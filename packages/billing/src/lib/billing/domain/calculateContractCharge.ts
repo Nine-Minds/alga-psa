@@ -158,6 +158,7 @@ export function normalizeResolvedContractCharge(input: {
               configurationId: charge.inputs.fallbackService.config_id,
             }
           : null,
+        hasProductMembers: charge.inputs.hasProductMembers ?? false,
       };
       break;
     case "hourly":
@@ -302,6 +303,7 @@ export function normalizeResolvedContractCharge(input: {
           configurationQuantity: service.configuration_quantity,
           configurationCustomRate: service.configuration_custom_rate,
           priceRate: service.price_rate,
+          effectivePricing: service.effective_pricing ?? null,
         })),
       };
   }
@@ -409,6 +411,7 @@ export function calculateNormalizedContractCharge(
                 config_id: facts.fallbackService.configurationId,
               }
             : null,
+          hasProductMembers: facts.hasProductMembers ?? false,
           billingProfile: facts.billingProfile,
         },
       };
@@ -598,6 +601,7 @@ export function calculateNormalizedContractCharge(
             configuration_quantity: service.configurationQuantity,
             configuration_custom_rate: service.configurationCustomRate,
             price_rate: service.priceRate,
+            effective_pricing: service.effectivePricing ?? null,
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,

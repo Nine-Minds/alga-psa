@@ -19,6 +19,7 @@ const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: dbRef.knex, tenant: dbRef.tenant })),
+  getConnection: vi.fn(async () => dbRef.knex),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -85,6 +86,14 @@ import {
   updateExternalLink,
   upsertTenantExternalSystem,
 } from '../../../../packages/tickets/src/actions/externalLinks/externalLinkActions';
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
+  getUserAvatarUrlAction: vi.fn(async () => null),
+  getContactAvatarUrlAction: vi.fn(async () => null),
+}));
+
+import { getClientTicketDetails } from '../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets';
+import visibilityMigration from '../../../migrations/20260917051554_add_external_link_portal_visibility.cjs';
+import { loadPortalTicketExternalLinks } from '../../../../packages/client-portal/src/lib/portalTicketExternalLinks';
 import { persistExternalLinksForCreate } from '../../../../packages/tickets/src/actions/externalLinks/externalLinkPersistence';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { TicketService } from '../../lib/api/services/TicketService';
@@ -158,6 +167,142 @@ describe('ticket external system links', () => {
     bundleRulesMock.mockResolvedValue([]);
     authorizationKernelMock.authorizeResource.mockReset();
     authorizationKernelMock.authorizeResource.mockResolvedValue({ allowed: true });
+  });
+
+  it('migration keeps pre-existing rows private, defaults new rows private, rejects shared comments, and rolls back', async () => {
+    await db.transaction(async (trx) => {
+      // A connection-local table shadows the real table without changing other tests' data.
+      await trx.raw('CREATE TEMP TABLE external_entity_links (tenant uuid, entity_type text) ON COMMIT DROP');
+      await trx('external_entity_links').insert([{ tenant: uuidv4(), entity_type: 'ticket' }, { tenant: uuidv4(), entity_type: 'comment' }]);
+      await visibilityMigration.up(trx);
+      expect((await trx('external_entity_links')).every((row) => row.portal_visible === false)).toBe(true);
+      const [created] = await trx('external_entity_links').insert({ tenant: uuidv4(), entity_type: 'ticket' }).returning('*');
+      expect(created.portal_visible).toBe(false);
+      await expect(trx.transaction((savepoint) => savepoint('external_entity_links')
+        .insert({ tenant: uuidv4(), entity_type: 'comment', portal_visible: true }))).rejects.toMatchObject({ code: '23514' });
+      await visibilityMigration.down(trx);
+      expect((await trx('external_entity_links').first())).not.toHaveProperty('portal_visible');
+    });
+  });
+
+  it('sharing is opt-in for every relationship, minimal, revocable, audited, and silent', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const read = () => db.transaction((trx) => loadPortalTicketExternalLinks(trx, fixture.tenantId, ticketId));
+    for (const relationship of ['origin', 'mirror', 'reference'] as const) {
+      const link = expectActionSuccess(await addExternalLink({
+        ticket_id: ticketId, system: 'generic', external_id: `case-${relationship}-${uuidv4()}`,
+        url: 'https://example.com/vendor/login', relationship,
+        actor: { id: 'PRIVATE_ACTOR', url: 'https://private.example.com/profile' },
+        realm: 'PRIVATE_REALM', metadata: { secret: 'PRIVATE_METADATA' },
+      }));
+      expect(link.portal_visible).toBe(false);
+      expect(await read()).toEqual([]);
+      expectActionSuccess(await updateExternalLink(link.link_id, { portal_visible: true }));
+      expect(await read()).toEqual([{ label: `External Reference · ${link.external_id}`, url: 'https://example.com/vendor/login' }]);
+      const edited = expectActionSuccess(await updateExternalLink(link.link_id, { url: 'https://example.com/vendor/changed' }));
+      expect(edited.portal_visible).toBe(true);
+      expect((await read())[0].url).toBe('https://example.com/vendor/changed');
+      expect(await db.transaction((trx) => loadPortalTicketExternalLinks(trx, uuidv4(), ticketId))).toEqual([]);
+      expect(await db.transaction((trx) => loadPortalTicketExternalLinks(trx, fixture.tenantId, uuidv4()))).toEqual([]);
+      expectActionSuccess(await updateExternalLink(link.link_id, { portal_visible: false }));
+      expect(await read()).toEqual([]);
+      expectActionSuccess(await updateExternalLink(link.link_id, { portal_visible: true }));
+      expectActionSuccess(await removeExternalLink(link.link_id));
+      expect(await read()).toEqual([]);
+      const audits = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+        .where({ entity_id: link.link_id, event_type: 'TICKET_EXTERNAL_LINK_UPDATED' }).orderBy('occurred_at');
+      expect(audits.map((a) => a.changes.portal_visible)).toEqual([
+        { old: false, new: true }, { old: true, new: false }, { old: false, new: true },
+      ]);
+      expect(audits.every((a) => a.actor_user_id === fixture.userId && a.occurred_at && a.source === 'external_link')).toBe(true);
+    }
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(publishEventMock.mock.calls.every((call: any[]) => /^TICKET_EXTERNAL_LINK_/.test(call[0].eventType))).toBe(true);
+  });
+
+  it('explicit dedicated creates can share; malformed values and comment sharing fail; inline/import links stay private', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const shared = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'generic',
+      external_id: uuidv4(), url: 'https://example.com', portal_visible: true }));
+    expect(shared.portal_visible).toBe(true);
+    for (const portal_visible of [null, 'true', 1]) {
+      expect(await updateExternalLink(shared.link_id, { portal_visible } as any)).toMatchObject({ code: 'invalid_visibility' });
+      expect(await addExternalLink({ ticket_id: ticketId, system: 'generic', external_id: uuidv4(),
+        url: 'https://example.com', portal_visible } as any)).toMatchObject({ code: 'invalid_visibility' });
+    }
+    expect(await addExternalLink({ ticket_id: ticketId, entity_type: 'comment', system: 'generic',
+      external_id: uuidv4(), url: 'https://example.com', portal_visible: true })).toMatchObject({ code: 'invalid_visibility' });
+    const [imported] = await db.transaction((trx) => persistExternalLinksForCreate(trx, fixture.tenantId, ticketId,
+      [{ system: 'generic', external_id: uuidv4(), url: 'https://example.com', portal_visible: true }], fixture.userId));
+    expect(imported.portal_visible).toBe(false);
+    const commentId = await insertResolutionComment(db, fixture, ticketId);
+    const commentLink = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, entity_type: 'comment',
+      comment_id: commentId, system: 'generic', external_id: uuidv4(), url: 'https://private.example.com/comment' }));
+    expect(await updateExternalLink(commentLink.link_id, { portal_visible: true })).toMatchObject({ code: 'invalid_visibility' });
+    const portalLinks = await db.transaction((trx) => loadPortalTicketExternalLinks(trx, fixture.tenantId, ticketId));
+    expect(JSON.stringify(portalLinks)).not.toContain('private.example.com/comment');
+  });
+
+  it('actual portal detail responses preserve client, board, contact, and tenant scope and never serialize private link data', async () => {
+    const internalUser = userRef.user;
+    const tenant = dbRef.tenant;
+    const ticketId = await insertTicket(db, fixture);
+    const privateLink = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'generic',
+      external_id: uuidv4(), url: 'https://private.example.com/PRIVATE_URL',
+      actor: { id: 'PRIVATE_ACTOR' }, metadata: { secret: 'PRIVATE_METADATA' } }));
+    const sharedLink = expectActionSuccess(await addExternalLink({ ticket_id: ticketId, system: 'generic',
+      external_id: 'Customer case', url: 'https://example.com/login', portal_visible: true,
+      realm: 'PRIVATE_REALM', actor: { id: 'SHARED_ACTOR_SECRET' }, metadata: { secret: 'SHARED_METADATA_SECRET' } }));
+    const otherFixture = await createCloseRulesFixture(db, tenant, fixture.userId);
+    const makeUser = async (contactId: string) => {
+      const id = uuidv4();
+      const row = { tenant, user_id: id, username: id, email: `${id}@example.com`, first_name: 'Portal',
+        last_name: 'Reviewer', user_type: 'client', contact_id: contactId, hashed_password: 'not-a-login-password', is_inactive: false };
+      await scopedDbFor(tenant).table('users').insert(row);
+      return row;
+    };
+    const allowed = await makeUser(fixture.contactId);
+    const denied = await makeUser(otherFixture.contactId);
+    try {
+      userRef.user = allowed;
+      const response = expectActionSuccess(await getClientTicketDetails(ticketId));
+      expect(response.portalExternalLinks).toEqual([{ label: 'External Reference · Customer case', url: 'https://example.com/login' }]);
+      const wire = JSON.stringify(response);
+      for (const secret of ['PRIVATE_URL', 'PRIVATE_ACTOR', 'PRIVATE_METADATA', 'PRIVATE_REALM',
+        'SHARED_ACTOR_SECRET', 'SHARED_METADATA_SECRET', privateLink.link_id, sharedLink.link_id]) {
+        expect(wire).not.toContain(secret);
+      }
+      expect(isReturnedActionError(await getTicketExternalLinks(ticketId))).toBe(true);
+      expect(isReturnedActionError(await updateExternalLink(sharedLink.link_id, { portal_visible: false }))).toBe(true);
+      expect(isReturnedActionError(await removeExternalLink(sharedLink.link_id))).toBe(true);
+      expect(isReturnedActionError(await addExternalLink({ ticket_id: ticketId, system: 'generic', external_id: uuidv4(),
+        url: 'https://example.com', portal_visible: true }))).toBe(true);
+      userRef.user = denied;
+      expect(isReturnedActionError(await getClientTicketDetails(ticketId))).toBe(true);
+      userRef.user = allowed;
+      await scopedDbFor(tenant).table('boards').where({ board_id: fixture.boardId }).update({ client_portal_visible: false });
+      expect(isReturnedActionError(await getClientTicketDetails(ticketId))).toBe(true);
+      await scopedDbFor(tenant).table('boards').where({ board_id: fixture.boardId }).update({ client_portal_visible: true });
+      // A same-client contact restricted to its own tickets cannot inherit access from sharing.
+      const groupId = uuidv4();
+      await scopedDbFor(tenant).table('client_portal_visibility_groups').insert({
+        tenant, group_id: groupId, client_id: fixture.clientId, name: 'Own tickets only', ticket_scope: 'contact',
+      });
+      await scopedDbFor(tenant).table('client_portal_visibility_group_boards').insert({
+        tenant, group_id: groupId, board_id: fixture.boardId,
+      });
+      await scopedDbFor(tenant).table('contacts').where({ contact_name_id: otherFixture.contactId })
+        .update({ client_id: fixture.clientId, portal_visibility_group_id: groupId });
+      userRef.user = denied;
+      expect(isReturnedActionError(await getClientTicketDetails(ticketId))).toBe(true);
+      userRef.user = allowed;
+      dbRef.tenant = uuidv4();
+      expect(isReturnedActionError(await getClientTicketDetails(ticketId))).toBe(true);
+    } finally {
+      dbRef.tenant = tenant;
+      userRef.user = internalUser;
+      await scopedDbFor(tenant).table('boards').where({ board_id: fixture.boardId }).update({ client_portal_visible: true });
+    }
   });
 
   it('T300: add / list / update / remove round trip with resolved display', async () => {

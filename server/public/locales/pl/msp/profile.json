@@ -52,6 +52,7 @@
         "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
         "loadFailed": "Nie udało się załadować profilu",
         "saveFailed": "Nie udało się zapisać profilu",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "errorPrefix": "Błąd: {{error}}"
       }
     },
@@ -728,6 +729,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "Nie udało się powiązać konta SSO.",
+      "no_matching_user": "Konto, za pomocą którego się zalogowano, to {{providerEmail}}, natomiast Twój login AlgaPSA to {{accountEmail}}. Powiąż konto używające adresu {{accountEmail}} albo poproś administratora dostawcy tożsamości o ustawienie {{accountEmail}} jako głównego adresu e-mail tego konta.",
+      "missing_email": "Dostawca tożsamości nie zwrócił adresu e-mail dla tego konta, więc nie można go dopasować do Twojego loginu AlgaPSA {{accountEmail}}. Poproś administratora dostawcy tożsamości o udostępnienie adresu e-mail dla tego konta i spróbuj ponownie.",
+      "inactive_user": "Użytkownik AlgaPSA dla {{providerEmail}} jest nieaktywny, dlatego nie można go powiązać. Poproś administratora o ponowną aktywację i spróbuj ponownie.",
+      "user_type_mismatch": "{{providerEmail}} odpowiada użytkownikowi portalu klienta, a nie wewnętrznemu użytkownikowi AlgaPSA. Powiąż zamiast tego konto używające adresu {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} należy do innej organizacji niż {{accountEmail}}. Powiąż konto z własnej organizacji.",
+      "generic": "Nie udało się powiązać tego konta z {{accountEmail}}. Spróbuj ponownie lub skontaktuj się z administratorem.",
+      "unknownProviderEmail": "konto bez adresu e-mail"
+    },
     "verify": {
       "title": "Zabezpiecz swoje konto za pomocą SSO",
       "description": "Połącz Azure AD lub Google Workspace, aby korzystać z polityk organizacyjnych i pomijać lokalne monity uwierzytelniania dwuskładnikowego.",

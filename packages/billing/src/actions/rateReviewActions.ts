@@ -443,6 +443,9 @@ export const resetContractLineRateToStandard = withAuth(
         // A member-level snapshot (`clsfc.base_rate`) shadows the catalog even
         // after the line rate is cleared, so it must be reset in the same
         // transaction or the line reports Standard and bills the old number.
+        // Per-unit members are excluded: their base_rate is a standing unit
+        // price that changes only through a dated revision (seatRevisions), so
+        // resetting the bundle rate must not reprice seats in place.
         await trx.raw(
           `UPDATE contract_line_service_fixed_config AS clsfc
            SET base_rate = NULL, rate_provenance = 'inherited'
@@ -450,7 +453,8 @@ export const resetContractLineRateToStandard = withAuth(
            WHERE clsc.config_id = clsfc.config_id
              AND clsc.tenant = clsfc.tenant
              AND clsc.tenant = ?
-             AND clsc.contract_line_id = ?`,
+             AND clsc.contract_line_id = ?
+             AND clsfc.pricing_basis IS DISTINCT FROM 'unit'`,
           [tenant, contractLineId],
         );
 

@@ -9,6 +9,7 @@ on:
       - 'tools/mutation/**'
       - 'shared/billingClients/calendarMonthEndClosePolicy.ts'
       - 'packages/authorization/src/kernel/**'
+      - 'packages/authorization/src/portal/visibility.ts'
       - 'server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts'
       - 'server/src/test/unit/authorization/kernel.failClosed.test.ts'
       - 'package.json'

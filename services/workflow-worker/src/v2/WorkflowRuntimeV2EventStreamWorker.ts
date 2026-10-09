@@ -1,3 +1,4 @@
+import { evaluateWorkflowSelfTrigger } from '@alga-psa/workflows/lib/workflowSelfTriggerGuard';
 import logger from '@shared/core/logger.js';
 import {
   RedisStreamClient,
@@ -213,7 +214,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
     });
 
     const signaledRuns = new Set<string>();
-    let deliveryError: string | null = null;
+    // Each waiting run and each matching workflow is delivered independently:
+    // one failure is recorded and must not stop delivery to the rest.
+    const deliveryErrors: string[] = [];
     const correlationKeys = correlation.keys.length > 0
       ? correlation.keys
       : (correlation.key ? [correlation.key] : []);
@@ -277,9 +280,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
           }
           signaledRuns.add(wait.run_id);
         } catch (error) {
-          deliveryError = wait.wait_type === 'human'
+          deliveryErrors.push(wait.wait_type === 'human'
             ? `Failed to signal Temporal human task for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`
-            : `Failed to signal Temporal event wait for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`;
+            : `Failed to signal Temporal event wait for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`);
           logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
             workerId: this.workerId,
             runId: wait.run_id,
@@ -290,7 +293,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
             correlationKey: correlation.key,
             error,
           });
-          break;
         }
       }
     } else {
@@ -314,16 +316,47 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const startedRuns: string[] = [];
     const payloadValidationErrors: string[] = [];
+    // Every reason a matching workflow was NOT launched. These used to be
+    // counted in skipStats only, so an operator looking at the event row saw no
+    // error and no run (alga-2026-0002379). They are persisted with the event.
+    const skipDiagnostics: string[] = [];
     const skipStats = {
       noVersion: 0,
       missingSchemaRef: 0,
       unknownSchemaRef: 0,
       schemaMismatch: 0,
       payloadValidationFailed: 0,
+      paused: 0,
+      workflowCycle: 0,
     };
+    // Workflow ids that caused this event (stamped by an action such as tickets.create when a
+    // workflow run published it). A workflow already in the chain never relaunches itself, which
+    // bounds A -> A and A -> B -> A loops. Non-cyclic chains (A -> B) still run.
+    const eventLineage = Array.isArray(payload.workflowLineage)
+      ? (payload.workflowLineage as unknown[]).filter((id): id is string => typeof id === 'string')
+      : [];
     for (const { workflow, latestVersion: latest } of matching) {
-      if (deliveryError) {
-        break;
+      // Paused is a deliberate state, not a delivery failure; the launcher
+      // would refuse the run anyway.
+      if (workflow.is_paused) {
+        skipStats.paused += 1;
+        continue;
+      }
+
+      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
+
+      if (eventLineage.includes(workflow.workflow_id)) {
+        skipStats.workflowCycle += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`);
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          workflowLineage: eventLineage,
+        });
+        continue;
       }
 
       const latestDefinition = latest.definition_json as any;
@@ -333,10 +366,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
         skipStats.unknownSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`);
         continue;
       }
 
@@ -348,6 +383,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
       if (!effectiveSourceSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`);
         continue;
       }
 
@@ -356,6 +392,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
       if (!mappingProvided && !refsMatch) {
         skipStats.schemaMismatch += 1;
+        skipDiagnostics.push(
+          `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`
+        );
         continue;
       }
 
@@ -378,7 +417,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
           workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
           mappingApplied = true;
-        } catch {
+        } catch (mappingError) {
+          skipDiagnostics.push(
+            `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingError instanceof Error ? mappingError.message : String(mappingError)}`
+          );
           continue;
         }
       }
@@ -411,6 +453,25 @@ export class WorkflowRuntimeV2EventStreamWorker {
         continue;
       }
 
+      const selfTrigger = await evaluateWorkflowSelfTrigger(knex, {
+        tenant: event.tenant,
+        originExecutionId: event.execution_id,
+        candidateWorkflowId: workflow.workflow_id,
+      });
+      if (!selfTrigger.allow) {
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Skipping workflow launch: event was caused by this workflow chain', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          originExecutionId: event.execution_id,
+          reason: selfTrigger.reason,
+          causationDepth: selfTrigger.causationDepth,
+        });
+        continue;
+      }
+
       try {
         const launched = await launchPublishedWorkflowRun(knex, {
           workflowId: workflow.workflow_id,
@@ -421,7 +482,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
           triggerMetadata: {
             eventType: event.event_type,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-            triggerMappingApplied: mappingApplied
+            triggerMappingApplied: mappingApplied,
+            ...(selfTrigger.causationDepth > 0 ? { causationDepth: selfTrigger.causationDepth } : {}),
+            ...(eventLineage.length > 0 ? { workflowLineage: eventLineage } : {})
           },
           eventType: event.event_type,
           sourcePayloadSchemaRef: effectiveSourceSchemaRef,
@@ -440,7 +503,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
         }
       } catch (error) {
-        deliveryError = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+        deliveryErrors.push(`Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`);
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to launch workflow', {
           workerId: this.workerId,
           workflowId: workflow.workflow_id,
@@ -450,7 +513,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
           tenant: event.tenant,
           error,
         });
-        break;
       }
     }
 
@@ -474,14 +536,18 @@ export class WorkflowRuntimeV2EventStreamWorker {
       });
     }
 
-    if (deliveryError) {
+    if (deliveryErrors.length > 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: deliveryError,
+        error_message: deliveryErrors.join('\n'),
         processed_at: processedAt,
       });
-    } else if (payloadValidationErrors.length > 0 && startedRuns.length === 0 && signaledRuns.size === 0) {
+    } else if (
+      (payloadValidationErrors.length > 0 || skipDiagnostics.length > 0) &&
+      startedRuns.length === 0 &&
+      signaledRuns.size === 0
+    ) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: payloadValidationErrors.join('\n'),
+        error_message: [...payloadValidationErrors, ...skipDiagnostics].join('\n'),
         processed_at: processedAt,
       }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {

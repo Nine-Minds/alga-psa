@@ -149,7 +149,8 @@
     "header": {
       "runIdLabel": "Uitvoerings-ID",
       "workflowIdLabel": "Workflow-ID:",
-      "triggerLabel": "Trigger:"
+      "triggerLabel": "Trigger:",
+      "workflowTriggerLabel": "Workflowtrigger:"
     },
     "actions": {
       "cancel": "Annuleren",
@@ -179,7 +180,8 @@
       "identity": "Identiteit",
       "runErrorFallback": "Uitvoeringsfout",
       "errorCategoryFallback": "Fout",
-      "technicalDetailLabel": "Technisch detail:"
+      "technicalDetailLabel": "Technisch detail:",
+      "runSourceLabel": "Uitvoeringsbron"
     },
     "stepTimeline": {
       "title": "Tijdlijn van stappen",
@@ -199,7 +201,8 @@
         "error": "Fout",
         "action": "Actie"
       },
-      "empty": "Nog geen stapgeschiedenis."
+      "empty": "Nog geen stapgeschiedenis.",
+      "neverStarted": "Deze uitvoering heeft de workflow-engine nooit bereikt, dus er zijn geen stappen uitgevoerd."
     },
     "stepDetails": {
       "title": "Stapdetails",
@@ -338,7 +341,10 @@
       "savePreset": "Voorinstelling opslaan",
       "show": "Tonen",
       "startRun": "Uitvoering starten",
-      "starting": "Bezig met starten…"
+      "starting": "Bezig met starten…",
+      "viewRun": "Uitvoering bekijken",
+      "viewFailedRun": "Mislukte uitvoering bekijken",
+      "tryAgain": "Opnieuw proberen"
     },
     "eventCatalog": {
       "title": "Gebeurteniscatalogus",
@@ -361,7 +367,11 @@
       "manualTrigger": "Handmatig",
       "workflowStatusLabel": "Workflowstatus",
       "statusActive": "actief",
-      "statusPaused": "gepauzeerd"
+      "statusPaused": "gepauzeerd",
+      "runSourceLabel": "Uitvoeringsbron",
+      "runSourceManualTest": "Handmatige test",
+      "workflowTriggerLabel": "Workflowtrigger",
+      "noTrigger": "Geen (wordt alleen handmatig gestart)"
     },
     "form": {
       "booleanTrue": "Waar",
@@ -370,7 +380,12 @@
       "mapEntriesPrompt": "Veldnaam of -pad invoeren",
       "mapEntriesDescription": "Voeg voor map-achtige objecten sleutels toe en stel elke waarde in.",
       "mapEntriesEmpty": "Geen map-vermeldingen toegevoegd.",
-      "noSchema": "Geen schema beschikbaar om een formulier weer te geven."
+      "noSchema": "Geen schema beschikbaar om een formulier weer te geven.",
+      "recordFillHint": "Kies een echt record (bijvoorbeeld een contract, ticket of klant) en de lege velden ernaast worden uit dat record ingevuld.",
+      "recordFillHintField": "Kies een echt record in {{field}} en deze velden worden er automatisch uit ingevuld als ze leeg zijn: {{targets}}.",
+      "recordFillKeepsTyped": "Waarden die u zelf hebt getypt blijven behouden; velden waarvoor het record geen waarde heeft, blijven zoals ze zijn.",
+      "recordFillGap": "Het gekozen record heeft geen {{fields}}, dus dat blijft leeg.",
+      "recordNeverFires": "Deze trigger wordt nooit uitgevoerd voor dit record: er is geen datum om op uit te voeren. Kies een ander record of voer de datums zelf in."
     },
     "noPublishedVersion": {
       "title": "Geen gepubliceerde versie",
@@ -380,7 +395,9 @@
       "largePayloadWarning": "Payload-grootte overschrijdt 256 KB; uitvoeringen kunnen langzamer zijn.",
       "payloadJsonLabel": "Payload (JSON)",
       "payloadLabel": "payload",
-      "payloadSize": "Payload-grootte: {{size}} KB"
+      "payloadSize": "Payload-grootte: {{size}} KB",
+      "uuidPlaceholder": "Een id (UUID), bijv. 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "generateTestId": "Test-id genereren"
     },
     "presets": {
       "presetNameLabel": "Naam voorinstelling",
@@ -438,7 +455,8 @@
       "presetSaved": "Voorinstelling opgeslagen.",
       "providePresetName": "Geef een naam voor de voorinstelling op.",
       "startRunFailed": "Kan uitvoering niet starten",
-      "triggerMappingMissing": "Voor dit gebeurtenisschema is een triggerkoppeling vereist, maar deze is niet geconfigureerd op de workflow."
+      "triggerMappingMissing": "Voor dit gebeurtenisschema is een triggerkoppeling vereist, maar deze is niet geconfigureerd op de workflow.",
+      "runStarted": "Uitvoering gestart."
     },
     "validation": {
       "invalidJson": "Ongeldige JSON",
@@ -450,6 +468,74 @@
     "sections": {
       "schemaAndEvents": "Schema en gebeurtenissen",
       "payloadTools": "Payloadhulpmiddelen"
+    },
+    "startFailure": {
+      "engineUnavailableTitle": "De workflow-engine kon niet worden bereikt",
+      "engineUnavailableDescription": "De uitvoering is vastgelegd maar kon niet starten en is daarom als mislukt gemarkeerd. Probeer het over een paar minuten opnieuw. Als dit blijft gebeuren, vraag dan een beheerder de workflowservice te controleren.",
+      "launchFailedTitle": "De uitvoering kon niet starten",
+      "launchFailedDescription": "De uitvoering is vastgelegd en als mislukt gemarkeerd. Open deze om de fout te zien.",
+      "genericTitle": "De uitvoering is niet gestart",
+      "technicalDetails": "Technische details"
+    },
+    "startProgress": "Verbinden met de workflow-engine…",
+    "issues": {
+      "item": "element {{position}}",
+      "required": "{{field}} is verplicht",
+      "type": "{{field}} moet {{type}} zijn",
+      "typeUnknown": "{{field}} heeft het verkeerde soort waarde",
+      "formatUuid": "{{field}} moet een id (UUID) zijn, zoals 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "formatEmail": "{{field}} moet een e-mailadres zijn",
+      "formatDate": "{{field}} moet een datum zijn (YYYY-MM-DD)",
+      "formatDateTime": "{{field}} moet een datum en tijd zijn, zoals 2026-10-03T09:00:00Z",
+      "formatTime": "{{field}} moet een tijd zijn (HH:MM)",
+      "formatUrl": "{{field}} moet een webadres zijn",
+      "formatOther": "{{field}} heeft niet de verwachte notatie",
+      "choice": "{{field}} moet een van deze zijn: {{options}}",
+      "choiceUnknown": "{{field}} is geen van de toegestane waarden",
+      "tooShort": "{{field}} moet minimaal {{limit}} tekens bevatten",
+      "tooFewItems": "{{field}} heeft minimaal {{limit}} items nodig",
+      "tooSmall": "{{field}} moet minimaal {{limit}} zijn",
+      "tooLong": "{{field}} mag maximaal {{limit}} tekens bevatten",
+      "tooManyItems": "{{field}} mag maximaal {{limit}} items bevatten",
+      "tooBig": "{{field}} mag maximaal {{limit}} zijn",
+      "unknownField": "{{field}} maakt geen deel uit van deze payload",
+      "invalidWithMessage": "{{field}}: {{message}}",
+      "invalid": "{{field}} is ongeldig",
+      "more": "+{{count}} meer",
+      "inputTitle": "Corrigeer deze velden en start de uitvoering daarna opnieuw",
+      "mappedTitle": "De triggerkoppeling heeft een payload opgeleverd die de workflow niet accepteert",
+      "mappedDescription": "{{issues}} Controleer de triggerkoppeling in de workflowinstellingen of de gebeurtenisvelden die deze leest.",
+      "types": {
+        "string": "tekst",
+        "number": "een getal",
+        "integer": "een geheel getal",
+        "boolean": "waar of onwaar",
+        "object": "een groep velden",
+        "array": "een lijst"
+      }
+    },
+    "draft": {
+      "restored": "Uw laatste testpayload voor deze workflow is hersteld. Deze blijft hier staan totdat u opnieuw begint.",
+      "kept": "Deze payload blijft bewaard als u het dialoogvenster sluit.",
+      "startOver": "Opnieuw beginnen"
+    },
+    "dateTrigger": {
+      "help": {
+        "occursOn": "De datum waarop deze uitvoering betrekking heeft: {{dateName}}. Ingevuld vanuit het gekozen record.",
+        "offsetDays": "Dagen tussen die datum en de uitvoering, volgens de trigger ({{timing}}). Negatief betekent ervoor, positief erna.",
+        "fireDate": "De dag waarop de planner deze uitvoering zou starten: de datum hierboven plus de verschuiving."
+      },
+      "timing": {
+        "before": "{{days}} dagen ervoor",
+        "after": "{{days}} dagen erna",
+        "onTheDay": "op de dag zelf"
+      },
+      "dateNames": {
+        "anniversary": "de volgende jubileumdatum van de klant",
+        "renewal": "de beslisdatum voor verlenging van het contract",
+        "contractEnd": "de einddatum van het contract",
+        "warrantyEnd": "de einddatum van de garantie van het asset"
+      }
     }
   },
   "eventList": {
@@ -582,7 +668,9 @@
       "loading": "Auditvermeldingen laden..."
     },
     "values": {
-      "system": "systeem"
+      "system": "systeem",
+      "unknownUser": "Onbekende gebruiker",
+      "byUser": "Door {{user}}"
     },
     "toasts": {
       "loadFailed": "Kan auditlogs niet laden",
@@ -633,7 +721,26 @@
       "validation": {
         "lastValidated": "Laatst gevalideerd: {{timestamp}}",
         "unknown": "Validatiestatus onbekend"
-      }
+      },
+      "publishedVersionBadge": "Gepubliceerd v{{version}}",
+      "notPublishedBadge": "Niet gepubliceerd",
+      "pausedToast": "Workflow gepauzeerd. Nieuwe gebeurtenissen starten geen uitvoeringen.",
+      "resumedToast": "Workflow actief. Nieuwe gebeurtenissen starten weer uitvoeringen.",
+      "resumeTitle": "Gepauzeerd: nieuwe gebeurtenissen starten geen uitvoeringen. Klik om te activeren.",
+      "pauseTitle": "Actief: nieuwe gebeurtenissen starten uitvoeringen. Klik om te pauzeren.",
+      "pausedBadge": "Gepauzeerd",
+      "activeBadge": "Actief",
+      "runPausedReason": "Gepauzeerd: hervat de workflow om deze uit te voeren.",
+      "pauseTitleDate": "Actief: uitvoeringen starten op de datums die deze workflow bewaakt. Klik om te pauzeren.",
+      "resumeTitleDate": "Gepauzeerd: bewaakte datums starten geen uitvoeringen. Klik om te activeren.",
+      "pausedToastDate": "Workflow gepauzeerd. Bewaakte datums starten geen uitvoeringen.",
+      "resumedToastDate": "Workflow actief. Bewaakte datums starten weer uitvoeringen.",
+      "pauseTitleManual": "Actief: schema’s kunnen uitvoeringen starten. Klik om te pauzeren.",
+      "resumeTitleManual": "Gepauzeerd: schema’s starten geen uitvoeringen. Klik om te activeren.",
+      "pausedToastManual": "Workflow gepauzeerd. Schema’s starten geen uitvoeringen.",
+      "resumedToastManual": "Workflow actief. Schema’s starten weer uitvoeringen.",
+      "newWorkflowTitle": "Begin een nieuwe, lege workflow. Deze workflow blijft zoals laatst opgeslagen.",
+      "newWorkflowShort": "Nieuwe workflow"
     },
     "form": {
       "nameLabel": "Workflownaam",
@@ -691,7 +798,17 @@
       "timezoneOptional": "Tijdzone (optioneel)",
       "tenantTimezoneDefault": "Tijdzone van de tenant",
       "dateTriggerSummary": "Wordt {{days}} {{direction}} {{source}} om {{time}} ({{timezone}}) uitgevoerd",
-      "inputDataDatePrefix": "Deze workflow ontvangt de payload die is gedefinieerd door"
+      "inputDataDatePrefix": "Deze workflow ontvangt de payload die is gedefinieerd door",
+      "searchEventCategories": "Categorieën zoeken",
+      "searchAllEvents": "Alle gebeurtenissen zoeken",
+      "selectEventToFinish": "Selecteer een gebeurtenis om het configureren van deze trigger af te ronden.",
+      "searchOrPickCategory": "Doorzoek alle gebeurtenissen of kies een categorie om de lijst te beperken.",
+      "nextVersionLabel": "Volgende te publiceren versie",
+      "publishedAndNextVersion": "Gepubliceerd: v{{published}}. U bewerkt een concept; publiceren maakt v{{next}} aan.",
+      "notPublishedNextVersion": "Nog niet gepubliceerd. Publiceren maakt v{{next}} aan.",
+      "tenantTimezoneOption": "Tijdzone van de tenant (standaard)",
+      "searchTimezones": "Tijdzones zoeken",
+      "inputDataEventPending": "Kies hierboven de gebeurtenis; uw stappen lezen de gegevens die die gebeurtenis verstuurt."
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
@@ -732,7 +849,12 @@
       "untilInput": "Tot-invoer",
       "specificDateTime": "Specifieke datum en tijd",
       "untilExpression": "Tot-expressie",
-      "returnNotice": "Return stopt de uitvoering van de workflow."
+      "returnNotice": "Return stopt de uitvoering van de workflow.",
+      "duration": "Duur",
+      "durationSummary": "Wacht {{duration}}.",
+      "durationEmpty": "Voer in hoe lang er gewacht moet worden, in een van deze eenheden.",
+      "notFoundInTry": "Deze stap staat binnen een Try. Als er niets wordt gevonden, gaat de workflow nu door, dus de Catch-tak wordt niet uitgevoerd. Laat de stap in plaats daarvan mislukken zodat Catch een ontbrekend record kan afhandelen.",
+      "notFoundFailAction": "Laten mislukken zodat Catch het kan afhandelen"
     },
     "mappingExpr": {
       "add": "Toevoegen",
@@ -950,7 +1072,12 @@
       "else": "ANDERS",
       "try": "TRY",
       "catch": "CATCH",
-      "body": "BODY"
+      "body": "BODY",
+      "thenLabel": "Dan",
+      "elseLabel": "Anders",
+      "tryLabel": "Proberen",
+      "catchLabel": "Afvangen",
+      "bodyLabel": "Inhoud"
     },
     "palette": {
       "showPalette": "Palet weergeven",
@@ -967,7 +1094,9 @@
         "Apps": "Apps",
         "Action": "Actie",
         "Email": "E-mail",
-        "Nodes": "Knooppunten"
+        "Nodes": "Knooppunten",
+        "Actions": "Acties",
+        "Results": "Resultaten"
       },
       "controlBlocks": {
         "control.if": {
@@ -1027,7 +1156,7 @@
           "description": "Wachten op een duur of tot een datum/tijd"
         },
         "transform.assign": {
-          "label": "Toewijzen",
+          "label": "Variabelen instellen",
           "description": "Waarden toewijzen aan payload of variabelen"
         },
         "action.call": {
@@ -1138,6 +1267,13 @@
           "label": "Gegevensopslag",
           "description": "Duurzame workflow-status lezen en schrijven over uitvoeringen heen."
         }
+      },
+      "noMatches": {
+        "title": "Geen resultaten voor “{{query}}”",
+        "tipWords": "Probeer een kortere of ander woord, zoals “ticket”, “e-mail” of “wachten”.",
+        "tipVerb": "Zoek op wat de stap doet: aanmaken, zoeken, bijwerken, melden.",
+        "tipBrowse": "Wis de zoekopdracht om alle categorieën te bekijken.",
+        "clear": "Zoekopdracht wissen"
       }
     },
     "stepCard": {
@@ -1180,7 +1316,8 @@
       "published": "Workflow gepubliceerd",
       "publishFailed": "Kan workflow niet publiceren",
       "publishValidationErrors": "Publiceren mislukt - corrigeer validatiefouten",
-      "systemEventMissingSchema": "Deze systeemgebeurtenis heeft geen geldig schema en kan niet worden geselecteerd totdat dit is opgelost."
+      "systemEventMissingSchema": "Deze systeemgebeurtenis heeft geen geldig schema en kan niet worden geselecteerd totdat dit is opgelost.",
+      "publishedVersion": "Versie {{version}} gepubliceerd. Nieuwe uitvoeringen gebruiken deze versie."
     },
     "propsPanel": {
       "resizeAria": "Eigenschappenpaneel vergroten/verkleinen",
@@ -1192,7 +1329,8 @@
       "unlimited": "Onbeperkt",
       "autoPauseFailureRate": "Automatisch pauzeren bij faalpercentage",
       "failureRateThreshold": "Drempel faalpercentage",
-      "minRunsBeforeAutoPause": "Minimale uitvoeringen voor automatische pauze"
+      "minRunsBeforeAutoPause": "Minimale uitvoeringen voor automatische pauze",
+      "resizeHint": "Sleep om het formaat aan te passen. Dubbelklik om te verbreden of te versmallen."
     },
     "trigger": {
       "summary": "Triggeroverzicht",
@@ -1224,7 +1362,8 @@
     },
     "expression": {
       "insertField": "Veld invoegen",
-      "enterPlaceholder": "Expressie invoeren..."
+      "enterPlaceholder": "Expressie invoeren...",
+      "conditionPlaceholder": "bijv. payload.status = \"open\" and payload.count > 3"
     },
     "dataContext": {
       "availableDataAtStep": "Beschikbare gegevens bij deze stap",
@@ -1245,6 +1384,114 @@
       "clientSecret": "Clientgeheim:",
       "tenantId": "Tenant-ID:",
       "userEmail": "Gebruikers-e-mailadres:"
+    },
+    "entityLookup": {
+      "added": "“{{action}}” toegevoegd. Latere stappen kunnen de uitvoer gebruiken via vars.{{saveAs}}.",
+      "message": "Deze trigger bevat alleen de id van de {{entity}} (payload.{{field}}). Om de details van de {{entity}} te gebruiken, zoals naam of status, voegt u eerst “{{action}}” toe.",
+      "addButton": "“{{action}}” toevoegen",
+      "entities": {
+        "ticket": "ticket",
+        "client": "klant",
+        "contact": "contactpersoon",
+        "project": "project"
+      },
+      "messageWithCarried": "Deze trigger bevat al {{fields}}. Voor andere details van de {{entity}} voegt u “{{action}}” toe, dat de {{entity}} opzoekt via payload.{{field}}.",
+      "tips": {
+        "customerReplyText": {
+          "available": "De antwoordtekst zit niet in de trigger zelf. Gebruik {{path}} (“{{action}}” › laatste klantreactie).",
+          "afterLookup": "De antwoordtekst zit niet in de trigger zelf. Na “{{action}}” is deze beschikbaar als “{{action}}” › {{detail}}."
+        }
+      }
+    },
+    "insertion": {
+      "afterStepIn": "Na “{{step}}” in {{container}}",
+      "afterStep": "Na “{{step}}”",
+      "startOf": "Begin van {{container}}",
+      "startOfWorkflow": "Begin van de workflow",
+      "endOf": "Einde van {{container}}",
+      "endOfWorkflow": "Einde van de workflow",
+      "paletteLabel": "Voegt toe aan:",
+      "reset": "Resetten"
+    },
+    "conditionBuilder": {
+      "triggerSource": "Trigger",
+      "expressionLabel": "Conditie-expressie",
+      "joinWords": {
+        "and": "en",
+        "or": "of"
+      },
+      "noConditionSummary": "Geen conditie ingesteld",
+      "selectValue": "Selecteer een waarde",
+      "booleanTrue": "waar",
+      "booleanFalse": "onwaar",
+      "numberPlaceholder": "Getal",
+      "textPlaceholder": "Waarde",
+      "removeValue": "Waarde verwijderen",
+      "addValue": "Waarde toevoegen",
+      "builderUnavailable": "De builder kan alleen condities tonen die een lijst van veldcontroles zijn, allemaal verbonden door \"and\" of allemaal door \"or\".",
+      "modes": {
+        "builder": "Visueel",
+        "expression": "Expressie"
+      },
+      "expressionOnlyNotice": "Deze conditie kan alleen als expressie worden bewerkt. Wis de conditie om opnieuw te beginnen in de builder.",
+      "matchPrefix": "Doorgaan wanneer",
+      "joinAll": "alle",
+      "joinAny": "een van de",
+      "matchSuffix": "waar zijn",
+      "selectField": "Kies een veld",
+      "searchFields": "Velden zoeken",
+      "noFields": "Geen overeenkomende velden",
+      "removeCondition": "Conditie verwijderen",
+      "emptyHint": "Voeg een conditie toe om te bepalen wanneer de Then-tak wordt uitgevoerd. Anders wordt de Else-tak uitgevoerd.",
+      "noFieldsHint": "Er zijn nog geen velden beschikbaar. Kies een trigger of voeg vóór deze stap een stap toe die de uitvoer opslaat.",
+      "addCondition": "Conditie toevoegen",
+      "operators": {
+        "equals": "is",
+        "not_equals": "is niet",
+        "in": "is een van",
+        "not_in": "is geen van",
+        "gt": "is groter dan",
+        "gte": "is minimaal",
+        "lt": "is kleiner dan",
+        "lte": "is maximaal",
+        "contains": "bevat",
+        "starts_with": "begint met",
+        "ends_with": "eindigt op",
+        "is_empty": "is leeg",
+        "is_not_empty": "is niet leeg"
+      },
+      "unknownEntity": "onbekende {{field}}",
+      "anyBoardStatus": "{{name}} (elk bord)",
+      "boardStatus": "{{name}} ({{board}})",
+      "cancelNewCondition": "Nieuwe conditie annuleren"
+    },
+    "draftBackup": {
+      "message": "Deze browser heeft niet-opgeslagen wijzigingen aan deze workflow van {{time}} bewaard. Herstellen?",
+      "restore": "Wijzigingen herstellen",
+      "discard": "Verwerpen"
+    },
+    "sessionExpired": {
+      "title": "Uw sessie is beëindigd",
+      "backToEditing": "Terug naar bewerken",
+      "signIn": "Aanmelden in een nieuw tabblad",
+      "message": "Uw sessie is beëindigd. Meld u opnieuw aan in een nieuw tabblad, kom daarna terug en sla op — uw wijzigingen blijven bewaard."
+    },
+    "firstPublish": {
+      "messageEvent": "Door te publiceren wordt deze workflow gestart. Vanaf nu wordt deze uitgevoerd telkens wanneer “{{event}}” plaatsvindt. U kunt de workflow op elk moment pauzeren.",
+      "messageDate": "Door te publiceren wordt deze workflow gestart. Vanaf nu wordt deze uitgevoerd op de datums die de datumtrigger selecteert. U kunt de workflow op elk moment pauzeren.",
+      "messageManual": "Door te publiceren kan deze workflow worden uitgevoerd. Niets start de workflow automatisch: start hem met Uitvoeren of voeg een schema toe in het Workflow-beheerpaneel.",
+      "title": "Deze workflow publiceren en starten?",
+      "confirm": "Publiceren",
+      "cancel": "Annuleren"
+    },
+    "saveStatus": {
+      "justNow": "zojuist",
+      "minutesAgo": "{{count}} min geleden",
+      "atTime": "om {{time}}",
+      "notSavedYet": "Nog niet opgeslagen",
+      "unsaved": "Niet-opgeslagen wijzigingen",
+      "savedAgo": "Opgeslagen · {{ago}}",
+      "saved": "Opgeslagen"
     }
   },
   "actionInputFieldInfo": {
@@ -1257,10 +1504,13 @@
     "range": "Bereik: {{min}} - {{max}}",
     "any": "elk",
     "defaultPrefix": "Standaard:",
-    "examplePrefix": "Voorbeeld:"
+    "examplePrefix": "Voorbeeld:",
+    "atMost": "Maximaal {{max}}",
+    "atLeast": "Minimaal {{min}}"
   },
   "actionInputSection": {
-    "heading": "Actie-invoer"
+    "heading": "Actie-invoer",
+    "requireOneOf": "Vul minimaal een van deze in: {{fields}}"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Opties laden…",
@@ -1297,6 +1547,25 @@
         "board_id": "Kies eerst een vast bord om subcategorieopties te laden.",
         "category_id": "Kies eerst een vaste categorie om subcategorieopties te laden."
       }
+    },
+    "ticketNoMatches": "Geen tickets gevonden. Probeer het ticketnummer (bijvoorbeeld 1122) of woorden uit de titel.",
+    "addValue": "Waarde toevoegen",
+    "removeValue": "{{label}} verwijderen",
+    "searchPlaceholder": "Zoeken",
+    "noMatchingOptions": "Geen overeenkomende opties",
+    "details": {
+      "endsOn": "Eindigt op {{date}}",
+      "noEndDate": "Geen einddatum",
+      "warrantyEndsOn": "Garantie eindigt op {{date}}",
+      "noWarrantyEnd": "Geen einddatum van garantie",
+      "anyBoardStatus": "{{name}} (elk bord)"
+    },
+    "clientScope": {
+      "showingAll": "Alle klanten worden getoond",
+      "filteredTo": "Gefilterd op {{client}}",
+      "filteredToChosen": "Gefilterd op de gekozen klant",
+      "filterAgain": "Alleen deze klant",
+      "showAll": "Alle klanten tonen"
     }
   },
   "serverErrors": {
@@ -1339,7 +1608,17 @@
     "schedulePinnedSchemaRequired": "Planningen worden alleen ondersteund voor workflows met een vastgepind payload-schema.",
     "scheduleSchemaNotRegistered": "De meest recent gepubliceerde workflowversie heeft geen geregistreerd vastgepind payload-schema.",
     "schedulePayloadInvalid": "De planning-payload is niet gevalideerd tegen het payload-schema van de workflow.",
-    "processEventFailed": "Kan de workflow-gebeurtenis niet verwerken."
+    "processEventFailed": "Kan de workflow-gebeurtenis niet verwerken.",
+    "workflowEngineUnavailable": "De workflow-engine kon niet worden bereikt. Probeer het over een paar minuten opnieuw. Als dit blijft gebeuren, vraag dan een beheerder de workflowservice te controleren.",
+    "invalidFields": "Sommige waarden zijn ongeldig: {{details}}",
+    "sessionExpired": "Uw sessie is beëindigd. Meld u opnieuw aan en probeer het daarna opnieuw.",
+    "fieldValue": "Een waarde",
+    "issue": {
+      "required": "{{field}} is verplicht",
+      "number": "{{field}} moet een getal zijn",
+      "tooSmall": "{{field}} moet minimaal {{minimum}} zijn",
+      "tooBig": "{{field}} mag maximaal {{maximum}} zijn"
+    }
   },
   "taskInbox": {
     "title": "Taken-inbox",
@@ -1525,7 +1804,11 @@
     "emptySelectPrompt": "Selecteer een stap in het paneel om te beginnen.",
     "patchSummary": {
       "unchanged": "overige velden ongewijzigd"
-    }
+    },
+    "insertionPointLabel": "Nieuwe stappen komen hier",
+    "emptyBranchPrompt": "Voeg een stap toe aan deze tak",
+    "emptyActivePrompt": "Nieuwe stappen komen hier. Kies er een uit het palet.",
+    "stepCount": "({{count}} stappen)"
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -1533,10 +1816,67 @@
     "textAreaPlaceholder": "JSONata-expressie invoeren...",
     "field": {
       "placeholder": "Expressie invoeren...",
-      "insertFieldPlaceholder": "Veld invoegen"
+      "insertFieldPlaceholder": "Veld invoegen",
+      "expand": "Grotere editor openen",
+      "expandShort": "Uitvouwen",
+      "expandedTitle": "Expressie bewerken",
+      "done": "Gereed"
     },
     "clear": "Wissen",
-    "clearAriaLabel": "Expressie wissen"
+    "clearAriaLabel": "Expressie wissen",
+    "syntaxHelp": {
+      "toggle": "Syntaxhulp",
+      "intro": "Expressies berekenen een waarde uit workflowgegevens. Veelgebruikte patronen:",
+      "examples": {
+        "field": {
+          "label": "Veld",
+          "description": "Een waarde uit de trigger (payload.…) of een opgeslagen stapresultaat (vars.…)."
+        },
+        "text": {
+          "label": "Tekst",
+          "description": "Zet tekst tussen dubbele aanhalingstekens. Voeg waarden samen met &."
+        },
+        "equals": {
+          "label": "Gelijk aan",
+          "description": "Gebruik = voor gelijk aan en != voor niet gelijk aan."
+        },
+        "compare": {
+          "label": "Vergelijken",
+          "description": "Vergelijk getallen met >, >=, < en <=."
+        },
+        "andOr": {
+          "label": "En / of",
+          "description": "Combineer condities met and, or en haakjes."
+        },
+        "oneOf": {
+          "label": "Een van",
+          "description": "Waar wanneer de waarde overeenkomt met een item in de lijst."
+        },
+        "hasValue": {
+          "label": "Heeft een waarde",
+          "description": "Waar wanneer het veld aanwezig en niet leeg (null) is."
+        },
+        "notTrue": {
+          "label": "Niet",
+          "description": "Keer een conditie om door deze met false te vergelijken."
+        },
+        "choose": {
+          "label": "Een waarde kiezen",
+          "description": "conditie ? waarde indien waar : waarde indien onwaar."
+        },
+        "list": {
+          "label": "Lijst",
+          "description": "Zet waarden tussen rechte haken, gescheiden door komma’s, voor invoer die een lijst accepteert."
+        }
+      },
+      "functionsHeading": "Functies",
+      "transformsPointer": "Voor zwaarder tekstwerk voegt u in plaats daarvan een Transform-stap toe: Tekst afkappen, Tekst samenstellen, Tekst splitsen, Regex-extractie, Regex-vervanging en meer. Zoek in het palet naar \"tekst\" of \"regex\"."
+    },
+    "preview": {
+      "title": "Voorbeeld met voorbeeldgegevens",
+      "emptyResult": "(leeg)",
+      "cannotPreview": "Nog geen voorbeeld mogelijk: {{message}}"
+    }
   },
   "sourceDataTree": {
     "searchPlaceholder": "Velden doorzoeken...",
@@ -1586,6 +1926,11 @@
     "addItem": "Item toevoegen",
     "fill": "Invullen",
     "clearValues": "Waarden wissen",
+    "askAi": {
+      "ariaLabel": "Vraag AI om hulp bij transformaties",
+      "title": "Vraag AI",
+      "shortcutHint": "Open Quick Ask voor transformatiehulp"
+    },
     "applySuggestions": "Suggesties toepassen ({{count}})",
     "applySuggestionTitle": "Suggestie toepassen: {{sourcePath}}",
     "fuzzySuffix": "(benaderend)",
@@ -1630,11 +1975,6 @@
       "apply": "Toepassen",
       "cancel": "Annuleren"
     },
-    "askAi": {
-      "ariaLabel": "Vraag AI om hulp bij transformaties",
-      "title": "Vraag AI",
-      "shortcutHint": "Open Quick Ask voor transformatiehulp"
-    },
     "softEnumPlaceholder": "Selecteer of voer een waarde in",
     "softEnumSearchPlaceholder": "Zoek of voer een aangepaste waarde in",
     "softEnumNoResults": "Geen suggesties",
@@ -1672,7 +2012,24 @@
         "fromExpression": "het {{record}} gekozen door een expressie",
         "fixed": "een specifiek {{record}}"
       }
-    }
+    },
+    "ticketAssignment": {
+      "editFields": "Als afzonderlijke velden bewerken"
+    },
+    "reference": {
+      "firstItem": "(eerste item)",
+      "lastItem": "(laatste item)",
+      "wholeResult": "Volledig resultaat",
+      "oneItemList": "Deze enkele waarde wordt verzonden als een lijst met één item."
+    },
+    "setOptionalField": "Instellen",
+    "unsetOptionalField": "{{name}} niet instellen",
+    "textWithFieldsMode": "Tekst",
+    "textModeUnavailable": "Deze expressie doet meer dan tekst en velden samenvoegen, dus ze kan alleen als expressie worden bewerkt. Wis de expressie om opnieuw te beginnen als tekst.",
+    "partialMatchSuffix": "(vergelijkbare naam: controleer voor gebruik)",
+    "kindMatchSuffix": "(zelfde soort record)",
+    "kindMatchSuffixAn": "(ook een {{kind}})",
+    "kindMatchSuffixA": "(ook een {{kind}})"
   },
   "schemaReference": {
     "selectAction": "Selecteer een actie om het invoer-/uitvoerschema ervan te zien",
@@ -1733,7 +2090,14 @@
     "eventWithType": "Gebeurtenis: {{eventType}}",
     "oneTimeSchedule": "Eenmalige planning",
     "recurringSchedule": "Terugkerende planning",
-    "date": "Datum"
+    "date": "Datum",
+    "manualWithEvent": "Handmatige test met gebeurtenis: {{eventType}}",
+    "dateTiming": {
+      "before": "{{count}} dagen ervoor",
+      "after": "{{count}} dagen erna",
+      "onTheDay": "op de dag zelf"
+    },
+    "dateWithTiming": "{{source}}, {{timing}}"
   },
   "scheduleStatus": {
     "unknown": "Onbekend",
@@ -1914,7 +2278,9 @@
       "waitForTime": "Wachten op tijd",
       "humanTask": "Handmatige taak",
       "setState": "Status instellen",
-      "assign": "Toewijzen"
+      "assign": "Toewijzen",
+      "return": "Terugkeren",
+      "callWorkflow": "Workflow aanroepen"
     },
     "stepCard": {
       "lastStatus": "Laatste status: {{status}} ({{timestamp}})",
@@ -1946,7 +2312,13 @@
     },
     "lastRefreshed": "Laatst vernieuwd {{time}}",
     "navigation": {
-      "backToRuns": "← Terug naar workflow-uitvoeringen"
+      "backToRuns": "← Terug naar workflow-uitvoeringen",
+      "breadcrumbLabel": "Locatie van de uitvoering",
+      "workflows": "Workflows",
+      "runs": "Uitvoeringen",
+      "currentRunOf": "Uitvoering van {{workflow}}",
+      "currentRun": "Uitvoering {{id}}",
+      "backToWorkflow": "Terug naar workflow"
     },
     "title": "Workflow-uitvoeringsstudio"
   },
@@ -2386,7 +2758,9 @@
       },
       "tableValues": {
         "system": "Systeem",
-        "draftVersion": "Concept: v{{version}}"
+        "draftVersion": "Concept: v{{version}}",
+        "unpublishedChangesTitle": "Het opgeslagen concept bevat wijzigingen die nog niet zijn gepubliceerd. Uitvoeringen gebruiken v{{version}}.",
+        "unpublishedChanges": "Ongepubliceerde wijzigingen"
       },
       "rowMenu": {
         "ariaLabel": "Workflow-acties",
@@ -2394,7 +2768,12 @@
         "pause": "Pauzeren",
         "duplicate": "Dupliceren",
         "viewRuns": "Uitvoeringen bekijken",
-        "delete": "Verwijderen"
+        "delete": "Verwijderen",
+        "ariaLabelNamed": "Acties voor {{name}}",
+        "open": "Openen in editor",
+        "runPaused": "Uitvoeren (eerst hervatten)",
+        "run": "Uitvoeren…",
+        "title": "Workflowacties"
       },
       "states": {
         "errorTitle": "Workflows konden niet worden geladen",
@@ -2731,5 +3110,76 @@
   "actionInputTypeHint": {
     "coercible": "Type \"{{sourceType}}\" wordt geconverteerd naar \"{{targetType}}\"",
     "incompatible": "Type \"{{sourceType}}\" is niet compatibel met het verwachte type \"{{targetType}}\""
+  },
+  "ticketAssignmentEditor": {
+    "assignTo": "Toewijzen aan",
+    "assigneeHint": "Zoek gebruikers of teams",
+    "teamMode": "Hoe het team wordt toegewezen",
+    "teamModeLead": "Teamleider, met teamleden toegevoegd als extra medewerkers",
+    "teamModeQueue": "Wachtrij: het eerste lid van het team",
+    "additionalUsers": "Ook toewijzen (optioneel)",
+    "additionalUsersHint": "Gebruikers zoeken"
+  },
+  "textTemplateEditor": {
+    "insertField": "Veld invoegen",
+    "placeholder": "Typ tekst. Gebruik Veld invoegen om waarden toe te voegen, bijv. Ticket {{example}} is bijgewerkt",
+    "fieldsUsed": "Velden:",
+    "hint": "Tijdelijke aanduidingen zoals {{payloadExample}} of {{varsExample}} worden door de workflow ingevuld. Andere {{otherExample}}-aanduidingen blijven zoals geschreven, bijvoorbeeld voor de eigen gegevens van een e-mailsjabloon.",
+    "expand": "Uitvouwen",
+    "expandedTitle": "Tekst bewerken",
+    "done": "Gereed",
+    "hintInLoop": "Tijdelijke aanduidingen zoals {{itemExample}}, {{indexExample}}, {{payloadExample}} of {{varsExample}} worden door de workflow ingevuld. Andere {{otherExample}}-aanduidingen blijven zoals geschreven, bijvoorbeeld voor de eigen gegevens van een e-mailsjabloon."
+  },
+  "valueSourceChooser": {
+    "origin": {
+      "trigger": "Trigger",
+      "loop": "Huidig lusitem",
+      "error": "Opgevangen fout",
+      "workflow": "Workflowuitvoering"
+    },
+    "chooseSpecific": "Kies een specifieke {{entity}}…",
+    "typeText": "Typ tekst (voeg onderweg velden in)…",
+    "enterValue": "Voer een vaste waarde in…",
+    "tierSameName": "Dezelfde naam",
+    "tierSameKind": "Zelfde soort record",
+    "tierActor": "Wie het deed, niet het record zelf",
+    "writeExpression": "Schrijf een expressie…",
+    "placeholder": "Kies een veld uit eerdere stappen of de trigger",
+    "noMatches": "Geen passende velden. Kies een vaste waarde of schrijf een expressie.",
+    "groupSuggested": "Voorgesteld",
+    "currentSpecific": "Een specifieke {{entity}}",
+    "currentText": "Tekst",
+    "currentFixed": "Vaste waarde",
+    "currentExpression": "Expressie",
+    "label": "Waarde van",
+    "tierSameKindAn": "Ook een {{kind}}",
+    "tierSameKindA": "Ook een {{kind}}"
+  },
+  "notificationRecipientsEditor": {
+    "users": "Gebruikers op de hoogte stellen",
+    "usersHint": "Gebruikers zoeken",
+    "roles": "Iedereen met deze rollen op de hoogte stellen",
+    "rolesHint": "Een rol toevoegen",
+    "roleNames": "Rolnamen (optioneel)",
+    "roleNamesPlaceholder": "bijv. Technicus, Planner (wordt op naam gekoppeld wanneer de workflow wordt uitgevoerd)",
+    "empty": "Kies minimaal een gebruiker of rol om op de hoogte te stellen."
+  },
+  "emailUserRecipientsEditor": {
+    "users": "E-mail naar gebruikers",
+    "usersHint": "Gebruikers zoeken",
+    "roles": "E-mail naar iedereen met deze rollen",
+    "rolesHint": "Rol toevoegen",
+    "roleNames": "Rolnamen (optioneel)",
+    "roleNamesPlaceholder": "bijv. Technician, Dispatcher (op naam gekoppeld wanneer de workflow wordt uitgevoerd)",
+    "empty": "Kies gebruikers of rollen, of selecteer hieronder een ticket."
+  },
+  "emailRecipientsEditor": {
+    "remove": "{{email}} verwijderen",
+    "placeholder": "Typ een adres en druk op Enter, bijv. Ada Lovelace <ada@example.com>",
+    "invalid": "Geen e-mailadres: {{entries}}"
+  },
+  "fieldPicker": {
+    "searchPlaceholder": "Velden zoeken",
+    "noMatches": "Geen overeenkomende velden"
   }
 }

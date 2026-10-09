@@ -7,6 +7,7 @@ import BulkBundleDialog from './BulkBundleDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
+import { createTicketActionsColumn } from './ticketActionsColumn';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -1590,7 +1591,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn = createTicketActionsColumn({
+      t,
+      onDuplicate: (ticketId) => navigateAwayTo(buildCreateTicketHref({
+        duplicateFromTicketId: ticketId,
+        isAlgaDeskMode: useAlgaDeskQuickAddForm,
+      })),
+    });
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1616,6 +1627,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
     t,
     locale,
     dateFormat,
@@ -1818,6 +1831,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
       entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      latest_activity_at: (ticket) => formatPrintDateTime(ticket.latest_activity_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
         return tags.length > 0
@@ -1839,7 +1853,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
             ? 'tickets-print-title-column'
-            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at' || dataIndexKey === 'latest_activity_at'
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.6.7",
+  "version": "1.6.10",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx tsx dev-server.ts",
-    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 npx tsx dev-server.ts",
+    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
+    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
@@ -57,7 +57,8 @@
     "rollback-tenant": "tsx scripts/rollback-tenant.ts",
     "migrate:ee": "node scripts/run-ee-migrations.js",
     "migrate:ee:down": "node scripts/run-ee-migrations.js down",
-    "migrate:ee:status": "node scripts/run-ee-migrations.js status"
+    "migrate:ee:status": "node scripts/run-ee-migrations.js status",
+    "test:calendar-routing": "vitest run --config vitest.redis.config.ts src/test/infrastructure/eventBusWorktreeNamespace.test.ts src/test/infrastructure/calendarSearchSubscriberDelivery.test.ts src/test/integration/calendar/automaticCalendarDelivery.integration.test.ts --coverage.enabled=false"
   },
   "nx": {
     "targets": {
@@ -137,13 +138,14 @@
     "@wasmer/sdk": "^0.9.0",
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "cookie-parser": "^1.4.7",
     "cookies-next": "^6.1.0",
+    "cron-parser": "^4.9.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
@@ -171,12 +173,12 @@
     "mkdirp": "^3.0.1",
     "monaco-editor": "^0.52.2",
     "nestjs-knex": "^2.0.0",
-    "next": "16.2.12",
+    "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",
     "node-vault": "^0.10.2",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.13",
     "papaparse": "^5.5.3",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",

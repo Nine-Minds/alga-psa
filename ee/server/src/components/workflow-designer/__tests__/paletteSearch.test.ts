@@ -3,6 +3,8 @@ import {
   buildPaletteSearchIndex,
   groupPaletteItemsByCategory,
   matchesPaletteSearchQuery,
+  rankPaletteSearchResults,
+  scorePaletteSearchMatch,
 } from '../paletteSearch';
 
 describe('workflow designer palette search helpers', () => {
@@ -97,5 +99,103 @@ describe('workflow designer palette search helpers', () => {
     expect(Object.keys(grouped)).toEqual(['Control', 'Core', 'Transform', 'Apps', 'Nodes']);
     expect(grouped.Control.map((item) => item.id)).toEqual(['control.forEach', 'control.if']);
     expect(grouped.Core.map((item) => item.id)).toEqual(['ticket']);
+  });
+
+  it('matches synonyms of query words, so "note" finds comment actions and "notify" finds alerts', () => {
+    const commentIndex = buildPaletteSearchIndex(['Add Ticket Comment', 'tickets.add_comment', 'ticket_id body visibility']);
+    const alertIndex = buildPaletteSearchIndex(['Send In-App Notification', 'notifications.send_in_app']);
+
+    expect(matchesPaletteSearchQuery(commentIndex, 'note')).toBe(true);
+    expect(matchesPaletteSearchQuery(commentIndex, 'add note')).toBe(true);
+    expect(matchesPaletteSearchQuery(commentIndex, 'internal notes')).toBe(false);
+    expect(matchesPaletteSearchQuery(alertIndex, 'alert')).toBe(true);
+    expect(matchesPaletteSearchQuery(alertIndex, 'notify')).toBe(true);
+    expect(matchesPaletteSearchQuery(alertIndex, 'note')).toBe(false);
+  });
+
+  describe('ranking', () => {
+    const action = (id: string, label: string, fieldNames: string[] = [], description = '') => ({
+      id,
+      searchFields: { label, aliases: [id], description: [description], keywords: fieldNames },
+    });
+    const catalog = [
+      action('tickets.add_attachment', 'Add Ticket Attachment', ['ticket_id', 'comment']),
+      action('scheduling.assign_user', 'Assign User (Schedule Entry)', ['entry_id', 'comment']),
+      action('crm.create_quote', 'Create Quote', ['client_id', 'notes', 'comment']),
+      action('time.find_entries', 'Find Time Entries', ['comment', 'ticket_id']),
+      action('time.find_billing_blockers', 'Find Time Billing Blockers', ['ticket', 'ticket_id']),
+      action('crm.find_activities', 'Find CRM Activities', ['ticket_id']),
+      action('tickets.add_comment', 'Add Ticket Comment', ['ticket_id', 'body']),
+      action('tickets.find', 'Find Ticket', ['ticket_id', 'priority_name']),
+      action('tickets.find_attachments', 'Find Ticket Attachments', ['ticket_id']),
+    ];
+    const ranked = (query: string) => rankPaletteSearchResults(catalog, query).map((item) => item.id);
+
+    it('finds Increment Stored Number for counter words', () => {
+      const withIncrement = [...catalog, action('store.increment', 'Increment Stored Number', ['namespace', 'key', 'by'])];
+      for (const query of ['counter', 'tally', 'increment']) {
+        expect(rankPaletteSearchResults(withIncrement, query).map((item) => item.id)[0]).toBe('store.increment');
+      }
+    });
+
+    it('puts an action named with the search word first, ahead of field-name matches', () => {
+      expect(ranked('comment')[0]).toBe('tickets.add_comment');
+      expect(ranked('comment').indexOf('crm.create_quote')).toBeGreaterThan(0);
+    });
+
+    it('puts an exact name first, then longer names that contain it', () => {
+      expect(ranked('find ticket').slice(0, 2)).toEqual(['tickets.find', 'tickets.find_attachments']);
+    });
+
+    it('matches a partly typed last word in the name', () => {
+      expect(ranked('add ticket com')[0]).toBe('tickets.add_comment');
+    });
+
+    it('uses synonyms on names, but not on field names', () => {
+      expect(ranked('note')[0]).toBe('tickets.add_comment');
+      // Create Quote has a "notes" field, which is the word itself (not a synonym), so it still matches.
+      expect(scorePaletteSearchMatch(catalog[2].searchFields, 'note')).not.toBeNull();
+      expect(scorePaletteSearchMatch({ label: 'Create Quote', keywords: ['remark'] }, 'note')).toBeNull();
+    });
+
+    it('finds Send Email for "email engineer", "email technician", "email assignee" and "email resource"', () => {
+      const withEmail = [
+        ...catalog,
+        action('email.send', 'Send Email', ['to', 'users', 'ticket_id', 'subject'], "Send an email to addresses, users, roles, or a ticket's assigned technicians"),
+        action('notifications.send_in_app', 'Send In-App Notification', ['recipients', 'title', 'body']),
+      ];
+      for (const query of ['email engineer', 'email technician', 'email assignee', 'email resource']) {
+        const top = rankPaletteSearchResults(withEmail, query).map((item) => item.id).slice(0, 3);
+        expect(top, query).toContain('email.send');
+      }
+    });
+
+    it('ranks by tier: exact > prefix > words > ids > description > fields', () => {
+      const score = (label: string, query: string, extra: Partial<Parameters<typeof scorePaletteSearchMatch>[0]> = {}) =>
+        scorePaletteSearchMatch({ label, ...extra }, query) ?? -1;
+      expect(score('Find Ticket', 'find ticket')).toBeGreaterThan(score('Find Ticket Attachments', 'find ticket'));
+      expect(score('Find Ticket Attachments', 'find ticket')).toBeGreaterThan(score('Ticket Find', 'find ticket'));
+      expect(score('Ticket Find', 'find ticket')).toBeGreaterThan(score('Lookup', 'find ticket', { aliases: ['tickets.find'] }));
+      expect(score('Lookup', 'find ticket', { aliases: ['tickets.find'] }))
+        .toBeGreaterThan(score('Lookup', 'find ticket', { description: ['Find a ticket'] }));
+      expect(score('Lookup', 'find ticket', { description: ['Find a ticket'] }))
+        .toBeGreaterThan(score('Lookup', 'find ticket', { keywords: ['find', 'ticket'] }));
+      expect(score('Lookup', 'find ticket')).toBe(-1);
+    });
+
+    it('ranks business actions above generic transforms that match as well', () => {
+      const items = [
+        { id: 'transform.assign', category: 'Transform', searchFields: { label: 'Set variables', aliases: ['transform.assign'] } },
+        { id: 'transform:pick', tileKind: 'transform', category: 'Actions', searchFields: { label: 'Assign Fields' } },
+        { id: 'tickets.assign', tileKind: 'core-object', category: 'Actions', searchFields: { label: 'Assign Ticket To Team' } },
+      ];
+      expect(rankPaletteSearchResults(items, 'assign').map((item) => item.id)).toEqual([
+        'tickets.assign',
+        'transform:pick',
+        'transform.assign',
+      ]);
+      // A better match tier still wins over the business/transform tiebreak.
+      expect(rankPaletteSearchResults(items, 'assign fields').map((item) => item.id)[0]).toBe('transform:pick');
+    });
   });
 });

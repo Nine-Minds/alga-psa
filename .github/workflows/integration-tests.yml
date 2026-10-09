@@ -17,6 +17,10 @@ on:
     - cron: '30 4 * * *'
 
 jobs:
+  images:
+    name: Pinned images
+    uses: ./.github/workflows/pinned-images.yml
+
   check-changes:
     name: Check for relevant changes
     runs-on: ubuntu-latest
@@ -44,9 +48,9 @@ jobs:
 
   integration-tests:
     name: Integration shard ${{ matrix.shard }}
-    needs: check-changes
+    needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -56,7 +60,7 @@ jobs:
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
@@ -72,9 +76,11 @@ jobs:
         image: greenmail/standalone:2.1.8
         env:
           GREENMAIL_OPTS: '-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled'
+        # Let Docker allocate available host ports; fixed high ports can collide
+        # with existing listeners before the job even reaches checkout.
         ports:
-          - 33025:3025
-          - 38080:8080
+          - 3025
+          - 8080
       # Event-bus integration paths need real Redis streams; the suite-wide
       # `redis` stub alias is skipped via REAL_REDIS below.
       redis:
@@ -91,8 +97,6 @@ jobs:
       INTEGRATION_SHARD_INDEX: ${{ matrix.shard }}
       INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       COMMENT_SMTP_ISOLATED: 'true'
-      COMMENT_SMTP_PORT: '33025'
-      COMMENT_SMTP_API_PORT: '38080'
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
@@ -116,6 +120,14 @@ jobs:
         with:
           # The Tier-1 gate diffs against TIER1_BASE_SHA to pick affected suites.
           fetch-depth: 0
+
+      - name: Configure isolated SMTP ports
+        env:
+          SMTP_PORT: ${{ job.services['comment-smtp'].ports['3025'] }}
+          SMTP_API_PORT: ${{ job.services['comment-smtp'].ports['8080'] }}
+        run: |
+          echo "COMMENT_SMTP_PORT=$SMTP_PORT" >> "$GITHUB_ENV"
+          echo "COMMENT_SMTP_API_PORT=$SMTP_API_PORT" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -306,8 +318,8 @@ jobs:
   # aggregate rejects missing, stale or failed shard evidence.
   infrastructure-tests:
     name: Infrastructure shard ${{ matrix.shard }}
-    needs: check-changes
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    needs: [check-changes, images]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -317,7 +329,7 @@ jobs:
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
@@ -415,7 +427,7 @@ jobs:
           name: infrastructure-shard-${{ matrix.shard }}
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       # Published only when this shard retried something. The shard bundle above
       # expires in a week; the weekly flaky report reads this one.
@@ -464,7 +476,7 @@ jobs:
           name: infrastructure-execution-evidence
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
       - name: Record full infrastructure metrics to Google Sheet
         if: always() && env.INFRA_MODE == 'full' && needs.infrastructure-tests.result != 'skipped'
         continue-on-error: true
@@ -477,14 +489,14 @@ jobs:
 
   workspace-db-tests:
     name: Workspace database tests
-    needs: check-changes
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    needs: [check-changes, images]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
@@ -594,7 +606,7 @@ jobs:
           name: workspace-db-evidence
           path: test-results/workspace-db/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
   workspace-db-complete:
     name: Workspace database execution complete

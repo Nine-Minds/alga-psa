@@ -279,6 +279,17 @@ jobs:
           path: test-results/production-readiness/
           if-no-files-found: error
           retention-days: 30
+      # One row per run in the sheet's gate_runs tab: the verdict above plus the
+      # lanes that went red (docs/reference/test-metrics.md). No-op without the
+      # Google secrets; never fails the gate.
+      - name: Record gate verdict to Google Sheet
+        if: always()
+        continue-on-error: true
+        run: node scripts/record-gate-metrics.mjs
+        env:
+          READINESS_JOBS: ${{ toJSON(needs) }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
   # Scores the shadow selection against the executed integration shards and
   # browser journeys: recall against real failures and the share of executed

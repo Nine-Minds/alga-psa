@@ -10,6 +10,10 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 const COUNTABLE_INVOICE_STATUSES = [
   'sent',
@@ -377,6 +381,9 @@ async function fetchRevenueFacts(
           JOIN time_entries te
             ON te.tenant = ite.tenant
            AND te.entry_id = ite.entry_id
+          -- Task time only, on purpose: the ticket resolver reads today's links,
+          -- so using it here would zero hourly ticket revenue that was really
+          -- invoiced, and rewrite past periods whenever a link is toggled.
           JOIN project_tasks task
             ON task.tenant = te.tenant
            AND te.work_item_type = 'project_task'
@@ -595,9 +602,13 @@ async function fetchLaborFacts(knex: Knex, tenant: string, startDate: string, en
     LEFT JOIN project_phases pp
       ON pp.tenant = pt.tenant
      AND pp.phase_id = pt.phase_id
+    ${ticketProjectAttributionJoin('te')}
+    -- Every consumer resolves a time entry's project the same way, so labor on
+    -- a linked ticket reaches its project here too. Client attribution for
+    -- ticket time deliberately stays on the ticket (see the CASE above).
     LEFT JOIN projects p
-      ON p.tenant = pp.tenant
-     AND p.project_id = pp.project_id
+      ON p.tenant = te.tenant
+     AND p.project_id = ${ticketProjectIdExpression('pp')}
     LEFT JOIN interactions i
       ON i.tenant = te.tenant
      AND te.work_item_type = 'interaction'

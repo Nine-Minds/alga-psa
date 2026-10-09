@@ -656,6 +656,43 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
+  // Last Activity (newest of the ticket's own timestamps and its latest comment)
+  if (columnVisibility.last_activity) {
+    columns.push({
+      key: 'last_activity',
+      col: {
+        title: t('fields.lastActivity', 'Last Activity'),
+        dataIndex: 'latest_activity_at',
+        width: '10%',
+        render: (value: string | null, record: ITicketListItem) => {
+          const actor = record.latest_activity_actor;
+          const actorLabel = !actor
+            ? null
+            : actor.kind === 'system'
+              ? t('conversation.systemAuthor', 'System')
+              : actor.name
+                ? t('fields.byName', 'by {{name}}').replace('{{name}}', actor.name)
+                : null;
+          return (
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm text-gray-500">
+                {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
+              </span>
+              {actorLabel && (
+                <span
+                  className="text-[11px] text-[rgb(var(--color-text-400))]"
+                  data-testid="last-activity-actor"
+                >
+                  {actorLabel}
+                </span>
+              )}
+            </div>
+          );
+        },
+      }
+    });
+  }
+
   // Apply the stored order to the reorderable columns only, leaving every other
   // kind exactly where the builder put it. Sorting the whole array would let a
   // stored order drag the title cell out of first position.

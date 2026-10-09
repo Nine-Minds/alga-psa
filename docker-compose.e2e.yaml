@@ -103,7 +103,9 @@ secrets:
 services:
   # Test-specific PostgreSQL instance
   postgres-test:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     container_name: ${APP_NAME:-sebastian}_postgres_test
     networks:
       - app-network
@@ -114,7 +116,7 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "5433:5432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d server_test"]
       interval: 10s
@@ -134,7 +136,7 @@ services:
     secrets:
       - redis_password
     ports:
-      - "6380:6379"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
@@ -162,7 +164,7 @@ services:
       postgres-test:
         condition: service_healthy
     ports:
-      - "6433:6432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:6433:6432"
 
   # Test setup service
   setup-test:

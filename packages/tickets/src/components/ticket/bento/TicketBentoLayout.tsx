@@ -4,6 +4,7 @@ import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -35,6 +36,7 @@ import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
+import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -135,7 +137,9 @@ export interface TicketBentoLayoutProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
@@ -160,7 +164,12 @@ export interface TicketBentoLayoutProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
-  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  onAddReplyComment?: (
+    content: PartialBlock[],
+    parentCommentId: string,
+    isInternal: boolean,
+    emailRecipients?: CommentEmailRecipientsPayload,
+  ) => Promise<boolean>;
   /**
    * Server-started data promises from the RSC page. Tiles resolve them via
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
@@ -196,6 +205,8 @@ export interface TicketBentoLayoutProps {
   onPause: () => void;
   onStop: () => void;
   onAddTimeEntry: () => void;
+  /** True while the time-entry launch chain is in flight; disables the button. */
+  isLaunchingTimeEntry?: boolean;
   userId?: string;
   showWeekday?: boolean;
   timeEntriesRefreshKey?: number;
@@ -678,7 +689,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         type="button"
         className="w-full mb-3"
         onClick={props.onAddTimeEntry}
+        disabled={props.isLaunchingTimeEntry}
       >
+        {props.isLaunchingTimeEntry ? (
+          <Spinner size="button" variant="inverted" className="mr-2" />
+        ) : null}
         {t('bento.tiles.addTimeEntry', 'Add time entry')}
       </Button>
 
@@ -965,6 +980,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
+            allowEmailRecipients
+            clientId={ticket.client_id ?? null}
           />
           </Suspense>
         </div>

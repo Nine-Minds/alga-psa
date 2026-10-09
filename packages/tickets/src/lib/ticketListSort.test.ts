@@ -14,6 +14,7 @@ describe('ticket list sort contract', () => {
       'assigned_to_name',
       'assigned_team_name',
       'updated_at',
+      'latest_activity_at',
       'entered_at',
       'due_date',
     ]) {
@@ -24,6 +25,7 @@ describe('ticket list sort contract', () => {
   it('recognizes only supported keys', () => {
     expect(isTicketListSortKey('assigned_to_name')).toBe(true);
     expect(isTicketListSortKey('updated_at')).toBe(true);
+    expect(isTicketListSortKey('latest_activity_at')).toBe(true);
     expect(isTicketListSortKey('assigned_to_ids')).toBe(false);
     expect(isTicketListSortKey(undefined)).toBe(false);
     expect(isTicketListSortKey(42)).toBe(false);

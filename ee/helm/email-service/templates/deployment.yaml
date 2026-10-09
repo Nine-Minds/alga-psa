@@ -70,7 +70,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.waitForBootstrap.image.name }}:{{ .Values.waitForBootstrap.image.tag }}"
+          image: {{ include "email-service.imageRef" .Values.waitForBootstrap.image | quote }}
           imagePullPolicy: {{ .Values.waitForBootstrap.pullPolicy }}
           command: ["/bin/sh", "-ec"]
           args:

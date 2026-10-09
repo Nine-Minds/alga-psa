@@ -55,6 +55,19 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
     expect(sidebarSource).not.toContain('bg-gray-700');
   });
 
+  it('gates the projects and documents links on their read permissions', () => {
+    // A portal role with project/document access unchecked must not even be
+    // offered the link; the routes enforce the same permissions server-side.
+    expect(sidebarSource).toContain('hasProjectAccess: boolean;');
+    expect(sidebarSource).toContain('hasDocumentAccess: boolean;');
+    expect(sidebarSource).toMatch(
+      /permissions\.hasProjectAccess[\s\S]{0,120}'\/client-portal\/projects'/,
+    );
+    expect(sidebarSource).toMatch(
+      /permissions\.hasDocumentAccess[\s\S]{0,120}'\/client-portal\/documents'/,
+    );
+  });
+
   it('contains explicit AlgaDesk portal navigation gating', () => {
     expect(sidebarSource).toContain('const isAlgaDeskPortal = productCode === \'algadesk\'');
     expect(sidebarSource).toContain('/client-portal/knowledge-base');

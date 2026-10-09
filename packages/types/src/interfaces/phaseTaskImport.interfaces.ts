@@ -22,6 +22,7 @@ export type MappableTaskField =
   | 'assigned_to'
   | 'estimated_hours'
   | 'actual_hours'
+  | 'start_date'
   | 'due_date'
   | 'priority'
   | 'service'
@@ -39,6 +40,7 @@ export const TASK_IMPORT_FIELDS: Record<MappableTaskField, { label: string; requ
   assigned_to: { label: 'Assigned To', required: false },
   estimated_hours: { label: 'Estimated Hours', required: false },
   actual_hours: { label: 'Actual Hours', required: false },
+  start_date: { label: 'Start Date', required: false },
   due_date: { label: 'Due Date', required: false },
   priority: { label: 'Priority', required: false },
   service: { label: 'Service', required: false },
@@ -73,6 +75,7 @@ export interface ITaskImportRow {
   assigned_to?: string;
   estimated_hours?: string;
   actual_hours?: string;
+  start_date?: string;
   due_date?: string;
   priority?: string;
   service?: string;
@@ -115,6 +118,7 @@ export interface IGroupedTaskData {
   additional_agent_ids: string[];
   estimated_hours: number | null;
   actual_hours: number | null;
+  start_date: Date | null;
   due_date: Date | null;
   priority_id: string | null;
   service_id: string | null;

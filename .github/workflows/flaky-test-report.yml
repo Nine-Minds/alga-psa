@@ -34,6 +34,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           FLAKY_WINDOW_DAYS: ${{ inputs.window_days || '7' }}
+      # The sheet is where the list is tracked and owned (flaky_tests tab, one
+      # row per test per report); the summary and artifact below stay as the
+      # run's own record. A re-run attempt of the same workflow run appends
+      # nothing.
+      - name: Record the report in the test-metrics sheet
+        run: node scripts/record-flaky-tests.mjs test-results/flaky-tests
+        env:
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
       # The collector writes collection.json even when aggregation fails, so the
       # normal red path still ships its diagnostics. Only a job killed before
       # that write leaves the directory absent, and then the failing step above

@@ -52,6 +52,7 @@
         "fillRequiredFields": "Complete todos los campos obligatorios",
         "loadFailed": "No se pudo cargar el perfil",
         "saveFailed": "No se pudo guardar el perfil",
+        "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York.",
         "errorPrefix": "Error: {{error}}"
       }
     },
@@ -726,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "No se pudo vincular el SSO.",
+      "no_matching_user": "La cuenta con la que inició sesión es {{providerEmail}}, pero su inicio de sesión de AlgaPSA es {{accountEmail}}. Vincule una cuenta que use {{accountEmail}} o pida al administrador de su proveedor de identidad que establezca {{accountEmail}} como dirección de correo electrónico principal de esa cuenta.",
+      "missing_email": "Su proveedor de identidad no devolvió una dirección de correo electrónico para esa cuenta, por lo que no se puede asociar con su inicio de sesión de AlgaPSA {{accountEmail}}. Pida al administrador de su proveedor de identidad que publique una dirección de correo electrónico para la cuenta e inténtelo de nuevo.",
+      "inactive_user": "El usuario de AlgaPSA para {{providerEmail}} está inactivo, por lo que no se puede vincular. Pida a su administrador que lo reactive e inténtelo de nuevo.",
+      "user_type_mismatch": "{{providerEmail}} corresponde a un usuario del portal del cliente, no a un usuario interno de AlgaPSA. Vincule en su lugar una cuenta que use {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} pertenece a una organización distinta de {{accountEmail}}. Vincule una cuenta de su propia organización.",
+      "generic": "No pudimos vincular esa cuenta con {{accountEmail}}. Inténtelo de nuevo o póngase en contacto con su administrador.",
+      "unknownProviderEmail": "una cuenta sin dirección de correo electrónico"
+    },
     "verify": {
       "title": "Asegure su cuenta con SSO",
       "description": "Vincule Azure AD o Google Workspace para reutilizar las políticas organizacionales y omitir las solicitudes locales de doble factor.",

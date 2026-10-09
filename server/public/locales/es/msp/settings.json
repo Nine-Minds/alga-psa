@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York.",
         "permissionDenied": "No tiene permiso para cambiar los roles de usuario.",
         "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
         "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
@@ -820,6 +821,27 @@
           "appearanceHelp": "Anclaje de pestaña y vista de lista predeterminada del tablero",
           "assignment": "Asignación y SLA",
           "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
+          "notifications": "Notificaciones",
+          "notificationsHelp": "Avisar a los técnicos de tickets nuevos y cambios de estado, y definir observadores predeterminados",
+          "notificationsRulesLabel": "Reglas de notificación",
+          "notificationsRulesHelp": "Los destinatarios reciben una notificación por evento. No se añaden como observadores.",
+          "notificationsAddRule": "Añadir regla",
+          "notificationsRuleTitle": "Regla {{number}}",
+          "notificationsRuleEnabled": "Activada",
+          "notificationsRemoveRule": "Eliminar regla",
+          "notificationsOnCreate": "Cuando se crea un ticket en este tablero",
+          "notificationsOnStatus": "Cuando un ticket pasa al estado",
+          "notificationsNoStatuses": "Los estados se pueden seleccionar una vez guardado el tablero.",
+          "notificationsRecipients": "Notificar a",
+          "notificationsRecipientsPlaceholder": "Seleccionar usuarios y equipos...",
+          "notificationsRecipientsHelp": "Los miembros del equipo se consultan cada vez que se envía una notificación.",
+          "notificationsDefaultWatchers": "Observadores predeterminados",
+          "notificationsDefaultWatchersPlaceholder": "Seleccionar usuarios...",
+          "notificationsDefaultWatchersHelp": "Se añaden a la lista de seguimiento de cada ticket nuevo de este tablero y reciben todas las actualizaciones posteriores.",
+          "notificationsTriggerRequired": "Cada regla de notificación necesita al menos un desencadenante: la creación de un ticket o un estado.",
+          "notificationsRecipientRequired": "Cada regla de notificación necesita al menos un usuario o equipo a quien notificar.",
+          "notificationsFetchFailed": "No se pudo cargar la configuración de notificaciones",
+          "notificationsStatusRemapFailed": "Se creó el tablero, pero no se pudo asociar el estado de una regla de notificación con el nuevo tablero. Vuelva a agregar las reglas de notificación.",
           "inbound": "Correo y respuestas entrantes",
           "inboundHelp": "Reabrir tickets cuando los clientes respondan por correo electrónico",
           "close": "Reglas de cierre",
@@ -1824,6 +1846,12 @@
         "useLogo": "Usar mi logo en el encabezado del correo electrónico",
         "logoWide": "Logo ancho",
         "logoDefault": "Logo cuadrado",
+        "logoArtwork": "Versión del logo",
+        "logoArtworkAuto": "Según el encabezado",
+        "logoArtworkLight": "Logo para fondo claro",
+        "logoArtworkDark": "Logo para fondo oscuro",
+        "logoArtworkAutoDark": "El modo automático considera oscuro este encabezado y usa el logo para fondo oscuro.",
+        "logoArtworkAutoLight": "El modo automático considera claro este encabezado y usa el logo para fondo claro.",
         "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
         "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }
@@ -2391,6 +2419,11 @@
       "updateFailed": "No se pudo actualizar el rol",
       "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
       "deleteFailed": "No se pudo eliminar el rol"
+    },
+    "editDialog": {
+      "title": "Editar rol",
+      "builtInNameLocked": "Los nombres de los roles integrados no se pueden cambiar porque el sistema depende de ellos.",
+      "portalLocked": "El acceso al portal no se puede cambiar después de crear un rol."
     }
   },
   "security": {
@@ -3445,7 +3478,10 @@
       "duplicate": "Ese usuario ya tiene el rol seleccionado.",
       "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
       "missingField": "Falta un campo obligatorio del rol de usuario.",
-      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
+      "nameRequired": "El nombre del rol es obligatorio.",
+      "builtInRename": "Los roles integrados no se pueden renombrar.",
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
@@ -3470,6 +3506,7 @@
       "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
       "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} no es una zona horaria basada en una ciudad. Elige una zona como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
         "update": "Permiso denegado: no se puede actualizar la configuración",

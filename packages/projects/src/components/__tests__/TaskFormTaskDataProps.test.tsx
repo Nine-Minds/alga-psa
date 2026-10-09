@@ -225,6 +225,7 @@ describe('TaskForm taskData prop', () => {
             created_at: new Date(),
             updated_at: new Date(),
             wbs_code: '1',
+            start_date: null,
             due_date: new Date('2026-02-05T00:00:00.000Z'),
             task_type_key: 'task',
             tenant: 'tenant-1'

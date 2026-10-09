@@ -8,6 +8,7 @@ import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryAct
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -40,7 +41,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
+          {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}

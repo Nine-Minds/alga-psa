@@ -32,7 +32,7 @@ export abstract class BaseStorageProvider {
     abstract upload(
         file: Buffer | Readable,
         path: string,
-        options?: { mime_type?: string; metadata?: Record<string, string> }
+        options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }
     ): Promise<UploadResult>;
     abstract download(path: string): Promise<Buffer>;
     abstract delete(path: string): Promise<void>;
@@ -66,7 +66,7 @@ export class S3StorageProvider extends BaseStorageProvider {
         );
     }
 
-    async upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult> {
+    async upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }): Promise<UploadResult> {
         this.throwEnterpriseError('upload');
     }
 

@@ -13,11 +13,14 @@ const runtimeState = vi.hoisted(() => ({
   currentTenantTx: null as {
     tenantId: string;
     actorUserId: string;
+    workflowId: string;
+    lineage: string[];
     trx: any;
   } | null,
   createTicketMock: vi.fn(),
   updateTicketMock: vi.fn(),
   createCommentMock: vi.fn(),
+  createWithEffectsMock: vi.fn(),
   dbUpdates: [] as Array<{
     tableName: string;
     conditions: Record<string, any>;
@@ -63,6 +66,10 @@ vi.mock('../../../../models/ticketModel', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../../services/tickets/createTicketWithSideEffects', () => ({
+  createTicketWithSideEffects: runtimeState.createWithEffectsMock,
+}));
+
 vi.mock('../../registries/workflowEmailRegistry', () => ({
   getWorkflowEmailProvider: () => ({
     TenantEmailService: {
@@ -80,6 +87,7 @@ import { registerTicketActions } from '../businessOperations/tickets';
 class FakeQueryBuilder {
   private conditions: Record<string, any> = {};
   private comparisons: Array<{ column: string; operator: string; value: any }> = [];
+  private inclusions: Array<{ column: string; values: any[] }> = [];
   private orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
   private joins: Array<{
     tableName: string;
@@ -137,6 +145,18 @@ class FakeQueryBuilder {
     return this.where(columnOrConditions as any, operatorOrValue);
   }
 
+  whereIn(column: string, values: any[]): this {
+    if (column === 'author_type') {
+      // Postgres rejects values outside the comment_author_type enum, so the mock does too.
+      const invalid = values.filter((value) => !['internal', 'client', 'unknown'].includes(value));
+      if (invalid.length > 0) {
+        throw new Error(`invalid input value for enum comment_author_type: "${invalid[0]}"`);
+      }
+    }
+    this.inclusions.push({ column, values });
+    return this;
+  }
+
   andWhereRaw(sql: string, bindings: any[]): this {
     if (sql.includes("attributes->>'external_ref'")) {
       this.rawExternalRef = String(bindings[0]);
@@ -191,6 +211,7 @@ class FakeQueryBuilder {
     const cloned = new FakeQueryBuilder(this.tableName, this.tables);
     cloned.conditions = { ...this.conditions };
     cloned.comparisons = [...this.comparisons];
+    cloned.inclusions = [...this.inclusions];
     cloned.orderings = [...this.orderings];
     cloned.joins = this.joins.map((join) => ({ ...join, clauses: [...join.clauses] }));
     cloned.selectedColumns = [...this.selectedColumns];
@@ -253,6 +274,7 @@ class FakeQueryBuilder {
 
   private matches(row: TableRow): boolean {
     return Object.entries(this.conditions).every(([column, value]) => this.valueFor(row, column) === value)
+      && this.inclusions.every(({ column, values }) => values.includes(this.valueFor(row, column)))
       && this.comparisons.every(({ column, operator, value }) => {
         const rowValue = this.valueFor(row, column);
         if (operator === '>') {
@@ -354,6 +376,8 @@ function setTenantTx(tables: TableMap): void {
   runtimeState.currentTenantTx = {
     tenantId: 'tenant-1',
     actorUserId: 'user-1',
+    workflowId: 'workflow-1',
+    lineage: [],
     trx: createFakeTrx(tables),
   };
 }
@@ -436,7 +460,7 @@ function createFindComments(): TableRow[] {
       created_at: '2026-03-10T10:00:00.000Z',
       user_id: null,
       contact_id: findIds.contactId,
-      author_type: 'contact',
+      author_type: 'client',
     },
     {
       tenant: 'tenant-1',
@@ -462,7 +486,7 @@ function createFindComments(): TableRow[] {
       created_at: '2026-03-10T12:00:00.000Z',
       user_id: null,
       contact_id: findIds.contactId,
-      author_type: 'contact',
+      author_type: 'client',
     },
   ];
 }
@@ -474,6 +498,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     runtimeState.createTicketMock.mockReset();
     runtimeState.updateTicketMock.mockReset();
     runtimeState.createCommentMock.mockReset();
+    runtimeState.createWithEffectsMock.mockReset();
     runtimeState.dbUpdates.length = 0;
     registerTicketActions();
   });
@@ -517,7 +542,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       message: 'Invalid status_id for selected board',
     });
 
-    expect(runtimeState.createTicketMock).not.toHaveBeenCalled();
+    expect(runtimeState.createWithEffectsMock).not.toHaveBeenCalled();
   });
 
   it('T038: tickets.update_fields rejects a cross-board status id for the current ticket board', async () => {
@@ -732,16 +757,13 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     );
   });
 
-  it('T040: tickets.create writes real ticket tag mappings while preserving mirrored attributes.tags', async () => {
-    const tables: TableMap = { statuses: [], tag_definitions: [], tag_mappings: [] };
+  it('T040: tickets.create hands tags to the creation service and preserves mirrored attributes.tags', async () => {
+    const tables: TableMap = {
+      statuses: [],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-1', status_id: 'status-board-a-open', entered_at: '2026-03-14T00:00:00.000Z' }],
+    };
     setTenantTx(tables);
-    runtimeState.createTicketMock.mockResolvedValue({
-      ticket_id: 'ticket-1',
-      ticket_number: 'T-1',
-      entered_at: '2026-03-14T00:00:00.000Z',
-      status_id: 'status-board-a-open',
-      priority_id: 'priority-1',
-    });
+    runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-1', ticketNumber: 'T-1' });
 
     const action = getAction('tickets.create');
 
@@ -757,66 +779,22 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       createActionContext()
     );
 
-    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        attributes: expect.objectContaining({
-          tags: ['Look at the spaces'],
-        }),
-      }),
-      'tenant-1',
-      expect.any(Function),
-      {},
-      undefined,
-      undefined,
-      'user-1'
-    );
-
-    expect(tables.tag_definitions).toHaveLength(1);
-    expect(tables.tag_definitions[0]).toMatchObject({
-      tenant: 'tenant-1',
-      tag_text: 'Look at the spaces',
-      tagged_type: 'ticket',
-      text_color: '#2C3E50',
-    });
-
-    expect(tables.tag_mappings).toHaveLength(1);
-    expect(tables.tag_mappings[0]).toMatchObject({
-      tenant: 'tenant-1',
-      tag_id: tables.tag_definitions[0]?.tag_id,
-      tagged_id: 'ticket-1',
-      tagged_type: 'ticket',
-      created_by: 'user-1',
-    });
+    expect(runtimeState.createWithEffectsMock).toHaveBeenCalledTimes(1);
+    const [, tenant, serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
+    expect(tenant).toBe('tenant-1');
+    expect(serviceInput.tags).toEqual(['Look at the spaces']);
+    expect(serviceInput.ticket.attributes).toEqual(expect.objectContaining({ tags: ['Look at the spaces'] }));
+    // Definitions and mappings are written by the service (TagModel), not by the action.
+    expect(tables.tag_definitions).toBeUndefined();
+    expect(tables.tag_mappings).toBeUndefined();
   });
 
-  it("T041: tickets.create returns the selected board's default status when workflow input omits status_id", async () => {
+  it("T041: tickets.create returns the stored status of the created ticket when workflow input omits status_id", async () => {
     setTenantTx({
-      statuses: [
-        {
-          tenant: 'tenant-1',
-          status_id: 'status-board-a-default',
-          status_type: 'ticket',
-          board_id: 'board-a',
-          is_default: true,
-          order_number: 2,
-        },
-        {
-          tenant: 'tenant-1',
-          status_id: 'status-board-b-default',
-          status_type: 'ticket',
-          board_id: 'board-b',
-          is_default: true,
-          order_number: 1,
-        },
-      ],
+      statuses: [],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-2', status_id: 'status-board-a-default', entered_at: '2026-03-14T00:00:00.000Z' }],
     });
-    runtimeState.createTicketMock.mockImplementation(async (input, tenant, trx) => ({
-      ticket_id: 'ticket-2',
-      ticket_number: 'T-2',
-      entered_at: '2026-03-14T00:00:00.000Z',
-      status_id: input.status_id ?? (await TicketModel.getDefaultStatusId(tenant, trx, input.board_id)),
-      priority_id: input.priority_id,
-    }));
+    runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-2', ticketNumber: 'T-2' });
 
     const action = getAction('tickets.create');
 
@@ -831,19 +809,10 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       createActionContext()
     );
 
-    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        board_id: 'board-a',
-        status_id: undefined,
-      }),
-      'tenant-1',
-      expect.any(Function),
-      {},
-      undefined,
-      undefined,
-      'user-1'
-    );
+    const [, , serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
+    expect(serviceInput.ticket).toEqual(expect.objectContaining({ board_id: 'board-a', status_id: undefined }));
     expect(result.status_id).toBe('status-board-a-default');
+    expect(result.created_at).toBe('2026-03-14T00:00:00.000Z');
   });
 
   it('T042: tickets.find returns response_state in the ticket summary', async () => {
@@ -875,6 +844,92 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     );
 
     expect(result.ticket.board_id).toBe(findIds.boardId);
+  });
+
+  it('tickets.find returns display names for related records alongside their ids', async () => {
+    setTenantTx({
+      tickets: [createFindTicket({ company_id: undefined, client_id: findIds.companyId })],
+      clients: [{ tenant: 'tenant-1', client_id: findIds.companyId, client_name: 'Acme Corp' }],
+      boards: [{ tenant: 'tenant-1', board_id: findIds.boardId, board_name: 'Urgent Matters' }],
+      contacts: [{ tenant: 'tenant-1', contact_name_id: findIds.contactId, full_name: 'Dana Contact' }],
+      statuses: [{ tenant: 'tenant-1', status_id: findIds.statusId, name: 'Open' }],
+      priorities: [{ tenant: 'tenant-1', priority_id: findIds.priorityId, priority_name: 'P1 - Critical' }],
+      categories: [
+        { tenant: 'tenant-1', category_id: findIds.categoryId, category_name: 'Network' },
+        { tenant: 'tenant-1', category_id: findIds.subcategoryId, category_name: 'VPN' },
+      ],
+      users: [{ tenant: 'tenant-1', user_id: findIds.assignedTo, first_name: 'Robin', last_name: 'Tech', username: 'robin' }],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.ticket).toMatchObject({
+      client_id: findIds.companyId,
+      company_id: findIds.companyId,
+      client_name: 'Acme Corp',
+      board_name: 'Urgent Matters',
+      contact_name: 'Dana Contact',
+      status_name: 'Open',
+      priority_name: 'P1 - Critical',
+      category_name: 'Network',
+      subcategory_name: 'VPN',
+      assigned_to_name: 'Robin Tech',
+    });
+  });
+
+  it('tickets.find always returns the latest comment and the latest customer comment', async () => {
+    const comment = (id: string, createdAt: string, extra: TableRow) => ({
+      tenant: 'tenant-1',
+      ticket_id: findIds.ticketId,
+      comment_id: id,
+      note: `note ${id}`,
+      created_at: createdAt,
+      is_internal: false,
+      is_resolution: false,
+      user_id: null,
+      contact_id: null,
+      author_type: 'internal',
+      ...extra,
+    });
+    setTenantTx({
+      tickets: [createFindTicket()],
+      comments: [
+        comment('99999999-9999-4999-8999-999999999991', '2026-03-10T10:00:00.000Z', { author_type: 'client', contact_id: findIds.contactId }),
+        comment('99999999-9999-4999-8999-999999999992', '2026-03-10T11:00:00.000Z', { author_type: 'client', is_internal: true }),
+        comment('99999999-9999-4999-8999-999999999993', '2026-03-10T12:00:00.000Z', { author_type: 'internal' }),
+      ],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.latest_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999993');
+    // Internal notes are never the customer's reply, even when authored by a client.
+    expect(result.latest_customer_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999991');
+    expect(result.latest_customer_comment?.note).toBe('note 99999999-9999-4999-8999-999999999991');
+    expect(result.comments).toBeUndefined();
+  });
+
+  it('tickets.find returns null latest comments for a ticket without comments', async () => {
+    setTenantTx({ tickets: [createFindTicket()] });
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+    expect(result.latest_comment).toBeNull();
+    expect(result.latest_customer_comment).toBeNull();
+  });
+
+  it('tickets.find returns null display names when related records are missing', async () => {
+    setTenantTx({
+      tickets: [createFindTicket({ board_id: null, assigned_to: null })],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.ticket.board_name).toBeNull();
+    expect(result.ticket.assigned_to_name).toBeNull();
+    expect(result.ticket.priority_name).toBeNull();
   });
 
   it('T048: tickets.find tolerates a ticket without a board', async () => {

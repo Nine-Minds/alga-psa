@@ -66,6 +66,7 @@ const COLUMN_CONFIG: TaskColumn[] = [
   { key: 'priority',     priority: 4,                    defaultWidth: 130, minWidth: 90,  maxWidth: 200, resizable: true,  align: 'left'  },
   { key: 'task_type',    priority: 5,                    defaultWidth: 140, minWidth: 100, maxWidth: 220, resizable: true,  align: 'left'  },
   { key: 'assignee',     priority: 6,                    defaultWidth: 240, minWidth: 150, maxWidth: 440, resizable: true,  align: 'left'  },
+  { key: 'start_date',   priority: 7.5,                  defaultWidth: 150, minWidth: 110, maxWidth: 260, resizable: true,  align: 'left'  },
   { key: 'due_date',     priority: 7,                    defaultWidth: 150, minWidth: 110, maxWidth: 260, resizable: true,  align: 'left'  },
   { key: 'tags',         priority: 8,                    defaultWidth: 180, minWidth: 120, maxWidth: 360, resizable: true,  align: 'left'  },
   { key: 'est_hours',    priority: 9,                    defaultWidth: 110, minWidth: 80,  maxWidth: 200, resizable: true,  align: 'left'  },
@@ -543,6 +544,7 @@ export default function TaskListView({
     assignee: t('tasks.assignee', 'Assignee'),
     est_hours: t('tasks.estHours', 'Est. Hours'),
     actual_hours: t('tasks.actualHours', 'Actual Hours'),
+    start_date: t('startDate', 'Start Date'),
     due_date: t('tasks.dueDate', 'Due Date'),
     attachments: t('tasks.attachments', 'Attachments'),
   }), [t]);
@@ -1234,6 +1236,14 @@ export default function TaskListView({
       header: t('tasks.actualHours', 'Actual Hours'),
       render: ({ task }) => task.actual_hours != null
         ? (task.actual_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'startDate',
+      label: t('startDate', 'Start Date'),
+      header: t('startDate', 'Start Date'),
+      render: ({ task }) => task.start_date
+        ? format(new Date(task.start_date), 'PP')
         : t('projectPrint.tasks.emptyValue', '-'),
     },
     {
@@ -1943,6 +1953,29 @@ export default function TaskListView({
                                               </Tooltip>
                                             )}
                                           </div>
+                                        </td>
+                                      );
+                                    case 'start_date':
+                                      if (onTaskUpdate) {
+                                        return (
+                                          <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
+                                            <DatePicker
+                                              value={task.start_date ? new Date(task.start_date) : undefined}
+                                              onChange={(date) => onTaskUpdate(task.task_id, { start_date: date ?? null })}
+                                              maxDate={task.due_date ? new Date(task.due_date) : undefined}
+                                              clearable
+                                              placeholder={t('startDate', 'Start Date')}
+                                            />
+                                          </td>
+                                        );
+                                      }
+                                      return (
+                                        <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
+                                          {task.start_date && (
+                                            <span className="text-[13px] text-[rgb(var(--color-text-700))]">
+                                              {format(new Date(task.start_date), 'MMM d, yyyy')}
+                                            </span>
+                                          )}
                                         </td>
                                       );
                                     case 'due_date':

@@ -13,6 +13,7 @@ import type {
 
 // Ticket imports
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 // Client imports
@@ -51,7 +52,7 @@ export function MspSchedulingCrossFeatureProvider({ children }: { children: Reac
         initialClient={ticketData.client}
         initialContacts={ticketData.contacts}
         initialContactInfo={ticketData.contactInfo}
-        initialCreatedByUser={ticketData.createdByUser}
+        {...ticketDetailsInitialProps(ticketData)}
         initialAdditionalAgents={ticketData.additionalAgents}
         initialAvailableAgents={ticketData.availableAgents}
         initialUserMap={ticketData.userMap}

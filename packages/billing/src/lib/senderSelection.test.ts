@@ -15,18 +15,31 @@ describe('sender selection', () => {
     expect(senderIdForSend(options[1].value)).toBe('first');
   });
 
-  it('keeps invoice and every quote send surface on the shared default sentinel behavior', () => {
-    const components = [
+  it('keeps every sender-selection owner on the shared default sentinel behavior', () => {
+    const senderSelectionOwners = [
       '../components/billing-dashboard/invoicing/SendInvoiceEmailDialog.tsx',
-      '../components/billing-dashboard/quotes/QuoteDetail.tsx',
       '../components/billing-dashboard/quotes/QuoteForm.tsx',
-      '../components/billing-dashboard/quotes/QuotesTab.tsx',
+      '../components/billing-dashboard/quotes/QuoteSendDialog.tsx',
     ];
-    for (const component of components) {
+    for (const component of senderSelectionOwners) {
       const source = readFileSync(path.resolve(__dirname, component), 'utf8');
       expect(source).toContain('buildSenderOptions');
       expect(source).toContain('senderIdForSend');
       expect(source).toContain('DEFAULT_SENDER_SELECTION');
+    }
+  });
+
+  it('keeps both quote send surfaces delegated to the shared dialog', () => {
+    const delegatedQuoteSurfaces = [
+      '../components/billing-dashboard/quotes/QuoteDetail.tsx',
+      '../components/billing-dashboard/quotes/QuotesTab.tsx',
+    ];
+    for (const component of delegatedQuoteSurfaces) {
+      const source = readFileSync(path.resolve(__dirname, component), 'utf8');
+      expect(source).toContain("import { QuoteSendDialog");
+      expect(source).toContain('<QuoteSendDialog');
+      expect(source).toContain('senderId={quoteSenderId}');
+      expect(source).toContain('onSenderChange={setQuoteSenderId}');
     }
   });
 });

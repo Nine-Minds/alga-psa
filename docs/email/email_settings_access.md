@@ -50,6 +50,12 @@ Alternatively, you can directly access it via:
 - Enable/disable email tracking
 - Set daily email limits
 
+### 4. Outbound Connection Diagnostics
+
+The **Run diagnostics** button on the Outbound Email tab opens a step-by-step diagnostics dialog that replaced the older single-action test button. The dialog runs each delivery step individually — TCP connection, TLS negotiation, SMTP AUTH, and a probe send — and shows a **pass / warn / fail** status for each. Failed steps include the SMTP error code, the raw server response, and the specific command that triggered the failure, so configuration problems (wrong port, TLS mismatch, bad credentials) can be corrected without guessing. An **Export support bundle** button in the dialog produces a redacted diagnostic log suitable for sharing with your email provider or Nine Minds support.
+
+The same diagnostics dialog is available for the Microsoft 365 and Resend outbound providers where applicable; the underlying step modules (`smtp.ts`, `m365.ts`, `resend.ts`) are wired through the shared `shared/services/diagnostics/runner.ts` kernel.
+
 ## Required Permissions
 
 Users need appropriate permissions to access and modify email settings. The component uses server actions that automatically check user authentication and tenant context.

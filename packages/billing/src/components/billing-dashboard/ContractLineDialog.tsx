@@ -24,12 +24,18 @@ import { IContractLinePreset } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { getCurrencySymbol } from '@alga-psa/core';
 import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
+import { FixedServiceConfigPanel } from './service-configurations/FixedServiceConfigPanel';
+import {
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+  isUnitFixedService,
+} from '../../lib/fixedServiceBasis';
+import { reindexRateInputs } from '../../lib/serviceRateInputs';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
@@ -67,7 +73,7 @@ interface ContractLineDialogProps {
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
   const { t } = useTranslation('msp/contract-lines');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, money } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
@@ -82,7 +88,17 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<'start' | 'end' | 'prorated'>('start');
 
   // Services state
-  const [fixedServices, setFixedServices] = useState<Array<{ service_id: string; service_name: string; quantity: number }>>([]);
+  const [fixedServices, setFixedServices] = useState<Array<{
+    service_id: string;
+    service_name: string;
+    quantity: number;
+    /** Catalog item kind; a product is billed by unit quantity and is never a recurring seat. */
+    item_kind?: string;
+    /** 'unit' = recurring seats billed quantity x unit rate; 'bundle' = quantity only allocates the line total. */
+    pricing_basis: 'bundle' | 'unit';
+    /** Optional default unit rate in minor units; empty follows the catalog in the contract currency. */
+    unit_rate?: number | null;
+  }>>([]);
   const [hourlyServices, setHourlyServices] = useState<Array<{
     service_id: string;
     service_name: string;
@@ -153,19 +169,26 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               presetServices.map(async (s) => {
                 const svc = await getServiceById(s.service_id);
                 if (isActionMessageError(svc) || isActionPermissionError(svc)) {
-                  return { preset: s, serviceName: '' };
+                  return { preset: s, serviceName: '', itemKind: undefined };
                 }
-                return { preset: s, serviceName: svc?.service_name ?? '' };
+                return { preset: s, serviceName: svc?.service_name ?? '', itemKind: svc?.item_kind };
               })
             );
 
             if (editingPlan.contract_line_type === 'Fixed') {
               setFixedServices(
-                resolved.map(({ preset, serviceName }) => ({
-                  service_id: preset.service_id,
-                  service_name: serviceName,
-                  quantity: preset.quantity || 1,
-                }))
+                resolved.map(({ preset, serviceName, itemKind }) => {
+                  const unit = isUnitFixedService(preset);
+                  return {
+                    service_id: preset.service_id,
+                    service_name: serviceName,
+                    item_kind: itemKind,
+                    pricing_basis: unit ? 'unit' as const : 'bundle' as const,
+                    // A stored zero seat count is legitimate for recurring units.
+                    quantity: unit ? preset.quantity ?? 0 : preset.quantity || 1,
+                    unit_rate: unit ? preset.custom_rate ?? null : undefined,
+                  };
+                })
               );
             } else if (editingPlan.contract_line_type === 'Hourly') {
               const next = resolved.map(({ preset, serviceName }) => ({
@@ -284,6 +307,16 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
           errors.push(
             t('dialog.validation.serviceSelectRequired', {
               defaultValue: 'Service {{index}}: Please select a service',
+              index: index + 1,
+            }),
+          );
+        }
+        // The unit rate is optional on a preset (it follows the catalog in the
+        // contract currency), but a seat count must be a whole number >= 0.
+        if (getFixedServiceBasisIssue(service, { requireUnitRate: false })) {
+          errors.push(
+            t('dialog.validation.recurringQuantityInvalid', {
+              defaultValue: 'Service {{index}}: Recurring quantity must be a whole number, zero or more',
               index: index + 1,
             }),
           );
@@ -411,7 +444,9 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
         if (planType === 'Fixed') {
           // Save Fixed config
           const fixedConfigResult = await updateContractLinePresetFixedConfig(savedPresetId, {
-            base_rate: baseRate ?? null,
+            // The base rate is the bundle total for allocation members only; a
+            // preset made entirely of recurring units has none.
+            base_rate: hasBundleFixedService(fixedServices) ? baseRate ?? null : null,
             enable_proration: enableProration,
             billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
               billingCycleAlignment: billingCycleAlignment,
@@ -429,8 +464,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
               servicesToSave.push({
                 preset_id: savedPresetId,
                 service_id: service.service_id,
-                quantity: service.quantity || 1,
-                custom_rate: null,
+                quantity: isUnitFixedService(service) ? service.quantity ?? 0 : service.quantity || 1,
+                // For a recurring-unit service custom_rate is the optional default unit rate.
+                custom_rate: isUnitFixedService(service) ? service.unit_rate ?? null : null,
+                pricing_basis: isUnitFixedService(service) ? 'unit' : 'bundle',
                 unit_of_measure: null
               });
             }
@@ -528,15 +565,11 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     closeDialog();
   };
 
-  const formatCurrency = (cents: number | undefined, currencyCode: string = 'USD') => {
-    const symbol = getCurrencySymbol(currencyCode);
-    if (!cents) return `${symbol}0.00`;
-    return `${symbol}${(cents / 100).toFixed(2)}`;
-  };
+  const formatCurrency = (cents: number | undefined) => money(cents ?? 0);
 
   const renderFixedConfig = () => {
     const handleAddFixedService = () => {
-      setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1 }]);
+      setFixedServices([...fixedServices, { service_id: '', service_name: '', quantity: 1, pricing_basis: 'bundle', unit_rate: undefined }]);
       markDirty();
     };
 
@@ -553,6 +586,28 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       markDirty();
     };
 
+    const handleConfigurationChange = (
+      index: number,
+      updates: { pricing_basis?: 'bundle' | 'unit' | null; base_rate?: number | null },
+    ) => {
+      setFixedServices((current) => current.map((item, i) => {
+        if (i !== index) return item;
+        const pricingBasis: 'bundle' | 'unit' =
+          updates.pricing_basis === 'unit' ? 'unit' : updates.pricing_basis === 'bundle' ? 'bundle' : item.pricing_basis;
+        const switchedToBundle = updates.pricing_basis === 'bundle' && item.pricing_basis === 'unit';
+        return {
+          ...item,
+          pricing_basis: pricingBasis,
+          unit_rate: pricingBasis === 'unit'
+            ? (updates.base_rate !== undefined ? updates.base_rate : item.unit_rate)
+            : undefined,
+          // An allocation keeps its historical minimum of 1.
+          quantity: switchedToBundle ? Math.max(1, item.quantity || 1) : item.quantity,
+        };
+      }));
+      markDirty();
+    };
+
     return (
       <div className="space-y-4">
         <Alert variant="info">
@@ -565,6 +620,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {t('dialog.fixed.alertBody', {
               defaultValue:
                 "The contract line's base rate is the billed amount. You can also attach products here; product quantities are billed as units, while fixed-fee service quantities are used for tax allocation only.",
+            })}{' '}
+            {t('dialog.fixed.alertUnits', {
+              defaultValue:
+                'To bill a service per seat or unit instead, choose recurring quantity pricing for it: it is billed quantity × unit rate every period and is not part of the base rate.',
             })}
           </AlertDescription>
         </Alert>
@@ -595,7 +654,10 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       next[index] = {
                         ...next[index],
                         service_id: item.service_id,
-                        service_name: item.service_name
+                        service_name: item.service_name,
+                        item_kind: item.item_kind,
+                        // A product can never be a recurring seat.
+                        ...(item.item_kind === 'product' ? { pricing_basis: 'bundle' as const, unit_rate: undefined } : {})
                       };
                       setFixedServices(next);
                       markDirty();
@@ -610,17 +672,46 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    {t('dialog.common.quantity', { defaultValue: 'Quantity' })}
+                    {isUnitFixedService(service)
+                      ? t('dialog.fixed.recurringQuantity', { defaultValue: 'Recurring quantity' })
+                      : t('dialog.common.quantity', { defaultValue: 'Quantity' })}
                   </Label>
                   <Input
                     id={`quantity-${index}`}
                     type="number"
+                    step="1"
                     value={service.quantity}
-                    onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 1)}
-                    min="1"
+                    onChange={(e) => {
+                      const parsed = parseInt(e.target.value);
+                      handleQuantityChange(
+                        index,
+                        isUnitFixedService(service) ? (Number.isNaN(parsed) ? 0 : Math.max(0, parsed)) : parsed || 1,
+                      );
+                    }}
+                    min={isUnitFixedService(service) ? '0' : '1'}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     className="w-24"
                   />
+                  {isUnitFixedService(service) && (
+                    <p className="text-xs text-muted-foreground" id={`fixed-unit-help-${index}`}>
+                      {t('dialog.fixed.unitRateOptional', {
+                        defaultValue:
+                          "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a line is created from this preset.",
+                      })}
+                    </p>
+                  )}
                 </div>
+                {service.item_kind !== 'product' && (
+                  <FixedServiceConfigPanel
+                    idPrefix={`preset-fixed-${index}-`}
+                    configuration={{ pricing_basis: service.pricing_basis, base_rate: service.unit_rate }}
+                    quantity={service.quantity}
+                    planFixedConfig={{ enable_proration: enableProration }}
+                    onConfigurationChange={(updates) => handleConfigurationChange(index, updates)}
+                    onPlanFixedConfigChange={() => undefined}
+                    hideProration
+                  />
+                )}
               </div>
 
               <Button
@@ -670,9 +761,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveHourlyService = (index: number) => {
       const newServices = hourlyServices.filter((_, i) => i !== index);
       setHourlyServices(newServices);
-      const newInputs = { ...hourlyServiceRateInputs };
-      delete newInputs[index];
-      setHourlyServiceRateInputs(newInputs);
+      setHourlyServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
@@ -716,6 +805,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">
@@ -740,6 +830,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">
@@ -939,9 +1030,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveUsageService = (index: number) => {
       const newServices = usageServices.filter((_, i) => i !== index);
       setUsageServices(newServices);
-      const newInputs = { ...usageServiceRateInputs };
-      delete newInputs[index];
-      setUsageServiceRateInputs(newInputs);
+      setUsageServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
@@ -1432,6 +1521,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
 
                 {fixedServices.length > 0 && (
                   <>
+                    {hasBundleFixedService(fixedServices) && (
                     <div className="space-y-2 pt-4 border-t">
                       <Label htmlFor="base-rate">
                         {t('dialog.fixed.baseRateLabel', {
@@ -1475,6 +1565,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         })}
                       </p>
                     </div>
+                    )}
 
                     <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                       <div className="flex items-center justify-between">

@@ -979,8 +979,11 @@ it('T111: billing engine contract resolution joins only on instantiated client_c
   expect(billingResult.charges.length).toBeGreaterThan(0);
 
   const coalesceFallbackPattern = /coalesce\s*\(\s*cc\.template_contract_id\s*,\s*cc\.contract_id\s*\)/i;
-  const templateJoinFallbackPattern = /cc\"\s*\.\s*\"template_contract_id\"\s*=\s*\"c\"\s*\.\s*\"contract_id\"/i;
-  const canonicalJoinPattern = /cc\"\s*\.\s*\"contract_id\"\s*=\s*\"c\"\s*\.\s*\"contract_id\"/i;
+  // Alias-agnostic: the join partner may be `contracts as c` or, as in the shared
+  // discount resolver, `contract_lines` directly. What matters is which
+  // client_contracts column the contract id is matched against.
+  const templateJoinFallbackPattern = /cc\"\s*\.\s*\"template_contract_id\"\s*=\s*\"\w+\"\s*\.\s*\"contract_id\"/i;
+  const canonicalJoinPattern = /cc\"\s*\.\s*\"contract_id\"\s*=\s*\"\w+\"\s*\.\s*\"contract_id\"/i;
 
   expect(observedSql.some((sql) => coalesceFallbackPattern.test(sql))).toBe(false);
   expect(observedSql.some((sql) => templateJoinFallbackPattern.test(sql))).toBe(false);
@@ -2587,7 +2590,8 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
 
   expect(preview).toMatchObject({
     success: false,
-    error: 'Recurring service periods were not materialized for this recurring execution window.',
+    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+    error: expect.stringContaining("Service periods haven't been generated"),
   });
 }, HOOK_TIMEOUT);
 

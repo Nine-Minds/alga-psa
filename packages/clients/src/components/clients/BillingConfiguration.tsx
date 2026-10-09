@@ -23,6 +23,7 @@ import {
 import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
+import ClientDefaultTimeEntryServiceSettings from './ClientDefaultTimeEntryServiceSettings';
 import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
 import ClientCreditDrawdownSettings from './ClientCreditDrawdownSettings';
 import ClientExternalCreditSettings from './ClientExternalCreditSettings';
@@ -258,6 +259,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     <ClientBillingProfiles clientId={client.client_id} />
 
                     <ClientZeroDollarInvoiceSettings
+                        clientId={client.client_id}
+                    />
+
+                    <ClientDefaultTimeEntryServiceSettings
                         clientId={client.client_id}
                     />
 

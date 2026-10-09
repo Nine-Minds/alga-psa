@@ -14,6 +14,7 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
+import { CommentEmailRecipients, type CommentRecipientSearch } from "./CommentEmailRecipients";
 import { ScheduleCommentModal } from "./ScheduleCommentModal";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { MAX_COMMENT_LENGTH } from "../types";
@@ -47,6 +48,12 @@ export function CommentComposer({
   mentionAuthToken,
   scheduleAt,
   onChangeScheduleAt,
+  cc,
+  bcc,
+  onChangeCc,
+  onChangeBcc,
+  onSearchRecipients,
+  variant = "ticket",
 }: {
   draftContent: string;
   draftPlainText: string;
@@ -70,13 +77,22 @@ export function CommentComposer({
   mentionAuthToken?: string;
   /** Withhold the (client-visible) comment until this instant. */
   scheduleAt?: Date | null;
+  /** One-off Cc/Bcc for this comment's email (public ticket comments only). */
+  cc?: string[];
+  bcc?: string[];
+  onChangeCc?: (next: string[]) => void;
+  onChangeBcc?: (next: string[]) => void;
+  /** Contact lookup behind the Cc/Bcc suggestion list. */
+  onSearchRecipients?: CommentRecipientSearch;
+  /** Task comments are always internal and never scheduled, so those controls are hidden. */
+  variant?: "ticket" | "task";
   onChangeScheduleAt?: (value: Date | null) => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const canSchedule = Boolean(onChangeScheduleAt);
+  const canSchedule = variant === "ticket" && (Boolean(onChangeScheduleAt));
   const isScheduled = Boolean(scheduleAt);
 
   // Only client-visible comments can be withheld: switching to Internal drops
@@ -150,8 +166,12 @@ export function CommentComposer({
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-            <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
-            <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+            {variant === "ticket" ? (
+              <>
+                <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
+                <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+              </>
+            ) : null}
             {onChangeIsResolution ? (
               <ActionChip
                 label={isResolution ? t("comments.resolutionChecked") : t("comments.resolution")}
@@ -166,6 +186,16 @@ export function CommentComposer({
               />
             ) : null}
           </View>
+          {variant === "ticket" && onChangeCc && onChangeBcc ? (
+            <CommentEmailRecipients
+              isInternal={isInternal}
+              cc={cc ?? []}
+              bcc={bcc ?? []}
+              onChangeCc={onChangeCc}
+              onChangeBcc={onChangeBcc}
+              searchRecipients={onSearchRecipients}
+            />
+          ) : null}
           {canSchedule && isInternal ? (
             <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs }}>
               {t("comments.scheduleInternalBlocked")}

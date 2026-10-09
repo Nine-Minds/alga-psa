@@ -1,0 +1,24 @@
+name: Compose Port Exposure Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  compose-port-exposure-guard:
+    name: Data-plane ports stay unpublished or loopback-only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Docker Compose version
+        # docker-compose.prod.yaml uses `!reset`, which needs Compose 2.24 or later.
+        run: docker compose version
+
+      - name: Run compose port exposure tests
+        # Pure node:test; renders `docker compose config`, so no images or secrets are needed.
+        run: node --test scripts/tests/compose-port-exposure.test.mjs

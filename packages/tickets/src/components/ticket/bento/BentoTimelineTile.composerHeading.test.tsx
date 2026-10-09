@@ -123,6 +123,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
 
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
+  // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
+  withUIReflectionId: (Component: unknown) => Component,
 }));
 
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
@@ -215,9 +217,6 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-internal')!);
     expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
 
-    fireEvent.click(document.getElementById('ticket-timeline-composer-lane-resolution')!);
-    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
-
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-client')!);
     expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
   });
@@ -229,9 +228,62 @@ describe('BentoTimelineTile composer heading', () => {
 
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-internal')!);
     expect(screen.queryByText('Write a reply')).not.toBeInTheDocument();
+  });
 
-    fireEvent.click(document.getElementById('ticket-timeline-composer-lane-resolution')!);
-    expect(screen.queryByText('Write a reply')).not.toBeInTheDocument();
+  // Visibility and resolution are independent: marking a reply as the
+  // resolution must not drag it out of the client lane, and an internal note
+  // can be the resolution too.
+  it('offers only client and internal visibility, with resolution as its own toggle', () => {
+    renderTimeline();
+
+    expect(document.getElementById('ticket-timeline-composer-lane-client')).not.toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-lane-internal')).not.toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-lane-resolution')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-resolution-toggle')).not.toBeNull();
+  });
+
+  it('keeps the client heading when the resolution toggle is on', () => {
+    renderTimeline();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Mark as Resolution' }));
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+    expect(document.getElementById('ticket-timeline-composer-resolution-options')).not.toBeNull();
+  });
+
+  it.each([
+    { visibility: 'Client', isInternal: false },
+    { visibility: 'Internal', isInternal: true },
+  ])('submits a $visibility comment that is also the resolution', async ({ visibility, isInternal }) => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('button', { name: visibility }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Mark as Resolution' }));
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, true, null, undefined, null, undefined);
+    });
+  });
+
+  it('resets the resolution toggle after a successful send', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Mark as Resolution' }));
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalled();
+      expect(document.getElementById('ticket-timeline-composer')).toBeNull();
+    });
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.getByRole('switch', { name: 'Mark as Resolution' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
   it('schedules a client-visible comment with the resolved instant and user time zone', async () => {
@@ -253,6 +305,8 @@ describe('BentoTimelineTile composer heading', () => {
         null,
         undefined,
         { publishAt: '2026-08-23T13:30:00.000Z', timeZone: 'America/New_York' },
+        // The Cc/Bcc payload: undefined while the control is not enabled.
+        undefined,
       );
       expect(document.getElementById('ticket-timeline-composer')).toBeNull();
     });
@@ -266,23 +320,20 @@ describe('BentoTimelineTile composer heading', () => {
     expect(document.getElementById('ticket-timeline-composer-schedule-toggle')).toBeNull();
   });
 
-  it.each([
-    { lane: 'Internal', isInternal: true, isResolution: false },
-    { lane: 'Resolution', isInternal: false, isResolution: true },
-  ])('allows an ordinary $lane comment after leaving an invalid client schedule', async ({ lane, isInternal, isResolution }) => {
+  it('allows an ordinary Internal comment after leaving an invalid client schedule', async () => {
     const onAddNewComment = vi.fn().mockResolvedValue(true);
     renderTimeline({ onAddNewComment });
 
     fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
     fireEvent.click(screen.getByTestId('composer-editor'));
-    fireEvent.click(screen.getByRole('button', { name: lane }));
+    fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
 
     const send = screen.getByRole('button', { name: 'Send' });
     expect(send).toBeEnabled();
     fireEvent.click(send);
 
     await vi.waitFor(() => {
-      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, isResolution, null, undefined, null);
+      expect(onAddNewComment).toHaveBeenCalledWith(true, false, null, undefined, null, undefined);
     });
   });
 

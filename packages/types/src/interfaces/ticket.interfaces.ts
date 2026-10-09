@@ -4,7 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
-import type { IExternalEntityLink } from './externalSystem.interfaces';
+import type { IExternalEntityLink, PortalTicketExternalLink } from './externalSystem.interfaces';
 
 /**
  * Response state tracking for tickets.
@@ -20,6 +20,7 @@ export const TICKET_ORIGINS = {
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 export type TicketOrigin =
@@ -61,6 +62,10 @@ export interface ITicket extends TenantEntity, ITaggable {
   /** Denormalized close flag kept in sync with the selected status. */
   is_closed?: boolean;
   due_date?: string;         // Optional due date for the ticket
+  /** Source ticket this one was duplicated from (create-only provenance, no FK). */
+  duplicated_from_ticket_id?: string | null;
+  /** Display-only: number of the source ticket, joined on read. */
+  duplicated_from_ticket_number?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
@@ -88,6 +93,13 @@ export interface ITicket extends TenantEntity, ITaggable {
   external_links?: IExternalEntityLink[];
 }
 
+export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'contact' | 'email_sender' | 'system';
+
+export interface ITicketLatestActivityActor {
+  kind: TicketLatestActivityActorKind;
+  name: string | null;
+}
+
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
   status_id: string | null;
   priority_id: string | null;
@@ -111,6 +123,10 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_open_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Newest of the ticket's own timestamps and its newest published comment.
+  latest_activity_at?: string | null;
+  // Who produced the activity shown in latest_activity_at; null when nobody can be named.
+  latest_activity_actor?: ITicketLatestActivityActor | null;
 }
 
 export interface ITicketListFilters {
@@ -190,6 +206,7 @@ export interface IAgentSchedule {
 }
 
 export interface ITicketWithDetails extends ITicket {
+  portalExternalLinks?: PortalTicketExternalLink[];
   status_name?: string;
   priority_name?: string;
   priority_color?: string;

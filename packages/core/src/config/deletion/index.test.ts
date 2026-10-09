@@ -92,9 +92,21 @@ describe('deletion configs', () => {
     });
   });
 
-  it('T024: team config uses table team_members', () => {
+  it('T024: team config does not block on team_members', () => {
+    // teams.manager_id is NOT NULL and the lead is always also a team_members row, so a
+    // member blocker made every team undeletable. Team.delete clears the members itself.
     const memberDep = DELETION_CONFIGS.team.dependencies.find((dep) => dep.type === 'member');
-    expect(memberDep?.table).toBe('team_members');
+    expect(memberDep).toBeUndefined();
+    expect(DELETION_CONFIGS.team.dependencies.some((dep) => dep.table === 'team_members')).toBe(false);
+  });
+
+  it('T024b: team config keeps the real assignment blockers', () => {
+    const deps = Object.fromEntries(DELETION_CONFIGS.team.dependencies.map((dep) => [dep.type, dep]));
+
+    expect(deps.ticket).toMatchObject({ table: 'tickets', foreignKey: 'assigned_team_id' });
+    expect(deps.project_task).toMatchObject({ table: 'project_tasks', foreignKey: 'assigned_team_id' });
+    expect(deps.project_template_task).toMatchObject({ table: 'project_template_tasks', foreignKey: 'assigned_team_id' });
+    expect(deps.board).toMatchObject({ table: 'boards', foreignKey: 'default_assigned_team_id' });
   });
 
   it('T025: user config uses table schedule_entry_assignees', () => {

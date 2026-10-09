@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Die Standardwährung wurde aktualisiert."
+        "updated": "Die Standardwährung wurde aktualisiert.",
+        "propagated": "Standardwährung geändert zu {{currency}}. {{updated}} Kundenstandards aktualisiert; {{preserved}} Kundenüberschreibungen beibehalten."
       },
       "errors": {
         "load": "Die Einstellungen konnten nicht geladen werden",
         "save": "Einstellungen konnten nicht gespeichert werden"
-      }
+      },
+      "propagationNote": "Wenn Sie dies ändern, werden Kunden aktualisiert, die noch die vorherige Standardwährung verwenden. Kunden mit einer anderen Währung bleiben unverändert, und bestehende Dokumente und Vorlagen werden nicht geändert."
     },
     "invoiceNumbering": {
       "title": "Rechnungsnummerierung",
@@ -164,6 +166,20 @@
         "load": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht geladen werden",
         "loadStatuses": "Der Status des Verlängerungstickets konnte nicht geladen werden",
         "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
+      }
+    },
+    "timeEntryService": {
+      "title": "Standarddienst für Zeiteinträge",
+      "description": "Ersatzdienst für neue Zeiteinträge in Tickets. Kundenspezifische Vorgaben haben Vorrang.",
+      "label": "Standarddienst für Zeiteinträge",
+      "placeholder": "Kein Standarddienst",
+      "help": "Wird für neue Zeiteinträge in Tickets verwendet, wenn der Kunde keinen eigenen Standard festgelegt hat. Der Dienst muss weiterhin aktiv und durch den Kundenvertrag abgedeckt sein.",
+      "toast": {
+        "updated": "Standarddienst für Zeiteinträge aktualisiert."
+      },
+      "errors": {
+        "load": "Standarddienst für Zeiteinträge konnte nicht geladen werden",
+        "save": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden"
       }
     },
     "quotes": {
@@ -1048,7 +1064,8 @@
       },
       "label": {
         "label": "Kategoriebezeichnung",
-        "placeholder": "Optionale freie Bezeichnung"
+        "placeholder": "Optionale freie Bezeichnung",
+        "help": "Interner Bezeichner wie Hersteller/Modell; durchsuchbar, wird Kunden nie angezeigt."
       },
       "vendor": {
         "label": "Verkäufer"

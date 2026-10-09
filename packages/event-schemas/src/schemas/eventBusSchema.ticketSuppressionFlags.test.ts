@@ -117,4 +117,55 @@ describe('ticket lifecycle notification suppression event schemas', () => {
       suppressInternalNotifications: true,
     }));
   });
+
+  describe('TICKET_CREATED', () => {
+    const systemCreatedPayload = {
+      tenantId: '00000000-0000-4000-8000-000000000003',
+      ticketId: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-07-09T12:00:00.000Z',
+      actorType: 'SYSTEM',
+      source: 'recurring_ticket',
+    };
+
+    it('keeps contact suppression on a system-created payload (no userId) instead of stripping it', () => {
+      const result = EventSchemas.TICKET_CREATED.parse({
+        ...baseEvent,
+        eventType: 'TICKET_CREATED',
+        payload: { ...systemCreatedPayload, suppressContactNotifications: true },
+      });
+
+      expect(result.payload).toEqual(expect.objectContaining({ suppressContactNotifications: true }));
+    });
+
+    it('defaults suppression flags to false so creators that never set them are unchanged', () => {
+      const result = EventSchemas.TICKET_CREATED.parse({
+        ...baseEvent,
+        eventType: 'TICKET_CREATED',
+        payload: systemCreatedPayload,
+      });
+
+      expect(result.payload).toEqual(expect.objectContaining({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      }));
+    });
+  });
+});
+
+describe('TICKET_CREATED requester identity', () => {
+  it('keeps clientName/contactName/senderEmail/requesterName through both union branches', () => {
+    const requester = { senderEmail: 'who@example.test', requesterName: 'who@example.test' };
+    const legacy = EventSchemas.TICKET_CREATED.parse({
+      id: '11111111-1111-4111-8111-111111111111',
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId: '22222222-2222-4222-8222-222222222222',
+        ticketId: '33333333-3333-4333-8333-333333333333',
+        userId: '33333333-3333-4333-8333-333333333333',
+        ...requester,
+      },
+    });
+    expect(legacy.payload).toMatchObject(requester);
+  });
 });

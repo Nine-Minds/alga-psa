@@ -276,7 +276,10 @@
       "heading": "Services à frais fixes",
       "itemLabel": "Article {{index}}",
       "selectItemPlaceholder": "Sélectionnez un élément",
-      "servicesAndProducts": "Services et produits"
+      "servicesAndProducts": "Services et produits",
+      "recurringQuantity": "Quantité récurrente",
+      "unitRateOptional": "Facultatif. Laissez le tarif unitaire vide pour utiliser le prix catalogue du service dans la devise du client lorsqu'une ligne est créée à partir de ce préréglage.",
+      "alertUnits": "Pour facturer un service par poste ou par unité, choisissez pour lui la tarification par quantité récurrente : il est facturé quantité × tarif unitaire à chaque période et ne fait pas partie du tarif de base."
     },
     "hourly": {
       "addHourlyService": "Ajouter un service horaire",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Service {{index}} : Veuillez sélectionner un service",
       "unitOfMeasureRequired": "Service {{index}} : une unité de mesure est requise",
       "unitRateRequired": "Service {{index}} : Un tarif unitaire est requis",
-      "usageServiceRequired": "Au moins un service basé sur l'utilisation est requis"
+      "usageServiceRequired": "Au moins un service basé sur l'utilisation est requis",
+      "recurringQuantityInvalid": "Service {{index}} : la quantité récurrente doit être un nombre entier, zéro ou plus"
     }
   },
   "forms": {
@@ -728,7 +732,8 @@
         "enterRatePlaceholder": "Entrez le taux",
         "metadata": "Type de service : {{type}} | Méthode : {{method}}",
         "noCurrencyPrice": "Pas de prix {{currency}}",
-        "rateDetail": "Taux : {{symbol}}{{amount}}"
+        "rateDetail": "Taux : {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Valeur par défaut du catalogue : {{symbol}}{{amount}}"
       },
       "unknownService": "Service inconnu"
     },

@@ -14,7 +14,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 # Two retention runs would compute their deletion ranges from the same grid and
 # the second would delete rows the first had already shifted.
@@ -40,23 +39,12 @@ jobs:
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
       # A retention job that stops running lets the tab grow back until the
       # collector's index-scan cap refuses it, so a failure must be visible the
-      # same week rather than at the next reconcile breakage.
-      - name: Open or update the failure notice
+      # same week rather than at the next reconcile breakage. It is recorded in
+      # the test-metrics sheet (workflow_health tab), not as a GitHub issue.
+      - name: Record the failure in the test-metrics sheet
         if: failure()
+        run: node scripts/record-workflow-health.mjs
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          NOTICE_TITLE: 'CI: browser metrics retention is failing'
-        run: |
-          set -euo pipefail
-          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
-          body="$(printf '%s\n\n%s\n' "The weekly browser_readiness retention run failed. Until it succeeds the tab grows again, and reconcile eventually refuses the grid with sheet-row-limit-exceeded." "Latest failing run: ${url}")"
-          # One open notice per streak, updated in place: a weekly failure must
-          # not file an issue a week, and a comment per failure is the same spam.
-          number="$(gh issue list --state open --limit 100 --json number,title --jq 'map(select(.title == env.NOTICE_TITLE)) | first | .number // empty')"
-          if [ -n "$number" ]; then
-            gh issue edit "$number" --body "$body"
-            echo "Updated existing notice #${number}."
-          else
-            gh issue create --title "$NOTICE_TITLE" --body "$body"
-          fi
+          WORKFLOW_HEALTH_CONCLUSION: ${{ job.status }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

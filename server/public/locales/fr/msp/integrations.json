@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Mappage en masse",
+        "columns": {
+          "ignore": "Ignorer",
+          "select": "Enregistrer",
+          "status": "Statut"
+        },
+        "exit": "Retour aux mappages",
+        "filter": {
+          "all": "Tous",
+          "mapped": "Mappé",
+          "unmapped": "Non mappé"
+        },
+        "ignoreAll": "Tout ignorer",
+        "noRows": "Aucune ligne ne correspond au filtre actuel.",
+        "possibleMatch": "Correspondance possible",
+        "rowIgnoreAria": "Ignorer {{name}}",
+        "rowSelectAria": "Inclure {{name}} dans l'enregistrement",
+        "saveAll": "Tout enregistrer",
+        "searchPlaceholder": "Rechercher des services et des cibles...",
+        "selectAll": "Tout sélectionner",
+        "status": {
+          "ignored": "Ignoré",
+          "mapped": "Mappé",
+          "noResult": "Aucun résultat n'a été renvoyé pour cette ligne.",
+          "pending": "En attente",
+          "saved": "Enregistré"
+        },
+        "suggested": "Suggéré",
+        "toSave": "{{total}} à enregistrer"
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",
@@ -90,7 +121,8 @@
           "clients": "Clients",
           "itemsServices": "Articles / Services",
           "taxCodes": "Codes fiscaux",
-          "paymentTerms": "Conditions de paiement"
+          "paymentTerms": "Conditions de paiement",
+          "discounts": "Remises"
         }
       }
     },
@@ -111,6 +143,7 @@
           "failed": "Échec de l'export",
           "missingItemMapping": "Mappage d'article manquant",
           "missingItemMappingId": "Mappage d'article manquant ({{serviceId}})",
+          "missingDiscountMapping": "Mappage des remises manquant (onglet Remises)",
           "missingItemMappingNamed": "Mappage d'article manquant : {{serviceName}}"
         },
         "fields": {
@@ -469,7 +502,8 @@
           "previousCount": "Précédent",
           "syncFinished": "Synchronisation terminée pour {{client}}.",
           "syncing": "Synchronisation…",
-          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat."
+          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat.",
+          "syncWorkerUnavailable": "La synchronisation est en file d'attente, mais rien ne traite la file d'arrière-plan pour le moment. Elle s'exécutera dès que le worker sera de retour ; si elle reste bloquée, redémarrez le service temporal-worker."
         },
         "connection": {
           "changeAction": "Modifier la connexion",

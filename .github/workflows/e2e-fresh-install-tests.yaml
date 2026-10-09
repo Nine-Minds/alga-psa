@@ -1084,7 +1084,7 @@ jobs:
           name: fresh-install-api-${{ matrix.edition }}
           path: test-results/api-e2e/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Prepare populated v1.5.0 upgrade
         id: upgrade_schema
@@ -1192,7 +1192,7 @@ jobs:
           name: supported-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload upgrade browser diagnostics
         if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1309,7 +1309,7 @@ jobs:
           name: supported-citus-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload supported Citus upgrade diagnostics
         if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1451,7 +1451,7 @@ jobs:
           name: teams-development-execution
           path: test-results/teams-development/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect bounded Teams static chunk diagnostics
         if: ${{ always() && steps.teams_development_server.outcome == 'success' }}
@@ -1499,7 +1499,7 @@ jobs:
           name: microsoft-callback-execution
           path: test-results/microsoft-callback/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
