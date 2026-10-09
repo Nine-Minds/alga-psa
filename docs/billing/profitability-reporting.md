@@ -112,6 +112,18 @@ This logic is encapsulated in `buildCostRateResolutionLateralJoin` in `packages/
 
 The report surfaces these as an explicit warning banner rather than silently zeroing affected rows, so operators know when figures are incomplete.
 
+## Ticket time billed under a project
+
+When a ticket is linked to a project task with **Bill this ticket's time as project time** enabled (`bill_under_project = true` on the `project_ticket_links` row), the ticket's time entries are attributed to the linked project's contract rather than to the ticket's own agreement. This resolution is handled by `packages/billing/src/models/ticketProjectAttribution.ts`, which is shared across `getAgreementProfitability`, `getTicketProfitability`, and the invoice-generation path.
+
+Consequences for profitability figures:
+
+- `getAgreementProfitability` — the attributed ticket's labor cost and revenue appear under the project's agreement row, not under any ticket-specific agreement.
+- `getTicketProfitability` — the ticket remains listed so hours stay visible, but its revenue and cost follow the project agreement line.
+- **Multi-project ambiguity**: when a ticket is linked to more than one project task with `bill_under_project` set, attribution is suspended and the hours fall to the unattributed / `uncostedHours` bucket. These are surfaced through the existing data-quality counters.
+- **Cross-client links**: a ticket linked to a project owned by a different client is never attributed across the client boundary; those hours remain on the originating ticket's agreement.
+- **Fixed vs T&M projects**: on a Fixed contract the attributed ticket time feeds delivery economics (hours worked toward the fixed fee); on a T&M contract it generates billable hours on the project line at the contract rate.
+
 ## UI surfaces
 
 - **Settings > Billing > Cost Rates** — lists all internal users, each expandable to their rate history. Add / edit / delete rates through dialogs. When editing a rate that covers already-worked time, a warning dialog explains that the change will rewrite historical margin data for that period.
