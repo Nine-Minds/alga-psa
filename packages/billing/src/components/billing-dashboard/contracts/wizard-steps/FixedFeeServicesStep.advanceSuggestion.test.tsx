@@ -37,7 +37,9 @@ const { FixedFeeServicesStep } = await import('./FixedFeeServicesStep');
 
 const withService = (overrides: Record<string, unknown> = {}) => ({
   ...createDefaultContractWizardData(),
-  fixed_services: [{ service_id: 'svc-1', service_name: 'Managed Services', quantity: 1 }],
+  fixed_services: [
+    { service_id: 'svc-1', service_name: 'Managed Services', quantity: 1, pricing_basis: 'bundle' as const },
+  ],
   ...overrides,
 });
 
