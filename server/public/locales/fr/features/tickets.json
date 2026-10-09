@@ -455,6 +455,7 @@
     },
     "filters": {
       "allAssignees": "Tous les cessionnaires",
+      "allContacts": "Tous les contacts",
       "selectStatus": "Sélectionnez le statut",
       "responseState": "État de réponse",
       "allResponseStates": "Tous les états de réponse",

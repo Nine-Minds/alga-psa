@@ -36,6 +36,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -96,7 +97,13 @@ import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPick
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import { getClientById, getContactByContactNameId } from '../actions/clientLookupActions';
+import {
+  getAllActiveContacts,
+  getClientById,
+  getContactByContactNameId,
+  getContactsByClient,
+} from '../actions/clientLookupActions';
+import { contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -425,6 +432,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     ? selectedBoards[0]
     : null;
   const selectedClient = filterValues.clientId ?? null;
+  const selectedContact = filterValues.contactId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
   const selectedCategories = useMemo(() => {
@@ -524,6 +532,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return selectedBoards.length > 0 ||
       excludedBoards.length > 0 ||
       selectedClient !== null ||
+      selectedContact !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
       selectedCategories.length > 0 ||
@@ -536,7 +545,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoards, excludedBoards, selectedClient, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
 
   // Count of active filter groups (excludes the always-visible search box) — drives
   // the "Filters" button badge in the candidate #1 collapsed toolbar.
@@ -544,6 +553,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     let n = 0;
     if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
     if (selectedClient !== null) n++;
+    if (selectedContact !== null) n++;
     if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
     if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
     if (selectedResponseState !== 'all') n++;
@@ -553,10 +563,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
     if (selectedTags.length > 0) n++;
     return n;
-  }, [selectedBoards, excludedBoards, selectedClient, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
 
   // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
   const [showFilters, setShowFilters] = useState(false);
+
+  // Options for the contact filter, cross-linked to the client filter: a
+  // selected client narrows them to that client's contacts (including inactive
+  // ones, since old tickets point at them), and with no client every active
+  // contact in the tenant is selectable.
+  const [contactOptions, setContactOptions] = useState<IContact[]>([]);
+  // Fetched lazily — a tenant-wide contact list is large and the filter row is
+  // collapsed by default, so nothing is loaded until the row is opened or a
+  // deep link arrives with a contact already applied.
+  const needsContactOptions = showFilters || selectedContact !== null;
+  useEffect(() => {
+    if (!needsContactOptions) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // 'all' rather than 'active': a ticket can name a contact who has since
+        // been deactivated, and that ticket still has to be findable.
+        const contacts = selectedClient
+          ? await getContactsByClient(selectedClient, 'all')
+          : await getAllActiveContacts();
+        if (!cancelled) setContactOptions(contacts);
+      } catch {
+        // A stale option list would offer contacts the client filter forbids.
+        if (!cancelled) setContactOptions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [needsContactOptions, selectedClient]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -824,6 +862,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       params.set('excludeBoardIds', f.excludeBoardIds.join(','));
     }
     if (f.clientId) params.set('clientId', f.clientId);
+    if (f.contactId) params.set('contactId', f.contactId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
     if (f.categoryIds && f.categoryIds.length > 0) {
@@ -1187,6 +1226,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
     excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
     clientId: selectedClient ?? undefined,
+    contactId: selectedContact ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
     showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
@@ -1204,7 +1244,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleView,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedClient, selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
@@ -2069,8 +2109,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange]);
 
+  // Client and contact move together: a contact that does not belong to the
+  // newly selected client is cleared in the *same* update, so one click is one
+  // debounced fetch and no intermediate state applies both at once.
   const handleClientSelect = useCallback((clientId: string | null) => {
-    onFilterChange({ clientId: clientId || undefined });
+    onFilterChange(contactFilterUpdateForClientChange({
+      nextClientId: clientId,
+      currentContactId: selectedContact,
+      contactClientId: contactOptions.find((c) => c.contact_name_id === selectedContact)?.client_id,
+    }));
+  }, [onFilterChange, selectedContact, contactOptions]);
+
+  const handleContactSelect = useCallback((contactId: string) => {
+    onFilterChange({ contactId: contactId || undefined });
   }, [onFilterChange]);
 
   const handleClientFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
@@ -2093,6 +2144,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardIds: undefined,
       excludeBoardIds: undefined,
       clientId: undefined,
+      contactId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
       categoryId: undefined,
@@ -2147,6 +2199,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedClient) {
       const name = clients.find((c) => c.client_id === selectedClient)?.client_name ?? t('fields.client', 'Client');
       chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
+    }
+
+    if (selectedContact) {
+      const contactLabel = t('fields.contact', 'Contact');
+      const name = contactOptions.find((c) => c.contact_name_id === selectedContact)?.full_name ?? contactLabel;
+      chips.push({
+        key: `contact:${selectedContact}`,
+        label: `${contactLabel}: ${name}`,
+        onRemove: () => handleContactSelect(''),
+      });
     }
 
     selectedAssignees.forEach((userId) => {
@@ -2239,7 +2301,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
 
     return chips;
-  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
@@ -2470,6 +2532,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={handleClientTypeFilterChange}
                   fitContent={true}
+                />
+                <ContactPicker
+                  id="contact-picker"
+                  data-automation-id={`${id}-contact-picker`}
+                  contacts={contactOptions}
+                  value={selectedContact ?? ''}
+                  onValueChange={handleContactSelect}
+                  // Belt to the braces of the scoped fetch: even a mid-flight
+                  // option list cannot offer another client's contact.
+                  clientId={selectedClient ?? undefined}
+                  placeholder={t('dashboard.filters.allContacts', 'All Contacts')}
+                  buttonWidth="fit"
+                  className="text-sm min-w-[180px]"
                 />
                 <MultiUserAndTeamPicker
                     id={`${id}-assignee-filter`}

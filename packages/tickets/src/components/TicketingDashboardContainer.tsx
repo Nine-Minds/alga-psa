@@ -113,6 +113,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
+    contactId: params.get('contactId') || undefined,
     statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
@@ -346,6 +347,7 @@ export default function TicketingDashboardContainer({
       params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
     }
     if (filters.clientId) params.set('clientId', filters.clientId);
+    if (filters.contactId) params.set('contactId', filters.contactId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
     if (filters.categoryIds && Array.isArray(filters.categoryIds) && filters.categoryIds.length > 0) {
@@ -450,6 +452,7 @@ export default function TicketingDashboardContainer({
         categoryIds: filters.categoryIds && filters.categoryIds.length > 0 ? filters.categoryIds : undefined,
         excludeCategoryIds: filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0 ? filters.excludeCategoryIds : undefined,
         clientId: filters.clientId || undefined,
+        contactId: filters.contactId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: shouldApplyOpenOnlyStatusFilter(filters.statusId, filters.showOpenOnly),

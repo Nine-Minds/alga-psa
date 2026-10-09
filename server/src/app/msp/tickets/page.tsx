@@ -112,6 +112,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.clientId && typeof params.clientId === 'string') {
       filtersFromURL.clientId = params.clientId;
     }
+    if (params?.contactId && typeof params.contactId === 'string') {
+      filtersFromURL.contactId = params.contactId;
+    }
     if (params?.statusId && typeof params.statusId === 'string') {
       filtersFromURL.statusId = params.statusId;
     }
@@ -313,6 +316,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       categoryIds: initialFilters.categoryIds || undefined,
       excludeCategoryIds: initialFilters.excludeCategoryIds || undefined,
       clientId: initialFilters.clientId || undefined,
+      contactId: initialFilters.contactId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: isTicketStatusOpenFilter(initialFilters.statusId),
