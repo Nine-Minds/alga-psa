@@ -1136,6 +1136,8 @@ export class ClientService extends BaseService<IClient> {
       }>;
       pinPortalGrants?: boolean;
       externalRemapChoices?: Array<{ mappingId: string; apply: boolean }>;
+      /** FR-G2: source_profile (default) | target_default. */
+      billingStrategy?: 'source_profile' | 'target_default';
     },
     context: ServiceContext
   ): Promise<ClientMergeResult> {
@@ -1150,6 +1152,7 @@ export class ClientService extends BaseService<IClient> {
           contractDecisions: input.contractDecisions,
           pinPortalGrants: input.pinPortalGrants,
           externalRemapChoices: input.externalRemapChoices,
+          billingStrategy: input.billingStrategy,
         })
       );
     } catch (error) {

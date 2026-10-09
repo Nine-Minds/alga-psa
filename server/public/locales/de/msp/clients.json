@@ -2004,7 +2004,15 @@
     "accountingApply": "Auswahl übernehmen",
     "accountingSkip": "Vorerst überspringen",
     "accountingRemapped": "Buchhaltungszuordnungen wurden umgestellt",
-    "accountingSkipped": "{{count}} Zuordnung(en) konnten nicht umgestellt werden und müssen manuell neu verknüpft werden."
+    "accountingSkipped": "{{count}} Zuordnung(en) konnten nicht umgestellt werden und müssen manuell neu verknüpft werden.",
+    "assetsDescription": "Diese Geräte und RMM-Organisationen werden zum Ziel-Kunden verschoben. Die Synchronisierung lässt sie dort.",
+    "assetsTotal": "Assets",
+    "assetGroups": "Asset-Gruppen",
+    "deviceCount": "{{count}} Geräte",
+    "billingStrategyHeading": "Zusammengeführte Arbeit und Geräte abrechnen unter",
+    "billingStrategySource": "Abrechnungsprofil von {{source}}, als separates Profil bei {{target}} erhalten",
+    "billingStrategyTarget": "Standard-Abrechnungsprofil von {{target}}",
+    "billingStrategyHelp": "Gilt für {{tickets}} Ticket(s), {{projects}} Projekt(e), {{assets}} Asset(s) und {{mappings}} RMM-Gerätegruppe(n) ohne eigenes Abrechnungsprofil. Zeilen mit einem expliziten Profil behalten es, und Rechnungen, Abrechnungszyklen, Zahlungen und Guthaben bleiben immer beim zusammengeführten Profil."
   },
   "billingProfileContacts": {
     "title": "Profilkontakte",

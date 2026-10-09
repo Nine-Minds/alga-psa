@@ -2004,7 +2004,15 @@
     "accountingApply": "Applica la selezione",
     "accountingSkip": "Rimanda",
     "accountingRemapped": "Corrispondenze contabili reindirizzate",
-    "accountingSkipped": "{{count}} corrispondenza/e non è stato possibile reindirizzarle: vanno ricollegate manualmente."
+    "accountingSkipped": "{{count}} corrispondenza/e non è stato possibile reindirizzarle: vanno ricollegate manualmente.",
+    "assetsDescription": "Questi dispositivi e organizzazioni RMM si spostano sul cliente di destinazione. La sincronizzazione li mantiene lì.",
+    "assetsTotal": "Asset",
+    "assetGroups": "Gruppi di asset",
+    "deviceCount": "{{count}} dispositivi",
+    "billingStrategyHeading": "Fattura il lavoro e i dispositivi uniti su",
+    "billingStrategySource": "Profilo di fatturazione di {{source}}, mantenuto come profilo separato su {{target}}",
+    "billingStrategyTarget": "Profilo di fatturazione predefinito di {{target}}",
+    "billingStrategyHelp": "Si applica a {{tickets}} ticket, {{projects}} progetti, {{assets}} asset e {{mappings}} gruppi di dispositivi RMM senza un profilo di fatturazione proprio. Le righe con un profilo esplicito lo mantengono e fatture, cicli di fatturazione, pagamenti e crediti restano sempre sul profilo unito."
   },
   "billingProfileContacts": {
     "title": "Contatti del profilo",
