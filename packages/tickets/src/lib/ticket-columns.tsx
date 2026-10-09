@@ -7,6 +7,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -499,9 +500,23 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.contact', 'Contact'),
         dataIndex: 'contact_name',
         width: '8%',
-        render: (value: string | null) => value
-          ? <span className="block truncate text-[rgb(var(--color-text-700))]">{value}</span>
-          : <span className="text-[rgb(var(--color-text-400))]">—</span>,
+        render: (value: string | null, record: ITicketListItem) => (
+          <span className="flex items-center gap-2 overflow-hidden text-[rgb(var(--color-text-700))]">
+            {value ? (
+              <ContactAvatar
+                contactId={record.contact_name_id || value}
+                contactName={value}
+                avatarUrl={record.contact_avatar_url ?? null}
+                size="xs"
+              />
+            ) : (
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
+                —
+              </span>
+            )}
+            <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
+          </span>
+        ),
       }
     });
   }
