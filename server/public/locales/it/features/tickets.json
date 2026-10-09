@@ -450,7 +450,8 @@
       "loading": "Caricamento...",
       "clientNotFound": "Cliente non trovato.",
       "clientRendererMissing": "I dettagli del cliente non sono disponibili in questo contesto.",
-      "clientLoadFailed": "Impossibile caricare il cliente."
+      "clientLoadFailed": "Impossibile caricare il cliente.",
+      "contactRendererMissing": "I dettagli del contatto non sono disponibili in questo contesto."
     },
     "filters": {
       "allAssignees": "Tutti gli assegnatari",

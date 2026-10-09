@@ -458,7 +458,8 @@
       "loading": "Loading...",
       "clientNotFound": "Client not found.",
       "clientRendererMissing": "Client details are unavailable in this context.",
-      "clientLoadFailed": "Failed to load client."
+      "clientLoadFailed": "Failed to load client.",
+      "contactRendererMissing": "Contact details are unavailable in this context."
     },
     "filters": {
       "allAssignees": "All Assignees",

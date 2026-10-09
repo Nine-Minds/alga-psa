@@ -450,7 +450,8 @@
       "loading": "Wird geladen...",
       "clientNotFound": "Kunde nicht gefunden.",
       "clientRendererMissing": "Kundendetails sind in diesem Kontext nicht verfügbar.",
-      "clientLoadFailed": "Kunde konnte nicht geladen werden."
+      "clientLoadFailed": "Kunde konnte nicht geladen werden.",
+      "contactRendererMissing": "Kontaktdetails sind in diesem Kontext nicht verfügbar."
     },
     "filters": {
       "allAssignees": "Alle Zuständigen",
