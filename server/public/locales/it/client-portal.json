@@ -1008,10 +1008,12 @@
       "type": "Tipo",
       "status": "Stato",
       "location": "Ubicazione",
-      "lastUpdated": "Ultimo aggiornamento"
+      "lastUpdated": "Ultimo aggiornamento",
+      "assignedTo": "Assegnato a"
     },
     "notAvailable": "N/D",
-    "detailsTitle": "Dettagli asset"
+    "detailsTitle": "Dettagli asset",
+    "unassigned": "Non assegnato"
   },
   "errors": {
     "account": {

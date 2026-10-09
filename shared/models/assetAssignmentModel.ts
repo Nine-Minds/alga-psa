@@ -58,7 +58,7 @@ function table(trx: Knex | Knex.Transaction, tenant: string, name: string): Knex
  * tables not existing yet so this helper lands before the groups migration.
  */
 async function sharedWorkspaceGroupId(
-  trx: Knex.Transaction,
+  trx: Knex | Knex.Transaction,
   tenant: string,
   assetId: string
 ): Promise<string | null> {
@@ -77,6 +77,17 @@ async function sharedWorkspaceGroupId(
   }
 }
 
+async function contactDisplayName(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<string | null> {
+  const row = await table(trx, tenant, 'contacts')
+    .where({ contact_name_id: contactId })
+    .first<{ full_name?: string | null }>('full_name');
+  return row?.full_name ?? null;
+}
+
 /**
  * Assigns (or clears, with `null`) the asset's contact.
  *
@@ -88,7 +99,7 @@ async function sharedWorkspaceGroupId(
  *   `asset_history` row.
  */
 export async function setAssetAssignee(
-  trx: Knex.Transaction,
+  trx: Knex | Knex.Transaction,
   tenant: string,
   assetId: string,
   contactId: string | null,
@@ -152,6 +163,14 @@ export async function setAssetAssignee(
   // no audit user) has no actor, so the row is skipped rather than failing the
   // assignment it is only describing.
   if (options.actorUserId) {
+    // The names travel with the history entry so the timeline can render
+    // "Assigned to Jane Doe" without a second lookup per row — and still read
+    // correctly after the contact is renamed or deleted.
+    const [contactName, previousContactName] = await Promise.all([
+      contactId ? contactDisplayName(trx, tenant, contactId) : Promise.resolve(null),
+      previousContactId ? contactDisplayName(trx, tenant, previousContactId) : Promise.resolve(null),
+    ]);
+
     await table(trx, tenant, 'asset_history').insert({
       tenant,
       asset_id: assetId,
@@ -160,7 +179,9 @@ export async function setAssetAssignee(
       changes: {
         source: options.source,
         previous_contact_name_id: previousContactId,
+        previous_contact_name: previousContactName,
         contact_name_id: contactId,
+        contact_name: contactName,
         ...(options.note ? { note: options.note } : {}),
       },
       changed_at: now,
@@ -172,7 +193,7 @@ export async function setAssetAssignee(
 
 /** The asset's current assignment, if it has one. */
 export async function getOpenAssetAssignment(
-  trx: Knex.Transaction,
+  trx: Knex | Knex.Transaction,
   tenant: string,
   assetId: string
 ): Promise<AssetAssignment | null> {

@@ -653,6 +653,10 @@ function InfoGrid({
       )}
       <InfoRow label={t('assetDetailDrawer.info.assetTag', { defaultValue: 'Asset tag' })} value={asset.asset_tag} />
       <InfoRow label={t('assetDetailDrawer.info.status', { defaultValue: 'Status' })} value={statusLabel} />
+      <InfoRow
+        label={t('assetDetailDrawer.info.assignedTo', { defaultValue: 'Assigned to' })}
+        value={asset.contact_name || t('assetDetailDrawer.info.unassigned', { defaultValue: 'Unassigned' })}
+      />
       {asset.manufacturer ? (
         <InfoRow label={t('assetDetailDrawer.info.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
       ) : null}

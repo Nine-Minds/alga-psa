@@ -233,7 +233,8 @@
         "delete": "Supprimer",
         "selectedCount": "{{count}} sélectionné(s)",
         "setLocation": "Définir l'emplacement",
-        "setStatus": "Définir le statut"
+        "setStatus": "Définir le statut",
+        "assignContact": "Attribuer à un contact"
       },
       "actions": {
         "apply": "Appliquer",
@@ -241,7 +242,8 @@
         "deleteAssets": "Supprimer",
         "deleting": "Suppression...",
         "updateLocation": "Mise à jour de l'emplacement",
-        "updateStatus": "Mise à jour du statut"
+        "updateStatus": "Mise à jour du statut",
+        "assignContact": "Attribution"
       },
       "deleteDialog": {
         "description": "Supprimer {{count}} actif(s) sélectionné(s). Les actifs ayant des dépendances peuvent être ignorés.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Impossible de supprimer les actifs sélectionnés.",
         "updateLocationFailed": "Impossible de mettre à jour les emplacements des actifs sélectionnés.",
-        "updateStatusFailed": "Impossible de mettre à jour les actifs sélectionnés."
+        "updateStatusFailed": "Impossible de mettre à jour les actifs sélectionnés.",
+        "assignFailed": "Impossible d'attribuer les actifs sélectionnés."
       },
       "locationDialog": {
         "clearLocation": "Effacer l'emplacement",
@@ -268,7 +271,11 @@
         "description": "Mettre à jour {{count}} actif(s) sélectionné(s).",
         "title": "Définir le statut des actifs"
       },
-      "success": "{{action}} terminée pour {{count}} actif(s)."
+      "success": "{{action}} terminée pour {{count}} actif(s).",
+      "assignDialog": {
+        "title": "Attribuer à un contact",
+        "description": "Attribuer {{count}} actif(s) sélectionné(s) à un contact de ce client."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Mis à jour",
       "tenant": "Locataire",
       "manufacturer": "Fabricant",
-      "model": "Modèle"
+      "model": "Modèle",
+      "assignedTo": "Attribué à"
     },
     "typeDetails": {
       "workstation": "Détails du poste de travail",
@@ -1542,7 +1550,15 @@
     "model": "Modèle",
     "vendor": "Fournisseur",
     "purchaseCost": "Coût d'achat",
-    "orderNumber": "N° de commande"
+    "orderNumber": "N° de commande",
+    "assignedTo": "Attribué à",
+    "unassigned": "Non attribué",
+    "assign": "Attribuer",
+    "unassign": "Retirer l'attribution",
+    "aContact": "Contact",
+    "assignDialogTitle": "Attribuer cet actif",
+    "sharedWorkspace": "Espace partagé",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personnes"
   },
   "assetTimeline": {
     "title": "Chronologie",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Dernier redémarrage",
       "patchScan": "Analyse des correctifs",
       "patchScanDetail": "{{pending}} en attente, {{failed}} en échec",
-      "purchased": "Acheté"
+      "purchased": "Acheté",
+      "assignedTo": "Attribué à {{contact}}",
+      "unassigned": "Attribution retirée",
+      "autoAssigned": "Attribué automatiquement à {{contact}} depuis l'utilisateur connecté",
+      "assignedViaBundle": "Attribué à {{contact}} via le lot {{group}}",
+      "aContact": "un contact",
+      "groupAdded": "Ajouté à {{group}}",
+      "groupRemoved": "Retiré de {{group}}",
+      "aGroup": "un groupe"
     },
     "changeTypes": {
       "created": "Créé",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Autorisation refusée : impossible d’associer des documents aux actifs",
       "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs",
       "readAssetStatuses": "Autorisation refusée : impossible de lire les statuts des actifs",
-      "manageAssetStatuses": "Autorisation refusée : impossible de gérer les statuts des actifs"
+      "manageAssetStatuses": "Autorisation refusée : impossible de gérer les statuts des actifs",
+      "updateAssets": "Autorisation refusée : impossible de mettre à jour les actifs"
     },
     "asset": {
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
@@ -1710,5 +1735,9 @@
       "load": "Impossible de charger les statuts des actifs",
       "inUse": "Encore utilisé par {{count}} actif(s). Déplacez-les d'abord vers un autre statut."
     }
+  },
+  "contactAssets": {
+    "title": "Actifs",
+    "empty": "Aucun actif attribué à ce contact."
   }
 }

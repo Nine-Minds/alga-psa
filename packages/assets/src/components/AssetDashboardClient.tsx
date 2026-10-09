@@ -23,6 +23,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
@@ -31,11 +32,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
+import type { Asset, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { toast } from 'react-hot-toast';
@@ -82,6 +83,7 @@ import {
   Trash2,
   MapPin,
   CircleDot,
+  UserPlus,
 } from 'lucide-react';
 import { useListViews } from '@alga-psa/list-views/hooks';
 import { ListViewPicker } from '@alga-psa/list-views/components';
@@ -217,6 +219,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  // F039: bulk assignment only makes sense inside one client — a contact
+  // belongs to a client, so a mixed selection has no valid picker.
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [bulkContacts, setBulkContacts] = useState<IContact[]>([]);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('active');
@@ -765,6 +771,47 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       setBulkActionLoading(false);
     }
   }, [bulkCustomLocation, bulkLocationId, bulkLocationMode, refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
+
+  useEffect(() => {
+    if (!isBulkAssignOpen || !singleClientSelectionId) {
+      setBulkContacts([]);
+      return;
+    }
+    let mounted = true;
+    void (async () => {
+      try {
+        const list = await getClientContactsForAssets(singleClientSelectionId, null);
+        if (mounted) setBulkContacts(list);
+      } catch (error) {
+        console.error('Failed to load client contacts for bulk assign:', error);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isBulkAssignOpen, singleClientSelectionId]);
+
+  const handleBulkAssignContact = useCallback(async (contactId: string | null) => {
+    setBulkActionLoading(true);
+    try {
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, { contact_name_id: contactId }));
+      summarizeBulkResult(
+        t('assetDashboardClient.bulk.actions.assignContact', { defaultValue: 'Assignment' }),
+        response.succeeded,
+        response.failed
+      );
+      removeSucceededSelections(response.results);
+      setIsBulkAssignOpen(false);
+      refreshAssets();
+    } catch (error) {
+      console.error('Failed to bulk assign assets:', error);
+      toast.error(t('assetDashboardClient.bulk.errors.assignFailed', {
+        defaultValue: 'Unable to assign selected assets.'
+      }));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
 
   const handleBulkDelete = useCallback(async () => {
     setBulkActionLoading(true);
@@ -1863,6 +1910,50 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           </p>
         </DialogContent>
       </Dialog>
+      <Dialog
+        id="bulk-assign-assets"
+        isOpen={isBulkAssignOpen}
+        onClose={() => setIsBulkAssignOpen(false)}
+        title={t('assetDashboardClient.bulk.assignDialog.title', { defaultValue: 'Assign to contact' })}
+        className="max-w-lg"
+        footer={(
+          <div className="flex justify-between gap-2">
+            <Button
+              id="bulk-assign-unassign"
+              variant="outline"
+              disabled={bulkActionLoading}
+              onClick={() => { void handleBulkAssignContact(null); }}
+            >
+              {t('assetBento.unassign', { defaultValue: 'Unassign' })}
+            </Button>
+            <Button id="bulk-assign-cancel" variant="secondary" onClick={() => setIsBulkAssignOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t('assetDashboardClient.bulk.assignDialog.description', {
+                defaultValue: 'Assign {{count}} selected asset(s) to one of this client\u2019s contacts.',
+                count: selectedAssetIds.length,
+              })}
+            </p>
+            <ContactPicker
+              id="bulk-assign-contact-picker"
+              label={t('assetDashboardClient.table.assignedTo', { defaultValue: 'Assigned to' })}
+              contacts={bulkContacts}
+              value={''}
+              onValueChange={(value) => { if (value) void handleBulkAssignContact(value); }}
+              clientId={singleClientSelectionId ?? undefined}
+              placeholder={t('assetForm.placeholders.selectContact', { defaultValue: 'Select a contact' })}
+              disabled={bulkActionLoading}
+              buttonWidth="full"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       <BulkActionBar
         idPrefix="asset-bulk-action-bar"
         count={selectedAssetIds.length}
@@ -1885,6 +1976,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               setBulkLocationMode(canBulkAssignSavedLocation ? 'saved' : 'custom');
               setIsBulkLocationOpen(true);
             },
+          },
+          {
+            id: 'assign',
+            label: t('assetDashboardClient.bulk.actionBar.assignContact', { defaultValue: 'Assign to contact' }),
+            icon: <UserPlus className="h-4 w-4" />,
+            disabled: !singleClientSelectionId,
+            onClick: () => setIsBulkAssignOpen(true),
           },
           {
             id: 'delete',

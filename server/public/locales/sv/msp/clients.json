@@ -1596,7 +1596,8 @@
         "warrantyEnd": "Garantins slutdatum",
         "agent": "Agent",
         "patching": "Patchning",
-        "coverage": "Täckning"
+        "coverage": "Täckning",
+        "assignedTo": "Tilldelad till"
       },
       "details": {
         "local": "Lokal",

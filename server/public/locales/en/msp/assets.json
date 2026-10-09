@@ -233,7 +233,8 @@
         "delete": "Delete",
         "selectedCount": "{{count}} selected",
         "setLocation": "Set location",
-        "setStatus": "Set status"
+        "setStatus": "Set status",
+        "assignContact": "Assign to contact"
       },
       "actions": {
         "apply": "Apply",
@@ -241,7 +242,8 @@
         "deleteAssets": "Delete",
         "deleting": "Deleting...",
         "updateLocation": "Location update",
-        "updateStatus": "Status update"
+        "updateStatus": "Status update",
+        "assignContact": "Assignment"
       },
       "deleteDialog": {
         "description": "Delete {{count}} selected asset(s). Assets with dependencies may be skipped.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Unable to delete selected assets.",
         "updateLocationFailed": "Unable to update selected asset locations.",
-        "updateStatusFailed": "Unable to update selected assets."
+        "updateStatusFailed": "Unable to update selected assets.",
+        "assignFailed": "Unable to assign selected assets."
       },
       "locationDialog": {
         "clearLocation": "Clear location",
@@ -268,7 +271,11 @@
         "description": "Update {{count}} selected asset(s).",
         "title": "Set asset status"
       },
-      "success": "{{action}} completed for {{count}} asset(s)."
+      "success": "{{action}} completed for {{count}} asset(s).",
+      "assignDialog": {
+        "title": "Assign to contact",
+        "description": "Assign {{count}} selected asset(s) to one of this client’s contacts."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Updated",
       "tenant": "Tenant",
       "manufacturer": "Manufacturer",
-      "model": "Model"
+      "model": "Model",
+      "assignedTo": "Assigned to"
     },
     "typeDetails": {
       "workstation": "Workstation details",
@@ -1542,7 +1550,15 @@
     "model": "Model",
     "vendor": "Vendor",
     "purchaseCost": "Purchase cost",
-    "orderNumber": "Order no."
+    "orderNumber": "Order no.",
+    "assignedTo": "Assigned to",
+    "unassigned": "Unassigned",
+    "assign": "Assign",
+    "unassign": "Unassign",
+    "aContact": "Contact",
+    "assignDialogTitle": "Assign this asset",
+    "sharedWorkspace": "Shared workspace",
+    "sharedWorkspaceValue": "{{name}} · {{count}} people"
   },
   "assetTimeline": {
     "title": "Timeline",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Last reboot",
       "patchScan": "Patch scan",
       "patchScanDetail": "{{pending}} pending, {{failed}} failed",
-      "purchased": "Purchased"
+      "purchased": "Purchased",
+      "assignedTo": "Assigned to {{contact}}",
+      "unassigned": "Unassigned",
+      "autoAssigned": "Auto-assigned to {{contact}} from the signed-in user",
+      "assignedViaBundle": "Assigned to {{contact}} via bundle {{group}}",
+      "aContact": "a contact",
+      "groupAdded": "Added to {{group}}",
+      "groupRemoved": "Removed from {{group}}",
+      "aGroup": "a group"
     },
     "changeTypes": {
       "created": "Created",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Permission denied: Cannot associate documents with assets",
       "removeDocuments": "Permission denied: Cannot remove documents from assets",
       "readAssetStatuses": "Permission denied: Cannot read asset statuses",
-      "manageAssetStatuses": "Permission denied: Cannot manage asset statuses"
+      "manageAssetStatuses": "Permission denied: Cannot manage asset statuses",
+      "updateAssets": "Permission denied: Cannot update assets"
     },
     "asset": {
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
@@ -1710,5 +1735,9 @@
       "load": "Unable to load asset statuses",
       "inUse": "Still used by {{count}} asset(s). Move them to another status first."
     }
+  },
+  "contactAssets": {
+    "title": "Assets",
+    "empty": "No assets assigned to this contact."
   }
 }

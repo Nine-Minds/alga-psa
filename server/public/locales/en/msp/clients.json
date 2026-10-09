@@ -1605,7 +1605,8 @@
         "warrantyEnd": "Warranty End",
         "agent": "Agent",
         "patching": "Patching",
-        "coverage": "Coverage"
+        "coverage": "Coverage",
+        "assignedTo": "Assigned to"
       },
       "details": {
         "local": "Local",

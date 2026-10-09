@@ -142,6 +142,11 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
               </p>
             </div>
             <div>
+              {/* FR-C6: contact name only — no assignment history, no cost. */}
+              <p className="text-sm text-gray-500">{t('assets.columns.assignedTo', 'Assigned to')}</p>
+              <p className="mt-1">{asset.contact_name || t('assets.unassigned', 'Unassigned')}</p>
+            </div>
+            <div>
               <p className="text-sm text-gray-500">Location</p>
               <p className="mt-1">{asset.location || 'N/A'}</p>
             </div>

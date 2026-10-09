@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Einde garantie",
         "agent": "Medewerker",
         "patching": "Patches",
-        "coverage": "Dekking"
+        "coverage": "Dekking",
+        "assignedTo": "Toegewezen aan"
       },
       "details": {
         "local": "Lokaal",

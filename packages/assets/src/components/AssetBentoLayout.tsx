@@ -50,6 +50,7 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
+import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetTimeline } from './AssetTimeline';
 import AssetFormClient from './AssetFormClient';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
@@ -208,6 +209,13 @@ export function AssetBentoLayout({
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
                 <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={asset.status} />
+                {/* FR-C6: the assignee is always shown, even when empty. */}
+                <AssetAssigneeRow
+                  assetId={asset.asset_id}
+                  clientId={asset.client_id}
+                  contactNameId={asset.contact_name_id ?? null}
+                  contactName={asset.contact_name ?? null}
+                />
                 <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.location} />
                 {/* FR-A1 rows are hidden when empty rather than showing a dash. */}
                 {asset.manufacturer ? (

@@ -224,6 +224,15 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
     },
         {
+      // FR-C6: who has the device is as much a part of "the client's assets"
+      // as where it is.
+      title: t('clientTabs.assets.columns.assignedTo', { defaultValue: 'Assigned to' }),
+      dataIndex: 'contact_name',
+      render: (value: string | null) => (
+        <span className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))]">{value || '—'}</span>
+      )
+    },
+        {
       title: t('clientTabs.assets.columns.location', { defaultValue: 'Location' }),
       dataIndex: 'location',
       render: (value: string | null) => (

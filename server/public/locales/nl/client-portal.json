@@ -1008,10 +1008,12 @@
       "type": "Type",
       "status": "Status",
       "location": "Locatie",
-      "lastUpdated": "Laatst bijgewerkt"
+      "lastUpdated": "Laatst bijgewerkt",
+      "assignedTo": "Toegewezen aan"
     },
     "notAvailable": "N.v.t.",
-    "detailsTitle": "Asset-details"
+    "detailsTitle": "Asset-details",
+    "unassigned": "Niet toegewezen"
   },
   "errors": {
     "account": {

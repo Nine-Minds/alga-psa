@@ -233,7 +233,8 @@
         "delete": "Excluir",
         "selectedCount": "{{count}} selecionado",
         "setLocation": "Definir localização",
-        "setStatus": "Definir status"
+        "setStatus": "Definir status",
+        "assignContact": "Atribuir a contato"
       },
       "actions": {
         "apply": "Aplicar",
@@ -241,7 +242,8 @@
         "deleteAssets": "Excluir",
         "deleting": "Excluindo...",
         "updateLocation": "Atualização de localização",
-        "updateStatus": "Atualização de status"
+        "updateStatus": "Atualização de status",
+        "assignContact": "Atribuição"
       },
       "deleteDialog": {
         "description": "Exclua o(s) ativo(s) selecionado(s) {{count}}. Os ativos com dependências podem ser ignorados.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Não foi possível excluir os ativos selecionados.",
         "updateLocationFailed": "Não foi possível atualizar os locais dos ativos selecionados.",
-        "updateStatusFailed": "Não foi possível atualizar os recursos selecionados."
+        "updateStatusFailed": "Não foi possível atualizar os recursos selecionados.",
+        "assignFailed": "Não foi possível atribuir os ativos selecionados."
       },
       "locationDialog": {
         "clearLocation": "Limpar localização",
@@ -268,7 +271,11 @@
         "description": "Atualize o(s) ativo(s) selecionado(s) {{count}}.",
         "title": "Definir status do ativo"
       },
-      "success": "{{action}} concluído para ativo(s) {{count}}."
+      "success": "{{action}} concluído para ativo(s) {{count}}.",
+      "assignDialog": {
+        "title": "Atribuir a contato",
+        "description": "Atribuir {{count}} ativo(s) selecionado(s) a um contato deste cliente."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Atualizado",
       "tenant": "Inquilino",
       "manufacturer": "Fabricante",
-      "model": "Modelo"
+      "model": "Modelo",
+      "assignedTo": "Atribuído a"
     },
     "typeDetails": {
       "workstation": "Detalhes da estação de trabalho",
@@ -1542,7 +1550,15 @@
     "model": "Modelo",
     "vendor": "Fornecedor",
     "purchaseCost": "Custo de compra",
-    "orderNumber": "N.º do pedido"
+    "orderNumber": "N.º do pedido",
+    "assignedTo": "Atribuído a",
+    "unassigned": "Não atribuído",
+    "assign": "Atribuir",
+    "unassign": "Remover atribuição",
+    "aContact": "Contato",
+    "assignDialogTitle": "Atribuir este ativo",
+    "sharedWorkspace": "Espaço compartilhado",
+    "sharedWorkspaceValue": "{{name}} · {{count}} pessoas"
   },
   "assetTimeline": {
     "title": "Linha do tempo",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Última reinicialização",
       "patchScan": "Verificação de patches",
       "patchScanDetail": "{{pending}} pendentes, {{failed}} com falha",
-      "purchased": "Comprado"
+      "purchased": "Comprado",
+      "assignedTo": "Atribuído a {{contact}}",
+      "unassigned": "Atribuição removida",
+      "autoAssigned": "Atribuído automaticamente a {{contact}} a partir do usuário conectado",
+      "assignedViaBundle": "Atribuído a {{contact}} pelo pacote {{group}}",
+      "aContact": "um contato",
+      "groupAdded": "Adicionado a {{group}}",
+      "groupRemoved": "Removido de {{group}}",
+      "aGroup": "um grupo"
     },
     "changeTypes": {
       "created": "Criado",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
       "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
       "readAssetStatuses": "Permissão negada: não é possível ler os status de ativos",
-      "manageAssetStatuses": "Permissão negada: não é possível gerenciar os status de ativos"
+      "manageAssetStatuses": "Permissão negada: não é possível gerenciar os status de ativos",
+      "updateAssets": "Permissão negada: não é possível atualizar os ativos"
     },
     "asset": {
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -1710,5 +1735,9 @@
       "load": "Não foi possível carregar os status de ativos",
       "inUse": "Ainda usado por {{count}} ativo(s). Mova-os para outro status primeiro."
     }
+  },
+  "contactAssets": {
+    "title": "Ativos",
+    "empty": "Nenhum ativo atribuído a este contato."
   }
 }

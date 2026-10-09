@@ -233,7 +233,8 @@
         "delete": "Eliminar",
         "selectedCount": "{{count}} seleccionados",
         "setLocation": "Establecer ubicación",
-        "setStatus": "Establecer estado"
+        "setStatus": "Establecer estado",
+        "assignContact": "Asignar a contacto"
       },
       "actions": {
         "apply": "Aplicar",
@@ -241,7 +242,8 @@
         "deleteAssets": "Eliminar",
         "deleting": "Eliminando...",
         "updateLocation": "Actualización de ubicación",
-        "updateStatus": "Actualización de estado"
+        "updateStatus": "Actualización de estado",
+        "assignContact": "Asignación"
       },
       "deleteDialog": {
         "description": "Eliminar {{count}} activo(s) seleccionado(s). Los activos con dependencias pueden omitirse.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "No se pudieron eliminar los activos seleccionados.",
         "updateLocationFailed": "No se pudieron actualizar las ubicaciones de los activos seleccionados.",
-        "updateStatusFailed": "No se pudieron actualizar los activos seleccionados."
+        "updateStatusFailed": "No se pudieron actualizar los activos seleccionados.",
+        "assignFailed": "No se pudieron asignar los activos seleccionados."
       },
       "locationDialog": {
         "clearLocation": "Borrar ubicación",
@@ -268,7 +271,11 @@
         "description": "Actualizar {{count}} activo(s) seleccionado(s).",
         "title": "Establecer estado del activo"
       },
-      "success": "{{action}} se completó para {{count}} activo(s)."
+      "success": "{{action}} se completó para {{count}} activo(s).",
+      "assignDialog": {
+        "title": "Asignar a contacto",
+        "description": "Asignar {{count}} activo(s) seleccionado(s) a un contacto de este cliente."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Actualizado",
       "tenant": "Inquilino",
       "manufacturer": "Fabricante",
-      "model": "Modelo"
+      "model": "Modelo",
+      "assignedTo": "Asignado a"
     },
     "typeDetails": {
       "workstation": "Detalles de la estación de trabajo",
@@ -1542,7 +1550,15 @@
     "model": "Modelo",
     "vendor": "Proveedor",
     "purchaseCost": "Coste de compra",
-    "orderNumber": "N.º de pedido"
+    "orderNumber": "N.º de pedido",
+    "assignedTo": "Asignado a",
+    "unassigned": "Sin asignar",
+    "assign": "Asignar",
+    "unassign": "Desasignar",
+    "aContact": "Contacto",
+    "assignDialogTitle": "Asignar este activo",
+    "sharedWorkspace": "Espacio compartido",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personas"
   },
   "assetTimeline": {
     "title": "Cronología",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Último reinicio",
       "patchScan": "Análisis de parches",
       "patchScanDetail": "{{pending}} pendientes, {{failed}} fallidos",
-      "purchased": "Comprado"
+      "purchased": "Comprado",
+      "assignedTo": "Asignado a {{contact}}",
+      "unassigned": "Sin asignar",
+      "autoAssigned": "Asignado automáticamente a {{contact}} desde el usuario con sesión iniciada",
+      "assignedViaBundle": "Asignado a {{contact}} mediante el paquete {{group}}",
+      "aContact": "un contacto",
+      "groupAdded": "Añadido a {{group}}",
+      "groupRemoved": "Eliminado de {{group}}",
+      "aGroup": "un grupo"
     },
     "changeTypes": {
       "created": "Creado",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Permiso denegado: no se pueden asociar documentos a los activos",
       "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos",
       "readAssetStatuses": "Permiso denegado: no se pueden leer los estados de activos",
-      "manageAssetStatuses": "Permiso denegado: no se pueden gestionar los estados de activos"
+      "manageAssetStatuses": "Permiso denegado: no se pueden gestionar los estados de activos",
+      "updateAssets": "Permiso denegado: no se pueden actualizar los activos"
     },
     "asset": {
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -1710,5 +1735,9 @@
       "load": "No se pudieron cargar los estados de activos",
       "inUse": "Todavía lo usan {{count}} activo(s). Muévalos primero a otro estado."
     }
+  },
+  "contactAssets": {
+    "title": "Activos",
+    "empty": "No hay activos asignados a este contacto."
   }
 }

@@ -50,6 +50,13 @@ export function AssetList({ assets }: AssetListProps) {
       )
     },
     {
+      // FR-C6: the portal shows the contact name only — never the assignment
+      // history or any cost field.
+      title: t('assets.columns.assignedTo', { defaultValue: 'Assigned to' }),
+      dataIndex: 'contact_name',
+      render: (value: string | null) => value || t('assets.unassigned', { defaultValue: 'Unassigned' })
+    },
+    {
       title: t('assets.columns.location', { defaultValue: 'Location' }),
       dataIndex: 'location',
       render: (value: string | null) => value || t('assets.notAvailable', { defaultValue: 'N/A' })

@@ -233,7 +233,8 @@
         "delete": "Elimina",
         "selectedCount": "{{count}} selezionate",
         "setLocation": "Imposta posizione",
-        "setStatus": "Imposta stato"
+        "setStatus": "Imposta stato",
+        "assignContact": "Assegna a contatto"
       },
       "actions": {
         "apply": "Applica",
@@ -241,7 +242,8 @@
         "deleteAssets": "Elimina",
         "deleting": "Eliminazione...",
         "updateLocation": "Aggiornamento posizione",
-        "updateStatus": "Aggiornamento stato"
+        "updateStatus": "Aggiornamento stato",
+        "assignContact": "Assegnazione"
       },
       "deleteDialog": {
         "description": "Elimina {{count}} asset selezionati. Gli asset con dipendenze potrebbero essere ignorati.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Impossibile eliminare gli asset selezionati.",
         "updateLocationFailed": "Impossibile aggiornare le posizioni degli asset selezionati.",
-        "updateStatusFailed": "Impossibile aggiornare gli asset selezionati."
+        "updateStatusFailed": "Impossibile aggiornare gli asset selezionati.",
+        "assignFailed": "Impossibile assegnare gli asset selezionati."
       },
       "locationDialog": {
         "clearLocation": "Rimuovi posizione",
@@ -268,7 +271,11 @@
         "description": "Aggiorna {{count}} asset selezionati.",
         "title": "Imposta stato degli asset"
       },
-      "success": "{{action}} completato per {{count}} asset."
+      "success": "{{action}} completato per {{count}} asset.",
+      "assignDialog": {
+        "title": "Assegna a contatto",
+        "description": "Assegna {{count}} asset selezionati a un contatto di questo cliente."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Aggiornato",
       "tenant": "Tenant",
       "manufacturer": "Produttore",
-      "model": "Modello"
+      "model": "Modello",
+      "assignedTo": "Assegnato a"
     },
     "typeDetails": {
       "workstation": "Dettagli della postazione di lavoro",
@@ -1542,7 +1550,15 @@
     "model": "Modello",
     "vendor": "Fornitore",
     "purchaseCost": "Costo di acquisto",
-    "orderNumber": "N. ordine"
+    "orderNumber": "N. ordine",
+    "assignedTo": "Assegnato a",
+    "unassigned": "Non assegnato",
+    "assign": "Assegna",
+    "unassign": "Rimuovi assegnazione",
+    "aContact": "Contatto",
+    "assignDialogTitle": "Assegna questo asset",
+    "sharedWorkspace": "Postazione condivisa",
+    "sharedWorkspaceValue": "{{name}} · {{count}} persone"
   },
   "assetTimeline": {
     "title": "Cronologia",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Ultimo riavvio",
       "patchScan": "Scansione patch",
       "patchScanDetail": "{{pending}} in sospeso, {{failed}} non riuscite",
-      "purchased": "Acquistato"
+      "purchased": "Acquistato",
+      "assignedTo": "Assegnato a {{contact}}",
+      "unassigned": "Assegnazione rimossa",
+      "autoAssigned": "Assegnato automaticamente a {{contact}} dall'utente connesso",
+      "assignedViaBundle": "Assegnato a {{contact}} tramite il bundle {{group}}",
+      "aContact": "un contatto",
+      "groupAdded": "Aggiunto a {{group}}",
+      "groupRemoved": "Rimosso da {{group}}",
+      "aGroup": "un gruppo"
     },
     "changeTypes": {
       "created": "Creato",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Autorizzazione negata: impossibile associare documenti agli asset",
       "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset",
       "readAssetStatuses": "Permesso negato: impossibile leggere gli stati degli asset",
-      "manageAssetStatuses": "Permesso negato: impossibile gestire gli stati degli asset"
+      "manageAssetStatuses": "Permesso negato: impossibile gestire gli stati degli asset",
+      "updateAssets": "Permesso negato: impossibile aggiornare gli asset"
     },
     "asset": {
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -1710,5 +1735,9 @@
       "load": "Impossibile caricare gli stati degli asset",
       "inUse": "Ancora usato da {{count}} asset. Spostali prima su un altro stato."
     }
+  },
+  "contactAssets": {
+    "title": "Asset",
+    "empty": "Nessun asset assegnato a questo contatto."
   }
 }

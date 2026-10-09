@@ -233,7 +233,8 @@
         "delete": "Verwijderen",
         "selectedCount": "{{count}} geselecteerd",
         "setLocation": "Locatie instellen",
-        "setStatus": "Status instellen"
+        "setStatus": "Status instellen",
+        "assignContact": "Aan contact toewijzen"
       },
       "actions": {
         "apply": "Toepassen",
@@ -241,7 +242,8 @@
         "deleteAssets": "Verwijderen",
         "deleting": "Verwijderen...",
         "updateLocation": "Locatie-update",
-        "updateStatus": "Statusupdate"
+        "updateStatus": "Statusupdate",
+        "assignContact": "Toewijzing"
       },
       "deleteDialog": {
         "description": "Verwijder {{count}} geselecteerde asset(s). Assets met afhankelijkheden worden mogelijk overgeslagen.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Kan geselecteerde assets niet verwijderen.",
         "updateLocationFailed": "Kan locaties van geselecteerde assets niet bijwerken.",
-        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken."
+        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken.",
+        "assignFailed": "Kan de geselecteerde assets niet toewijzen."
       },
       "locationDialog": {
         "clearLocation": "Locatie wissen",
@@ -268,7 +271,11 @@
         "description": "Werk {{count}} geselecteerde asset(s) bij.",
         "title": "Assetstatus instellen"
       },
-      "success": "{{action}} voltooid voor {{count}} asset(s)."
+      "success": "{{action}} voltooid voor {{count}} asset(s).",
+      "assignDialog": {
+        "title": "Aan contact toewijzen",
+        "description": "{{count}} geselecteerde asset(s) toewijzen aan een contact van deze klant."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Bijgewerkt",
       "tenant": "Tenant",
       "manufacturer": "Fabrikant",
-      "model": "Model"
+      "model": "Model",
+      "assignedTo": "Toegewezen aan"
     },
     "typeDetails": {
       "workstation": "Details van het werkstation",
@@ -1542,7 +1550,15 @@
     "model": "Model",
     "vendor": "Leverancier",
     "purchaseCost": "Aanschafkosten",
-    "orderNumber": "Ordernr."
+    "orderNumber": "Ordernr.",
+    "assignedTo": "Toegewezen aan",
+    "unassigned": "Niet toegewezen",
+    "assign": "Toewijzen",
+    "unassign": "Toewijzing opheffen",
+    "aContact": "Contact",
+    "assignDialogTitle": "Dit asset toewijzen",
+    "sharedWorkspace": "Gedeelde werkplek",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personen"
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Laatste herstart",
       "patchScan": "Patchscan",
       "patchScanDetail": "{{pending}} openstaand, {{failed}} mislukt",
-      "purchased": "Gekocht"
+      "purchased": "Gekocht",
+      "assignedTo": "Toegewezen aan {{contact}}",
+      "unassigned": "Toewijzing opgeheven",
+      "autoAssigned": "Automatisch toegewezen aan {{contact}} op basis van de aangemelde gebruiker",
+      "assignedViaBundle": "Toegewezen aan {{contact}} via bundel {{group}}",
+      "aContact": "een contact",
+      "groupAdded": "Toegevoegd aan {{group}}",
+      "groupRemoved": "Verwijderd uit {{group}}",
+      "aGroup": "een groep"
     },
     "changeTypes": {
       "created": "Aangemaakt",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Toestemming geweigerd: documenten kunnen niet aan assets worden gekoppeld",
       "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd",
       "readAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden gelezen",
-      "manageAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden beheerd"
+      "manageAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden beheerd",
+      "updateAssets": "Toegang geweigerd: assets kunnen niet worden bijgewerkt"
     },
     "asset": {
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -1710,5 +1735,9 @@
       "load": "Assetstatussen konden niet worden geladen",
       "inUse": "Nog gebruikt door {{count}} asset(s). Verplaats die eerst naar een andere status."
     }
+  },
+  "contactAssets": {
+    "title": "Assets",
+    "empty": "Er zijn geen assets aan dit contact toegewezen."
   }
 }

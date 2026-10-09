@@ -233,7 +233,8 @@
         "delete": "Usuń",
         "selectedCount": "Zaznaczono {{count}}",
         "setLocation": "Ustaw lokalizację",
-        "setStatus": "Ustaw status"
+        "setStatus": "Ustaw status",
+        "assignContact": "Przypisz do kontaktu"
       },
       "actions": {
         "apply": "Zastosuj",
@@ -241,7 +242,8 @@
         "deleteAssets": "Usuń",
         "deleting": "Usuwanie...",
         "updateLocation": "Aktualizacja lokalizacji",
-        "updateStatus": "Aktualizacja statusu"
+        "updateStatus": "Aktualizacja statusu",
+        "assignContact": "Przypisanie"
       },
       "deleteDialog": {
         "description": "Usuń {{count}} zaznaczonych zasobów. Zasoby z zależnościami mogą zostać pominięte.",
@@ -250,7 +252,8 @@
       "errors": {
         "deleteFailed": "Nie można usunąć zaznaczonych zasobów.",
         "updateLocationFailed": "Nie można zaktualizować lokalizacji zaznaczonych zasobów.",
-        "updateStatusFailed": "Nie można zaktualizować zaznaczonych zasobów."
+        "updateStatusFailed": "Nie można zaktualizować zaznaczonych zasobów.",
+        "assignFailed": "Nie udało się przypisać wybranych zasobów."
       },
       "locationDialog": {
         "clearLocation": "Wyczyść lokalizację",
@@ -268,7 +271,11 @@
         "description": "Zaktualizuj {{count}} zaznaczonych zasobów.",
         "title": "Ustaw status zasobu"
       },
-      "success": "{{action}} ukończono dla {{count}} zasobów."
+      "success": "{{action}} ukończono dla {{count}} zasobów.",
+      "assignDialog": {
+        "title": "Przypisz do kontaktu",
+        "description": "Przypisz {{count}} wybrane zasoby do kontaktu tego klienta."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -355,7 +362,8 @@
       "updated": "Zaktualizowano",
       "tenant": "Organizacja",
       "manufacturer": "Producent",
-      "model": "Model"
+      "model": "Model",
+      "assignedTo": "Przypisano do"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -1542,7 +1550,15 @@
     "model": "Model",
     "vendor": "Dostawca",
     "purchaseCost": "Koszt zakupu",
-    "orderNumber": "Nr zamówienia"
+    "orderNumber": "Nr zamówienia",
+    "assignedTo": "Przypisano do",
+    "unassigned": "Nieprzypisany",
+    "assign": "Przypisz",
+    "unassign": "Usuń przypisanie",
+    "aContact": "Kontakt",
+    "assignDialogTitle": "Przypisz ten zasób",
+    "sharedWorkspace": "Współdzielone stanowisko",
+    "sharedWorkspaceValue": "{{name}} · {{count}} osób"
   },
   "assetTimeline": {
     "title": "Oś czasu",
@@ -1561,7 +1577,15 @@
       "lastReboot": "Ostatni restart",
       "patchScan": "Skanowanie poprawek",
       "patchScanDetail": "{{pending}} oczekujących, {{failed}} nieudanych",
-      "purchased": "Zakupiono"
+      "purchased": "Zakupiono",
+      "assignedTo": "Przypisano do {{contact}}",
+      "unassigned": "Usunięto przypisanie",
+      "autoAssigned": "Automatycznie przypisano do {{contact}} na podstawie zalogowanego użytkownika",
+      "assignedViaBundle": "Przypisano do {{contact}} przez zestaw {{group}}",
+      "aContact": "kontaktu",
+      "groupAdded": "Dodano do {{group}}",
+      "groupRemoved": "Usunięto z {{group}}",
+      "aGroup": "grupy"
     },
     "changeTypes": {
       "created": "Utworzono",
@@ -1631,7 +1655,8 @@
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
       "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
       "readAssetStatuses": "Brak uprawnień: nie można odczytać statusów zasobów",
-      "manageAssetStatuses": "Brak uprawnień: nie można zarządzać statusami zasobów"
+      "manageAssetStatuses": "Brak uprawnień: nie można zarządzać statusami zasobów",
+      "updateAssets": "Brak uprawnień: nie można aktualizować zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1710,5 +1735,9 @@
       "load": "Nie udało się wczytać statusów zasobów",
       "inUse": "Nadal używany przez {{count}} zasób/zasoby. Najpierw przenieś je na inny status."
     }
+  },
+  "contactAssets": {
+    "title": "Zasoby",
+    "empty": "Do tego kontaktu nie przypisano żadnych zasobów."
   }
 }

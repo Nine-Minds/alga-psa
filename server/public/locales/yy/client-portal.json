@@ -1014,10 +1014,12 @@
       "type": "〖Ŧẏƥḗ ··〗",
       "status": "〖Şŧȧŧŭş ···〗",
       "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
-      "lastUpdated": "〖Ŀȧşŧ Ŭƥḓȧŧḗḓ ·····〗"
+      "lastUpdated": "〖Ŀȧşŧ Ŭƥḓȧŧḗḓ ·····〗",
+      "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗"
     },
     "notAvailable": "〖Ƞ/Ȧ ··〗",
-    "detailsTitle": "〖Ȧşşḗŧ Ḓḗŧȧīŀş ······〗"
+    "detailsTitle": "〖Ȧşşḗŧ Ḓḗŧȧīŀş ······〗",
+    "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗"
   },
   "errors": {
     "account": {

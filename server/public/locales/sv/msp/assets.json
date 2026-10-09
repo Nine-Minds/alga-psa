@@ -231,7 +231,8 @@
         "delete": "Radera",
         "selectedCount": "Markerade: {{count}}",
         "setLocation": "Ange plats",
-        "setStatus": "Ange status"
+        "setStatus": "Ange status",
+        "assignContact": "Tilldela till kontakt"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -239,7 +240,8 @@
         "deleteAssets": "Radera",
         "deleting": "Raderar…",
         "updateLocation": "Platsuppdatering",
-        "updateStatus": "Statusuppdatering"
+        "updateStatus": "Statusuppdatering",
+        "assignContact": "Tilldelning"
       },
       "deleteDialog": {
         "description": "Radera markerade tillgångar ({{count}}). Tillgångar med beroenden kan hoppas över.",
@@ -248,7 +250,8 @@
       "errors": {
         "deleteFailed": "Det gick inte att radera de markerade tillgångarna.",
         "updateLocationFailed": "Det gick inte att uppdatera platserna för de markerade tillgångarna.",
-        "updateStatusFailed": "Det gick inte att uppdatera de markerade tillgångarna."
+        "updateStatusFailed": "Det gick inte att uppdatera de markerade tillgångarna.",
+        "assignFailed": "Kunde inte tilldela de valda tillgångarna."
       },
       "locationDialog": {
         "clearLocation": "Rensa plats",
@@ -266,7 +269,11 @@
         "description": "Uppdatera markerade tillgångar ({{count}}).",
         "title": "Ange tillgångens status"
       },
-      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}."
+      "success": "{{action}} slutfördes. Antal tillgångar: {{count}}.",
+      "assignDialog": {
+        "title": "Tilldela till kontakt",
+        "description": "Tilldela {{count}} valda tillgångar till en kontakt hos den här kunden."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -353,7 +360,8 @@
       "updated": "Uppdaterad",
       "tenant": "Organisation",
       "manufacturer": "Tillverkare",
-      "model": "Modell"
+      "model": "Modell",
+      "assignedTo": "Tilldelad till"
     },
     "typeDetails": {
       "workstation": "Arbetsstationsdetaljer",
@@ -1514,7 +1522,15 @@
     "model": "Modell",
     "vendor": "Leverantör",
     "purchaseCost": "Inköpskostnad",
-    "orderNumber": "Ordernr."
+    "orderNumber": "Ordernr.",
+    "assignedTo": "Tilldelad till",
+    "unassigned": "Ej tilldelad",
+    "assign": "Tilldela",
+    "unassign": "Ta bort tilldelning",
+    "aContact": "Kontakt",
+    "assignDialogTitle": "Tilldela den här tillgången",
+    "sharedWorkspace": "Delad arbetsplats",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personer"
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1533,7 +1549,15 @@
       "lastReboot": "Senaste omstart",
       "patchScan": "Patchsökning",
       "patchScanDetail": "{{pending}} väntande, {{failed}} misslyckade",
-      "purchased": "Inköpt"
+      "purchased": "Inköpt",
+      "assignedTo": "Tilldelad till {{contact}}",
+      "unassigned": "Tilldelning borttagen",
+      "autoAssigned": "Automatiskt tilldelad till {{contact}} utifrån inloggad användare",
+      "assignedViaBundle": "Tilldelad till {{contact}} via paketet {{group}}",
+      "aContact": "en kontakt",
+      "groupAdded": "Tillagd i {{group}}",
+      "groupRemoved": "Borttagen från {{group}}",
+      "aGroup": "en grupp"
     },
     "changeTypes": {
       "created": "Skapad",
@@ -1603,7 +1627,8 @@
       "associateDocuments": "Behörighet saknas: Du kan inte koppla dokument till tillgångar",
       "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar",
       "readAssetStatuses": "Åtkomst nekad: kan inte läsa tillgångsstatusar",
-      "manageAssetStatuses": "Åtkomst nekad: kan inte hantera tillgångsstatusar"
+      "manageAssetStatuses": "Åtkomst nekad: kan inte hantera tillgångsstatusar",
+      "updateAssets": "Åtkomst nekad: kan inte uppdatera tillgångar"
     },
     "asset": {
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
@@ -1682,5 +1707,9 @@
       "load": "Kunde inte läsa in tillgångsstatusar",
       "inUse": "Används fortfarande av {{count}} tillgång(ar). Flytta dem till en annan status först."
     }
+  },
+  "contactAssets": {
+    "title": "Tillgångar",
+    "empty": "Inga tillgångar är tilldelade den här kontakten."
   }
 }

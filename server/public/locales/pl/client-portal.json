@@ -1012,10 +1012,12 @@
       "type": "Typ",
       "status": "Status",
       "location": "Lokalizacja",
-      "lastUpdated": "Ostatnia aktualizacja"
+      "lastUpdated": "Ostatnia aktualizacja",
+      "assignedTo": "Przypisano do"
     },
     "notAvailable": "Brak",
-    "detailsTitle": "Szczegóły zasobu"
+    "detailsTitle": "Szczegóły zasobu",
+    "unassigned": "Nieprzypisany"
   },
   "errors": {
     "account": {

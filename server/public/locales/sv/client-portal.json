@@ -1014,10 +1014,12 @@
       "type": "Typ",
       "status": "Status",
       "location": "Plats",
-      "lastUpdated": "Senast uppdaterad"
+      "lastUpdated": "Senast uppdaterad",
+      "assignedTo": "Tilldelad till"
     },
     "notAvailable": "Saknas",
-    "detailsTitle": "Enhetsdetaljer"
+    "detailsTitle": "Enhetsdetaljer",
+    "unassigned": "Ej tilldelad"
   },
   "errors": {
     "account": {

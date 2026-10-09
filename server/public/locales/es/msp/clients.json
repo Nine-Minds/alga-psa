@@ -1578,7 +1578,8 @@
         "warrantyEnd": "Fin de garantía",
         "agent": "Agente",
         "patching": "Parches",
-        "coverage": "Cobertura"
+        "coverage": "Cobertura",
+        "assignedTo": "Asignado a"
       },
       "details": {
         "local": "Local",

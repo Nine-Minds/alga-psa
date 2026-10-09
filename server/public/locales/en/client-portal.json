@@ -1014,10 +1014,12 @@
       "type": "Type",
       "status": "Status",
       "location": "Location",
-      "lastUpdated": "Last Updated"
+      "lastUpdated": "Last Updated",
+      "assignedTo": "Assigned to"
     },
     "notAvailable": "N/A",
-    "detailsTitle": "Asset Details"
+    "detailsTitle": "Asset Details",
+    "unassigned": "Unassigned"
   },
   "errors": {
     "account": {

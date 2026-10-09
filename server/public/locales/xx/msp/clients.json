@@ -1605,7 +1605,8 @@
         "warrantyEnd": "⟦Ẇȧřřȧƞŧẏ Ḗƞḓ⟧",
         "agent": "⟦Ȧɠḗƞŧ⟧",
         "patching": "⟦Ƥȧŧƈħīƞɠ⟧",
-        "coverage": "⟦Ƈȯṽḗřȧɠḗ⟧"
+        "coverage": "⟦Ƈȯṽḗřȧɠḗ⟧",
+        "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧"
       },
       "details": {
         "local": "⟦Ŀȯƈȧŀ⟧",

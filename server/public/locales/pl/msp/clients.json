@@ -1630,7 +1630,8 @@
         "warrantyEnd": "Koniec gwarancji",
         "agent": "Agent",
         "patching": "Poprawki",
-        "coverage": "Zakres"
+        "coverage": "Zakres",
+        "assignedTo": "Przypisano do"
       },
       "details": {
         "local": "Lokalny",

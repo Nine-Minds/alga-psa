@@ -1008,10 +1008,12 @@
       "type": "Tipo",
       "status": "Status",
       "location": "Local",
-      "lastUpdated": "Última atualização"
+      "lastUpdated": "Última atualização",
+      "assignedTo": "Atribuído a"
     },
     "notAvailable": "N/D",
-    "detailsTitle": "Detalhes do ativo"
+    "detailsTitle": "Detalhes do ativo",
+    "unassigned": "Não atribuído"
   },
   "errors": {
     "account": {

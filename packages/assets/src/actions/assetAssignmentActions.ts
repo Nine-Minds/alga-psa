@@ -8,6 +8,8 @@ import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { setAssetAssignee } from '../lib/assetAssignment';
+import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string): Knex.QueryBuilder<any, any> {
   return tenantDb(conn, tenant).table(name) as Knex.QueryBuilder<any, any>;
@@ -110,4 +112,43 @@ export const getContactAssignedAssets = withAuth(async (
     const rows = await query.orderBy('assets.name', 'asc');
     return rows.map(mapRow);
   });
+});
+
+/**
+ * FR-C7: the details page Assign popover and the list's bulk Assign action.
+ * One round trip, source `manual`, and the typed shared-workspace / wrong-client
+ * failures come back as action errors the UI can render inline.
+ */
+export const assignAssetContact = withAuth(async (
+  user,
+  { tenant },
+  assetId: string,
+  contactId: string | null
+): Promise<{ contact_name_id: string | null; contact_name: string | null } | AssetActionError> => {
+  if (!await hasPermission(user, 'asset', 'update')) {
+    return permissionError('Permission denied: Cannot update assets', 'msp/assets:errors.permissions.updateAssets');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await setAssetAssignee(trx, tenant, assetId, contactId, {
+        actorUserId: user.user_id,
+        source: 'manual',
+      });
+
+      const contact = contactId
+        ? await table(trx, tenant, 'contacts')
+            .where({ contact_name_id: contactId })
+            .first<{ full_name?: string | null }>('full_name')
+        : null;
+
+      return { contact_name_id: contactId, contact_name: contact?.full_name ?? null };
+    });
+  } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
