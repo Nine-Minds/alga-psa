@@ -185,6 +185,12 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 
 **Permissions:** all five routes require `ticket:update`.
 
+#### Ticket Comment Cc/Bcc
+
+Agents can Cc or Bcc one-off external email addresses when posting a public ticket comment, without adding those addresses to the ticket's ongoing watch list. Pass `cc` and/or `bcc` arrays of email strings in the request body of `POST /api/v1/tickets/{id}/comments`. Both arrays are validated: addresses are trimmed and deduplicated, a single address in both lists is promoted to `cc`, the combined count must not exceed 20 recipients, and one-off recipients are rejected on internal notes. The resolved list is persisted in the comment's `email_recipients` metadata field and returned on comment read responses; client-portal contacts can see `cc` addresses but not `bcc` entries. When the ticket has no requester email or the requester is the comment author, AlgaPSA sends a direct fallback email to the one-off recipients rather than dropping them. A one-off recipient who replies to the thread is recognized on that conversation but is never added to the ticket's permanent watch list.
+
+**Permissions:** posting a comment with Cc/Bcc requires `ticket:update`.
+
 #### Ticket Location Address
 
 The single-ticket detail endpoint `GET /api/v1/tickets/{id}` includes `location_address` alongside `location_name` in its response. `location_address` is the full formatted postal address of the ticket's linked location — `address_line1`, `city`, `state_province`, `postal_code`, and `country_name` joined with commas — or `null` if the location has no address data. Use this field when building map links or displaying location context in field-service workflows; the location name alone is a poor geocoding input.
