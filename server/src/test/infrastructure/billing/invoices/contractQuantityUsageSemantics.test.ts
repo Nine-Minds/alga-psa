@@ -1847,11 +1847,13 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
 
       // Re-previewing the same window: the consumed total is evidence of
-      // reporting, so the failure must not be the coded "record usage" state.
+      // reporting, so the failure must not be the coded "record usage" state;
+      // it is the explained nothing-to-bill refusal instead.
       const preview = await previewInvoice(setup.billingCycleId);
       expect(preview.success).toBe(false);
       if (preview.success) throw new Error('unreachable');
-      expect(preview.code).toBeUndefined();
+      expect(preview.code).not.toBe('USAGE_RECORDS_MISSING');
+      expect(preview.code).toBe('NOTHING_TO_BILL');
     });
   });
 
