@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  contactFilterUpdateForClientChange,
   normalizeAssignedToIdList,
   normalizeAssignedToIds,
   parseReturnFilters,
@@ -10,6 +11,9 @@ import {
 
 const USER_A = '11111111-2222-4333-8444-555555555555';
 const USER_B = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
+const CLIENT_A = '22222222-3333-4444-8555-666666666666';
+const CLIENT_B = '33333333-4444-4555-8666-777777777777';
+const CONTACT_A = '44444444-5555-4666-8777-888888888888';
 
 describe('normalizeAssignedToIds', () => {
   it('returns an empty result for null, undefined, and empty input', () => {
@@ -109,5 +113,87 @@ describe('parseReturnFilters assignee handling', () => {
   it('keeps the explicit includeUnassigned flag working', () => {
     const filters = parseReturnFilters(encodeURIComponent('includeUnassigned=true'));
     expect(filters.includeUnassigned).toBe(true);
+  });
+});
+
+describe('contactFilterUpdateForClientChange (client ↔ contact cross-link)', () => {
+  it('emits the client alone when no contact is applied', () => {
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_A,
+      currentContactId: null,
+    })).toEqual({ clientId: CLIENT_A, contactId: undefined });
+  });
+
+  it('keeps the contact when the client filter is cleared', () => {
+    // With no client selected every contact is reachable again, so the already
+    // applied contact is still a legal — and intentional — filter.
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: null,
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    })).toEqual({ clientId: undefined, contactId: CONTACT_A });
+  });
+
+  it('treats an empty client string as no client', () => {
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: '',
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    })).toEqual({ clientId: undefined, contactId: CONTACT_A });
+  });
+
+  it('keeps the contact when it belongs to the newly selected client', () => {
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_A,
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    })).toEqual({ clientId: CLIENT_A, contactId: CONTACT_A });
+  });
+
+  it('clears the contact when it belongs to a different client', () => {
+    // Otherwise the list would be filtered to an impossible pair and come back
+    // empty, which reads as a bug rather than as a filter.
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_B,
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
+  });
+
+  it('clears the contact when its ownership is unknown', () => {
+    // Unknown means the contact is absent from the client-scoped option list,
+    // which is exactly the evidence that it is not this client's contact.
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_B,
+      currentContactId: CONTACT_A,
+    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
+    expect(contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_B,
+      currentContactId: CONTACT_A,
+      contactClientId: null,
+    })).toEqual({ clientId: CLIENT_B, contactId: undefined });
+  });
+
+  it('always names both keys, so the update clears rather than merges', () => {
+    // handleFilterChange merges the update onto the live filters, so a dropped
+    // contact has to arrive as an explicit undefined — omitting the key would
+    // leave the stale contact filter applied.
+    const update = contactFilterUpdateForClientChange({
+      nextClientId: CLIENT_B,
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    });
+    expect(Object.keys(update).sort()).toEqual(['clientId', 'contactId']);
+  });
+});
+
+describe('parseReturnFilters contact handling', () => {
+  it('round-trips the contact filter', () => {
+    const filters = parseReturnFilters(encodeURIComponent(`contactId=${CONTACT_A}`));
+    expect(filters.contactId).toBe(CONTACT_A);
+  });
+
+  it('leaves the contact filter unset when the URL carries none', () => {
+    expect(parseReturnFilters(encodeURIComponent('statusId=open')).contactId).toBeUndefined();
   });
 });
