@@ -1678,7 +1678,28 @@
         "workstation": "Stacja robocza"
       },
       "loadError": "Nie można teraz załadować zasobów.",
-      "retry": "Ponów"
+      "retry": "Ponów",
+      "views": {
+        "assets": "Zasoby",
+        "groups": "Grupy"
+      },
+      "groups": {
+        "newGroup": "Nowa grupa",
+        "drawerTitle": "Grupa zasobów",
+        "name": "Nazwa",
+        "kind": "Rodzaj",
+        "kinds": {
+          "bundle": "Zestaw",
+          "shared_workspace": "Współdzielone stanowisko"
+        },
+        "columns": {
+          "name": "Nazwa",
+          "kind": "Rodzaj",
+          "location": "Lokalizacja",
+          "members": "Elementy",
+          "people": "Osoby"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Dodaj zgłoszenie",

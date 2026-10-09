@@ -129,7 +129,8 @@
       "coverage": "Täckning",
       "assignedTo": "Tilldelad till",
       "manufacturer": "Tillverkare",
-      "model": "Modell"
+      "model": "Modell",
+      "group": "Grupp"
     },
     "metrics": {
       "totalAssets": {
@@ -174,7 +175,8 @@
       "rmmManaged": {
         "managed": "Hanterad via RMM",
         "unmanaged": "Inte hanterad"
-      }
+      },
+      "allGroups": "Alla grupper"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -232,7 +234,8 @@
         "selectedCount": "Markerade: {{count}}",
         "setLocation": "Ange plats",
         "setStatus": "Ange status",
-        "assignContact": "Tilldela till kontakt"
+        "assignContact": "Tilldela till kontakt",
+        "addToGroup": "Lägg till i grupp"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -273,6 +276,11 @@
       "assignDialog": {
         "title": "Tilldela till kontakt",
         "description": "Tilldela {{count}} valda tillgångar till en kontakt hos den här kunden."
+      },
+      "groupDialog": {
+        "title": "Lägg till i grupp",
+        "description": "Lägg till {{count}} valda tillgångar i en grupp hos den här kunden, eller skapa en ny.",
+        "newGroup": "Skapa en ny grupp"
       }
     }
   },
@@ -1722,6 +1730,47 @@
   },
   "contactAssets": {
     "title": "Tillgångar",
-    "empty": "Inga tillgångar är tilldelade den här kontakten."
+    "empty": "Inga tillgångar är tilldelade den här kontakten.",
+    "sharedWorkspaces": "Delade arbetsplatser",
+    "memberCount": "{{count}} tillgångar"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Paket",
+      "shared_workspace": "Delad arbetsplats"
+    },
+    "drawerTitle": "Grupp",
+    "fields": {
+      "name": "Namn",
+      "kind": "Typ",
+      "location": "Plats",
+      "owner": "Ägare",
+      "users": "Användare",
+      "members": "Medlemmar"
+    },
+    "sections": {
+      "people": "Personer",
+      "members": "Medlemmar"
+    },
+    "addAssets": "Lägg till tillgångar",
+    "addUser": "Lägg till en person",
+    "noLocation": "Ingen plats",
+    "locationHelp": "Att ändra platsen flyttar alla medlemmar i gruppen.",
+    "deleteHelp": "Medlemmarna behåller sin nuvarande tilldelning och plats.",
+    "actions": {
+      "manage": "Hantera",
+      "delete": "Ta bort grupp",
+      "addToGroup": "Lägg till i grupp"
+    },
+    "confirmUnassignTitle": "Ta bort tilldelningen för dessa tillgångar?",
+    "confirmUnassignMessage": "En delad arbetsplats har användare i stället för en enskild tilldelad, så {{count}} tillgång(ar) blir otilldelade.",
+    "confirmKindTitle": "Gör om till delad arbetsplats?",
+    "confirmKindMessage": "En delad arbetsplats har användare i stället för en ägare, så alla medlemmar blir otilldelade.",
+    "confirmDeleteTitle": "Ta bort den här gruppen?",
+    "confirmDeleteMessage": "Ta bort \"{{name}}\"? Medlemmarna behåller sin nuvarande tilldelning och plats.",
+    "errors": {
+      "createFailed": "Kunde inte skapa gruppen.",
+      "addFailed": "Kunde inte lägga till de valda tillgångarna."
+    }
   }
 }

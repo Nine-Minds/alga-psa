@@ -1626,7 +1626,28 @@
         "workstation": "Werkstation"
       },
       "loadError": "Kan assets momenteel niet laden.",
-      "retry": "Opnieuw"
+      "retry": "Opnieuw",
+      "views": {
+        "assets": "Assets",
+        "groups": "Groepen"
+      },
+      "groups": {
+        "newGroup": "Nieuwe groep",
+        "drawerTitle": "Assetgroep",
+        "name": "Naam",
+        "kind": "Soort",
+        "kinds": {
+          "bundle": "Bundel",
+          "shared_workspace": "Gedeelde werkplek"
+        },
+        "columns": {
+          "name": "Naam",
+          "kind": "Soort",
+          "location": "Locatie",
+          "members": "Leden",
+          "people": "Personen"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Ticket toevoegen",

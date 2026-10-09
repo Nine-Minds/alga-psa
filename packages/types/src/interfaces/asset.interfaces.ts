@@ -566,6 +566,10 @@ export interface AssetQueryParams {
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
   status?: string;
+  vendor_id?: string;
+  group_id?: string;
+  /** Only assets that are not in any group. */
+  ungrouped_only?: boolean;
   search?: string;
   agent_status?: RmmAgentStatus;
   rmm_managed?: boolean;

@@ -296,6 +296,9 @@ export const assetQuerySchema = z.object({
   asset_type: z.string().optional(),
   status: z.string().optional(),
   vendor_id: z.string().uuid().optional(),
+  group_id: z.string().uuid().optional(),
+  /** Only assets that are not in any group (the group drawer's Add assets). */
+  ungrouped_only: z.boolean().optional(),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().optional(),
   limit: z.number().int().positive().optional(),

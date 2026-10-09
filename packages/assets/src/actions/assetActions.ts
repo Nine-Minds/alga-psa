@@ -2255,6 +2255,20 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 if (validatedParams.vendor_id) {
                     query.where('assets.vendor_id', validatedParams.vendor_id);
                 }
+                if (validatedParams.group_id) {
+                    query.whereIn(
+                        'assets.asset_id',
+                        tenantScopedTable(trx, 'asset_group_members', tenant)
+                            .where({ group_id: validatedParams.group_id })
+                            .select('asset_id')
+                    );
+                }
+                if (validatedParams.ungrouped_only) {
+                    query.whereNotIn(
+                        'assets.asset_id',
+                        tenantScopedTable(trx, 'asset_group_members', tenant).select('asset_id')
+                    );
+                }
                 if (validatedParams.search) {
                     const searchTerm = `%${validatedParams.search}%`;
                     query.where(function () {

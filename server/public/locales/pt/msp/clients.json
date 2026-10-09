@@ -1626,7 +1626,28 @@
         "workstation": "Estação de trabalho"
       },
       "loadError": "Não é possível carregar os ativos no momento.",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "views": {
+        "assets": "Ativos",
+        "groups": "Grupos"
+      },
+      "groups": {
+        "newGroup": "Novo grupo",
+        "drawerTitle": "Grupo de ativos",
+        "name": "Nome",
+        "kind": "Tipo",
+        "kinds": {
+          "bundle": "Pacote",
+          "shared_workspace": "Espaço compartilhado"
+        },
+        "columns": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "location": "Localização",
+          "members": "Membros",
+          "people": "Pessoas"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Adicionar ticket",

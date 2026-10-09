@@ -1653,7 +1653,28 @@
         "workstation": "Workstation"
       },
       "loadError": "Unable to load assets right now.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "views": {
+        "assets": "Assets",
+        "groups": "Groups"
+      },
+      "groups": {
+        "newGroup": "New group",
+        "drawerTitle": "Asset group",
+        "name": "Name",
+        "kind": "Kind",
+        "kinds": {
+          "bundle": "Bundle",
+          "shared_workspace": "Shared workspace"
+        },
+        "columns": {
+          "name": "Name",
+          "kind": "Kind",
+          "location": "Location",
+          "members": "Members",
+          "people": "People"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Add Ticket",

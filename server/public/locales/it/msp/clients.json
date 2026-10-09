@@ -1626,7 +1626,28 @@
         "workstation": "Stazione di lavoro"
       },
       "loadError": "Impossibile caricare gli asset in questo momento.",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "views": {
+        "assets": "Asset",
+        "groups": "Gruppi"
+      },
+      "groups": {
+        "newGroup": "Nuovo gruppo",
+        "drawerTitle": "Gruppo di asset",
+        "name": "Nome",
+        "kind": "Tipo",
+        "kinds": {
+          "bundle": "Bundle",
+          "shared_workspace": "Postazione condivisa"
+        },
+        "columns": {
+          "name": "Nome",
+          "kind": "Tipo",
+          "location": "Sede",
+          "members": "Membri",
+          "people": "Persone"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Aggiungi ticket",

@@ -131,7 +131,8 @@
       "coverage": "Coverage",
       "assignedTo": "Assigned to",
       "manufacturer": "Manufacturer",
-      "model": "Model"
+      "model": "Model",
+      "group": "Group"
     },
     "metrics": {
       "totalAssets": {
@@ -176,7 +177,8 @@
       "rmmManaged": {
         "managed": "RMM Managed",
         "unmanaged": "Not Managed"
-      }
+      },
+      "allGroups": "All groups"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -234,7 +236,8 @@
         "selectedCount": "{{count}} selected",
         "setLocation": "Set location",
         "setStatus": "Set status",
-        "assignContact": "Assign to contact"
+        "assignContact": "Assign to contact",
+        "addToGroup": "Add to group"
       },
       "actions": {
         "apply": "Apply",
@@ -275,6 +278,11 @@
       "assignDialog": {
         "title": "Assign to contact",
         "description": "Assign {{count}} selected asset(s) to one of this client’s contacts."
+      },
+      "groupDialog": {
+        "title": "Add to group",
+        "description": "Add {{count}} selected asset(s) to one of this client’s groups, or create a new one.",
+        "newGroup": "Create a new group"
       }
     }
   },
@@ -1750,6 +1758,47 @@
   },
   "contactAssets": {
     "title": "Assets",
-    "empty": "No assets assigned to this contact."
+    "empty": "No assets assigned to this contact.",
+    "sharedWorkspaces": "Shared workspaces",
+    "memberCount": "{{count}} assets"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundle",
+      "shared_workspace": "Shared workspace"
+    },
+    "drawerTitle": "Group",
+    "fields": {
+      "name": "Name",
+      "kind": "Kind",
+      "location": "Location",
+      "owner": "Owner",
+      "users": "Users",
+      "members": "Members"
+    },
+    "sections": {
+      "people": "People",
+      "members": "Members"
+    },
+    "addAssets": "Add assets",
+    "addUser": "Add a person",
+    "noLocation": "No location",
+    "locationHelp": "Changing the location moves every member of the group.",
+    "deleteHelp": "Members keep their current assignee and location.",
+    "actions": {
+      "manage": "Manage",
+      "delete": "Delete group",
+      "addToGroup": "Add to group"
+    },
+    "confirmUnassignTitle": "Unassign these assets?",
+    "confirmUnassignMessage": "A shared workspace has users rather than one assignee, so {{count}} asset(s) will be unassigned.",
+    "confirmKindTitle": "Turn this into a shared workspace?",
+    "confirmKindMessage": "A shared workspace has users rather than one owner, so every member will be unassigned.",
+    "confirmDeleteTitle": "Delete this group?",
+    "confirmDeleteMessage": "Delete \"{{name}}\"? Members keep their current assignee and location.",
+    "errors": {
+      "createFailed": "Unable to create the group.",
+      "addFailed": "Unable to add the selected assets."
+    }
   }
 }

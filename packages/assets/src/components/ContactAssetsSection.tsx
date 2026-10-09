@@ -8,10 +8,11 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getContactAssignedAssets } from '../actions/assetAssignmentActions';
+import { getContactSharedWorkspaces } from '../actions/assetGroupActions';
 
 /**
- * FR-C6: the contact page's Assets tile — what this person currently holds.
- * The Shared workspaces list lands with the groups UI (FR-E12).
+ * FR-C6 / FR-E12: the contact page's Assets tile — what this person currently
+ * holds, plus the shared workspaces they use.
  *
  * Injected into `ContactBentoLayout` through its `assetsSlot` prop: the clients
  * package cannot depend on the assets package, the same reason the create-ticket
@@ -28,7 +29,16 @@ export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { con
     }
   );
 
+  const { data: workspaces } = useSWR(
+    contactId ? ['contact', contactId, 'shared-workspaces'] : null,
+    async ([, cid]) => {
+      const result = await getContactSharedWorkspaces(cid);
+      return Array.isArray(result) ? result : [];
+    }
+  );
+
   const hasAssets = (assigned?.length ?? 0) > 0;
+  const hasWorkspaces = (workspaces?.length ?? 0) > 0;
 
   return (
     <BentoTile
@@ -58,6 +68,31 @@ export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { con
         </BentoTileEmpty>
       )}
 
+      {/* F077: the shared workspaces this contact uses. */}
+      {hasWorkspaces ? (
+        <div className="mt-3 border-t border-[rgb(var(--color-border-100))] pt-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+            {t('contactAssets.sharedWorkspaces', { defaultValue: 'Shared workspaces' })}
+          </div>
+          <div className="divide-y divide-[rgb(var(--color-border-100))]">
+            {(workspaces ?? []).map((group) => (
+              <div
+                key={group.group_id}
+                id={`${id}-workspace-${group.group_id}`}
+                className="flex items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span className="truncate font-medium text-[rgb(var(--color-text-800))]">{group.name}</span>
+                <span className="flex-shrink-0 text-xs text-[rgb(var(--color-text-500))]">
+                  {[
+                    group.location_name,
+                    t('contactAssets.memberCount', { defaultValue: '{{count}} assets', count: group.member_count ?? 0 }),
+                  ].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </BentoTile>
   );
 }

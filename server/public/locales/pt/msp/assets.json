@@ -131,7 +131,8 @@
       "coverage": "Cobertura",
       "assignedTo": "Atribuído a",
       "manufacturer": "Fabricante",
-      "model": "Modelo"
+      "model": "Modelo",
+      "group": "Grupo"
     },
     "metrics": {
       "totalAssets": {
@@ -176,7 +177,8 @@
       "rmmManaged": {
         "managed": "RMM gerenciado",
         "unmanaged": "Não gerenciado"
-      }
+      },
+      "allGroups": "Todos os grupos"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -234,7 +236,8 @@
         "selectedCount": "{{count}} selecionado",
         "setLocation": "Definir localização",
         "setStatus": "Definir status",
-        "assignContact": "Atribuir a contato"
+        "assignContact": "Atribuir a contato",
+        "addToGroup": "Adicionar ao grupo"
       },
       "actions": {
         "apply": "Aplicar",
@@ -275,6 +278,11 @@
       "assignDialog": {
         "title": "Atribuir a contato",
         "description": "Atribuir {{count}} ativo(s) selecionado(s) a um contato deste cliente."
+      },
+      "groupDialog": {
+        "title": "Adicionar ao grupo",
+        "description": "Adicionar {{count}} ativo(s) selecionado(s) a um grupo deste cliente ou criar um novo.",
+        "newGroup": "Criar um novo grupo"
       }
     }
   },
@@ -1750,6 +1758,47 @@
   },
   "contactAssets": {
     "title": "Ativos",
-    "empty": "Nenhum ativo atribuído a este contato."
+    "empty": "Nenhum ativo atribuído a este contato.",
+    "sharedWorkspaces": "Espaços compartilhados",
+    "memberCount": "{{count}} ativos"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Pacote",
+      "shared_workspace": "Espaço compartilhado"
+    },
+    "drawerTitle": "Grupo",
+    "fields": {
+      "name": "Nome",
+      "kind": "Tipo",
+      "location": "Localização",
+      "owner": "Proprietário",
+      "users": "Usuários",
+      "members": "Membros"
+    },
+    "sections": {
+      "people": "Pessoas",
+      "members": "Membros"
+    },
+    "addAssets": "Adicionar ativos",
+    "addUser": "Adicionar uma pessoa",
+    "noLocation": "Sem localização",
+    "locationHelp": "Alterar a localização move todos os membros do grupo.",
+    "deleteHelp": "Os membros mantêm a atribuição e a localização atuais.",
+    "actions": {
+      "manage": "Gerenciar",
+      "delete": "Excluir grupo",
+      "addToGroup": "Adicionar ao grupo"
+    },
+    "confirmUnassignTitle": "Remover a atribuição destes ativos?",
+    "confirmUnassignMessage": "Um espaço compartilhado tem usuários em vez de um único responsável, portanto {{count}} ativo(s) ficarão sem atribuição.",
+    "confirmKindTitle": "Transformar em espaço compartilhado?",
+    "confirmKindMessage": "Um espaço compartilhado tem usuários em vez de um proprietário, portanto todos os membros ficarão sem atribuição.",
+    "confirmDeleteTitle": "Excluir este grupo?",
+    "confirmDeleteMessage": "Excluir \"{{name}}\"? Os membros mantêm a atribuição e a localização atuais.",
+    "errors": {
+      "createFailed": "Não foi possível criar o grupo.",
+      "addFailed": "Não foi possível adicionar os ativos selecionados."
+    }
   }
 }

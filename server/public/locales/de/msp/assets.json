@@ -131,7 +131,8 @@
       "coverage": "Abdeckung",
       "assignedTo": "Zugewiesen an",
       "manufacturer": "Hersteller",
-      "model": "Modell"
+      "model": "Modell",
+      "group": "Gruppe"
     },
     "metrics": {
       "totalAssets": {
@@ -176,7 +177,8 @@
       "rmmManaged": {
         "managed": "RMM Verwaltet",
         "unmanaged": "Nicht verwaltet"
-      }
+      },
+      "allGroups": "Alle Gruppen"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -234,7 +236,8 @@
         "selectedCount": "{{count}} ausgewählt",
         "setLocation": "Standort festlegen",
         "setStatus": "Status festlegen",
-        "assignContact": "Kontakt zuweisen"
+        "assignContact": "Kontakt zuweisen",
+        "addToGroup": "Zu Gruppe hinzufügen"
       },
       "actions": {
         "apply": "Anwenden",
@@ -275,6 +278,11 @@
       "assignDialog": {
         "title": "Kontakt zuweisen",
         "description": "{{count}} ausgewählte Asset(s) einem Kontakt dieses Kunden zuweisen."
+      },
+      "groupDialog": {
+        "title": "Zu Gruppe hinzufügen",
+        "description": "{{count}} ausgewählte Asset(s) zu einer Gruppe dieses Kunden hinzufügen oder eine neue erstellen.",
+        "newGroup": "Neue Gruppe erstellen"
       }
     }
   },
@@ -1750,6 +1758,47 @@
   },
   "contactAssets": {
     "title": "Assets",
-    "empty": "Diesem Kontakt sind keine Assets zugewiesen."
+    "empty": "Diesem Kontakt sind keine Assets zugewiesen.",
+    "sharedWorkspaces": "Gemeinsame Arbeitsplätze",
+    "memberCount": "{{count}} Assets"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundle",
+      "shared_workspace": "Gemeinsamer Arbeitsplatz"
+    },
+    "drawerTitle": "Gruppe",
+    "fields": {
+      "name": "Name",
+      "kind": "Art",
+      "location": "Standort",
+      "owner": "Eigentümer",
+      "users": "Benutzer",
+      "members": "Mitglieder"
+    },
+    "sections": {
+      "people": "Personen",
+      "members": "Mitglieder"
+    },
+    "addAssets": "Assets hinzufügen",
+    "addUser": "Person hinzufügen",
+    "noLocation": "Kein Standort",
+    "locationHelp": "Eine Standortänderung verschiebt alle Mitglieder der Gruppe.",
+    "deleteHelp": "Mitglieder behalten ihre aktuelle Zuweisung und ihren Standort.",
+    "actions": {
+      "manage": "Verwalten",
+      "delete": "Gruppe löschen",
+      "addToGroup": "Zu Gruppe hinzufügen"
+    },
+    "confirmUnassignTitle": "Zuweisung dieser Assets aufheben?",
+    "confirmUnassignMessage": "Ein gemeinsamer Arbeitsplatz hat Benutzer statt einer einzelnen Zuweisung, daher werden {{count}} Asset(s) nicht mehr zugewiesen.",
+    "confirmKindTitle": "In gemeinsamen Arbeitsplatz umwandeln?",
+    "confirmKindMessage": "Ein gemeinsamer Arbeitsplatz hat Benutzer statt eines Eigentümers, daher wird die Zuweisung aller Mitglieder aufgehoben.",
+    "confirmDeleteTitle": "Diese Gruppe löschen?",
+    "confirmDeleteMessage": "„{{name}}“ löschen? Mitglieder behalten ihre aktuelle Zuweisung und ihren Standort.",
+    "errors": {
+      "createFailed": "Die Gruppe konnte nicht erstellt werden.",
+      "addFailed": "Die ausgewählten Assets konnten nicht hinzugefügt werden."
+    }
   }
 }

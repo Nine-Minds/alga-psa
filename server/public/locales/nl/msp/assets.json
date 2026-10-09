@@ -131,7 +131,8 @@
       "coverage": "Dekking",
       "assignedTo": "Toegewezen aan",
       "manufacturer": "Fabrikant",
-      "model": "Model"
+      "model": "Model",
+      "group": "Groep"
     },
     "metrics": {
       "totalAssets": {
@@ -176,7 +177,8 @@
       "rmmManaged": {
         "managed": "RMM beheerd",
         "unmanaged": "Niet beheerd"
-      }
+      },
+      "allGroups": "Alle groepen"
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -234,7 +236,8 @@
         "selectedCount": "{{count}} geselecteerd",
         "setLocation": "Locatie instellen",
         "setStatus": "Status instellen",
-        "assignContact": "Aan contact toewijzen"
+        "assignContact": "Aan contact toewijzen",
+        "addToGroup": "Aan groep toevoegen"
       },
       "actions": {
         "apply": "Toepassen",
@@ -275,6 +278,11 @@
       "assignDialog": {
         "title": "Aan contact toewijzen",
         "description": "{{count}} geselecteerde asset(s) toewijzen aan een contact van deze klant."
+      },
+      "groupDialog": {
+        "title": "Aan groep toevoegen",
+        "description": "{{count}} geselecteerde asset(s) aan een groep van deze klant toevoegen, of een nieuwe maken.",
+        "newGroup": "Een nieuwe groep maken"
       }
     }
   },
@@ -1750,6 +1758,47 @@
   },
   "contactAssets": {
     "title": "Assets",
-    "empty": "Er zijn geen assets aan dit contact toegewezen."
+    "empty": "Er zijn geen assets aan dit contact toegewezen.",
+    "sharedWorkspaces": "Gedeelde werkplekken",
+    "memberCount": "{{count}} assets"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundel",
+      "shared_workspace": "Gedeelde werkplek"
+    },
+    "drawerTitle": "Groep",
+    "fields": {
+      "name": "Naam",
+      "kind": "Soort",
+      "location": "Locatie",
+      "owner": "Eigenaar",
+      "users": "Gebruikers",
+      "members": "Leden"
+    },
+    "sections": {
+      "people": "Personen",
+      "members": "Leden"
+    },
+    "addAssets": "Assets toevoegen",
+    "addUser": "Persoon toevoegen",
+    "noLocation": "Geen locatie",
+    "locationHelp": "Als u de locatie wijzigt, verhuizen alle leden van de groep.",
+    "deleteHelp": "Leden houden hun huidige toewijzing en locatie.",
+    "actions": {
+      "manage": "Beheren",
+      "delete": "Groep verwijderen",
+      "addToGroup": "Aan groep toevoegen"
+    },
+    "confirmUnassignTitle": "Toewijzing van deze assets opheffen?",
+    "confirmUnassignMessage": "Een gedeelde werkplek heeft gebruikers in plaats van één toegewezen persoon, dus {{count}} asset(s) worden niet meer toegewezen.",
+    "confirmKindTitle": "Omzetten naar gedeelde werkplek?",
+    "confirmKindMessage": "Een gedeelde werkplek heeft gebruikers in plaats van een eigenaar, dus de toewijzing van alle leden wordt opgeheven.",
+    "confirmDeleteTitle": "Deze groep verwijderen?",
+    "confirmDeleteMessage": "'{{name}}' verwijderen? Leden houden hun huidige toewijzing en locatie.",
+    "errors": {
+      "createFailed": "Kan de groep niet aanmaken.",
+      "addFailed": "Kan de geselecteerde assets niet toevoegen."
+    }
   }
 }

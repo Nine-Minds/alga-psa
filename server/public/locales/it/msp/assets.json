@@ -131,7 +131,8 @@
       "coverage": "Copertura",
       "assignedTo": "Assegnato a",
       "manufacturer": "Produttore",
-      "model": "Modello"
+      "model": "Modello",
+      "group": "Gruppo"
     },
     "metrics": {
       "totalAssets": {
@@ -176,7 +177,8 @@
       "rmmManaged": {
         "managed": "Gestito da RMM",
         "unmanaged": "Non gestito"
-      }
+      },
+      "allGroups": "Tutti i gruppi"
     },
     "activeFilters": {
       "status": "Stato: {{value}}",
@@ -234,7 +236,8 @@
         "selectedCount": "{{count}} selezionate",
         "setLocation": "Imposta posizione",
         "setStatus": "Imposta stato",
-        "assignContact": "Assegna a contatto"
+        "assignContact": "Assegna a contatto",
+        "addToGroup": "Aggiungi al gruppo"
       },
       "actions": {
         "apply": "Applica",
@@ -275,6 +278,11 @@
       "assignDialog": {
         "title": "Assegna a contatto",
         "description": "Assegna {{count}} asset selezionati a un contatto di questo cliente."
+      },
+      "groupDialog": {
+        "title": "Aggiungi al gruppo",
+        "description": "Aggiungi {{count}} asset selezionati a un gruppo di questo cliente oppure creane uno nuovo.",
+        "newGroup": "Crea un nuovo gruppo"
       }
     }
   },
@@ -1750,6 +1758,47 @@
   },
   "contactAssets": {
     "title": "Asset",
-    "empty": "Nessun asset assegnato a questo contatto."
+    "empty": "Nessun asset assegnato a questo contatto.",
+    "sharedWorkspaces": "Postazioni condivise",
+    "memberCount": "{{count}} asset"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundle",
+      "shared_workspace": "Postazione condivisa"
+    },
+    "drawerTitle": "Gruppo",
+    "fields": {
+      "name": "Nome",
+      "kind": "Tipo",
+      "location": "Sede",
+      "owner": "Proprietario",
+      "users": "Utenti",
+      "members": "Membri"
+    },
+    "sections": {
+      "people": "Persone",
+      "members": "Membri"
+    },
+    "addAssets": "Aggiungi asset",
+    "addUser": "Aggiungi una persona",
+    "noLocation": "Nessuna sede",
+    "locationHelp": "Cambiare la sede sposta tutti i membri del gruppo.",
+    "deleteHelp": "I membri mantengono l'assegnazione e la sede attuali.",
+    "actions": {
+      "manage": "Gestisci",
+      "delete": "Elimina gruppo",
+      "addToGroup": "Aggiungi al gruppo"
+    },
+    "confirmUnassignTitle": "Rimuovere l'assegnazione di questi asset?",
+    "confirmUnassignMessage": "Una postazione condivisa ha utenti anziché un solo assegnatario, quindi {{count}} asset verranno disassegnati.",
+    "confirmKindTitle": "Trasformare in postazione condivisa?",
+    "confirmKindMessage": "Una postazione condivisa ha utenti anziché un proprietario, quindi tutti i membri verranno disassegnati.",
+    "confirmDeleteTitle": "Eliminare questo gruppo?",
+    "confirmDeleteMessage": "Eliminare «{{name}}»? I membri mantengono l'assegnazione e la sede attuali.",
+    "errors": {
+      "createFailed": "Impossibile creare il gruppo.",
+      "addFailed": "Impossibile aggiungere gli asset selezionati."
+    }
   }
 }

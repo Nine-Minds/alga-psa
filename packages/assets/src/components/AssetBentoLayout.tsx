@@ -52,6 +52,7 @@ import {
 import { formatMinorUnits } from '../lib/money';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
+import { AssetGroupDrawer } from './groups/AssetGroupDrawer';
 import { AssetTimeline } from './AssetTimeline';
 import AssetFormClient from './AssetFormClient';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
@@ -138,6 +139,14 @@ export function AssetBentoLayout({
     { id: 'software', label: t('assetDetailTabs.tabs.software', { defaultValue: 'Software' }), icon: Boxes, content: <SoftwareInventoryTab asset={asset} /> },
     { id: 'maintenance', label: t('assetDetailTabs.tabs.maintenance', { defaultValue: 'Maintenance' }), icon: CalendarDays, content: <MaintenanceSchedulesTab assetId={asset.asset_id} /> },
     { id: 'related-assets', label: t('assetDetailTabs.tabs.relatedAssets', { defaultValue: 'Related assets' }), icon: Network, content: <RelatedAssetsTab asset={asset} /> },
+    ...(asset.group
+      ? [{
+          id: 'group',
+          label: t('assetGroups.drawerTitle', { defaultValue: 'Group' }),
+          icon: Boxes,
+          content: <AssetGroupDrawer groupId={asset.group.group_id} />,
+        }]
+      : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
   ], [asset, t, onFocusChange]);
 
@@ -216,6 +225,13 @@ export function AssetBentoLayout({
                   clientId={asset.client_id}
                   contactNameId={asset.contact_name_id ?? null}
                   contactName={asset.contact_name ?? null}
+                  sharedWorkspace={asset.group?.kind === 'shared_workspace'
+                    ? {
+                        group_id: asset.group.group_id,
+                        name: asset.group.name,
+                        user_count: asset.group.user_count ?? 0,
+                      }
+                    : null}
                 />
                 <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.location} />
                 {/* FR-A1 rows are hidden when empty rather than showing a dash. */}
@@ -277,6 +293,44 @@ export function AssetBentoLayout({
                 </BentoTileEmpty>
               )}
             </BentoTile>
+
+            {/* F071: the group the asset belongs to, with its siblings and people. */}
+            {asset.group ? (
+              <BentoTile
+                id="asset-bento-group"
+                title={asset.group.kind === 'bundle'
+                  ? t('assetGroups.kinds.bundle', { defaultValue: 'Bundle' })
+                  : t('assetGroups.kinds.shared_workspace', { defaultValue: 'Shared workspace' })}
+                icon={<Boxes className="h-4 w-4" />}
+                action={
+                  <button
+                    id="asset-bento-group-open"
+                    type="button"
+                    onClick={() => onFocusChange('group')}
+                    className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                  >
+                    {t('assetGroups.actions.manage', { defaultValue: 'Manage' })}
+                  </button>
+                }
+              >
+                <div className="space-y-1.5 text-sm">
+                  <BentoLabelValue label={t('assetGroups.fields.name', { defaultValue: 'Name' })} value={asset.group.name} />
+                  {asset.group.location_name ? (
+                    <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.group.location_name} />
+                  ) : null}
+                  <BentoLabelValue
+                    label={t('assetGroups.fields.members', { defaultValue: 'Members' })}
+                    value={asset.group.member_count ?? 0}
+                  />
+                  {asset.group.kind === 'shared_workspace' ? (
+                    <BentoLabelValue
+                      label={t('assetGroups.fields.users', { defaultValue: 'Users' })}
+                      value={asset.group.user_count ?? 0}
+                    />
+                  ) : null}
+                </div>
+              </BentoTile>
+            ) : null}
 
             <CustomTypeDetailsPanel asset={asset} />
 
@@ -372,6 +426,16 @@ export function AssetBentoLayout({
                   {t('assetBento.noRelated', { defaultValue: 'Not linked to any other asset.' })}
                 </BentoTileEmpty>
               )}
+              {/* F071: an ungrouped asset gets the way into a group from here. */}
+              {!asset.group ? (
+                <Link
+                  id="asset-bento-add-to-group"
+                  href={`/msp/clients/${asset.client_id}?tab=assets&view=groups`}
+                  className="mt-3 inline-block text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                >
+                  {t('assetGroups.actions.addToGroup', { defaultValue: 'Add to group' })}
+                </Link>
+              ) : null}
             </BentoTile>
 
             {assetFacts && assetFacts.length > 0 ? (

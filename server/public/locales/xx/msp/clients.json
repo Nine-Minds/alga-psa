@@ -1653,7 +1653,28 @@
         "workstation": "⟦Ẇȯřķşŧȧŧīȯƞ⟧"
       },
       "loadError": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ȧşşḗŧş řīɠħŧ ƞȯẇ.⟧",
-      "retry": "⟦Řḗŧřẏ⟧"
+      "retry": "⟦Řḗŧřẏ⟧",
+      "views": {
+        "assets": "⟦Ȧşşḗŧş⟧",
+        "groups": "⟦Ɠřȯŭƥş⟧"
+      },
+      "groups": {
+        "newGroup": "⟦Ƞḗẇ ɠřȯŭƥ⟧",
+        "drawerTitle": "⟦Ȧşşḗŧ ɠřȯŭƥ⟧",
+        "name": "⟦Ƞȧḿḗ⟧",
+        "kind": "⟦Ķīƞḓ⟧",
+        "kinds": {
+          "bundle": "⟦Ɓŭƞḓŀḗ⟧",
+          "shared_workspace": "⟦Şħȧřḗḓ ẇȯřķşƥȧƈḗ⟧"
+        },
+        "columns": {
+          "name": "⟦Ƞȧḿḗ⟧",
+          "kind": "⟦Ķīƞḓ⟧",
+          "location": "⟦Ŀȯƈȧŧīȯƞ⟧",
+          "members": "⟦Ḿḗḿƀḗřş⟧",
+          "people": "⟦Ƥḗȯƥŀḗ⟧"
+        }
+      }
     },
     "tickets": {
       "addTicket": "⟦Ȧḓḓ Ŧīƈķḗŧ⟧",

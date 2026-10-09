@@ -1644,7 +1644,28 @@
         "workstation": "Arbetsstation"
       },
       "loadError": "Det går inte att läsa in tillgångarna just nu.",
-      "retry": "Försök igen"
+      "retry": "Försök igen",
+      "views": {
+        "assets": "Tillgångar",
+        "groups": "Grupper"
+      },
+      "groups": {
+        "newGroup": "Ny grupp",
+        "drawerTitle": "Tillgångsgrupp",
+        "name": "Namn",
+        "kind": "Typ",
+        "kinds": {
+          "bundle": "Paket",
+          "shared_workspace": "Delad arbetsplats"
+        },
+        "columns": {
+          "name": "Namn",
+          "kind": "Typ",
+          "location": "Plats",
+          "members": "Medlemmar",
+          "people": "Personer"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Lägg till ärende",

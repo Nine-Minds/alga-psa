@@ -1626,7 +1626,28 @@
         "workstation": "Poste de travail"
       },
       "loadError": "Impossible de charger les actifs pour le moment.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "views": {
+        "assets": "Actifs",
+        "groups": "Groupes"
+      },
+      "groups": {
+        "newGroup": "Nouveau groupe",
+        "drawerTitle": "Groupe d'actifs",
+        "name": "Nom",
+        "kind": "Type",
+        "kinds": {
+          "bundle": "Lot",
+          "shared_workspace": "Espace partagé"
+        },
+        "columns": {
+          "name": "Nom",
+          "kind": "Type",
+          "location": "Emplacement",
+          "members": "Membres",
+          "people": "Personnes"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Ajouter un ticket",
