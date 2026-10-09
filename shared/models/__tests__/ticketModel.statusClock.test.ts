@@ -34,6 +34,7 @@ function buildTrx() {
     throw new Error(`Unexpected table: ${table}`);
   });
   trx.raw = vi.fn((sql: string, bindings: unknown[]) => ({ sql, bindings }));
+  trx.fn = { now: () => 'NOW()' };
   return { trx, updates };
 }
 
@@ -49,6 +50,7 @@ describe('TicketModel.updateTicket status clock', () => {
       sql: 'CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END',
       bindings: [NEW_STATUS],
     });
+    expect(updates[0]).toMatchObject({ updated_at: 'NOW()', updated_by: null });
   });
 
   it('leaves status_changed_at out of updates that do not write status_id', async () => {
@@ -57,7 +59,7 @@ describe('TicketModel.updateTicket status clock', () => {
     await TicketModel.updateTicket(TICKET_ID, { title: 'Renamed' }, 'tenant-1', trx);
 
     expect(updates).toHaveLength(1);
-    expect(updates[0]).toMatchObject({ title: 'Renamed' });
+    expect(updates[0]).toMatchObject({ title: 'Renamed', updated_at: 'NOW()', updated_by: null });
     expect(updates[0]).not.toHaveProperty('status_changed_at');
     expect(trx.raw).not.toHaveBeenCalled();
   });
