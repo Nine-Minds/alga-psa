@@ -2203,6 +2203,11 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       .where({ workflow_id: parsed.workflowId })
       .del();
 
+    // No FK to workflow_definitions (CE/EE PK shapes differ), so clean up explicitly.
+    await db.table('workflow_event_launch_skips')
+      .where({ workflow_id: parsed.workflowId })
+      .del();
+
     await db.table('workflow_definitions')
       .where({ workflow_id: parsed.workflowId })
       .del();

@@ -24,7 +24,8 @@ const {
   loggerWarnMock,
   loggerDebugMock,
   loggerErrorMock,
-  insertOutboxRowMock
+  insertOutboxRowMock,
+  skipInsertManyMock
 } = vi.hoisted(() => ({
   redisInitializeMock: vi.fn(async () => undefined),
   redisRegisterConsumerMock: vi.fn(),
@@ -49,7 +50,8 @@ const {
   loggerWarnMock: vi.fn(),
   loggerDebugMock: vi.fn(),
   loggerErrorMock: vi.fn(),
-  insertOutboxRowMock: vi.fn(async () => undefined)
+  insertOutboxRowMock: vi.fn(async () => undefined),
+  skipInsertManyMock: vi.fn(async () => undefined)
 }));
 
 let registeredConsumer: ((event: unknown) => Promise<void>) | null = null;
@@ -119,6 +121,9 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowDefinitionVersionModelV2: {
     listByWorkflow: (...args: unknown[]) => workflowDefinitionVersionListByWorkflowMock(...args)
   },
+  WorkflowEventLaunchSkipModelV2: {
+    insertMany: (...args: unknown[]) => skipInsertManyMock(...args)
+  },
   WorkflowRuntimeEventModelV2: {
     getById: (...args: unknown[]) => workflowRuntimeEventGetByIdMock(...args),
     create: (...args: unknown[]) => workflowRuntimeEventCreateMock(...args),
@@ -175,6 +180,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     registeredConsumer = null;
     catalogSchemaRef = 'payload.WorkflowEvent.v1';
     insertOutboxRowMock.mockClear();
+    skipInsertManyMock.mockReset();
+    skipInsertManyMock.mockResolvedValue(undefined);
 
     redisInitializeMock.mockReset();
     redisRegisterConsumerMock.mockReset();
@@ -1033,5 +1040,193 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         triggerMappingApplied: true
       })
     );
+  });
+  describe('structured launch skips (alga0002106)', () => {
+    type SkipRow = Record<string, any>;
+    const metrics = { recordLaunchSkip: vi.fn(), recordLaunch: vi.fn() };
+
+    const definition = (overrides: Record<string, unknown> = {}, trigger: Record<string, unknown> = { type: 'event', eventName: 'PING' }) => ({
+      version: 3,
+      definition_json: { id: 'wf', version: 3, payloadSchemaRef: 'payload.WorkflowEvent.v1', trigger, steps: [], ...overrides },
+    });
+
+    const setWorkflows = (workflows: Array<{ id: string; paused?: boolean; version: ReturnType<typeof definition> }>) => {
+      workflowDefinitionListMock.mockResolvedValue(
+        workflows.map((w) => ({ workflow_id: w.id, key: `${w.id}-key`, status: 'published', is_paused: w.paused ?? false, trigger: { type: 'event', eventName: 'PING' } }))
+      );
+      workflowDefinitionVersionListByWorkflowMock.mockImplementation(async (_k: unknown, id: string) => [
+        workflows.find((w) => w.id === id)!.version,
+      ]);
+    };
+
+    const deliver = async (payload: Record<string, unknown> = { foo: 'bar' }, extra: Record<string, unknown> = {}) => {
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1', metrics);
+      await worker.start();
+      await registeredConsumer?.({
+        event_id: 'event-s',
+        event_type: 'PING',
+        workflow_correlation_key: 'corr-s',
+        tenant: 'tenant-1',
+        payload,
+        ...extra,
+      });
+      await worker.stop();
+    };
+
+    const persisted = (): SkipRow[] => skipInsertManyMock.mock.calls.flatMap((call: any[]) => call[2] as SkipRow[]);
+
+    const expectSingleSkip = (reason: string, intentional: boolean) => {
+      const rows = persisted();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        tenant: 'tenant-1',
+        event_id: 'event-s',
+        workflow_id: 'wf-1',
+        workflow_version: 3,
+        event_name: 'PING',
+        reason,
+        intentional,
+      });
+      expect(typeof rows[0].message).toBe('string');
+      expect(rows[0].message.length).toBeGreaterThan(0);
+      expect(metrics.recordLaunchSkip).toHaveBeenCalledTimes(1);
+      expect(metrics.recordLaunchSkip).toHaveBeenCalledWith({
+        tenant: 'tenant-1',
+        workflowId: 'wf-1',
+        eventName: 'PING',
+        reason,
+        intentional,
+      });
+      expect(metrics.recordLaunch).not.toHaveBeenCalled();
+      return rows[0];
+    };
+
+    beforeEach(() => {
+      metrics.recordLaunchSkip.mockReset();
+      metrics.recordLaunch.mockReset();
+      setWorkflows([{ id: 'wf-1', version: definition() }]);
+    });
+
+    it('missing_schema_ref', async () => {
+      setWorkflows([{ id: 'wf-1', version: definition({ payloadSchemaRef: undefined }) }]);
+      await deliver();
+      const row = expectSingleSkip('missing_schema_ref', false);
+      expect(row.message).toContain('no payload schema reference is set');
+    });
+
+    it('unknown_schema_ref', async () => {
+      schemaRegistryHasMock.mockReturnValue(false);
+      await deliver();
+      const row = expectSingleSkip('unknown_schema_ref', false);
+      expect(row.details).toMatchObject({ workflowPayloadSchemaRef: 'payload.WorkflowEvent.v1' });
+    });
+
+    it('missing_source_schema', async () => {
+      catalogSchemaRef = null as any;
+      await deliver();
+      const row = expectSingleSkip('missing_source_schema', false);
+      expect(row.message).toContain('no source payload schema is known');
+    });
+
+    it('schema_mismatch', async () => {
+      setWorkflows([{ id: 'wf-1', version: definition({ payloadSchemaRef: 'payload.Other.v1' }) }]);
+      await deliver();
+      const row = expectSingleSkip('schema_mismatch', false);
+      expect(row.details).toMatchObject({
+        workflowPayloadSchemaRef: 'payload.Other.v1',
+        sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1',
+      });
+    });
+
+    it('payload_mapping_failed', async () => {
+      setWorkflows([
+        { id: 'wf-1', version: definition({}, { type: 'event', eventName: 'PING', payloadMapping: { a: { $expr: 'x' } } }) },
+      ]);
+      resolveInputMappingMock.mockRejectedValue(new Error('boom'));
+      await deliver();
+      const row = expectSingleSkip('payload_mapping_failed', false);
+      expect(row.message).toContain('trigger payload mapping failed: boom');
+      expect(row.details).toMatchObject({ error: 'boom' });
+    });
+
+    it('payload_validation_failed', async () => {
+      schemaRegistryGetMock.mockReturnValue({
+        safeParse: () => ({ success: false, error: { issues: [{ path: ['a', 'b'], code: 'invalid_type', message: 'Required' }] } }),
+      });
+      await deliver();
+      const row = expectSingleSkip('payload_validation_failed', false);
+      expect(row.details).toMatchObject({ issues: [{ path: 'a.b', code: 'invalid_type', message: 'Required' }] });
+    });
+
+    it('launch_failed', async () => {
+      launchPublishedWorkflowRunMock.mockRejectedValue(new Error('temporal down'));
+      await deliver();
+      const row = expectSingleSkip('launch_failed', false);
+      expect(row.message).toContain('temporal down');
+    });
+
+    it('paused', async () => {
+      setWorkflows([{ id: 'wf-1', paused: true, version: definition() }]);
+      await deliver();
+      expectSingleSkip('paused', true);
+      // paused must not stamp an error on the event row
+      expect(workflowRuntimeEventUpdateMock.mock.calls.some(([, , patch]) => 'error_message' in (patch as object))).toBe(false);
+    });
+
+    it('lineage_loop_guard', async () => {
+      await deliver({ foo: 'bar', workflowLineage: ['wf-1'] });
+      const row = expectSingleSkip('lineage_loop_guard', true);
+      expect(row.details).toMatchObject({ workflowLineage: ['wf-1'] });
+    });
+
+    it('self_trigger_guard', async () => {
+      workflowRunGetByIdMock.mockResolvedValue({ run_id: 'run-origin', workflow_id: 'wf-1', trigger_metadata_json: null });
+      await deliver({ foo: 'bar' }, { execution_id: 'run-origin' });
+      const row = expectSingleSkip('self_trigger_guard', true);
+      expect(row.details).toMatchObject({ guardReason: 'self_trigger' });
+    });
+
+    it('causation_depth_exceeded', async () => {
+      workflowRunGetByIdMock.mockResolvedValue({
+        run_id: 'run-origin',
+        workflow_id: 'other-workflow',
+        trigger_metadata_json: { causationDepth: 5 },
+      });
+      await deliver({ foo: 'bar' }, { execution_id: 'run-origin' });
+      const row = expectSingleSkip('causation_depth_exceeded', true);
+      expect(row.details).toMatchObject({ guardReason: 'causation_depth_exceeded' });
+    });
+
+    it('persists a partial skip while the event row error_message stays unset', async () => {
+      setWorkflows([
+        { id: 'wf-a', version: definition() },
+        { id: 'wf-b', version: definition({ payloadSchemaRef: 'payload.Other.v1' }) },
+      ]);
+      launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-a', workflowVersion: 3 });
+      await deliver();
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      const rows = persisted();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ workflow_id: 'wf-b', reason: 'schema_mismatch', intentional: false });
+      expect(workflowRuntimeEventUpdateMock.mock.calls.some(([, , patch]) => 'error_message' in (patch as object))).toBe(false);
+      expect(metrics.recordLaunch).toHaveBeenCalledWith({ tenant: 'tenant-1', workflowId: 'wf-a', eventName: 'PING' });
+      expect(metrics.recordLaunchSkip).toHaveBeenCalledWith(expect.objectContaining({ workflowId: 'wf-b', reason: 'schema_mismatch' }));
+    });
+
+    it('increments the launches counter on a successful launch and persists nothing', async () => {
+      await deliver();
+      expect(metrics.recordLaunch).toHaveBeenCalledWith({ tenant: 'tenant-1', workflowId: 'wf-1', eventName: 'PING' });
+      expect(metrics.recordLaunchSkip).not.toHaveBeenCalled();
+      expect(persisted()).toHaveLength(0);
+    });
+
+    it('propagates skip persistence failures instead of swallowing them', async () => {
+      setWorkflows([{ id: 'wf-1', paused: true, version: definition() }]);
+      skipInsertManyMock.mockRejectedValue(new Error('db down'));
+      await expect(deliver()).rejects.toThrow('db down');
+      expect(metrics.recordLaunchSkip).not.toHaveBeenCalled();
+    });
   });
 });

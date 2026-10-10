@@ -13,6 +13,7 @@ import {
 } from '@alga-psa/workflows/runtime/core';
 import {
   listPublishedWorkflowDefinitions,
+  WorkflowEventLaunchSkipModelV2,
   WorkflowRuntimeEventModelV2,
   WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
@@ -23,6 +24,11 @@ import {
   signalWorkflowRuntimeV2Event,
   signalWorkflowRuntimeV2HumanTask,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
+import {
+  WORKFLOW_LAUNCH_SKIP_INTENTIONAL,
+  type WorkflowLaunchSkipReason,
+} from '@alga-psa/workflows/lib/workflowLaunchSkipReasons';
+import { getWorkflowWorkerMetrics, type WorkflowEventMetrics } from '../metrics.js';
 import { resolveWorkflowEventCorrelation } from '@alga-psa/workflows/lib/workflowEventCorrelation';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@shared/db/admin.js';
@@ -32,6 +38,21 @@ type WorkerConfig = {
   consumerGroup: string;
   pollIntervalMs: number;
   batchSize: number;
+};
+
+/**
+ * One decision not to launch one workflow for one event. Every skip is
+ * persisted to workflow_event_launch_skips and counted in the metrics.
+ * `errorMessageSection` only controls how the skip contributes to the event
+ * row's legacy `error_message` (unchanged behaviour).
+ */
+type LaunchSkip = {
+  workflowId: string;
+  workflowVersion: number | null;
+  reason: WorkflowLaunchSkipReason;
+  message: string;
+  details: Record<string, unknown> | null;
+  errorMessageSection: 'validation' | 'diagnostic' | null;
 };
 
 const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
@@ -69,10 +90,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
   private readonly config: WorkerConfig;
   private readonly redis: RedisStreamClient;
   private readonly verbose: boolean;
+  private readonly metrics: WorkflowEventMetrics;
   private running = false;
 
-  constructor(workerId: string) {
+  constructor(workerId: string, metrics: WorkflowEventMetrics = getWorkflowWorkerMetrics()) {
     this.workerId = workerId;
+    this.metrics = metrics;
     this.verbose =
       process.env.WORKFLOW_WORKER_VERBOSE === 'true' ||
       process.env.WORKFLOW_WORKER_VERBOSE === '1' ||
@@ -315,19 +338,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
     );
 
     const startedRuns: string[] = [];
-    const payloadValidationErrors: string[] = [];
-    // Every reason a matching workflow was NOT launched. These used to be
-    // counted in skipStats only, so an operator looking at the event row saw no
-    // error and no run (alga-2026-0002379). They are persisted with the event.
-    const skipDiagnostics: string[] = [];
-    const skipStats = {
-      noVersion: 0,
-      missingSchemaRef: 0,
-      unknownSchemaRef: 0,
-      schemaMismatch: 0,
-      payloadValidationFailed: 0,
-      paused: 0,
-      workflowCycle: 0,
+    // Every reason a matching workflow was NOT launched, collected per workflow
+    // and persisted after the loop (including when other workflows launched).
+    const skips: LaunchSkip[] = [];
+    const recordSkip = (skip: Omit<LaunchSkip, 'errorMessageSection'> & { errorMessageSection?: LaunchSkip['errorMessageSection'] }) => {
+      skips.push({ errorMessageSection: null, ...skip });
     };
     // Workflow ids that caused this event (stamped by an action such as tickets.create when a
     // workflow run published it). A workflow already in the chain never relaunches itself, which
@@ -339,15 +354,27 @@ export class WorkflowRuntimeV2EventStreamWorker {
       // Paused is a deliberate state, not a delivery failure; the launcher
       // would refuse the run anyway.
       if (workflow.is_paused) {
-        skipStats.paused += 1;
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'paused',
+          message: `Skipped workflow ${workflow.key ?? workflow.workflow_id}: workflow is paused`,
+          details: null,
+        });
         continue;
       }
 
       const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
 
       if (eventLineage.includes(workflow.workflow_id)) {
-        skipStats.workflowCycle += 1;
-        skipDiagnostics.push(`Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'lineage_loop_guard',
+          message: `Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`,
+          details: { guardReason: 'lineage_loop_guard', workflowLineage: eventLineage },
+          errorMessageSection: 'diagnostic',
+        });
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -365,13 +392,25 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
       if (!workflowPayloadSchemaRef) {
-        skipStats.missingSchemaRef += 1;
-        skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'missing_schema_ref',
+          message: `Skipped ${skipLabel}: no payload schema reference is set on the workflow`,
+          details: null,
+          errorMessageSection: 'diagnostic',
+        });
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
-        skipStats.unknownSchemaRef += 1;
-        skipDiagnostics.push(`Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'unknown_schema_ref',
+          message: `Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`,
+          details: { workflowPayloadSchemaRef },
+          errorMessageSection: 'diagnostic',
+        });
         continue;
       }
 
@@ -382,8 +421,14 @@ export class WorkflowRuntimeV2EventStreamWorker {
         : null;
       const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
       if (!effectiveSourceSchemaRef) {
-        skipStats.missingSchemaRef += 1;
-        skipDiagnostics.push(`Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'missing_source_schema',
+          message: `Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`,
+          details: { workflowPayloadSchemaRef },
+          errorMessageSection: 'diagnostic',
+        });
         continue;
       }
 
@@ -391,10 +436,14 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const mappingProvided = payloadMapping && typeof payloadMapping === 'object' && Object.keys(payloadMapping).length > 0;
       const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
       if (!mappingProvided && !refsMatch) {
-        skipStats.schemaMismatch += 1;
-        skipDiagnostics.push(
-          `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`
-        );
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'schema_mismatch',
+          message: `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`,
+          details: { workflowPayloadSchemaRef, sourcePayloadSchemaRef: effectiveSourceSchemaRef },
+          errorMessageSection: 'diagnostic',
+        });
         continue;
       }
 
@@ -418,16 +467,25 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
           mappingApplied = true;
         } catch (mappingError) {
-          skipDiagnostics.push(
-            `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingError instanceof Error ? mappingError.message : String(mappingError)}`
-          );
+          const mappingErrorMessage = mappingError instanceof Error ? mappingError.message : String(mappingError);
+          recordSkip({
+            workflowId: workflow.workflow_id,
+            workflowVersion: latest.version ?? null,
+            reason: 'payload_mapping_failed',
+            message: `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingErrorMessage}`,
+            details: {
+              workflowPayloadSchemaRef,
+              sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+              error: mappingErrorMessage,
+            },
+            errorMessageSection: 'diagnostic',
+          });
           continue;
         }
       }
 
       const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
       if (!validation.success) {
-        skipStats.payloadValidationFailed += 1;
         const workflowKey = workflow.key ?? workflow.workflow_id;
         const issues = validation.error.issues.map((issue) => ({
           path: issue.path.join('.'),
@@ -435,7 +493,18 @@ export class WorkflowRuntimeV2EventStreamWorker {
           message: issue.message,
         }));
         const validationMessage = `Payload validation failed for workflow ${workflowKey} (${workflow.workflow_id}) using ${workflowPayloadSchemaRef}: ${JSON.stringify(issues)}`;
-        payloadValidationErrors.push(validationMessage);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'payload_validation_failed',
+          message: validationMessage,
+          details: {
+            issues,
+            workflowPayloadSchemaRef,
+            sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+          },
+          errorMessageSection: 'validation',
+        });
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Payload validation failed; skipping workflow launch', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -447,9 +516,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
           sourcePayloadSchemaRef: effectiveSourceSchemaRef,
           issues,
         });
-        // Persistence happens after the workflow loop, and only when nothing
-        // launched or signaled: an event that matched another workflow must
-        // not read as an error in Run Studio.
+        // Skips are persisted after the loop. Only the event row's legacy
+        // error_message is conditional on nothing having launched or signaled:
+        // an event that matched another workflow must not read as an error.
         continue;
       }
 
@@ -468,6 +537,21 @@ export class WorkflowRuntimeV2EventStreamWorker {
           originExecutionId: event.execution_id,
           reason: selfTrigger.reason,
           causationDepth: selfTrigger.causationDepth,
+        });
+        const selfTriggerReason: WorkflowLaunchSkipReason =
+          selfTrigger.reason === 'causation_depth_exceeded' ? 'causation_depth_exceeded' : 'self_trigger_guard';
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: selfTriggerReason,
+          message: selfTriggerReason === 'causation_depth_exceeded'
+            ? `Skipped ${skipLabel}: workflow causation depth limit exceeded`
+            : `Skipped ${skipLabel}: event was caused by this workflow chain (self-trigger guard)`,
+          details: {
+            guardReason: selfTrigger.reason,
+            causationDepth: selfTrigger.causationDepth,
+            originExecutionId: event.execution_id ?? null,
+          },
         });
         continue;
       }
@@ -491,6 +575,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
           triggerMappingApplied: mappingApplied,
         });
         startedRuns.push(launched.runId);
+        this.metrics.recordLaunch({
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          eventName: event.event_type,
+        });
         if (this.verbose) {
           logger.info('[WorkflowRuntimeV2EventStreamWorker] Started run', {
             workerId: this.workerId,
@@ -503,7 +592,15 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
         }
       } catch (error) {
-        deliveryErrors.push(`Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`);
+        const launchErrorMessage = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+        deliveryErrors.push(launchErrorMessage);
+        recordSkip({
+          workflowId: workflow.workflow_id,
+          workflowVersion: latest.version ?? null,
+          reason: 'launch_failed',
+          message: launchErrorMessage,
+          details: { error: error instanceof Error ? error.message : String(error) },
+        });
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to launch workflow', {
           workerId: this.workerId,
           workflowId: workflow.workflow_id,
@@ -516,6 +613,39 @@ export class WorkflowRuntimeV2EventStreamWorker {
       }
     }
 
+    const skipCountsByReason: Record<string, number> = {};
+    for (const skip of skips) {
+      skipCountsByReason[skip.reason] = (skipCountsByReason[skip.reason] ?? 0) + 1;
+    }
+
+    // Always persist: this closes the partial-skip gap (event launched workflow
+    // A but skipped B). Failures propagate (fail-fast) to the consumer's
+    // logger.error + rethrow; they are not swallowed.
+    await WorkflowEventLaunchSkipModelV2.insertMany(
+      knex,
+      event.tenant,
+      skips.map((skip) => ({
+        tenant: event.tenant,
+        event_id: event.event_id,
+        workflow_id: skip.workflowId,
+        workflow_version: skip.workflowVersion,
+        event_name: event.event_type,
+        reason: skip.reason,
+        intentional: WORKFLOW_LAUNCH_SKIP_INTENTIONAL[skip.reason],
+        message: skip.message,
+        details: skip.details,
+      }))
+    );
+    for (const skip of skips) {
+      this.metrics.recordLaunchSkip({
+        tenant: event.tenant,
+        workflowId: skip.workflowId,
+        eventName: event.event_type,
+        reason: skip.reason,
+        intentional: WORKFLOW_LAUNCH_SKIP_INTENTIONAL[skip.reason],
+      });
+    }
+
     logger.debug('[WorkflowRuntimeV2EventStreamWorker] Event processed', {
       workerId: this.workerId,
       eventId: event.event_id,
@@ -525,8 +655,23 @@ export class WorkflowRuntimeV2EventStreamWorker {
       matchingWorkflows: matching.length,
       startedRuns: startedRuns.length,
       signaledRuns: signaledRuns.size,
-      skipStats,
+      skipCountsByReason,
+      // Legacy-shaped view kept for log consumers (derived from the collector).
+      skipStats: {
+        paused: skipCountsByReason.paused ?? 0,
+        workflowCycle: skipCountsByReason.lineage_loop_guard ?? 0,
+        missingSchemaRef: (skipCountsByReason.missing_schema_ref ?? 0) + (skipCountsByReason.missing_source_schema ?? 0),
+        unknownSchemaRef: skipCountsByReason.unknown_schema_ref ?? 0,
+        schemaMismatch: skipCountsByReason.schema_mismatch ?? 0,
+        payloadValidationFailed: skipCountsByReason.payload_validation_failed ?? 0,
+      },
     });
+
+    // Legacy event-row error_message: validation messages first, then the other
+    // diagnostics, each in collection order (paused / self-trigger / launch
+    // failures never contributed here).
+    const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.message);
+    const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.message);
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
     if (matchedRunId) {
@@ -542,12 +687,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
         processed_at: processedAt,
       });
     } else if (
-      (payloadValidationErrors.length > 0 || skipDiagnostics.length > 0) &&
+      (validationMessages.length > 0 || diagnosticMessages.length > 0) &&
       startedRuns.length === 0 &&
       signaledRuns.size === 0
     ) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: [...payloadValidationErrors, ...skipDiagnostics].join('\n'),
+        error_message: [...validationMessages, ...diagnosticMessages].join('\n'),
         processed_at: processedAt,
       }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
