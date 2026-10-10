@@ -375,7 +375,7 @@ export function TenantProjectTaskStatusSettings() {
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle>{t('settings.statuses.task_status_library_title', 'Project Task Status Library')}</CardTitle>
+            <CardTitle>{t('settings.statuses.task_status_library_title', 'Task Status Library')}</CardTitle>
             <CardDescription>
               {t('settings.statuses.task_status_library_description', `Manage your organization's project task statuses. These statuses can be used across all projects.`)}
             </CardDescription>
