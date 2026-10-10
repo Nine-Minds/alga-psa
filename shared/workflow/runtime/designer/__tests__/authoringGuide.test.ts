@@ -50,6 +50,25 @@ describe('buildWorkflowAuthoringGuide', () => {
     expect(grammar).not.toContain('plus JSONata built-ins that they wrap');
   });
 
+  it('tells authors to verify event-triggered workflows by replaying a stored event', () => {
+    const guide = buildWorkflowAuthoringGuide();
+    const verify = guide.overview.authoringLoop.find((step) => step.startsWith('Verify:')) ?? '';
+
+    expect(verify).toContain('useLatestEvent: true');
+    expect(verify).toContain('eventId');
+    expect(verify).toContain('replayed-event');
+    expect(verify).toContain('Production would skip this event');
+    expect(verify).toContain('payloadMapping');
+    expect(verify).toContain('payloadSchemaRef');
+    expect(verify).toContain('payload synthesized from schema');
+    expect(verify).toContain('NOT checked');
+
+    const pitfalls = guide.commonPitfalls.join('\n');
+    expect(pitfalls).toContain('useLatestEvent');
+    expect(verify).not.toContain('realistic payload');
+    expect(pitfalls).not.toContain('realistic payload');
+  });
+
   it('documents workflow behavior pitfalls that silently change author intent', () => {
     const guide = buildWorkflowAuthoringGuide();
     const pitfalls = guide.commonPitfalls.join('\n');
