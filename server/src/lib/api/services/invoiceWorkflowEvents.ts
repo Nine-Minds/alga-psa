@@ -209,3 +209,21 @@ export function buildInvoiceWrittenOffPayload(params: {
     recurringProvenance: params.recurringProvenance,
   };
 }
+
+/**
+ * INVOICE_FINALIZED. `totalAmount` is a string on the wire (payload.InvoiceFinalized.v1); `userId`
+ * and `timestamp` are the legacy fields existing consumers read.
+ */
+export function buildInvoiceFinalizedPayload(params: {
+  invoiceId: string;
+  totalAmount: number;
+  userId?: string;
+  occurredAt: string;
+}) {
+  return {
+    invoiceId: params.invoiceId,
+    totalAmount: String(params.totalAmount),
+    userId: params.userId,
+    timestamp: params.occurredAt,
+  };
+}

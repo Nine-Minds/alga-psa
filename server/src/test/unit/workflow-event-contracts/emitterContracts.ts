@@ -3,6 +3,7 @@ import { pendingMigration, schemaNotRegistered } from './registryTypes';
 import { ticketContracts } from './contracts/tickets';
 import { projectContracts } from './contracts/projects';
 import { schedulingContracts } from './contracts/scheduling';
+import { billingContracts } from './contracts/billing';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -23,29 +24,10 @@ export const emitterContracts: EmitterContracts = {
   ...projectContracts,
   // ---- scheduling / dispatch ----
   ...schedulingContracts,
+  // ---- billing ----
+  ...billingContracts,
   // ---- scheduling ----
   // ---- billing ----
-  INVOICE_GENERATED: pendingMigration('INVOICE_GENERATED', 'billing'),
-  INVOICE_FINALIZED: pendingMigration('INVOICE_FINALIZED', 'billing'),
-  CONTRACT_CREATED: pendingMigration('CONTRACT_CREATED', 'billing'),
-  CONTRACT_RENEWAL_UPCOMING: pendingMigration('CONTRACT_RENEWAL_UPCOMING', 'billing'),
-  CONTRACT_STATUS_CHANGED: pendingMigration('CONTRACT_STATUS_CHANGED', 'billing'),
-  CONTRACT_UPDATED: pendingMigration('CONTRACT_UPDATED', 'billing'),
-  CREDIT_NOTE_APPLIED: pendingMigration('CREDIT_NOTE_APPLIED', 'billing'),
-  CREDIT_NOTE_CREATED: pendingMigration('CREDIT_NOTE_CREATED', 'billing'),
-  CREDIT_NOTE_VOIDED: pendingMigration('CREDIT_NOTE_VOIDED', 'billing'),
-  INVOICE_DUE_DATE_CHANGED: pendingMigration('INVOICE_DUE_DATE_CHANGED', 'billing'),
-  INVOICE_OVERDUE: pendingMigration('INVOICE_OVERDUE', 'billing'),
-  INVOICE_SENT: pendingMigration('INVOICE_SENT', 'billing'),
-  INVOICE_STATUS_CHANGED: pendingMigration('INVOICE_STATUS_CHANGED', 'billing'),
-  INVOICE_WRITTEN_OFF: pendingMigration('INVOICE_WRITTEN_OFF', 'billing'),
-  PAYMENT_APPLIED: pendingMigration('PAYMENT_APPLIED', 'billing'),
-  PAYMENT_FAILED: pendingMigration('PAYMENT_FAILED', 'billing'),
-  PAYMENT_RECORDED: pendingMigration('PAYMENT_RECORDED', 'billing'),
-  PAYMENT_REFUNDED: pendingMigration('PAYMENT_REFUNDED', 'billing'),
-  RECURRING_BILLING_RUN_COMPLETED: pendingMigration('RECURRING_BILLING_RUN_COMPLETED', 'billing'),
-  RECURRING_BILLING_RUN_FAILED: pendingMigration('RECURRING_BILLING_RUN_FAILED', 'billing'),
-  RECURRING_BILLING_RUN_STARTED: pendingMigration('RECURRING_BILLING_RUN_STARTED', 'billing'),
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
   PROJECT_BUDGET_THRESHOLD_REACHED: schemaNotRegistered('PROJECT_BUDGET_THRESHOLD_REACHED', 'payload.ProjectBudgetThresholdReached.v1'),
   PROJECT_BUDGET_EXCEEDED: schemaNotRegistered('PROJECT_BUDGET_EXCEEDED', 'payload.ProjectBudgetExceeded.v1'),
