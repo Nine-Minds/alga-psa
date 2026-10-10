@@ -83,6 +83,11 @@ const DEFAULT_FILTERS: ActivityFilters = {
 type ListViewMode = 'flat' | 'grouped';
 
 const PRINT_FALLBACK_PAGE_SIZE = 500;
+
+// Single source for the loaded/current key comparison that gates deep-link focus.
+function buildLoadedKey(filters: ActivityFilters, viewMode: string): string {
+  return JSON.stringify([filters, viewMode]);
+}
 const NO_GROUPS: ActivityGroup[] = [];
 
 function dedupeRecurringActivities(activities: Activity[]): Activity[] {
@@ -403,6 +408,9 @@ function formatActivityPrintDate(dateString?: string): string {
       const effectivePage = listViewMode === 'grouped' ? 1 : currentPage;
       const effectivePageSize = listViewMode === 'grouped' ? 500 : pageSize;
 
+      // Compute the key before awaiting so it reflects exactly what was requested.
+      const requestKey = buildLoadedKey(effectiveFilters, listViewMode);
+
       const result = await getActivities(
         effectiveFilters,
         effectivePage,
@@ -411,7 +419,7 @@ function formatActivityPrintDate(dateString?: string): string {
 
       setActivities(result.activities);
       setTotalItems(result.totalCount);
-      setLoadedKey(JSON.stringify([effectiveFilters, listViewMode]));
+      setLoadedKey(requestKey);
       setError(null);
     } catch (err) {
       console.error(`Error loading activities:`, err);
@@ -461,7 +469,7 @@ function formatActivityPrintDate(dateString?: string): string {
   }, [setSavedFilters]);
 
   const currentKey = useMemo(
-    () => JSON.stringify([getEffectiveFilters(), listViewMode]),
+    () => buildLoadedKey(getEffectiveFilters(), listViewMode),
     [getEffectiveFilters, listViewMode]
   );
 
