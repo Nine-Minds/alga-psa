@@ -3,6 +3,12 @@ import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } fr
 import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import {
+  isServiceCatalogPricingError,
+  writeServiceCatalogPricing,
+  type ScheduledServicePriceInput,
+  type ServicePriceInput,
+} from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -47,6 +53,30 @@ export async function publishServiceCatalogSearchEvent(
     });
   } catch (eventError) {
     console.error(`[ServiceCatalogService] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
+
+/** Top-level `currency_code` has no meaning on a service body; never drop it silently (D6). */
+export function rejectTopLevelCurrencyCode(currencyCode: unknown): void {
+  if (currencyCode !== undefined) {
+    throw new ValidationError('currency_code is not accepted at the top level; use prices[].currency_code');
+  }
+}
+
+/** Runs the shared pricing writer and surfaces its validation failures as 400s. */
+export async function writePricing(
+  trx: Parameters<typeof writeServiceCatalogPricing>[0],
+  tenant: string,
+  serviceId: string,
+  input: Parameters<typeof writeServiceCatalogPricing>[3],
+) {
+  try {
+    return await writeServiceCatalogPricing(trx, tenant, serviceId, input);
+  } catch (error) {
+    if (isServiceCatalogPricingError(error)) {
+      throw new ValidationError(error.message, { issues: error.issues });
+    }
+    throw error;
   }
 }
 
@@ -178,6 +208,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       ? await db.table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
+          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
       : [];
 
     const pricesByService: Record<string, any[]> = {};
@@ -221,7 +252,8 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     const prices = await db.table('service_prices')
       .where('service_id', id)
-      .select('*');
+      .select('*')
+      .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
     const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
     return { ...service, prices: current, scheduled_prices: scheduled } as IService;
@@ -235,10 +267,22 @@ export class ServiceCatalogService extends BaseService<IService> {
 
     const rawData = data as any;
     const {
-      currency_code: _currency_code,
-      prices: _prices,
+      currency_code,
+      prices,
+      scheduled_prices: scheduledPrices,
       ...serviceInput
-    } = rawData;
+    } = rawData as {
+      currency_code?: unknown;
+      prices?: ServicePriceInput[];
+      scheduled_prices?: ScheduledServicePriceInput[];
+      [key: string]: any;
+    };
+    rejectTopLevelCurrencyCode(currency_code);
+    // default_rate is the mirror of the primary price; derive it from prices[0]
+    // so a create that only sends prices does not need to repeat the rate.
+    if (serviceInput.default_rate === undefined && prices && prices.length > 0) {
+      serviceInput.default_rate = prices[0].rate;
+    }
 
     // Resolve inherited defaults and units in the transaction, holding the
     // documented rate/region locks until the catalog row is persisted.
@@ -275,10 +319,22 @@ export class ServiceCatalogService extends BaseService<IService> {
         .insert(serviceData)
         .returning('*');
 
+      if (prices !== undefined || scheduledPrices !== undefined) {
+        await writePricing(trx, tenant, created.service_id, {
+          current: prices,
+          scheduled: scheduledPrices,
+          defaultRate: serviceInput.default_rate === undefined ? undefined : Number(serviceInput.default_rate),
+        });
+      }
+
       return {
         serviceId: created.service_id,
         itemKind: created.item_kind,
-        changedFields: Object.keys(serviceData),
+        changedFields: [
+          ...Object.keys(serviceData),
+          ...(prices !== undefined ? ['prices'] : []),
+          ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
+        ],
       };
     });
 
@@ -298,25 +354,61 @@ export class ServiceCatalogService extends BaseService<IService> {
     // Strip fields that shouldn't be updated
     const {
       service_type_name: _,
-      prices: _prices,
-      currency_code: _currency_code,
+      prices,
+      scheduled_prices: scheduledPrices,
+      currency_code,
       ...updateData
-    } = data as any;
-    Object.assign(updateData, await resolveCatalogUnitForUpdate(knex, tenant, updateData));
+    } = data as {
+      service_type_name?: unknown;
+      prices?: ServicePriceInput[];
+      scheduled_prices?: ScheduledServicePriceInput[];
+      currency_code?: unknown;
+      [key: string]: any;
+    };
+    rejectTopLevelCurrencyCode(currency_code);
 
-    const [updated] = await tenantDb(knex, tenant).table('service_catalog')
-      .where('service_id', id)
-      .update(updateData)
-      .returning('*');
+    const result = await withTransaction(knex, async (trx) => {
+      // 404 before anything is written.
+      const existing = await tenantDb(trx, tenant).table('service_catalog')
+        .where('service_id', id)
+        .first('service_id', 'item_kind');
+      if (!existing) {
+        throw new NotFoundError('Resource not found or permission denied');
+      }
 
-    if (!updated) {
-      throw new NotFoundError('Resource not found or permission denied');
-    }
+      Object.assign(updateData, await resolveCatalogUnitForUpdate(trx, tenant, updateData));
+
+      // Price rows (window replace, billing lock, default_rate mirror) are
+      // written by the shared catalog pricing writer inside this transaction.
+      if (prices !== undefined || scheduledPrices !== undefined || updateData.default_rate !== undefined) {
+        const { servicePatch } = await writePricing(trx, tenant, id, {
+          current: prices,
+          scheduled: scheduledPrices,
+          defaultRate: updateData.default_rate === undefined ? undefined : Number(updateData.default_rate),
+        });
+        Object.assign(updateData, servicePatch);
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await tenantDb(trx, tenant).table('service_catalog')
+          .where('service_id', id)
+          .update(updateData);
+      }
+
+      return {
+        itemKind: existing.item_kind,
+        changedFields: [
+          ...Object.keys(updateData),
+          ...(prices !== undefined ? ['prices'] : []),
+          ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
+        ],
+      };
+    });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
       userId: context.userId,
-      itemKind: updated.item_kind,
-      changedFields: Object.keys(updateData),
+      itemKind: result.itemKind,
+      changedFields: result.changedFields,
     });
 
     return this.getById(id, context) as Promise<IService>;
