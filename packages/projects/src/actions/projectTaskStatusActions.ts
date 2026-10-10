@@ -24,6 +24,11 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+import {
+  bucketProjectStatusRenameImpact,
+  type ProjectStatusRenameImpact,
+  type ProjectStatusRenameImpactRow,
+} from '../lib/projectStatusRenameImpact';
 
 export type ProjectTaskStatusActionError = ActionMessageError | ActionPermissionError;
 
@@ -484,18 +489,18 @@ export const getPhaseCustomStatusCounts = withAuth(async (
 });
 
 /**
- * Read-only: how a rename of one library status would land on existing project
- * columns. Columns linked straight to the status (status_id, no custom_name)
- * follow the rename immediately; columns with a pinned custom_name and older
- * columns seeded against the standard status keep whatever name they show
- * today. Surfaced in the Edit Status dialog so a rename never silently
- * produces two names for the same concept.
+ * Read-only: where a rename of one library status actually lands. The match set
+ * is every column linked to the status plus every column that renders the same
+ * label today; `bucketProjectStatusRenameImpact` splits it into the columns
+ * that follow the rename and the ones that silently keep the old name, so the
+ * Edit Status dialog can name the projects that will diverge before the rename
+ * is committed. No data is changed.
  */
 export const getProjectStatusRenameImpact = withAuth(async (
   user,
   { tenant },
   statusId: string
-): Promise<{ live: number; pinned: number; standardMapped: number } | ProjectTaskStatusActionError> => {
+): Promise<ProjectStatusRenameImpact | ProjectTaskStatusActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -506,26 +511,34 @@ export const getProjectStatusRenameImpact = withAuth(async (
 
       const status = await tenantScopedTable(trx, 'statuses', tenant)
         .where({ status_id: statusId })
-        .first();
+        .first<IStatus | undefined>();
 
       if (!status) {
         throw new Error('Project task status not found');
       }
 
-      const countRows = async (apply: (query: Knex.QueryBuilder) => Knex.QueryBuilder) => {
-        const row = await apply(tenantScopedTable(trx, 'project_status_mappings', tenant))
-          .count('* as count')
-          .first();
-        return parseInt(row?.count as string) || 0;
-      };
+      const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      const scoped = tenantDb(trx, tenant);
+      scoped.tenantJoin(query, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' });
+      scoped.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      scoped.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
 
-      const live = await countRows((query) => query.where({ status_id: statusId }).whereNull('custom_name'));
-      const pinned = await countRows((query) => query.where({ status_id: statusId }).whereNotNull('custom_name'));
-      const standardMapped = status.standard_status_id
-        ? await countRows((query) => query.where({ standard_status_id: status.standard_status_id }))
-        : 0;
+      const rows = await query
+        .where((builder) => {
+          builder
+            .where('psm.status_id', statusId)
+            .orWhereRaw('lower(trim(COALESCE(psm.custom_name, s.name, ss.name))) = ?', [
+              status.name.trim().toLowerCase(),
+            ]);
+        })
+        .select<ProjectStatusRenameImpactRow[]>(
+          'psm.status_id as status_id',
+          'psm.custom_name as custom_name',
+          'psm.project_id as project_id',
+          'p.project_name as project_name'
+        );
 
-      return { live, pinned, standardMapped };
+      return bucketProjectStatusRenameImpact(rows, statusId, status.name);
     });
   } catch (error) {
     const expected = projectTaskStatusActionErrorFrom(error);
