@@ -3,15 +3,50 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectStatusSnapshot, collectStatusSnapshotAsync } from '../status-engine.mjs';
+import { collectStatusSnapshotAsync, podDisplayStatus } from '../status-engine.mjs';
 
-const kubectlUnavailableRunner = (command) => Promise.resolve({
-  ok: false,
-  status: 127,
-  command,
-  stdout: '',
-  stderr: 'sh: 1: kubectl: not found'
-});
+// --- fake cluster: the API object shapes cluster-reader.mjs returns ----------
+
+const readyNode = { metadata: { name: 'node-1' }, status: { conditions: [{ type: 'Ready', status: 'True' }] } };
+
+function pod(namespace, name, status) {
+  const base = { metadata: { namespace, name }, spec: { containers: [{ name: 'main' }] } };
+  if (status === 'Running') {
+    return { ...base, status: { phase: 'Running', containerStatuses: [{ name: 'main', ready: true, restartCount: 0, state: { running: {} } }] } };
+  }
+  if (status === 'Completed') {
+    return { ...base, status: { phase: 'Succeeded', containerStatuses: [{ name: 'main', ready: false, restartCount: 0, state: { terminated: { reason: 'Completed', exitCode: 0 } } }] } };
+  }
+  const phase = status === 'ContainerCreating' ? 'Pending' : 'Running';
+  return { ...base, status: { phase, containerStatuses: [{ name: 'main', ready: false, restartCount: 3, state: { waiting: { reason: status } } }] } };
+}
+
+function job(name, succeeded, completions = 1) {
+  return { metadata: { name }, spec: { completions }, status: { succeeded } };
+}
+
+function helmRelease(name, ready, message) {
+  return { metadata: { name }, status: { conditions: [{ type: 'Ready', status: ready, reason: ready === 'True' ? 'Succeeded' : 'Progressing', message }] } };
+}
+
+function fakeCluster({ nodes = [readyNode], pods = [], jobs = [], helmReleases = [], events = [], failures = {} } = {}) {
+  const respond = (method, items) => async () => failures[method] || { ok: true, items };
+  return {
+    listNodes: respond('listNodes', nodes),
+    listPods: respond('listPods', pods),
+    listJobs: respond('listJobs', jobs),
+    listHelmReleases: respond('listHelmReleases', helmReleases),
+    listEvents: respond('listEvents', events)
+  };
+}
+
+function failingReader(reason, error) {
+  const result = { ok: false, reason, status: null, error };
+  return fakeCluster({ failures: { listNodes: result, listPods: result, listJobs: result, listHelmReleases: result, listEvents: result } });
+}
+
+// The API is not reachable yet (no kubeconfig / k3s still starting).
+const unavailableReader = failingReader('unavailable', 'Kubernetes client configuration is not available: ENOENT kubeconfig');
 
 function writeStateFile(state) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-net-'));
@@ -20,557 +55,276 @@ function writeStateFile(state) {
   return stateFile;
 }
 
-test('collectStatusSnapshot reads local state and kubeconfig-driven kubectl output', () => {
+test('collectStatusSnapshotAsync reads local state and cluster objects', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-'));
   const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
-
   const setupInputsFile = path.join(tmp, 'setup-inputs.json');
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   fs.writeFileSync(stateFile, JSON.stringify({ phase: 'flux', status: 'flux-source-complete' }));
   fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', appHostname: 'http://192.0.2.10:3000', releaseRef: '' }));
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', selectedReleaseVersion: '1.0.0', registryHost: 'ghcr.io', repository: 'nine-minds/alga-appliance-release', manifestDigest: 'sha256:release' }));
 
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-default pod-a Running
-kube-system pod-b Running
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    setupInputsFile,
+    releaseSelectionFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({ pods: [pod('default', 'pod-a', 'Running'), pod('kube-system', 'pod-b', 'Running')] })
+  });
 
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      setupInputsFile,
-      releaseSelectionFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.currentPhase, 'flux');
-    assert.equal(snapshot.status, 'flux-source-complete');
-    assert.equal(snapshot.setupInputs.channel, 'stable');
-    assert.equal(snapshot.urls.loginUrl, 'http://192.0.2.10:3000');
-    assert.equal(snapshot.releaseSelection.manifestDigest, 'sha256:release');
-    assert.equal(snapshot.kubernetes.nodes.length, 1);
-    assert.equal(snapshot.kubernetes.nodes[0].ready, true);
-    assert.equal(snapshot.kubernetes.podCount, 2);
-    assert.equal(snapshot.kubernetes.warnings.length, 0);
-    assert.equal(snapshot.tiers.platformReady, true);
-    assert.equal(snapshot.tiers.coreReady, false);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.currentPhase, 'flux');
+  assert.equal(snapshot.status, 'flux-source-complete');
+  assert.equal(snapshot.setupInputs.channel, 'stable');
+  assert.equal(snapshot.urls.loginUrl, 'http://192.0.2.10:3000');
+  assert.equal(snapshot.releaseSelection.manifestDigest, 'sha256:release');
+  assert.equal(snapshot.kubernetes.nodes.length, 1);
+  assert.equal(snapshot.kubernetes.nodes[0].ready, true);
+  assert.equal(snapshot.kubernetes.podCount, 2);
+  assert.equal(snapshot.kubernetes.warnings.length, 0);
+  assert.equal(snapshot.tiers.platformReady, true);
+  assert.equal(snapshot.tiers.coreReady, false);
 });
 
-test('collectStatusSnapshot includes UI contract fields for live status page', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-ui-contract-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
-  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'registry-release-source', status: 'release-config-complete', lastAction: 'Release selection persisted.' }));
+test('collectStatusSnapshotAsync includes UI contract fields for live status page', async () => {
+  const stateFile = writeStateFile({ phase: 'registry-release-source', status: 'release-config-complete', lastAction: 'Release selection persisted.' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running'), pod('msp', 'temporal-worker-xyz', 'CrashLoopBackOff')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: [helmRelease('alga-core', 'True', 'Helm install succeeded'), helmRelease('temporal-worker', 'False', 'Helm install failed')],
+      events: [{ type: 'Warning', reason: 'BackOff', metadata: { namespace: 'msp' }, involvedObject: { kind: 'Pod', name: 'temporal-worker-xyz' }, message: 'Back-off restarting', lastTimestamp: '2026-10-05T02:00:00Z' }]
+    })
+  });
 
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-msp alga-core-abc Running
-msp temporal-worker-xyz CrashLoopBackOff
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  cat <<'TXT'
-alga-core-bootstrap 1/1 1 1m
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  cat <<'TXT'
-alga-core 1h True Helm install succeeded
-temporal-worker 1h False Helm install failed
-TXT
-  exit 0
-fi
-if [[ "$*" == *"get events -A -o json"* ]]; then
-  echo '{"items":[]}'
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.readinessTiers.platformReady.ready, true);
-    assert.equal(snapshot.readinessTiers.backgroundReady.ready, false);
-    assert.equal(snapshot.topBlockers.length >= 1, true);
-    assert.equal(typeof snapshot.rollup.state, 'string');
-    assert.equal(Array.isArray(snapshot.recentEvents), true);
-    assert.equal(Array.isArray(snapshot.activeOperations), true);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.readinessTiers.platformReady.ready, true);
+  assert.equal(snapshot.readinessTiers.backgroundReady.ready, false);
+  assert.equal(snapshot.topBlockers.length >= 1, true);
+  assert.equal(typeof snapshot.rollup.state, 'string');
+  assert.equal(snapshot.recentEvents.length, 1);
+  assert.equal(snapshot.recentEvents[0].involvedObject, 'Pod/temporal-worker-xyz');
+  assert.equal(snapshot.activeOperations.length, 1);
+  assert.equal(snapshot.activeOperations[0].message, 'temporal-worker-xyz is CrashLoopBackOff.');
 });
 
-test('loginReady remains true when background service has issues', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-bg-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('loginReady remains true when background service has issues', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running'), pod('alga-system', 'temporal-worker-xyz', 'CrashLoopBackOff')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: [helmRelease('alga-core', 'True', 'Release reconciliation succeeded')]
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-msp alga-core-abc Running
-alga-system temporal-worker-xyz CrashLoopBackOff
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  cat <<'TXT'
-alga-core-bootstrap 1/1 1 1m
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  cat <<'TXT'
-alga-core 1h True Release reconciliation succeeded
-TXT
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.tiers.loginReady, true);
-    assert.equal(snapshot.tiers.backgroundReady, false);
-    assert.equal(snapshot.tiers.backgroundIssues.length, 1);
-    assert.equal(snapshot.failures.some((failure) => failure.category === 'background-services'), true);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.tiers.backgroundIssues.length, 1);
+  assert.equal(snapshot.failures.some((failure) => failure.category === 'background-services'), true);
 });
 
-test('non-ready HelmReleases block fullyHealthy even when pods are running', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-hr-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('non-ready HelmReleases block fullyHealthy even when pods are running', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running'), pod('msp', 'workflow-worker-xyz', 'Running')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: [helmRelease('alga-core', 'True', 'Helm install succeeded'), helmRelease('workflow-worker', 'False', 'Helm install failed for release msp/workflow-worker')]
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-msp alga-core-abc Running
-msp workflow-worker-xyz Running
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  cat <<'TXT'
-alga-core-bootstrap 1/1 1 1m
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  cat <<'TXT'
-alga-core 1h True Helm install succeeded
-workflow-worker 1h False Helm install failed for release msp/workflow-worker
-TXT
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.tiers.loginReady, true);
-    assert.equal(snapshot.tiers.backgroundReady, false);
-    assert.equal(snapshot.tiers.fullyHealthy, false);
-    assert.equal(snapshot.failures.some((failure) => failure.category === 'flux'), true);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.tiers.fullyHealthy, false);
+  assert.equal(snapshot.failures.some((failure) => failure.category === 'flux'), true);
 });
 
-test('missing expected HelmReleases block fullyHealthy while staged kustomizations are still catching up', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-hr-missing-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+// Live appliance 2026-10-05: three background releases stalled after a slow
+// upgrade while login worked, yet the blocker read "critical / login blocking".
+test('stalled background-only HelmReleases are background blockers, not login blockers', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'update-complete' });
+  const stalled = 'Helm upgrade failed for release msp/email-service with chart email-service@0.0.0: failed early due to stalled resources';
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running'), pod('msp', 'email-service-abc', 'Running')],
+      jobs: [job('alga-core-sebastian-bootstrap', 1)],
+      helmReleases: [
+        helmRelease('alga-core', 'True', 'Helm upgrade succeeded'),
+        helmRelease('pgbouncer', 'True', 'Helm upgrade succeeded'),
+        helmRelease('temporal', 'True', 'Helm upgrade succeeded'),
+        helmRelease('email-service', 'False', stalled),
+        helmRelease('temporal-worker', 'False', 'Helm upgrade failed for release msp/temporal-worker'),
+        helmRelease('workflow-worker', 'False', 'Helm upgrade failed for release msp/workflow-worker')
+      ]
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-msp alga-core-abc Running
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  cat <<'TXT'
-alga-core-bootstrap 1/1 1 1m
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  cat <<'TXT'
-alga-core 1h True Helm install succeeded
-pgbouncer 1h True Helm install succeeded
-TXT
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.tiers.loginReady, true);
-    assert.equal(snapshot.tiers.fullyHealthy, false);
-    assert.equal(snapshot.failures.some((failure) => failure.suspectedCause.includes('temporal missing')), true);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.rollup.state, 'ready_with_background_issues');
+  const flux = snapshot.topBlockers.find((blocker) => blocker.component === 'flux');
+  assert.ok(flux);
+  assert.equal(flux.severity, 'background');
+  assert.equal(flux.loginBlocking, false);
+  assert.match(flux.reason, /^email-service: Helm upgrade failed/);
+  assert.deepEqual(snapshot.failures.find((failure) => failure.category === 'flux').releases, ['email-service', 'temporal-worker', 'workflow-worker']);
 });
 
-test('early setup treats missing kubectl as expected install progress, not a blocker', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-early-kubectl-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
-
-  fs.writeFileSync(stateFile, JSON.stringify({
-    phase: 'setup',
-    status: 'setup-accepted',
-    lastAction: 'Setup accepted; background workflow is starting'
-  }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-echo 'sh: 1: kubectl: not found' >&2
-exit 127
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.rollup.state, 'installing');
-    assert.equal(snapshot.rollup.message, 'Starting the appliance installation.');
-    assert.equal(snapshot.tiers.platformReady, false);
-    assert.equal(snapshot.readinessTiers.platformReady.status, 'waiting_for_kubernetes');
-    assert.equal(snapshot.failures.length, 0);
-    assert.equal(snapshot.topBlockers.length, 0);
-    assert.equal(snapshot.kubernetes.warnings.length, 0);
-    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+test('a stalled core HelmRelease stays a login blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: [helmRelease('alga-core', 'True', 'ok'), helmRelease('pgbouncer', 'False', 'Helm upgrade failed for release msp/pgbouncer')]
+    })
+  });
+  const flux = snapshot.topBlockers.find((blocker) => blocker.component === 'flux');
+  assert.equal(flux.severity, 'critical');
+  assert.equal(flux.loginBlocking, true);
 });
 
-test('app-readiness treats HelmRelease dependency convergence as progress, not a blocker', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-helm-converge-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('missing expected HelmReleases block fullyHealthy while staged kustomizations are still catching up', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: [helmRelease('alga-core', 'True', 'Helm install succeeded'), helmRelease('pgbouncer', 'True', 'Helm install succeeded')]
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({
-    phase: 'app-readiness',
-    status: 'release-config-complete',
-    lastAction: 'Checking application readiness.'
-  }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-msp alga-core-abc Running
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  cat <<'TXT'
-alga-core 4m38s Unknown Running 'install' action with timeout of 30m0s
-email-service 4m38s False dependency 'alga-system/alga-core' is not ready
-pgbouncer 4m37s False dependency 'alga-system/alga-core' is not ready
-temporal 4m37s False dependency 'alga-system/alga-core' is not ready
-temporal-worker 4m36s False dependency 'alga-system/alga-core' is not ready
-workflow-worker 4m35s False dependency 'alga-system/alga-core' is not ready
-TXT
-  exit 0
-fi
-if [[ "$*" == *"get events -A -o json"* ]]; then
-  echo '{"items":[]}'
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.rollup.state, 'installing');
-    assert.equal(snapshot.tiers.platformReady, true);
-    assert.equal(snapshot.tiers.loginReady, false);
-    assert.equal(snapshot.tiers.backgroundReady, false);
-    assert.equal(snapshot.tiers.fullyHealthy, false);
-    assert.equal(snapshot.kubernetes.helmReleaseCount, 6);
-    assert.equal(snapshot.failures.length, 0);
-    assert.equal(snapshot.topBlockers.length, 0);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.fullyHealthy, false);
+  assert.equal(snapshot.failures.some((failure) => failure.suspectedCause.includes('temporal missing')), true);
 });
 
-test('app-readiness treats missing HelmRelease CRD as transient progress, not a blocker', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-helm-crd-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('early setup treats an unreachable Kubernetes API as expected install progress, not a blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'setup', status: 'setup-accepted', lastAction: 'Setup accepted; background workflow is starting' });
+  const snapshot = await collectStatusSnapshotAsync({ stateFile, kubeconfigPath: '/tmp/k3s.yaml', clusterReader: unavailableReader });
 
-  fs.writeFileSync(stateFile, JSON.stringify({
-    phase: 'app-readiness',
-    status: 'release-config-complete',
-    lastAction: 'Checking application readiness.'
-  }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-if [[ "$*" == *"get nodes -o json"* ]]; then
-  cat <<'JSON'
-{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
-JSON
-  exit 0
-fi
-if [[ "$*" == *"get pods -A --no-headers"* ]]; then
-  cat <<'TXT'
-kube-system flux-controller-abc Running
-TXT
-  exit 0
-fi
-if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
-  exit 0
-fi
-if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
-  printf '%s\n' "error: the server doesn't have a resource type \"helmreleases\"" >&2
-  exit 1
-fi
-if [[ "$*" == *"get events -A -o json"* ]]; then
-  echo '{"items":[]}'
-  exit 0
-fi
-exit 1
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.rollup.state, 'installing');
-    assert.equal(snapshot.rollup.message, 'Checking application readiness.');
-    assert.equal(snapshot.tiers.platformReady, true);
-    assert.equal(snapshot.tiers.loginReady, false);
-    assert.equal(snapshot.tiers.fullyHealthy, false);
-    assert.equal(snapshot.failures.length, 0);
-    assert.equal(snapshot.topBlockers.length, 0);
-    assert.equal(snapshot.kubernetes.warnings.length, 0);
-    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.rollup.state, 'installing');
+  assert.equal(snapshot.rollup.message, 'Starting the appliance installation.');
+  assert.equal(snapshot.tiers.platformReady, false);
+  assert.equal(snapshot.readinessTiers.platformReady.status, 'waiting_for_kubernetes');
+  assert.equal(snapshot.failures.length, 0);
+  assert.equal(snapshot.topBlockers.length, 0);
+  assert.equal(snapshot.kubernetes.warnings.length, 0);
+  assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
 });
 
-test('app-readiness still reports kubectl query failures as blockers', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-kubectl-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('app-readiness treats HelmRelease dependency convergence as progress, not a blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete', lastAction: 'Checking application readiness.' });
+  const dependency = "dependency 'alga-system/alga-core' is not ready";
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running')],
+      helmReleases: [
+        helmRelease('alga-core', 'Unknown', "Running 'install' action with timeout of 30m0s"),
+        helmRelease('email-service', 'False', dependency),
+        helmRelease('pgbouncer', 'False', dependency),
+        helmRelease('temporal', 'False', dependency),
+        helmRelease('temporal-worker', 'False', dependency),
+        helmRelease('workflow-worker', 'False', dependency)
+      ]
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({
-    phase: 'app-readiness',
-    status: 'release-config-complete',
-    lastAction: 'Checking application readiness.'
-  }));
-
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
-echo 'sh: 1: kubectl: not found' >&2
-exit 127
-`);
-  fs.chmodSync(kubectlPath, 0o755);
-
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
-
-    assert.equal(snapshot.rollup.state, 'blocked');
-    assert.equal(snapshot.failures.length, 1);
-    assert.equal(snapshot.failures[0].category, 'app-readiness');
-    assert.equal(snapshot.topBlockers.length, 1);
-    assert.equal(snapshot.kubernetes.warnings.length, 1);
-    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 0);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.rollup.state, 'installing');
+  assert.equal(snapshot.tiers.platformReady, true);
+  assert.equal(snapshot.tiers.loginReady, false);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.tiers.fullyHealthy, false);
+  assert.equal(snapshot.kubernetes.helmReleaseCount, 6);
+  assert.equal(snapshot.failures.length, 0);
+  assert.equal(snapshot.topBlockers.length, 0);
 });
 
-test('collectStatusSnapshot classifies persisted k3s failures', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-k3s-failure-'));
-  const stateFile = path.join(tmp, 'install-state.json');
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
+test('app-readiness treats missing HelmRelease CRD as transient progress, not a blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete', lastAction: 'Checking application readiness.' });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: fakeCluster({
+      pods: [pod('kube-system', 'flux-controller-abc', 'Running')],
+      failures: { listHelmReleases: { ok: false, reason: 'not-found', status: 404, error: 'Kubernetes API returned HTTP 404: the server could not find the requested resource' } }
+    })
+  });
 
-  fs.writeFileSync(stateFile, JSON.stringify({
+  assert.equal(snapshot.rollup.state, 'installing');
+  assert.equal(snapshot.rollup.message, 'Checking application readiness.');
+  assert.equal(snapshot.tiers.platformReady, true);
+  assert.equal(snapshot.failures.length, 0);
+  assert.equal(snapshot.kubernetes.warnings.length, 0);
+  assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
+});
+
+test('app-readiness still reports Kubernetes query failures as blockers', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'release-config-complete', lastAction: 'Checking application readiness.' });
+  const snapshot = await collectStatusSnapshotAsync({ stateFile, kubeconfigPath: '/tmp/k3s.yaml', clusterReader: unavailableReader });
+
+  assert.equal(snapshot.rollup.state, 'blocked');
+  assert.equal(snapshot.failures.length, 1);
+  assert.equal(snapshot.failures[0].category, 'app-readiness');
+  assert.equal(snapshot.topBlockers.length, 1);
+  assert.equal(snapshot.kubernetes.warnings.length, 1);
+  assert.equal(snapshot.kubernetes.suppressedWarnings.length, 0);
+});
+
+test('collectStatusSnapshotAsync classifies persisted k3s failures', async () => {
+  const stateFile = writeStateFile({
     phase: 'k3s',
     status: 'k3s-install-blocked',
     lastAction: 'k3s installation command failed.',
-    failure: {
-      phase: 'k3s',
-      step: 'install-k3s-server',
-      message: 'k3s installation command failed.',
-      suspectedCause: 'k3s install failed',
-      suggestedNextStep: 'inspect logs',
-      retrySafe: true
-    }
-  }));
+    failure: { phase: 'k3s', step: 'install-k3s-server', message: 'k3s installation command failed.', suspectedCause: 'k3s install failed', suggestedNextStep: 'inspect logs', retrySafe: true }
+  });
+  const snapshot = await collectStatusSnapshotAsync({ stateFile, kubeconfigPath: '/tmp/k3s.yaml', clusterReader: failingReader('error', 'boom') });
 
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, '#!/usr/bin/env bash\nexit 1\n');
-  fs.chmodSync(kubectlPath, 0o755);
+  assert.equal(snapshot.failures.length >= 1, true);
+  assert.equal(snapshot.failures[0].category, 'k3s');
+  assert.equal(snapshot.failures[0].retrySafe, true);
+});
 
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const snapshot = collectStatusSnapshot({
-      stateFile,
-      kubeconfigPath: '/tmp/k3s.yaml',
-      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-    });
+test('host advisories are surfaced without blocking login or changing the rollup', async () => {
+  const stateFile = writeStateFile({ phase: 'app-readiness', status: 'update-complete' });
+  const cpuWarning = { severity: 'warning', component: 'host', layer: 'host', code: 'host-cpu-features-missing', reason: 'missing pclmulqdq', nextAction: 'set CPU type to host' };
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    hostHealth: () => ({ cpu: { warnings: [cpuWarning] }, disk: { latest: { writeAwaitMs: 42 }, warnings: [] } }),
+    clusterReader: fakeCluster({
+      pods: [pod('msp', 'alga-core-abc', 'Running')],
+      jobs: [job('alga-core-bootstrap', 1)],
+      helmReleases: ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'].map((name) => helmRelease(name, 'True', 'ok'))
+    })
+  });
 
-    assert.equal(snapshot.failures.length >= 1, true);
-    assert.equal(snapshot.failures[0].category, 'k3s');
-    assert.equal(snapshot.failures[0].retrySafe, true);
-  } finally {
-    process.env.PATH = originalPath;
-  }
+  assert.equal(snapshot.rollup.state, 'fully_healthy');
+  const advisory = snapshot.topBlockers.find((blocker) => blocker.code === 'host-cpu-features-missing');
+  assert.ok(advisory);
+  assert.equal(advisory.loginBlocking, false);
+  assert.equal(snapshot.failures.length, 0);
+  assert.equal(snapshot.host.disk.writeAwaitMs, 42);
+});
+
+test('podDisplayStatus matches kubectl STATUS for the states readiness depends on', () => {
+  assert.equal(podDisplayStatus(pod('msp', 'a', 'Running')), 'Running');
+  assert.equal(podDisplayStatus(pod('msp', 'a', 'Completed')), 'Completed');
+  assert.equal(podDisplayStatus(pod('msp', 'a', 'CrashLoopBackOff')), 'CrashLoopBackOff');
+  assert.equal(podDisplayStatus(pod('msp', 'a', 'ContainerCreating')), 'ContainerCreating');
+  assert.equal(podDisplayStatus({ metadata: { deletionTimestamp: '2026-10-05T00:00:00Z' }, status: { phase: 'Running' } }), 'Terminating');
+  assert.equal(podDisplayStatus({ status: { phase: 'Pending', initContainerStatuses: [{ state: { waiting: { reason: 'ImagePullBackOff' } } }] } }), 'Init:ImagePullBackOff');
 });
 
 test('live network probe clears a stale recorded network failure and unpoisons k8s suppression', async () => {
@@ -591,8 +345,7 @@ test('live network probe clears a stale recorded network failure and unpoisons k
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:00.000Z', failure: null }
   });
 
@@ -619,8 +372,7 @@ test('live network probe failure surfaces a fresh blocker instead of the recorde
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     networkProbe: {
       ok: false,
       checkedAt: '2026-05-28T23:59:30.000Z',
@@ -646,8 +398,7 @@ test('live network probe does not alter a recorded non-network (k3s) failure', a
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:45.000Z', failure: null }
   });
 
@@ -675,8 +426,7 @@ test('a healthy network probe does not clear a licensing redemption failure', as
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:00.000Z', failure: null }
   });
 
@@ -705,8 +455,7 @@ test('retry diagnostics stay visible while an automatic retry is in progress', a
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     autoRetry: {
       willRetry: true,
       exhausted: false,
@@ -730,8 +479,7 @@ test('the durable retry failure snapshot is surfaced even when install state los
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     autoRetry: {
       willRetry: false,
       exhausted: true,
@@ -754,8 +502,7 @@ test('a failed cluster-DNS reconcile is a distinct blocker', async () => {
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     dnsReconcile: { ok: false, error: 'no usable upstream resolver was found', at: '2026-09-22T00:00:00.000Z', logFile: '/var/lib/alga-appliance/dns-reconcile.log' }
   });
 
@@ -774,8 +521,7 @@ test('a pending cluster-DNS activation surfaces an actionable blocker', async ()
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     dnsReconcile: {
       ok: null,
       state: 'submitted',
@@ -799,55 +545,28 @@ test('a successful or absent DNS reconcile adds no blocker', async () => {
   const snapshot = await collectStatusSnapshotAsync({
     stateFile,
     kubeconfigPath: '/tmp/k3s.yaml',
-    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
-    runCommand: kubectlUnavailableRunner,
+    clusterReader: unavailableReader,
     dnsReconcile: { ok: true, at: '2026-09-22T00:00:00.000Z', logFile: '/var/lib/alga-appliance/dns-reconcile.log' }
   });
   assert.equal(snapshot.failures.some((item) => item.step === 'reconcile-cluster-dns'), false);
 });
 
-test('collectStatusSnapshot maps failure phases to expected categories', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-phase-map-'));
-  const fakeBin = path.join(tmp, 'bin');
-  fs.mkdirSync(fakeBin, { recursive: true });
-  const kubectlPath = path.join(fakeBin, 'kubectl');
-  fs.writeFileSync(kubectlPath, '#!/usr/bin/env bash\nexit 1\n');
-  fs.chmodSync(kubectlPath, 0o755);
+test('collectStatusSnapshotAsync maps failure phases to expected categories', async () => {
+  const cases = [
+    ['flux', 'flux-install-blocked', 'flux'],
+    ['storage', 'storage-config-blocked', 'storage'],
+    ['app-bootstrap', 'bootstrap-blocked', 'app-bootstrap'],
+    ['app-readiness', 'readiness-blocked', 'app-readiness']
+  ];
 
-  const originalPath = process.env.PATH;
-  process.env.PATH = `${fakeBin}:${originalPath}`;
-  try {
-    const cases = [
-      ['flux', 'flux-install-blocked', 'flux'],
-      ['storage', 'storage-config-blocked', 'storage'],
-      ['app-bootstrap', 'bootstrap-blocked', 'app-bootstrap'],
-      ['app-readiness', 'readiness-blocked', 'app-readiness']
-    ];
-
-    for (const [phase, status, expectedCategory] of cases) {
-      const stateFile = path.join(tmp, `${phase}.json`);
-      fs.writeFileSync(stateFile, JSON.stringify({
-        phase,
-        status,
-        lastAction: `${phase} failed`,
-        failure: {
-          phase,
-          step: `${phase}-step`,
-          message: `${phase} failed`,
-          suspectedCause: `${phase} cause`,
-          suggestedNextStep: `${phase} next`,
-          retrySafe: true
-        }
-      }));
-
-      const snapshot = collectStatusSnapshot({
-        stateFile,
-        kubeconfigPath: '/tmp/k3s.yaml',
-        kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
-      });
-      assert.equal(snapshot.failures[0].category, expectedCategory);
-    }
-  } finally {
-    process.env.PATH = originalPath;
+  for (const [phase, status, expectedCategory] of cases) {
+    const stateFile = writeStateFile({
+      phase,
+      status,
+      lastAction: `${phase} failed`,
+      failure: { phase, step: `${phase}-step`, message: `${phase} failed`, suspectedCause: `${phase} cause`, suggestedNextStep: `${phase} next`, retrySafe: true }
+    });
+    const snapshot = await collectStatusSnapshotAsync({ stateFile, kubeconfigPath: '/tmp/k3s.yaml', clusterReader: failingReader('error', 'boom') });
+    assert.equal(snapshot.failures[0].category, expectedCategory);
   }
 });

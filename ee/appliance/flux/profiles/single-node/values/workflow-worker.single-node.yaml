@@ -1,4 +1,9 @@
 namespace: msp
+# Match the HelmRelease timeout (30m). With Kubernetes' 600s default a slow
+# appliance can miss the rollout deadline mid-upgrade; Helm then fails the
+# release early and, with remediation retries at 0, it stays stalled even
+# after the pods come up.
+progressDeadlineSeconds: 1800
 enabled: true
 
 image:
