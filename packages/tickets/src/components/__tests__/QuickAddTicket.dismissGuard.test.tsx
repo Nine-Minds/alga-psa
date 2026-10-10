@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { QuickAddTicket } from '../QuickAddTicket';
+import { addTicket } from '../../actions/ticketActions';
 
 const getTicketFormDataMock = vi.fn();
 const getTicketStatusesMock = vi.fn();
@@ -454,5 +455,145 @@ describe('QuickAddTicket never discards typed text without confirmation', () => 
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(question()).toBeNull();
+  });
+});
+
+
+describe('QuickAddTicket after a create starts (Create + View reload window)', () => {
+  const createdTicket = { ticket_id: 'ticket-1', title: 'Printer jam', tags: [], attributes: {} };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [{ board_id: 'board-a', board_name: 'Board A', priority_type: 'custom' }],
+      statuses: [],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'P1', item_type: 'ticket', is_default: true }],
+      clients: [],
+      selectedClient: { client_id: 'client-1', client_type: 'company' },
+    });
+    getTicketStatusesMock.mockResolvedValue([
+      { status_id: 'status-1', name: 'New', is_default: true, is_closed: false },
+    ]);
+  });
+
+  afterEach(() => cleanup());
+
+  async function renderFilledDialog() {
+    const onViewCreatedTicket = vi.fn();
+    const onTicketAdded = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={onOpenChange}
+        onTicketAdded={onTicketAdded}
+        onViewCreatedTicket={onViewCreatedTicket}
+        prefilledClient={{ id: 'client-1', name: 'Acme' }}
+      />
+    );
+    const title = (await screen.findByPlaceholderText('Ticket Title *')) as HTMLInputElement;
+    const description = await screen.findByLabelText('Description editor');
+    fireEvent.click(await screen.findByRole('button', { name: 'Select Board A' }));
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a'));
+    fireEvent.change(title, { target: { value: 'Printer jam' } });
+    typeDescription(description, 'Jams every morning');
+    return { title, description, onViewCreatedTicket, onTicketAdded, onOpenChange };
+  }
+
+  const createViewButton = () => screen.getByRole('button', { name: /Create \+ View Ticket|Adding|Opening/ });
+  const clickCreateView = async () => {
+    await waitFor(() => expect((createViewButton() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(createViewButton());
+  };
+
+  const fireBeforeUnload = () => {
+    const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(event);
+    return event;
+  };
+
+  const expectGuardOff = () => {
+    const event = fireBeforeUnload();
+    expect(event.defaultPrevented).toBe(false);
+    expect((event as { returnValue?: unknown }).returnValue).not.toBe('');
+  };
+
+  it('does not flag the draft as unsaved while Create + View is in flight, and Escape does not ask', async () => {
+    const { description } = await renderFilledDialog();
+    expect(fireBeforeUnload().defaultPrevented).toBe(true);
+
+    let resolveCreate: (value: unknown) => void = () => {};
+    vi.mocked(addTicket).mockReturnValue(new Promise((resolve) => { resolveCreate = resolve; }) as never);
+
+    await clickCreateView();
+    await waitFor(() => expect(addTicket).toHaveBeenCalledTimes(1));
+
+    expectGuardOff();
+    pressEscape(description);
+    expect(question()).toBeNull();
+
+    resolveCreate(createdTicket);
+  });
+
+  it('stays unguarded after the ticket is created and the host has been handed it', async () => {
+    const { onViewCreatedTicket } = await renderFilledDialog();
+    vi.mocked(addTicket).mockResolvedValue(createdTicket as never);
+
+    await clickCreateView();
+    await waitFor(() => expect(onViewCreatedTicket).toHaveBeenCalledTimes(1));
+    // let `finally` flip isSubmitting back to false
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Opening ticket…' })).toBeTruthy());
+
+    expectGuardOff();
+  });
+
+  it('brings the guard back when the create fails', async () => {
+    const { description } = await renderFilledDialog();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(addTicket).mockRejectedValue(new Error('boom'));
+
+    await clickCreateView();
+    await waitFor(() => expect(addTicket).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect((createViewButton() as HTMLButtonElement).disabled).toBe(false));
+
+    expect(fireBeforeUnload().defaultPrevented).toBe(true);
+    pressEscape(description);
+    await waitFor(() => expect(question()).toBeTruthy());
+  });
+
+  it('never creates twice after a successful Create + View (buttons, form submit, Cmd/Ctrl+Enter)', async () => {
+    const { onViewCreatedTicket, title } = await renderFilledDialog();
+    vi.mocked(addTicket).mockResolvedValue(createdTicket as never);
+
+    await clickCreateView();
+    await waitFor(() => expect(onViewCreatedTicket).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Opening ticket…' })).toBeTruthy());
+
+    expect((screen.getByRole('button', { name: 'Opening ticket…' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Create' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Opening ticket…' }));
+    const form = title.closest('form');
+    if (form) fireEvent.submit(form);
+    fireEvent.keyDown(title, { key: 'Enter', metaKey: true, bubbles: true });
+    fireEvent.keyDown(title, { key: 'Enter', ctrlKey: true, bubbles: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(addTicket).toHaveBeenCalledTimes(1);
+    expect(onViewCreatedTicket).toHaveBeenCalledTimes(1);
+  });
+
+  it('two quick triggers while a create is pending reach addTicket once', async () => {
+    const { title } = await renderFilledDialog();
+    vi.mocked(addTicket).mockReturnValue(new Promise(() => {}) as never);
+
+    await clickCreateView();
+    fireEvent.keyDown(title, { key: 'Enter', metaKey: true, bubbles: true });
+    fireEvent.keyDown(title, { key: 'Enter', ctrlKey: true, bubbles: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(addTicket).toHaveBeenCalledTimes(1);
   });
 });
