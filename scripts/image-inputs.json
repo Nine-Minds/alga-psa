@@ -1,0 +1,28 @@
+{
+  "$comment": "What each fresh-install image is built from, as repository paths. An image from an earlier run may be reused for a candidate only when every listed input has the identical git blob at both revisions. Includes are path prefixes (or exact files); an empty include list means the whole tree. Excludes never count as inputs for any image. The workflow file carries the build arguments, so it is an input to every image.",
+  "schemaVersion": 1,
+  "exclude": ["docs/", "ee/docs/", "e2e-tests/", "scripts/tests/", ".claude/", ".crew/", ".pi/", "README.md", "CHANGELOG.md"],
+  "always": [".github/workflows/e2e-fresh-install-tests.yaml", "scripts/image-inputs.json"],
+  "images": {
+    "server": { "dockerfile": "Dockerfile.build", "include": [] },
+    "server-ee": { "dockerfile": "ee/server/Dockerfile.build", "include": [] },
+    "email-service": { "dockerfile": "services/email-service/Dockerfile", "include": [
+      "services/email-service/", "shared/", "server/", "packages/", "types/",
+      "tsconfig.base.json", "tsconfig.json", "package.json", "package-lock.json", ".npmrc", ".dockerignore"] },
+    "workflow-worker": { "dockerfile": "services/workflow-worker/Dockerfile", "include": [
+      "services/workflow-worker/", "ee/packages/workflows/", "ee/temporal-workflows/", "packages/", "shared/", "server/",
+      "tsconfig.base.json", "tsconfig.json", "package.json", "package-lock.json", ".npmrc", ".dockerignore"] },
+    "temporal-worker": { "dockerfile": "ee/temporal-workflows/Dockerfile", "include": [
+      "ee/temporal-workflows/", "ee/packages/workflows/", "ee/server/src/", "ee/server/seeds/onboarding/",
+      "packages/", "shared/", "server/src/", "server/package.json", "server/migrations/utils/",
+      "tsconfig.base.json", "tsconfig.json", "package.json", "package-lock.json", ".npmrc", ".dockerignore"] },
+    "algasim": { "dockerfile": "packages/emulators/Dockerfile", "include": [
+      "packages/emulators/", "e2e-tests/harness/", "package.json", "package-lock.json"] },
+    "setup": { "dockerfile": "setup/Dockerfile.ubuntu", "include": [
+      "setup/", "shared/", "server/setup/", "server/knexfile.cjs", "server/migrations/", "ee/server/migrations/", "server/seeds/",
+      "server/src/invoice-templates/assemblyscript/", "server/package.json", "package.json", "package-lock.json", "tsconfig.base.json"] },
+    "hocuspocus": { "dockerfile": "hocuspocus/Dockerfile", "include": ["hocuspocus/"] },
+    "redis": { "dockerfile": "redis/Dockerfile", "include": ["redis/"] },
+    "pgbouncer": { "dockerfile": "pgbouncer/Dockerfile", "include": ["pgbouncer/"] }
+  }
+}
