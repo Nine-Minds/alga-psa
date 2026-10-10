@@ -23,6 +23,11 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- if and .Values.metrics.enabled .Values.metrics.podAnnotations }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.service.port | quote }}
+        prometheus.io/path: "/metrics"
+        {{- end }}
         {{- if .Values.vaultAgent.enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
@@ -268,7 +273,7 @@ spec:
 
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.livenessProbe.path | default "/health" }}
               port: http
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
@@ -278,7 +283,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.readinessProbe.path | default "/ready" }}
               port: http
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
