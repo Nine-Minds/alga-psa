@@ -46,6 +46,7 @@ vi.mock('@alga-psa/billing/services', () => ({
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEvent(...args),
+  publishUnregisteredEventType: (...args: any[]) => publishEvent(...args),
 }));
 
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({

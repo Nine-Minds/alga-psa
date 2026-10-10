@@ -3,7 +3,8 @@ import { dispatchCommentPublication, resolveCommentAuthorDisplay } from '@shared
 import { randomUUID } from 'node:crypto';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketResponseStateChangedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { BaseJobData } from '../interfaces';
 import { getJobRunner } from '../JobRunnerFactory';
 import {
@@ -43,12 +44,21 @@ async function dispatchScheduledResponseStateEvent(knex: any, tenantId: string, 
   const comment = await db.table('comments').where({ comment_id: commentId, publish_state: 'published' })
     .whereNotNull('scheduled_response_event_id').whereNull('scheduled_response_dispatched_at').first();
   if (!comment) return;
-  await publishEvent({ eventType: 'TICKET_RESPONSE_STATE_CHANGED', payload: {
-    tenantId, occurredAt: comment.published_at ?? new Date().toISOString(), ticketId: comment.ticket_id,
-    userId: comment.user_id, previousResponseState: comment.scheduled_previous_response_state ?? null,
-    newResponseState: 'awaiting_client', previousState: comment.scheduled_previous_response_state ?? null,
-    newState: 'awaiting_client', trigger: 'comment',
-  } }, { eventId: comment.scheduled_response_event_id, strict: true });
+  await publishWorkflowEvent({
+    eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+    payload: buildTicketResponseStateChangedPayload({
+      ticketId: comment.ticket_id,
+      userId: comment.user_id ?? null,
+      previousState: comment.scheduled_previous_response_state ?? null,
+      newState: 'awaiting_client',
+      trigger: 'comment',
+    }),
+    ctx: {
+      tenantId,
+      occurredAt: comment.published_at ?? new Date().toISOString(),
+      actor: comment.user_id ? { actorType: 'USER', actorUserId: comment.user_id } : { actorType: 'SYSTEM' },
+    },
+  }, { eventId: comment.scheduled_response_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_response_event_id: comment.scheduled_response_event_id })
     .whereNull('scheduled_response_dispatched_at').update({ scheduled_response_dispatched_at: knex.fn.now() });
 }

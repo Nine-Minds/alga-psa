@@ -1,7 +1,13 @@
 import type { IEventPublisher } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
+import {
+  buildModelPublisherTicketAssignedPayload,
+  buildModelPublisherTicketClosedPayload,
+  buildModelPublisherTicketCreatedPayload,
+  buildModelPublisherTicketUpdatedPayload,
+} from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 export class TicketModelEventPublisher implements IEventPublisher {
   /**
@@ -23,13 +29,11 @@ export class TicketModelEventPublisher implements IEventPublisher {
   ) {}
 
   async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
-    await this.safePublishEvent('TICKET_CREATED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      ...data.metadata,
-      ...this.options.ticketCreatedPayload,
-    });
+    await this.safePublishEvent(
+      'TICKET_CREATED',
+      data.tenantId,
+      buildModelPublisherTicketCreatedPayload(data, this.options.ticketCreatedPayload)
+    );
   }
 
   async publishTicketUpdated(data: {
@@ -39,22 +43,11 @@ export class TicketModelEventPublisher implements IEventPublisher {
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_UPDATED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      changes: data.changes,
-      ...data.metadata,
-    });
+    await this.safePublishEvent('TICKET_UPDATED', data.tenantId, buildModelPublisherTicketUpdatedPayload(data));
   }
 
   async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
-    await this.safePublishEvent('TICKET_CLOSED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      ...data.metadata,
-    });
+    await this.safePublishEvent('TICKET_CLOSED', data.tenantId, buildModelPublisherTicketClosedPayload(data));
   }
 
   async publishCommentCreated(data: {
@@ -64,8 +57,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: data.tenantId,
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', data.tenantId, {
       ticketId: data.ticketId,
       commentId: data.commentId,
       userId: data.userId,
@@ -74,26 +66,21 @@ export class TicketModelEventPublisher implements IEventPublisher {
   }
 
   async publishTicketAssigned(data: { tenantId: string; ticketId: string; userId: string; assignedByUserId?: string }): Promise<void> {
-    await this.safePublishEvent('TICKET_ASSIGNED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      assignedByUserId: data.assignedByUserId,
-    });
+    await this.safePublishEvent('TICKET_ASSIGNED', data.tenantId, buildModelPublisherTicketAssignedPayload(data));
   }
 
-  private async safePublishEvent(eventType: string, payload: any): Promise<void> {
+  private async safePublishEvent(eventType: string, tenantId: string, payload: any): Promise<void> {
     const actorUserId =
       typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
         ? payload.assignedByUserId
         : (typeof payload?.userId === 'string' ? payload.userId : undefined);
 
     const publish = () =>
-      publishWorkflowEvent({
-        eventType: eventType as any,
+      publishWorkflowEventByName({
+        eventType: eventType,
         payload,
         ctx: {
-          tenantId: String(payload?.tenantId ?? ''),
+          tenantId,
           actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
         }
       });

@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventoryCountSubmittedPayload, buildInventoryCountApprovedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -19,7 +20,6 @@ import {
   resolveTenantCurrency,
   startCountSessionCore,
   submitCountForReviewCore,
-  timestampPayload,
   type PendingStockLowSignal,
 } from '../lib';
 
@@ -346,12 +346,12 @@ export const submitCountForReview = withAuth(
         const facts = await loadCountEventFacts(trx, tenant, sessionId);
         return { session, facts };
       });
-      await publishInventoryEvent('INVENTORY_COUNT_SUBMITTED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_COUNT_SUBMITTED', buildInventoryCountSubmittedPayload({
         tenant,
-        session_id: outcome.session.session_id,
-        location_id: outcome.session.location_id,
-        ...outcome.facts,
-        user_id: user.user_id,
+        sessionId: outcome.session.session_id,
+        locationId: outcome.session.location_id,
+        facts: outcome.facts,
+        userId: user.user_id,
       }));
       return outcome.session;
     });
@@ -599,15 +599,15 @@ export const approveCountSession = withAuth(
     for (const signal of outcome.pendingStockLowEvents) {
       await publishInventoryEvent('INVENTORY_STOCK_LOW', signal);
     }
-    await publishInventoryEvent('INVENTORY_COUNT_APPROVED', timestampPayload({
+    await publishInventoryEvent('INVENTORY_COUNT_APPROVED', buildInventoryCountApprovedPayload({
       tenant,
-      session_id: outcome.result.session.session_id,
-      location_id: outcome.result.session.location_id,
-      ...outcome.facts,
-      adjustment_line_count: outcome.result.adjustments.length,
-      stale_line_count: outcome.result.stale_service_ids.length,
-      uncounted_line_count: outcome.result.uncounted_service_ids.length,
-      user_id: user.user_id,
+      sessionId: outcome.result.session.session_id,
+      locationId: outcome.result.session.location_id,
+      facts: outcome.facts,
+      adjustmentLineCount: outcome.result.adjustments.length,
+      staleLineCount: outcome.result.stale_service_ids.length,
+      uncountedLineCount: outcome.result.uncounted_service_ids.length,
+      userId: user.user_id,
     }));
     return outcome.result;
     });

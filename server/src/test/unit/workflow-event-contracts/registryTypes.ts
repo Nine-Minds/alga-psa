@@ -1,0 +1,67 @@
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import type { EmitterCase } from './harness';
+
+/**
+ * Ticket references. The format is `alga` + digits, matching the project's ticket numbers
+ * (`alga0002106`). A registry entry that is not `covered` MUST cite one.
+ */
+export type TicketRef = `alga${string}`;
+
+export type CoveredEntry = {
+  status: 'covered';
+  cases: [EmitterCase, ...EmitterCase[]];
+};
+
+/**
+ * The emitter exists but its payload does not (yet) pass the schema, or its builder has not
+ * been extracted yet. Cases run under `it.fails`: fixing the drift turns the test red until the
+ * entry is flipped to `covered`.
+ */
+export type KnownDriftEntry = {
+  status: 'known-drift';
+  ticket: TicketRef;
+  reason: string;
+  /**
+   * Set when the failure is structural rather than payload drift. `schema_not_registered`: the
+   * catalog names a payload schema ref that the workflow worker's schema registry does not have,
+   * so the worker would throw on every such event. The main test asserts that exact code (not
+   * just "fails"), so registering the schema turns it red and forces the entry to be updated.
+   */
+  failureCode?: 'schema_not_registered';
+  cases: [EmitterCase, ...EmitterCase[]];
+};
+
+/** The catalog advertises a trigger that no product code fires. */
+export type NoProductEmitterEntry = {
+  status: 'no-product-emitter';
+  ticket: TicketRef;
+  reason: string;
+};
+
+export type Entry = CoveredEntry | KnownDriftEntry | NoProductEmitterEntry;
+
+export type EmitterContracts = { [K in WorkflowCatalogEventType]: Entry };
+
+/** Tracking ticket for builder extraction that has not landed yet (this card). */
+export const TRACKING_TICKET: TicketRef = 'alga0002106';
+
+/**
+ * Umbrella ticket for catalogued events that nothing fires. Each `no-product-emitter` entry cites it.
+ * TODO(alga0002106): replace with the filed umbrella ticket number before merge.
+ */
+export const NO_EMITTER_UMBRELLA_TICKET: TicketRef = 'alga0002106';
+
+/**
+ * Catalogued event whose payload schema ref is missing from the worker's schema registry. No
+ * builder can pass until the schema is registered (schema collapse, plan step B), so the entry is
+ * asserted to fail with `schema_not_registered` specifically.
+ */
+export function schemaNotRegistered(eventType: WorkflowCatalogEventType, schemaRef: string): KnownDriftEntry {
+  return {
+    status: 'known-drift',
+    ticket: TRACKING_TICKET,
+    reason: `schema_not_registered: ${schemaRef}`,
+    failureCode: 'schema_not_registered',
+    cases: [{ site: `unregistered-schema#${eventType}`, build: () => ({}) }],
+  };
+}

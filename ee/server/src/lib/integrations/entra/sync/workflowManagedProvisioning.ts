@@ -2,7 +2,7 @@
 // the Temporal worker bundle, and the server-side publisher barrel drags in
 // @alga-psa/notifications, whose exports resolve to .ts sources that plain Node
 // cannot load from the built worker.
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
 import type { EntraSyncUser } from './types';
 
 export type WorkflowManagedPortalEventType =
@@ -45,7 +45,7 @@ export async function publishWorkflowManagedPortalProvisioningEvent(
     entitled ? 'eligible' : user.accountEnabled ? 'removed_entitlement' : 'removed_disabled',
   ].join(':');
 
-  await publishWorkflowEvent({
+  await publishWorkflowEventByName({
     eventType,
     payload: {
       tenantId: context.tenantId,

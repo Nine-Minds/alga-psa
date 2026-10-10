@@ -103,6 +103,7 @@ vi.mock('@alga-psa/shared/models/clientModel', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('@alga-psa/workflow-streams', () => ({

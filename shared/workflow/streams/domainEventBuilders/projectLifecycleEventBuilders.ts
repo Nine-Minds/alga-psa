@@ -74,3 +74,25 @@ export function buildProjectStatusChangedPayload(params: {
     ...(params.changedAt ? { changedAt: normalizeChangeValue(params.changedAt) } : {}),
   };
 }
+
+/**
+ * PROJECT_CREATED. `userId` and `timestamp` are legacy fields (subscribers and webhooks read them)
+ * and stay alongside the v2 `createdByUserId` / `createdAt`. `projectName` / `clientId` are extra
+ * context some creators attach.
+ */
+export function buildProjectCreatedPayload(params: {
+  projectId: string;
+  createdByUserId?: string;
+  createdAt?: Date | string;
+  projectName?: string;
+  clientId?: string | null;
+}): Record<string, unknown> {
+  const createdAt = params.createdAt ? normalizeChangeValue(params.createdAt) : undefined;
+  return {
+    projectId: params.projectId,
+    ...(params.projectName !== undefined ? { projectName: params.projectName } : {}),
+    ...(params.clientId !== undefined ? { clientId: params.clientId } : {}),
+    ...(params.createdByUserId ? { createdByUserId: params.createdByUserId, userId: params.createdByUserId } : {}),
+    ...(createdAt ? { createdAt, timestamp: createdAt } : {}),
+  };
+}

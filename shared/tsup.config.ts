@@ -49,6 +49,8 @@ export default defineConfig({
     'workflow/streams/domainEventBuilders/documentGeneratedEventBuilders': 'workflow/streams/domainEventBuilders/documentGeneratedEventBuilders.ts',
     'workflow/streams/domainEventBuilders/documentStorageEventBuilders': 'workflow/streams/domainEventBuilders/documentStorageEventBuilders.ts',
     'workflow/streams/domainEventBuilders/emailFeedbackEventBuilders': 'workflow/streams/domainEventBuilders/emailFeedbackEventBuilders.ts',
+    'workflow/streams/domainEventBuilders/emailLifecycleEventBuilders': 'workflow/streams/domainEventBuilders/emailLifecycleEventBuilders.ts',
+    'workflow/streams/domainEventBuilders/inventoryEventBuilders': 'workflow/streams/domainEventBuilders/inventoryEventBuilders.ts',
     'workflow/streams/domainEventBuilders/externalMappingEventBuilders': 'workflow/streams/domainEventBuilders/externalMappingEventBuilders.ts',
     'workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders': 'workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders.ts',
     'workflow/streams/domainEventBuilders/integrationConnectionEventBuilders': 'workflow/streams/domainEventBuilders/integrationConnectionEventBuilders.ts',

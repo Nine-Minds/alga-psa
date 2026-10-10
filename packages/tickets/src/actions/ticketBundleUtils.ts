@@ -35,11 +35,17 @@ import {
 } from '../lib/validateTicketClosure';
 import type { CloseRuleFailure } from '../lib/closeRuleConstants';
 import {
+  buildTicketStatusChangedPayload,
   buildTicketTransitionEvents,
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import {
+  buildTicketClosedPayload,
+  buildTicketMergedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,
@@ -512,7 +518,7 @@ export async function applyClosedMasterChoice(
 
       publications.push({
         eventType: 'TICKET_CLOSED',
-        payload: {
+        payload: buildTicketClosedPayload({
           ticketId: childTicketId,
           ...(actor.userId ? { userId: actor.userId, closedByUserId: actor.userId } : {}),
           closedAt: occurredAt,
@@ -521,7 +527,7 @@ export async function applyClosedMasterChoice(
             closed_at: { old: null, new: occurredAt },
             closed_by: { old: null, new: actor.userId ?? null },
           },
-        },
+        }),
         eventName: 'Ticket Closed',
         fromState: previousStatusId ?? undefined,
         toState: master.statusId ?? undefined,
@@ -530,12 +536,12 @@ export async function applyClosedMasterChoice(
       if (previousStatusId && master.statusId && previousStatusId !== master.statusId) {
         publications.push({
           eventType: 'TICKET_STATUS_CHANGED',
-          payload: {
+          payload: buildTicketStatusChangedPayload({
             ticketId: childTicketId,
             previousStatusId,
             newStatusId: master.statusId,
             changedAt: occurredAt,
-          },
+          }),
           eventName: 'Ticket Status Changed',
           fromState: previousStatusId,
           toState: master.statusId,
@@ -575,13 +581,13 @@ export async function applyClosedMasterChoice(
   if (reopenResult.reopened && reopenResult.previousStatusId && reopenResult.newStatusId) {
     publications.push({
       eventType: 'TICKET_UPDATED',
-      payload: {
+      payload: buildTicketUpdatedPayload({
         ticketId: master.masterTicketId,
         ...(actor.userId ? { userId: actor.userId, updatedByUserId: actor.userId } : {}),
         changes: {
           status_id: { old: reopenResult.previousStatusId, new: reopenResult.newStatusId },
         },
-      },
+      }),
       eventName: 'Ticket Updated',
     });
 
@@ -886,12 +892,12 @@ export async function attachChildrenToBundle(
 
   const publications: BundleAfterCommitPublication[] = childIds.map((childId) => ({
     eventType: 'TICKET_MERGED',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: childId,
       targetTicketId: params.masterTicketId,
       mergedAt: occurredAt,
       reason: params.mergedReason ?? 'bundle:added_children',
-    },
+    }),
     eventName: 'Ticket Merged',
   }));
 

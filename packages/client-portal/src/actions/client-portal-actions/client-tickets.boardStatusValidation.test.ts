@@ -333,6 +333,7 @@ describe('client portal board-scoped ticket status validation', () => {
     });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 
   it('T001: updateTicketStatus accepts a default-selectable board status and updates the ticket', async () => {
@@ -363,7 +364,7 @@ describe('client portal board-scoped ticket status validation', () => {
       status_id: 'board-1-in-progress',
       is_closed: false,
     });
-    expect(publishEventMock).toHaveBeenCalledWith(
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'TICKET_UPDATED' })
     );
   });
@@ -398,6 +399,7 @@ describe('client portal board-scoped ticket status validation', () => {
     );
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
     expect(publishWorkflowEventMock).not.toHaveBeenCalled();
     expect(enforceTicketCloseRulesMock).not.toHaveBeenCalled();
   });

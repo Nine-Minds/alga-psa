@@ -21,7 +21,8 @@ import {
 } from '../lib/closeGates';
 import { prepareOpportunityWinConversions, type WinOpportunityOptions } from '../lib/opportunityWin';
 import { getOpportunityHandoffData } from '../lib/opportunityHandoff';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildProjectCreatedPayload } from '@alga-psa/workflow-streams';
 import { promoteProspectClientAfterWin } from '../lib/clientLifecyclePromotion';
 
 export interface LinkableOpportunityQuote {
@@ -192,14 +193,19 @@ export const winOpportunity = withAuth(async (
     }, actorId(user));
     if (conversions.converted_project_id) {
       const projectId = conversions.converted_project_id;
-      registerAfterCommit(trx, () => publishEvent({
+      const createdAt = new Date();
+      registerAfterCommit(trx, () => publishWorkflowEvent({
         eventType: 'PROJECT_CREATED',
-        payload: {
+        ctx: {
           tenantId: tenant,
-          projectId,
-          userId: actorId(user),
-          timestamp: new Date().toISOString(),
+          occurredAt: createdAt,
+          actor: { actorType: 'USER', actorUserId: actorId(user) },
         },
+        payload: buildProjectCreatedPayload({
+          projectId,
+          createdByUserId: actorId(user),
+          createdAt,
+        }),
       }), `project_created_from_opportunity:${opportunityId}:${projectId}`);
     }
     await recordEvidence(trx, tenant, {

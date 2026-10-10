@@ -18,7 +18,7 @@ import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing
 import ContractLine from '@alga-psa/billing/models/contractLine';
 import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '@alga-psa/billing/services';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import {
   addContractLine as repositoryAddContractLine,
   removeContractLine as repositoryRemoveContractLine,
@@ -371,7 +371,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         };
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'CONTRACT_LINE_CREATED',
         payload: {
           tenantId: context.tenant,

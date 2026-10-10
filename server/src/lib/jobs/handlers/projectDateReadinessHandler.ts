@@ -1,6 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
 import { computeEntryAmounts, evaluateDateReadiness } from '@alga-psa/billing/services';
 import type { IProjectBillingConfig, IProjectBillingScheduleEntry } from '@alga-psa/types';
 import { runWithTenant } from 'server/src/lib/db';
@@ -63,7 +63,7 @@ export async function projectDateReadinessHandler(data: ProjectDateReadinessJobD
         });
         continue;
       }
-      await publishEvent({
+      await publishCatalogEventPayload({
         eventType: 'PROJECT_MILESTONE_READY',
         payload: {
           tenantId: data.tenantId,
@@ -74,7 +74,7 @@ export async function projectDateReadinessHandler(data: ProjectDateReadinessJobD
           trigger: 'date',
         },
       });
-      await publishEvent({
+      await publishCatalogEventPayload({
         eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
         payload: {
           tenantId: data.tenantId,

@@ -13,13 +13,14 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
-import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';
+import { publishEvent, publishUnregisteredEventType, publishWorkflowEvent } from '../../eventBus/publishers';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import {
   buildInvoiceDueDateChangedPayload,
   buildInvoiceOverduePayload,
   buildInvoiceSentPayload,
   buildInvoiceStatusChangedPayload,
+  buildInvoiceFinalizedPayload,
   buildInvoiceWrittenOffPayload,
   summarizeInvoiceRecurringProvenance,
   inferInvoiceDeliveryMethod,
@@ -991,20 +992,20 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Publish event
-      deferredEvents.push(() => publishEvent({
+      const finalizedAt = new Date().toISOString();
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'INVOICE_FINALIZED',
-        payload: (() => {
-          const occurredAt = new Date().toISOString();
-          return {
-            tenantId: context.tenant,
-            occurredAt,
-            invoiceId: data.invoice_id,
-            // payload.InvoiceFinalized.v1 types totalAmount as a string
-            totalAmount: String(totalAmount),
-            userId: context.userId,
-            timestamp: occurredAt
-          };
-        })()
+        payload: buildInvoiceFinalizedPayload({
+          invoiceId: data.invoice_id,
+          totalAmount,
+          userId: context.userId,
+          occurredAt: finalizedAt,
+        }),
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: finalizedAt,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
       }));
 
       deferredEvents.push(() => publishWorkflowEvent({
@@ -1291,7 +1292,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
-	      deferredEvents.push(() => publishEvent({
+	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_PAYMENT_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1465,7 +1466,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
 
         // Publish event
-        deferredEvents.push(() => publishEvent({
+        deferredEvents.push(() => publishUnregisteredEventType({
           eventType: 'INVOICE_CREDIT_APPLIED',
           payload: {
             tenantId: context.tenant,
@@ -1633,7 +1634,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
-	      deferredEvents.push(() => publishEvent({
+	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_REFUND_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1797,7 +1798,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Publish bulk event
-      deferredEvents.push(() => publishEvent({
+      deferredEvents.push(() => publishUnregisteredEventType({
         eventType: 'INVOICE_BULK_STATUS_UPDATE',
         payload: {
           tenantId: context.tenant,

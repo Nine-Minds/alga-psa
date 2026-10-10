@@ -26,7 +26,7 @@ import {
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import {
@@ -264,7 +264,7 @@ export class TimeSheetService extends BaseService<any> {
         return timeSheet;
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -311,7 +311,7 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_UPDATED',
         payload: {
           tenantId: context.tenant,
@@ -352,7 +352,7 @@ export class TimeSheetService extends BaseService<any> {
           .del();
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_DELETED',
         payload: {
           tenantId: context.tenant,
@@ -401,7 +401,7 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_SUBMITTED',
         payload: {
           tenantId: context.tenant,
@@ -458,7 +458,7 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVED',
         payload: {
           tenantId: context.tenant,
@@ -509,7 +509,7 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CHANGES_REQUESTED',
         payload: {
           tenantId: context.tenant,
@@ -597,7 +597,7 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVAL_REVERSED',
         payload: {
           tenantId: context.tenant,

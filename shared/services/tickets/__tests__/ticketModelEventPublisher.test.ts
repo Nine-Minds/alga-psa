@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: mocks.publishWorkflowEvent,
+  publishWorkflowEventByName: mocks.publishWorkflowEvent,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -34,10 +34,9 @@ describe('TicketModelEventPublisher', () => {
 
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'TICKET_CREATED',
+      // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
-        tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
         source: 'ninjaone',
       },
       ctx: {
@@ -70,10 +69,9 @@ describe('TicketModelEventPublisher', () => {
 
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'TICKET_CREATED',
+      // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
-        tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
         source: 'huntress',
       },
       ctx: {

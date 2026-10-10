@@ -65,7 +65,7 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishWorkflowEventMock,
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({

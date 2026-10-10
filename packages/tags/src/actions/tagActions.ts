@@ -10,6 +10,7 @@ import { generateEntityColorAsync } from '../lib/uiHelpers';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketUpdatedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   buildTagAppliedPayload,
   buildTagDefinitionCreatedPayload,
@@ -240,13 +241,17 @@ async function publishEntityTagUpdateEvent(params: {
   }
 
   if (params.taggedType === 'ticket') {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TICKET_UPDATED',
-      payload: {
-        tenantId: params.tenant,
+      payload: buildTicketUpdatedPayload({
         ticketId: params.taggedId,
         userId: params.userId,
         changes,
+      }),
+      ctx: {
+        tenantId: params.tenant,
+        occurredAt: params.occurredAt,
+        actor: { actorType: 'USER', actorUserId: params.userId },
       },
     });
   }

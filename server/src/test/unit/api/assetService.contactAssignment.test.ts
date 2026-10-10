@@ -46,7 +46,9 @@ const h = vi.hoisted(() => {
       updates.push({ table: this.table, patch });
       const rows = this.rows();
       rows.forEach((row) => Object.assign(row, patch));
-      return Promise.resolve(rows.length);
+      const result: any = Promise.resolve(rows.length);
+      result.returning = () => Promise.resolve(rows.map((row) => ({ ...row })));
+      return result;
     }
     insert(row: Row) {
       inserts.push({ table: this.table, row });
@@ -73,7 +75,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn(async () => undefined) }));
+vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: vi.fn(async () => undefined) }));
 
 vi.mock('@alga-psa/assets/lib/assetAttributeWrites', () => ({
   resolveWritableAssetType: vi.fn(async () => null),

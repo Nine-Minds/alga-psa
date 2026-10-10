@@ -1,5 +1,6 @@
 'use server';
 
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -86,6 +87,12 @@ import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSq
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildTicketAssignedPayload,
+  buildTicketClosedPayload,
+  buildTicketResponseStateChangedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
@@ -407,18 +414,19 @@ async function updateTicketResponseStateFromComment(
       .update({ response_state: newState });
 
     registerAfterCommit(trx, () =>
-      publishEvent({
+      publishWorkflowEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
+        payload: buildTicketResponseStateChangedPayload({
           ticketId,
           userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment',
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
         },
       }),
       `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
@@ -3139,7 +3147,7 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: id,
             ...(isSystemActor
               ? {}
@@ -3148,7 +3156,7 @@ export async function updateTicketInTransaction(
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
@@ -3177,22 +3185,23 @@ export async function updateTicketInTransaction(
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
+      const newAssigneeId = updateData.assigned_to;
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
+          payload: buildTicketAssignedPayload({
             ticketId: id,
-            userId: updateData.assigned_to, // Legacy: assigned user
+            userId: newAssigneeId, // Legacy: assigned user
             assignedByUserId: user.user_id,
             previousAssigneeId: currentTicket.assigned_to ?? undefined,
             previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-            newAssigneeId: updateData.assigned_to,
+            newAssigneeId,
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
         }),
@@ -3203,14 +3212,14 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
+          payload: buildTicketUpdatedPayload({
             ticketId: id,
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
         }),
@@ -3304,18 +3313,19 @@ export async function updateTicketInTransaction(
     // open-to-closed reset.
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       registerAfterCommit(trx, () =>
-        publishEvent({
+        publishWorkflowEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-          payload: {
-            tenantId: tenant,
-            occurredAt,
+          payload: buildTicketResponseStateChangedPayload({
             ticketId: id,
             userId: user.user_id,
-            previousResponseState: currentTicket.response_state || null,
-            newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
             trigger: clearsResponseStateOnClose ? 'close' : 'manual',
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
@@ -3622,14 +3632,13 @@ export const addTicketCommentWithCache = withAuth(async (
     // Publish comment added event after the comment transaction commits.
     if (!isScheduled) await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+        payload: buildTicketCommentAddedPayload({
           tenantId: tenant,
           occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId: user.user_id,
+          commentId: newComment.comment_id!,
+          userId: user.user_id!,
           comment: {
-            id: newComment.comment_id,
             content: content,
             author: `${user.first_name} ${user.last_name}`,
             isInternal,
@@ -3637,7 +3646,7 @@ export const addTicketCommentWithCache = withAuth(async (
           },
           suppressContactNotifications,
           suppressInternalNotifications,
-        }
+        })
       }, publishEvent);
 
     // Publish workflow v2 ticket message events (additive).

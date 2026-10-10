@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn(), delete: vi.fn(), insertRow: undefined as Record<string, unknown> | undefined }));
-vi.mock('../publishers', () => ({ publishWorkflowEvent: mocks.publish }));
+vi.mock('../publishers', () => ({ publishWorkflowEventByName: mocks.publish }));
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: () => ({
     insert: (row: Record<string, unknown>) => {

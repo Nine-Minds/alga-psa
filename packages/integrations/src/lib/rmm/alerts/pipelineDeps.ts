@@ -1,4 +1,4 @@
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { RmmAlertPipelineDeps } from '@alga-psa/shared/rmm/alerts';
 
 /**
@@ -9,7 +9,7 @@ import type { RmmAlertPipelineDeps } from '@alga-psa/shared/rmm/alerts';
 export function buildRmmAlertPipelineDeps(overrides?: Partial<RmmAlertPipelineDeps>): RmmAlertPipelineDeps {
   return {
     publishWorkflowEvent: async ({ eventType, tenantId, payload }) => {
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType,
         payload,
         ctx: { tenantId, actor: { actorType: 'SYSTEM' } },

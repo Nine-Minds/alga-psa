@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventoryPurchaseOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -255,12 +256,7 @@ export const addPoLine = withAuth(
       return row as IPurchaseOrderLine;
     });
 
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: poId,
-      user_id: user.user_id,
-      changed_fields: ['lines'],
-    }));
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: poId, userId: user.user_id, changedFields: ['lines'] }));
 
     return result;
   },
@@ -296,12 +292,7 @@ export const updatePoLine = withAuth(
       return row as IPurchaseOrderLine;
     });
 
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: result.po_id,
-      user_id: user.user_id,
-      changed_fields: Object.keys(patch),
-    }));
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: result.po_id, userId: user.user_id, changedFields: Object.keys(patch) }));
 
     return result;
   },
@@ -322,12 +313,7 @@ export const removePoLine = withAuth(
       return { removed: true, po_id: po.po_id };
     });
 
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: result.po_id,
-      user_id: user.user_id,
-      changed_fields: ['lines'],
-    }));
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: result.po_id, userId: user.user_id, changedFields: ['lines'] }));
 
     return { removed: result.removed };
   },
@@ -343,11 +329,7 @@ export const deletePurchaseOrder = withAuth(
         if (po.status !== 'draft') throw new Error('Only draft purchase orders can be deleted');
         await trx('purchase_orders').where({ tenant, po_id: poId }).del();
       });
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_DELETED', timestampPayload({
-        tenant,
-        po_id: poId,
-        user_id: user.user_id,
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_DELETED', buildInventoryPurchaseOrderPayload({ tenant, poId: poId, userId: user.user_id }));
       return { deleted: true };
     });
   },
@@ -378,12 +360,7 @@ export const submitPurchaseOrder = withAuth(
         return row as IPurchaseOrder;
       });
 
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-        tenant,
-        po_id: poId,
-        user_id: user.user_id,
-        changed_fields: ['status'],
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: poId, userId: user.user_id, changedFields: ['status'] }));
 
       return result;
     });
@@ -413,12 +390,7 @@ export const cancelPurchaseOrder = withAuth(
         return row as IPurchaseOrder;
       });
 
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-        tenant,
-        po_id: poId,
-        user_id: user.user_id,
-        changed_fields: ['status'],
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: poId, userId: user.user_id, changedFields: ['status'] }));
 
       return result;
     });
@@ -466,12 +438,7 @@ export const receivePoLine = withAuth(
       );
 
       await publishInventoryEvent('INVENTORY_PO_RECEIVED', core.po_received_event);
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-        tenant,
-        po_id: core.po_line.po_id,
-        user_id: user.user_id,
-        changed_fields: ['status', 'quantity_received'],
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: core.po_line.po_id, userId: user.user_id, changedFields: ['status', 'quantity_received'] }));
       for (const unit of core.units) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
           tenant,

@@ -11,6 +11,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketCommentAddedPayload, buildTicketResponseStateChangedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -172,19 +173,20 @@ async function updateTicketResponseState(
 
     // Publish response state change event
     try {
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
+        payload: buildTicketResponseStateChangedPayload({
           ticketId,
           userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
           previousState,
           newState,
-          trigger: 'comment'
-        }
+          trigger: 'comment',
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+        },
       });
       console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
     } catch (eventError) {
@@ -388,7 +390,7 @@ export const createComment = withAuth(async (
           const eventComment = await Comment.get(trx, commentTenant, commentId);
           await persistCommentPublication(trx, {
             eventType: 'TICKET_COMMENT_ADDED',
-            payload: {
+            payload: buildTicketCommentAddedPayload({
               tenantId: commentTenant,
               occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
@@ -398,7 +400,6 @@ export const createComment = withAuth(async (
               parent_comment_id: eventComment?.parent_comment_id ?? null,
               is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
-                id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
@@ -407,7 +408,7 @@ export const createComment = withAuth(async (
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
-            }
+            })
           }, publishEvent);
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {

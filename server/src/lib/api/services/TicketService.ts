@@ -1,5 +1,13 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildApiTicketCreatedPayload,
+  buildTicketClosedPayload,
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+  buildTicketTeamAssignedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
@@ -53,7 +61,7 @@ import {
   type RemoveTeamFromTicketOptions,
 } from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEventByName } from 'server/src/lib/eventBus/publishers';
 import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
@@ -1098,13 +1106,13 @@ export class TicketService extends BaseService<ITicket> {
       return { ticket: updated as ITicket, assignedTo: resolvedAssignedTo };
     });
 
-    await this.safePublishEvent('TICKET_ASSIGNED', context, {
+    await this.safePublishEvent('TICKET_ASSIGNED', context, buildTicketTeamAssignedPayload({
       ticketId,
-      userId: assignedTo,
+      assignedToUserId: assignedTo,
       assignedByUserId: context.userId,
-      changes: { assigned_team_id: data.team_id },
+      teamId: data.team_id,
       ...notificationSuppression,
-    });
+    }));
 
     return this.withDescriptionHtml(ticket);
   }
@@ -1807,33 +1815,17 @@ export class TicketService extends BaseService<ITicket> {
         return { fullTicket, externalLinks };
       });
 
-      await this.safePublishEvent('TICKET_CREATED', context, {
+      await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
         ticketId: fullTicket.ticket_id,
         userId: context.userId,
-        createdByUserId: context.userId,
         createdAt: fullTicket.entered_at
           ? new Date(fullTicket.entered_at as unknown as string).toISOString()
           : new Date().toISOString(),
-        source: 'api',
-        board_id: fullTicket.board_id,
-        priority_id: fullTicket.priority_id,
-        client_id: fullTicket.client_id,
-        ...(externalLinks.length > 0
-          ? {
-              externalLinks: externalLinks.map((link) => ({
-                linkId: link.link_id,
-                entityType: link.entity_type,
-                entityId: link.entity_id,
-                system: link.system,
-                externalId: link.external_id,
-                externalParentId: link.external_parent_id ?? null,
-                realm: link.realm ?? null,
-                url: link.url ?? null,
-                relationship: link.relationship,
-              })),
-            }
-          : {}),
-      });
+        boardId: fullTicket.board_id,
+        priorityId: fullTicket.priority_id,
+        clientId: fullTicket.client_id,
+        externalLinks,
+      }));
 
       // Post-commit: announce each inline ticket link so subscribers see the
       // same events as links added through the dedicated endpoint. Publishing
@@ -2123,13 +2115,13 @@ export class TicketService extends BaseService<ITicket> {
       // Publish appropriate events
       if (statusChanged) {
         if (nextStatus?.is_closed) {
-          await this.safePublishEvent('TICKET_CLOSED', context, {
+          await this.safePublishEvent('TICKET_CLOSED', context, buildTicketClosedPayload({
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
             closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
-          });
+          }));
         }
       }
 
@@ -2179,13 +2171,13 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', context, {
+      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
         ticketId: ticket.ticket_id,
         updatedByUserId: context.userId,
         changes: structuredChanges,
         suppressContactNotifications,
         suppressInternalNotifications,
-      });
+      }));
 
       // Activity-timeline row for REST API updates. Uses curated diff so
       // only user-meaningful field changes produce a timeline entry; no-op
@@ -2314,18 +2306,16 @@ export class TicketService extends BaseService<ITicket> {
       return fullTicket as ITicket;
     });
 
-    await this.safePublishEvent('TICKET_CREATED', context, {
-      ticketId: fullTicket.ticket_id,
+    await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
+      ticketId: fullTicket.ticket_id!,
       userId: context.userId,
-      createdByUserId: context.userId,
       createdAt: fullTicket.entered_at
         ? new Date(fullTicket.entered_at as unknown as string).toISOString()
         : new Date().toISOString(),
-      source: 'api',
-      board_id: fullTicket.board_id,
-      priority_id: fullTicket.priority_id,
-      client_id: fullTicket.client_id,
-    });
+      boardId: fullTicket.board_id,
+      priorityId: fullTicket.priority_id,
+      clientId: fullTicket.client_id,
+    }));
 
     return fullTicket;
   }
@@ -3305,8 +3295,8 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
+      await publishWorkflowEventByName({
+        eventType: eventType,
         payload,
         ctx: {
           tenantId: context.tenant,
@@ -3575,12 +3565,12 @@ export class TicketService extends BaseService<ITicket> {
       return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
     });
 
-    await this.safePublishEvent('TICKET_MERGED', context, {
+    await this.safePublishEvent('TICKET_MERGED', context, buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: new Date().toISOString(),
       reason: 'bundle:promote_master',
-    });
+    }));
 
     return result;
   }
@@ -3653,12 +3643,12 @@ export class TicketService extends BaseService<ITicket> {
       return { masterTicketId, childTicketId: params.childTicketId, remainingChildren: remaining };
     });
 
-    await this.safePublishEvent('TICKET_SPLIT', context, {
+    await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: new Date().toISOString(),
       reason: 'bundle:remove_child',
-    });
+    }));
 
     return result;
   }
@@ -3695,12 +3685,12 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     if (result.childTicketIds.length > 0) {
-      await this.safePublishEvent('TICKET_SPLIT', context, {
+      await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: new Date().toISOString(),
         reason: 'bundle:unbundle_master',
-      });
+      }));
     }
 
     return result;

@@ -14,6 +14,14 @@
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import type { IEventPublisher } from '@alga-psa/types';
+import {
+  buildInboundPublisherTicketAssignedPayload,
+  buildInboundPublisherTicketClosedPayload,
+  buildInboundPublisherTicketCreatedPayload,
+  buildInboundPublisherTicketUpdatedPayload,
+  buildTicketStatusChangedOutboxPayload,
+  withOutboxOccurredAt,
+} from '../../lib/tickets/ticketWorkflowEventPayloads';
 import { insertOutboxRow } from '../../services/email/inboundEmailDurableStore';
 
 export interface InboundEmailOutboxEventPublisherContext {
@@ -66,7 +74,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       // Workflow triggers validate payloads against schemas that require
       // `occurredAt`. Stamp it when the event is recorded (not when the
       // dispatcher publishes) so a retried publish keeps the original time.
-      payload: { occurredAt: new Date().toISOString(), ...params.payload },
+      payload: withOutboxOccurredAt(params.payload, new Date().toISOString()),
       publish_options: params.publishOptions ?? null,
     });
   }
@@ -80,12 +88,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: 'ticket-created',
       eventType: 'TICKET_CREATED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
-        ...(data.metadata ?? {}),
-      },
+      payload: buildInboundPublisherTicketCreatedPayload(data),
     });
   }
 
@@ -104,13 +107,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: 'ticket-updated',
       eventType: 'TICKET_UPDATED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
-        changes: data.changes,
-        ...(data.metadata ?? {}),
-      },
+      payload: buildInboundPublisherTicketUpdatedPayload(data),
     });
   }
 
@@ -125,16 +122,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: 'ticket-status-changed',
       eventType: 'TICKET_STATUS_CHANGED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        // Required by the TICKET_STATUS_CHANGED domain schema the subscribers validate against.
-        occurredAt: data.changedAt,
-        ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' } : {}),
-        previousStatusId: data.previousStatusId,
-        newStatusId: data.newStatusId,
-        changedAt: data.changedAt,
-      },
+      payload: buildTicketStatusChangedOutboxPayload(data),
     });
   }
 
@@ -147,12 +135,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: 'ticket-closed',
       eventType: 'TICKET_CLOSED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
-        ...(data.metadata ?? {}),
-      },
+      payload: buildInboundPublisherTicketClosedPayload(data),
     });
   }
 
@@ -191,12 +174,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: 'ticket-assigned',
       eventType: 'TICKET_ASSIGNED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        userId: data.userId,
-        assignedByUserId: data.assignedByUserId,
-      },
+      payload: buildInboundPublisherTicketAssignedPayload(data),
     });
   }
 }

@@ -8,7 +8,8 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildTagDefinitionCreatedPayload, buildTagDefinitionUpdatedPayload } from '@alga-psa/workflow-streams';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 // Import tag models and interfaces
@@ -90,18 +91,15 @@ export class TagService extends BaseService {
 
   private async publishTagDefinitionCreated(definition: ITagDefinition, context: ServiceContext): Promise<void> {
     const occurredAt = new Date().toISOString();
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TAG_DEFINITION_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        occurredAt,
-        actorType: 'USER',
-        actorUserId: context.userId,
+      payload: buildTagDefinitionCreatedPayload({
         tagId: definition.tag_id,
         tagName: definition.tag_text,
         createdByUserId: context.userId,
         createdAt: definition.created_at ? new Date(definition.created_at).toISOString() : occurredAt,
-      },
+      }),
+      ctx: { tenantId: context.tenant, occurredAt, actor: { actorType: 'USER', actorUserId: context.userId } },
     });
   }
 
@@ -112,19 +110,16 @@ export class TagService extends BaseService {
     context: ServiceContext,
   ): Promise<void> {
     const occurredAt = new Date().toISOString();
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TAG_DEFINITION_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        occurredAt,
-        actorType: 'USER',
-        actorUserId: context.userId,
+      payload: buildTagDefinitionUpdatedPayload({
         tagId,
         previousName,
         newName,
         updatedByUserId: context.userId,
         updatedAt: occurredAt,
-      },
+      }),
+      ctx: { tenantId: context.tenant, occurredAt, actor: { actorType: 'USER', actorUserId: context.userId } },
     });
   }
 

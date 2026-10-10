@@ -55,6 +55,21 @@ function normalizeUuid(value: string | null | undefined): string | null {
   return value;
 }
 
+/** TICKET_STATUS_CHANGED payload (also used by the bundle close path). */
+export function buildTicketStatusChangedPayload(input: {
+  ticketId: string;
+  previousStatusId: string;
+  newStatusId: string;
+  changedAt: string;
+}) {
+  return {
+    ticketId: input.ticketId,
+    previousStatusId: input.previousStatusId,
+    newStatusId: input.newStatusId,
+    changedAt: input.changedAt,
+  };
+}
+
 export function buildTicketTransitionEvents(params: {
   before: TicketTransitionSnapshot;
   after: TicketTransitionSnapshot;
@@ -70,12 +85,12 @@ export function buildTicketTransitionEvents(params: {
   if (before.statusId !== after.statusId) {
     events.push({
       eventType: 'TICKET_STATUS_CHANGED',
-      payload: {
+      payload: buildTicketStatusChangedPayload({
         ticketId: after.ticketId,
         previousStatusId: before.statusId,
         newStatusId: after.statusId,
         changedAt: occurredAt,
-      },
+      }),
       workflow: {
         eventName: 'Ticket Status Changed',
         fromState: before.statusId,
@@ -365,10 +380,10 @@ export async function publishTicketTransitionsAfterCommit(
   registerAfterCommit(
     trx,
     async () => {
-      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const { publishWorkflowEventByName } = await import('@alga-psa/event-bus/publishers');
       for (const ev of events) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType as any,
+        await publishWorkflowEventByName({
+          eventType: ev.eventType,
           payload:
             ev.eventType === 'TICKET_STATUS_CHANGED' && params.statusChangedPayloadExtras
               ? { ...ev.payload, ...params.statusChangedPayloadExtras }

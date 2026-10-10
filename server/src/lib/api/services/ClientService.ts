@@ -30,7 +30,7 @@ import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,
@@ -500,7 +500,7 @@ export class ClientService extends BaseService<IClient> {
     }
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_DELETED',
       payload: {
         clientId: id,

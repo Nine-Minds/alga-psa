@@ -26,7 +26,7 @@ import {
 import type { IBoard } from '@alga-psa/types';
 import { assertContactIsNotSharedMailbox, clearContactLinksBeforeDelete, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,
@@ -508,7 +508,7 @@ export const deleteContact = withAuth(async (
 
     if (result.deleted) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CONTACT_DELETED',
         payload: {
           contactId,

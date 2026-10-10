@@ -11,7 +11,7 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
@@ -81,7 +81,7 @@ async function publishScheduleEvent(input: {
   previousStatus?: ProjectBillingScheduleStatus | null;
   changes?: Record<string, unknown>;
 }): Promise<void> {
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: input.eventType,
     payload: {
       tenantId: input.tenant,
@@ -375,7 +375,7 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
     entry: result.entry,
   });
   if (parsed.increase_total) {
-    await publishEvent({
+    await publishCatalogEventPayload({
       eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
       payload: {
         tenantId: tenant,
@@ -523,7 +523,7 @@ export const markEntryReady = withAuth(withProjectBillingActionErrors(async (
       ready_at: new Date().toISOString(),
     });
   });
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: 'PROJECT_MILESTONE_READY',
     payload: {
       tenantId: tenant,

@@ -344,21 +344,10 @@ async function publishWorkflowDomainEvent(params: {
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
+    // Dynamic import keeps the runtime free of a static event-bus dependency; the binding stays fully typed.
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 
-    await publishers.publishWorkflowEvent({
+    await publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
       ctx: {

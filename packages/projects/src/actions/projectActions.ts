@@ -30,12 +30,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent, publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
+  buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
@@ -1147,7 +1148,7 @@ export const markPhaseComplete = withAuth(async (
     });
 
     for (const entry of result.ready_events) {
-        await publishEvent({
+        await publishCatalogEventPayload({
             eventType: 'PROJECT_MILESTONE_READY',
             payload: {
                 tenantId: tenant,
@@ -1158,7 +1159,7 @@ export const markPhaseComplete = withAuth(async (
                 trigger: 'phase',
             },
         });
-        await publishEvent({
+        await publishCatalogEventPayload({
             eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
             payload: {
                 tenantId: tenant,
@@ -1665,14 +1666,19 @@ export const createProject = withAuth(async (
         // Only publish events if not using an external transaction (or explicitly requested)
         if (!options?.skipEvents) {
             // Publish project created event
-            await publishEvent({
+            const createdAt = new Date();
+            await publishWorkflowEvent({
                 eventType: 'PROJECT_CREATED',
-                payload: {
+                ctx: {
                     tenantId: tenant,
+                    occurredAt: createdAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+                payload: buildProjectCreatedPayload({
                     projectId: fullProject.project_id,
-                    userId: user.user_id,
-                    timestamp: new Date().toISOString()
-                }
+                    createdByUserId: user.user_id,
+                    createdAt,
+                }),
             });
         }
 

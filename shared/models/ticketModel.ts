@@ -19,6 +19,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -1278,7 +1279,7 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
-          changes: updateData,
+          changes: buildTicketModelChanges(currentTicket, updateData),
           metadata: {
             updated_fields: Object.keys(updateData)
           }

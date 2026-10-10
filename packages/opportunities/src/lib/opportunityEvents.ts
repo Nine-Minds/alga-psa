@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
 
 export function publishOpportunityEventAfterCommit(
   trx: Knex.Transaction,
@@ -21,8 +21,8 @@ export function publishOpportunityEventAfterCommit(
             ? payload.overdueAt
             : new Date().toISOString();
 
-  registerAfterCommit(trx, () => publishWorkflowEvent({
-    eventType: eventType as never,
+  registerAfterCommit(trx, () => publishWorkflowEventByName({
+    eventType: eventType,
     payload,
     ctx: { tenantId: tenant, occurredAt },
     idempotencyKey,

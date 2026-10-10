@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { publishWorkflowEvent } from '../publishers';
+import { publishWorkflowEventByName } from '../publishers';
 import { normalizeDateOnly } from '@alga-psa/types';
 import type { WorkflowEventPublishContext } from '../workflow/workflowEventPublishHelpers';
 
@@ -50,8 +50,8 @@ export async function emitDateDomainEventOnce(knex: Knex, tenant: string, params
   }).onConflict(['tenant', 'dedupe_key']).ignore().returning('dedupe_key');
   if (inserted.length === 0) return false;
   try {
-    await publishWorkflowEvent({
-      eventType: params.eventType as never,
+    await publishWorkflowEventByName({
+      eventType: params.eventType,
       payload: params.payload,
       ctx: params.ctx ?? { tenantId: tenant, actor: { actorType: 'SYSTEM' } },
     }, { eventId: uuidv5(dedupeKey, EVENT_ID_NAMESPACE) });

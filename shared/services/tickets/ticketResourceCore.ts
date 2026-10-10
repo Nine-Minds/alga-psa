@@ -1,7 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
 import type { ITicketResource } from '@alga-psa/types';
+import { buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -21,7 +22,18 @@ export class TicketResourceError extends Error {
   }
 }
 
-type TicketResourceEvent = Parameters<typeof publishEvent>[0];
+/**
+ * What a ticket-resource change publishes. `payload` is the event-specific part;
+ * the envelope (tenantId, occurredAt, actor) is added at publish time from
+ * `tenant` / `actorUserId`.
+ */
+export type TicketResourceEvent = {
+  eventType: 'TICKET_ASSIGNED' | 'TICKET_ADDITIONAL_AGENT_ASSIGNED';
+  payload: Record<string, unknown>;
+  tenant: string;
+  /** Null for system-initiated work. */
+  actorUserId: string | null;
+};
 
 export interface AddTicketResourceResult {
   /** Null when the ticket had no primary assignee and the user was promoted. */
@@ -36,7 +48,14 @@ export type TicketResourceNotificationSuppression = {
 
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
-  await publishEvent(event);
+  await publishWorkflowEventByName({
+    eventType: event.eventType,
+    payload: event.payload,
+    ctx: {
+      tenantId: event.tenant,
+      actor: event.actorUserId ? { actorType: 'USER', actorUserId: event.actorUserId } : { actorType: 'SYSTEM' },
+    },
+  });
 }
 
 /**
@@ -87,13 +106,14 @@ export async function addTicketResourceCore(
       resource: null,
       event: {
         eventType: 'TICKET_ASSIGNED',
-        payload: {
-          tenantId: tenant,
+        payload: buildTicketAssignedPayload({
           ticketId: ticketId,
           userId: additionalUserId,
           ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
           ...notificationSuppression,
-        }
+        }),
+        tenant,
+        actorUserId,
       }
     };
   }
@@ -128,13 +148,14 @@ export async function addTicketResourceCore(
     event: {
       eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
       payload: {
-        tenantId: tenant,
         ticketId: ticketId,
         primaryAgentId: ticket.assigned_to,
         additionalAgentId: additionalUserId,
         ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
         ...notificationSuppression,
-      }
+      },
+      tenant,
+      actorUserId,
     }
   };
 }
