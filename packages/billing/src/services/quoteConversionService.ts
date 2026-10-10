@@ -541,6 +541,7 @@ export async function buildQuoteConversionPreview(
 
   const contractItems: QuoteConversionPreviewItem[] = [];
   let contractBlockedReason: string | null = null;
+  let contractBlockedItemDescription: string | null = null;
   const invoiceItems: QuoteConversionPreviewItem[] = [];
   const salesOrderItems: QuoteConversionPreviewItem[] = salesOrder
     ? salesOrder.lines.map((line) => {
@@ -564,7 +565,10 @@ export async function buildQuoteConversionPreview(
     if (recurringIds.has(item.quote_item_id)) {
       if (!item.service_id) {
         const message = serviceLessRecurringMessage(item);
-        contractBlockedReason = contractBlockedReason ?? message;
+        if (!contractBlockedReason) {
+          contractBlockedReason = message;
+          contractBlockedItemDescription = item.description;
+        }
         excludedItems.push(toPreviewItem(item, 'excluded', message, lookupName(item)));
         continue;
       }
@@ -639,6 +643,7 @@ export async function buildQuoteConversionPreview(
     available_actions: availableActions,
     invoice_error: invoiceError,
     contract_blocked_reason: contractBlockedReason,
+    contract_blocked_item_description: contractBlockedItemDescription,
     contract_items: contractItems,
     invoice_items: invoiceItems,
     sales_order_items: salesOrderItems,

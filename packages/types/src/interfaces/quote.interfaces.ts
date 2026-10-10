@@ -171,6 +171,8 @@ export interface QuoteConversionPreview {
   invoice_error?: string | null;
   /** Set when a recurring item cannot become a billable contract line; contract conversion is unavailable. */
   contract_blocked_reason?: string | null;
+  /** Description of the service-less recurring item behind `contract_blocked_reason`, for localized display. */
+  contract_blocked_item_description?: string | null;
   contract_items: QuoteConversionPreviewItem[];
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */

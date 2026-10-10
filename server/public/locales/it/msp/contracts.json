@@ -2585,7 +2585,8 @@
       "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
       "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto.",
-      "resumeUnsupportedShape": "Questa bozza non può essere ripresa nella procedura guidata senza modificarne i prezzi: {{lines}}"
+      "resumeUnsupportedShape": "Questa bozza non può essere ripresa nella procedura guidata senza modificarne i prezzi: {{lines}}",
+      "fixedLineNoService": "La riga fissa \"{{lineName}}\" ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare."
     },
     "pricingSchedule": {
       "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",

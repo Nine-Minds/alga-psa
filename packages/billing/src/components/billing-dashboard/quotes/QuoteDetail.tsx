@@ -1343,7 +1343,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               )}
               {conversionPreview.contract_blocked_reason && (
                 <Alert variant="destructive" id="quote-conversion-contract-blocked">
-                  <AlertDescription>{conversionPreview.contract_blocked_reason}</AlertDescription>
+                  <AlertDescription>
+                    {conversionPreview.contract_blocked_item_description != null
+                      ? t('quoteConversion.contractBlockedServiceless', {
+                          defaultValue: conversionPreview.contract_blocked_reason,
+                          description: conversionPreview.contract_blocked_item_description,
+                        })
+                      : conversionPreview.contract_blocked_reason}
+                  </AlertDescription>
                 </Alert>
               )}
               {conversionPreview.sales_order_items.length > 0 ? (

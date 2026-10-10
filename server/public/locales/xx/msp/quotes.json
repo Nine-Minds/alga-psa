@@ -664,7 +664,8 @@
       "openSalesOrders": "⟦Ȯƥḗƞ şȧŀḗş ȯřḓḗřş⟧",
       "successBody": "⟦Ƥřȯḓŭƈŧ ŀīƞḗş ẇīŀŀ ƀīŀŀ ȯƞ ƒŭŀƒīŀŀḿḗƞŧ.⟧",
       "successTitle": "⟦Şȧŀḗş ȯřḓḗř {{number}} ƈřḗȧŧḗḓ⟧"
-    }
+    },
+    "contractBlockedServiceless": "⟦Řḗƈŭřřīƞɠ īŧḗḿ \"{{description}}\" ḿŭşŧ řḗƒḗřḗƞƈḗ ȧ ƈȧŧȧŀȯɠ şḗřṽīƈḗ ƀḗƒȯřḗ ƈȯƞŧřȧƈŧ ƈȯƞṽḗřşīȯƞ⟧"
   },
   "quoteApproval": {
     "title": "⟦Ɋŭȯŧḗ Ȧƥƥřȯṽȧŀş⟧",

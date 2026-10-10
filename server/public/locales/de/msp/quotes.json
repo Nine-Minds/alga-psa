@@ -664,7 +664,8 @@
       "openSalesOrders": "Kundenaufträge öffnen",
       "successBody": "Produktpositionen werden bei Erfüllung abgerechnet.",
       "successTitle": "Kundenauftrag {{number}} erstellt"
-    }
+    },
+    "contractBlockedServiceless": "Die wiederkehrende Position „{{description}}\" muss vor der Vertragsumwandlung auf einen Katalogservice verweisen"
   },
   "quoteApproval": {
     "title": "Angebotsfreigaben",

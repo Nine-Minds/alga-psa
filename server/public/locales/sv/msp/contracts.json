@@ -2585,7 +2585,8 @@
       "invalidStartDate": "Avtalsutkastet har ett ogiltigt startdatum",
       "recordInvalid": "En av de valda posterna i avtalsguiden är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "En matchande post finns redan i avtalsguiden.",
-      "resumeUnsupportedShape": "Det här utkastet kan inte återupptas i guiden utan att dess priser ändras: {{lines}}"
+      "resumeUnsupportedShape": "Det här utkastet kan inte återupptas i guiden utan att dess priser ändras: {{lines}}",
+      "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför."
     },
     "pricingSchedule": {
       "endAfterEffective": "Slutdatum måste vara efter datumet då ändringen börjar gälla",

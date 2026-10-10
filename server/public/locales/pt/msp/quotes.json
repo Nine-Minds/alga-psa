@@ -664,7 +664,8 @@
       "openSalesOrders": "Abrir pedidos de venda",
       "successBody": "As linhas de produto serão faturadas na entrega.",
       "successTitle": "Pedido de venda {{number}} criado"
-    }
+    },
+    "contractBlockedServiceless": "O item recorrente \"{{description}}\" tem de referenciar um serviço do catálogo antes da conversão em contrato"
   },
   "quoteApproval": {
     "title": "Aprovações de cotação",

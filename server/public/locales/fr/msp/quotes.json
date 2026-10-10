@@ -664,7 +664,8 @@
       "openSalesOrders": "Ouvrir les commandes clients",
       "successBody": "Les lignes de produit seront facturées à l'exécution.",
       "successTitle": "Commande client {{number}} créée"
-    }
+    },
+    "contractBlockedServiceless": "L'élément récurrent « {{description}} » doit référencer un service du catalogue avant la conversion en contrat"
   },
   "quoteApproval": {
     "title": "Approbations de devis",

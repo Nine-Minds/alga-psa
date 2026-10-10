@@ -664,7 +664,8 @@
       "openSalesOrders": "Otwórz zamówienia sprzedaży",
       "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
       "successTitle": "Utworzono zamówienie sprzedaży {{number}}"
-    }
+    },
+    "contractBlockedServiceless": "Pozycja cykliczna „{{description}}\" musi odwoływać się do usługi z katalogu przed konwersją na umowę"
   },
   "quoteApproval": {
     "title": "Akceptacje wycen",

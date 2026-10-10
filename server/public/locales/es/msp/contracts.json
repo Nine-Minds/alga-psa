@@ -2585,7 +2585,8 @@
       "invalidStartDate": "El contrato en borrador tiene una fecha de inicio no válida",
       "recordInvalid": "Uno de los registros seleccionados del asistente de contratos ya no es válido. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un registro coincidente del asistente de contratos.",
-      "resumeUnsupportedShape": "Este borrador no se puede reanudar en el asistente sin cambiar sus precios: {{lines}}"
+      "resumeUnsupportedShape": "Este borrador no se puede reanudar en el asistente sin cambiar sus precios: {{lines}}",
+      "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar."
     },
     "pricingSchedule": {
       "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",

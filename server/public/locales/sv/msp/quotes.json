@@ -664,7 +664,8 @@
       "openSalesOrders": "Öppna försäljningsorder",
       "successBody": "Produktraderna faktureras vid leverans.",
       "successTitle": "Försäljningsorder {{number}} har skapats"
-    }
+    },
+    "contractBlockedServiceless": "Den återkommande posten \"{{description}}\" måste referera till en katalogtjänst före avtalsomvandling"
   },
   "quoteApproval": {
     "title": "Offertgodkännanden",

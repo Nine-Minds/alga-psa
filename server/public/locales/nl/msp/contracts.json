@@ -2585,7 +2585,8 @@
       "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
       "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
-      "resumeUnsupportedShape": "Dit concept kan niet in de wizard worden hervat zonder de prijzen te wijzigen: {{lines}}"
+      "resumeUnsupportedShape": "Dit concept kan niet in de wizard worden hervat zonder de prijzen te wijzigen: {{lines}}",
+      "fixedLineNoService": "Vaste regel \"{{lineName}}\" heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt."
     },
     "pricingSchedule": {
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",

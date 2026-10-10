@@ -2589,7 +2589,8 @@
       "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
       "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
-      "resumeUnsupportedShape": "Tej wersji roboczej nie można wznowić w kreatorze bez zmiany jej cen: {{lines}}"
+      "resumeUnsupportedShape": "Tej wersji roboczej nie można wznowić w kreatorze bez zmiany jej cen: {{lines}}",
+      "fixedLineNoService": "Linia stała „{{lineName}}\" ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem."
     },
     "pricingSchedule": {
       "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",

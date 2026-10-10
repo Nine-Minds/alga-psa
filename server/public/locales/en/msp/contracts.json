@@ -2585,7 +2585,8 @@
       "invalidStartDate": "Draft contract has an invalid start date",
       "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
       "duplicate": "A matching contract wizard record already exists.",
-      "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}"
+      "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}",
+      "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing."
     },
     "pricingSchedule": {
       "endAfterEffective": "End date must be after effective date",
