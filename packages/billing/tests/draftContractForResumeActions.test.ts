@@ -41,6 +41,11 @@ vi.mock('@alga-psa/workflow-streams/domainEventBuilders/contractEventBuilders', 
   computeContractRenewalUpcoming: vi.fn(() => null),
 }));
 
+const getContractMonthlyFixedValuesByContract = vi.fn(async () => new Map<string, { monthlyValueCents: number }>());
+vi.mock('@alga-psa/shared/billingClients/contractMonthlyValue', () => ({
+  getContractMonthlyFixedValuesByContract: (...args: any[]) => (getContractMonthlyFixedValuesByContract as any)(...args),
+}));
+
 const fetchDetailedContractLines = vi.fn();
 vi.mock('../src/repositories/contractLineRepository', () => ({
   fetchDetailedContractLines: (...args: any[]) => fetchDetailedContractLines(...args),
@@ -165,7 +170,7 @@ describe('getDraftContractForResume action', () => {
       billing_frequency: 'monthly',
       currency_code: 'USD',
     });
-    expect(Array.isArray(result.fixed_services)).toBe(true);
+    expect(Array.isArray(result.fixed_lines)).toBe(true);
     expect(Array.isArray(result.product_services)).toBe(true);
     expect(Array.isArray(result.hourly_services)).toBe(true);
     expect(Array.isArray(result.usage_services)).toBe(true);
@@ -220,10 +225,11 @@ describe('getDraftContractForResume action', () => {
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     const result = await getDraftContractForResume('contract-1');
 
-    expect(result.fixed_base_rate).toBe(1000);
+    expect(result.fixed_lines).toHaveLength(1);
+    expect(result.fixed_lines[0].base_rate).toBe(1000);
     // The stored basis and unit rate round-trip, so a per-seat service does not
     // resume as a bundle allocation.
-    expect(result.fixed_services).toEqual([
+    expect(result.fixed_lines[0].services).toEqual([
       {
         service_id: 'svc-1',
         service_name: 'Service 1',
@@ -278,6 +284,8 @@ describe('getDraftContractForResume action', () => {
         contract_line_id: 'hourly-1',
         contract_line_type: 'Hourly',
         billing_frequency: 'monthly',
+        // A stored mix of cadence owners is not representable by the wizard and is refused, so lines agree.
+        cadence_owner: 'contract',
       },
     ]);
 
@@ -363,8 +371,8 @@ describe('getDraftContractForResume action', () => {
     expect(result).toMatchObject({
       cadence_owner: 'contract',
       enable_proration: true,
-      fixed_base_rate: 1000,
     });
+    expect(result.fixed_lines[0]).toMatchObject({ base_rate: 1000, enable_proration: true });
   });
 
   it('includes service configurations (T029)', async () => {
@@ -470,8 +478,8 @@ describe('getDraftContractForResume action', () => {
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     const result = await getDraftContractForResume('contract-1');
 
-    expect(result.fixed_base_rate).toBe(2500);
-    expect(result.fixed_services[0]?.bucket_overlay).toEqual({
+    expect(result.fixed_lines[0].base_rate).toBe(2500);
+    expect(result.fixed_lines[0].services[0]?.bucket_overlay).toEqual({
       total_minutes: 120,
       overage_rate: 1500,
       allow_rollover: true,
@@ -868,5 +876,183 @@ describe('getDraftContractForResume action', () => {
     await expect(getDraftContractForResume('contract-1')).resolves.toMatchObject({
       permissionError: 'Permission denied: Cannot resume billing contracts',
     });
+  });
+});
+
+describe('getDraftContractForResume: per-line fixed pricing and fidelity', () => {
+  const draftKnex = () =>
+    makeKnex({
+      contracts: {
+        contract_id: 'contract-1',
+        contract_name: 'Draft Beta',
+        contract_description: null,
+        status: 'draft',
+        billing_frequency: 'monthly',
+        currency_code: 'USD',
+      },
+      client_contracts: {
+        contract_id: 'contract-1',
+        client_id: 'client-1',
+        start_date: '2026-01-01T00:00:00.000Z',
+        end_date: null,
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+      },
+    });
+
+  const member = (id: string, extra: Record<string, unknown> = {}) => ({
+    service: { service_id: id, service_name: `Svc ${id}`, item_kind: 'service' },
+    configuration: { quantity: 1 },
+    bucketConfig: null,
+    ...extra,
+  });
+
+  const arrange = (lines: any[], membersByLine: Record<string, any[]>) => {
+    createTenantKnex.mockResolvedValue({ knex: draftKnex() });
+    fetchDetailedContractLines.mockResolvedValue(lines);
+    getContractLineServicesWithConfigurations.mockImplementation(async (lineId: string) => membersByLine[lineId] ?? []);
+  };
+
+  const resume = async () => {
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
+    return (await getDraftContractForResume('contract-1')) as any;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(hasPermission).mockReturnValue(true);
+  });
+
+  it('1: two bundle fixed lines resume as two lines with their own rate, members, frequency and proration', async () => {
+    arrange(
+      [
+        { contract_line_id: 'l1', contract_line_name: 'Core', contract_line_type: 'Fixed', rate: 300000, enable_proration: true, billing_frequency: 'monthly' },
+        { contract_line_id: 'l2', contract_line_name: 'Annual extras', contract_line_type: 'Fixed', rate: 105000, enable_proration: false, billing_frequency: 'annually' },
+      ],
+      { l1: [member('A'), member('B')], l2: [member('C')] },
+    );
+    getContractMonthlyFixedValuesByContract.mockResolvedValue(new Map([['contract-1', { monthlyValueCents: 308750 }]]));
+    const result = await resume();
+
+    expect(result.fixed_lines).toHaveLength(2);
+    expect(result.fixed_lines[0]).toMatchObject({ contract_line_name: 'Core', base_rate: 300000, billing_frequency: 'monthly', enable_proration: true });
+    expect(result.fixed_lines[0].services.map((s: any) => s.service_id)).toEqual(['A', 'B']);
+    expect(result.fixed_lines[1]).toMatchObject({ contract_line_name: 'Annual extras', base_rate: 105000, billing_frequency: 'annually', enable_proration: false });
+    expect(result.fixed_lines[1].services.map((s: any) => s.service_id)).toEqual(['C']);
+    expect(result.recurring_baseline).toEqual({ monthly_cents: 308750 });
+  });
+
+  it('2: a service-less custom fixed line resumes with services [] and its base rate', async () => {
+    arrange(
+      [{ contract_line_id: 'c1', contract_line_name: 'Custom retainer', contract_line_type: 'Fixed', rate: 70000, enable_proration: false, billing_frequency: 'monthly' }],
+      { c1: [] },
+    );
+    const result = await resume();
+    expect(result.fixed_lines).toHaveLength(1);
+    expect(result.fixed_lines[0]).toMatchObject({ contract_line_name: 'Custom retainer', services: [], base_rate: 70000 });
+  });
+
+  it('3: a unit + bundle mixed line keeps basis, quantity and unit rate per member, and base rate per line', async () => {
+    arrange(
+      [
+        { contract_line_id: 'm1', contract_line_name: 'Mixed', contract_line_type: 'Fixed', rate: 50000, enable_proration: false, billing_frequency: 'monthly' },
+        { contract_line_id: 'm2', contract_line_name: 'Other', contract_line_type: 'Fixed', rate: 20000, enable_proration: false, billing_frequency: 'monthly' },
+      ],
+      {
+        m1: [
+          member('seat', { configuration: { quantity: 5, configuration_type: 'Fixed' }, typeConfig: { pricing_basis: 'unit', base_rate: 15000 } }),
+          member('bundle'),
+        ],
+        m2: [member('other')],
+      },
+    );
+    const result = await resume();
+    expect(result.fixed_lines).toHaveLength(2);
+    expect(result.fixed_lines[0].base_rate).toBe(50000);
+    expect(result.fixed_lines[0].services).toMatchObject([
+      { service_id: 'seat', pricing_basis: 'unit', quantity: 5, unit_rate: 15000 },
+      { service_id: 'bundle', pricing_basis: 'bundle', quantity: 1 },
+    ]);
+    expect(result.fixed_lines[1].base_rate).toBe(20000);
+  });
+
+  it('4: a Rivermark per-seat shape resumes as three unit lines with a null base rate', async () => {
+    const seat = (id: string, qty: number, rate: number) =>
+      member(id, { configuration: { quantity: qty, configuration_type: 'Fixed' }, typeConfig: { pricing_basis: 'unit', base_rate: rate } });
+    arrange(
+      [
+        { contract_line_id: 'r1', contract_line_name: 'X', contract_line_type: 'Fixed', rate: 0, enable_proration: false, billing_frequency: 'monthly' },
+        { contract_line_id: 'r2', contract_line_name: 'Y', contract_line_type: 'Fixed', rate: 0, enable_proration: false, billing_frequency: 'monthly' },
+        { contract_line_id: 'r3', contract_line_name: 'Z', contract_line_type: 'Fixed', rate: null, enable_proration: false, billing_frequency: 'monthly' },
+      ],
+      { r1: [seat('x', 10, 20000)], r2: [seat('y', 8, 10000)], r3: [seat('z', 4, 35000)] },
+    );
+    const result = await resume();
+    expect(result.fixed_lines).toHaveLength(3);
+    expect(result.fixed_lines.map((l: any) => l.base_rate)).toEqual([null, null, null]);
+    expect(result.fixed_lines.map((l: any) => [l.services[0].quantity, l.services[0].unit_rate])).toEqual([
+      [10, 20000],
+      [8, 10000],
+      [4, 35000],
+    ]);
+  });
+
+  it('5: a fixed line mixing product and service members is refused, naming the line', async () => {
+    arrange(
+      [{ contract_line_id: 'p1', contract_line_name: 'Hardware bundle', contract_line_type: 'Fixed', rate: 90000, enable_proration: false, billing_frequency: 'monthly' }],
+      { p1: [member('svc'), { service: { service_id: 'prod', service_name: 'Router', item_kind: 'product' }, configuration: { quantity: 2, custom_rate: 5000 }, bucketConfig: null }] },
+    );
+    const result = await resume();
+    expect(result.messageKey).toBe('msp/contracts:errors.wizard.resumeUnsupportedShape');
+    expect(result.actionError).toContain('Hardware bundle');
+    expect(result.fixed_lines).toBeUndefined();
+  });
+
+  it('6: hourly lines differing in billing_frequency are refused; equal ones merge and resume', async () => {
+    const hourly = (id: string) => [
+      { service: { service_id: id, service_name: `H ${id}`, item_kind: 'service' }, configuration: {}, typeConfig: { hourly_rate: 12500, minimum_billable_time: 15, round_up_to_nearest: 15 }, bucketConfig: null },
+    ];
+    arrange(
+      [
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly' },
+        { contract_line_id: 'h2', contract_line_name: 'H2', contract_line_type: 'Hourly', billing_frequency: 'quarterly' },
+      ],
+      { h1: hourly('a'), h2: hourly('b') },
+    );
+    const refused = await resume();
+    expect(refused.messageKey).toBe('msp/contracts:errors.wizard.resumeUnsupportedShape');
+
+    arrange(
+      [
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly' },
+        { contract_line_id: 'h2', contract_line_name: 'H2', contract_line_type: 'Hourly', billing_frequency: 'monthly' },
+      ],
+      { h1: hourly('a'), h2: hourly('b') },
+    );
+    const merged = await resume();
+    expect(merged.messageKey).toBeUndefined();
+    expect(merged.hourly_services.map((s: any) => s.service_id)).toEqual(['a', 'b']);
+  });
+
+  it('7: a template snapshot with two fixed lines gives two fixed_lines (no last-wins)', async () => {
+    createTenantKnex.mockResolvedValue({
+      knex: makeKnex({
+        contract_templates: { template_id: 'template-1', template_name: 'T', template_description: '', default_billing_frequency: 'monthly' },
+      }),
+    });
+    fetchDetailedContractLines.mockResolvedValue([
+      { contract_line_id: 't1', contract_line_type: 'Fixed', rate: 300000, enable_proration: true, billing_frequency: 'monthly' },
+      { contract_line_id: 't2', contract_line_type: 'Fixed', rate: 105000, enable_proration: false, billing_frequency: 'monthly' },
+    ]);
+    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) =>
+      lineId === 't1' ? [member('A')] : [member('C')],
+    );
+    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
+    const snapshot: any = await getContractTemplateSnapshotForClientWizard('template-1');
+    expect(snapshot.fixed_lines).toHaveLength(2);
+    expect(snapshot.fixed_lines.map((l: any) => l.base_rate)).toEqual([300000, 105000]);
+    expect(snapshot.fixed_lines.map((l: any) => l.services[0].service_id)).toEqual(['A', 'C']);
   });
 });
