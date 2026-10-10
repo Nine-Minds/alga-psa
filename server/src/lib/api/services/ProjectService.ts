@@ -42,6 +42,7 @@ import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publ
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
+  buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
@@ -337,16 +338,21 @@ export class ProjectService extends BaseService<IProject> {
       return project;
     });
 
-    await publishEvent({
+    const createdAt = new Date();
+    await publishWorkflowEvent({
       eventType: 'PROJECT_CREATED',
-      payload: {
+      ctx: {
         tenantId: context.tenant,
+        occurredAt: createdAt,
+        actor: { actorType: 'USER', actorUserId: context.userId },
+      },
+      payload: buildProjectCreatedPayload({
         projectId: project.project_id,
         projectName: project.project_name,
         clientId: project.client_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
+        createdByUserId: context.userId,
+        createdAt,
+      }),
     });
 
     return project;

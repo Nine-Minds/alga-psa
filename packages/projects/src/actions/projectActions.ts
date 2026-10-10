@@ -36,6 +36,7 @@ import { OrderingService } from '../lib/orderingUtils';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
+  buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@alga-psa/workflow-streams';
@@ -1665,14 +1666,19 @@ export const createProject = withAuth(async (
         // Only publish events if not using an external transaction (or explicitly requested)
         if (!options?.skipEvents) {
             // Publish project created event
-            await publishEvent({
+            const createdAt = new Date();
+            await publishWorkflowEvent({
                 eventType: 'PROJECT_CREATED',
-                payload: {
+                ctx: {
                     tenantId: tenant,
+                    occurredAt: createdAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+                payload: buildProjectCreatedPayload({
                     projectId: fullProject.project_id,
-                    userId: user.user_id,
-                    timestamp: new Date().toISOString()
-                }
+                    createdByUserId: user.user_id,
+                    createdAt,
+                }),
             });
         }
 

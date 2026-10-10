@@ -1,4 +1,4 @@
-import type { IComment, ITicket, ITimeEntry } from '@alga-psa/types';
+import type { IComment, IProject, IProjectTask, ITicket, ITimeEntry } from '@alga-psa/types';
 
 /**
  * Realistic domain fixtures for the emitter contract cases. Builders are fed values read off
@@ -29,6 +29,11 @@ export const IDS = {
   client: 'cccccccc-cccc-4ccc-8ccc-000000000001',
   team: 'dddddddd-dddd-4ddd-8ddd-000000000001',
   timeEntry: 'eeeeeeee-eeee-4eee-8eee-000000000001',
+  project: 'f0f0f0f0-0000-4000-8000-000000000001',
+  phase: 'f0f0f0f0-0000-4000-8000-000000000002',
+  task: 'f0f0f0f0-0000-4000-8000-000000000003',
+  blockerTask: 'f0f0f0f0-0000-4000-8000-000000000004',
+  taskStatusMapping: 'f0f0f0f0-0000-4000-8000-000000000005',
 } as const;
 
 export const NOW = '2026-07-16T12:00:00.000Z';
@@ -101,4 +106,46 @@ export const ticketTimeEntry: ITimeEntry = {
   notes: 'Replaced toner',
   user_id: IDS.user,
   approval_status: 'DRAFT',
+};
+
+// ---- projects ----
+
+const projectCreatedAt = new Date(EARLIER);
+
+export const project: IProject = {
+  tenant: IDS.tenant,
+  project_id: IDS.project,
+  client_id: IDS.client,
+  project_name: 'Office network refresh',
+  description: 'Replace the core switches and access points',
+  start_date: new Date('2026-07-01T00:00:00.000Z'),
+  end_date: new Date('2026-09-30T00:00:00.000Z'),
+  created_at: projectCreatedAt,
+  updated_at: projectCreatedAt,
+  wbs_code: '1',
+  is_inactive: false,
+  status: IDS.statusOpen,
+  status_name: 'In Progress',
+  is_closed: false,
+  assigned_to: IDS.assignee,
+  contact_name_id: IDS.contact,
+  project_number: 'PRJ-0007',
+};
+
+export const projectTask: IProjectTask = {
+  tenant: IDS.tenant,
+  task_id: IDS.task,
+  phase_id: IDS.phase,
+  task_name: 'Rack and cable the new switches',
+  description: null,
+  assigned_to: IDS.assignee,
+  estimated_hours: 8,
+  actual_hours: null,
+  project_status_mapping_id: IDS.taskStatusMapping,
+  created_at: projectCreatedAt,
+  updated_at: projectCreatedAt,
+  wbs_code: '1.1',
+  start_date: null,
+  due_date: new Date('2026-08-15T00:00:00.000Z'),
+  task_type_key: 'task',
 };

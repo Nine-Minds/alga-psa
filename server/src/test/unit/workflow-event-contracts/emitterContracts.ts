@@ -1,6 +1,7 @@
 import type { EmitterContracts } from './registryTypes';
 import { pendingMigration, schemaNotRegistered } from './registryTypes';
 import { ticketContracts } from './contracts/tickets';
+import { projectContracts } from './contracts/projects';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -18,18 +19,7 @@ export const emitterContracts: EmitterContracts = {
   // ---- tickets ----
   ...ticketContracts,
   // ---- projects ----
-  PROJECT_CREATED: pendingMigration('PROJECT_CREATED', 'projects'),
-  PROJECT_APPROVAL_GRANTED: pendingMigration('PROJECT_APPROVAL_GRANTED', 'projects'),
-  PROJECT_APPROVAL_REJECTED: pendingMigration('PROJECT_APPROVAL_REJECTED', 'projects'),
-  PROJECT_APPROVAL_REQUESTED: pendingMigration('PROJECT_APPROVAL_REQUESTED', 'projects'),
-  PROJECT_STATUS_CHANGED: pendingMigration('PROJECT_STATUS_CHANGED', 'projects'),
-  PROJECT_TASK_ASSIGNED: pendingMigration('PROJECT_TASK_ASSIGNED', 'projects'),
-  PROJECT_TASK_COMPLETED: pendingMigration('PROJECT_TASK_COMPLETED', 'projects'),
-  PROJECT_TASK_CREATED: pendingMigration('PROJECT_TASK_CREATED', 'projects'),
-  PROJECT_TASK_DEPENDENCY_BLOCKED: pendingMigration('PROJECT_TASK_DEPENDENCY_BLOCKED', 'projects'),
-  PROJECT_TASK_DEPENDENCY_UNBLOCKED: pendingMigration('PROJECT_TASK_DEPENDENCY_UNBLOCKED', 'projects'),
-  PROJECT_TASK_STATUS_CHANGED: pendingMigration('PROJECT_TASK_STATUS_CHANGED', 'projects'),
-  PROJECT_UPDATED: pendingMigration('PROJECT_UPDATED', 'projects'),
+  ...projectContracts,
   // ---- scheduling ----
   APPOINTMENT_ASSIGNED: pendingMigration('APPOINTMENT_ASSIGNED', 'scheduling'),
   APPOINTMENT_CANCELED: pendingMigration('APPOINTMENT_CANCELED', 'scheduling'),
