@@ -13366,6 +13366,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid",
                 "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
               }
             },
             "required": [
@@ -13452,6 +13480,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ],
                 "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
                 "description": "Read-only; ignored on write."
               }
             },
@@ -13635,6 +13691,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid",
                 "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
               }
             },
             "required": [
@@ -13721,6 +13805,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ],
                 "format": "uuid",
+                "description": "Read-only; ignored on write."
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Read-only; ignored on write."
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
                 "description": "Read-only; ignored on write."
               }
             },

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { IContactPhoneNumber } from '@alga-psa/shared/interfaces/contact.interfaces';
 
 import {
   contactResponseSchema,
@@ -169,4 +170,25 @@ describe('contact phone API schemas', () => {
       expect(result.success).toBe(true);
     });
   });
+
+    it('accepts a full hydrated GET row (every key ContactModel hydration emits) for round-trip PUT', () => {
+      const hydratedRow = {
+        contact_phone_number_id: '00000000-0000-4000-8000-000000000001',
+        phone_number: '555-0100',
+        extension: null,
+        normalized_phone_number: '5550100',
+        canonical_type: 'work',
+        custom_phone_type_id: null,
+        custom_type: null,
+        is_default: true,
+        display_order: 0,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      } satisfies Required<IContactPhoneNumber>;
+
+      expect(updateContactSchema.safeParse({ phone_numbers: [hydratedRow] }).success).toBe(true);
+      expect(updateContactSchema.safeParse({
+        phone_numbers: [{ ...hydratedRow, created_at: new Date(), updated_at: new Date() }],
+      }).success).toBe(true);
+    });
 });

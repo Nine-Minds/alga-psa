@@ -5328,6 +5328,18 @@ components:
                   - "null"
                 format: uuid
                 description: Read-only; ignored on write.
+              created_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
+              updated_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
             required:
               - phone_number
             additionalProperties: false
@@ -5391,6 +5403,18 @@ components:
                   - string
                   - "null"
                 format: uuid
+                description: Read-only; ignored on write.
+              created_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
+              updated_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
                 description: Read-only; ignored on write.
             required:
               - email_address
@@ -5467,6 +5491,18 @@ components:
                   - "null"
                 format: uuid
                 description: Read-only; ignored on write.
+              created_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
+              updated_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
             required:
               - phone_number
             additionalProperties: false
@@ -5526,6 +5562,18 @@ components:
                   - string
                   - "null"
                 format: uuid
+                description: Read-only; ignored on write.
+              created_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
+                description: Read-only; ignored on write.
+              updated_at:
+                anyOf:
+                  - type: string
+                  - type: string
+                  - type: "null"
                 description: Read-only; ignored on write.
             required:
               - email_address

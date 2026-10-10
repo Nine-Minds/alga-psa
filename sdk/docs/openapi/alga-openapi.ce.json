@@ -7510,6 +7510,34 @@
                   ],
                   "format": "uuid",
                   "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
                 }
               },
               "required": [
@@ -7596,6 +7624,34 @@
                     "null"
                   ],
                   "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "description": "Read-only; ignored on write."
                 }
               },
@@ -7703,6 +7759,34 @@
                   ],
                   "format": "uuid",
                   "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
                 }
               },
               "required": [
@@ -7789,6 +7873,34 @@
                     "null"
                   ],
                   "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "description": "Read-only; ignored on write."
                 }
               },

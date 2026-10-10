@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { IContactEmailAddress } from '@alga-psa/shared/interfaces/contact.interfaces';
 
 import {
   contactResponseSchema,
@@ -95,4 +96,23 @@ describe('contact email API schemas', () => {
       expect(result.success).toBe(true);
     });
   });
+
+    it('accepts a full hydrated GET row (every key ContactModel hydration emits) for round-trip PUT', () => {
+      const hydratedRow = {
+        contact_additional_email_address_id: '00000000-0000-4000-8000-000000000001',
+        email_address: 'jd@example.com',
+        normalized_email_address: 'jd@example.com',
+        canonical_type: 'work',
+        custom_email_type_id: null,
+        custom_type: null,
+        display_order: 0,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      } satisfies Required<IContactEmailAddress>;
+
+      expect(updateContactSchema.safeParse({ additional_email_addresses: [hydratedRow] }).success).toBe(true);
+      expect(updateContactSchema.safeParse({
+        additional_email_addresses: [{ ...hydratedRow, created_at: new Date(), updated_at: new Date() }],
+      }).success).toBe(true);
+    });
 });

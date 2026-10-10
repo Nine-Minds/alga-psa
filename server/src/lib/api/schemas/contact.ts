@@ -43,7 +43,9 @@ export const contactPhoneNumberInputSchema = z.object({
   // Response-only keys: accepted so a GET row can be sent back unchanged. The model's
   // non-strict phoneRowInputSchema strips them.
   normalized_phone_number: z.string().optional().describe('Read-only; ignored on write.'),
-  custom_phone_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.')
+  custom_phone_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.'),
+  created_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.'),
+  updated_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.')
 }).strict().describe(
   'Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. ' +
   'When any rows are sent, exactly one must have is_default: true. ' +
@@ -60,7 +62,9 @@ export const contactEmailAddressInputSchema = z.object({
   display_order: z.number().int().min(0).optional(),
   // Response-only keys; see contactPhoneNumberInputSchema.
   normalized_email_address: z.string().optional().describe('Read-only; ignored on write.'),
-  custom_email_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.')
+  custom_email_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.'),
+  created_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.'),
+  updated_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.')
 }).strict().describe(
   'Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. ' +
   'On update, the array replaces all of the contact\'s additional email addresses; include contact_additional_email_address_id to keep an existing row.'
