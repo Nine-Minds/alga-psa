@@ -1637,7 +1637,7 @@
         "name": "Name",
         "kind": "Art",
         "kinds": {
-          "bundle": "Bundle",
+          "bundle": "Paket",
           "shared_workspace": "Gemeinsamer Arbeitsplatz"
         },
         "columns": {
