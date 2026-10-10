@@ -7,6 +7,7 @@ import { billingContracts } from './contracts/billing';
 import { crmContracts } from './contracts/crm';
 import { documentContracts } from './contracts/documents';
 import { surveyContracts } from './contracts/surveys';
+import { notificationContracts } from './contracts/notifications';
 import { emailContracts } from './contracts/email';
 
 /**
@@ -36,6 +37,7 @@ export const emitterContracts: EmitterContracts = {
   ...documentContracts,
   ...surveyContracts,
   ...emailContracts,
+  ...notificationContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -73,10 +75,6 @@ export const emitterContracts: EmitterContracts = {
   INTEGRATION_TOKEN_EXPIRING: pendingMigration('INTEGRATION_TOKEN_EXPIRING', 'comms'),
   INTEGRATION_TOKEN_REFRESH_FAILED: pendingMigration('INTEGRATION_TOKEN_REFRESH_FAILED', 'comms'),
   INTEGRATION_WEBHOOK_RECEIVED: pendingMigration('INTEGRATION_WEBHOOK_RECEIVED', 'comms'),
-  NOTIFICATION_DELIVERED: pendingMigration('NOTIFICATION_DELIVERED', 'comms'),
-  NOTIFICATION_FAILED: pendingMigration('NOTIFICATION_FAILED', 'comms'),
-  NOTIFICATION_READ: pendingMigration('NOTIFICATION_READ', 'comms'),
-  NOTIFICATION_SENT: pendingMigration('NOTIFICATION_SENT', 'comms'),
   // ---- remaining ----
   INVENTORY_STOCK_LOW: schemaNotRegistered('INVENTORY_STOCK_LOW', 'payload.InventoryStockLow.v1'),
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
