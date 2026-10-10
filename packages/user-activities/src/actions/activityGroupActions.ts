@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 import {
   getUserActivityGroupsForApi,
+  isActivityOnUsersListForApi,
   moveActivityToGroupForApi,
   removeActivityFromGroupsForApi,
   reorderActivitiesInGroupForApi,
@@ -31,6 +32,20 @@ export const getUserActivityGroups = withAuth(async (
   targetUserId?: string
 ): Promise<ActivityGroup[]> => {
   return getUserActivityGroupsForApi(user, tenant, targetUserId);
+});
+
+/**
+ * Is the record on the current user's own activities list (so it can be grouped from its
+ * detail screen)? Session user only. Returns false, never throws, for unsupported types or
+ * a caller without `user_schedule:read`.
+ */
+export const isActivityOnMyList = withAuth(async (
+  user,
+  { tenant },
+  activityType: string,
+  activityId: string
+): Promise<boolean> => {
+  return isActivityOnUsersListForApi(user, tenant, activityType, activityId);
 });
 
 /**

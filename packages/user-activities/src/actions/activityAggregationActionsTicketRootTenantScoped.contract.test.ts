@@ -21,7 +21,9 @@ describe('activity aggregation ticket root tenant-scoped query contract', () => 
 
     expect(section).toContain(".table(\"tickets");
     expect(section).toContain('.select(');
-    expect(section).toContain('this.orWhereExists(');
+    // The assigned-or-resource predicate (its orWhereExists) now lives in activityAssignmentScope,
+    // shared with isActivityOnUsersListForApi; its structure is asserted by the *AssignmentTenantScoped tests.
+    expect(section).toContain('whereTicketOnUsersList(scopedDb, db, userId)');
 
     expect(section).not.toContain('return await trx("tickets")');
     expect(section).not.toContain('.where("tickets.tenant", tenant)');

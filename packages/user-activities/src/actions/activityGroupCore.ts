@@ -9,12 +9,21 @@
  * supplies the resolved identity), so they must never be registered as client-callable
  * server actions. They import knex, so this module must stay out of any client bundle (it
  * is exposed only through `@alga-psa/user-activities/server/activity-actions`).
+ *
+ * Membership lifecycle decision (alga0002045): a group membership row is PERSONAL
+ * bookkeeping and is KEPT when its record leaves the owner's list (unassigned or reassigned
+ * to someone else). If the record is assigned back, it reappears in its old group. Nothing
+ * clears memberships on reassignment: stale rows are never rendered (the grouped view only
+ * shows items in the current activity set), and clearing would let a colleague's edit
+ * destroy part of my private organization. See `isActivityOnUsersListForApi`.
  */
 
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import { hasPermission } from "@alga-psa/auth";
 import type { IUserWithRoles } from "@alga-psa/types";
 import type { Knex } from "knex";
+import { ActivityType } from "@alga-psa/types";
+import { whereProjectTaskOnUsersList, whereTicketOnUsersList } from "./activityAssignmentScope";
 
 export interface ActivityGroup {
   groupId: string;
@@ -281,5 +290,52 @@ export async function reorderActivitiesInGroupForApi(
         })
         .update({ sort_order: item.sortOrder });
     }
+  });
+}
+
+/**
+ * Is this record on the caller's own activities list? Drives whether the detail-screen
+ * "My group" control is shown. Uses the same predicates as the board
+ * (`activityAssignmentScope`), so "appears on my board" and "can be grouped from the detail
+ * screen" cannot drift apart.
+ *
+ * Only `ticket` and `projectTask` are supported; any other type returns `false`, as does a
+ * caller without `user_schedule:read` (they couldn't organize groups anyway). This never
+ * throws for those cases. Closed records still count as on the list: the board shows them
+ * when the closed filter is off, and membership should survive while a record is closed.
+ *
+ * Reassignment keeps group membership (see the header note): a record that leaves the list
+ * keeps its `user_activity_group_items` row, which stays invisible until the record returns.
+ * That is why the existing mutations carry no eligibility guard either: workflow actions
+ * file items into other users' groups on purpose, possibly before assignment.
+ */
+export async function isActivityOnUsersListForApi(
+  user: IUserWithRoles,
+  tenant: string,
+  activityType: string,
+  activityId: string,
+): Promise<boolean> {
+  if (!activityId) return false;
+  if (activityType !== ActivityType.TICKET && activityType !== ActivityType.PROJECT_TASK) {
+    return false;
+  }
+
+  const { knex: db } = await createTenantKnex(tenant);
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!(await hasPermission(user, "user_schedule", "read", trx))) {
+      return false;
+    }
+
+    const scopedDb = tenantDb(trx, tenant);
+    const row = activityType === ActivityType.TICKET
+      ? await scopedDb.table("tickets")
+          .where("tickets.ticket_id", activityId)
+          .where(whereTicketOnUsersList(scopedDb, trx, user.user_id))
+          .first("tickets.ticket_id")
+      : await scopedDb.table("project_tasks")
+          .where("project_tasks.task_id", activityId)
+          .where(whereProjectTaskOnUsersList(scopedDb, trx, user.user_id))
+          .first("project_tasks.task_id");
+    return !!row;
   });
 }
