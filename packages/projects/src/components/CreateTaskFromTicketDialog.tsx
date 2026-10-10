@@ -193,6 +193,7 @@ export default function CreateTaskFromTicketDialog({
                   created_at: new Date(),
                   project_id: selectedProjectId,
                   phase_id: selectedPhaseId,
+                  bill_under_project: true,
                   status_name: defaultStatus?.custom_name || defaultStatus?.name || 'New',
                   is_closed: false
                 }

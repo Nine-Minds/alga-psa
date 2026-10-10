@@ -28,6 +28,9 @@ export interface CommentThreadDrawerProps<TComment> {
   isSubmitting?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   searchMentions?: (query: string) => Promise<any[]>;
+  /** Forwarded to the reply composer's editor footer (e.g. Cc/Bcc control). */
+  replyFooterActions?: React.ReactNode;
+  replySubmitDisabled?: boolean;
   onSubmitReply: (params: {
     parentCommentId: string;
     content: PartialBlock[];
@@ -51,6 +54,8 @@ export function CommentThreadDrawer<TComment>({
   isSubmitting = false,
   uploadFile,
   searchMentions,
+  replyFooterActions,
+  replySubmitDisabled = false,
   onSubmitReply,
 }: CommentThreadDrawerProps<TComment>): React.ReactElement {
   const rootCommentId = group ? getCommentId(group.root) : null;
@@ -86,6 +91,8 @@ export function CommentThreadDrawer<TComment>({
               isSubmitting={isSubmitting}
               uploadFile={uploadFile}
               searchMentions={searchMentions}
+              footerActions={replyFooterActions}
+              submitDisabled={replySubmitDisabled}
               onSubmit={onSubmitReply}
               onCancel={onClose}
             />

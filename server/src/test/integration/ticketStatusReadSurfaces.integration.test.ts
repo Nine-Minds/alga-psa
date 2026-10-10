@@ -7,6 +7,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@shared/models/ticketModel';
 import { TicketService } from '@/lib/api/services/TicketService';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: vi.fn().mockResolvedValue(null),
@@ -240,7 +241,7 @@ async function seedTickets(fixture: ReadSurfaceFixture): Promise<void> {
         entered_by: fixture.userId,
       },
       fixture.tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
 
     await TicketModel.createTicket(
@@ -254,7 +255,7 @@ async function seedTickets(fixture: ReadSurfaceFixture): Promise<void> {
         entered_by: fixture.userId,
       },
       fixture.tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
 
     await TicketModel.createTicket(
@@ -268,7 +269,7 @@ async function seedTickets(fixture: ReadSurfaceFixture): Promise<void> {
         entered_by: fixture.userId,
       },
       fixture.tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
   });
 }

@@ -65,6 +65,57 @@ export async function createLicenseCheckoutSessionAction(
 /**
  * CE Stub - Not available in Community Edition
  */
+export async function getAddLicensesPreviewAction(
+  _additional: number,
+): Promise<{
+  success: boolean;
+  data?: {
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+    remainingAmount: number;
+    isTrialing: boolean;
+    trialEnd: string | null;
+  };
+  error?: string;
+}> {
+  logger.warn('[CE] getAddLicensesPreviewAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'This feature is only available in Enterprise Edition. Self-hosted Community Edition has unlimited users.',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function addLicensesAction(
+  _additional: number,
+): Promise<{
+  success: boolean;
+  data?: {
+    type: 'checkout' | 'updated';
+    clientSecret?: string;
+    sessionId?: string;
+    publishableKey?: string;
+    scheduledChange?: boolean;
+  };
+  error?: string;
+}> {
+  logger.warn('[CE] addLicensesAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'License purchasing is only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
 export async function getLicensePricingAction(): Promise<{
   success: boolean;
   data?: {

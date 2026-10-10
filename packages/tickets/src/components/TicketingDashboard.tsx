@@ -7,6 +7,7 @@ import BulkBundleDialog from './BulkBundleDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
+import { createTicketActionsColumn } from './ticketActionsColumn';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -46,7 +47,7 @@ import {
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
+import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -95,7 +96,7 @@ import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPick
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import { getClientById } from '../actions/clientLookupActions';
+import { getClientById, getContactByContactNameId } from '../actions/clientLookupActions';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -161,6 +162,7 @@ interface TicketingDashboardProps {
   sortDirection?: 'asc' | 'desc';
   onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
+  renderContactDetails?: (args: { id: string; contact: IContact; clients: IClient[]; userId?: string }) => React.ReactNode;
   initialAgentAvatarUrls?: Record<string, string | null>;
   initialTeamAvatarUrls?: Record<string, string | null>;
   initialTicketTags?: Record<string, ITag[]>;
@@ -331,6 +333,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   sortDirection = 'desc',
   onSortChange,
   renderClientDetails,
+  renderContactDetails,
   initialAgentAvatarUrls = {},
   initialTeamAvatarUrls = {},
   initialTicketTags = {},
@@ -913,7 +916,57 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
   }, [id, openDrawer, replaceDrawer, renderClientDetails, t]);
-  
+
+  const onQuickViewContact = useCallback(async (contactNameId: string) => {
+    if (!contactNameId) return;
+
+    openDrawer(
+      <div className="p-4 text-sm text-gray-600">
+        {t('dashboard.drawer.loading', 'Loading...')}
+      </div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+    try {
+      const contact = await getContactByContactNameId(contactNameId);
+      if (!contact) {
+        replaceDrawer(
+          <div className="p-4 text-sm text-gray-600">
+            {t('info.contactNotFound', 'Contact not found.')}
+          </div>
+        );
+        return;
+      }
+
+      // ContactDetailsView resolves the contact's client name and phone country
+      // from this list, so the owning client is all it needs.
+      const client = contact.client_id ? await getClientById(contact.client_id) : null;
+
+      replaceDrawer(
+        renderContactDetails
+          ? renderContactDetails({
+            id: `${id}-contact-details`,
+            contact,
+            clients: client ? [client] : [],
+            userId: currentUser?.user_id,
+          })
+          : (
+            <div className="p-4 text-sm text-gray-600">
+              {t('dashboard.drawer.contactRendererMissing', 'Contact details are unavailable in this context.')}
+            </div>
+          ),
+        undefined,
+        '900px'
+      );
+    } catch (e) {
+      const message = e instanceof Error
+        ? e.message
+        : t('info.contactLoadFailed', 'Failed to load contact.');
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
+    }
+  }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
+
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
 
@@ -1488,6 +1541,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
+      onContactClick: onQuickViewContact,
       statusIsClosedById,
       additionalAgentAvatarUrls,
       teamAvatarUrls,
@@ -1590,7 +1644,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn = createTicketActionsColumn({
+      t,
+      onDuplicate: (ticketId) => navigateAwayTo(buildCreateTicketHref({
+        duplicateFromTicketId: ticketId,
+        isAlgaDeskMode: useAlgaDeskQuickAddForm,
+      })),
+    });
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1600,6 +1664,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTagsChange,
     ticketTagsRef,
     onQuickViewClient,
+    onQuickViewContact,
     id,
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
@@ -1616,6 +1681,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
     t,
     locale,
     dateFormat,
@@ -1818,6 +1885,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
       entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      latest_activity_at: (ticket) => formatPrintDateTime(ticket.latest_activity_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
         return tags.length > 0
@@ -1839,7 +1907,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
             ? 'tickets-print-title-column'
-            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at' || dataIndexKey === 'latest_activity_at'
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (

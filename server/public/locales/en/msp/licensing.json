@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Confirm License Update",
       "increaseDescription": "Review the details of your license increase before confirming.",
-      "decreaseDescription": "Review the details of your license decrease. Changes will take effect at the end of your billing period.",
       "currentMonthlyCost": "Current Monthly Cost",
       "currentLicenseCount": "Current License Count",
       "newMonthlyCost": "New Monthly Cost",
       "newLicenseCount": "New License Count",
       "monthlyIncrease": "Monthly Increase",
-      "monthlySavings": "Monthly Savings",
       "paymentMethod": "Payment Method",
       "changePaymentMethod": "Change",
       "immediateChargeTitle": "Immediate charge",
       "immediateChargeDescription": "You will be charged {{amountDue}} now for the prorated amount.",
       "prorationDescription": "Proration: {{amount}} for the remainder of this billing period",
-      "scheduledTitle": "Scheduled for period end",
-      "scheduledDescription": "License decrease will take effect on {{date}} at the end of your current billing period.",
-      "scheduledKeepAccess": "You'll keep access to all {{count}} licenses until then.",
       "cancel": "Cancel",
       "confirmPayNow": "Confirm & Pay Now",
-      "confirmSchedule": "Confirm Schedule"
+      "confirm": "Confirm",
+      "trialTitle": "No charge during your trial",
+      "trialDescription": "Your trial continues as before. Billing starts at {{amount}} on {{date}}."
     },
     "usage": {
       "title": "Current License Usage",
       "licensesUsed": "licenses used"
     },
     "fields": {
-      "totalLicenseCount": "Total License Count"
+      "licensesToAdd": "Licenses to add"
     },
     "help": {
-      "totalLicenseCount": "Enter the new total number of licenses (minimum: {{minimum}}). Currently: {{current}}",
-      "reduceViaAccount": "To reduce licenses, visit Account Management",
-      "quantityWarning": "Warning: You have {{used}} users but are setting the total to {{quantity}}"
+      "licensesToAdd": "Enter how many licenses to add. Your new total updates below."
     },
     "pricing": {
       "pricePerLicense": "Price per license:",
-      "quantity": "Quantity:",
-      "total": "Total:"
+      "addedCost": "Added cost:",
+      "newTotal": "New total:"
     },
     "actions": {
       "creatingCheckout": "Creating Checkout...",
-      "noChange": "No Change",
-      "updateToTotal": "Update to {{quantity}} Total ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Add {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "This sets your total subscription quantity (not an addition to current licenses)",
       "increasingImmediate": "Increasing licenses: Immediate access with prorated charge",
-      "billedMonthly": "Licenses are billed monthly and can be canceled anytime"
+      "billedMonthly": "Licenses are billed monthly and can be canceled anytime",
+      "addsToTotal": "Licenses are added to your current total. To reduce licenses, visit Account Management."
     },
     "solo": {
       "title": "Solo includes one user",
       "description": "The Solo plan is designed for a single user and does not support adding licenses. Upgrade to Pro to add more users to your team.",
       "upgradeCta": "Upgrade to Pro"
+    },
+    "summary": {
+      "currentLicenses": "Current licenses",
+      "licensesToAdd": "Licenses to add",
+      "newTotal": "New total"
     }
   },
   "removalModal": {

@@ -336,10 +336,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       ));
 
       // Handle all other fields
+      // Callers spread whole fetched records back in, and the read queries join
+      // location, account-manager and default-client columns onto clients. Only
+      // keys that exist on the stored row are real columns; anything else would
+      // fail the UPDATE (alga-2026-0002617).
+      const clientColumns = new Set(Object.keys(currentClient));
       Object.entries(permittedUpdateData).forEach(([key, value]) => {
         // Exclude properties, url, tax_region, account_manager_id, logoUrl (computed field), location fields, and partition keys (tenant, client_id)
-        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
-        if (!excludedFields.includes(key)) {
+        const excludedFields = ['properties', 'url', 'tax_region', 'account_manager_id', 'logoUrl', 'logoWideUrl', 'tenant', 'client_id', 'phone', 'email', 'address', 'location_email', 'location_phone', 'location_phone_extension', 'location_country_code', 'location_address', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_name'];
+        if (!excludedFields.includes(key) && clientColumns.has(key)) {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }

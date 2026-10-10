@@ -54,12 +54,12 @@ describe('Teams meeting job wiring', () => {
 
   it('T037: jobs index registers both teams meeting handlers on the legacy scheduler inside the EE workflow-edition block', () => {
     // The first `if (isEnterpriseWorkflowEdition()) {` in the handler
-    // registration section opens the EE-only block; the CE-only sla-timer
+    // registration section opens the EE-only block; the workflow-quota-resume-scan
     // registration follows it, so the slice covers exactly that block.
     const eeHandlerBlock = sliceBetween(
       jobsIndexSource,
       'if (isEnterpriseWorkflowEdition()) {',
-      "'sla-timer',"
+      "jobScheduler.registerJobHandler<WorkflowQuotaResumeScanJobData>("
     );
     expect(eeHandlerBlock).toContain('jobScheduler.registerJobHandler<TeamsMeetingCleanupJobData>(');
     expect(eeHandlerBlock).toContain('TEAMS_MEETING_CLEANUP_JOB,');
@@ -114,7 +114,7 @@ describe('Teams meeting job wiring', () => {
     const fnBody = sliceBetween(
       jobsIndexSource,
       'export const scheduleTeamsMeetingSweepJob = async (',
-      'export const scheduleGoogleGmailWatchRenewalJob = async ('
+      'export const scheduleDateTriggerScanJob = async ('
     );
     expect(fnBody).toContain('const runner = await getJobRunnerInstance();');
     expect(fnBody).toContain("if (runner.getRunnerType() === 'temporal') {");

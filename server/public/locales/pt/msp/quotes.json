@@ -313,7 +313,15 @@
       "currencyPlaceholder": "Selecione a moeda",
       "quoteDate": "Data da cotação",
       "validUntil": "Válido até",
-      "validUntilHelp": "A cotação expira automaticamente nesta data."
+      "validUntilHelp": "A cotação expira automaticamente nesta data.",
+      "currencySource": {
+        "tenant": "Padrão do locatário",
+        "client": "Padrão do cliente para {{clientName}}",
+        "template": "Do modelo de cotação {{templateTitle}}",
+        "saved": "Salva nesta cotação",
+        "savedTemplate": "Salva neste modelo",
+        "manual": "Selecionada manualmente"
+      }
     },
     "lineItems": {
       "title": "Itens de linha",
@@ -353,6 +361,14 @@
       "subtotal": "Subtotal",
       "discounts": "Descontos",
       "tax": "Imposto",
+      "optionalIfSelected": "Opcional se selecionado",
+      "cadence": {
+        "monthly": "Mensal",
+        "quarterly": "Trimestral",
+        "semiAnnually": "Semestral",
+        "annually": "Anual",
+        "oneTime": "Único"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Aprovação",
       "approvalMessage": "As cotações precisam da aprovação do líder de vendas antes do envio.",
@@ -509,6 +525,7 @@
       "noPriceInCurrency": "Sem preço em {{currencyCode}}",
       "optional": "Opcional",
       "phaseSection": "Fase/Seção",
+      "preselected": "Pré-selecionado",
       "recurring": "Recorrente",
       "service": "serviço",
       "setPrice": "Definir preço",

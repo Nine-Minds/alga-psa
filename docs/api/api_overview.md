@@ -128,7 +128,7 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`.
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
@@ -184,6 +184,12 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 **Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
 
 **Permissions:** all five routes require `ticket:update`.
+
+#### Ticket Comment Cc/Bcc
+
+Agents can Cc or Bcc one-off external email addresses when posting a public ticket comment, without adding those addresses to the ticket's ongoing watch list. Pass `cc` and/or `bcc` arrays of email strings in the request body of `POST /api/v1/tickets/{id}/comments`. Both arrays are validated: addresses are trimmed and deduplicated, a single address in both lists is promoted to `cc`, the combined count must not exceed 20 recipients, and one-off recipients are rejected on internal notes. The resolved list is persisted in the comment's `email_recipients` metadata field and returned on comment read responses; client-portal contacts can see `cc` addresses but not `bcc` entries. When the ticket has no requester email or the requester is the comment author, AlgaPSA sends a direct fallback email to the one-off recipients rather than dropping them. A one-off recipient who replies to the thread is recognized on that conversation but is never added to the ticket's permanent watch list.
+
+**Permissions:** posting a comment with Cc/Bcc requires `ticket:update`.
 
 #### Ticket Location Address
 

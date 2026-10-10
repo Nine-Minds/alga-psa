@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { publishRmmTicketCreated } from '@alga-psa/shared/rmm/alerts';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import { ticketUpdateStamp } from '@alga-psa/shared/lib/tickets/ticketUpdateStamp';
 import type {
   HuntressAgent,
   HuntressIncidentReport,
@@ -213,7 +215,7 @@ export async function processIncident(
         if (action.close && integration.settings.closedStatusId) {
           await txDb.table('tickets')
             .where({ ticket_id: existingAlert.ticket_id })
-            .update({ status_id: integration.settings.closedStatusId, updated_at: now });
+            .update({ status_id: integration.settings.closedStatusId, ...ticketStatusClockPatch(trx, integration.settings.closedStatusId), ...ticketUpdateStamp(trx, null) });
         }
         return existingAlert.ticket_id as string;
       }

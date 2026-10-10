@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { TicketModel } from '@shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -233,7 +234,7 @@ describe('Ticket board/status validation integration', () => {
           entered_by: fixture.userId,
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
 
       expect(created.status_id).toBe(fixture.boardAStatusId);
@@ -250,7 +251,7 @@ describe('Ticket board/status validation integration', () => {
             entered_by: fixture.userId,
           },
           fixture.tenantId,
-          trx,
+          trx, {}, silentTicketCreation('test fixture'),
         )
       ).rejects.toThrow('selected status does not belong to the selected board');
     });
@@ -279,7 +280,7 @@ describe('Ticket board/status validation integration', () => {
           entered_by: fixture.userId,
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
 
       ticketId = created.ticket_id;

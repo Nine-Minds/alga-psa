@@ -145,6 +145,11 @@
       "durationSameDay": "Czas trwania musi kończyć się tego samego dnia",
       "endSameDay": "Godzina zakończenia musi przypadać tego samego dnia co godzina rozpoczęcia",
       "invalidTimeRange": "Wprowadź prawidłowy zakres czasu"
+    },
+    "serviceSource": {
+      "task": "Domyślnie z zadania",
+      "phase": "Domyślnie z fazy",
+      "project": "Domyślnie z projektu"
     }
   },
   "workItemPicker": {

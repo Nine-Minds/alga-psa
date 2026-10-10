@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const translationsRoot = fileURLToPath(new URL('../', import.meta.url));
+const require = createRequire(import.meta.url);
+const { allowlistMatchers } = require('../lib/translation-utils.cjs');
 const registry = JSON.parse(readFileSync(join(translationsRoot, 'locales.registry.json'), 'utf8'));
 const schema = JSON.parse(readFileSync(join(translationsRoot, 'lib/glossary.schema.json'), 'utf8'));
 
@@ -96,4 +99,36 @@ for (const [locale, config] of Object.entries(registry)) {
       assert.doesNotThrow(() => new RegExp(pattern, 'u'), `${locale}: invalid allowlist pattern: ${pattern}`);
     }
   });
+
+  test(`${locale} allowlist accepts placeholder-only formulas`, (t) => {
+    const glossaryPath = join(repoRoot, config.dir, config.glossary);
+    if (!existsSync(glossaryPath)) {
+      t.skip(`${locale}: glossary not found at ${glossaryPath}`);
+      return;
+    }
+    const glossary = JSON.parse(readFileSync(glossaryPath, 'utf8'));
+    const allowlist = allowlistMatchers(glossary, config.dialect);
+
+    // Pure interpolation formulas have no translatable words, so a locale value
+    // identical to English is correct and must not be reported as untranslated.
+    for (const formula of [
+      '{{count}} × {{rate}} = {{amount}}',
+      '{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}',
+      '{{start}} - {{end}}',
+    ]) {
+      assert.equal(allowlist.isAllowed(formula), true, `${locale}: ${formula} should be allowlisted`);
+    }
+    assert.equal(allowlist.isAllowed('{{count}} × catalog price'), false, `${locale}: prose must not be allowlisted`);
+  });
 }
+
+test('nl allowlist accepts the Dutch copula "is" without admitting English sentences', () => {
+  const config = registry.nl;
+  const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+  const allowlist = allowlistMatchers(glossary, config.dialect);
+
+  // The condition builder's "equals" operator reads "is" in both English and Dutch.
+  assert.equal(allowlist.isAllowed('is'), true);
+  assert.equal(allowlist.isAllowed('is not'), false);
+  assert.equal(allowlist.isAllowed('Builder'), false);
+});

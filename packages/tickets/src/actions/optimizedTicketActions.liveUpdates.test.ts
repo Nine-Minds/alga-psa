@@ -19,6 +19,11 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -119,7 +124,7 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
@@ -456,6 +461,31 @@ describe('updateTicketWithCache live updates', () => {
     );
   });
 
+  it('status clock: a status change includes the status_changed_at CASE patch in the tickets UPDATE', async () => {
+    let capturedTrx: any;
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      capturedTrx = buildTrx({ currentTicket: makeTicket({ status_id: 'status-1' }) });
+      return callback(capturedTrx);
+    });
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toHaveProperty('status_changed_at');
+    expect(capturedTrx.raw).toHaveBeenCalledWith(
+      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END'),
+      ['status-2']
+    );
+  });
+
+  it('status clock: an update that does not write status_id never touches status_changed_at', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { title: 'Renamed' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
+    expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
+  });
+
   it('T005: permission failure results in zero live-update publishes', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
@@ -719,7 +749,7 @@ describe('updateTicketWithCache live updates', () => {
 
   it('publishes suppression flags on TICKET_CLOSED', async () => {
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    const slaEvents = await import('@alga-psa/shared/services/tickets/ticketSlaStageEvents');
     (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
       eventType: 'TICKET_SLA_STAGE_MET',
       payload: {
@@ -827,7 +857,10 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
+      status_changed_at: expect.anything(),
       response_state: null,
+      updated_at: expect.anything(),
+      updated_by: 'user-1',
     });
     expect(publishRedisMock).toHaveBeenCalledWith(
       'alga-psa:ticket-updates:tenant-1:ticket-1',

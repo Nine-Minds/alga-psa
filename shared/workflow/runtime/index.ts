@@ -19,6 +19,10 @@ export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowE
 export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';
 export * from './jsonSchemaMetadata';
+export * from './dateTriggerOccurrence';
+export * from './dateTriggerSourceDefinitions';
+export * from './dateTriggerParams';
+export * from './dateTriggerBuilder';
 export {
   validateWorkflowDefinition,
   type PublishValidationResult
@@ -37,6 +41,12 @@ export {
 export { buildSampleFromJsonSchema } from './simulation/samplePayload';
 export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
 export { listWorkflowExpressionFunctions } from './expressionFunctions';
+export {
+  inferExpressionResultTypes,
+  type WorkflowExpressionResultType,
+  type WorkflowExpressionPathSegment,
+  type WorkflowExpressionPathTypeResolver
+} from './expressionTypeInference';
 export {
   DEFAULT_WORKFLOW_EVENT_CORRELATION_PATHS,
   WORKFLOW_EVENT_CORRELATION_PATHS_ENV,

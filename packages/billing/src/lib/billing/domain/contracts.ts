@@ -120,6 +120,8 @@ export type ResolvedContractBillingChargeFacts =
         taxRateId: string | null;
         configurationId: string;
       } | null;
+      /** Every member is a product/license billed by its own charge family. */
+      hasProductMembers?: boolean;
     })
   | (ContractChargeFactsBase & {
       kind: "hourly";
@@ -238,6 +240,19 @@ export type ResolvedContractBillingChargeFacts =
         configurationQuantity?: number | string | null;
         configurationCustomRate?: number | string | null;
         priceRate?: number | string | null;
+        /**
+         * Effective scheduled revision for the covered service period. Carried
+         * through the domain facts boundary so billing computes the same
+         * quantity/rate the resolver selected; never a delta.
+         */
+        effectivePricing?: {
+          quantity: number;
+          pricePolicy: "override" | "catalog";
+          unitRateCents: number | null;
+          revisionId: string;
+          version: number;
+          effectivePeriodStart: string;
+        } | null;
       }>;
     });
 
@@ -334,6 +349,14 @@ export interface ContractBillingCalculationInput {
   };
 }
 
+export interface CalculationDiagnostic {
+  code: string;
+  message: string;
+  /** Present for line-scoped diagnostics. */
+  contractLineId?: string;
+  contractLineName?: string;
+}
+
 export interface ContractBillingCalculationResult {
   schemaVersion: 1;
   calculationId: string;
@@ -346,7 +369,13 @@ export interface ContractBillingCalculationResult {
   subtotal: number;
   taxTotal: number;
   total: number;
-  diagnostics: { code: string; message: string }[];
+  /**
+   * Coded, non-throwing findings of the calculation (e.g.
+   * FIXED_LINE_RATE_UNRESOLVED). Live callers refuse to preview/generate when
+   * a blocking diagnostic is present instead of billing a silently short
+   * document.
+   */
+  diagnostics: CalculationDiagnostic[];
   /** Rich compute results used only by the guarded production commit adapter. */
   sourceCharges: IBillingCharge[];
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { TicketVisibilityScope } from '../portal/visibility';
 
 export type AuthorizationDecisionStage = 'rbac' | 'builtin' | 'bundle' | 'mutation' | 'redaction';
 
@@ -55,6 +56,13 @@ export interface AuthorizationRecord {
   clientId?: string | null;
   boardId?: string | null;
   contactId?: string | null;
+  /**
+   * The ticket's billing profile (`undefined` = not loaded, which can never
+   * satisfy a profile grant; `null` = the ticket has none).
+   */
+  billingProfileId?: string | null;
+  /** Contact ids of the ticket's active contact watchers. */
+  watcherContactIds?: string[];
   teamIds?: string[];
   [key: string]: unknown;
 }
@@ -74,12 +82,7 @@ export interface AuthorizationMutationInput {
 }
 
 /** Trusted, resolved portal scope; null context means resolution failed (deny). */
-export interface ContactVisibilityScope {
-  clientId: string;
-  contactId: string;
-  visibleBoardIds: string[] | null;
-  effectiveTicketScope: 'client' | 'contact';
-}
+export type ContactVisibilityScope = TicketVisibilityScope;
 
 export interface AuthorizationEvaluationInput {
   contactVisibility?: ContactVisibilityScope | null;

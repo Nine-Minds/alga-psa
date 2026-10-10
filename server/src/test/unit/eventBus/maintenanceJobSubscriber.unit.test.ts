@@ -31,6 +31,7 @@ vi.mock('../../../lib/jobs/dateTriggerWorkflowLauncher', () => ({ configureEditi
 vi.mock('../../../lib/jobs/registerServerMaintenanceJobs', () => ({
   registerServerMaintenanceJobs: () => { registrationOrder.push('register-server-jobs'); },
 }));
+vi.mock('../../../lib/jobs/registerCeMaintenanceJobs', () => ({ registerCeMaintenanceJobs: () => undefined }));
 vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
 }));

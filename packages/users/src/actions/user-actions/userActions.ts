@@ -17,10 +17,12 @@ import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
+import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -65,6 +67,7 @@ export type UpdateUserErrorCode =
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
   | 'SCIM_MANAGED_INACTIVE'
+  | 'INVALID_TIMEZONE'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -858,6 +861,8 @@ export const deleteUser = withAuth(async (
         'telemetry_consent_log',
         'calendar_providers',
         'team_members',
+        'board_notification_rule_recipients',
+        'board_default_watchers',
         'schedule_entry_assignees',
         'comment_reactions',
         'project_task_comment_reactions',
@@ -1078,16 +1083,44 @@ export const updateUser = withAuth(async (
       }
 
       let normalizedUserData = userData;
+
+      // The email uniqueness check and the timezone change check both need the
+      // stored row, so read it once.
+      const timezoneProvided = 'timezone' in userData && userData.timezone !== undefined;
+      const existing = (userData.email || timezoneProvided)
+        ? await tenantDb(trx, tenant).table('users')
+            .where({ user_id: userId })
+            .select('email', 'user_type', 'timezone')
+            .first()
+        : undefined;
+
+      if (timezoneProvided) {
+        // Only validate when the zone actually changes. This path saves the whole
+        // profile at once; re-checking an unchanged legacy value (e.g. "EST" on
+        // another install) would block unrelated edits such as a phone number.
+        const requested = userData.timezone ?? null;
+        const stored = (existing?.timezone as string | null | undefined) ?? null;
+        if (requested !== stored) {
+          const validation = validateStorableTimeZone(requested);
+          if (validation.ok === false) {
+            return {
+              success: false,
+              code: 'INVALID_TIMEZONE',
+              error: validation.reason === 'not_location'
+                ? `${validation.input} isn't a city-based time zone. Choose a zone such as America/New_York.`
+                : `Invalid timezone: ${validation.input}`,
+            };
+          }
+          normalizedUserData = { ...normalizedUserData, timezone: validation.timeZone as IUser['timezone'] };
+        }
+      }
+
       if (userData.email) {
         const normalizedEmail = userData.email.toLowerCase();
         // Only run the global uniqueness check when the email is actually
         // changing — otherwise editing any field (e.g. setting a manager)
         // would re-validate the unchanged email and could trip on legitimate
         // cross-tenant duplicates.
-        const existing = await tenantDb(trx, tenant).table('users')
-          .where({ user_id: userId })
-          .select('email', 'user_type')
-          .first();
         const currentEmail = existing?.email?.toLowerCase();
 
         if (currentEmail !== normalizedEmail) {
@@ -1106,7 +1139,7 @@ export const updateUser = withAuth(async (
         }
 
         normalizedUserData = {
-          ...userData,
+          ...normalizedUserData,
           email: normalizedEmail,
         };
       }
@@ -1370,7 +1403,9 @@ export const deactivateUserWithDisposition = withAuth(
               assigned_to: nextAssignee,
             };
             if (disposition.tickets.action === "archive") {
+              // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
               update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              Object.assign(update, ticketStatusClockPatch(trx, update.status_id as string | undefined));
               update.is_closed = true;
               update.closed_at = new Date();
               update.closed_by = currentUser.user_id;

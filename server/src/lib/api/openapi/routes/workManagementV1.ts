@@ -21,6 +21,24 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1ProjectTaskParam',
     zOpenApi.object({ taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.') }),
   );
+  const ProjectTaskChecklistItemParams = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemParams',
+    zOpenApi.object({
+      taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.'),
+      itemId: zOpenApi.string().uuid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
+    }),
+  );
+  const ProjectTaskChecklistItemBody = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemBody',
+    zOpenApi.object({
+      item_name: zOpenApi.string().min(1).optional().describe('Checklist item text. Required on create. `item_text` is accepted as a legacy alias.'),
+      description: zOpenApi.string().nullable().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      completed: zOpenApi.boolean().optional().describe('Mark the item done/undone. `is_completed` is accepted as a legacy alias.'),
+      due_date: zOpenApi.string().nullable().optional(),
+      order_number: zOpenApi.number().int().min(0).optional(),
+    }),
+  );
 
   const SessionParam = registry.registerSchema(
     'WorkV1SessionParam',
@@ -43,6 +61,43 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
       fields: zOpenApi.string().optional(),
+      search: zOpenApi.string().optional(),
+      query: zOpenApi.string().optional(),
+    }),
+  );
+
+  // GET /api/v1/tickets validates `sort` against an allowlist (TicketService
+  // TICKET_LIST_API_SORT_SQL): anything else is a 400, not a database error.
+  const TicketListQuery = registry.registerSchema(
+    'WorkV1TicketListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum([
+          'client_name',
+          'closed_at',
+          'created_at',
+          'due_date',
+          'entered_at',
+          'latest_activity_at',
+          'priority_name',
+          'status_name',
+          'ticket_number',
+          'title',
+          'updated_at',
+        ])
+        .optional()
+        .describe(
+          'Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket\'s own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      fields: zOpenApi
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400.',
+        ),
       search: zOpenApi.string().optional(),
       query: zOpenApi.string().optional(),
     }),
@@ -160,8 +215,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       parent_comment_id: zOpenApi.string().uuid().optional(),
       scheduled_publish_at: zOpenApi.string().datetime({ offset: true }).optional().describe('Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread.'),
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
+      cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       ...ticketNotificationSuppressionProperties,
-    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job.'),
+    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );
 
   const CreateTagBody = registry.registerSchema(
@@ -254,7 +311,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/projects/search', summary: 'Search projects', description: 'Searches projects via ApiProjectController.search().', family: 'project' },
     { method: 'get', path: '/api/v1/projects/stats', summary: 'Get project stats', description: 'Returns project aggregate statistics for authorized projects.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'List task checklist items', description: 'Reads checklist items for project task UUID through ApiProjectController.getTaskChecklist().', family: 'project' },
-    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().', family: 'project' },
+    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table\'s item_name / completed names; item_text / is_completed remain accepted aliases.', family: 'project' },
+    { method: 'put', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Update task checklist item', description: 'Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.', family: 'project' },
+    { method: 'delete', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Delete task checklist item', description: 'Deletes one checklist item of the task. 404 when the item is not on that task.', family: 'project' },
     { method: 'delete', path: '/api/v1/projects/{id}', summary: 'Delete project', description: 'Deletes project by project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}', summary: 'Get project', description: 'Returns one project by project UUID.', family: 'project' },
     { method: 'put', path: '/api/v1/projects/{id}', summary: 'Update project', description: 'Updates project by project UUID.', family: 'project' },
@@ -292,7 +351,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/colors', summary: 'Update tag colors', description: 'Updates tag color attributes.', family: 'tag' },
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
-    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination.', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
@@ -391,7 +450,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
-    if (def.path.includes('{taskId}')) req.params = ProjectTaskParam;
+    if (def.path.includes('{taskId}')) req.params = def.path.includes('{itemId}') ? ProjectTaskChecklistItemParams : ProjectTaskParam;
     if (def.path.includes('{id}/phases/{phaseId}')) req.params = ProjectPhaseParams;
     if (def.path.includes('{sessionId}')) req.params = SessionParam;
     if (def.path.includes('{entityType}/{entityId}')) req.params = TagEntityParams;
@@ -404,7 +463,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.query = ListQuery;
     }
 
-    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
+    if (def.method === 'get' && def.path === '/api/v1/tickets') {
+      req.query = TicketListQuery;
+    }
+
+    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {
+      req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : def.path.includes('/checklist') ? ProjectTaskChecklistItemBody : GenericBody };
+    }
     if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
       let schema: ZodTypeAny = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;

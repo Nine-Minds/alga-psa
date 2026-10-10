@@ -13,6 +13,7 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCpuSummary } from '../lib/extensionDisplay';
 import {
   Edit,
   AlertTriangle,
@@ -55,6 +56,7 @@ interface AssetDetailsProps {
 
 export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport }: AssetDetailsProps) {
   const { t } = useTranslation('msp/assets');
+  const notProvided = t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' });
   const { renderDocuments } = useDocumentsCrossFeature();
   useRegisterUIComponent({
     id: 'asset-details',
@@ -193,7 +195,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.cpu', { defaultValue: 'CPU' })}
                   </Text>
-                  <Text as="div" size="2">{asset.workstation.cpu_model} ({asset.workstation.cpu_cores} cores)</Text>
+                  <Text as="div" size="2">{formatCpuSummary(asset.workstation.cpu_model, asset.workstation.cpu_cores) ?? notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -204,7 +206,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.ram', { defaultValue: 'RAM' })}
                   </Text>
-                  <Text as="div" size="2">{asset.workstation.ram_gb}GB</Text>
+                  <Text as="div" size="2">{asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB` : notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -215,7 +217,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.storage', { defaultValue: 'Storage' })}
                   </Text>
-                  <Text as="div" size="2">{asset.workstation.storage_type} - {asset.workstation.storage_capacity_gb}GB</Text>
+                  <Text as="div" size="2">{asset.workstation.storage_type} - {asset.workstation.storage_capacity_gb != null ? `${asset.workstation.storage_capacity_gb}GB` : notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -285,7 +287,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.portCount', { defaultValue: 'Port Count' })}
                   </Text>
-                  <Text as="div" size="2">{asset.network_device.port_count}</Text>
+                  <Text as="div" size="2">{asset.network_device.port_count ?? notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -296,7 +298,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.powerDraw', { defaultValue: 'Power Draw' })}
                   </Text>
-                  <Text as="div" size="2">{asset.network_device.power_draw_watts}W</Text>
+                  <Text as="div" size="2">{asset.network_device.power_draw_watts != null ? `${asset.network_device.power_draw_watts}W` : notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -351,7 +353,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.cpu', { defaultValue: 'CPU' })}
                   </Text>
-                  <Text as="div" size="2">{asset.server.cpu_model} ({asset.server.cpu_cores} cores)</Text>
+                  <Text as="div" size="2">{formatCpuSummary(asset.server.cpu_model, asset.server.cpu_cores) ?? notProvided}</Text>
                 </div>
               </Flex>
             </Card>
@@ -362,7 +364,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
                   <Text as="div" size="2" weight="medium">
                     {t('assetDetails.fields.ram', { defaultValue: 'RAM' })}
                   </Text>
-                  <Text as="div" size="2">{asset.server.ram_gb}GB</Text>
+                  <Text as="div" size="2">{asset.server.ram_gb != null ? `${asset.server.ram_gb}GB` : notProvided}</Text>
                 </div>
               </Flex>
             </Card>

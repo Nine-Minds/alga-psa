@@ -8,17 +8,19 @@ import React, {
   useTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import type { ContractDraftSimulationInput, FixedPricingBasis } from "@alga-psa/types";
 import { Dialog } from "@alga-psa/ui/components/Dialog";
 import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { Button } from "@alga-psa/ui/components/Button";
 import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
+import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
 import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
@@ -39,6 +41,12 @@ import {
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import type { ContractAuthoringRateSource } from "../../../lib/contractAuthoringRate";
+import { projectFixedServicesForSubmission } from "../../../lib/contractAuthoringSubmission";
+import {
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+} from "../../../lib/fixedServiceBasis";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -163,8 +171,17 @@ export interface ContractWizardData {
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
+    /** Allocation quantity for 'bundle'; recurring seats/units (whole number >= 0) for 'unit'. */
     quantity: number;
+    /** 'bundle' (default) shares the line base rate; 'unit' bills quantity × unit_rate. */
+    pricing_basis: FixedPricingBasis;
+    /** Unit rate in minor units of the contract currency. Only used when pricing_basis is 'unit'. */
+    unit_rate?: number | null;
     bucket_overlay?: BucketOverlayInput | null;
+    /** Draft-only resolved catalog rate in minor units. Never submitted. */
+    resolved_rate?: number | null;
+    /** Draft-only provenance for the resolved rate. Never submitted. */
+    resolved_rate_source?: ContractAuthoringRateSource;
   }>;
   product_services: Array<{
     service_id: string;
@@ -311,6 +328,10 @@ export function ContractWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
     useState(false);
+  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // when it first invoices and only reports completion when that is dismissed.
+  const [createdContract, setCreatedContract] =
+    useState<ContractWizardData | null>(null);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -356,6 +377,7 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
 
     const initialWizardData = buildInitialContractWizardData(editingContract);
     if (!editingContract && initialClientId) {
@@ -422,10 +444,15 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
   };
 
-  const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => ({ ...prev, ...data }));
+  // A function update is resolved against the latest state inside the setter, so
+  // async callers (e.g. catalog-price prefill) never write back a stale snapshot.
+  const updateData = (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => {
+    setWizardData((prev) => ({ ...prev, ...(typeof data === 'function' ? data(prev) : data) }));
   };
 
   const hasUnsavedChanges = useMemo(() => {
@@ -434,7 +461,20 @@ export function ContractWizard({
     return !isEqual(wizardData, initialWizardDataRef.current);
   }, [open, wizardData]);
 
+  const handleConfirmationDone = () => {
+    const created = createdContract;
+    setCreatedContract(null);
+    if (created) {
+      onComplete?.(created);
+    }
+    onOpenChange(false);
+  };
+
   const handleCloseRequest = () => {
+    if (createdContract) {
+      handleConfirmationDone();
+      return;
+    }
     if (hasUnsavedChanges) {
       setShowUnsavedChangesDialog(true);
       return;
@@ -455,7 +495,12 @@ export function ContractWizard({
       cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
       billing_timing: snapshot.billing_timing ?? prev.billing_timing,
       // currency_code is inherited from client, not from template (templates are currency-neutral)
-      fixed_services: snapshot.fixed_services ?? [],
+      fixed_services: (snapshot.fixed_services ?? []).map((service) => ({
+        ...service,
+        quantity: service.quantity,
+        pricing_basis: service.pricing_basis === "unit" ? "unit" : "bundle",
+        unit_rate: service.pricing_basis === "unit" ? (service.unit_rate ?? null) : undefined,
+      })),
       product_services: snapshot.product_services ?? [],
       fixed_base_rate: snapshot.fixed_base_rate,
       enable_proration: snapshot.enable_proration ?? prev.enable_proration,
@@ -556,7 +601,9 @@ export function ContractWizard({
         enable_proration: wizardData.enable_proration,
         hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
-        fixed_services: wizardData.fixed_services ?? [],
+        // Explicitly project the public fixed-service fields so draft-only
+        // rate/source metadata never reaches the persisted submission.
+        fixed_services: projectFixedServicesForSubmission(wizardData.fixed_services ?? []),
         product_services: wizardData.product_services ?? [],
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
@@ -749,8 +796,34 @@ export function ContractWizard({
         }
         return true;
       case 1:
+        {
+          const basisIssue = wizardData.fixed_services
+            .filter((service) => service.service_id)
+            .map((service) => getFixedServiceBasisIssue(service))
+            .find((issue) => issue !== null);
+          if (basisIssue) {
+            const message =
+              basisIssue === "unit_rate_required"
+                ? t("wizard.validation.recurringUnitRateRequired", {
+                    defaultValue: "Enter a unit rate for each recurring service.",
+                  })
+                : basisIssue === "unit_quantity_not_whole"
+                  ? t("wizard.validation.recurringQuantityWholeNumber", {
+                      defaultValue: "Recurring quantity must be a whole number.",
+                    })
+                  : t("wizard.validation.fixedQuantityInvalid", {
+                      defaultValue: "Quantity must be zero or greater.",
+                    });
+            setErrors((prev) => ({ ...prev, [stepIndex]: message }));
+            return false;
+          }
+        }
+        // The line base rate is the bundle total: it is required only when an
+        // allocation (bundle) member exists. Per-unit services bill quantity ×
+        // unit rate and carry no share of it.
         if (
           wizardData.fixed_services.length > 0 &&
+          hasBundleFixedService(wizardData.fixed_services) &&
           !wizardData.fixed_base_rate
         ) {
           setErrors((prev) => ({
@@ -885,6 +958,10 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
+      if (completedData.fixed_services.length > 0) {
+        setCreatedContract(completedData);
+        return;
+      }
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
@@ -1028,7 +1105,17 @@ export function ContractWizard({
     }
   };
 
-  const wizardFooter = (
+  const wizardFooter = createdContract ? (
+    <div className="flex justify-end">
+      <Button
+        id="contract-wizard-created-done"
+        variant="default"
+        onClick={handleConfirmationDone}
+      >
+        {t("wizardCreated.done", { defaultValue: "Done" })}
+      </Button>
+    </div>
+  ) : (
     <WizardNavigation
       currentStep={currentStep}
       totalSteps={stepLabels.length}
@@ -1061,28 +1148,40 @@ export function ContractWizard({
         isOpen={open}
         onClose={handleCloseRequest}
         title={
-          editingContract
-            ? t("wizard.title.editContract", { defaultValue: "Edit Contract" })
-            : t("wizard.title.createNewContract", {
-                defaultValue: "Create New Contract",
-              })
+          createdContract
+            ? t("wizardCreated.title", { defaultValue: "Contract Created" })
+            : editingContract
+              ? t("wizard.title.editContract", {
+                  defaultValue: "Edit Contract",
+                })
+              : t("wizard.title.createNewContract", {
+                  defaultValue: "Create New Contract",
+                })
         }
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <WizardProgress
-              steps={stepLabels as unknown as string[]}
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
-          </div>
+          {!createdContract && (
+            <div className="flex-shrink-0 px-6 pt-6">
+              <WizardProgress
+                steps={stepLabels as unknown as string[]}
+                currentStep={currentStep}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+              />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="mb-4">{renderStep()}</div>
+            <div className="mb-4">
+              {createdContract ? (
+                <ContractCreatedConfirmation data={createdContract} />
+              ) : (
+                renderStep()
+              )}
+            </div>
 
             {errors[currentStep] && (
               <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">

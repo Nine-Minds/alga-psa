@@ -12,8 +12,9 @@ name: Citus Migration Smoke
 # vector-dependent pieces of the EE AI migrations skip themselves via their
 # pg_available_extensions guard. The vector path is covered by
 # validate-tenant-management.yaml, which runs the same combined chain against
-# ankane/pgvector. Between the two jobs, both dimensions are exercised without
-# maintaining a custom citus+pgvector image.
+# the pinned pgvector image (docker-compose.images.yaml). Between the two jobs,
+# both dimensions are exercised without maintaining a custom citus+pgvector
+# image.
 
 on:
   workflow_call:
@@ -174,6 +175,7 @@ jobs:
           name: temporal-database-execution
           path: test-results/temporal-database/
           if-no-files-found: error
+          retention-days: 30
 
       - name: Upload Citus runtime results
         if: always()

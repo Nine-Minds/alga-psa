@@ -24,6 +24,7 @@ interface FocusViewHostProps {
 const RAIL_GROUP_BY_TAB: Record<string, string> = {
   details: '',
   tickets: 'service',
+  'recurring-tickets': 'service',
   interactions: 'service',
   billing: 'money',
   'billing-dashboard': 'money',

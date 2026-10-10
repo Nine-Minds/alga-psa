@@ -74,6 +74,9 @@ describe('DesignCanvas print settings integration', () => {
     expect(artboard?.style.width).toBe('794px');
     expect(artboard?.style.height).toBe('1123px');
     expect(artboard?.style.minHeight).toBe('1123px');
-    expect(document.body.textContent).toContain('1150');
+    // The vertical ruler spans the page and reads in designer px.
+    const verticalRuler = document.querySelector('[data-automation-id="designer-ruler-vertical"]') as HTMLElement | null;
+    expect(verticalRuler?.style.height).toBe('1123px');
+    expect(verticalRuler?.textContent).toContain('1100');
   });
 });

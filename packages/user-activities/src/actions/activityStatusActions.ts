@@ -9,6 +9,12 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '@shared/lib/tickets/ticketLifecycleEvents';
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -85,9 +91,11 @@ export const updateActivityStatus = withAuth(async (
           
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: status.status_id,
-              updated_at: new Date()
+              ...ticketStatusClockPatch(trx, status.status_id),
+              ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
           
@@ -163,13 +171,23 @@ export const updateActivityStatusById = withAuth(async (
       const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
-        case ActivityType.TICKET:
-          return await tenantScopedTable("tickets")
+        case ActivityType.TICKET: {
+          const transitionBefore = await captureTicketTransitionSnapshot(trx, tenant, activityId);
+          const updatedRows = await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: statusId,
-              updated_at: new Date(),
+              ...ticketStatusClockPatch(trx, statusId),
+              ...ticketUpdateStamp(trx, user.user_id),
             });
+          await publishTicketTransitionsAfterCommit(trx, {
+            tenant,
+            before: transitionBefore,
+            actorUserId: user?.user_id,
+          });
+          return updatedRows;
+        }
 
         case ActivityType.PROJECT_TASK:
           return await tenantScopedTable("project_tasks")
@@ -407,7 +425,7 @@ export const updateActivityPriority = withAuth(async (
             .where("ticket_id", activityId)
             .update({
               priority_id: ticketPriority.priority_id,
-              updated_at: new Date()
+              ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
 
@@ -496,7 +514,7 @@ export const updateActivityPriorityById = withAuth(async (
             .where("ticket_id", activityId)
             .update({
               priority_id: priorityId,
-              updated_at: new Date()
+              ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
 
@@ -591,7 +609,7 @@ export const reassignActivity = withAuth(async (
             .where("ticket_id", activityId)
             .update({ 
               assigned_to: newAssigneeId,
-              updated_at: new Date()
+              ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
           

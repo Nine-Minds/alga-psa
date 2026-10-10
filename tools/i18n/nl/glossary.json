@@ -2397,7 +2397,7 @@
       "percentage",
       "Percentage (%) *",
       "Perfect",
-      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
       "Phishing/Spam",
       "Plan",
       "Planning",
@@ -2550,7 +2550,13 @@
       "Liter",
       "Kilogram",
       "Meter",
-      "Volume"
+      "Volume",
+      "Auto",
+      "auto | 50% | 120px",
+      "is",
+      "Cc",
+      "Bcc",
+      "Cc/Bcc"
     ],
     "caseInsensitive": [
       "account",
@@ -2595,7 +2601,7 @@
       "^[A-Z]{2,8}$",
       "^#[0-9A-Fa-f]{3,8}$",
       "^\\{\\{[^{}]+\\}\\}$",
-      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*$",
       "^v\\{\\{[^{}]+\\}\\}$",
       "^Item \\{\\{[^{}]+\\}\\}$",
       "^Tickets?:?$",

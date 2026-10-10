@@ -72,16 +72,24 @@ describe('OAuth profile mapping user boundaries', () => {
       is_inactive: false,
     });
 
-    const { mapOAuthProfileToExtendedUser } = await import('../../../lib/auth/ssoProviders');
-    await expect(
-      mapOAuthProfileToExtendedUser({
-        provider: 'microsoft',
-        email: 'internal@example.com',
-        profile: {},
-        tenantHint: tenantId,
-        userTypeHint: 'client',
-      })
-    ).rejects.toThrow('User not found');
+    const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await import(
+      '../../../lib/auth/ssoProviders'
+    );
+    const mapped = await mapOAuthProfileToExtendedUser({
+      provider: 'microsoft',
+      email: 'internal@example.com',
+      profile: {},
+      tenantHint: tenantId,
+      userTypeHint: 'client',
+    });
+
+    expect(isOAuthMappingFailure(mapped)).toBe(true);
+    expect(mapped.authFailure).toMatchObject({
+      code: 'user_type_mismatch',
+      providerEmail: 'internal@example.com',
+      userType: 'client',
+    });
+    expect(mapped.id).toBe('');
   });
 
   it('authenticates internal users through a type-scoped lookup', async () => {
@@ -122,13 +130,21 @@ describe('OAuth profile mapping user boundaries', () => {
       client_id: 'client-2',
     });
 
-    const { mapOAuthProfileToExtendedUser } = await import('../../../lib/auth/ssoProviders');
-    await expect(
-      mapOAuthProfileToExtendedUser({
-        provider: 'microsoft',
-        email: 'client@example.com',
-        profile: {},
-      })
-    ).rejects.toThrow('User not found');
+    const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await import(
+      '../../../lib/auth/ssoProviders'
+    );
+    const mapped = await mapOAuthProfileToExtendedUser({
+      provider: 'microsoft',
+      email: 'client@example.com',
+      profile: {},
+    });
+
+    expect(isOAuthMappingFailure(mapped)).toBe(true);
+    expect(mapped.authFailure).toMatchObject({
+      code: 'user_type_mismatch',
+      providerEmail: 'client@example.com',
+      userType: 'internal',
+    });
+    expect(mapped.id).toBe('');
   });
 });

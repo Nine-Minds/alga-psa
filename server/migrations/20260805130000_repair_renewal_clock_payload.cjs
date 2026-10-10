@@ -50,6 +50,11 @@ function buildClockPlaceholderPayload(schedule, now) {
 }
 
 exports.up = async function up(knex) {
+  // EE-only table: nothing to repair on CE.
+  if (!(await knex.schema.hasTable('tenant_workflow_schedule'))) {
+    return;
+  }
+
   const { tenantDb } = require('./utils/tenantDb.cjs');
   const migrationDb = tenantDb(knex, REPAIR_TENANT);
   const tenants = await migrationDb.unscoped('tenants', ENUMERATION_REASON)

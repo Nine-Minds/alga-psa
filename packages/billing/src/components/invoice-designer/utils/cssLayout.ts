@@ -59,6 +59,7 @@ export const resolveNodeBoxStyle = (nodeStyle?: DesignerNodeStyle): CSSPropertie
     fontSize: nodeStyle.fontSize,
     fontWeight: nodeStyle.fontWeight,
     fontFamily: nodeStyle.fontFamily,
+    fontStyle: nodeStyle.fontStyle,
     lineHeight: nodeStyle.lineHeight,
     textAlign: nodeStyle.textAlign,
 

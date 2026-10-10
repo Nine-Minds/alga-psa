@@ -139,6 +139,8 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
@@ -529,6 +531,7 @@ describe('invoice preview recurring timing', () => {
     );
     expect(result).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
         // The stubbed profile identity sets no payment terms, so the preview
@@ -725,6 +728,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(selectorResult).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         dueDate: legacyResult.success ? legacyResult.data.dueDate : undefined,
         subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,
@@ -871,11 +875,41 @@ describe('invoice preview recurring timing', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error:
-        'Recurring service periods were not materialized for this recurring execution window.',
+      code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+      error: expect.stringContaining("Service periods haven't been generated"),
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
+    expect(JSON.stringify(result)).not.toContain('were not materialized');
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'No active contract lines found for this client in the selected billing period.',
+      'NO_ACTIVE_CONTRACT_LINES',
+      'No contract line is active for this billing period',
+    ],
+    ['Nothing to bill', 'NOTHING_TO_BILL', 'Nothing is ready to invoice for this window'],
+  ])('returns a stable code and actionable message when the engine refuses with "%s"', async (engineMessage, code, fallback) => {
+    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(new Error(engineMessage));
+
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    const result = await previewInvoiceForSelectionInput(selectorInput);
+
+    expect(result).toMatchObject({
+      success: false,
+      code,
+      error: expect.stringContaining(fallback),
+      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    });
+    expect((result as { error: string }).error).not.toBe(engineMessage);
   });
 
   it('T044: selector-input PO-overage action returns null when the preview spans no PO-governed client contract', async () => {

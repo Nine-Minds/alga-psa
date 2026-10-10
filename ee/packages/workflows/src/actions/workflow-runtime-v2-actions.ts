@@ -35,6 +35,7 @@ import {
   buildSampleFromJsonSchema,
   buildWorkflowAuthoringGuide,
   didYouMean,
+  inferExpressionResultTypes,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -64,8 +65,11 @@ import {
   syncWorkflowScheduleState
 } from '../lib/workflowScheduleLifecycle';
 import {
+  INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS,
+  isWorkflowRunLaunchError,
   launchPublishedWorkflowRun,
-  recordFailedWorkflowRunLaunch
+  recordFailedWorkflowRunLaunch,
+  type WorkflowRunLaunchFailureReason
 } from '../lib/workflowRunLauncher';
 import {
   cancelWorkflowRuntimeV2TemporalRun,
@@ -73,6 +77,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
   signalWorkflowRuntimeV2QuotaResume
 } from '../lib/workflowRuntimeV2Temporal';
+import { getDateTriggerSourceDefinition } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
 import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
@@ -105,9 +110,11 @@ import {
   WORKFLOW_AUDIT_CSV_HEADERS,
   buildActorMap,
   buildCsv as buildWorkflowAuditCsv,
+  formatActorName,
   buildWorkflowAuditCsvRows
 } from './workflow-audit-csv';
 import { workflowTenantDb, workflowTenantTable } from '../lib/workflowTenantDb';
+import { describeManualRunPayloadFailure, type WorkflowPayloadValidationFailure } from '../authoring/payloadIssues';
 
 const throwHttpError = (status: number, message: string, details?: unknown): never => {
   const error = new Error(message) as Error & { status?: number; details?: unknown };
@@ -790,41 +797,33 @@ const computeValidation = async (params: {
 
   const inferredPayloadSchemaJson = payloadSchemaJson ? cloneJsonSchema(payloadSchemaJson) : null;
 
-  const exprPathToSchemaTypes = (expr: string, ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> }): Set<string> => {
-    const trimmed = String(expr ?? '').trim();
-    if (!trimmed) return new Set(['unknown']);
+  // Infers what an expression produces: operators and function calls are typed by the
+  // shared inference, and field paths resolve against the schemas in scope here.
+  const exprPathToSchemaTypes = (expr: string, ctx: { payload?: any | null; eventPayload?: any | null; vars?: Map<string, any> }): Set<string> =>
+    inferExpressionResultTypes(expr, (segments) => {
+      // Array indexes resolve through the array's `items` schema.
+      const parts = segments.map((segment) => (segment.kind === 'index' ? 'items' : segment.name));
+      const [root, ...rest] = parts;
+      const resolveTypes = (schema: any, path: string[]): Set<string> => {
+        const resolved = resolveSchemaAtPath(schema, path);
+        return resolved ? normalizeTypes(resolved) : new Set(['unknown']);
+      };
 
-    const pathFor = (prefix: string) => trimmed.startsWith(prefix) ? trimmed.slice(prefix.length).split('.').filter(Boolean) : null;
-
-    // event.payload.<...>
-    const eventPath = pathFor('event.payload.');
-    if (eventPath && ctx.eventPayload) {
-      const schema = resolveSchemaAtPath(ctx.eventPayload, eventPath);
-      return schema ? normalizeTypes(schema) : new Set(['unknown']);
-    }
-
-    // payload.<...>
-    const payloadPath = pathFor('payload.');
-    if (payloadPath && ctx.payload) {
-      const schema = resolveSchemaAtPath(ctx.payload, payloadPath);
-      return schema ? normalizeTypes(schema) : new Set(['unknown']);
-    }
-
-    // vars.<saveAs>.<...>
-    if (trimmed.startsWith('vars.')) {
-      const rest = trimmed.slice('vars.'.length);
-      const [saveAs, ...sub] = rest.split('.').filter(Boolean);
-      if (!saveAs) return new Set(['unknown']);
-      const baseSchema = ctx.vars?.get(saveAs) ?? null;
-      if (!baseSchema) return new Set(['unknown']);
-      if (sub.length === 0) return normalizeTypes(baseSchema);
-      const schema = resolveSchemaAtPath(baseSchema, sub);
-      return schema ? normalizeTypes(schema) : new Set(['unknown']);
-    }
-
-    // meta.* and secrets/env are treated as unknown for now.
-    return new Set(['unknown']);
-  };
+      if (root === 'event' && rest[0] === 'payload' && ctx.eventPayload) {
+        return resolveTypes(ctx.eventPayload, rest.slice(1));
+      }
+      if (root === 'payload' && ctx.payload) {
+        return resolveTypes(ctx.payload, rest);
+      }
+      if (root === 'vars') {
+        const [saveAs, ...sub] = rest;
+        const baseSchema = saveAs ? ctx.vars?.get(saveAs) ?? null : null;
+        if (!baseSchema) return new Set(['unknown']);
+        return sub.length === 0 ? normalizeTypes(baseSchema) : resolveTypes(baseSchema, sub);
+      }
+      // meta.*, error.*, and secrets are not typed here.
+      return new Set(['unknown']);
+    });
 
   const isCompatible = (expected: Set<string>, actual: Set<string>): { ok: boolean; known: boolean } => {
     // Any 'unknown' member means the inference is partial (e.g. a nullable
@@ -884,7 +883,7 @@ const computeValidation = async (params: {
           stepPath: options.stepPath,
           stepId: options.stepId,
           code: 'MAPPING_TYPE_UNKNOWN',
-          message: `Could not determine a type for "${options.fieldName}.${field}" to validate against expected "${Array.from(expected).join('|')}".`
+          message: `Can't check that "${options.fieldName}.${field}" produces a ${Array.from(expected).join(' or ')}: the value's type isn't known until the workflow runs. Make sure the expression returns a ${Array.from(expected).join(' or ')}.`
         });
       }
     }
@@ -1455,19 +1454,22 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   const countRow = await countQuery.count<{ count: number | string }[]>({ count: '*' }).first();
   const totalItems = countRow?.count == null ? 0 : Number(countRow.count);
 
-  const versionsSubquery = db.table('workflow_definition_versions')
-    .select('tenant', 'workflow_id')
-    .max('version as published_version')
-    .groupBy('tenant', 'workflow_id')
-    .as('pv');
-
+  // Join each workflow's latest published version. Publishing copies the published definition
+  // into the draft with the next version number, so the draft only has unpublished changes when
+  // its content (ignoring id and version) differs from that published definition.
   const itemsQuery = db.table('workflow_definitions as wd')
     .select('wd.*')
-    .select(knex.raw('pv.published_version as published_version'));
-  db.tenantJoinSubquery(itemsQuery, versionsSubquery, 'pv.workflow_id', 'wd.workflow_id', {
+    .select(knex.raw('pv.version as published_version'))
+    .select(knex.raw(
+      `case when pv.version is null then null
+        else (wd.draft_definition - 'id' - 'version') is distinct from (pv.definition_json - 'id' - 'version')
+      end as has_unpublished_changes`
+    ));
+  db.tenantJoinFirstMatching(itemsQuery, 'workflow_definition_versions', 'pv', 'wd.workflow_id', 'workflow_id', {
     type: 'left',
     rootTenantColumn: 'wd.tenant',
-    joinedTenantColumn: 'pv.tenant',
+    where: () => {},
+    orderBy: [{ column: 'version', order: 'desc' }],
   });
 
   applyFilters(itemsQuery);
@@ -1498,6 +1500,7 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   const items = (rows as any[]).map((row) => ({
     ...row,
     published_version: row.published_version == null ? null : Number(row.published_version),
+    has_unpublished_changes: row.has_unpublished_changes == null ? null : Boolean(row.has_unpublished_changes),
     schedule_state: scheduleStateMap.get(row.workflow_id) ?? null
   }));
 
@@ -2026,10 +2029,11 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
     ...(parsed.key ? { key: parsed.key.trim() } : {}),
     is_visible: parsed.isVisible ?? current.is_visible ?? true,
     is_paused: nextIsPaused,
-    concurrency_limit: parsed.concurrencyLimit ?? current.concurrency_limit ?? null,
+    // undefined keeps the stored value; null clears it (e.g. an emptied concurrency limit means unlimited).
+    concurrency_limit: parsed.concurrencyLimit !== undefined ? parsed.concurrencyLimit : current.concurrency_limit ?? null,
     auto_pause_on_failure: parsed.autoPauseOnFailure ?? current.auto_pause_on_failure ?? false,
-    failure_rate_threshold: parsed.failureRateThreshold ?? current.failure_rate_threshold ?? null,
-    failure_rate_min_runs: parsed.failureRateMinRuns ?? current.failure_rate_min_runs ?? null,
+    failure_rate_threshold: parsed.failureRateThreshold !== undefined ? parsed.failureRateThreshold : current.failure_rate_threshold ?? null,
+    failure_rate_min_runs: parsed.failureRateMinRuns !== undefined ? parsed.failureRateMinRuns : current.failure_rate_min_runs ?? null,
     retention_policy_override: parsed.retentionPolicyOverride ?? current.retention_policy_override ?? null,
     updated_by: user.user_id
   });
@@ -2255,14 +2259,8 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   // Publish-time inference: for inferred mode, prefer the trigger event's schemaRef as the workflow payload contract.
   const schemaRegistry = getSchemaRegistry();
-  const dateSourcePayloadSchemaRefs: Record<string, string> = {
-    'client.anniversary': 'payload.ClientAnniversary.v1',
-    'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-    'contract.end': 'payload.ContractEndDate.v1',
-    'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-  };
   const dateTrigger = (definition as any)?.trigger;
-  if (dateTrigger?.type === 'date' && dateSourcePayloadSchemaRefs[dateTrigger.source] !== definition.payloadSchemaRef) {
+  if (dateTrigger?.type === 'date' && getDateTriggerSourceDefinition(dateTrigger.source)?.payloadSchemaRef !== definition.payloadSchemaRef) {
     return {
       ok: false,
       errors: [{ severity: 'error', stepPath: 'root.payloadSchemaRef', code: 'DATE_TRIGGER_SCHEMA_MISMATCH', message: 'Date trigger payload schema must match its selected source.' }],
@@ -2414,6 +2412,18 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   return { ok: true, publishedVersion: record.version, errors: [], warnings: validation.warnings };
 });
+
+export type StartWorkflowRunResult = {
+  runId: string;
+  status?: string;
+  /** Present when the run record was created but the workflow engine did not accept it. */
+  launchFailure?: {
+    reason: WorkflowRunLaunchFailureReason;
+    message: string;
+  };
+  /** Present (with `reportPayloadIssues`) when the payload did not fit the workflow's schema. */
+  payloadValidation?: WorkflowPayloadValidationFailure;
+};
 
 export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
   initializeWorkflowRuntimeV2();
@@ -2574,7 +2584,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
   if (schemaRef && schemaRegistry.has(schemaRef)) {
     const validation = schemaRegistry.get(schemaRef).safeParse(finalPayload);
     if (!validation.success) {
-      await recordFailedWorkflowRunLaunch(knex, {
+      const failedRun = await recordFailedWorkflowRunLaunch(knex, {
         workflowId: parsed.workflowId,
         workflowVersion: versionRecord.version,
         tenantId: tenant,
@@ -2587,19 +2597,74 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
           issues: validation.error.issues
         }
       });
+      if (parsed.reportPayloadIssues) {
+        const invalidPayload: StartWorkflowRunResult = {
+          runId: failedRun.runId,
+          status: 'FAILED',
+          payloadValidation: describeManualRunPayloadFailure({
+            mappedIssues: validation.error.issues,
+            submittedPayload: parsed.payload ?? {},
+            submittedIsMapped: inputIsSourcePayload && triggerMappingApplied,
+            sourceSchema: effectiveSourceSchemaRef && schemaRegistry.has(effectiveSourceSchemaRef)
+              ? schemaRegistry.get(effectiveSourceSchemaRef)
+              : null,
+          }),
+        };
+        return invalidPayload;
+      }
       return throwHttpError(400, 'Payload failed validation', { issues: validation.error.issues });
     }
   }
 
-  const launchResult = await launchPublishedWorkflowRun(knex, {
-    workflowId: parsed.workflowId,
-    workflowVersion: versionRecord.version,
-    payload: finalPayload,
-    tenantId: tenant,
-    eventType: parsed.eventType ?? null,
-    sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
-    triggerMappingApplied: triggerMappingApplied
-  });
+  let launchResult: Awaited<ReturnType<typeof launchPublishedWorkflowRun>>;
+  try {
+    launchResult = await launchPublishedWorkflowRun(knex, {
+      workflowId: parsed.workflowId,
+      workflowVersion: versionRecord.version,
+      payload: finalPayload,
+      tenantId: tenant,
+      eventType: parsed.eventType ?? null,
+      sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
+      triggerMappingApplied: triggerMappingApplied,
+      // Someone is waiting in the Run dialog: report an unreachable engine fast.
+      engineConnectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS
+    });
+  } catch (error) {
+    if (!isWorkflowRunLaunchError(error)) {
+      throw error;
+    }
+    // The run row exists (marked FAILED) but the engine never accepted it. Return it
+    // instead of throwing: thrown server-action errors lose custom fields, and the
+    // caller needs the run id to send people to the failed run.
+    console.error('[startWorkflowRunAction] workflow run launch failed', {
+      runId: error.runId,
+      workflowId: parsed.workflowId,
+      reason: error.reason,
+      message: error.message
+    });
+    await auditWorkflowEvent(knex, user, {
+      operation: 'workflow_run_start',
+      tableName: 'workflow_runs',
+      recordId: error.runId,
+      changedData: { status: 'FAILED' },
+      details: {
+        workflowId: parsed.workflowId,
+        workflowVersion: versionRecord.version,
+        eventType: parsed.eventType ?? null,
+        launchFailureReason: error.reason
+      },
+      source: 'ui'
+    });
+    const failedLaunch: StartWorkflowRunResult = {
+      runId: error.runId,
+      status: 'FAILED',
+      launchFailure: {
+        reason: error.reason,
+        message: error.message
+      }
+    };
+    return failedLaunch;
+  }
 
   try {
     void analytics.capture('workflow.trigger.mapping_applied', {
@@ -2630,7 +2695,8 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
     },
     source: 'ui'
   });
-  return { runId: launchResult.runId, status: run?.status };
+  const startedRun: StartWorkflowRunResult = { runId: launchResult.runId, status: run?.status };
+  return startedRun;
 });
 
 export const getWorkflowRunAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -3066,10 +3132,19 @@ export const listWorkflowAuditLogsAction = withAuth(async (user, { tenant }, inp
   const logs = hasMore ? rows.slice(0, parsed.limit) : rows;
   const nextCursor = hasMore ? parsed.cursor + parsed.limit : null;
 
+  // Name the acting user so lists don't show a raw user id.
+  const userNameById = await buildActorMap(
+    knex,
+    logs.map((log: any) => String(log.user_id ?? '')).filter(Boolean),
+    tenant,
+    formatActorName
+  );
+
   const sanitized = logs.map((log: any) => ({
     ...log,
     changed_data: redactSensitiveValues(log.changed_data),
-    details: redactSensitiveValues(log.details)
+    details: redactSensitiveValues(log.details),
+    user_name: log.user_id ? userNameById.get(String(log.user_id)) ?? null : null
   }));
 
   return { logs: sanitized, nextCursor };
@@ -3463,6 +3538,7 @@ export const replayWorkflowRunAction = withAuth(async (user, { tenant }, input: 
     eventType: run.event_type ?? null,
     sourcePayloadSchemaRef: run.source_payload_schema_ref ?? null,
     triggerMappingApplied: run.trigger_mapping_applied ?? false,
+    engineConnectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS,
   });
   const newRunId = launched.runId;
 

@@ -86,6 +86,8 @@ interface TextEditorProps {
   uploadFile?: (file: File, blockId?: string) => Promise<string | Record<string, any>>;
   autoFocus?: boolean;
   allowFileAttachments?: boolean;
+  /** Extra controls rendered in the footer row next to "Attach files". */
+  footerActions?: React.ReactNode;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -182,6 +184,7 @@ export default function TextEditor({
   uploadFile,
   autoFocus = false,
   allowFileAttachments = false,
+  footerActions,
 }: TextEditorProps) {
   useShortcutScope('editor');
   const { t } = useTranslation('common');
@@ -512,8 +515,14 @@ export default function TextEditor({
         <Button id={`${id}-attach-files`} type="button" variant="outline" size="sm" disabled={uploadingFiles} onClick={() => filePickerRef.current?.click()}>
           {uploadingFiles ? t('editor.uploadingFiles', 'Uploading files…') : t('editor.attachFiles', 'Attach files')}
         </Button>
+        {footerActions}
         {uploadError && <span role="alert" className="text-sm text-[rgb(var(--color-text-700))]">{uploadError}</span>}
       </div>}
+      {/* Without the attachment row there is no footer yet; render one so the
+          slot still has a home. Omitting the slot leaves the layout unchanged. */}
+      {footerActions && !(allowFileAttachments && uploadFile) && (
+        <div className="mb-2 flex items-center gap-2">{footerActions}</div>
+      )}
       <div
         className="min-h-[100px] h-full w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
         onDragStart={(e) => {

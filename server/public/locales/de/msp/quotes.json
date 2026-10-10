@@ -313,7 +313,15 @@
       "currencyPlaceholder": "Währung auswählen",
       "quoteDate": "Angebotsdatum",
       "validUntil": "Gültig bis",
-      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab.",
+      "currencySource": {
+        "tenant": "Mandantenstandard",
+        "client": "Kundenstandard für {{clientName}}",
+        "template": "Aus Angebotsvorlage {{templateTitle}}",
+        "saved": "In diesem Angebot gespeichert",
+        "savedTemplate": "In dieser Vorlage gespeichert",
+        "manual": "Manuell ausgewählt"
+      }
     },
     "lineItems": {
       "title": "Positionen",
@@ -353,6 +361,14 @@
       "subtotal": "Zwischensumme",
       "discounts": "Rabatte",
       "tax": "Steuer",
+      "optionalIfSelected": "Optional falls ausgewählt",
+      "cadence": {
+        "monthly": "Monatlich",
+        "quarterly": "Vierteljährlich",
+        "semiAnnually": "Halbjährlich",
+        "annually": "Jährlich",
+        "oneTime": "Einmalig"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Genehmigung",
       "approvalMessage": "Angebote benötigen vor dem Versand die Genehmigung durch den Vertriebsleiter.",
@@ -509,6 +525,7 @@
       "noPriceInCurrency": "Kein Preis in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Abschnitt",
+      "preselected": "Vorausgewählt",
       "recurring": "Wiederkehrend",
       "service": "Service",
       "setPrice": "Preis festlegen",

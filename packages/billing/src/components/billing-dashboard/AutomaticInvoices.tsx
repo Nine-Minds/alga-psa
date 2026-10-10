@@ -14,6 +14,7 @@ import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePic
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
+  IExpectedRecurringPricingSource,
   IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -46,7 +47,7 @@ import {
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { formatCurrency, formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -186,6 +187,7 @@ interface RecurringInvoiceParentGroup {
 
 type RecurringSelectionGroup = {
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId: string | null;
@@ -651,8 +653,9 @@ const resolveStatusKey = (summary: {
 };
 
 // Saved views shown as the segmented control above the grid. Each is a pure
-// predicate over the already-loaded page of candidates, so counts and filtering
-// stay honest about what is on screen (server pagination still applies).
+// predicate over the already-loaded page of candidates, so view counts and chips
+// still apply only to the loaded page (server pagination still applies). The
+// client filter is different: it runs on the server before pagination.
 type AutomaticInvoiceViewKey = 'all' | 'ready' | 'combinable' | 'attention' | 'notYetDue';
 
 const matchesAutomaticInvoiceView = (
@@ -681,6 +684,7 @@ const matchesAutomaticInvoiceView = (
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
   const router = useRouter();
   const translateAssignmentContext = (contextValue: string | null): string | null => {
     if (!contextValue) {
@@ -771,6 +775,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [totalInvoicedPeriods, setTotalInvoicedPeriods] = useState(0);
   const [invoicedSearchTerm, setInvoicedSearchTerm] = useState('');
   const [debouncedInvoicedSearchTerm, setDebouncedInvoicedSearchTerm] = useState('');
+  // Trimmed, debounced copy of clientFilter that drives the server fetch. Seeded
+  // from the same URL value so a deep link fetches filtered results first time.
+  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(
+    () => readAutomaticInvoicesClientFilterFromLocation().trim(),
+  );
+  const debouncedClientFilterRef = useRef(debouncedClientFilter);
+  debouncedClientFilterRef.current = debouncedClientFilter;
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(true);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(true);
@@ -793,6 +804,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectorInputs: IRecurringDueSelectionInput[];
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+      expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
     }>;
     invoiceCount: number;
     billingCycleId: string | null;
@@ -803,8 +815,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
      * path. Handed to generation so finalization refuses (stale preview)
      * when a report or its pricing changed after this preview was shown.
      */
-    expectedUsagePeriodTotals: IExpectedUsagePeriodTotal[] | null;
-  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null });
+    expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[] | null;
+    expectedRecurringPricingSources?: IExpectedRecurringPricingSource[] | null;
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null, expectedRecurringPricingSources: null });
   // Structured code of the last preview failure; drives actionable remediation
   // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
   const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
@@ -829,7 +842,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
     executionIdentityKeys: string[];
-    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
+    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null; currencyCode: string | null }>;
   }>({
     isOpen: false,
     executionIdentityKeys: [],
@@ -842,6 +855,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     selectorInput: IRecurringDueSelectionInput | null;
     overageCents: number;
     poNumber: string | null;
+    currencyCode: string | null;
   }>({
     isOpen: false,
     billingCycleId: null,
@@ -849,6 +863,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     selectorInput: null,
     overageCents: 0,
     poNumber: null,
+    currencyCode: null,
   });
   // Pending "generate without the unreported usage services?" confirmation.
   // Captures the exact generation request that failed with the
@@ -921,10 +936,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => clearTimeout(timer);
   }, [clientFilter]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = clientFilter.trim();
+      // A filter that settles back to the committed value changes nothing.
+      // Otherwise commit filter + page reset + selection clear in one batch so
+      // exactly one fetch (page 1, new filter) follows.
+      if (trimmed === debouncedClientFilterRef.current) return;
+      setDebouncedClientFilter(trimmed);
+      setCurrentReadyPage(1);
+      setSelectedTargets(new Set());
+      setExpandedParentGroups(new Set());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientFilter]);
+
   const handleClientFilterChange = (value: string) => {
     if (value === clientFilter) return;
     setClientFilter(value);
-    setCurrentReadyPage(1);
     setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
@@ -970,7 +999,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
-          dateRange: dateRangeFilter
+          dateRange: dateRangeFilter,
+          ...(debouncedClientFilter ? { clientName: debouncedClientFilter } : {}),
         });
 
         if (!isMounted) return;
@@ -1011,7 +1041,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => {
       isMounted = false;
     };
-  }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
+  }, [currentReadyPage, pageSize, appliedDateRange, debouncedClientFilter, refreshTrigger]);
 
   // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
   // the user does not have to repair each one by hand. Refreshes on success so
@@ -1048,15 +1078,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
   };
 
-  const normalizedReadyClientFilter = clientFilter.trim().toLowerCase();
-
-  // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
-  const filteredPeriods = normalizedReadyClientFilter.length === 0
-    ? periods
-    : periods.filter((period) =>
-        (period.clientName ?? '').toLowerCase().includes(normalizedReadyClientFilter),
-      );
-  const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
+  // The client filter is applied by the server before pagination, so `periods`
+  // is already the filtered page.
+  const parentGroups = buildRecurringInvoiceParentGroups(periods);
   const needsApprovalParentGroups = parentGroups.filter(
     (group) => (group.candidate.approvalBlockedEntryCount ?? 0) > 0,
   );
@@ -1313,6 +1337,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectionKnownCents += amount;
     }
   }
+  const selectionCurrencies = new Set(
+    selectedExecutionRows.map((member) => member.currencyCode?.trim()).filter((code): code is string => Boolean(code)),
+  );
+  const selectionCurrencyCode = selectionCurrencies.size === 1 ? [...selectionCurrencies][0] : undefined;
   const selectionInvoiceCount = selectedSelectionGroups.length;
   const selectionCombineCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length > 1).length;
   const selectionSeparateCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length === 1).length;
@@ -1432,18 +1460,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const renderGroupAmountCell = (group: RecurringInvoiceParentGroup) => {
     const summary = summarizeGroupAmount(group.childExecutionRows);
+    const groupCurrency = group.candidate.currencyCode?.trim() || undefined;
     if (summary.allKnown) {
       return (
         <div className="flex items-center justify-end gap-1 font-semibold font-mono tabular-nums text-foreground">
           <Check className="h-3.5 w-3.5 text-success" />
-          {formatCurrency(summary.knownCents / 100)}
+          {money(summary.knownCents, groupCurrency)}
         </div>
       );
     }
     if (summary.hasKnown) {
       return (
         <div className="text-right">
-          <div className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
+          <div className="font-semibold font-mono tabular-nums text-foreground">{money(summary.knownCents, groupCurrency)}</div>
           <div className="text-2xs text-muted-foreground">
             {t('automaticInvoices.amount.plusAtGeneration', {
               count: summary.atGenerationCount,
@@ -1648,6 +1677,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           response.previews.length === 1
             ? response.previews[0].expectedUsagePeriodTotals ?? null
             : null,
+        expectedRecurringPricingSources:
+          response.previews.length === 1
+            ? response.previews[0].expectedRecurringPricingSources ?? []
+            : null,
       });
       setShowPreviewDialog(true);
     } else {
@@ -1658,6 +1691,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         executionIdentityKey: null,
         selectorInput: null,
         expectedUsagePeriodTotals: null,
+        expectedRecurringPricingSources: null,
       }); // Clear preview state on error
       setPreviewFailureCode(response.code ?? null);
       // Prefill the remediation route from what was previewed: the selection's
@@ -1723,7 +1757,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       );
 
       const overageAnalysisErrors: { [key: string]: string } = {};
-      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
+      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null; currencyCode: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
         if (isReturnedActionError(overage)) {
@@ -1742,6 +1776,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           clientName,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
+          currencyCode: result.period.currencyCode?.trim() || null,
         };
       }
 
@@ -1868,11 +1903,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             t('automaticInvoices.dialogs.poOverage.skippedError', {
-              amount: formatCurrencyFromMinorUnits(info.overageCents),
+              amount: money(info.overageCents, info.currencyCode ?? undefined),
               poLabel: formatPoLabel(info.poNumber),
               defaultValue:
                 `Skipped due to PO overage (${formatPoLabel(info.poNumber)}): `
-                + `over by ${formatCurrencyFromMinorUnits(info.overageCents)}.`,
+                + `over by ${money(info.overageCents, info.currencyCode ?? undefined)}.`,
             });
         }
       }
@@ -2007,6 +2042,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           selectorInput: previewState.selectorInput,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
+          currencyCode: previewState.previews[0]?.data.currencyCode ?? null,
         });
         return;
       }
@@ -2023,6 +2059,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
             : {}),
+          ...(previewState.expectedRecurringPricingSources != null
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
+            : {}),
         },
       ] : [];
       const groupedTargets = previewState.previews.map(preview => ({
@@ -2030,6 +2069,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInputs: preview.selectorInputs,
         billingCycleId: lastPreviewGroupsRef.current.find(group => group.groupKey === preview.previewGroupKey)?.billingCycleId ?? null,
         expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals,
+        expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
       }));
       const runResult = targets.length > 0
         ? await generateInvoicesAsRecurringBillingRun({ targets })
@@ -2093,6 +2133,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectorInput: null,
       overageCents: 0,
       poNumber: null,
+      currencyCode: null,
     });
 
     setIsGeneratingFromPreview(true);
@@ -2109,6 +2150,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           // identity binding across the PO-overage confirmation.
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
+            : {}),
+          ...(previewState.expectedRecurringPricingSources != null
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
             : {}),
         },
       ];
@@ -2677,7 +2721,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="ml-auto text-right leading-tight">
                   {selectionKnownCents > 0 ? (
                     <>
-                      <div className="font-semibold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
+                      <div className="font-semibold font-mono tabular-nums">{money(selectionKnownCents, selectionCurrencyCode)}</div>
                       <div className="text-2xs text-white/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
@@ -3059,7 +3103,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         </span>
                       );
                     }
-                    return <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>;
+                    return <span className="font-medium font-mono tabular-nums">{money(amount, record.member.currencyCode?.trim() || record.group.candidate.currencyCode?.trim() || undefined)}</span>;
                   }
                   return renderGroupAmountCell(record.group);
                 },
@@ -3070,7 +3114,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onPageChange={handleReadyPageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
+            totalItems={totalPeriods}
             rowClassName={(rowRecord: unknown) => {
               const record = rowRecord as AutomaticInvoiceDisplayRow;
               if (record.kind === 'member') {
@@ -3710,7 +3754,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 <td className="py-2 px-2">{item.description}</td>
                                 <td className="text-right py-2 px-2"></td>
                                 <td className="text-right py-2 px-2"></td>
-                                <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                                <td className="text-right py-2 px-2">{money(item.total, previewEntry.data.currencyCode)}</td>
                               </tr>
                             );
                           }
@@ -3718,8 +3762,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             <tr key={item.id} className="border-b">
                               <td className="py-2 px-2">{item.description}</td>
                               <td className="text-right py-2 px-2">{item.quantity}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                              <td className="text-right py-2 px-2">{money(item.unitPrice, previewEntry.data.currencyCode)}</td>
+                              <td className="text-right py-2 px-2">{money(item.total, previewEntry.data.currencyCode)}</td>
                             </tr>
                           );
                         })}
@@ -3727,15 +3771,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <tfoot>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.subtotal', { defaultValue: 'Subtotal' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.subtotal / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.subtotal, previewEntry.data.currencyCode)}</td>
                         </tr>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.tax', { defaultValue: 'Tax' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.tax / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.tax, previewEntry.data.currencyCode)}</td>
                         </tr>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.total', { defaultValue: 'Total' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.total / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.total, previewEntry.data.currencyCode)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -3850,8 +3894,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <li key={id}>
                   {t('automaticInvoices.dialogs.poOverage.batchItem', {
                     clientName: info.clientName,
-                    amount: formatCurrencyFromMinorUnits(info.overageCents),
-                    defaultValue: `${info.clientName}: over by ${formatCurrencyFromMinorUnits(info.overageCents)}`,
+                    amount: money(info.overageCents, info.currencyCode ?? undefined),
+                    defaultValue: `${info.clientName}: over by ${money(info.overageCents, info.currencyCode ?? undefined)}`,
                   })}
                   {info.poNumber ? ` (${formatPoLabel(info.poNumber)})` : ''}
                 </li>
@@ -3889,6 +3933,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             selectorInput: null,
             overageCents: 0,
             poNumber: null,
+            currencyCode: null,
           })
         }
         title={t('automaticInvoices.dialogs.poOverage.title', {
@@ -3898,9 +3943,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="space-y-2">
             <p>
               {t('automaticInvoices.dialogs.poOverage.singleDescription', {
-                amount: formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents),
+                amount: money(poOverageSingleConfirm.overageCents, poOverageSingleConfirm.currencyCode ?? undefined),
                 defaultValue:
-                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents)}.`,
+                  `This invoice would exceed the Purchase Order authorized amount by ${money(poOverageSingleConfirm.overageCents, poOverageSingleConfirm.currencyCode ?? undefined)}.`,
               })}
             </p>
             {poOverageSingleConfirm.poNumber && (

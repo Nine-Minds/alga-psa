@@ -21,7 +21,7 @@ jobs:
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -198,8 +198,10 @@ jobs:
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
-      - name: Install dependencies
-        run: npm ci
+      - name: Install server unit dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.

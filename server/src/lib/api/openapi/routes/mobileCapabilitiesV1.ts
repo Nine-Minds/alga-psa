@@ -36,6 +36,11 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           inventory: zOpenApi.boolean(),
           opportunities: zOpenApi.boolean(),
           opportunitiesCreate: zOpenApi.boolean(),
+          projects: zOpenApi.boolean().describe('Project tasks on mobile (project:read; PSA product only).'),
+          clientsCreate: zOpenApi.boolean(),
+          clientsUpdate: zOpenApi.boolean(),
+          contactsCreate: zOpenApi.boolean(),
+          contactsUpdate: zOpenApi.boolean(),
         }),
         // Date shape resolved from the user's country, so the device locale
         // never decides how a tenant's dates read.

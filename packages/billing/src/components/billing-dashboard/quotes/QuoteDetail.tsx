@@ -16,7 +16,7 @@ import { getActiveClientLocationsForBilling, type BillingLocationSummary } from 
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, markQuoteAccepted, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
@@ -29,7 +29,8 @@ import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
-import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -44,11 +45,11 @@ function formatQuoteNumber(quote: IQuote, templateQuoteLabel: string): string {
 }
 
 function hasConvertibleRecurringItems(quote: IQuote | null): boolean {
-  return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+  return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && isQuoteItemIncluded(item)));
 }
 
 function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
-  const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+  const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && isQuoteItemIncluded(item));
   if (oneTimeItems.some((item) => !item.is_discount)) {
     return true;
   }
@@ -70,7 +71,7 @@ function hasConvertibleProductOneTimeItems(quote: IQuote | null): boolean {
         item.service_item_kind === 'product' &&
         !item.is_recurring &&
         !item.is_discount &&
-        (!item.is_optional || item.is_selected !== false),
+        isQuoteItemIncluded(item),
     ),
   );
 }
@@ -107,7 +108,7 @@ function renderQuoteDetailRow(
   availability?: ProductAvailability | null,
 ) {
   const showClientSelection = quote.status === 'accepted' && item.is_optional;
-  const clientSelected = item.is_selected !== false;
+  const clientSelected = isQuoteItemIncluded(item);
 
   return (
     <tr
@@ -171,9 +172,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
   const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
-  const [sendMessage, setSendMessage] = useState('');
-  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
-  const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
@@ -648,7 +646,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleSendQuote = async () => {
+  const handleSendQuote = async (payload: QuoteSendDialogPayload) => {
     if (!quote) {
       return;
     }
@@ -657,21 +655,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
-      const typedEmails = additionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
-      const pickedEmails = sendRecipients.map((r) => r.email);
-      const seen = new Set<string>();
-      const combined: string[] = [];
-      for (const email of [...pickedEmails, ...typedEmails]) {
-        const key = email.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        combined.push(email);
-      }
-      const result = await sendQuote(quote.quote_id, {
-        message: sendMessage.trim() || undefined,
-        email_addresses: combined.length > 0 ? combined : undefined,
-        senderId: senderIdForSend(quoteSenderId),
-      });
+      const result = await sendQuote(quote.quote_id, payload);
 
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -679,9 +663,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       setQuote(result);
       setIsSendDialogOpen(false);
-      setSendMessage('');
-      setSendRecipients([]);
-      setAdditionalEmails('');
       setNotice(
         t('quoteDetail.notices.sent', { defaultValue: 'Quote sent to the client.' }),
       );
@@ -748,12 +729,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         throw new Error(getErrorMessage(result));
       }
 
-      const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
+      const { pdfData, fileName } = result as { pdfData: number[]; fileName: string };
+      // LEVERAGE: pattern pdf-blob-download — keep this established download flow aligned with the other quote screens.
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `${quoteNumber}.pdf`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1022,6 +1004,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     );
   }
 
+  // Quote summary amounts are persisted in minor units; the major-unit
+  // formatter would inflate them 100x if passed directly, so convert once here.
+  const formatSummaryAmount = (minorUnits: number | null | undefined): string =>
+    formatCurrency((Number(minorUnits) || 0) / 100, quote.currency_code || 'USD');
+
   return (
     <Card size="2">
       <Box p="4" className="space-y-6">
@@ -1131,26 +1118,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
-            <div className="mt-1 font-medium">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 font-medium">{formatSummaryAmount(quote.total_amount)}</div>
           </div>
         </section>
 
         <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.subtotal', { defaultValue: 'Subtotal' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.subtotal, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.subtotal)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.discounts', { defaultValue: 'Discounts' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.discount_total, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.discount_total)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.tax', { defaultValue: 'Tax' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.tax, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.tax)}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.total', { defaultValue: 'Total' })}</div>
-            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+            <div className="mt-1 text-lg font-semibold">{formatSummaryAmount(quote.total_amount)}</div>
           </div>
         </section>
 
@@ -1245,7 +1232,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               <div className="space-y-4">
                 {locationGroups.map((group) => {
                   const subtotal = group.items
-                    .filter((item) => !item.is_discount && (!item.is_optional || item.is_selected !== false))
+                    .filter((item) => !item.is_discount && isQuoteItemIncluded(item))
                     .reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
                   return (
                     <div key={group.key} className="overflow-hidden rounded-md border border-border">
@@ -1563,61 +1550,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </DialogContent>
       </Dialog>
-      <Dialog
-        id="quote-send-dialog"
+      <QuoteSendDialog
+        idPrefix="quote-send"
         isOpen={isSendDialogOpen}
+        clientId={quote.client_id}
+        isSending={isWorking}
+        senders={quoteSenders}
+        effectiveSenderAddress={quoteEffectiveSenderAddress}
+        senderId={quoteSenderId}
+        onSenderChange={setQuoteSenderId}
         onClose={() => setIsSendDialogOpen(false)}
-        title={t('quoteForm.dialogs.send.title', { defaultValue: 'Send Quote to Client' })}
-        footer={(
-          <div className="flex justify-end space-x-2">
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking
-                ? t('common.states.sending', { defaultValue: 'Sending...' })
-                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
-            </Button>
-          </div>
-        )}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {t('quoteForm.dialogs.send.description', {
-              defaultValue: 'This will email the quote to the client\'s billing contacts and change its status to "Sent".',
-            })}
-          </DialogDescription>
-          <div className="space-y-3 py-2">
-            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-detail-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-detail-send-sender" value={quoteSenderId} onValueChange={setQuoteSenderId} options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))} /></div>}
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
-              <QuoteSendRecipientsField
-                id="quote-send-recipients"
-                clientId={quote?.client_id}
-                value={sendRecipients}
-                onChange={setSendRecipients}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.additionalEmails', { defaultValue: 'Additional email addresses (comma-separated)' })}
-              <input
-                type="text"
-                value={additionalEmails}
-                onChange={(event) => setAdditionalEmails(event.target.value)}
-                placeholder={t('quoteForm.placeholders.additionalEmails', { defaultValue: 'email@example.com, another@example.com' })}
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteDetail.dialogs.send.message', { defaultValue: 'Optional message to include in the email' })}
-              <TextArea
-                value={sendMessage}
-                onChange={(event) => setSendMessage(event.target.value)}
-                rows={3}
-                placeholder={t('quoteForm.placeholders.message', { defaultValue: 'Add a personal note for the client...' })}
-              />
-            </label>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onConfirm={(payload) => void handleSendQuote(payload)}
+      />
       <QuoteMarkAcceptedDialog
         isOpen={isMarkAcceptedOpen}
         isWorking={isWorking}

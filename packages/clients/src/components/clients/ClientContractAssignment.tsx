@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Calendar, AlertCircle, Wand2 } from 'lucide-react';
@@ -63,6 +64,7 @@ const isClientContractActionError = (
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId, onAssignmentsChanged }) => {
   const { t } = useTranslation('msp/clients');
+  const router = useRouter();
   const { renderContractWizard, renderContractQuickAdd } = useClientCrossFeature();
   const [clientContracts, setClientContracts] = useState<DetailedClientContract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,6 +172,20 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
 
   const handleEditContract = (contract: DetailedClientContract) => {
     setEditingContract(contract);
+  };
+
+  // Mirrors the canonical client-contract route built by the Billing contract
+  // list (`ClientContractsTab.navigateToContract`). Kept local because importing
+  // from @alga-psa/billing would add a Clients -> Billing package dependency.
+  const navigateToContract = (contractId?: string | null, clientContractId?: string | null) => {
+    if (!contractId || !clientContractId) {
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set('tab', 'client-contracts');
+    params.set('contractId', contractId);
+    params.set('clientContractId', clientContractId);
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   const handleContractUpdated = async (
@@ -294,8 +310,21 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     {
       title: t('clientContractAssignment.contractName', { defaultValue: 'Contract Name' }),
       dataIndex: 'contract_name',
-      // Revert to just displaying the value, no button/dialog trigger needed here
-      render: (value) => value,
+      render: (value, record) => (
+        <button
+          type="button"
+          id={`view-client-contract-details-${record.client_contract_id}`}
+          data-testid={`client-contract-name-${record.client_contract_id}`}
+          className="text-left font-medium whitespace-normal break-words text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-1 rounded"
+          title={typeof value === 'string' ? value : undefined}
+          onClick={(event) => {
+            event.stopPropagation();
+            navigateToContract(record.contract_id, record.client_contract_id);
+          }}
+        >
+          {value}
+        </button>
+      ),
     },
     {
       title: t('clientContractAssignment.description', { defaultValue: 'Description' }),
@@ -377,8 +406,20 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              id={`view-client-contract-details-menu-item-${record.client_contract_id}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                navigateToContract(record.contract_id, record.client_contract_id);
+              }}
+            >
+              {t('clientContractAssignment.viewDetails', { defaultValue: 'View details' })}
+            </DropdownMenuItem>
+            <DropdownMenuItem
               id="edit-client-contract-menu-item"
-              onClick={() => handleEditContract(record)}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleEditContract(record);
+              }}
             >
               <Calendar className="h-4 w-4 mr-2" />
               {t('common.actions.edit', { defaultValue: 'Edit' })}
