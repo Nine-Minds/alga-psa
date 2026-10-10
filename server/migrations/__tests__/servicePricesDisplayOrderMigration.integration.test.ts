@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
-const migration = require(path.resolve(__dirname, '..', '20261010120000_service_prices_display_order.cjs'));
+const migration = require(path.resolve(__dirname, '..', '20261009120000_service_prices_display_order.cjs'));
 // Scratch database: the test drops the column and re-applies the migration.
 const SCRATCH_DB = process.env.TEST_DB_NAME_PRICE_ORDER_MIGRATION ?? 'test_db_price_display_order_migration';
 
@@ -23,7 +23,7 @@ const orderOf = async (serviceId: string) =>
       .map((r: any) => [r.currency_code, r.display_order]),
   );
 
-describe('20261010120000_service_prices_display_order', () => {
+describe('20261009120000_service_prices_display_order', () => {
   beforeAll(async () => {
     db = await createTestDbConnection({ databaseName: SCRATCH_DB });
     await migration.down(db);

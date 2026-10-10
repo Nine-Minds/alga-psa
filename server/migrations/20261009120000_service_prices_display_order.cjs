@@ -24,7 +24,7 @@ const { tenantDb } = require('./utils/tenantDb.cjs');
 
 const TABLE = 'service_prices';
 const COLUMN = 'display_order';
-const MIGRATION_TENANT = 'migration:20261010120000_service_prices_display_order';
+const MIGRATION_TENANT = 'migration:20261009120000_service_prices_display_order';
 const TENANT_ENUMERATION_REASON = 'enumerate tenants for service_prices display_order backfill';
 
 const calendarDate = (value) => {

@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const { computeDisplayOrders } = require(path.resolve(__dirname, '..', '20261010120000_service_prices_display_order.cjs'));
+const { computeDisplayOrders } = require(path.resolve(__dirname, '..', '20261009120000_service_prices_display_order.cjs'));
 
 const TODAY = '2026-10-10';
 const row = (id: string, service_id: string, currency_code: string, rate: number, effective_date = '1970-01-01') =>
