@@ -3,7 +3,7 @@
 - **Ticket:** alga0002091 — Accounting exports (QBO API/CSV, Xero) assume 2-decimal currencies, corrupting JPY amounts
 - **Branch:** `feature/alga0002091-accounting-exports-qbo-api-csv-xero`
 - **Date:** 2026-10-10
-- **Grounded against:** worktree at origin/main `b0d0b4dacf`
+- **Grounded against:** worktree at merge-base `b0d0b4dacf` (all line numbers re-verified against the current worktree on 2026-10-09)
 
 ## Problem
 
@@ -104,15 +104,19 @@ sites with the core helpers, each keyed on the in-scope currency.
 | 1483 | import | `amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0)` | `toMinorUnits(..., 'en-US', qboInvoice.CurrencyRef?.value ?? 'USD')` | `qboInvoice.CurrencyRef.value` |
 | 1484 | import | `amountToCents(qboInvoice.TotalAmt ?? 0)` | `toMinorUnits(..., 'en-US', qboInvoice.CurrencyRef?.value ?? 'USD')` | `qboInvoice.CurrencyRef.value` |
 | 1499 | import | `amountToCents(line.Amount ?? 0)` | `toMinorUnits(..., 'en-US', qboInvoice.CurrencyRef?.value ?? 'USD')` | `qboInvoice.CurrencyRef.value` |
+| 1561 | import | `amountToCents(line.Amount ?? 0)` (tax-component amount inside `invoiceTaxComponents.map`) | `toMinorUnits(..., 'en-US', qboInvoice.CurrencyRef?.value ?? 'USD')` | `qboInvoice.CurrencyRef.value` (same scope as 1483/1499) |
 | 1819 | import | `Math.round(Number(line?.Amount) * 100)` | `toMinorUnits(Number(line?.Amount), 'en-US', currency)` | `payload.CurrencyRef?.value` — hoist the `currency` read (1827) above the loop |
 | 1831 | import | `Math.round(Number(payload?.TotalAmt) * 100)` | `toMinorUnits(Number(payload?.TotalAmt), 'en-US', currency)` | `payload.CurrencyRef?.value` |
 | 1834 | import | `Math.round(Number(payload?.UnappliedAmt) * 100)` | `toMinorUnits(Number(payload?.UnappliedAmt), 'en-US', currency)` | `payload.CurrencyRef?.value` |
 
-Note: sites 1483/1484/1499/1819/1831/1834 were **not in the original card list** but are the same
-defect on the QBO read-back/payment-import path; they must change for the round-trip to reconcile.
-Keep `Number.isFinite`/guards intact; `toMinorUnits` throws `MoneyInputError` only on a negative or
-non-finite input, so preserve the existing "finite and > 0" checks around it (wrap non-finite
-inputs before calling, matching current guards).
+Note: sites 1483/1484/1499/1561/1819/1831/1834 were **not in the original card list** but are the
+same defect on the QBO read-back/payment-import path; they must change for the round-trip to
+reconcile. `toMinorUnits` (`formatters.ts:134-136`) performs **no input validation** — it is simply
+`Math.round(value * 10 ** digits)`, so a non-finite input yields `NaN` exactly as the current
+`amountToCents`/`Math.round(x * 100)` would. Preserve each call site's existing `Number.isFinite` /
+`?? 0` guards verbatim; the swap is behaviour-preserving for the guard logic and only fixes the
+scale factor. (`minorUnitsToDecimalText`, used on the CSV path, *does* throw `MoneyInputError` on an
+unsupported currency / non-integer / negative — see decision 2 and the Risks section.)
 
 ### C. QuickBooks CSV adapter — `packages/billing/src/adapters/accounting/quickBooksCSVAdapter.ts`
 
@@ -146,6 +150,46 @@ Populating `normalized.currency` on the Xero payment path (1270) also fixes the 
 gap — `NormalizedExternalPaymentPayload.currency` exists but Xero currently never sets it, unlike
 QBO (`quickBooksOnlineAdapter.ts:1827`).
 
+> **Critical:** `xeroAdapter.ts` keeps its invoice payload entirely in **cents** and delegates the
+> actual cents↔decimal conversion to the Xero **client service** (section E-bis). The `xeroAdapter`
+> site 809 above is only the `exportedTotal` reconciliation fallback — fixing it alone does **not**
+> fix the money Xero actually receives/returns. Section E-bis is the primary Xero export/import fix
+> and must land with this section.
+
+### E-bis. Xero API client service — `packages/integrations/src/lib/xero/xeroClientService.ts`
+
+This is where the real Xero invoice money conversion happens (the adapter passes `*Cents` straight
+through). Two module-private helpers are currency-blind and used on both directions:
+
+- **`centsToDecimal` (1448-1450)** `Math.round(value) / 100` — outbound (cents → Xero decimal)
+- **`decimalToCents` (1452-1454)** `Math.round(value * 100)` — inbound (Xero decimal → cents)
+
+Delete both helpers and replace each call with the core helper keyed on the invoice's currency.
+Currency is already in scope on both sides but is **not threaded into the two mapping functions**, so
+thread it in as a parameter:
+
+| Line | Direction | Current | Replace with | Currency source |
+|---|---|---|---|---|
+| 1395 | export | `centsToDecimal(line.unitAmountCents)` | `fromMinorUnits(line.unitAmountCents, 'en-US', currency)` | thread `currency` into `mapInvoiceLine(line, currency)`; caller `buildInvoicePayload` has `payload.currency ?? 'USD'` (set as `CurrencyCode` at 1381; call site 1372) |
+| 1396 | export | `centsToDecimal(line.amountCents)` | `fromMinorUnits(line.amountCents, 'en-US', currency)` | same |
+| 1413 | export | `centsToDecimal(line.taxAmountCents)` | `fromMinorUnits(line.taxAmountCents, 'en-US', currency)` | same |
+| 755 | import | `decimalToCents(invoice.Total)` | `toMinorUnits(invoice.Total, 'en-US', currency)` | `invoice.CurrencyCode ?? 'USD'` (read at 753); resolve once at top of `mapInvoiceDetails` |
+| 756 | import | `decimalToCents(invoice.TotalTax)` | `toMinorUnits(..., 'en-US', currency)` | same |
+| 757 | import | `decimalToCents(invoice.SubTotal)` | `toMinorUnits(..., 'en-US', currency)` | same |
+| 769 | import | `decimalToCents(component.TaxAmount)` | `toMinorUnits(..., 'en-US', currency)` | thread `currency` into `mapLineItemDetails(line, currency)`; call site 759 |
+| 777 | import | `decimalToCents(line.UnitAmount)` | `toMinorUnits(..., 'en-US', currency)` | same |
+| 778 | import | `decimalToCents(line.LineAmount)` | `toMinorUnits(..., 'en-US', currency)` | same |
+| 779 | import | `decimalToCents(line.TaxAmount)` | `toMinorUnits(..., 'en-US', currency)` | same |
+
+Keep the existing `typeof … === 'number' ? … : 0`/`: undefined` guards verbatim (wrap only the
+non-`undefined`/finite branch, exactly as today). The `UnitAmount` quantity-division fallback at
+1409 operates on already-decimal values and needs no change. Import `fromMinorUnits`/`toMinorUnits`
+from `@alga-psa/core` at the top of the file.
+
+> The **QBO** client service (`packages/integrations/src/lib/qbo/qboClientService.ts`) was checked
+> and performs **no money scaling** — QBO does all its cents↔decimal conversion inline in the
+> adapter (section B). So only the Xero client service needs this treatment.
+
 ### F. Xero CSV adapter — `packages/billing/src/adapters/accounting/xeroCsvAdapter.ts`
 
 | Line | Direction | Current | Replace with | Currency source |
@@ -176,6 +220,7 @@ without them would leave JPY payment-push and credit application mis-scaled.
 | `services/accountingSync/paymentApplier.ts:67` | import | `Math.round(amount * 100)` | `toMinorUnits(amount, 'en-US', currency)` |
 | `services/accountingSync/qboItemResolver.ts:121` | import | `Math.round(Number(amount) * 100)` | `toMinorUnits(Number(amount), 'en-US', currency)` |
 | `actions/qboOnboardingActions.ts:705` | import | `match.externalTotal / 100` | `fromMinorUnits(match.externalTotal, 'en-US', currency)` |
+| `services/accountingSync/onboarding/historicalInvoiceMatcher.ts:55` (`toCents`) | import/compare | `Math.round(n * 100)` | `toMinorUnits(n, 'en-US', currency)` — give `toCents` a `currency` param resolved per row (QBO row `CurrencyCode`/`CurrencyRef.value` or Alga row `currency_code`). **Note:** `CENT_TOLERANCE = 1` (line ~53) is itself 2-decimal-centric — a 1-minor-unit tolerance is 1 yen (fine) but was authored as "1 cent"; keep the constant, just make the scaling currency-aware so matched totals are comparable in the same currency's minor units. |
 
 **Contract/threading changes so the above sites have a `currency` to use:**
 
@@ -196,9 +241,12 @@ without them would leave JPY payment-push and credit application mis-scaled.
 
 ### I. Test simulator — `packages/billing/src/services/accountingSync/testing/qboSimulator.ts`
 
-Lines 104 (`Math.round(cents)/100`) and 348 (`Math.round(qty*unitPrice*100)`) must become
-currency-aware too, otherwise the simulator cannot faithfully round-trip a JPY document in tests.
-Thread the currency already present on the simulated entity (`CurrencyRef`).
+The simulator's own money helpers — `toCents` at **line 100** (`Math.round(value * 100)`) and
+`toAmount` at **line 104** (`Math.round(cents)/100`) — plus the assertion at **line 348**
+(`Math.round(qty*unitPrice*100)`) must become currency-aware too, otherwise the simulator cannot
+faithfully round-trip a JPY document in tests. Thread the currency already present on the simulated
+entity (`CurrencyRef`) into both helpers. (Line 304's `/100` is a tax-rate percentage, not a money
+scale — leave it.)
 
 ## Explicitly OUT of scope (separate concern — note, do not fix here)
 
@@ -212,6 +260,12 @@ marker at each so they are counted for a follow-up, but do not change them here:
 `components/billing-dashboard/quotes/quoteLineItemDraft.ts:337`. (The percentage `/100`/`*100`
 sites in `contractInvoiceAdjustments`, `prepaidBalanceAlerts`, `projectBillingConfig`,
 `billingViewHelpers` are not money-scaling and are irrelevant.)
+
+Also cents-assuming but **ingest-side**, not accounting export/import — a separate concern, do not
+change here (mark only): the local `toMinorUnits = Math.round(numeric * 100)` in
+`lib/adapters/invoiceAdapters.ts:591-596` and `parseMinorUnit` in `models/invoice.ts:395-410`. These
+parse user/general-ledger decimal amounts into minor units for the invoice domain and should migrate
+to the core `toMinorUnits` under a dedicated invoice-currency card, not this accounting-export one.
 
 ## Tests (80/20, high value)
 
@@ -227,19 +281,25 @@ USD-unchanged guarantee is locked in.
 3. **QBO CSV row** — JPY row emits `*ItemRate`/`*ItemAmount`/`TaxAmount` as whole-yen strings with
    no decimal point; USD still emits `"10.50"`-style two-decimal strings (byte-for-byte).
 4. **QBO Desktop IIF** — JPY `!TRNS` AMOUNT column is whole yen.
-5. **Xero export** — JPY `exportedTotal` fallback equals stored minor units; USD unchanged.
-6. **Xero read-back / payment import** — `normalizeXeroPayment` on a JPY payment record
+5. **Xero invoice push (client service, primary path)** — `xeroClientService` builds a JPY invoice
+   (`currency: 'JPY'`, line `amountCents: 10000`) with Xero `LineAmount`/`UnitAmount`/`TaxAmount` =
+   `10000` (not `100`); USD `1050` still builds `10.5`. Covers `mapInvoiceLine` with the threaded
+   currency. (New `xeroClientService.*.test.ts`; `qboClientService` tests show the pattern.)
+6. **Xero invoice read-back (client service, primary path)** — `mapInvoiceDetails` on a JPY Xero
+   invoice (`CurrencyCode: 'JPY'`, `Total: 10000`) yields `total/subTotal/taxAmount = 10000`;
+   USD unchanged. Covers `mapLineItemDetails` with the threaded currency.
+7. **Xero adapter payment import** — `normalizeXeroPayment` on a JPY payment record
    (`Amount: 10000, CurrencyCode: 'JPY'`) yields `amountCents: 10000` and `currency: 'JPY'`;
-   USD record unchanged.
-7. **Round-trip reconciliation** — a JPY amount exported (minor units → major) and read back
+   USD record unchanged. (The `exportedTotal` fallback at `xeroAdapter.ts:809` gets a JPY assertion too.)
+8. **Round-trip reconciliation** — a JPY amount exported (minor units → major) and read back
    (major → minor) returns the identical minor-units value; same for USD. One focused test per
-   provider (QBO via the simulator, Xero via normalize).
-8. **Core helper** — add `fromMinorUnits` cases to the formatters test (JPY=0, USD=2, BHD=3) and
+   provider (QBO via the simulator, Xero via the client `mapInvoiceLine`→`mapInvoiceDetails` pair).
+9. **Core helper** — add `fromMinorUnits` cases to the formatters test (JPY=0, USD=2, BHD=3) and
    assert `fromMinorUnits(toMinorUnits(x, l, c), l, c) === x` for representative values.
 
 ## Verification / done criteria
 
-1. `grep -rnE "(/ ?100|\* ?100)" packages/billing/src/adapters/accounting packages/billing/src/services/accountingSync` returns **no money-scaling** matches (only the two tax-rate `*100` lines and the round-only `coerce*` helpers remain, each annotated).
+1. `grep -rnE "(/ ?100|\* ?100)" packages/billing/src/adapters/accounting packages/billing/src/services/accountingSync packages/integrations/src/lib/xero/xeroClientService.ts` returns **no money-scaling** matches. Expected *non-money* residue that is correct to leave: the tax-rate percentages (`quickBooksOnlineAdapter.ts` ~1532, `xeroAdapter.ts:1037`, `qboSimulator.ts:304`), the round-only `coerce*` helpers (`coerceChargeCents`, `coerceCents`, `xeroAdapter.ts:1508`), and the day/ms time arithmetic (`syncNotificationService.ts:120`, `creditApplicationApplier.ts:33`, `accountingSyncCycleService.ts:57,161`). Each surviving money-adjacent line should carry an explanatory annotation.
 2. `npm run build` / typecheck passes (new type fields wired end to end).
 3. New and existing adapter/applier Vitest suites pass; existing USD fixtures produce identical
    output (byte-for-byte for CSV/IIF strings, numerically identical for JSON).
@@ -266,12 +326,14 @@ USD-unchanged guarantee is locked in.
 - `packages/billing/src/adapters/accounting/quickBooksCSVAdapter.ts`
 - `packages/billing/src/adapters/accounting/quickBooksDesktopAdapter.ts`
 - `packages/billing/src/adapters/accounting/xeroAdapter.ts`
+- `packages/integrations/src/lib/xero/xeroClientService.ts` (**primary Xero money path** — delete `centsToDecimal`/`decimalToCents`, thread currency into `mapInvoiceLine`/`mapLineItemDetails`)
 - `packages/billing/src/adapters/accounting/xeroCsvAdapter.ts`
 - `packages/billing/src/adapters/accounting/qboProviderOperations.ts`
 - `packages/billing/src/services/accountingSync/paymentPushApplier.ts`
 - `packages/billing/src/services/accountingSync/creditApplicationApplier.ts`
 - `packages/billing/src/services/accountingSync/paymentApplier.ts`
 - `packages/billing/src/services/accountingSync/qboItemResolver.ts`
+- `packages/billing/src/services/accountingSync/onboarding/historicalInvoiceMatcher.ts`
 - `packages/billing/src/services/accountingSync/syncProducers.ts`
 - `packages/billing/src/services/accountingSync/testing/qboSimulator.ts`
 - `packages/billing/src/actions/qboOnboardingActions.ts`
