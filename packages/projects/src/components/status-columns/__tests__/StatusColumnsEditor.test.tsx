@@ -115,16 +115,43 @@ describe('StatusColumnsEditor form safety', () => {
     const onReorder = vi.fn();
     const onReorderCommit = vi.fn();
 
-    render(<StatusColumnsEditor items={ITEMS} onReorder={onReorder} onReorderCommit={onReorderCommit} />);
+    function Harness() {
+      const [items, setItems] = React.useState(ITEMS);
+      return (
+        <StatusColumnsEditor
+          items={items}
+          onReorder={(orderedIds) => {
+            onReorder(orderedIds);
+            setItems((previous) => orderedIds.map((id) => previous.find((item) => item.id === id)!));
+          }}
+          onReorderCommit={onReorderCommit}
+        />
+      );
+    }
 
-    const rows = screen.getAllByRole('listitem');
-    fireEvent.dragStart(rows[0]);
-    fireEvent.dragOver(rows[2]);
+    render(<Harness />);
+
+    fireEvent.dragStart(screen.getAllByRole('listitem')[0]);
+    fireEvent.dragOver(screen.getAllByRole('listitem')[2]);
 
     expect(onReorder).toHaveBeenCalledWith(['b', 'c', 'a']);
 
-    fireEvent.dragEnd(rows[0]);
+    fireEvent.dragEnd(screen.getAllByRole('listitem')[2]);
     await waitFor(() => expect(onReorderCommit).toHaveBeenCalledTimes(1));
+    expect(onReorderCommit).toHaveBeenCalledWith(['b', 'c', 'a']);
+  });
+
+  it('does not persist a drag that never moved anything', async () => {
+    const onReorderCommit = vi.fn();
+
+    render(<StatusColumnsEditor items={ITEMS} onReorder={vi.fn()} onReorderCommit={onReorderCommit} />);
+
+    const rows = screen.getAllByRole('listitem');
+    fireEvent.dragStart(rows[0]);
+    fireEvent.dragEnd(rows[0]);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onReorderCommit).not.toHaveBeenCalled();
   });
 
   it('renders order numbers and hides delete when the row cannot be removed', () => {

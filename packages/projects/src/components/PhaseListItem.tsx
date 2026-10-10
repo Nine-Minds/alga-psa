@@ -365,7 +365,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             {/* Status columns indicator */}
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
               <PhaseStatusScopeChip
-                customStatusCount={customStatusCount ?? 0}
+                customStatusCount={customStatusCount}
                 id={`phase-status-scope-edit-${phase.phase_id}`}
               />
               <button

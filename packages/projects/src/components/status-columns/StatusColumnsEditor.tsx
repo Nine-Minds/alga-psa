@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Circle, GripVertical, Trash2 } from 'lucide-react';
 
@@ -83,6 +83,7 @@ export function StatusColumnsEditor({
 }: StatusColumnsEditorProps): React.ReactElement {
   const { t } = useTranslation(['features/projects', 'common']);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const orderAtDragStart = useRef<string | null>(null);
 
   const moveTo = (from: number, to: number) => {
     if (!editable || to < 0 || to >= items.length || from === to) return;
@@ -111,7 +112,14 @@ export function StatusColumnsEditor({
   const handleDragEnd = async () => {
     if (draggedIndex === null) return;
     setDraggedIndex(null);
-    await onReorderCommit?.(items.map((item) => item.id));
+
+    // A drag that never moved anything must not write a reorder.
+    const orderedIds = items.map((item) => item.id);
+    const before = orderAtDragStart.current;
+    orderAtDragStart.current = null;
+    if (before === orderedIds.join('|')) return;
+
+    await onReorderCommit?.(orderedIds);
   };
 
   if (items.length === 0 && emptyState) {
@@ -128,7 +136,11 @@ export function StatusColumnsEditor({
             key={item.id}
             role="listitem"
             draggable={editable}
-            onDragStart={() => editable && setDraggedIndex(index)}
+            onDragStart={() => {
+              if (!editable) return;
+              orderAtDragStart.current = items.map((entry) => entry.id).join('|');
+              setDraggedIndex(index);
+            }}
             onDragOver={(event) => handleDragOver(event, index)}
             onDragEnd={editable ? handleDragEnd : undefined}
             className={`rounded-lg border bg-white p-3 dark:bg-[rgb(var(--color-card))] ${
