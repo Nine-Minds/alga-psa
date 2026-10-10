@@ -7,6 +7,12 @@
  * user". It includes `tenant`, the Citus distribution column, so it is valid on the
  * distributed table. No backfill: existing rows default to false.
  *
+ * DEPLOY ORDER: apply this migration BEFORE deploying code that selects `is_default`
+ * (e.g. getUserActivityGroupsForApi); those queries throw on an unmigrated database.
+ * It is idempotent (IF NOT EXISTS / IF EXISTS), so it is safe to run twice. Shared dev
+ * databases that `knex migrate:up` refuses to touch need the manual-apply recipe in section 9 of
+ * docs/plans/2026-10-10-default-user-activities-group-assigned-work-plan.md.
+ *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
