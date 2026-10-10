@@ -991,7 +991,7 @@
       "delete_no_move_target": "Er is geen andere statuskolom om deze taken naartoe te verplaatsen. Voeg eerst een kolom toe.",
       "delete_scope_help": "Dit verwijdert de kolom alleen binnen dit bereik. De status blijft in de Taakstatusbibliotheek.",
       "fork_title": "Aangepaste statuskolommen voor deze fase gebruiken?",
-      "fork_message": "Deze fase erft dan niet langer de standaardkolommen van het project. Statuskolommen die je later aan de projectstandaarden toevoegt, verschijnen hier pas als je de fase terugzet.",
+      "fork_message": "Deze fase erft dan niet langer de standaardkolommen van het project. Statuskolommen die u later aan de projectstandaarden toevoegt, verschijnen hier pas als u de fase terugzet.",
       "fork_confirm": "Aangepaste statussen gebruiken",
       "phase_uses_custom": "Deze fase heeft eigen statuskolommen en erft de projectstandaarden niet meer.",
       "rename_impact_title": "Waar deze naamswijziging terechtkomt",
@@ -1028,7 +1028,7 @@
       "replace_failed": "Statuskolom vervangen mislukt",
       "repair_status_columns": "Statuskolommen repareren",
       "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})",
-      "pending_row_hint": "Vul de lege statuskolom in voordat je er een toevoegt."
+      "pending_row_hint": "Vul de lege statuskolom in voordat u er een toevoegt."
     },
     "list": {
       "title": "Projectsjablonen",
