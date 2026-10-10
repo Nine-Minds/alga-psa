@@ -11,11 +11,12 @@ import {
   updateTenantProjectStatus,
   deleteTenantProjectStatus,
   validateTenantProjectStatusDeletion,
-  reorderTenantProjectStatuses
+  reorderTenantProjectStatuses,
+  getProjectStatusRenameImpact
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import type { DeletionValidationResult, IStatus, IStandardStatus } from '@alga-psa/types';
-import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette, Info } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
@@ -52,6 +53,7 @@ export function TenantProjectTaskStatusSettings() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [renameImpact, setRenameImpact] = useState<{ live: number; pinned: number; standardMapped: number } | null>(null);
   const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
@@ -101,6 +103,7 @@ export function TenantProjectTaskStatusSettings() {
 
   function openCreateDialog() {
     setEditingStatus(null);
+    setRenameImpact(null);
     setFormData({
       name: '',
       is_closed: false,
@@ -112,6 +115,12 @@ export function TenantProjectTaskStatusSettings() {
 
   function openEditDialog(status: IStatus) {
     setEditingStatus(status);
+    setRenameImpact(null);
+    void getProjectStatusRenameImpact(status.status_id)
+      .then((impact) => {
+        if (!isReturnedActionError(impact)) setRenameImpact(impact);
+      })
+      .catch(() => setRenameImpact(null));
     setFormData({
       name: status.name,
       is_closed: status.is_closed,
@@ -495,6 +504,29 @@ export function TenantProjectTaskStatusSettings() {
                 autoFocus
                 containerClassName="mb-0"
               />
+
+              {/* Where a rename actually lands — read-only, no data is changed. */}
+              {editingStatus && renameImpact && (
+                <div
+                  id="status-rename-impact"
+                  className="flex items-start gap-2 rounded-lg border border-[rgb(var(--color-border-200))] bg-gray-50 p-3 text-xs text-gray-600 dark:bg-[rgb(var(--color-border-50))] dark:text-gray-300"
+                >
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                  <div>
+                    <p className="font-medium text-gray-700 dark:text-gray-200">
+                      {t('settings.statuses.rename_impact_title', 'Where this rename lands')}
+                    </p>
+                    <p>
+                      {renameImpact.live + renameImpact.pinned + renameImpact.standardMapped === 0
+                        ? t('settings.statuses.rename_impact_none', 'This status is not used as a column in any project yet.')
+                        : t('settings.statuses.rename_impact', {
+                            live: renameImpact.live,
+                            unaffected: renameImpact.pinned + renameImpact.standardMapped,
+                          })}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Preview */}
               <div>

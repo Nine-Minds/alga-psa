@@ -484,6 +484,59 @@ export const getPhaseCustomStatusCounts = withAuth(async (
 });
 
 /**
+ * Read-only: how a rename of one library status would land on existing project
+ * columns. Columns linked straight to the status (status_id, no custom_name)
+ * follow the rename immediately; columns with a pinned custom_name and older
+ * columns seeded against the standard status keep whatever name they show
+ * today. Surfaced in the Edit Status dialog so a rename never silently
+ * produces two names for the same concept.
+ */
+export const getProjectStatusRenameImpact = withAuth(async (
+  user,
+  { tenant },
+  statusId: string
+): Promise<{ live: number; pinned: number; standardMapped: number } | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+
+      const status = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: statusId })
+        .first();
+
+      if (!status) {
+        throw new Error('Project task status not found');
+      }
+
+      const countRows = async (apply: (query: Knex.QueryBuilder) => Knex.QueryBuilder) => {
+        const row = await apply(tenantScopedTable(trx, 'project_status_mappings', tenant))
+          .count('* as count')
+          .first();
+        return parseInt(row?.count as string) || 0;
+      };
+
+      const live = await countRows((query) => query.where({ status_id: statusId }).whereNull('custom_name'));
+      const pinned = await countRows((query) => query.where({ status_id: statusId }).whereNotNull('custom_name'));
+      const standardMapped = status.standard_status_id
+        ? await countRows((query) => query.where({ standard_status_id: status.standard_status_id }))
+        : 0;
+
+      return { live, pinned, standardMapped };
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
  * Copy project default statuses into a phase as custom mappings.
  */
 export const copyProjectStatusesToPhase = withAuth(async (
