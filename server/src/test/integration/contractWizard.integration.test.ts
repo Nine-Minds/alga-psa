@@ -1041,6 +1041,14 @@ describe('createClientContractFromWizard', () => {
         .select('contract_line_id', 'service_id');
       expect(members.filter((m: any) => m.contract_line_id === lines[0].contract_line_id)).toHaveLength(2);
       expect(members.filter((m: any) => m.contract_line_id === lines[1].contract_line_id)).toHaveLength(1);
+
+      // Finish (non-draft) on the same unchanged resume: no prompt, same lines' rates and total.
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      const finishedLines = await linesOf(contractId);
+      expect(finishedLines.map((l: any) => Number(l.custom_rate))).toEqual([300000, 105000]);
+      expect(await monthlyOf(contractId)).toBe(405000);
     });
 
     it('2: a service-less custom line is refused on Finish (rolled back) and kept by Save Draft', async () => {
@@ -1087,7 +1095,14 @@ describe('createClientContractFromWizard', () => {
       const result = await createClientContractFromWizard(submission, { isDraft: true });
       expect('contract_id' in result).toBe(true);
       expect(await monthlyOf(contractId)).toBe(total);
-      expect(await linesOf(contractId)).toHaveLength(2);
+      const draftLines = await linesOf(contractId);
+      expect(draftLines.map((l: any) => Number(l.custom_rate))).toEqual([50000, 20000]);
+
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(total);
+      expect((await linesOf(contractId)).map((l: any) => Number(l.custom_rate))).toEqual([50000, 20000]);
     });
 
     it('4: a Rivermark per-seat shape (3 unit lines, $4,200/mo) is unchanged after resume + finalize', async () => {
@@ -1108,6 +1123,54 @@ describe('createClientContractFromWizard', () => {
       expect('contract_id' in result).toBe(true);
       expect(await linesOf(contractId)).toHaveLength(3);
       expect(await monthlyOf(contractId)).toBe(420000);
+    });
+
+    it('7: a legacy fixed_services + fixed_base_rate draft with an hourly line resumes and finalizes unchanged', async () => {
+      const [a] = await seedServices(['Legacy fixed']);
+      const hourlyServiceId = await insertCatalogItem(db, tenantId, {
+        serviceTypeId: createdIds.serviceTypeId!,
+        serviceName: `Legacy hourly ${createdIds.serviceTypeId!.slice(0, 6)}`,
+        billingMethod: 'hourly',
+        itemKind: 'service',
+        defaultRate: 6300,
+        unitOfMeasure: 'hour',
+      });
+      createdIds.additionalServiceIds = [...(createdIds.additionalServiceIds ?? []), hourlyServiceId];
+
+      const draft: any = await createClientContractFromWizard(
+        {
+          ...baseSubmission(),
+          fixed_base_rate: 40000,
+          fixed_services: [{ service_id: a, quantity: 1 }],
+          hourly_services: [{ service_id: hourlyServiceId, hourly_rate: 6300 }],
+          minimum_billable_time: 15,
+          round_up_to_nearest: 15,
+        } as any,
+        { isDraft: true },
+      );
+      expect('contract_id' in draft).toBe(true);
+      const contractId = draft.contract_id as string;
+      createdIds.contractId = contractId;
+      expect(await monthlyOf(contractId)).toBe(40000);
+
+      const { submission, resumed } = await resumeAsSubmission(contractId);
+      expect(resumed.resumeUnsupportedShape).toBeUndefined();
+      expect(resumed.fixed_lines).toHaveLength(1);
+      expect(resumed.hourly_services).toHaveLength(1);
+      expect(resumed.recurring_baseline.monthly_cents).toBe(40000);
+
+      const saved: any = await createClientContractFromWizard(submission, { isDraft: true });
+      expect(saved.confirmation_required).toBeUndefined();
+      expect(await monthlyOf(contractId)).toBe(40000);
+
+      const finished: any = await createClientContractFromWizard(submission);
+      expect(finished.confirmation_required).toBeUndefined();
+      expect('contract_id' in finished).toBe(true);
+      expect(await monthlyOf(contractId)).toBe(40000);
+      expect((await linesOf(contractId)).map((l: any) => Number(l.custom_rate))).toEqual([40000]);
+      const hourlyLines = await tenantTable<any>(db, tenantId, 'contract_lines')
+        .where({ tenant: tenantId, contract_id: contractId, contract_line_type: 'Hourly' });
+      expect(hourlyLines).toHaveLength(1);
     });
 
     it('5: the guard asks for confirmation on a changed total, commits with a matching ack, refuses a stale one', async () => {
