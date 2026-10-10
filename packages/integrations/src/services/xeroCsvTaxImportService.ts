@@ -2,7 +2,7 @@ import { v4 as uuid4, validate as uuidValidate } from 'uuid';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
-import { parseCSV } from '@alga-psa/core';
+import { parseCSV, toMinorUnits } from '@alga-psa/core';
 
 /**
  * Fixed tracking category names - must match XeroCsvAdapter constants.
@@ -464,7 +464,7 @@ export class XeroCsvTaxImportService {
     const invoiceInfo = matchedInvoiceIds.length > 0
       ? await scopedDb.table('invoices')
           .whereIn('invoice_id', matchedInvoiceIds)
-          .select('invoice_id', 'invoice_number', 'tax_source')
+          .select('invoice_id', 'invoice_number', 'tax_source', 'currency_code')
       : [];
 
     const invoiceInfoMap = new Map(invoiceInfo.map(i => [i.invoice_id, i]));
@@ -583,7 +583,7 @@ export class XeroCsvTaxImportService {
 
     const invoiceInfo = await scopedDb.table('invoices')
       .whereIn('invoice_id', matchedInvoiceIds)
-      .select('invoice_id', 'invoice_number', 'tax_source');
+      .select('invoice_id', 'invoice_number', 'tax_source', 'currency_code');
 
     const invoiceInfoMap = new Map(invoiceInfo.map(i => [i.invoice_id, i]));
 
@@ -629,6 +629,7 @@ export class XeroCsvTaxImportService {
           tenant,
           algaInvoiceId,
           matchedInvoice,
+          info.currency_code ?? 'USD',
           userId
         );
 
@@ -687,6 +688,7 @@ export class XeroCsvTaxImportService {
     tenant: string,
     invoiceId: string,
     matchedInvoice: MatchedInvoice,
+    invoiceCurrency: string,
     userId?: string
   ): Promise<SingleTaxImportResult> {
     const scopedDb = tenantDb(knex, tenant);
@@ -710,7 +712,9 @@ export class XeroCsvTaxImportService {
       0
     );
 
-    const totalTax = Math.round(matchedInvoice.totalTax * 100); // Convert to cents
+    // The report carries major-unit amounts; scale by the Alga invoice's own
+    // currency so a 0-digit currency (JPY) is not inflated 100x.
+    const totalTax = toMinorUnits(matchedInvoice.totalTax, 'en-US', invoiceCurrency);
     let distributedTax = 0;
     let chargesUpdated = 0;
 
