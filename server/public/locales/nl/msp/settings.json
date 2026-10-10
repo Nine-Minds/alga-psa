@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Teamnaam invoeren",
         "selectTeamLead": "Selecteer een teamleider",
-        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen"
+        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
+        "noTeamLead": "Niet toegewezen"
       },
       "alert": {
         "unsavedChanges": "U heeft niet-opgeslagen wijzigingen"

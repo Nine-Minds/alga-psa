@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "〖Ḗƞŧḗř ŧḗȧḿ ƞȧḿḗ ······〗",
         "selectTeamLead": "〖Şḗŀḗƈŧ ȧ ŧḗȧḿ ŀḗȧḓ ········〗",
-        "selectUserToAdd": "〖Şḗŀḗƈŧ ȧ ŭşḗř ŧȯ ȧḓḓ ········〗"
+        "selectUserToAdd": "〖Şḗŀḗƈŧ ȧ ŭşḗř ŧȯ ȧḓḓ ········〗",
+        "noTeamLead": "〖Ƞȯŧ ȧşşīɠƞḗḓ ·····〗"
       },
       "alert": {
         "unsavedChanges": "〖Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş ··········〗"
