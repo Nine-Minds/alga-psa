@@ -20,7 +20,6 @@ export * from './lib/dateOnly';
 export * from './lib/general';
 export * from './lib/tax';
 export * from './lib/temporal';
-export * from './lib/interval-tracking';
 export * from './lib/invoice-renderer/types';
 export * from './lib/invoice-template-ast';
 export * from './lib/invoice-print-settings';

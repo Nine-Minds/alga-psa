@@ -47,6 +47,7 @@ import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useActionPolling } from '@alga-psa/ui/hooks';
+import StopwatchHeaderIndicator from './StopwatchHeaderIndicator';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -587,6 +588,7 @@ export default function Header({
             selected: t('header.themeToggle.selected', { defaultValue: 'Selected' }),
           }}
         />
+        <StopwatchHeaderIndicator />
         <NotificationBell />
         <JobActivityIndicator t={t} />
         <DropdownMenu>

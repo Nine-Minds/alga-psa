@@ -11720,6 +11720,9 @@ components:
           type:
             - boolean
             - "null"
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type:
             - boolean
@@ -11793,6 +11796,9 @@ components:
           type: boolean
         enable_live_ticket_timer:
           type: boolean
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
       required:
@@ -11829,6 +11835,9 @@ components:
           type: boolean
         enable_live_ticket_timer:
           type: boolean
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
       description: Payload for updating a board. All fields are optional.
@@ -16747,6 +16756,246 @@ components:
       required:
         - data
         - pagination
+    WorkV1StopwatchSession:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        work_item_type:
+          type: string
+        work_item_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        service_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        notes:
+          type: string
+        status:
+          type: string
+          enum:
+            - running
+            - paused
+            - logged
+            - discarded
+        time_entry_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        closed_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        segments:
+          type: array
+          items:
+            type: object
+            properties:
+              segment_id:
+                type: string
+                format: uuid
+              started_at:
+                type: string
+                format: date-time
+              ended_at:
+                type:
+                  - string
+                  - "null"
+                format: date-time
+                description: Null while the segment is open (the stopwatch is running).
+            required:
+              - segment_id
+              - started_at
+              - ended_at
+        active_ms:
+          type: number
+          description: Active (non-paused) milliseconds as of server_now.
+        server_now:
+          type: string
+          format: date-time
+          description: Server clock at the moment the response was built; derive a clock
+            offset from it.
+        ticket_number:
+          type:
+            - string
+            - "null"
+        work_item_title:
+          type:
+            - string
+            - "null"
+        project_name:
+          type:
+            - string
+            - "null"
+        client_name:
+          type:
+            - string
+            - "null"
+        service_name:
+          type:
+            - string
+            - "null"
+      required:
+        - session_id
+        - user_id
+        - work_item_type
+        - work_item_id
+        - service_id
+        - notes
+        - status
+        - time_entry_id
+        - closed_at
+        - created_at
+        - updated_at
+        - segments
+        - active_ms
+        - server_now
+        - ticket_number
+        - work_item_title
+        - project_name
+        - client_name
+        - service_name
+    WorkV1StopwatchSessionResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkV1StopwatchSession"
+      required:
+        - data
+    WorkV1StopwatchActiveResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: "#/components/schemas/WorkV1StopwatchSession"
+            - type:
+                - object
+                - "null"
+              description: The open (running or paused) session, or null.
+      required:
+        - data
+    WorkV1StopwatchLogResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            session:
+              $ref: "#/components/schemas/WorkV1StopwatchSession"
+            time_entry:
+              type: object
+              additionalProperties: {}
+              description: The persisted time entry.
+          required:
+            - session
+            - time_entry
+      required:
+        - data
+    WorkV1StopwatchConflictError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - CONFLICT
+            message:
+              type: string
+            details:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: "`open_session_exists`, or the message key of the failure (closed
+                    session, stopwatch disabled for the board, locked time
+                    sheet)."
+                open_session:
+                  allOf:
+                    - $ref: "#/components/schemas/WorkV1StopwatchSession"
+                    - description: "Present when reason is `open_session_exists`: the session that is
+                        already open."
+              required:
+                - reason
+          required:
+            - code
+            - message
+            - details
+      required:
+        - error
+    WorkV1StopwatchActiveQuery:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+    WorkV1StopwatchStartBody:
+      type: object
+      properties:
+        work_item_type:
+          type: string
+          enum:
+            - ticket
+            - project_task
+        work_item_id:
+          type: string
+          format: uuid
+        service_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        notes:
+          type: string
+      required:
+        - work_item_type
+        - work_item_id
+    WorkV1StopwatchUpdateBody:
+      type: object
+      properties:
+        notes:
+          type: string
+        service_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+    WorkV1StopwatchLogBody:
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        billable_duration:
+          type: integer
+          minimum: 0
+        is_billable:
+          type: boolean
+        notes:
+          type: string
+        service_id:
+          type: string
+          format: uuid
     WorkV1TicketCommentParams:
       type: object
       properties:
@@ -64350,7 +64599,11 @@ paths:
   /api/v1/time-entries/active-session:
     get:
       summary: Get active tracking session
-      description: Returns active tracking session for current user context.
+      description: "Deprecated: use GET /api/v1/stopwatch/active. Returns the caller's
+        open stopwatch session in the legacy time-entry-row shape (`session_id`
+        is the stopwatch session id, `start_time` the first segment start).
+        Requires time_entry:read."
+      deprecated: true
       tags:
         - Work Management v1
       security:
@@ -64361,6 +64614,7 @@ paths:
           controller-specific equivalent
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: time_entry
+        x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
       parameters:
@@ -64886,7 +65140,10 @@ paths:
   /api/v1/time-entries/start-tracking:
     post:
       summary: Start time tracking
-      description: Starts active tracking session.
+      description: "Deprecated: use POST /api/v1/stopwatch. Starts a stopwatch session
+        and returns it in the legacy time-entry-row shape. 409 when a session is
+        already open."
+      deprecated: true
       tags:
         - Work Management v1
       security:
@@ -64897,6 +65154,7 @@ paths:
           controller-specific equivalent
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: time_entry
+        x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
       requestBody:
@@ -65029,7 +65287,9 @@ paths:
   /api/v1/time-entries/stop-tracking/{sessionId}:
     post:
       summary: Stop time tracking
-      description: Stops active tracking session by session id.
+      description: "Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open
+        (running or paused) session as a time entry and returns the entry."
+      deprecated: true
       tags:
         - Work Management v1
       security:
@@ -65040,6 +65300,7 @@ paths:
           controller-specific equivalent
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: time_entry
+        x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
       parameters:
@@ -67250,6 +67511,482 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "500":
           description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch/active:
+    get:
+      summary: Get active stopwatch session
+      description: "Returns the caller's open (running or paused) stopwatch session,
+        or `data: null`. Elapsed time is derived from `segments`; `active_ms`
+        and `server_now` are computed by the server. `user_id` reads another
+        user's session and requires delegation rights (time_sheet:approve plus
+        read_all or manager-of-subject)."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: user_id
+          in: query
+      responses:
+        "200":
+          description: Open session or null.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchActiveResponse"
+        "400":
+          description: Invalid query.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch:
+    post:
+      summary: Start stopwatch
+      description: "Starts a stopwatch session on a ticket or project task. A user has
+        at most one open session: starting while one exists returns 409 with
+        `details.open_session`. Also 409 when the ticket's board has the
+        stopwatch turned off."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1StopwatchStartBody"
+      responses:
+        "201":
+          description: Session started.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchSessionResponse"
+        "400":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Work item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: An open session already exists (details.open_session) or the board
+            disabled the stopwatch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch/{id}/pause:
+    post:
+      summary: Pause stopwatch
+      description: "Closes the open segment. Idempotent: pausing a paused session
+        returns it unchanged."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Paused session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchSessionResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Stopwatch session not found (or it belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The session is already logged or discarded (details.reason is the
+            message key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch/{id}/resume:
+    post:
+      summary: Resume stopwatch
+      description: "Opens a new segment. Idempotent: resuming a running session
+        returns it unchanged."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Running session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchSessionResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Stopwatch session not found (or it belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The session is already logged or discarded (details.reason is the
+            message key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch/{id}:
+    patch:
+      summary: Update stopwatch draft
+      description: "Updates the notes and/or service of an open session. Omitted
+        fields are unchanged; `service_id: null` clears the service."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1StopwatchUpdateBody"
+      responses:
+        "200":
+          description: Updated session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchSessionResponse"
+        "400":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Stopwatch session not found (or it belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The session is already logged or discarded (details.reason is the
+            message key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Discard stopwatch
+      description: Discards an open session without logging time.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Session discarded; no content.
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Stopwatch session not found (or it belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The session is already logged or discarded (details.reason is the
+            message key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/stopwatch/{id}/log:
+    post:
+      summary: Log stopwatch as time entry
+      description: "Logs the session as exactly one time entry: start = first segment
+        start (to the minute), end = start + active duration, billable_duration
+        = active minutes (min 1). Any body field overrides the derived value.
+        The time sheet is resolved server-side from the start date; a locked
+        (submitted/approved) sheet returns 409 and the session is left
+        untouched."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_entry
+        x-rbac-action: create
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1StopwatchLogBody"
+      responses:
+        "201":
+          description: Session logged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchLogResponse"
+        "400":
+          description: Validation failure (e.g. no service, no time period covers the date).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_entry:create for mutations, time_entry:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Stopwatch session not found (or it belongs to another user).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: Session already closed, or the target time sheet is locked
+            (details.reason is the message key).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1StopwatchConflictError"
+        "500":
+          description: Unexpected failure.
           content:
             application/json:
               schema:

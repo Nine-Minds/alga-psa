@@ -591,7 +591,20 @@
       "system": "System",
       "selected": "Valt"
     },
-    "openUserMenu": "Öppna användarmenyn"
+    "openUserMenu": "Öppna användarmenyn",
+    "stopwatch": {
+      "untitled": "Namnlös",
+      "ariaLabelPaused": "Stoppur pausat: {{label}} vid {{clock}}",
+      "ariaLabelRunning": "Stoppur pågår: {{label}} vid {{clock}}",
+      "paused": "Stoppur pausat",
+      "running": "Stoppur pågår",
+      "resume": "Återuppta",
+      "pause": "Pausa",
+      "stop": "Stoppa och logga",
+      "discard": "Kassera",
+      "pausedNoDrawer": "Stoppuret pausat vid {{clock}}. Öppna arbetsobjektet för att logga tiden.",
+      "openTicket": "Öppna ärende"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

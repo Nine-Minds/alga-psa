@@ -107,6 +107,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
@@ -771,8 +772,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           board_id: ticket.board_id
         })
         .first() : null;
-    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
-      board.enable_live_ticket_timer = true;
+    if (board) {
+      board.enable_live_ticket_timer = resolveBoardStopwatchEnabled(board.enable_live_ticket_timer);
     }
 
     // The `users` fetch above is deliberately narrowed to internal active users so

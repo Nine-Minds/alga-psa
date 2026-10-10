@@ -96,6 +96,8 @@ export interface TimeEntrySelectionRequest {
   entries: ITimeEntryWithWorkItemString[];
   defaultStartTime?: string;
   defaultEndTime?: string;
+  /** Explanation shown above the form, e.g. that the times are estimated from activity. */
+  notice?: string;
 }
 
 export interface TimeSheetListFocusFilter {

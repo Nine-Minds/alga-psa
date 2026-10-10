@@ -30,7 +30,6 @@ export * from './context';
 // editor (BlockNote) is intentionally NOT re-exported from the barrel — it would pull
 // the ~1MB rich-text bundle into every @alga-psa/ui consumer (incl. signin / tickets
 // list). Import it directly from '@alga-psa/ui/editor'.
-export * from './services';
 export { DeleteEntityDialog } from './components/DeleteEntityDialog';
 
 export { type ClientDrawerOptions } from './context/ClientDrawerContext';

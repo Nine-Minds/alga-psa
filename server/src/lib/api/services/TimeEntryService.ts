@@ -25,6 +25,16 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
+import type { IUser } from '@alga-psa/types';
+import {
+  StopwatchConflictError,
+  getOpenSession,
+  getSession,
+  logSession,
+  startSession,
+  type StopwatchSessionView,
+} from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
+import { mapStopwatchError, publishLoggedSessionEvents } from './StopwatchApiService';
 import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 export class TimeEntryService extends BaseService<any> {
@@ -231,6 +241,8 @@ export class TimeEntryService extends BaseService<any> {
     };
   }
 
+  // LEVERAGE: friction time-entry-write-paths — this thinner create skips sheet resolution, bucket draw, hour-block burn and
+  // ticket/task resource adding that persistTimeEntry (@alga-psa/scheduling timeEntryWriteCore) does; it should move onto the core.
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
@@ -565,168 +577,113 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Time tracking sessions
+  //
+  // LEGACY ADAPTERS (plan D7). Installed mobile builds still call start-tracking / stop-tracking /
+  // active-session. These keep the old response shapes but run on the server-side stopwatch
+  // (stopwatchCore); `session_id` is the stopwatch session id and `start_time` the first segment start.
+  // Pauses are not representable in the legacy shape: a paused session is reported with
+  // status 'paused' and elapsed_minutes = active minutes.
+
+  /** Old `time_entries`-row-shaped session payload (activeTimeSessionResponseSchema plus entry columns). */
+  private async toLegacySession(view: StopwatchSessionView, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    const startTime = new Date(view.segments[0]?.started_at ?? view.created_at);
+    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, view.user_id);
+    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
+    return {
+      session_id: view.session_id,
+      entry_id: view.session_id,
+      tenant: context.tenant,
+      work_item_id: view.work_item_id,
+      work_item_type: view.work_item_type,
+      service_id: view.service_id,
+      user_id: view.user_id,
+      start_time: startTime.toISOString(),
+      end_time: null,
+      work_date,
+      work_timezone,
+      notes: view.notes,
+      billable_duration: 0,
+      approval_status: 'DRAFT',
+      created_at: view.created_at,
+      updated_at: view.updated_at,
+      status: view.status === 'paused' ? 'paused' : 'active',
+      elapsed_minutes: Math.round(view.active_ms / 60_000),
+      work_item_title: view.work_item_title,
+      service_name: view.service_name,
+    };
+  }
+
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
-    
-    // Check for existing active session (time entry with null end_time)
-    const existingSession = await this.buildTenantScopedQuery(knex, context)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
 
-    if (existingSession) {
-      throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
+    let view: StopwatchSessionView;
+    try {
+      view = await knex.transaction((trx) =>
+        startSession(
+          trx,
+          context.tenant,
+          context.userId,
+          {
+            workItemType: data.work_item_type,
+            workItemId: data.work_item_id ?? null,
+            serviceId: data.service_id,
+            notes: data.notes || '',
+          },
+          { allowLegacyWorkItemTypes: true },
+        ),
+      );
+    } catch (error) {
+      if (error instanceof StopwatchConflictError) {
+        throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
+      }
+      throw mapStopwatchError(error);
     }
 
-    // Stamp the session start at minute granularity. Start and stop fire at different
-    // wall-clock instants, so keeping raw seconds is exactly what produced the off-by-one
-    // duration bug in stored entries.
-    const startTime = truncateToMinute(new Date());
-    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
-
-    // Create a time entry with null end_time to represent an active session
-    const timeEntryData = {
-      work_item_id: data.work_item_id,
-      work_item_type: data.work_item_type,
-      service_id: data.service_id,
-      user_id: context.userId,
-      start_time: startTime,
-      end_time: null, // Active session has no end time
-      work_date,
-      work_timezone,
-      notes: data.notes || '',
-      billable_duration: 0, // Will be calculated when stopped
-      approval_status: 'DRAFT',
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    const session = await knex.transaction(async (trx) => {
-      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
-        .insert(timeEntryData)
-        .returning('*');
-      // A DATE is a calendar date, not an instant: pg hydrates the returned column
-      // into a Date in the Node process timezone, which can shift the day. Overwrite
-      // it with the timezone-local 'YYYY-MM-DD' string computed above so the response
-      // and every other consumer see the correct date. (Citus rejects non-IMMUTABLE
-      // functions such as to_char in a distributed table's RETURNING clause.)
-      created.work_date = work_date;
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
-      return created;
-    });
-
-    return {
-      session_id: session.entry_id, // Use entry_id as session_id
-      ...session,
-      status: 'active',
-      elapsed_minutes: 0,
-      work_item_title: data.work_item_id ? await this.getWorkItemTitle(data.work_item_id, data.work_item_type, context) : null,
-      service_name: data.service_id ? await this.getServiceName(data.service_id, context) : null
-    };
+    return this.toLegacySession(view, context);
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    
-    // Find the active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .where('entry_id', sessionId)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
 
-    if (!session) {
-      throw new NotFoundError('Active session not found');
-    }
-
-    this.assertServiceIdPresent(data.service_id ?? session.service_id);
-
-    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
-    const endTime = truncateToMinute(data.end_time ?? new Date());
-    const startTime = truncateToMinute(session.start_time);
-    const durationMs = endTime.getTime() - startTime.getTime();
-    const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
-    
-    // Update the time entry to complete the session
-    const updateData: any = {
-      end_time: endTime,
-      notes: data.notes || session.notes,
-      service_id: data.service_id || session.service_id,
-      billable_duration: data.is_billable !== false ? billableDuration : 0,
-      updated_at: new Date()
-    };
-
-    // Backstop: if a legacy row is missing these fields, compute now using the stored work_timezone if present.
-    if (!session.work_date || !session.work_timezone) {
-      const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-      const { work_date, work_timezone } = computeWorkDateFields(
-        session.start_time,
-        session.work_timezone || userTimeZone
-      );
-      updateData.work_date = work_date;
-      updateData.work_timezone = work_timezone;
-    }
-
-    await knex.transaction(async (trx) => {
-      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ entry_id: sessionId })
-        .update(updateData)
-        .returning('*');
-      if (!updated) throw new NotFoundError('Active session not found');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, session, updated);
-    });
-
-    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
-      workItemType: session.work_item_type,
-      workItemId: session.work_item_id,
-      timeEntryId: sessionId,
-      minutes: billableDuration,
-      billable: updateData.billable_duration > 0,
-      createdAt: session.created_at,
-    });
-    if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
-        eventType: ticketTimeEntryAdded.eventType,
-        payload: ticketTimeEntryAdded.payload,
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: endTime,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
+    let result;
+    try {
+      result = await knex.transaction(async (trx) => {
+        // Only an open (running or paused) session of the caller can be stopped.
+        const session = await getSession(trx, context.tenant, context.userId, sessionId);
+        if (!session || (session.status !== 'running' && session.status !== 'paused')) {
+          throw new NotFoundError('Active session not found');
+        }
+        this.assertServiceIdPresent(data.service_id ?? session.service_id);
+        return logSession(trx, context.tenant, context.user as IUser, sessionId, {
+          end_time: data.end_time,
+          notes: data.notes || undefined,
+          service_id: data.service_id,
+          is_billable: data.is_billable,
+        });
       });
+    } catch (error) {
+      throw mapStopwatchError(error);
     }
 
-    return this.getById(sessionId, context);
+    await publishLoggedSessionEvents(result.persisted, context);
+
+    return this.getById(result.persisted.entry.entry_id, context);
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
-    
-    // Find active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .select(`${this.tableName}.*`, this.workDateProjection(knex))
-      .where('user_id', userId)
-      .whereNull('end_time')
-      .first();
 
-    if (!session) return null;
+    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+      throw new ForbiddenError('Permission denied: Cannot read time entries');
+    }
 
-    const now = new Date();
-    const elapsedMs = now.getTime() - new Date(session.start_time).getTime();
-    const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
-
-    return {
-      session_id: session.entry_id,
-      ...session,
-      status: 'active',
-      elapsed_minutes: elapsedMinutes,
-      work_item_title: session.work_item_id ? await this.getWorkItemTitle(session.work_item_id, session.work_item_type, context) : null,
-      service_name: session.service_id ? await this.getServiceName(session.service_id, context) : null
-    };
+    // Legacy endpoint: only the caller's own session (never another user's).
+    const view = await knex.transaction((trx) => getOpenSession(trx, context.tenant, userId));
+    if (!view) return null;
+    return this.toLegacySession(view, context);
   }
 
   // Templates
