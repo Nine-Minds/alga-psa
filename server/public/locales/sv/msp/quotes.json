@@ -27,7 +27,8 @@
       "sendToClient": "Skicka till kund",
       "setAsDefault": "Ange som standard",
       "submitForApproval": "Skicka in för godkännande",
-      "done": "Klart"
+      "done": "Klart",
+      "markAccepted": "Markera som accepterad"
     },
     "badges": {
       "standard": "Standard"
@@ -158,7 +159,8 @@
       "backToQuotes": "Tillbaka till offerter",
       "backToTemplates": "Tillbaka till offertmallar",
       "convertToSalesOrder": "Konvertera till försäljningsorder",
-      "convert": "Konvertera till…"
+      "convert": "Konvertera till…",
+      "markAccepted": "Markera som accepterad"
     },
     "headings": {
       "editQuote": "Redigera offert",
@@ -217,6 +219,12 @@
         "message": "Meddelande",
         "from": "Från",
         "useDefault": "Använd standardavsändare"
+      },
+      "markAccepted": {
+        "title": "Markera offert som accepterad",
+        "description": "Registrera att kunden har accepterat offerten utanför kundportalen (till exempel per telefon eller e-post). Offerten flyttas till Accepterad och kan konverteras som vilken accepterad offert som helst. Ditt namn och tidpunkten registreras.",
+        "note": "Anteckning (valfritt)",
+        "notePlaceholder": "Till exempel: Accepterad via e-post den 3:e"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "skicka offerten igen",
       "sendQuote": "skicka offerten",
       "sendReminder": "skicka påminnelsen",
-      "submitForApproval": "skicka in för godkännande"
+      "submitForApproval": "skicka in för godkännande",
+      "markAccepted": "markera offerten som accepterad"
     },
     "errors": {
       "convert": "Det gick inte att konvertera offerten",
@@ -252,7 +261,8 @@
       "requestedChanges": "Offerten har återställts till utkast med begärda ändringar.",
       "resent": "Offerten har skickats igen.",
       "sent": "Offerten har skickats till kunden.",
-      "submittedForApproval": "Offerten har skickats in för internt godkännande."
+      "submittedForApproval": "Offerten har skickats in för internt godkännande.",
+      "markedAccepted": "Offerten har markerats som accepterad."
     },
     "readOnlyNotice": "Den här offerten är skrivskyddad. Skapa en ny version för att göra ändringar.",
     "validation": {
@@ -441,7 +451,8 @@
       "saveAsTemplate": "Det gick inte att spara offerten som mall",
       "send": "Det gick inte att skicka offerten",
       "sendReminder": "Det gick inte att skicka offertpåminnelsen",
-      "submitForApproval": "Det gick inte att skicka in offerten för godkännande"
+      "submitForApproval": "Det gick inte att skicka in offerten för godkännande",
+      "markAccepted": "Det gick inte att markera offerten som accepterad"
     },
     "labels": {
       "phase": "Fas: {{phase}}",
@@ -460,7 +471,8 @@
       "submittedForApproval": "Offerten har skickats in för internt godkännande.",
       "templateAssigned": "Dokumentmallen har tilldelats.",
       "templateCleared": "Dokumentmallen har tagits bort (standardmallen används).",
-      "createdSalesOrder": "Försäljningsorderutkastet {{number}} har skapats. Produktraderna faktureras vid leverans."
+      "createdSalesOrder": "Försäljningsorderutkastet {{number}} har skapats. Produktraderna faktureras vid leverans.",
+      "markedAccepted": "Offerten har markerats som accepterad."
     },
     "preview": {
       "loading": "Läser in förhandsgranskning…"
@@ -691,7 +703,14 @@
       "load": "Det gick inte att läsa in offertgodkännandena",
       "settings": "Det gick inte att uppdatera inställningarna för offertgodkännande"
     },
-    "loading": "Läser in kön för godkännande…"
+    "loading": "Läser in kön för godkännande…",
+    "soleApprover": {
+      "title": "Du är den enda som kan godkänna offerter",
+      "description": "Ingen annan aktiv användare kan godkänna offerter, så du kan godkänna dina egna offerter. Självgodkännanden registreras i offertens aktivitetslogg.",
+      "draftDescription": "Du är den enda användaren som kan godkänna offerter. När du har skickat in offerten för godkännande kan du godkänna den själv och sedan skicka den.",
+      "pendingDescription": "Du är den enda användaren som kan godkänna offerter, så du kan godkänna offerten själv. Välj Godkänn för att göra den klar att skicka.",
+      "dialogNote": "Du är den enda som kan godkänna, så det är tillåtet att godkänna din egen offert. Godkännandet registreras som ett självgodkännande."
+    }
   },
   "quoteTemplates": {
     "title": "Mallar",
@@ -857,7 +876,9 @@
       "conflict": "Den här offertändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av offertvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt offertfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}.",
+      "templateCannotBeAccepted": "Offertmallar kan inte markeras som accepterade",
+      "onlySentCanBeAccepted": "Endast skickade offerter kan markeras som accepterade"
     }
   }
 }
