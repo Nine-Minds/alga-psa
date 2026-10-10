@@ -9,7 +9,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 const require = createRequire(import.meta.url);
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
-const BACKFILL_NAME = '20261010120000_backfill_quote_converted_contract_lines.cjs';
+const BACKFILL_NAME = '20261010100000_backfill_quote_converted_contract_lines.cjs';
 const DB_NAME = 'test_db_quote_converted_backfill';
 const tenant = randomUUID();
 const ids = {
