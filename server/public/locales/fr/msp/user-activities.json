@@ -168,7 +168,8 @@
       "expandGroup": "Développer le groupe",
       "collapseGroup": "Réduire le groupe",
       "renameGroup": "Renommer le groupe",
-      "deleteGroup": "Supprimer le groupe"
+      "deleteGroup": "Supprimer le groupe",
+      "groupMenu": "Actions du groupe"
     },
     "dropActivitiesHere": "Déposez les activités ici",
     "ungroupedHeading": "Sans groupe",
@@ -178,6 +179,16 @@
       "status": "Statut",
       "priority": "Priorité",
       "dueDate": "Date d'échéance"
+    },
+    "defaultBadge": "Par défaut",
+    "defaultBadgeHint": "Les activités que vous n'avez placées dans aucun groupe apparaissent ici, y compris le travail nouvellement assigné.",
+    "defaultGroupEmpty": "Le nouveau travail qui vous est assigné apparaîtra ici",
+    "menu": {
+      "setDefault": "Définir par défaut pour le nouveau travail",
+      "unsetDefault": "Ne plus utiliser par défaut"
+    },
+    "errors": {
+      "setDefaultFailed": "Impossible de mettre à jour le groupe par défaut"
     }
   },
   "printable": {

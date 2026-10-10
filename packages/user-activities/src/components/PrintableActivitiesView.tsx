@@ -4,6 +4,7 @@ import React from 'react';
 import { Activity, ActivityType } from '@alga-psa/types';
 import type { ActivityGroup } from '@alga-psa/user-activities/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { partitionActivitiesByGroup } from '../lib/groupPartition';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 
 interface PrintableActivitiesViewProps {
@@ -119,32 +120,13 @@ export function PrintableActivitiesView({
   let ungroupedActivities: Activity[] = activities;
 
   if (grouped && serverGroups.length > 0) {
-    const activityByKey = new Map<string, Activity>();
-    for (const a of activities) {
-      activityByKey.set(`${a.type}:${a.id}`, a);
-    }
-    const assignedKeys = new Set<string>();
-    groupedSections = serverGroups
-      .filter((sg) => !sg.isCollapsed)
-      .map((sg) => {
-        const sgActs: Activity[] = [];
-        for (const item of sg.items) {
-          const key = `${item.activityType}:${item.activityId}`;
-          const act = activityByKey.get(key);
-          if (act) {
-            sgActs.push(act);
-            assignedKeys.add(key);
-          }
-        }
-        return { name: sg.groupName, activities: sgActs };
-      });
-    // Items in collapsed groups should also be excluded from ungrouped
-    for (const sg of serverGroups.filter((sg) => sg.isCollapsed)) {
-      for (const item of sg.items) {
-        assignedKeys.add(`${item.activityType}:${item.activityId}`);
-      }
-    }
-    ungroupedActivities = activities.filter((a) => !assignedKeys.has(`${a.type}:${a.id}`));
+    // Same partitioning as the grouped view: unfiled activities go to the default group
+    // (when set) or to Ungrouped. Collapsed groups are hidden from print along with their items.
+    const partition = partitionActivitiesByGroup(activities, serverGroups);
+    groupedSections = partition.groups
+      .filter(({ group }) => !group.isCollapsed)
+      .map(({ group, activities: groupActs }) => ({ name: group.groupName, activities: groupActs }));
+    ungroupedActivities = partition.ungrouped;
   }
 
   return (
