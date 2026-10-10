@@ -11,7 +11,7 @@
  * `comment` and `comments[]`, and the `response_state` list filter.
  */
 import http from 'node:http';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -25,6 +25,8 @@ const state = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown) => Promise<void>>(),
   published: [] as Array<{ eventType: string; payload: any }>,
   jobs: [] as any[],
+  pending: [] as Array<Promise<void>>,
+  deferredErrors: [] as unknown[],
   secrets: new Map<string, string>(),
 }));
 
@@ -87,7 +89,17 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
         // the same transaction (separate stream messages, possibly other pods).
         // Deliver it late so the comment.added build cannot benefit from this
         // event's side effects.
-        setTimeout(() => { void handler(parsed).catch(() => undefined); }, 250);
+        // Tracked in state.pending and flushed in afterEach so no delivery crosses
+        // a test boundary; failures are recorded and rethrown there.
+        state.pending.push(
+          new Promise<void>((resolve) => {
+            setTimeout(() => {
+              handler(parsed)
+                .catch((error) => { state.deferredErrors.push(error); })
+                .finally(resolve);
+            }, 250);
+          }),
+        );
       } else {
         await handler(parsed);
       }
@@ -326,6 +338,20 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     else process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = originalAllowPrivate;
   }, HOOK_TIMEOUT);
 
+  async function flushDeferredDeliveries() {
+    while (state.pending.length > 0) {
+      await Promise.all(state.pending.splice(0));
+    }
+    if (state.deferredErrors.length > 0) {
+      const errors = state.deferredErrors.splice(0);
+      throw new Error(`Deferred event delivery failed: ${errors.map(String).join('; ')}`);
+    }
+  }
+
+  afterEach(async () => {
+    await flushDeferredDeliveries();
+  });
+
   beforeEach(async () => {
     state.published.length = 0;
     state.jobs.length = 0;
@@ -439,10 +465,12 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
       const ticketId = await createTicket(null);
       await service.addComment(ticketId, { comment_text: 'reply', is_internal: false } as any, staffCtx());
 
-      const job = await waitFor(() => state.jobs.find((j) => j.eventType === 'ticket.response_state_changed'));
+      const forTicket = () =>
+        state.jobs.filter((j) => j.eventType === 'ticket.response_state_changed' && j.payload?.ticket_id === ticketId);
+      const job = await waitFor(() => forTicket()[0]);
       expect(job.webhookId).toBe(created.data.webhook_id);
       // Exactly one response_state_changed job for this single change.
-      expect(state.jobs.filter((j) => j.eventType === 'ticket.response_state_changed')).toHaveLength(1);
+      expect(forTicket()).toHaveLength(1);
 
       const result = await processWebhookDeliveryJob(job);
       expect(result.outcome).toBe('delivered');
