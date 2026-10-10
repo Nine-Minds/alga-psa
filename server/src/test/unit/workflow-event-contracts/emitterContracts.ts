@@ -7,8 +7,9 @@ import { billingContracts } from './contracts/billing';
 import { crmContracts } from './contracts/crm';
 import { documentContracts } from './contracts/documents';
 import { surveyContracts } from './contracts/surveys';
-import { notificationContracts } from './contracts/notifications';
 import { emailContracts } from './contracts/email';
+import { notificationContracts } from './contracts/notifications';
+import { integrationContracts } from './contracts/integrations';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -38,6 +39,7 @@ export const emitterContracts: EmitterContracts = {
   ...surveyContracts,
   ...emailContracts,
   ...notificationContracts,
+  ...integrationContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -66,15 +68,6 @@ export const emitterContracts: EmitterContracts = {
   ASSET_UNASSIGNED: pendingMigration('ASSET_UNASSIGNED', 'comms'),
   ASSET_UPDATED: pendingMigration('ASSET_UPDATED', 'comms'),
   ASSET_WARRANTY_EXPIRING: pendingMigration('ASSET_WARRANTY_EXPIRING', 'comms'),
-  EXTERNAL_MAPPING_CHANGED: pendingMigration('EXTERNAL_MAPPING_CHANGED', 'comms'),
-  INTEGRATION_CONNECTED: pendingMigration('INTEGRATION_CONNECTED', 'comms'),
-  INTEGRATION_DISCONNECTED: pendingMigration('INTEGRATION_DISCONNECTED', 'comms'),
-  INTEGRATION_SYNC_COMPLETED: pendingMigration('INTEGRATION_SYNC_COMPLETED', 'comms'),
-  INTEGRATION_SYNC_FAILED: pendingMigration('INTEGRATION_SYNC_FAILED', 'comms'),
-  INTEGRATION_SYNC_STARTED: pendingMigration('INTEGRATION_SYNC_STARTED', 'comms'),
-  INTEGRATION_TOKEN_EXPIRING: pendingMigration('INTEGRATION_TOKEN_EXPIRING', 'comms'),
-  INTEGRATION_TOKEN_REFRESH_FAILED: pendingMigration('INTEGRATION_TOKEN_REFRESH_FAILED', 'comms'),
-  INTEGRATION_WEBHOOK_RECEIVED: pendingMigration('INTEGRATION_WEBHOOK_RECEIVED', 'comms'),
   // ---- remaining ----
   INVENTORY_STOCK_LOW: schemaNotRegistered('INVENTORY_STOCK_LOW', 'payload.InventoryStockLow.v1'),
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
