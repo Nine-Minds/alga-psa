@@ -560,5 +560,23 @@
       "linksChanged": "links gewijzigd",
       "updated": "bijgewerkt"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} bijgehouden in {{count}} segment (gepauzeerd {{paused}})",
+    "pausedNotice_other": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})",
+    "discardDialog": {
+      "title": "Deze stopwatch verwijderen?",
+      "message": "De {{duration}} die op {{workItem}} is bijgehouden wordt verwijderd en er wordt geen tijdregistratie gemaakt. Dit kan niet ongedaan worden gemaakt.",
+      "confirm": "Verwijderen",
+      "cancel": "Stopwatch behouden"
+    },
+    "conflictDialog": {
+      "title": "Er is al een stopwatch geopend",
+      "message": "U houdt al {{duration}} bij op {{workItem}}. Er kan maar één stopwatch tegelijk geopend zijn.",
+      "stopAndLog": "Huidige stoppen en registreren, dan starten",
+      "discard": "Huidige verwijderen, dan starten (de bijgehouden tijd wordt verwijderd)",
+      "confirm": "Doorgaan",
+      "cancel": "Annuleren"
+    }
   }
 }

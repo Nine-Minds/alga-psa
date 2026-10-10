@@ -560,5 +560,23 @@
       "linksChanged": "enlaces cambiados",
       "updated": "actualizado"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} registrado en {{count}} segmento (en pausa {{paused}})",
+    "pausedNotice_other": "{{active}} registrados en {{count}} segmentos (en pausa {{paused}})",
+    "discardDialog": {
+      "title": "¿Descartar este cronómetro?",
+      "message": "El tiempo registrado en {{workItem}} ({{duration}}) se eliminará y no se creará ninguna entrada de tiempo. Esta acción no se puede deshacer.",
+      "confirm": "Descartar",
+      "cancel": "Conservar cronómetro"
+    },
+    "conflictDialog": {
+      "title": "Ya hay un cronómetro abierto",
+      "message": "Ya está registrando {{duration}} en {{workItem}}. Solo puede haber un cronómetro abierto a la vez.",
+      "stopAndLog": "Detener y registrar el actual, luego iniciar",
+      "discard": "Descartar el actual, luego iniciar (el tiempo registrado se elimina)",
+      "confirm": "Continuar",
+      "cancel": "Cancelar"
+    }
   }
 }

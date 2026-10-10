@@ -566,5 +566,25 @@
       "linksChanged": "zmieniono łącza",
       "updated": "zaktualizowano"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "Zarejestrowano {{active}} w {{count}} segmencie (wstrzymanie: {{paused}})",
+    "pausedNotice_few": "Zarejestrowano {{active}} w {{count}} segmentach (wstrzymanie: {{paused}})",
+    "pausedNotice_many": "Zarejestrowano {{active}} w {{count}} segmentach (wstrzymanie: {{paused}})",
+    "pausedNotice_other": "Zarejestrowano {{active}} w {{count}} segmentach (wstrzymanie: {{paused}})",
+    "discardDialog": {
+      "title": "Odrzucić ten stoper?",
+      "message": "Czas {{duration}} zarejestrowany przy {{workItem}} zostanie usunięty, a wpis czasu nie zostanie utworzony. Tej operacji nie można cofnąć.",
+      "confirm": "Odrzuć",
+      "cancel": "Zachowaj stoper"
+    },
+    "conflictDialog": {
+      "title": "Stoper jest już otwarty",
+      "message": "Już rejestrujesz {{duration}} przy {{workItem}}. Jednocześnie może być otwarty tylko jeden stoper.",
+      "stopAndLog": "Zatrzymaj i zapisz bieżący, a następnie uruchom",
+      "discard": "Odrzuć bieżący, a następnie uruchom (zarejestrowany czas zostanie usunięty)",
+      "confirm": "Kontynuuj",
+      "cancel": "Anuluj"
+    }
   }
 }

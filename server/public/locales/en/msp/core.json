@@ -591,7 +591,18 @@
       "system": "System",
       "selected": "Selected"
     },
-    "openUserMenu": "Open user menu"
+    "openUserMenu": "Open user menu",
+    "stopwatch": {
+      "untitled": "Untitled",
+      "ariaLabelPaused": "Stopwatch paused: {{label}} at {{clock}}",
+      "ariaLabelRunning": "Stopwatch running: {{label}} at {{clock}}",
+      "paused": "Stopwatch paused",
+      "running": "Stopwatch running",
+      "resume": "Resume",
+      "pause": "Pause",
+      "stop": "Stop and log",
+      "discard": "Discard"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

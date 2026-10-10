@@ -234,6 +234,8 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
         userTimeZone={timeZone}
         periods={periods}
         defaults={defaults}
+        contextNotice={context.notice}
+        stopwatchSessionId={context.stopwatchSessionId}
       />,
       undefined,
       undefined,

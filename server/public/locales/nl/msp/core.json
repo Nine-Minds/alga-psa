@@ -239,6 +239,17 @@
       "ariaLabel": "Vraag AI over deze workflow",
       "title": "Vraag AI",
       "shortcutHint": "Open Quick Ask voor workflowhulp"
+    },
+    "stopwatch": {
+      "untitled": "Zonder titel",
+      "ariaLabelPaused": "Stopwatch gepauzeerd: {{label}} op {{clock}}",
+      "ariaLabelRunning": "Stopwatch loopt: {{label}} op {{clock}}",
+      "paused": "Stopwatch gepauzeerd",
+      "running": "Stopwatch loopt",
+      "resume": "Hervatten",
+      "pause": "Pauzeren",
+      "stop": "Stoppen en registreren",
+      "discard": "Verwijderen"
     }
   },
   "dialogs": {

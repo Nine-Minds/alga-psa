@@ -9,6 +9,7 @@ import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider } from "@alga-psa/ui";
+import { StopwatchProvider } from '@alga-psa/scheduling/providers/StopwatchProvider';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { savePreference } from '@alga-psa/ui/lib';
@@ -433,6 +434,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   return (
     <MspClientTagsProvider>
     <DrawerProvider>
+      {/* Mounted here (not WorkspaceProviders): the header indicator sits above the per-route provider stack. */}
+      <StopwatchProvider>
       <div className="fixed inset-0 flex overflow-hidden app-shell-ground">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
@@ -534,6 +537,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           }
         />
       )}
+      </StopwatchProvider>
     </DrawerProvider>
     </MspClientTagsProvider>
   );

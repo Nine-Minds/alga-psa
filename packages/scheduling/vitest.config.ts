@@ -30,6 +30,7 @@ export default defineConfig({
       'tests/timeEntryLauncher.test.tsx',
       'tests/suggestedEntriesSection.test.tsx',
       'tests/newWorkItemTimeEntry.test.tsx',
+      'tests/stopwatchProvider.test.tsx',
       'tests/timeEntryDialog.saveLifecycle.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,

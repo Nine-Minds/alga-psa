@@ -560,5 +560,23 @@
       "linksChanged": "links changed",
       "updated": "updated"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "Tracked {{active}} in {{count}} segment (paused {{paused}})",
+    "pausedNotice_other": "Tracked {{active}} across {{count}} segments (paused {{paused}})",
+    "discardDialog": {
+      "title": "Discard this stopwatch?",
+      "message": "The {{duration}} tracked on {{workItem}} will be deleted and no time entry will be created. This cannot be undone.",
+      "confirm": "Discard",
+      "cancel": "Keep stopwatch"
+    },
+    "conflictDialog": {
+      "title": "A stopwatch is already open",
+      "message": "You are already tracking {{duration}} on {{workItem}}. Only one stopwatch can be open at a time.",
+      "stopAndLog": "Stop and log current, then start",
+      "discard": "Discard current, then start (the tracked time is deleted)",
+      "confirm": "Continue",
+      "cancel": "Cancel"
+    }
   }
 }

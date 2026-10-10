@@ -560,5 +560,23 @@
       "linksChanged": "Links geändert",
       "updated": "aktualisiert"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",
+    "pausedNotice_other": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "discardDialog": {
+      "title": "Diese Stoppuhr verwerfen?",
+      "message": "Die auf {{workItem}} erfassten {{duration}} werden gelöscht und es wird kein Zeiteintrag erstellt. Dies kann nicht rückgängig gemacht werden.",
+      "confirm": "Verwerfen",
+      "cancel": "Stoppuhr behalten"
+    },
+    "conflictDialog": {
+      "title": "Es ist bereits eine Stoppuhr geöffnet",
+      "message": "Sie erfassen bereits {{duration}} auf {{workItem}}. Es kann nur eine Stoppuhr gleichzeitig geöffnet sein.",
+      "stopAndLog": "Aktuelle stoppen und erfassen, dann starten",
+      "discard": "Aktuelle verwerfen, dann starten (die erfasste Zeit wird gelöscht)",
+      "confirm": "Weiter",
+      "cancel": "Abbrechen"
+    }
   }
 }

@@ -591,7 +591,18 @@
       "system": "⟦Şẏşŧḗḿ⟧",
       "selected": "⟦Şḗŀḗƈŧḗḓ⟧"
     },
-    "openUserMenu": "⟦Ȯƥḗƞ ŭşḗř ḿḗƞŭ⟧"
+    "openUserMenu": "⟦Ȯƥḗƞ ŭşḗř ḿḗƞŭ⟧",
+    "stopwatch": {
+      "untitled": "⟦Ŭƞŧīŧŀḗḓ⟧",
+      "ariaLabelPaused": "⟦Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ: {{label}} ȧŧ {{clock}}⟧",
+      "ariaLabelRunning": "⟦Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ: {{label}} ȧŧ {{clock}}⟧",
+      "paused": "⟦Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ⟧",
+      "running": "⟦Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ⟧",
+      "resume": "⟦Řḗşŭḿḗ⟧",
+      "pause": "⟦Ƥȧŭşḗ⟧",
+      "stop": "⟦Şŧȯƥ ȧƞḓ ŀȯɠ⟧",
+      "discard": "⟦Ḓīşƈȧřḓ⟧"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

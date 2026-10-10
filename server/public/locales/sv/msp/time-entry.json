@@ -560,5 +560,23 @@
       "linksChanged": "länkar ändrade",
       "updated": "uppdaterat"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "pausedNotice_other": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "discardDialog": {
+      "title": "Kassera det här stoppuret?",
+      "message": "De {{duration}} som spårats på {{workItem}} raderas och ingen tidpost skapas. Det går inte att ångra.",
+      "confirm": "Kassera",
+      "cancel": "Behåll stoppur"
+    },
+    "conflictDialog": {
+      "title": "Ett stoppur är redan öppet",
+      "message": "Du spårar redan {{duration}} på {{workItem}}. Bara ett stoppur kan vara öppet åt gången.",
+      "stopAndLog": "Stoppa och logga nuvarande, starta sedan",
+      "discard": "Kassera nuvarande, starta sedan (den spårade tiden raderas)",
+      "confirm": "Fortsätt",
+      "cancel": "Avbryt"
+    }
   }
 }

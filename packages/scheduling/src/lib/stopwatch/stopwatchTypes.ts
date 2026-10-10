@@ -1,39 +1,11 @@
-export type StopwatchSessionStatus = 'running' | 'paused' | 'logged' | 'discarded';
+import type {
+  StopwatchSegmentView,
+  StopwatchSessionStatus,
+  StopwatchSessionView,
+} from '@alga-psa/types';
 
-export interface StopwatchSegmentView {
-  segment_id: string;
-  /** ISO 8601 */
-  started_at: string;
-  /** ISO 8601, null = open */
-  ended_at: string | null;
-}
-
-export interface StopwatchSessionView {
-  session_id: string;
-  user_id: string;
-  /** `ticket` | `project_task` (legacy adapters may hold others) */
-  work_item_type: string;
-  work_item_id: string | null;
-  service_id: string | null;
-  notes: string;
-  status: StopwatchSessionStatus;
-  time_entry_id: string | null;
-  closed_at: string | null;
-  created_at: string;
-  updated_at: string;
-  segments: StopwatchSegmentView[];
-  /** Active milliseconds as of `server_now`. */
-  active_ms: number;
-  /** Server clock (ISO) at the moment this view was built; clients derive a clock offset from it. */
-  server_now: string;
-  // Display fields (names only; never raw ids)
-  ticket_number: string | null;
-  /** Ticket title or project task name */
-  work_item_title: string | null;
-  project_name: string | null;
-  client_name: string | null;
-  service_name: string | null;
-}
+// The wire shape lives in @alga-psa/types so ui/tickets can use it without importing scheduling.
+export type { StopwatchSegmentView, StopwatchSessionStatus, StopwatchSessionView };
 
 export interface StartSessionInput {
   workItemType: string;

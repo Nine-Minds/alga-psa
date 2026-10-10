@@ -239,6 +239,17 @@
       "ariaLabel": "Chiedi all’IA informazioni su questo workflow",
       "title": "Chiedi all’IA",
       "shortcutHint": "Apri Quick Ask per la guida sul workflow"
+    },
+    "stopwatch": {
+      "untitled": "Senza titolo",
+      "ariaLabelPaused": "Cronometro in pausa: {{label}} a {{clock}}",
+      "ariaLabelRunning": "Cronometro in corso: {{label}} a {{clock}}",
+      "paused": "Cronometro in pausa",
+      "running": "Cronometro in corso",
+      "resume": "Riprendi",
+      "pause": "Pausa",
+      "stop": "Ferma e registra",
+      "discard": "Scarta"
     }
   },
   "dialogs": {

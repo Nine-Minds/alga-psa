@@ -560,5 +560,23 @@
       "linksChanged": "liens modifiés",
       "updated": "mis à jour"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} suivi en {{count}} segment (pause : {{paused}})",
+    "pausedNotice_other": "{{active}} suivis en {{count}} segments (pause : {{paused}})",
+    "discardDialog": {
+      "title": "Supprimer ce chronomètre ?",
+      "message": "Le temps suivi sur {{workItem}} ({{duration}}) sera supprimé et aucune entrée de temps ne sera créée. Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Conserver le chronomètre"
+    },
+    "conflictDialog": {
+      "title": "Un chronomètre est déjà ouvert",
+      "message": "Vous suivez déjà {{duration}} sur {{workItem}}. Un seul chronomètre peut être ouvert à la fois.",
+      "stopAndLog": "Arrêter et enregistrer l'actuel, puis démarrer",
+      "discard": "Supprimer l'actuel, puis démarrer (le temps suivi est supprimé)",
+      "confirm": "Continuer",
+      "cancel": "Annuler"
+    }
   }
 }

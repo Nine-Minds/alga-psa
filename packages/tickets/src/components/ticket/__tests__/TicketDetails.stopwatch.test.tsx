@@ -10,6 +10,10 @@ import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 const checkTicketClosureMock = vi.fn();
 const updateCommentMock = vi.fn();
 const findCommentByIdMock = vi.fn();
+const { launchTimeEntryMock, stopwatchRef } = vi.hoisted(() => ({
+  launchTimeEntryMock: vi.fn(),
+  stopwatchRef: { current: null as any },
+}));
 const updateTicketMock = vi.fn();
 const updateTicketWithCacheMock = vi.fn();
 const findBoardByIdMock = vi.fn();
@@ -67,8 +71,12 @@ vi.mock('@alga-psa/ui', () => ({
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
+  useStopwatch: () => stopwatchRef.current,
+  useStopwatchElapsedMs: () => 90_000,
+  formatStopwatchClock: () => '00:01:30',
+  formatStopwatchDuration: () => '1m',
   useSchedulingCallbacks: () => ({
-    launchTimeEntry: vi.fn(),
+    launchTimeEntry: launchTimeEntryMock,
     launchScheduleEntry: vi.fn(),
     fetchTimeEntriesForTicket: vi.fn(),
     deleteTimeEntry: vi.fn(),
@@ -141,6 +149,14 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
       </select>
     </label>
   ),
+}));
+
+vi.mock('@alga-psa/ui/components/Label', () => ({
+  Label: ({ children, ...props }: any) => <label {...props}>{children}</label>,
+}));
+
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+  withDataAutomationId: ({ id }: { id: string }) => ({ id }),
 }));
 
 vi.mock('@alga-psa/ui/components/Drawer', () => ({
@@ -271,7 +287,22 @@ vi.mock('../../../actions/comment-actions/clipboardImageDraftActions', () => ({
 }));
 
 vi.mock('../TicketInfo', () => ({ __esModule: true, default: () => <div data-testid="ticket-info" /> }));
-vi.mock('../TicketProperties', () => ({ __esModule: true, default: () => <div data-testid="ticket-properties" /> }));
+vi.mock('../TicketProperties', async () => {
+  const { TicketStopwatchControls } = await import('../TicketStopwatchControls');
+  return {
+    __esModule: true,
+    default: (props: any) => (
+      <TicketStopwatchControls
+        id="props"
+        ticketId={props.ticket.ticket_id}
+        enabled={props.isLiveTicketTimerEnabled ?? true}
+        timeDescription={props.timeDescription}
+        onTimeDescriptionChange={props.onTimeDescriptionChange}
+        onTimeEntryLogged={props.onTimeEntryLogged}
+      />
+    ),
+  };
+});
 vi.mock('../TicketDocumentsSection', () => ({ __esModule: true, default: () => <div data-testid="ticket-documents" /> }));
 vi.mock('../TicketEmailNotifications', () => ({ __esModule: true, default: () => <div data-testid="ticket-email" /> }));
 vi.mock('../AgentScheduleDrawer', () => ({ __esModule: true, default: () => <div data-testid="agent-schedule" /> }));
@@ -290,30 +321,7 @@ vi.mock('../TicketLiveProvider', () => ({
 vi.mock('../../TicketOriginBadge', () => ({ __esModule: true, default: () => <div data-testid="origin-badge" /> }));
 vi.mock('@alga-psa/ui/components/BackNav', () => ({ __esModule: true, default: () => <div data-testid="back-nav" /> }));
 
-// Stand-in for the conversation: drives the edit handler that owns
-// currentComment, then the save that flips is_resolution on.
-vi.mock('../TicketConversation', () => ({
-  __esModule: true,
-  default: ({
-    onEdit,
-    onSave,
-  }: {
-    onEdit: (comment: unknown) => void;
-    onSave: (updates: Record<string, unknown>) => void | Promise<void>;
-  }) => (
-    <div>
-      <button type="button" onClick={() => onEdit(existingComment)}>
-        edit-comment
-      </button>
-      <button type="button" onClick={() => void onSave({ is_resolution: true })}>
-        save-as-resolution
-      </button>
-      <button type="button" onClick={() => void onSave({ note: '[]' })}>
-        save-plain-edit
-      </button>
-    </div>
-  ),
-}));
+vi.mock('../TicketConversation', () => ({ __esModule: true, default: () => <div data-testid="ticket-conversation" /> }));
 
 const baseTicket = {
   ticket_id: 'ticket-1',
@@ -337,12 +345,61 @@ const baseTicket = {
   attributes: {},
 } as any;
 
-const statusOptions = [
-  { value: 'status-open', label: 'Open', is_closed: false, board_id: 'board-1' },
-  { value: 'status-closed', label: 'Closed', is_closed: true, board_id: 'board-1' },
-];
+const statusOptions = [{ value: 'status-open', label: 'Open', is_closed: false, board_id: 'board-1' }];
+const board = { board_id: 'board-1', board_name: 'Board', enable_live_ticket_timer: true };
 
-const board = { board_id: 'board-1', board_name: 'Board', enable_live_ticket_timer: false };
+const session = {
+  session_id: 'session-1',
+  user_id: 'user-1',
+  work_item_type: 'ticket',
+  work_item_id: 'ticket-1',
+  service_id: null,
+  notes: '',
+  status: 'running',
+  time_entry_id: null,
+  closed_at: null,
+  created_at: '2026-09-09T10:00:00Z',
+  updated_at: '2026-09-09T10:00:00Z',
+  segments: [{ segment_id: 'g1', started_at: '2026-09-09T10:00:00Z', ended_at: null }],
+  active_ms: 90_000,
+  server_now: '2026-09-09T10:01:30Z',
+  ticket_number: 'T-001',
+  work_item_title: 'Test Ticket',
+  project_name: null,
+  client_name: 'Acme',
+  service_name: null,
+} as any;
+
+const span = {
+  start: new Date('2026-09-09T10:00:00Z'),
+  end: new Date('2026-09-09T10:15:00Z'),
+  billableMinutes: 15,
+  pausedMs: 0,
+  segmentCount: 1,
+};
+
+function makeStopwatch(current: any) {
+  const value = {
+    session: current,
+    state: current ? current.status : 'idle',
+    isLoading: false,
+    serverOffsetMs: 0,
+    getElapsedMs: () => 90_000,
+    getEntrySpan: () => span,
+    start: vi.fn().mockResolvedValue({ status: 'started', session }),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    requestStop: vi.fn(async (launcher: any) => {
+      await launcher({ session: current, span, onLogged: vi.fn() });
+      return { status: 'ok' };
+    }),
+    requestDiscard: vi.fn(),
+    updateNotes: vi.fn(),
+    refresh: vi.fn(),
+  };
+  stopwatchRef.current = value;
+  return value;
+}
 
 function renderDetails() {
   return render(
@@ -350,40 +407,19 @@ function renderDetails() {
       bootstrap={entryLayoutBootstrap}
       initialTicket={baseTicket}
       initialBoard={board}
-      initialComments={[existingComment]}
+      initialComments={[]}
       statusOptions={statusOptions}
     />,
   );
 }
 
-async function flagCommentAsResolution() {
-  fireEvent.click(await screen.findByRole('button', { name: 'edit-comment' }));
-  fireEvent.click(screen.getByRole('button', { name: 'save-as-resolution' }));
-}
-
-describe('TicketDetails edit-to-resolution close prompt', () => {
+describe('TicketDetails stopwatch wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findBoardByIdMock.mockResolvedValue(board);
     getTicketByIdMock.mockResolvedValue(baseTicket);
-    updateCommentMock.mockResolvedValue('success');
-    findCommentByIdMock.mockResolvedValue({ ...existingComment, is_resolution: true });
-    updateTicketMock.mockResolvedValue('success');
-    updateTicketWithCacheMock.mockResolvedValue('success');
-    previewBundlePropagationMock.mockResolvedValue({
-      mode: 'sync_updates',
-      masterTicketId: 'ticket-1',
-      newStatusId: 'status-closed',
-      crossesBoundary: null,
-      affectedChildren: [],
-      unaffectedChildren: [],
-    });
-    checkTicketClosureMock.mockResolvedValue({
-      wouldClose: true,
-      allowed: true,
-      failures: [],
-      canOverride: false,
-    });
+    launchTimeEntryMock.mockResolvedValue(undefined);
+    checkTicketClosureMock.mockResolvedValue({ wouldClose: false, allowed: true, failures: [], canOverride: false });
   });
 
   afterEach(() => {
@@ -392,80 +428,45 @@ describe('TicketDetails edit-to-resolution close prompt', () => {
     consoleLogSpy.mockClear();
   });
 
-  it('offers the close once an edit flags the comment as the resolution', async () => {
+  it('never starts a stopwatch just by opening a ticket', async () => {
+    const stopwatch = makeStopwatch(null);
     renderDetails();
-    await flagCommentAsResolution();
 
-    await waitFor(() => {
-      expect(document.getElementById('ticket-details-resolution-close-prompt')).not.toBeNull();
-    });
-    // The board has exactly one closed status, so it is preselected.
-    expect(screen.getByLabelText('Close status')).toHaveValue('status-closed');
+    await waitFor(() => expect(document.getElementById('props-stopwatch-start')).not.toBeNull());
+    expect(stopwatch.start).not.toHaveBeenCalled();
+    expect(launchTimeEntryMock).not.toHaveBeenCalled();
   });
 
-  it('does not offer the close for an edit that leaves is_resolution alone', async () => {
+  it('starts the stopwatch only on the explicit Start click', async () => {
+    const stopwatch = makeStopwatch(null);
     renderDetails();
-    fireEvent.click(await screen.findByRole('button', { name: 'edit-comment' }));
-    fireEvent.click(screen.getByRole('button', { name: 'save-plain-edit' }));
 
-    await waitFor(() => expect(updateCommentMock).toHaveBeenCalled());
-    expect(document.getElementById('ticket-details-resolution-close-prompt')).toBeNull();
+    fireEvent.click(await waitFor(() => {
+      const el = document.getElementById('props-stopwatch-start');
+      if (!el) throw new Error('start not rendered');
+      return el;
+    }));
+
+    await waitFor(() => expect(stopwatch.start).toHaveBeenCalledTimes(1));
+    expect(stopwatch.start.mock.calls[0][0]).toMatchObject({ workItemType: 'ticket', workItemId: 'ticket-1' });
   });
 
-  it('closes the ticket through the shared close path on confirm', async () => {
+  it('opens the time-entry drawer prefilled from the session span on Stop', async () => {
+    const stopwatch = makeStopwatch(session);
     renderDetails();
-    await flagCommentAsResolution();
 
-    const confirm = await waitFor(() => {
-      const el = document.getElementById('ticket-details-resolution-close-prompt-confirm');
-      if (!el) throw new Error('close prompt confirm not rendered');
-      return el as HTMLButtonElement;
-    });
-    fireEvent.click(confirm);
+    fireEvent.click(await waitFor(() => {
+      const el = document.getElementById('props-stopwatch-stop');
+      if (!el) throw new Error('stop not rendered');
+      return el;
+    }));
 
-    await waitFor(() => {
-      expect(updateTicketMock).toHaveBeenCalledWith('ticket-1', { status_id: 'status-closed' });
-    });
-    await waitFor(() => {
-      expect(document.getElementById('ticket-details-resolution-close-prompt')).toBeNull();
-    });
-  });
-
-  it('leaves the status untouched when the close is declined', async () => {
-    renderDetails();
-    await flagCommentAsResolution();
-
-    const decline = await waitFor(() => {
-      const el = document.getElementById('ticket-details-resolution-close-prompt-decline');
-      if (!el) throw new Error('close prompt decline not rendered');
-      return el as HTMLButtonElement;
-    });
-    fireEvent.click(decline);
-
-    expect(document.getElementById('ticket-details-resolution-close-prompt')).toBeNull();
-    expect(updateTicketMock).not.toHaveBeenCalled();
-    expect(updateTicketWithCacheMock).not.toHaveBeenCalled();
-  });
-
-  it('opens the blocked-close dialog when close rules are unmet and the customer is silenced', async () => {
-    checkTicketClosureMock.mockResolvedValue({
-      wouldClose: true,
-      allowed: false,
-      failures: [{ rule: 'checklist_incomplete', message: 'Checklist incomplete' }],
-      canOverride: true,
-    });
-    renderDetails();
-    await flagCommentAsResolution();
-
-    const suppress = await waitFor(() =>
-      screen.getByRole('checkbox', { name: "Don't notify the customer" }),
-    );
-    fireEvent.click(suppress);
-    fireEvent.click(document.getElementById('ticket-details-resolution-close-prompt-confirm')!);
-
-    await waitFor(() => {
-      expect(document.getElementById('ticket-details-close-blocked-dialog')).not.toBeNull();
-    });
-    expect(updateTicketMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(launchTimeEntryMock).toHaveBeenCalledTimes(1));
+    expect(stopwatch.requestStop).toHaveBeenCalledTimes(1);
+    const { context } = launchTimeEntryMock.mock.calls[0][0];
+    expect(context.workItemId).toBe('ticket-1');
+    expect(context.startTime).toEqual(span.start);
+    expect(context.endTime).toEqual(span.end);
+    expect(context.stopwatchSessionId).toBe('session-1');
   });
 });

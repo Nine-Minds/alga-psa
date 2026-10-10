@@ -560,5 +560,23 @@
       "linksChanged": "link modificati",
       "updated": "aggiornato"
     }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} tracciato in {{count}} segmento (in pausa {{paused}})",
+    "pausedNotice_other": "{{active}} tracciati in {{count}} segmenti (in pausa {{paused}})",
+    "discardDialog": {
+      "title": "Scartare questo cronometro?",
+      "message": "Il tempo tracciato su {{workItem}} ({{duration}}) verrà eliminato e non verrà creato alcun inserimento ore. L'operazione non può essere annullata.",
+      "confirm": "Scarta",
+      "cancel": "Mantieni cronometro"
+    },
+    "conflictDialog": {
+      "title": "Un cronometro è già aperto",
+      "message": "Stai già tracciando {{duration}} su {{workItem}}. Può essere aperto un solo cronometro alla volta.",
+      "stopAndLog": "Ferma e registra quello attuale, poi avvia",
+      "discard": "Scarta quello attuale, poi avvia (il tempo tracciato viene eliminato)",
+      "confirm": "Continua",
+      "cancel": "Annulla"
+    }
   }
 }
