@@ -428,6 +428,14 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         expect.stringContaining('Skipping workflow launch'),
         expect.objectContaining({ workflowId: 'workflow-1', reason: 'self_trigger' })
       );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-1',
+        expect.objectContaining({
+          error_message: expect.stringContaining('published by a run of this same workflow'),
+        }),
+        'tenant-1'
+      );
     });
 
     it('launches a workflow for another definition and carries causationDepth in trigger metadata', async () => {
@@ -462,6 +470,14 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       expect(loggerWarnMock).toHaveBeenCalledWith(
         expect.stringContaining('Skipping workflow launch'),
         expect.objectContaining({ reason: 'causation_depth_exceeded', causationDepth: 6 })
+      );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-1',
+        expect.objectContaining({
+          error_message: expect.stringContaining('deeper than the causation limit (depth 6'),
+        }),
+        'tenant-1'
       );
     });
 

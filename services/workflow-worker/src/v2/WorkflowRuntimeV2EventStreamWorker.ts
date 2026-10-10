@@ -459,6 +459,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
         candidateWorkflowId: workflow.workflow_id,
       });
       if (!selfTrigger.allow) {
+        skipDiagnostics.push(
+          selfTrigger.reason === 'self_trigger'
+            ? `Skipped ${skipLabel}: event was published by a run of this same workflow (trigger loop guard)`
+            : `Skipped ${skipLabel}: event chain is deeper than the causation limit (depth ${selfTrigger.causationDepth}, trigger loop guard)`
+        );
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Skipping workflow launch: event was caused by this workflow chain', {
           workerId: this.workerId,
           eventId: event.event_id,
