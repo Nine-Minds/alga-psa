@@ -390,12 +390,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-entries/{id}', summary: 'Get time entry', description: 'Gets time entry UUID.', family: 'time_entry' },
     { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID.', family: 'time_entry' },
 
-    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod().', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.', family: 'time_sheet' },
 
