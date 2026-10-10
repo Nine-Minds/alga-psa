@@ -21,12 +21,18 @@ export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'C
 
 // Base time entry schema (without refinements)
 const baseTimeEntrySchema = z.object({
-  work_item_id: uuidSchema.optional(),
+  work_item_id: uuidSchema.optional().describe(
+    'Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types.'
+  ),
   work_item_type: workItemTypeSchema,
-  start_time: z.string().datetime(),
-  end_time: z.string().datetime(),
+  start_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted.'
+  ),
+  end_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted.'
+  ),
   notes: z.string().optional(),
-  service_id: uuidSchema.optional(),
+  service_id: uuidSchema.optional().describe('Required on create (it drives billing); cannot be cleared on update.'),
   tax_region: z.string().optional(),
   is_billable: z.boolean().optional().default(true)
 });
@@ -62,7 +68,16 @@ function validateTimeEntryWrite(
 }
 
 // Create time entry schema
-export const createTimeEntrySchema = baseTimeEntrySchema.superRefine((data, ctx) => {
+// service_id is required at the type level so the OpenAPI conversion lists it as required;
+// a superRefine requirement alone is invisible to the generator.
+const createTimeEntryObjectSchema = baseTimeEntrySchema.extend({
+  service_id: z
+    .string({ required_error: 'service_id is required for time entries' })
+    .uuid()
+    .describe('Required (it drives billing).')
+});
+
+export const createTimeEntrySchema = createTimeEntryObjectSchema.superRefine((data, ctx) => {
   validateTimeEntryWrite(data, ctx, { requireServiceId: true });
 });
 

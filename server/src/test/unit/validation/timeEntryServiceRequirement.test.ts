@@ -57,4 +57,30 @@ describe('time entry service requirement validation', () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
   });
+
+  it('reports a missing service_id with the documented message at path service_id', () => {
+    const result = createTimeEntrySchema.safeParse(baseCreatePayload);
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues.find(i => i.path[0] === 'service_id');
+    expect(issue?.path).toEqual(['service_id']);
+    expect(issue?.message).toBe('service_id is required for time entries');
+  });
+
+  it('rejects end_time that is not after start_time at path end_time', () => {
+    const result = createTimeEntrySchema.safeParse({
+      ...baseCreatePayload,
+      service_id: '00000000-0000-4000-8000-000000000002',
+      end_time: baseCreatePayload.start_time,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.some(i => i.path[0] === 'end_time')).toBe(true);
+  });
+
+  it('accepts a complete create payload', () => {
+    const result = createTimeEntrySchema.safeParse({
+      ...baseCreatePayload,
+      service_id: '00000000-0000-4000-8000-000000000002',
+    });
+    expect(result.success).toBe(true);
+  });
 });
