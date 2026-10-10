@@ -10,6 +10,7 @@ import { surveyContracts } from './contracts/surveys';
 import { emailContracts } from './contracts/email';
 import { notificationContracts } from './contracts/notifications';
 import { integrationContracts } from './contracts/integrations';
+import { assetContracts } from './contracts/assets';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -40,6 +41,7 @@ export const emitterContracts: EmitterContracts = {
   ...emailContracts,
   ...notificationContracts,
   ...integrationContracts,
+  ...assetContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -63,11 +65,6 @@ export const emitterContracts: EmitterContracts = {
   OPPORTUNITY_SUGGESTION_CREATED: schemaNotRegistered('OPPORTUNITY_SUGGESTION_CREATED', 'payload.OpportunitySuggestionCreated.v1'),
   // ---- documents ----
   // ---- comms ----
-  ASSET_ASSIGNED: pendingMigration('ASSET_ASSIGNED', 'comms'),
-  ASSET_CREATED: pendingMigration('ASSET_CREATED', 'comms'),
-  ASSET_UNASSIGNED: pendingMigration('ASSET_UNASSIGNED', 'comms'),
-  ASSET_UPDATED: pendingMigration('ASSET_UPDATED', 'comms'),
-  ASSET_WARRANTY_EXPIRING: pendingMigration('ASSET_WARRANTY_EXPIRING', 'comms'),
   // ---- remaining ----
   INVENTORY_STOCK_LOW: schemaNotRegistered('INVENTORY_STOCK_LOW', 'payload.InventoryStockLow.v1'),
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
