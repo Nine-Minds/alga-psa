@@ -31,7 +31,7 @@ beforeAll(async () => {
     `{ tenant, contract_line_id: '${randomUUID()}', contract_id: '${contract}', is_active: ${active} }`;
   const cc = (contract: string) =>
     `{ tenant, client_contract_id: '${randomUUID()}', contract_id: '${contract}', is_active: true }`;
-  fs.writeFileSync(path.join(scratchMigrationsDir, '20261010110000_qc_fixture_tables.cjs'), `exports.up = async (knex) => {
+  fs.writeFileSync(path.join(scratchMigrationsDir, '20261010090000_qc_fixture_tables.cjs'), `exports.up = async (knex) => {
     await knex.schema.createTable('contracts', t => {
       t.uuid('tenant').notNullable(); t.uuid('contract_id').notNullable();
       t.text('status'); t.jsonb('template_metadata'); t.primary(['tenant', 'contract_id']);
