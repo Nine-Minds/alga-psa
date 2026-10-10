@@ -168,7 +168,8 @@
       "expandGroup": "Groep uitvouwen",
       "collapseGroup": "Groep samenvouwen",
       "renameGroup": "Groep hernoemen",
-      "deleteGroup": "Groep verwijderen"
+      "deleteGroup": "Groep verwijderen",
+      "groupMenu": "Groepsacties"
     },
     "dropActivitiesHere": "Activiteiten hier neerzetten",
     "ungroupedHeading": "Niet gegroepeerd",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Prioriteit",
       "dueDate": "Vervaldatum"
+    },
+    "defaultBadge": "Standaard",
+    "defaultBadgeHint": "Activiteiten die u niet in een groep hebt geplaatst, verschijnen hier, inclusief nieuw toegewezen werk.",
+    "defaultGroupEmpty": "Nieuw aan u toegewezen werk verschijnt hier",
+    "menu": {
+      "setDefault": "Instellen als standaard voor nieuw werk",
+      "unsetDefault": "Niet meer als standaard gebruiken"
+    },
+    "errors": {
+      "setDefaultFailed": "De standaardgroep kon niet worden bijgewerkt"
     }
   },
   "printable": {

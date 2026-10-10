@@ -14,12 +14,15 @@ export const UNGROUPED_KEY = "__ungrouped__";
 
 /**
  * Bucket the (already-filtered) activity list into the user's saved custom groups for the
- * read-only "My groups" view. Groups and their items are emitted in saved order; activities
- * not in any group fall into a trailing "Ungrouped" bucket. Items whose activity isn't in
- * the current set (filtered out, or beyond the fetch) are skipped — mirroring the web,
- * which buckets against the activities currently in view. Produces the same shape as the
- * server's dimension grouping so the existing grouped renderer is reused unchanged.
+ * read-only "My groups" view. Groups and their items are emitted in saved order. Activities
+ * not pinned to any group fall into the user's default group when one is set (listed before
+ * the pinned items, in input order); otherwise into a trailing "Ungrouped" bucket. Items
+ * whose activity isn't in the current set (filtered out, or beyond the fetch) are skipped —
+ * mirroring the web, which buckets against the activities currently in view. Produces the
+ * same shape as the server's dimension grouping so the existing grouped renderer is reused
+ * unchanged.
  */
+// LEVERAGE: pattern activity-group-partition — mirrors packages/user-activities/src/lib/groupPartition.ts; mobile cannot import workspace packages
 export function buildCustomGroups(
   activities: Activity[],
   customGroups: CustomActivityGroup[],
@@ -28,24 +31,31 @@ export function buildCustomGroups(
   for (const a of activities) byKey.set(`${a.type}:${a.id}`, a);
   const claimed = new Set<string>();
 
-  const groups: ActivityGroup[] = [...customGroups]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((g) => {
-      const groupActivities: Activity[] = [];
-      for (const item of [...g.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
-        const key = `${item.activityType}:${item.activityId}`;
-        const activity = byKey.get(key);
-        if (activity && !claimed.has(key)) {
-          groupActivities.push(activity);
-          claimed.add(key);
-        }
+  const sorted = [...customGroups].sort((a, b) => a.sortOrder - b.sortOrder);
+  const pinnedByGroup = sorted.map((g) => {
+    const groupActivities: Activity[] = [];
+    for (const item of [...g.items].sort((a, b) => a.sortOrder - b.sortOrder)) {
+      const key = `${item.activityType}:${item.activityId}`;
+      const activity = byKey.get(key);
+      if (activity && !claimed.has(key)) {
+        groupActivities.push(activity);
+        claimed.add(key);
       }
-      return { key: g.groupId, label: g.groupName, count: groupActivities.length, activities: groupActivities };
-    });
+    }
+    return groupActivities;
+  });
 
-  const ungrouped = activities.filter((a) => !claimed.has(`${a.type}:${a.id}`));
-  if (ungrouped.length > 0) {
-    groups.push({ key: UNGROUPED_KEY, label: "Ungrouped", count: ungrouped.length, activities: ungrouped });
+  const unpinned = activities.filter((a) => !claimed.has(`${a.type}:${a.id}`));
+  const defaultId = sorted.find((g) => g.isDefault)?.groupId;
+
+  const groups: ActivityGroup[] = sorted.map((g, i) => {
+    const groupActivities = g.groupId === defaultId ? [...unpinned, ...pinnedByGroup[i]] : pinnedByGroup[i];
+    return { key: g.groupId, label: g.groupName, count: groupActivities.length, activities: groupActivities };
+  });
+
+  // With a default group there is no Ungrouped bucket. (Label is hard-coded, not localized.)
+  if (!defaultId && unpinned.length > 0) {
+    groups.push({ key: UNGROUPED_KEY, label: "Ungrouped", count: unpinned.length, activities: unpinned });
   }
   return groups;
 }

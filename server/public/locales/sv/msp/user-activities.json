@@ -168,7 +168,8 @@
       "expandGroup": "Expandera grupp",
       "collapseGroup": "Fäll ihop grupp",
       "renameGroup": "Byt namn på grupp",
-      "deleteGroup": "Radera grupp"
+      "deleteGroup": "Radera grupp",
+      "groupMenu": "Gruppåtgärder"
     },
     "dropActivitiesHere": "Släpp aktiviteter här",
     "ungroupedHeading": "Ogrupperade",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Prioritet",
       "dueDate": "Måldatum"
+    },
+    "defaultBadge": "Standard",
+    "defaultBadgeHint": "Aktiviteter som du inte har placerat i en grupp visas här, inklusive nyligen tilldelat arbete.",
+    "defaultGroupEmpty": "Nytt arbete som tilldelas dig visas här",
+    "menu": {
+      "setDefault": "Gör till standard för nytt arbete",
+      "unsetDefault": "Sluta använda som standard"
+    },
+    "errors": {
+      "setDefaultFailed": "Det gick inte att uppdatera standardgruppen"
     }
   },
   "printable": {
