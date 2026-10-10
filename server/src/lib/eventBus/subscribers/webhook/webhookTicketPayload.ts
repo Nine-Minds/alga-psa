@@ -90,6 +90,8 @@ export type TicketWebhookPayload = {
   category_id: string | null;
   subcategory_id: string | null;
   is_closed: boolean;
+  /** Current response state of the ticket (awaiting_client / awaiting_internal / null). */
+  response_state?: string | null;
   entered_at: string | null;
   updated_at: string | null;
   closed_at: string | null;
@@ -138,6 +140,7 @@ type TicketWebhookRow = {
   category_id: string | null;
   subcategory_id: string | null;
   is_closed: boolean | null;
+  response_state: string | null;
   entered_at: string | null;
   updated_at: string | null;
   closed_at: string | null;
@@ -203,6 +206,11 @@ export async function buildTicketWebhookPayload(
     };
     payload.previous_response_state = asResponseState(eventPayload.previousState ?? eventPayload.previousResponseState);
     payload.new_response_state = asResponseState(eventPayload.newState ?? eventPayload.newResponseState);
+    // The snapshot may predate this transition (60s cache), so the event is
+    // authoritative: make the snapshot agree with it and drop the stale entry
+    // so following events re-read the ticket.
+    payload.response_state = payload.new_response_state;
+    ticketWebhookCache.delete(`${tenantId}:${ticketId}`);
   }
 
   const comment = normalizeCommentPayload(internalEvent);
@@ -310,6 +318,7 @@ async function fetchTicketWebhookPayload(
     category_id: ticket.category_id ?? null,
     subcategory_id: ticket.subcategory_id ?? null,
     is_closed: Boolean(ticket.is_closed),
+    response_state: asResponseState(ticket.response_state),
     entered_at: ticket.entered_at ?? null,
     updated_at: ticket.updated_at ?? null,
     closed_at: ticket.closed_at ?? null,
@@ -357,6 +366,7 @@ async function fetchTicketWebhookRow(
       't.category_id',
       't.subcategory_id',
       knex.raw('COALESCE(t.is_closed, s.is_closed, false) as is_closed'),
+      't.response_state',
       't.entered_at',
       't.updated_at',
       't.closed_at',

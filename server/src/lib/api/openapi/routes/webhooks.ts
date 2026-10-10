@@ -581,6 +581,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       status_id: zOpenApi.string().uuid().nullable().optional(),
       status_name: zOpenApi.string().nullable().optional(),
       is_closed: zOpenApi.boolean().optional(),
+      response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Current response state of the ticket. On ticket.response_state_changed it equals new_response_state.'),
       previous_status_id: zOpenApi
         .string()
         .uuid()

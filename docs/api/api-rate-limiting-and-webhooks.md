@@ -111,7 +111,7 @@ Ticket webhooks support these event types in v1:
 - `ticket.assigned`
 - `ticket.closed`
 - `ticket.comment.added`
-- `ticket.response_state_changed` (payload adds `previous_response_state` / `new_response_state`; `comment` and `comments[]` entries now also carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them)
+- `ticket.response_state_changed` (payload adds `previous_response_state` / `new_response_state`, and `response_state` always reflects the current state — equal to `new_response_state` on this event; `comment` and `comments[]` entries now also carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them)
 
 ### Notification Suppression
 

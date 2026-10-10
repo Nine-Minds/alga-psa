@@ -13293,6 +13293,7 @@ components:
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
                   - previous_response_state
@@ -13364,9 +13365,9 @@ components:
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
-            previous_response_state, new_response_state, priority_id,
-            priority_name, client_id, client_name, contact_name_id,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
+            priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
             entered_at, updated_at, closed_at, due_date, tags, comment, changes,
@@ -13591,9 +13592,9 @@ components:
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
-            previous_response_state, new_response_state, priority_id,
-            priority_name, client_id, client_name, contact_name_id,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
+            priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
             entered_at, updated_at, closed_at, due_date, tags, comment, changes,
@@ -14334,6 +14335,15 @@ components:
             - "null"
         is_closed:
           type: boolean
+        response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Current response state of the ticket. On
+            ticket.response_state_changed it equals new_response_state.
         previous_status_id:
           type:
             - string

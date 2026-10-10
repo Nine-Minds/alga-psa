@@ -124,6 +124,10 @@ import { processWebhookDeliveryJob } from '../../lib/webhooks/processWebhookDeli
 import { verifyWebhookSignature, WEBHOOK_SIGNATURE_HEADER } from '../../lib/webhooks/sign';
 import { webhookModel } from '../../lib/webhooks/webhookModel';
 import {
+  buildTicketWebhookPayload,
+  clearTicketWebhookPayloadCache,
+} from '../../lib/eventBus/subscribers/webhook/webhookTicketPayload';
+import {
   applyCommentResponseState,
   resolveCommentAuthor,
 } from '@alga-psa/shared/lib/tickets/responseState';
@@ -394,6 +398,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
           ticket_id: ticketId,
           previous_response_state: null,
           new_response_state: 'awaiting_client',
+          response_state: 'awaiting_client',
         },
       });
       const header = hit.headers[WEBHOOK_SIGNATURE_HEADER.toLowerCase()];
@@ -402,6 +407,31 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
       await stub.close();
       TokenBucketRateLimiter.resetInstance();
     }
+  });
+
+  it('4b. response_state_changed snapshot matches new state even when the ticket snapshot was cached before the change', async () => {
+    clearTicketWebhookPayloadCache();
+    const ticketId = await createTicket(null);
+    const base = { tenantId, ticketId };
+
+    // Warm the 60s per-ticket cache while response_state is still null.
+    const before = await buildTicketWebhookPayload({ eventType: 'TICKET_COMMENT_ADDED', payload: base }, db);
+    expect(before.response_state).toBeNull();
+
+    await table('tickets').where({ ticket_id: ticketId }).update({ response_state: 'awaiting_client' });
+
+    const changed = await buildTicketWebhookPayload({
+      eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+      payload: { ...base, previousResponseState: null, newResponseState: 'awaiting_client' },
+    }, db);
+    expect(changed.new_response_state).toBe('awaiting_client');
+    expect(changed.response_state).toBe('awaiting_client');
+
+    // The stale entry must not leak into the next event either.
+    await table('tickets').where({ ticket_id: ticketId }).update({ response_state: 'awaiting_internal' });
+    const next = await buildTicketWebhookPayload({ eventType: 'TICKET_COMMENT_ADDED', payload: base }, db);
+    expect(next.response_state).toBe('awaiting_internal');
+    clearTicketWebhookPayloadCache();
   });
 
   it('5. a contact comment webhook payload carries author_type + contact_name in comment and comments[]', async () => {
