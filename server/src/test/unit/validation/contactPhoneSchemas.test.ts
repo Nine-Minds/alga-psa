@@ -132,4 +132,41 @@ describe('contact phone API schemas', () => {
 
     expect(parsed.success).toBe(true);
   });
+
+  describe('phone row strictness', () => {
+    const base = { full_name: 'Jane Doe', email: 'jane@example.com' };
+
+    it('rejects an unrecognized key such as type at phone_numbers.0', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        phone_numbers: [{ phone_number: '555-0100', type: 'work', is_default: true }],
+      });
+      expect(result.success).toBe(false);
+      const issue = result.error?.issues.find(i => i.code === 'unrecognized_keys');
+      expect(issue?.path).toEqual(['phone_numbers', 0]);
+    });
+
+    it('accepts canonical_type work with is_default', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        phone_numbers: [{ phone_number: '555-0100', canonical_type: 'work', is_default: true }],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts read-only response keys so a GET row can be sent back', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        phone_numbers: [{
+          contact_phone_number_id: '00000000-0000-4000-8000-000000000001',
+          phone_number: '555-0100',
+          canonical_type: 'work',
+          is_default: true,
+          normalized_phone_number: '5550100',
+          custom_phone_type_id: null,
+        }],
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 });

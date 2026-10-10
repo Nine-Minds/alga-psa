@@ -13290,37 +13290,113 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "full_name": {
+        "contact_kind": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 255
+          "enum": [
+            "person",
+            "shared_mailbox"
+          ]
+        },
+        "full_name": {
+          "type": "string"
         },
         "client_id": {
           "type": "string",
+          "format": "uuid"
+        },
+        "manager_contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "phone_numbers": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_phone_number_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "phone_number": {
+                "type": "string"
+              },
+              "extension": {
+                "type": "string",
+                "description": "Digits only."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "mobile",
+                  "home",
+                  "fax",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_phone_number": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_phone_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "phone_number"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+          },
+          "default": []
         },
         "email": {
-          "type": "string",
-          "format": "email"
+          "type": "string"
         },
         "primary_email_canonical_type": {
           "type": [
             "string",
             "null"
+          ],
+          "enum": [
+            "work",
+            "personal",
+            "billing",
+            "other"
           ]
         },
         "primary_email_custom_type": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "minLength": 1
         },
         "primary_email_custom_type_id": {
           "type": [
@@ -13333,17 +13409,70 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_additional_email_address_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "email_address": {
+                "type": "string",
+                "description": "Must be a valid email address."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "personal",
+                  "billing",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_email_address": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_email_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "email_address"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+          },
+          "default": []
         },
         "role": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "notes": {
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "tags": {
           "type": "array",
@@ -13355,7 +13484,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "full_name",
         "email"
-      ]
+      ],
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -13437,36 +13567,105 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "full_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
+          "type": "string"
         },
         "client_id": {
           "type": "string",
+          "format": "uuid"
+        },
+        "manager_contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "uuid"
         },
         "phone_numbers": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_phone_number_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "phone_number": {
+                "type": "string"
+              },
+              "extension": {
+                "type": "string",
+                "description": "Digits only."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "mobile",
+                  "home",
+                  "fax",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "is_default": {
+                "type": "boolean"
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_phone_number": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_phone_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "phone_number"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+          },
+          "default": []
         },
         "email": {
-          "type": "string",
-          "format": "email"
+          "type": "string"
         },
         "primary_email_canonical_type": {
           "type": [
             "string",
             "null"
+          ],
+          "enum": [
+            "work",
+            "personal",
+            "billing",
+            "other"
           ]
         },
         "primary_email_custom_type": {
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "minLength": 1
         },
         "primary_email_custom_type_id": {
           "type": [
@@ -13479,17 +13678,70 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "contact_additional_email_address_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Include to keep an existing row on update; omit for a new row."
+              },
+              "email_address": {
+                "type": "string",
+                "description": "Must be a valid email address."
+              },
+              "canonical_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "work",
+                  "personal",
+                  "billing",
+                  "other"
+                ]
+              },
+              "custom_type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "display_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "normalized_email_address": {
+                "type": "string",
+                "description": "Read-only; ignored on write."
+              },
+              "custom_email_type_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Read-only; ignored on write."
+              }
+            },
+            "required": [
+              "email_address"
+            ],
+            "additionalProperties": false,
+            "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+          },
+          "default": []
         },
         "role": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 100
         },
         "notes": {
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "tags": {
           "type": "array",
@@ -13498,10 +13750,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         }
       },
-      "required": [
-        "full_name",
-        "email"
-      ]
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -47975,32 +48224,53 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "work_item_type": {
-          "type": "string"
-        },
         "work_item_id": {
-          "type": "string"
-        },
-        "user_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
         },
-        "started_at": {
-          "type": "string"
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "non_billable_category",
+            "ad_hoc",
+            "interaction"
+          ]
         },
-        "ended_at": {
-          "type": "string"
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
         },
-        "duration_minutes": {
-          "type": "number"
-        },
-        "billable_minutes": {
-          "type": "number"
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
         },
         "notes": {
           "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required (it drives billing)."
+        },
+        "tax_region": {
+          "type": "string"
+        },
+        "is_billable": {
+          "type": "boolean",
+          "default": true
         }
-      }
+      },
+      "required": [
+        "work_item_type",
+        "start_time",
+        "end_time",
+        "service_id"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48190,8 +48460,67 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "work_item_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+              },
+              "work_item_type": {
+                "type": "string",
+                "enum": [
+                  "ticket",
+                  "project_task",
+                  "non_billable_category",
+                  "ad_hoc",
+                  "interaction"
+                ]
+              },
+              "start_time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+              },
+              "end_time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+              },
+              "notes": {
+                "type": "string"
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Required (it drives billing)."
+              },
+              "tax_region": {
+                "type": "string"
+              },
+              "is_billable": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": [
+              "work_item_type",
+              "start_time",
+              "end_time",
+              "service_id"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entries"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48235,8 +48564,74 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entry_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "work_item_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+                  },
+                  "work_item_type": {
+                    "type": "string",
+                    "enum": [
+                      "ticket",
+                      "project_task",
+                      "non_billable_category",
+                      "ad_hoc",
+                      "interaction"
+                    ]
+                  },
+                  "start_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+                  },
+                  "end_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "service_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Required on create (it drives billing); cannot be cleared on update."
+                  },
+                  "tax_region": {
+                    "type": "string"
+                  },
+                  "is_billable": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            },
+            "required": [
+              "entry_id",
+              "data"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entries"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -48280,8 +48675,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "parameters": [],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "entry_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 50
+        }
+      },
+      "required": [
+        "entry_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -49035,8 +49442,48 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+        },
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "non_billable_category",
+            "ad_hoc",
+            "interaction"
+          ]
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Required on create (it drives billing); cannot be cleared on update."
+        },
+        "tax_region": {
+          "type": "string"
+        },
+        "is_billable": {
+          "type": "boolean",
+          "default": true
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",

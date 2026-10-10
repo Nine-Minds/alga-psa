@@ -68,4 +68,31 @@ describe('contact email API schemas', () => {
 
     expect(parsed.success).toBe(true);
   });
+
+  describe('additional email row strictness', () => {
+    const base = { full_name: 'Jane Doe', email: 'jane@example.com' };
+
+    it('rejects an unrecognized key such as type at additional_email_addresses.0', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        additional_email_addresses: [{ email_address: 'jd@example.com', type: 'work' }],
+      });
+      expect(result.success).toBe(false);
+      const issue = result.error?.issues.find(i => i.code === 'unrecognized_keys');
+      expect(issue?.path).toEqual(['additional_email_addresses', 0]);
+    });
+
+    it('accepts a canonical_type row and read-only response keys', () => {
+      const result = createContactSchema.safeParse({
+        ...base,
+        additional_email_addresses: [{
+          email_address: 'jd@example.com',
+          canonical_type: 'work',
+          normalized_email_address: 'jd@example.com',
+          custom_email_type_id: null,
+        }],
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 });

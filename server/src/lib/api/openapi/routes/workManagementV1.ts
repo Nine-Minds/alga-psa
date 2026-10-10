@@ -1,4 +1,11 @@
 import type { ZodTypeAny } from 'zod';
+import {
+  bulkDeleteTimeEntrySchema,
+  bulkTimeEntrySchema,
+  bulkUpdateTimeEntrySchema,
+  createTimeEntrySchema,
+  updateTimeEntrySchema,
+} from '../../schemas/timeEntry';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
@@ -231,19 +238,20 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const CreateTimeEntryBody = registry.registerSchema(
-    'WorkV1CreateTimeEntryBody',
-    zOpenApi.object({
-      work_item_type: zOpenApi.string().optional(),
-      work_item_id: zOpenApi.string().optional(),
-      user_id: zOpenApi.string().uuid().optional(),
-      started_at: zOpenApi.string().optional(),
-      ended_at: zOpenApi.string().optional(),
-      duration_minutes: zOpenApi.number().optional(),
-      billable_minutes: zOpenApi.number().optional(),
-      notes: zOpenApi.string().optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const CreateTimeEntryBody = registry.registerSchema('WorkV1CreateTimeEntryBody', createTimeEntrySchema);
+  const UpdateTimeEntryBody = registry.registerSchema('WorkV1UpdateTimeEntryBody', updateTimeEntrySchema);
+  const BulkCreateTimeEntriesBody = registry.registerSchema('WorkV1BulkCreateTimeEntriesBody', bulkTimeEntrySchema);
+  const BulkUpdateTimeEntriesBody = registry.registerSchema('WorkV1BulkUpdateTimeEntriesBody', bulkUpdateTimeEntrySchema);
+  const BulkDeleteTimeEntriesBody = registry.registerSchema('WorkV1BulkDeleteTimeEntriesBody', bulkDeleteTimeEntrySchema);
+
+  const timeEntryBodySchemas: Record<string, ZodTypeAny> = {
+    'post /api/v1/time-entries': CreateTimeEntryBody,
+    'put /api/v1/time-entries/{id}': UpdateTimeEntryBody,
+    'post /api/v1/time-entries/bulk': BulkCreateTimeEntriesBody,
+    'put /api/v1/time-entries/bulk': BulkUpdateTimeEntriesBody,
+    'delete /api/v1/time-entries/bulk': BulkDeleteTimeEntriesBody,
+  };
 
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
@@ -479,7 +487,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.body = { schema };
     }
     if (def.path.startsWith('/api/v1/tags') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/tags' && def.method === 'post' ? CreateTagBody : GenericBody };
-    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-entries' && def.method === 'post' ? CreateTimeEntryBody : GenericBody };
+    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) {
+      req.body = { schema: timeEntryBodySchemas[`${def.method} ${def.path}`] ?? GenericBody };
+    }
     if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/time-periods') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
 
     return req;
