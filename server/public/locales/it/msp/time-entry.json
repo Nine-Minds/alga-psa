@@ -511,6 +511,14 @@
       "duplicate": "Esiste già un’impostazione del periodo in conflitto.",
       "missingField": "Manca un campo obbligatorio dell’impostazione del periodo.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Sessione del cronometro non trovata. Potrebbe essere già stata registrata o scartata. Aggiorna la pagina.",
+      "notOpen": "Questa sessione del cronometro è già chiusa.",
+      "workItemNotFound": "Impossibile trovare l'elemento di lavoro di questo cronometro.",
+      "unsupportedWorkItem": "Il cronometro può essere avviato solo su ticket e attività di progetto.",
+      "boardDisabled": "Il cronometro è disattivato per la bacheca di questo ticket.",
+      "alreadyOpen": "Hai già un cronometro in corso. Fermalo o scartalo prima."
     }
   },
   "workItemEntry": {

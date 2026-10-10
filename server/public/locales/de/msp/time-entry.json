@@ -511,6 +511,14 @@
       "duplicate": "Es existiert bereits eine widersprüchliche Zeitraumeinstellung.",
       "missingField": "Erforderliches Feld der Zeitraumeinstellung fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Stoppuhr-Sitzung nicht gefunden. Sie wurde möglicherweise bereits gebucht oder verworfen. Bitte aktualisieren Sie die Seite.",
+      "notOpen": "Diese Stoppuhr-Sitzung ist bereits geschlossen.",
+      "workItemNotFound": "Das Arbeitselement dieser Stoppuhr wurde nicht gefunden.",
+      "unsupportedWorkItem": "Die Stoppuhr kann nur für Tickets und Projektaufgaben gestartet werden.",
+      "boardDisabled": "Die Stoppuhr ist für das Board dieses Tickets deaktiviert.",
+      "alreadyOpen": "Es läuft bereits eine Stoppuhr. Beenden oder verwerfen Sie sie zuerst."
     }
   },
   "workItemEntry": {

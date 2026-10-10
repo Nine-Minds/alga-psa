@@ -35,6 +35,7 @@ import {
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
 } from './timeEntryChangeRequestActions';
 import { persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
+import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -295,7 +296,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 export const saveTimeEntry = withAuth(async (
   user,
   { tenant },
-  timeEntry: Omit<ITimeEntry, 'tenant'>
+  timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
 ): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
   const {knex: db} = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
@@ -323,9 +324,33 @@ export const saveTimeEntry = withAuth(async (
 
     // Everything from ownership checks to bucket/hour-block draws lives in the
     // shared write core (D6); it runs inside this action-owned transaction.
-    const persisted = await db.transaction((trx) =>
-      persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry }),
-    );
+    // With a stopwatch session the entry and the session close together (logSession semantics):
+    // the drawer's values win over the session-derived ones, the session must be the acting
+    // user's own open session, and any failure rolls back both.
+    const stopwatchSessionId = validatedTimeEntry.stopwatch_session_id;
+    if (stopwatchSessionId && validatedTimeEntry.entry_id) {
+      throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
+    }
+    const persisted = await db.transaction(async (trx) => {
+      if (!stopwatchSessionId) {
+        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry });
+      }
+      const logged = await logSession(trx, tenant, user, stopwatchSessionId, {
+        work_item_id: validatedTimeEntry.work_item_id,
+        work_item_type: validatedTimeEntry.work_item_type,
+        start_time: validatedTimeEntry.start_time,
+        end_time: validatedTimeEntry.end_time,
+        billable_duration: validatedTimeEntry.billable_duration,
+        notes: validatedTimeEntry.notes,
+        service_id: validatedTimeEntry.service_id,
+        contract_line_id: validatedTimeEntry.contract_line_id,
+        tax_region: validatedTimeEntry.tax_region,
+        tax_rate_id: validatedTimeEntry.tax_rate_id,
+        time_sheet_id: validatedTimeEntry.time_sheet_id,
+        user_id: validatedTimeEntry.user_id,
+      });
+      return logged.persisted;
+    });
 
     // Post-commit: publish only after the transaction above has committed.
     await publishPersistedTimeEntryEvents(persisted);

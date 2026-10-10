@@ -511,6 +511,14 @@
       "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Stoppurssessionen hittades inte. Den kan redan ha loggats eller förkastats. Uppdatera sidan.",
+      "notOpen": "Den här stoppurssessionen är redan stängd.",
+      "workItemNotFound": "Arbetsobjektet för det här stoppuret hittades inte.",
+      "unsupportedWorkItem": "Stoppuret kan bara startas på ärenden och projektuppgifter.",
+      "boardDisabled": "Stoppuret är avstängt för det här ärendets tavla.",
+      "alreadyOpen": "Du har redan ett stoppur igång. Stoppa eller förkasta det först."
     }
   },
   "workItemEntry": {

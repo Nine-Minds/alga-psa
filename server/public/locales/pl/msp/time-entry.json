@@ -515,6 +515,14 @@
       "duplicate": "Istnieje już sprzeczne ustawienie okresu.",
       "missingField": "Brakuje wymaganego pola ustawienia okresu.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawienia okresu: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Nie znaleziono sesji stopera. Mogła zostać już zapisana lub odrzucona. Odśwież stronę.",
+      "notOpen": "Ta sesja stopera jest już zamknięta.",
+      "workItemNotFound": "Nie znaleziono elementu pracy dla tego stopera.",
+      "unsupportedWorkItem": "Stoper można uruchomić tylko dla zgłoszeń i zadań projektu.",
+      "boardDisabled": "Stoper jest wyłączony dla tablicy tego zgłoszenia.",
+      "alreadyOpen": "Stoper jest już uruchomiony. Najpierw go zatrzymaj lub odrzuć."
     }
   },
   "workItemEntry": {

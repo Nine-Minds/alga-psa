@@ -231,6 +231,8 @@ export class TimeEntryService extends BaseService<any> {
     };
   }
 
+  // LEVERAGE: friction time-entry-write-paths — this thinner create skips sheet resolution, bucket draw, hour-block burn and
+  // ticket/task resource adding that persistTimeEntry (@alga-psa/scheduling timeEntryWriteCore) does; it should move onto the core.
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 

@@ -511,6 +511,14 @@
       "duplicate": "A conflicting time period setting already exists.",
       "missingField": "Missing required time period setting field.",
       "missingFieldNamed": "Missing required time period setting field: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Stopwatch session not found. It may already have been logged or discarded. Please refresh.",
+      "notOpen": "This stopwatch session is already closed.",
+      "workItemNotFound": "The work item for this stopwatch could not be found.",
+      "unsupportedWorkItem": "The stopwatch can only be started on tickets and project tasks.",
+      "boardDisabled": "The stopwatch is turned off for this ticket's board.",
+      "alreadyOpen": "You already have a stopwatch running. Stop or discard it first."
     }
   },
   "workItemEntry": {

@@ -511,6 +511,14 @@
       "duplicate": "Er bestaat al een conflicterende periode-instelling.",
       "missingField": "Er ontbreekt een verplicht veld van de periode-instelling.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de periode-instelling: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Stopwatchsessie niet gevonden. Mogelijk is deze al vastgelegd of verworpen. Vernieuw de pagina.",
+      "notOpen": "Deze stopwatchsessie is al gesloten.",
+      "workItemNotFound": "Het werkitem van deze stopwatch kon niet worden gevonden.",
+      "unsupportedWorkItem": "De stopwatch kan alleen worden gestart op tickets en projecttaken.",
+      "boardDisabled": "De stopwatch is uitgeschakeld voor het bord van dit ticket.",
+      "alreadyOpen": "Er loopt al een stopwatch. Stop of verwerp deze eerst."
     }
   },
   "workItemEntry": {
