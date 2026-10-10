@@ -673,8 +673,8 @@
           "suppressAiHelp": "Somente complemento Enterprise IA Assistant. Se não estiver disponível, as respostas reabrem normalmente."
         },
         "liveTimer": {
-          "label": "Ativar cronômetro de ticket ao vivo",
-          "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
+          "label": "Mostrar cronômetro nos tickets",
+          "help": "Mostra os controles do cronômetro nos tickets deste quadro. Desative para ocultar o cronômetro aqui; a entrada manual de hora permanece disponível. Um cronômetro que já está em execução continua em execução."
         },
         "clientPortalVisible": {
           "label": "Visível no portal do cliente",
@@ -851,7 +851,7 @@
           "statuses": "Prioridades e status",
           "statusesHelp": "Prioridade padrão e os status de ticket deste quadro",
           "display": "Exibição e comportamento",
-          "displayHelp": "Cronômetro ao vivo e tipo de quadro"
+          "displayHelp": "Cronômetro e tipo de quadro"
         },
         "saveChanges": "Salvar alterações",
         "unsaved": "Não salvo",

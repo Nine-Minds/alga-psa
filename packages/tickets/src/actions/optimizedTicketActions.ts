@@ -54,6 +54,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
 import Comment from '../models/comment';
@@ -106,6 +107,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
@@ -770,8 +772,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           board_id: ticket.board_id
         })
         .first() : null;
-    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
-      board.enable_live_ticket_timer = true;
+    if (board) {
+      board.enable_live_ticket_timer = resolveBoardStopwatchEnabled(board.enable_live_ticket_timer);
     }
 
     // The `users` fetch above is deliberately narrowed to internal active users so
@@ -2954,9 +2956,10 @@ export async function updateTicketInTransaction(
         }
         
         // Step 5: Update the ticket with the new assigned_to
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
-          .update({ ...updateData, ...ticketStamp })
+          .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketStamp })
           .returning('*');
           
         // Step 6: Re-create the resources with the new assigned_to
@@ -2970,9 +2973,10 @@ export async function updateTicketInTransaction(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update({ ...updateData, ...ticketStamp })
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketStamp })
         .returning('*');
     }
 

@@ -97,11 +97,19 @@ export function createCatalogSheetResolver(params: {
  * entry's date instead of a sheet fixed when the form opened.
  */
 export const createTimeEntrySaveHandler =
-  (onComplete?: () => void, resolveTimeSheetId?: TimeSheetResolver) =>
+  (
+    onComplete?: () => void,
+    resolveTimeSheetId?: TimeSheetResolver,
+    /** When set, saving also logs this stopwatch session in the same transaction (plan D4). */
+    options?: { stopwatchSessionId?: string | null },
+  ) =>
   async (timeEntry: SaveableEntry): Promise<void> => {
-    const entryToSave = resolveTimeSheetId
+    const resolvedEntry = resolveTimeSheetId
       ? { ...timeEntry, time_sheet_id: await resolveTimeSheetId(timeEntry) }
       : timeEntry;
+    const entryToSave = options?.stopwatchSessionId
+      ? { ...resolvedEntry, stopwatch_session_id: options.stopwatchSessionId }
+      : resolvedEntry;
     const savedEntry = await saveTimeEntry(entryToSave);
     if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
       throw new TimeEntrySaveRejectedError(getErrorMessage(savedEntry));

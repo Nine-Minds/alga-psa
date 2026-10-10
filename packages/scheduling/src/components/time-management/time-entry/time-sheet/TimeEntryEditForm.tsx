@@ -50,7 +50,7 @@ interface EligiblePlanUI {
 
 // Parse a 'YYYY-MM-DD' (or ISO) date string into a local midnight Date, avoiding the UTC shift
 // that `new Date(str)`/`parseISO` introduce for date-only values.
-// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx, IntervalSection.tsx,
+// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx,
 // timeSheetOperations.ts). Candidate for a shared scheduling date util.
 const SHEET_STATUS_FALLBACKS: Record<string, string> = {
   DRAFT: 'Draft',

@@ -7,19 +7,34 @@ import { TimeEntryService } from '../../../lib/api/services/TimeEntryService';
 import { timeEntryResponseSchema } from '../../../lib/api/schemas/timeEntry';
 
 let db: Knex;
-let context: { tenant: string; userId: string };
+let context: { tenant: string; userId: string; user: { user_id: string; user_type: string; tenant: string } };
 let serviceId: string;
 let service: TimeEntryService;
 
 beforeAll(async () => {
   db = await createTestDbConnection();
   const tenant = await db('tenants').first<{ tenant: string }>('tenant');
-  context = { tenant: tenant!.tenant, userId: randomUUID() };
+  const userId = randomUUID();
+  context = {
+    tenant: tenant!.tenant, userId,
+    user: { user_id: userId, user_type: 'internal', tenant: tenant!.tenant },
+  };
   await db('users').insert({
     tenant: context.tenant, user_id: context.userId, username: `date-${context.userId}`,
     email: `${context.userId}@example.test`, first_name: 'Date', last_name: 'Test',
     hashed_password: 'api-only-test-user', user_type: 'internal', timezone: 'America/Los_Angeles',
   });
+  // The legacy active-session read enforces time_entry:read, so the caller needs a real grant.
+  const roleId = randomUUID();
+  const permissionId = randomUUID();
+  await db('roles').insert({
+    tenant: context.tenant, role_id: roleId, role_name: `Date Test ${roleId.slice(0, 8)}`, msp: true, client: false,
+  });
+  await db('user_roles').insert({ tenant: context.tenant, user_id: context.userId, role_id: roleId });
+  await db('permissions').insert({
+    tenant: context.tenant, permission_id: permissionId, resource: 'time_entry', action: 'read', msp: true, client: false,
+  });
+  await db('role_permissions').insert({ tenant: context.tenant, role_id: roleId, permission_id: permissionId });
   serviceId = (await createTestService(db, context.tenant)).service_id;
   service = new TimeEntryService();
   vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: context.tenant });
@@ -65,6 +80,9 @@ it.each(['UTC', 'Pacific/Auckland', 'America/Los_Angeles'])(
       expect.soft(started.work_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect.soft(active?.work_date).toBe(started.work_date);
     } finally {
+      // Timer sessions live in time_tracking_sessions (segments cascade); clear them so the
+      // next timezone case can start a fresh session.
+      await db('time_tracking_sessions').where({ tenant: context.tenant, user_id: context.userId }).delete();
       await db('time_entries').where({ tenant: context.tenant, user_id: context.userId }).delete();
     }
   },

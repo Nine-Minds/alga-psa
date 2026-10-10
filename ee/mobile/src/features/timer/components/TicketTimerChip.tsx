@@ -83,9 +83,10 @@ export function WorkItemTimerChip({
   const elapsedMs = useTimerElapsedMs();
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
-  const runningHere =
-    timer.status === "running" && timer.session?.work_item_id === workItemId;
-  const runningElsewhere = timer.status === "running" && !runningHere;
+  const open = timer.status === "running" || timer.status === "paused";
+  const runningHere = open && timer.session?.work_item_id === workItemId;
+  const runningElsewhere = open && !runningHere;
+  const pausedHere = runningHere && timer.status === "paused";
   const defaultService = preferredService ?? timer.defaultService;
 
   const startHere = (service: { service_id: string; service_name: string }) => {
@@ -93,15 +94,23 @@ export function WorkItemTimerChip({
   };
 
   if (runningHere) {
+    const elapsed = elapsedMs === null ? "" : formatElapsedClock(elapsedMs);
     return (
-      <TimerChip
-        label={t("timer.chip.stop", {
-          elapsed: elapsedMs === null ? "" : formatElapsedClock(elapsedMs),
-        })}
-        icon="stop-circle"
-        variant="active"
-        onPress={() => timer.openStopModal()}
-      />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <TimerChip
+          label={pausedHere ? t("timer.chip.resume", { elapsed }) : t("timer.chip.pause")}
+          icon={pausedHere ? "play" : "pause"}
+          variant={pausedHere ? "filled" : "muted"}
+          disabled={timer.mutating}
+          onPress={() => void (pausedHere ? timer.resume() : timer.pause())}
+        />
+        <TimerChip
+          label={pausedHere ? t("timer.chip.stopPaused") : t("timer.chip.stop", { elapsed })}
+          icon="stop-circle"
+          variant={pausedHere ? "muted" : "active"}
+          onPress={() => timer.openStopModal()}
+        />
+      </View>
     );
   }
 

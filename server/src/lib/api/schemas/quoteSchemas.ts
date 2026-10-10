@@ -129,7 +129,7 @@ export const sendQuoteSchema = z.object({
 });
 
 export const approvalRequestChangesSchema = z.object({
-  reason: z.string().min(1).max(2000),
+  reason: z.string().trim().min(1, 'reason is required').max(2000),
 });
 
 export const convertQuoteSchema = z.object({

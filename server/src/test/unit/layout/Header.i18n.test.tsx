@@ -118,6 +118,10 @@ vi.mock('@alga-psa/notifications/components/NotificationBell', () => ({
   NotificationBell: () => <div>Notifications</div>,
 }));
 
+vi.mock('../../../components/layout/StopwatchHeaderIndicator', () => ({
+  default: () => null,
+}));
+
 vi.mock('../../../components/layout/QuickCreateDialog', () => ({
   QuickCreateDialog: () => <div>Quick create dialog</div>,
 }));

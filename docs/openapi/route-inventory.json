@@ -6536,6 +6536,73 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/stopwatch",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/stopwatch/active",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/active/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/stopwatch/{id}",
+    "methods": [
+      "DELETE",
+      "PATCH"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/[id]/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/stopwatch/{id}/log",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/[id]/log/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/stopwatch/{id}/pause",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/[id]/pause/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/stopwatch/{id}/resume",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/stopwatch/[id]/resume/route.ts",
+    "controller": "ApiStopwatchController",
+    "controller_import": "@/lib/api/controllers/ApiStopwatchController",
+    "controller_file": "server/src/lib/api/controllers/ApiStopwatchController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/storage/namespaces/{namespace}/records",
     "methods": [
       "GET",

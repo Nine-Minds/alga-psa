@@ -2,6 +2,7 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
 import { createHash, randomUUID } from 'node:crypto';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
   detectAutomatedInboundMessage,
@@ -585,8 +586,10 @@ async function applyInboundReplyReopenTransition(params: {
 
     await db.table('tickets')
       .where({ ticket_id: params.ticketId })
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       .update({
         status_id: params.statusId,
+        ...ticketStatusClockPatch(trx, params.statusId),
         is_closed: false,
         closed_at: null,
         closed_by: null,

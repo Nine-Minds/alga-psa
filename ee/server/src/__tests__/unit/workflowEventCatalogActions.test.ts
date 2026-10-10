@@ -54,7 +54,9 @@ vi.mock('@alga-psa/workflows/actions', () => ({
   createEventCatalogEntry: vi.fn()
 }));
 
+import { createWorkflowDefinitionAction } from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
 import {
+  createWorkflowFromEventAction,
   listEventCatalogCategoriesV2Action,
   listEventCatalogOptionsV2Action
 } from '@alga-psa/workflows/actions/workflow-event-catalog-v2-actions';
@@ -140,5 +142,40 @@ describe('workflow event catalog actions', () => {
     const result = await listEventCatalogCategoriesV2Action();
 
     expect(result.categories).toEqual(['Automation', 'Surveys', 'Tickets']);
+  });
+});
+
+describe('createWorkflowFromEventAction', () => {
+  beforeEach(() => {
+    createTenantKnexMock.mockReset();
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+    vi.mocked(createWorkflowDefinitionAction).mockReset();
+    vi.mocked(createWorkflowDefinitionAction).mockResolvedValue({ workflowId: 'wf-1' } as any);
+  });
+
+  it('creates a date trigger for the status-age catalog row, ignoring the caller payload schema ref', async () => {
+    await createWorkflowFromEventAction({
+      eventType: 'TICKET_STATUS_AGE',
+      payloadSchemaRef: 'payload.Wrong.v1',
+      sourcePayloadSchemaRef: 'payload.Wrong.v1'
+    });
+    const { definition } = vi.mocked(createWorkflowDefinitionAction).mock.calls[0][0] as any;
+    expect(definition.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
+    expect(definition.trigger).toEqual({
+      type: 'date',
+      source: 'ticket.status_age',
+      offsetDays: 0,
+      localTime: '08:00',
+      params: { statusName: '', boardId: null, days: 7, repeatEveryDays: null, requireNoActivity: false }
+    });
+  });
+
+  it('still creates an event trigger for an ordinary event', async () => {
+    await createWorkflowFromEventAction({ eventType: 'TICKET_CREATED', payloadSchemaRef: 'payload.Ticket.v1' });
+    const { definition } = vi.mocked(createWorkflowDefinitionAction).mock.calls[0][0] as any;
+    expect(definition.payloadSchemaRef).toBe('payload.Ticket.v1');
+    expect(definition.trigger).toMatchObject({ type: 'event', eventName: 'TICKET_CREATED' });
   });
 });

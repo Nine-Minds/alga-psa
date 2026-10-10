@@ -33,6 +33,8 @@ import type {
   ConvertQuoteApi,
 } from '../schemas/quoteSchemas';
 import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
+import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
 export interface QuoteListOptions extends ListOptions {
   include_items?: boolean;
@@ -396,14 +398,33 @@ export class QuoteService extends BaseService<IQuote> {
     }).catch(throwQuoteApiError);
   }
 
-  async approve(quoteId: string, context: ServiceContext): Promise<IQuote> {
+  async approve(
+    quoteId: string,
+    context: ServiceContext,
+    options: { selfApproved?: boolean } = {}
+  ): Promise<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      return Quote.update(trx, context.tenant, quoteId, {
+      const quote = await Quote.update(trx, context.tenant, quoteId, {
         status: 'approved',
         updated_by: context.userId,
       } as Partial<IQuote>);
+
+      // Same `approved` activity the UI action writes; a sole approver approving their
+      // own quote is flagged for audit (alga-2026-0002597).
+      await QuoteActivity.create(trx, context.tenant, {
+        quote_id: quoteId,
+        activity_type: QUOTE_ACTIVITY_TYPES.approved,
+        description: 'Quote approved',
+        performed_by: context.userId,
+        metadata: {
+          comment: null,
+          ...(options.selfApproved ? SELF_APPROVAL_AUDIT_METADATA : {}),
+        },
+      });
+
+      return quote;
     }).catch(throwQuoteApiError);
   }
 
@@ -418,10 +439,8 @@ export class QuoteService extends BaseService<IQuote> {
 
       await QuoteActivity.create(trx, context.tenant, {
         quote_id: quoteId,
-        activity_type: 'changes_requested',
-        description: reason,
+        ...buildApprovalChangesRequestedActivity(reason),
         performed_by: context.userId,
-        metadata: {},
       });
 
       return quote;

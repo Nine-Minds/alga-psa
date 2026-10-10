@@ -81,6 +81,9 @@ vi.mock('../TicketChecklistSection', () => ({ __esModule: true, default: () => n
 vi.mock('../TicketCredentialsSection', () => ({ TicketCredentialsSection: () => null }));
 vi.mock('../TicketExternalLinksSection', () => ({ TicketExternalLinksSection: () => null }));
 vi.mock('./DocumentsTile', () => ({ DocumentsTile: () => null }));
+vi.mock('../TicketStopwatchControls', () => ({
+  TicketStopwatchControls: ({ id }: { id: string }) => <div data-testid={`${id}-stopwatch-controls`} />,
+}));
 vi.mock('../TicketTimeEntries', () => ({ __esModule: true, default: () => null }));
 vi.mock('../TicketMaterialsCard', () => ({ __esModule: true, default: () => null }));
 vi.mock('../TicketWatchListCard', () => ({ __esModule: true, default: () => null }));
@@ -122,13 +125,8 @@ function baseProps(overrides: Partial<TicketBentoLayoutProps> = {}): TicketBento
     onClientClick: vi.fn(),
     checklistItems: [],
     onChecklistItemsChanged: vi.fn(),
-    elapsedTime: 0,
-    isRunning: false,
     timeDescription: '',
     onTimeDescriptionChange: vi.fn(),
-    onStart: vi.fn(),
-    onPause: vi.fn(),
-    onStop: vi.fn(),
     onAddTimeEntry: vi.fn(),
     additionalAgents: [],
     availableAgents: [],

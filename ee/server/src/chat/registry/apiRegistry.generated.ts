@@ -34888,7 +34888,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean"
         },
         "enable_live_ticket_timer": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board's tickets; a stopwatch already running keeps running. Defaults to true."
         },
         "client_portal_visible": {
           "type": "boolean"
@@ -48036,7 +48037,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/active-session",
     "displayName": "Get active tracking session",
     "summary": "Get active tracking session",
-    "description": "Returns active tracking session for current user context.",
+    "description": "Deprecated: use GET /api/v1/stopwatch/active. Returns the caller's open stopwatch session in the legacy time-entry-row shape (`session_id` is the stopwatch session id, `start_time` the first segment start). Requires time_entry:read.",
     "tags": [
       "Work Management v1"
     ],
@@ -48612,7 +48613,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/start-tracking",
     "displayName": "Start time tracking",
     "summary": "Start time tracking",
-    "description": "Starts active tracking session.",
+    "description": "Deprecated: use POST /api/v1/stopwatch. Starts a stopwatch session and returns it in the legacy time-entry-row shape. 409 when a session is already open.",
     "tags": [
       "Work Management v1"
     ],
@@ -48782,7 +48783,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-entries/stop-tracking/{sessionId}",
     "displayName": "Stop time tracking",
     "summary": "Stop time tracking",
-    "description": "Stops active tracking session by session id.",
+    "description": "Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open (running or paused) session as a time entry and returns the entry.",
     "tags": [
       "Work Management v1"
     ],
@@ -50987,6 +50988,330 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data",
         "pagination"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_stopwatch_active",
+    "method": "get",
+    "path": "/api/v1/stopwatch/active",
+    "displayName": "Get active stopwatch session",
+    "summary": "Get active stopwatch session",
+    "description": "Returns the caller's open (running or paused) stopwatch session, or `data: null`. Elapsed time is derived from `segments`; `active_ms` and `server_now` are computed by the server. `user_id` reads another user's session and requires delegation rights (time_sheet:approve plus read_all or manager-of-subject).",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/WorkV1StopwatchSession"
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "The open (running or paused) session, or null."
+            }
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch",
+    "method": "post",
+    "path": "/api/v1/stopwatch",
+    "displayName": "Start stopwatch",
+    "summary": "Start stopwatch",
+    "description": "Starts a stopwatch session on a ticket or project task. A user has at most one open session: starting while one exists returns 409 with `details.open_session`. Also 409 when the ticket's board has the stopwatch turned off.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "work_item_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task"
+          ]
+        },
+        "work_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "work_item_type",
+        "work_item_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_pause",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/pause",
+    "displayName": "Pause stopwatch",
+    "summary": "Pause stopwatch",
+    "description": "Closes the open segment. Idempotent: pausing a paused session returns it unchanged.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_resume",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/resume",
+    "displayName": "Resume stopwatch",
+    "summary": "Resume stopwatch",
+    "description": "Opens a new segment. Idempotent: resuming a running session returns it unchanged.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_stopwatch_id",
+    "method": "patch",
+    "path": "/api/v1/stopwatch/{id}",
+    "displayName": "Update stopwatch draft",
+    "summary": "Update stopwatch draft",
+    "description": "Updates the notes and/or service of an open session. Omitted fields are unchanged; `service_id: null` clears the service.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1StopwatchSession"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_stopwatch_id",
+    "method": "delete",
+    "path": "/api/v1/stopwatch/{id}",
+    "displayName": "Discard stopwatch",
+    "summary": "Discard stopwatch",
+    "description": "Discards an open session without logging time.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_stopwatch_id_log",
+    "method": "post",
+    "path": "/api/v1/stopwatch/{id}/log",
+    "displayName": "Log stopwatch as time entry",
+    "summary": "Log stopwatch as time entry",
+    "description": "Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "billable_duration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "is_billable": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "service_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "session": {
+              "$ref": "#/components/schemas/WorkV1StopwatchSession"
+            },
+            "time_entry": {
+              "type": "object",
+              "additionalProperties": {},
+              "description": "The persisted time entry."
+            }
+          },
+          "required": [
+            "session",
+            "time_entry"
+          ]
+        }
+      },
+      "required": [
+        "data"
       ]
     }
   },

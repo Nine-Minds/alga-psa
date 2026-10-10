@@ -3,6 +3,7 @@
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
@@ -1018,8 +1019,10 @@ export const updateTicketStatus = withAuth(async (
         .where({
           ticket_id: ticketId
         })
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: newStatusId,
+          ...ticketStatusClockPatch(trx, newStatusId),
           is_closed: !!statusForBoard.is_closed,
           ...(isClosing ? { closed_at: occurredAt, closed_by: userId } : {}),
           ...(isReopening ? { closed_at: null, closed_by: null } : {}),

@@ -673,8 +673,8 @@
           "suppressAiHelp": "Module complémentaire Enterprise AI Assistant uniquement. Si indisponible, les réponses rouvrent normalement."
         },
         "liveTimer": {
-          "label": "Activer le minuteur de ticket en direct",
-          "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+          "label": "Afficher le chronomètre sur les tickets",
+          "help": "Affiche les commandes du chronomètre sur les tickets de ce tableau. Désactivez cette option pour masquer le chronomètre ici ; la saisie manuelle du temps reste disponible. Un chronomètre déjà en cours continue de tourner."
         },
         "clientPortalVisible": {
           "label": "Visible dans le portail client",
@@ -851,7 +851,7 @@
           "statuses": "Priorités et statuts",
           "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
           "display": "Affichage et comportement",
-          "displayHelp": "Minuteur en direct et type de tableau"
+          "displayHelp": "Chronomètre et type de tableau"
         },
         "saveChanges": "Enregistrer les modifications",
         "unsaved": "Non enregistré",

@@ -534,7 +534,8 @@
         "anniversary": "⟦ŧħḗ ƈŀīḗƞŧ'ş ƞḗẋŧ ȧƞƞīṽḗřşȧřẏ⟧",
         "renewal": "⟦ŧħḗ ƈȯƞŧřȧƈŧ'ş řḗƞḗẇȧŀ ḓḗƈīşīȯƞ ḓȧŧḗ⟧",
         "contractEnd": "⟦ŧħḗ ƈȯƞŧřȧƈŧ'ş ḗƞḓ ḓȧŧḗ⟧",
-        "warrantyEnd": "⟦ŧħḗ ȧşşḗŧ'ş ẇȧřřȧƞŧẏ ḗƞḓ ḓȧŧḗ⟧"
+        "warrantyEnd": "⟦ŧħḗ ȧşşḗŧ'ş ẇȧřřȧƞŧẏ ḗƞḓ ḓȧŧḗ⟧",
+        "ticketStatusAge": "⟦ŧħḗ ḓȧẏ ŧħḗ ŧīƈķḗŧ řḗȧƈħḗş ŧħḗ ƞŭḿƀḗř ȯƒ ḓȧẏş īƞ şŧȧŧŭş⟧"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "⟦Ƞȯŧ ƥŭƀŀīşħḗḓ ẏḗŧ. Ƥŭƀŀīşħīƞɠ ƈřḗȧŧḗş ṽ{{next}}.⟧",
       "tenantTimezoneOption": "⟦Ŧḗƞȧƞŧ ŧīḿḗẑȯƞḗ (ḓḗƒȧŭŀŧ)⟧",
       "searchTimezones": "⟦Şḗȧřƈħ ŧīḿḗẑȯƞḗş⟧",
-      "inputDataEventPending": "⟦Ƈħȯȯşḗ ŧħḗ ḗṽḗƞŧ ȧƀȯṽḗ; ẏȯŭř şŧḗƥş ẇīŀŀ řḗȧḓ ŧħḗ ḓȧŧȧ ŧħȧŧ ḗṽḗƞŧ şḗƞḓş.⟧"
+      "inputDataEventPending": "⟦Ƈħȯȯşḗ ŧħḗ ḗṽḗƞŧ ȧƀȯṽḗ; ẏȯŭř şŧḗƥş ẇīŀŀ řḗȧḓ ŧħḗ ḓȧŧȧ ŧħȧŧ ḗṽḗƞŧ şḗƞḓş.⟧",
+      "dateSourceTicketStatusAge": "⟦Ŧīƈķḗŧ īƞ şŧȧŧŭş ƒȯř Ƞ ḓȧẏş⟧",
+      "statusAgeStatus": "⟦Şŧȧŧŭş⟧",
+      "statusAgeStatusPlaceholder": "⟦Şḗŀḗƈŧ ȧ şŧȧŧŭş⟧",
+      "statusAgeStatusMissing": "⟦Ƞȯ şŧȧŧŭş ẇīŧħ ŧħīş ƞȧḿḗ ḗẋīşŧş ȯƞ ŧħḗ şḗŀḗƈŧḗḓ ƀȯȧřḓ.⟧",
+      "statusAgeOptionsFailed": "⟦Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ şŧȧŧŭşḗş ȧƞḓ ƀȯȧřḓş.⟧",
+      "statusAgeMatchByName": "⟦Şŧȧŧŭşḗş ȧřḗ ḿȧŧƈħḗḓ ƀẏ ƞȧḿḗ. Řḗƞȧḿīƞɠ ȧ şŧȧŧŭş şŧȯƥş ŧħīş ŧřīɠɠḗř ƒřȯḿ ḿȧŧƈħīƞɠ.⟧",
+      "statusAgeBoard": "⟦Ɓȯȧřḓ (ȯƥŧīȯƞȧŀ)⟧",
+      "statusAgeAnyBoard": "⟦Ȧƞẏ ƀȯȧřḓ⟧",
+      "statusAgeDays": "⟦Ḓȧẏş īƞ şŧȧŧŭş⟧",
+      "statusAgeRepeat": "⟦Řḗƥḗȧŧ ẇħīŀḗ īƞ şŧȧŧŭş⟧",
+      "statusAgeRepeatEvery": "⟦Řḗƥḗȧŧ ḗṽḗřẏ (ḓȧẏş)⟧",
+      "statusAgeNoActivity": "⟦Ȯƞŀẏ īƒ ŧħḗřḗ ħȧş ƀḗḗƞ ƞȯ ȧƈŧīṽīŧẏ (ƈȯḿḿḗƞŧş ȯř ƈħȧƞɠḗş ƀẏ ƥḗȯƥŀḗ) ƒȯř ŧħȧŧ ŀȯƞɠ⟧",
+      "statusAgeSummary": "⟦Řŭƞş ḓȧīŀẏ ȧŧ {{time}} ({{timezone}}) ƒȯř ḗȧƈħ ŧīƈķḗŧ ŧħȧŧ ħȧş ƀḗḗƞ īƞ ŧħḗ ƈħȯşḗƞ şŧȧŧŭş ƒȯř ŧħḗ şḗŧ ƞŭḿƀḗř ȯƒ ḓȧẏş⟧"
     },
     "stepPanel": {
       "readOnly": "⟦Řḗȧḓ-ȯƞŀẏ ȧƈƈḗşş: şŧḗƥ ḗḓīŧīƞɠ īş ḓīşȧƀŀḗḓ.⟧",
@@ -1973,7 +1987,8 @@
     "dateTiming": {
       "before": "⟦{{count}} ḓȧẏş ƀḗƒȯřḗ⟧",
       "after": "⟦{{count}} ḓȧẏş ȧƒŧḗř⟧",
-      "onTheDay": "⟦ȯƞ ŧħḗ ḓȧẏ⟧"
+      "onTheDay": "⟦ȯƞ ŧħḗ ḓȧẏ⟧",
+      "daysInStatus": "⟦{{count}} ḓȧẏş īƞ ŧħḗ şŧȧŧŭş⟧"
     },
     "dateWithTiming": "⟦{{source}}, {{timing}}⟧"
   },

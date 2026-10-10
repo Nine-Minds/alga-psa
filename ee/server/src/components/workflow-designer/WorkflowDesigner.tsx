@@ -97,6 +97,9 @@ import {
   WORKFLOW_CAUGHT_ERROR_FIELDS,
   WORKFLOW_CAUGHT_ERROR_SCHEMA,
   buildWorkflowDesignerActionCatalog,
+  dateTriggerSourceDefinitions,
+  getDateTriggerSourceByCatalogEvent,
+  getDateTriggerSourceDefinition,
   getWorkflowDesignerCatalogRecordForAction,
   type WorkflowDesignerCatalogRecord
 } from '@alga-psa/workflows/authoring';
@@ -211,6 +214,9 @@ import type {
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
 import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
 import { DATE_TRIGGER_PAYLOAD_SCHEMA_REFS } from './dateTriggerPayloadSchemas';
+import { DateTriggerStatusAgeFields } from './DateTriggerStatusAgeFields';
+import { type StatusAgeParamsDraft } from './dateTriggerStatusAge';
+
 
 import {
   isWorkflowAiInferAction,
@@ -218,6 +224,7 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
+import { buildDateTriggerForSource } from '@alga-psa/workflows/authoring';
 import { describeExpressionError, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import {
@@ -2133,13 +2140,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const triggerSchemaPolicy = useMemo(() => {
     const dateTrigger = activeDefinition?.trigger?.type === 'date' ? activeDefinition.trigger : null;
     if (dateTrigger) {
-      // LEVERAGE: pattern date-trigger-source-list — third copy of the source-to-schema map; use the shared one.
-      const expectedRefs: Record<string, string> = {
-        'client.anniversary': 'payload.ClientAnniversary.v1',
-        'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-        'contract.end': 'payload.ContractEndDate.v1',
-        'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-      };
+      const expectedRefs: Record<string, string> = DATE_TRIGGER_PAYLOAD_SCHEMA_REFS;
       if (activeDefinition?.payloadSchemaRef !== expectedRefs[dateTrigger.source]) {
         return { ok: false, level: 'error' as const, message: 'Date trigger payload schema must match its selected source.' };
       }
@@ -4535,6 +4536,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           handleDefinitionChange({ trigger: undefined });
                                           return;
                                         }
+                                        // A date source's catalog row is not a real event: choosing it builds the date trigger.
+                                        const dateSource = getDateTriggerSourceByCatalogEvent(next);
+                                        if (dateSource) {
+                                          setShowUseEventSchemaSuggestion(false);
+                                          setPendingEventSchemaPrompt(null);
+                                          setSelectedTriggerEventCategory('');
+                                          setDateOffsetDirection('on');
+                                          setTriggerTypeSelection('date');
+                                          handleDefinitionChange({
+                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined),
+                                            payloadSchemaRef: dateSource.payloadSchemaRef,
+                                          });
+                                          return;
+                                        }
                                         const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
                                         if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
                                           toast.error(t('designer.toasts.systemEventMissingSchema', {
@@ -4695,19 +4710,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     value={dateTrigger.source}
                                     disabled={!canManage}
                                     showPlaceholderInDropdown={false}
-                                    // LEVERAGE: pattern date-trigger-source-list — build from the shared source definitions (id + labelKey).
-                                    options={[
-                                      { value: 'client.anniversary', label: t('designer.form.dateSourceAnniversary', { defaultValue: 'Client anniversary' }) },
-                                      { value: 'contract.renewal_decision', label: t('designer.form.dateSourceRenewal', { defaultValue: 'Contract renewal decision date' }) },
-                                      { value: 'contract.end', label: t('designer.form.dateSourceContractEnd', { defaultValue: 'Contract end date' }) },
-                                      { value: 'asset.warranty_end', label: t('designer.form.dateSourceWarranty', { defaultValue: 'Asset warranty end' }) },
-                                    ]}
+                                    options={dateTriggerSourceDefinitions.map((definition) => ({
+                                      value: definition.id,
+                                      label: t(definition.labelKey, { defaultValue: definition.defaultLabel }),
+                                    }))}
                                     onValueChange={(value) => {
-                                      handleDefinitionChange({ trigger: { ...dateTrigger, source: value as typeof dateTrigger.source }, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value] });
+                                      const nextDefinition = getDateTriggerSourceDefinition(value);
+                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>);
+                                      if (!nextDefinition?.usesOffset) setDateOffsetDirection('on');
+                                      handleDefinitionChange({ trigger: nextTrigger, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value as keyof typeof DATE_TRIGGER_PAYLOAD_SCHEMA_REFS] });
                                     }}
                                   />
                                 </div>
+                                {dateTrigger.source === 'ticket.status_age' && (
+                                  <DateTriggerStatusAgeFields
+                                    params={dateTrigger.params as StatusAgeParamsDraft | undefined}
+                                    disabled={!canManage}
+                                    onChange={(params) => handleDefinitionChange({ trigger: { ...dateTrigger, params } })}
+                                  />
+                                )}
                                 <div className="grid grid-cols-2 gap-3">
+                                  {getDateTriggerSourceDefinition(dateTrigger.source)?.usesOffset !== false && (<>
                                   <div>
                                     <label htmlFor="workflow-date-offset" className="mb-1 block text-sm font-medium">{t('designer.form.dateOffset', { defaultValue: 'Days' })}</label>
                                     <Input id="workflow-date-offset" type="number" min={0} max={365} value={Math.abs(dateTrigger.offsetDays)} disabled={!canManage} onChange={(event) => {
@@ -4727,6 +4750,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                       handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: direction === 'before' ? -days : direction === 'after' ? days : 0 } });
                                     }} />
                                   </div>
+                                  </>)}
                                   <div>
                                     <label htmlFor="workflow-date-local-time" className="mb-1 block text-sm font-medium">{t('designer.form.localTime', { defaultValue: 'Local time' })}</label>
                                     <Input id="workflow-date-local-time" type="time" value={dateTrigger.localTime} disabled={!canManage} onChange={(event) => handleDefinitionChange({ trigger: { ...dateTrigger, localTime: event.target.value } })} />
@@ -4748,7 +4772,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     />
                                   </div>
                                 </div>
-                                <p className="text-xs text-[rgb(var(--color-text-500))]">{t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateOffsetDirection === 'before' ? 'designer.form.daysBefore' : dateOffsetDirection === 'after' ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateOffsetDirection === 'before' ? 'days before' : dateOffsetDirection === 'after' ? 'days after' : 'on' }), source: t(({ 'client.anniversary': 'designer.form.dateSourceAnniversary', 'contract.renewal_decision': 'designer.form.dateSourceRenewal', 'contract.end': 'designer.form.dateSourceContractEnd', 'asset.warranty_end': 'designer.form.dateSourceWarranty' } as Record<string, string>)[dateTrigger.source], { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
+                                <p className="text-xs text-[rgb(var(--color-text-500))]">{dateTrigger.source === 'ticket.status_age'
+                                  ? t('designer.form.statusAgeSummary', { defaultValue: 'Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days', time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })
+                                  : t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateOffsetDirection === 'before' ? 'designer.form.daysBefore' : dateOffsetDirection === 'after' ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateOffsetDirection === 'before' ? 'days before' : dateOffsetDirection === 'after' ? 'days after' : 'on' }), source: t(getDateTriggerSourceDefinition(dateTrigger.source)?.labelKey ?? '', { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
                               </div>
                             )}
 

@@ -27,7 +27,8 @@
       "sendToClient": "Verzenden naar klant",
       "setAsDefault": "Instellen als standaard",
       "submitForApproval": "Ter goedkeuring indienen",
-      "done": "Klaar"
+      "done": "Klaar",
+      "markAccepted": "Markeren als geaccepteerd"
     },
     "badges": {
       "standard": "Standaard"
@@ -158,7 +159,8 @@
       "backToQuotes": "Terug naar offertes",
       "backToTemplates": "Terug naar offertesjablonen",
       "convertToSalesOrder": "Converteren naar verkooporder",
-      "convert": "Omzetten naar…"
+      "convert": "Omzetten naar…",
+      "markAccepted": "Markeren als geaccepteerd"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -217,6 +219,12 @@
         "message": "Bericht",
         "from": "Van",
         "useDefault": "Standaardafzender gebruiken"
+      },
+      "markAccepted": {
+        "title": "Offerte markeren als geaccepteerd",
+        "description": "Leg vast dat de klant deze offerte buiten het klantenportaal heeft geaccepteerd (bijvoorbeeld telefonisch of per e-mail). De offerte gaat naar Geaccepteerd en kan worden omgezet zoals elke geaccepteerde offerte. Uw naam en de tijd worden vastgelegd.",
+        "note": "Notitie (optioneel)",
+        "notePlaceholder": "Bijvoorbeeld: op de 3e per e-mail geaccepteerd"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "offerte opnieuw verzenden",
       "sendQuote": "offerte verzenden",
       "sendReminder": "herinnering sturen",
-      "submitForApproval": "ter goedkeuring indienen"
+      "submitForApproval": "ter goedkeuring indienen",
+      "markAccepted": "offerte markeren als geaccepteerd"
     },
     "errors": {
       "convert": "Kan offerte niet converteren",
@@ -252,7 +261,8 @@
       "requestedChanges": "Offerte teruggestuurd naar concept met gevraagde wijzigingen.",
       "resent": "Offerte opnieuw verzonden.",
       "sent": "Offerte verzonden naar de klant.",
-      "submittedForApproval": "Offerte ingediend voor interne goedkeuring."
+      "submittedForApproval": "Offerte ingediend voor interne goedkeuring.",
+      "markedAccepted": "Offerte gemarkeerd als geaccepteerd."
     },
     "readOnlyNotice": "Deze offerte is alleen-lezen. Als u wijzigingen wilt aanbrengen, maakt u een nieuwe revisie.",
     "validation": {
@@ -441,7 +451,8 @@
       "saveAsTemplate": "Kan de offerte niet opslaan als sjabloon",
       "send": "Kan de offerte niet verzenden",
       "sendReminder": "Kan de offerteherinnering niet verzenden",
-      "submitForApproval": "Kan de offerte niet ter goedkeuring indienen"
+      "submitForApproval": "Kan de offerte niet ter goedkeuring indienen",
+      "markAccepted": "Offerte kon niet als geaccepteerd worden gemarkeerd"
     },
     "labels": {
       "phase": "Fase: {{phase}}",
@@ -460,7 +471,8 @@
       "submittedForApproval": "Offerte ingediend voor interne goedkeuring.",
       "templateAssigned": "Documentsjabloon toegewezen.",
       "templateCleared": "Documentsjabloon gewist (standaard gebruikt).",
-      "createdSalesOrder": "Concept-verkooporder {{number}} aangemaakt. Productregels worden bij levering gefactureerd."
+      "createdSalesOrder": "Concept-verkooporder {{number}} aangemaakt. Productregels worden bij levering gefactureerd.",
+      "markedAccepted": "Offerte gemarkeerd als geaccepteerd."
     },
     "preview": {
       "loading": "Voorbeeld laden..."
@@ -691,7 +703,14 @@
       "load": "Kan offertegoedkeuringen niet laden",
       "settings": "Kan de instellingen voor het goedkeuren van offertes niet updaten"
     },
-    "loading": "Goedkeuringswachtrij laden..."
+    "loading": "Goedkeuringswachtrij laden...",
+    "soleApprover": {
+      "title": "U bent de enige offertegoedkeurder",
+      "description": "Geen enkele andere actieve gebruiker kan offertes goedkeuren, dus u kunt uw eigen offertes goedkeuren. Zelfgoedkeuringen worden vastgelegd in de offerteactiviteit.",
+      "draftDescription": "U bent de enige gebruiker die offertes kan goedkeuren. Nadat u deze offerte ter goedkeuring hebt ingediend, kunt u hem zelf goedkeuren en vervolgens verzenden.",
+      "pendingDescription": "U bent de enige gebruiker die offertes kan goedkeuren, dus u kunt deze offerte zelf goedkeuren. Kies Goedkeuren om hem klaar te zetten voor verzending.",
+      "dialogNote": "U bent de enige goedkeurder, dus het goedkeuren van uw eigen offerte is toegestaan. De goedkeuring wordt vastgelegd als zelfgoedkeuring."
+    }
   },
   "quoteTemplates": {
     "title": "Sjablonen",
@@ -857,7 +876,9 @@
       "conflict": "Deze wijziging van de offerte conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
       "notAllowed": "Een van de offertewaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht offerteveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht offerteveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht offerteveld: {{field}}.",
+      "templateCannotBeAccepted": "Offertesjablonen kunnen niet als geaccepteerd worden gemarkeerd",
+      "onlySentCanBeAccepted": "Alleen verzonden offertes kunnen als geaccepteerd worden gemarkeerd"
     }
   }
 }

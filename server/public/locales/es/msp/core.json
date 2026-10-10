@@ -239,6 +239,19 @@
       "ariaLabel": "Preguntar a la IA sobre este flujo de trabajo",
       "title": "Preguntar a la IA",
       "shortcutHint": "Abrir Quick Ask para obtener ayuda sobre el flujo de trabajo"
+    },
+    "stopwatch": {
+      "untitled": "Sin título",
+      "ariaLabelPaused": "Cronómetro en pausa: {{label}} a las {{clock}}",
+      "ariaLabelRunning": "Cronómetro en marcha: {{label}} a las {{clock}}",
+      "paused": "Cronómetro en pausa",
+      "running": "Cronómetro en marcha",
+      "resume": "Reanudar",
+      "pause": "Pausar",
+      "stop": "Detener y registrar",
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronómetro en pausa en {{clock}}. Abre el elemento de trabajo para registrar el tiempo.",
+      "openTicket": "Abrir ticket"
     }
   },
   "dialogs": {

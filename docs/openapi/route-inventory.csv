@@ -572,6 +572,12 @@ CE,/api/v1/services/{id},DELETE GET PUT,server/src/app/api/v1/services/[id]/rout
 CE,/api/v1/software/search,GET,server/src/app/api/v1/software/search/route.ts,,,
 CE,/api/v1/statuses,GET POST,server/src/app/api/v1/statuses/route.ts,ApiStatusController,@/lib/api/controllers/ApiStatusController,server/src/lib/api/controllers/ApiStatusController.ts
 CE,/api/v1/statuses/{id},DELETE GET PUT,server/src/app/api/v1/statuses/[id]/route.ts,ApiStatusController,@/lib/api/controllers/ApiStatusController,server/src/lib/api/controllers/ApiStatusController.ts
+CE,/api/v1/stopwatch,POST,server/src/app/api/v1/stopwatch/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
+CE,/api/v1/stopwatch/active,GET,server/src/app/api/v1/stopwatch/active/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
+CE,/api/v1/stopwatch/{id},DELETE PATCH,server/src/app/api/v1/stopwatch/[id]/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
+CE,/api/v1/stopwatch/{id}/log,POST,server/src/app/api/v1/stopwatch/[id]/log/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
+CE,/api/v1/stopwatch/{id}/pause,POST,server/src/app/api/v1/stopwatch/[id]/pause/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
+CE,/api/v1/stopwatch/{id}/resume,POST,server/src/app/api/v1/stopwatch/[id]/resume/route.ts,ApiStopwatchController,@/lib/api/controllers/ApiStopwatchController,server/src/lib/api/controllers/ApiStopwatchController.ts
 CE,/api/v1/storage/namespaces/{namespace}/records,GET POST,server/src/app/api/v1/storage/namespaces/[namespace]/records/route.ts,,,
 CE,/api/v1/storage/namespaces/{namespace}/records/{key},DELETE GET PUT,server/src/app/api/v1/storage/namespaces/[namespace]/records/[key]/route.ts,,,
 CE,/api/v1/tags,GET POST,server/src/app/api/v1/tags/route.ts,ApiTagController,@/lib/api/controllers/ApiTagController,server/src/lib/api/controllers/ApiTagController.ts

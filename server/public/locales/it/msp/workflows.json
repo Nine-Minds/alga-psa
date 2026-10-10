@@ -534,7 +534,8 @@
         "anniversary": "il prossimo anniversario del cliente",
         "renewal": "la data di decisione sul rinnovo del contratto",
         "contractEnd": "la data di fine del contratto",
-        "warrantyEnd": "la data di fine garanzia dell’asset"
+        "warrantyEnd": "la data di fine garanzia dell’asset",
+        "ticketStatusAge": "il giorno in cui il ticket raggiunge il numero di giorni nello stato"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Non ancora pubblicato. La pubblicazione crea la v{{next}}.",
       "tenantTimezoneOption": "Fuso orario del tenant (predefinito)",
       "searchTimezones": "Cerca fusi orari",
-      "inputDataEventPending": "Scegli l’evento qui sopra; i tuoi passaggi leggeranno i dati inviati da quell’evento."
+      "inputDataEventPending": "Scegli l’evento qui sopra; i tuoi passaggi leggeranno i dati inviati da quell’evento.",
+      "dateSourceTicketStatusAge": "Ticket nello stato da N giorni",
+      "statusAgeStatus": "Stato",
+      "statusAgeStatusPlaceholder": "Seleziona uno stato",
+      "statusAgeStatusMissing": "Nella bacheca selezionata non esiste uno stato con questo nome.",
+      "statusAgeOptionsFailed": "Impossibile caricare stati e bacheche.",
+      "statusAgeMatchByName": "Gli stati vengono confrontati per nome. Rinominare uno stato impedisce a questo trigger di corrispondere.",
+      "statusAgeBoard": "Bacheca (facoltativo)",
+      "statusAgeAnyBoard": "Qualsiasi bacheca",
+      "statusAgeDays": "Giorni nello stato",
+      "statusAgeRepeat": "Ripeti finché nello stato",
+      "statusAgeRepeatEvery": "Ripeti ogni (giorni)",
+      "statusAgeNoActivity": "Solo se non c'è stata alcuna attività (commenti o modifiche da parte di persone) per quel periodo",
+      "statusAgeSummary": "Viene eseguito ogni giorno alle {{time}} ({{timezone}}) per ogni ticket che è rimasto nello stato scelto per il numero di giorni impostato"
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
@@ -2095,7 +2109,8 @@
     "dateTiming": {
       "before": "{{count}} giorni prima",
       "after": "{{count}} giorni dopo",
-      "onTheDay": "nel giorno stesso"
+      "onTheDay": "nel giorno stesso",
+      "daysInStatus": "{{count}} giorni nello stato"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

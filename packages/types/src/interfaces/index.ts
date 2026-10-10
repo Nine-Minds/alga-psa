@@ -67,6 +67,7 @@ export * from './recurrenceRule.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';
+export * from './stopwatch.interfaces';
 export * from './serviceTier.interfaces';
 export * from './session.interfaces';
 export * from './software.interfaces';

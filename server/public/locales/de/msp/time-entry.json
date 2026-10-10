@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Intervalle anzeigen",
       "grid": "Raster",
-      "list": "Liste"
+      "list": "Liste",
+      "showSuggestions": "Vorschläge"
     }
   },
   "approval": {
@@ -402,52 +402,6 @@
     "title": "Abrechnungsfähige Legende",
     "description": "Farbindikatoren für abrechnungsfähige Zeitverhältnisse"
   },
-  "intervalItem": {
-    "now": "Jetzt",
-    "autoClosed": "Automatisch geschlossen",
-    "active": "Aktiv"
-  },
-  "intervals": {
-    "createdFromNote_one": "Aus {{count}} Intervall erstellt",
-    "createdFromNote_other": "Aus {{count}} Intervallen erstellt",
-    "selectedCount_one": "{{count}} Intervall ausgewählt",
-    "selectedCount_other": "{{count}} Intervalle ausgewählt",
-    "title": "Ticketzeitintervalle",
-    "hideShortIntervals": "Intervalle unter 1 Minute ausblenden",
-    "totalTime": "Gesamtzeit: {{value}}",
-    "selectedOne": "{{count}} Intervall ausgewählt",
-    "selectedOther": "{{count}} Intervalle ausgewählt",
-    "tooltips": {
-      "createTimeEntry": "Zeiteintrag aus ausgewählten Intervallen erstellen",
-      "deleteSelected": "Ausgewählte Intervalle löschen",
-      "mergeSelected": "Ausgewählte Intervalle zusammenführen"
-    },
-    "actions": {
-      "selectAll": "Wählen Sie „Alle“ aus",
-      "deselectAll": "Alle abwählen",
-      "merge": "Verschmelzen"
-    },
-    "states": {
-      "loading": "Ladeintervalle...",
-      "noIntervalsThisPeriod": "Für diesen Zeitraum wurden keine Intervalle gefunden",
-      "noIntervalsThisTicket": "Für dieses Ticket wurden keine Intervalle gefunden",
-      "noIntervalsLongerThanMinute": "Es wurden keine Intervalle gefunden, die länger als 1 Minute sind"
-    },
-    "entryName": "Ticketzeiteintrag",
-    "messages": {
-      "cannotFindTimeSheet": "Zeiteintrag kann nicht erstellt werden – Arbeitszeitnachweis konnte nicht gefunden oder erstellt werden",
-      "mergeFirst": "Bitte führen Sie zunächst Intervalle zusammen, bevor Sie einen Zeiteintrag erstellen",
-      "sameTicketOnly": "Es können nur Zeiteinträge aus Intervallen desselben Tickets erstellt werden",
-      "mergeSameTicketOnly": "Es können nur Intervalle desselben Tickets zusammengeführt werden",
-      "mergeSuccess": "Intervalle erfolgreich zusammengeführt",
-      "failedMerge": "Intervalle konnten nicht zusammengeführt werden",
-      "noActivePeriod": "Kein aktiver Zeitraum gefunden",
-      "failedFetchTimeSheet": "Zeitnachweis konnte nicht erstellt oder abgerufen werden",
-      "failedPrepareTimeEntry": "Zeiteintrag konnte nicht vorbereitet werden",
-      "savedSuccess": "Zeiteintrag erfolgreich gespeichert",
-      "failedSave": "Zeiteintrag konnte nicht gespeichert werden"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Arbeitselement hinzufügen",
     "description": "Wählen Sie ein Arbeitselement aus, das der Arbeitszeittabelle hinzugefügt werden soll",
@@ -511,6 +465,15 @@
       "duplicate": "Es existiert bereits eine widersprüchliche Zeitraumeinstellung.",
       "missingField": "Erforderliches Feld der Zeitraumeinstellung fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Stoppuhr-Sitzung nicht gefunden. Sie wurde möglicherweise bereits gebucht oder verworfen. Bitte aktualisieren Sie die Seite.",
+      "notOpen": "Diese Stoppuhr-Sitzung ist bereits geschlossen.",
+      "workItemNotFound": "Das Arbeitselement dieser Stoppuhr wurde nicht gefunden.",
+      "unsupportedWorkItem": "Die Stoppuhr kann nur für Tickets und Projektaufgaben gestartet werden.",
+      "boardDisabled": "Die Stoppuhr ist für das Board dieses Tickets deaktiviert.",
+      "alreadyOpen": "Es läuft bereits eine Stoppuhr. Beenden oder verwerfen Sie sie zuerst.",
+      "serviceRequired": "Wählen Sie vor dem Erfassen dieser Stoppuhr-Sitzung eine Leistung aus."
     }
   },
   "workItemEntry": {
@@ -540,5 +503,49 @@
     "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
     "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
     "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "suggestions": {
+    "title": "Vorschläge",
+    "description": "Tickets, an denen Sie in diesem Zeitraum gearbeitet haben und für die noch keine Zeit erfasst ist. Es wird nichts erfasst, bis Sie Zeit erfassen wählen.",
+    "loading": "Vorschläge werden geladen...",
+    "empty": "Keine Vorschläge für diesen Zeitraum",
+    "dismissAllForDay": "Alle für diesen Tag verwerfen",
+    "logTime": "Zeit erfassen",
+    "dismiss": "Verwerfen",
+    "estimatedNotice": "Diese Zeiten wurden anhand Ihrer Aktivität an diesem Ticket geschätzt. Passen Sie sie an die tatsächlich gearbeitete Zeit an.",
+    "dismissFailed": "Vorschlag konnte nicht verworfen werden",
+    "activitySummary_one": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktion ({{kinds}})",
+    "activitySummary_other": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "kinds": {
+      "created": "erstellt",
+      "commented": "kommentiert",
+      "internalNote": "interne Notiz",
+      "statusChanged": "Status geändert",
+      "priorityChanged": "Priorität geändert",
+      "assignmentChanged": "Zuweisung geändert",
+      "documentsChanged": "Dokumente geändert",
+      "checklistChanged": "Checkliste geändert",
+      "linksChanged": "Links geändert",
+      "updated": "aktualisiert"
+    }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",
+    "pausedNotice_other": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "discardDialog": {
+      "title": "Diese Stoppuhr verwerfen?",
+      "message": "Die auf {{workItem}} erfassten {{duration}} werden gelöscht und es wird kein Zeiteintrag erstellt. Dies kann nicht rückgängig gemacht werden.",
+      "confirm": "Verwerfen",
+      "cancel": "Stoppuhr behalten"
+    },
+    "conflictDialog": {
+      "title": "Es ist bereits eine Stoppuhr geöffnet",
+      "message": "Sie erfassen bereits {{duration}} auf {{workItem}}. Es kann nur eine Stoppuhr gleichzeitig geöffnet sein.",
+      "stopAndLog": "Aktuelle stoppen und erfassen, dann starten",
+      "discard": "Aktuelle verwerfen, dann starten (die erfasste Zeit wird gelöscht)",
+      "confirm": "Weiter",
+      "cancel": "Abbrechen"
+    },
+    "ticketFallbackName": "Ticket {{number}}"
   }
 }

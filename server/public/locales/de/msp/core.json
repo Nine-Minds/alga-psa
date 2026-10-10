@@ -239,6 +239,19 @@
       "ariaLabel": "KI zu diesem Workflow fragen",
       "title": "KI fragen",
       "shortcutHint": "Quick Ask für Workflow-Hilfe öffnen"
+    },
+    "stopwatch": {
+      "untitled": "Ohne Titel",
+      "ariaLabelPaused": "Stoppuhr pausiert: {{label}} bei {{clock}}",
+      "ariaLabelRunning": "Stoppuhr läuft: {{label}} bei {{clock}}",
+      "paused": "Stoppuhr pausiert",
+      "running": "Stoppuhr läuft",
+      "resume": "Fortsetzen",
+      "pause": "Pausieren",
+      "stop": "Stoppen und erfassen",
+      "discard": "Verwerfen",
+      "pausedNoDrawer": "Stoppuhr bei {{clock}} pausiert. Öffnen Sie das Arbeitselement, um die Zeit zu erfassen.",
+      "openTicket": "Ticket öffnen"
     }
   },
   "dialogs": {

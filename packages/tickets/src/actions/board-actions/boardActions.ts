@@ -13,6 +13,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
+import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
 import type { TicketViewSettings } from '../../lib/ticketViewSettings';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -31,17 +32,6 @@ export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
 
 export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
   ticket_statuses?: BoardTicketStatusInput[];
-}
-
-function normalizeBoardLiveTimerSetting<T extends Record<string, any>>(board: T): T {
-  if (!board || board.enable_live_ticket_timer !== null && board.enable_live_ticket_timer !== undefined) {
-    return board;
-  }
-
-  return {
-    ...board,
-    enable_live_ticket_timer: true,
-  };
 }
 
 function stripStatusIdsForNewBoard(
@@ -155,7 +145,7 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const board = await Board.get(trx, tenant, id);
-      return board ? normalizeBoardLiveTimerSetting(board) : board;
+      return board ? normalizeBoardStopwatchSetting(board) : board;
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);
@@ -175,7 +165,7 @@ export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boole
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
         .orderBy('board_name', 'asc');
-      return boards.map(normalizeBoardLiveTimerSetting);
+      return boards.map((board) => normalizeBoardStopwatchSetting(board));
     });
   } catch (error) {
     console.error('Failed to fetch boards:', error);
@@ -407,7 +397,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_cutoff_hours: boardData.inbound_reply_reopen_cutoff_hours ?? 168,
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
-          enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
+          enable_live_ticket_timer: resolveBoardStopwatchEnabled(boardData.enable_live_ticket_timer),
           client_portal_visible: boardData.client_portal_visible ?? true,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
@@ -468,7 +458,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
         },
       });
 
-      return normalizeBoardLiveTimerSetting(newBoard);
+      return normalizeBoardStopwatchSetting(newBoard);
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);
@@ -918,7 +908,7 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         );
       }
       if ('enable_live_ticket_timer' in sanitizedData) {
-        sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
+        sanitizedData.enable_live_ticket_timer = resolveBoardStopwatchEnabled(sanitizedData.enable_live_ticket_timer);
       }
       if ('client_portal_visible' in sanitizedData) {
         sanitizedData.client_portal_visible = sanitizedData.client_portal_visible ?? true;
@@ -988,7 +978,7 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         },
       });
 
-      return normalizeBoardLiveTimerSetting(updatedBoard);
+      return normalizeBoardStopwatchSetting(updatedBoard);
     });
   } catch (error) {
     const expected = boardActionErrorFrom(error);

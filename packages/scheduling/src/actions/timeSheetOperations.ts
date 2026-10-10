@@ -20,6 +20,7 @@ import {
 } from './timeEntrySchemas'; // Import schemas from the new module
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { findOrCreateTimeSheetRow } from '../lib/timeSheetResolution';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -361,23 +362,12 @@ export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: 
 
     const facade = tenantDb(db, tenant);
 
-    let timeSheet = await facade.table('time_sheets')
-      .where({
-        user_id: validatedParams.userId,
-        period_id: validatedParams.periodId,
-      })
-      .first();
-
-    if (!timeSheet) {
-      [timeSheet] = await facade.table('time_sheets')
-        .insert({
-          user_id: validatedParams.userId,
-          period_id: validatedParams.periodId,
-          approval_status: 'DRAFT',
-          tenant
-        })
-        .returning('*');
-    }
+    const timeSheet = await findOrCreateTimeSheetRow(
+      db,
+      tenant,
+      validatedParams.userId,
+      validatedParams.periodId,
+    );
 
     const timePeriod = await facade.table('time_periods')
       .where({

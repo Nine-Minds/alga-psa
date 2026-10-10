@@ -27,7 +27,8 @@
       "sendToClient": "Envoyer au client",
       "setAsDefault": "Définir par défaut",
       "submitForApproval": "Soumettre pour approbation",
-      "done": "Terminé"
+      "done": "Terminé",
+      "markAccepted": "Marquer comme accepté"
     },
     "badges": {
       "standard": "Standard"
@@ -158,7 +159,8 @@
       "backToQuotes": "Retour aux devis",
       "backToTemplates": "Retour aux modèles de devis",
       "convertToSalesOrder": "Convertir en commande client",
-      "convert": "Convertir en…"
+      "convert": "Convertir en…",
+      "markAccepted": "Marquer comme accepté"
     },
     "headings": {
       "editQuote": "Modifier le devis",
@@ -217,6 +219,12 @@
         "message": "Message",
         "from": "De",
         "useDefault": "Utiliser l’expéditeur par défaut"
+      },
+      "markAccepted": {
+        "title": "Marquer le devis comme accepté",
+        "description": "Indiquez que le client a accepté ce devis en dehors du portail client (par exemple par téléphone ou par e-mail). Le devis passe à l'état Accepté et peut être converti comme tout devis accepté. Votre nom et l'heure sont enregistrés.",
+        "note": "Note (facultatif)",
+        "notePlaceholder": "Par exemple : accepté par e-mail le 3"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "renvoyer le devis",
       "sendQuote": "envoyer un devis",
       "sendReminder": "envoyer un rappel",
-      "submitForApproval": "soumettre pour approbation"
+      "submitForApproval": "soumettre pour approbation",
+      "markAccepted": "marquer le devis comme accepté"
     },
     "errors": {
       "convert": "Échec de la conversion du devis",
@@ -252,7 +261,8 @@
       "requestedChanges": "Le devis est revenu à l'état de brouillon avec les modifications demandées.",
       "resent": "Devis renvoyé.",
       "sent": "Devis envoyé au client.",
-      "submittedForApproval": "Devis soumis pour approbation interne."
+      "submittedForApproval": "Devis soumis pour approbation interne.",
+      "markedAccepted": "Devis marqué comme accepté."
     },
     "readOnlyNotice": "Ce devis est en lecture seule. Pour apporter des modifications, créez une nouvelle révision.",
     "validation": {
@@ -441,7 +451,8 @@
       "saveAsTemplate": "Échec de l'enregistrement du devis en tant que modèle",
       "send": "Échec de l'envoi du devis",
       "sendReminder": "Échec de l'envoi du rappel de devis",
-      "submitForApproval": "Échec de la soumission du devis pour approbation"
+      "submitForApproval": "Échec de la soumission du devis pour approbation",
+      "markAccepted": "Impossible de marquer le devis comme accepté"
     },
     "labels": {
       "phase": "Phase : {{phase}}",
@@ -460,7 +471,8 @@
       "submittedForApproval": "Devis soumis pour approbation interne.",
       "templateAssigned": "Modèle de document attribué.",
       "templateCleared": "Modèle de document effacé (en utilisant la valeur par défaut).",
-      "createdSalesOrder": "Commande client provisoire {{number}} créée. Les lignes de produit seront facturées à l'exécution."
+      "createdSalesOrder": "Commande client provisoire {{number}} créée. Les lignes de produit seront facturées à l'exécution.",
+      "markedAccepted": "Devis marqué comme accepté."
     },
     "preview": {
       "loading": "Chargement de l'aperçu..."
@@ -691,7 +703,14 @@
       "load": "Échec du chargement des approbations de devis",
       "settings": "Échec de la mise à jour des paramètres d'approbation du devis"
     },
-    "loading": "Chargement de la file d'attente d'approbation..."
+    "loading": "Chargement de la file d'attente d'approbation...",
+    "soleApprover": {
+      "title": "Vous êtes le seul approbateur de devis",
+      "description": "Aucun autre utilisateur actif ne peut approuver les devis ; vous pouvez donc approuver vos propres devis. Les auto-approbations sont enregistrées dans l'activité du devis.",
+      "draftDescription": "Vous êtes le seul utilisateur pouvant approuver les devis. Après avoir soumis ce devis pour approbation, vous pourrez l'approuver vous-même puis l'envoyer.",
+      "pendingDescription": "Vous êtes le seul utilisateur pouvant approuver les devis ; vous pouvez donc approuver ce devis vous-même. Choisissez Approuver pour le rendre prêt à être envoyé.",
+      "dialogNote": "Vous êtes le seul approbateur ; approuver votre propre devis est donc autorisé. L'approbation est enregistrée comme une auto-approbation."
+    }
   },
   "quoteTemplates": {
     "title": "Modèles",
@@ -857,7 +876,9 @@
       "conflict": "Cette modification du devis entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs du devis n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire du devis est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du devis est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du devis est manquant : {{field}}.",
+      "templateCannotBeAccepted": "Les modèles de devis ne peuvent pas être marqués comme acceptés",
+      "onlySentCanBeAccepted": "Seuls les devis envoyés peuvent être marqués comme acceptés"
     }
   }
 }
