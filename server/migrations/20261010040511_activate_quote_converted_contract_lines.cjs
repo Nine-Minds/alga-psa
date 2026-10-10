@@ -9,10 +9,13 @@
 // Citus-safe: every statement is tenant-scoped, ids are selected first, and the
 // updates are plain parameterized `UPDATE ... WHERE tenant = ? AND id IN (...)`.
 //
-// Lines whose updated_at differs from created_at are NOT touched. Conversion inserts
-// lines with created_at = updated_at, but the API can still disable a contract line
-// on purpose (ContractLineService unassign / setPlanActivation), and that is
-// indistinguishable from the legacy state. Skipped lines are counted in the log.
+// Every inactive line of a quote-converted contract is re-enabled EXCEPT lines that show
+// they were once live: any recurring_service_periods row for the line, or any invoice
+// charge detail tied to the line (via its service configuration). Those can only exist if
+// the line was activated through the API and later disabled on purpose, so they are left
+// alone and logged by id for ops review. updated_at is NOT used as a signal: ordinary
+// edits to a draft's lines (rates, configs, terms) bump it, and excluding those would
+// leave exactly the affected contracts uninvoiceable.
 //
 // Periods for already-activated converted contracts are not materialized here; run
 // "Fix all" (repairAllClientCadenceServicePeriodsForTenant) afterwards.
@@ -43,12 +46,26 @@ exports.up = async function up(knex) {
     const lines = await lineQuery
       .whereRaw(CONVERSION_KIND_SQL)
       .where('cl.is_active', false)
-      .select('cl.contract_line_id', 'cl.created_at', 'cl.updated_at');
+      .select('cl.contract_line_id');
+    const inactiveIds = lines.map((row) => row.contract_line_id);
 
-    const sameInstant = (row) =>
-      new Date(row.created_at).getTime() === new Date(row.updated_at).getTime();
-    const lineIds = lines.filter(sameInstant).map((row) => row.contract_line_id);
-    const skipped = lines.length - lineIds.length;
+    const everLive = new Set();
+    for (const ids of chunk(inactiveIds)) {
+      const periods = await db.table('recurring_service_periods')
+        .whereIn('obligation_id', ids)
+        .distinct('obligation_id');
+      periods.forEach((row) => everLive.add(row.obligation_id));
+
+      const chargeQuery = db.table('invoice_charge_details as icd');
+      db.tenantJoin(chargeQuery, 'contract_line_service_configuration as c', 'c.config_id', 'icd.config_id');
+      const charged = await chargeQuery
+        .whereIn('c.contract_line_id', ids)
+        .distinct('c.contract_line_id');
+      charged.forEach((row) => everLive.add(row.contract_line_id));
+    }
+    const lineIds = inactiveIds.filter((id) => !everLive.has(id));
+    const skippedIds = inactiveIds.filter((id) => everLive.has(id));
+    const skipped = skippedIds.length;
 
     for (const ids of chunk(lineIds)) {
       await db.table('contract_lines')
@@ -74,7 +91,7 @@ exports.up = async function up(knex) {
     if (lineIds.length || assignmentIds.length || skipped) {
       console.log(
         `[quote-converted repair] tenant=${tenant} linesActivated=${lineIds.length} ` +
-          `linesSkippedModified=${skipped} draftAssignmentsDeactivated=${assignmentIds.length}`,
+          `linesSkippedPriorHistory=${skipped} skippedIds=[${skippedIds.join(',')}] draftAssignmentsDeactivated=${assignmentIds.length}`,
       );
     }
   }

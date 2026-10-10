@@ -291,15 +291,23 @@ describe('quote-converted contract: first invoice (alga0002168)', () => {
     expect(due.materializationGaps.filter((g: any) => g.clientId === client.clientId)).toEqual([]);
   }, HOOK_TIMEOUT);
 
-  it('3. legacy converted contract (inactive lines) is repaired by the migration and Fix all', async () => {
+  it('3. legacy converted contract (inactive, edited lines) is repaired by the migration and Fix all', async () => {
     const { client, name } = await newClientWithJulyCycle('Scenario3');
     const quoteId = await threeLineQuote(client.clientId);
     const { contractId, lines, assignment } = await convertAndLoad(quoteId);
 
-    // Old shape: lines inactive (created_at == updated_at), already activated.
+    // A normal edit on the draft (rate update through the repository) bumps updated_at.
+    const { updateContractLineRate } = await import('../../../../../packages/billing/src/repositories/contractLineRepository');
+    for (const line of lines) {
+      await updateContractLineRate(db as any, tenantId, contractId, line.contract_line_id, null, 'advance');
+    }
+    const edited = await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId, contract_id: contractId });
+    expect(edited.every((l: any) => new Date(l.updated_at).getTime() > new Date(l.created_at).getTime())).toBe(true);
+
+    // Old shape: lines inactive, already activated.
     await tenantTable(db, tenantId, 'contract_lines')
       .where({ tenant: tenantId, contract_id: contractId })
-      .update({ is_active: false, updated_at: db.raw('created_at') });
+      .update({ is_active: false });
     await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, client_contract_id: assignment.client_contract_id })
       .update({ is_active: true });
@@ -332,6 +340,36 @@ describe('quote-converted contract: first invoice (alga0002168)', () => {
     expect(run.failures, JSON.stringify(run)).toEqual([]);
     expect(run.invoicesCreated).toBe(1);
     expect(await invoicesFor(client.clientId)).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('3b. the migration leaves a line with prior period history disabled and reports it', async () => {
+    const { client, name } = await newClientWithJulyCycle('Scenario3b');
+    const { contractId, lines, assignment } = await convertAndLoad(await threeLineQuote(client.clientId));
+    await activateAndFind(name, assignment);
+    const lineIds = lines.map((l) => l.contract_line_id);
+    const [historic, ...fresh] = lineIds;
+
+    // Periods exist for every line (just materialized); drop them for all but one line,
+    // then disable every line as the legacy state would.
+    await tenantTable(db, tenantId, 'recurring_service_periods')
+      .where({ tenant: tenantId })
+      .whereIn('obligation_id', fresh)
+      .delete();
+    await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .update({ is_active: false });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const migration = await import('../../../../migrations/20261010040511_activate_quote_converted_contract_lines.cjs' as string);
+    await (migration.up ?? migration.default.up)(db);
+    const logged = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    logSpy.mockRestore();
+
+    const after = await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId, contract_id: contractId });
+    const byId = new Map(after.map((l: any) => [l.contract_line_id, l.is_active]));
+    expect(byId.get(historic)).toBe(false);
+    for (const id of fresh) expect(byId.get(id)).toBe(true);
+    expect(logged).toContain(historic);
   }, HOOK_TIMEOUT);
 
   it('4. failures are coded on the single and grouped paths', async () => {
