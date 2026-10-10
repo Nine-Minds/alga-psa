@@ -33,13 +33,15 @@ exports.up = async function up(knex) {
   }
 
   // attributes.manufacturer / attributes.model → columns, then drop the keys.
+  // `jsonb_exists(...)` rather than the `?` operator: knex reads a bare `?` in
+  // a raw string as a positional binding and rewrites it to `$1`.
   await knex.raw(`
     UPDATE assets
     SET manufacturer = COALESCE(NULLIF(manufacturer, ''), NULLIF(trim(attributes->>'manufacturer'), '')),
         model = COALESCE(NULLIF(model, ''), NULLIF(trim(attributes->>'model'), '')),
         attributes = attributes - 'manufacturer' - 'model'
     WHERE attributes IS NOT NULL
-      AND (attributes ? 'manufacturer' OR attributes ? 'model')
+      AND (jsonb_exists(attributes, 'manufacturer') OR jsonb_exists(attributes, 'model'))
   `);
 
   // Fill what is still empty from the RMM system_info blocks.
