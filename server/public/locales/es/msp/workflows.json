@@ -602,7 +602,12 @@
       "waitStepLine": "Paso: {{value}}",
       "matchedRunLabel": "Ejecución coincidente",
       "runStatusLine": "Estado: {{status}}",
-      "payloadLabel": "Carga útil"
+      "payloadLabel": "Carga útil",
+      "launchSkips": {
+        "title": "Flujos de trabajo no lanzados",
+        "unknownWorkflow": "Flujo de trabajo eliminado",
+        "intentional": "Intencional"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Error al cargar los eventos",
@@ -1492,6 +1497,39 @@
       "unsaved": "Cambios sin guardar",
       "savedAgo": "Guardado · {{ago}}",
       "saved": "Guardado"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "Se omitió {{count}} evento en los últimos {{days}} días — {{reasons}}",
+        "summary_other": "Se omitieron {{count}} eventos en los últimos {{days}} días — {{reasons}}",
+        "lastSkipped": "Última omisión {{when}}",
+        "view": "Ver eventos omitidos"
+      },
+      "drawer": {
+        "title": "Eventos omitidos",
+        "windowLabel": "Período",
+        "window": {
+          "24h": "Últimas 24 horas",
+          "7d": "Últimos 7 días",
+          "30d": "Últimos 30 días"
+        },
+        "allReasons": "Todos los motivos",
+        "reasonLabel": "Motivo",
+        "groupAttention": "Requiere atención",
+        "groupGuarded": "Protegido / en pausa (intencional)",
+        "lastSeen": "Visto por última vez {{when}}",
+        "columns": {
+          "received": "Recibido",
+          "event": "Evento",
+          "reason": "Motivo",
+          "message": "Mensaje"
+        },
+        "issuesTitle": "Problemas de validación",
+        "issueRoot": "(carga útil)",
+        "openEvent": "Abrir evento",
+        "loadError": "No se pudieron cargar los eventos omitidos.",
+        "empty": "No hay eventos omitidos en este período."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2786,6 +2824,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "este flujo de trabajo"
+      },
+      "launchSkips": {
+        "badge": "{{count}} omitidos",
+        "badgeTitle": "Eventos para los que este flujo de trabajo no se lanzó en los últimos 7 días"
       }
     },
     "eventsCatalog": {
@@ -3181,5 +3223,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Buscar campos",
     "noMatches": "Ningún campo coincide"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Falta la referencia del esquema de carga útil",
+      "hint": "El flujo de trabajo no tiene referencia de esquema de carga útil, por lo que no se puede validar la carga útil del evento."
+    },
+    "unknown_schema_ref": {
+      "label": "Referencia de esquema de carga útil desconocida",
+      "hint": "La referencia de esquema de carga útil del flujo de trabajo no existe en el registro de esquemas."
+    },
+    "missing_source_schema": {
+      "label": "Falta el esquema de origen",
+      "hint": "El evento no tiene un esquema de origen para comparar con el esquema del flujo de trabajo."
+    },
+    "schema_mismatch": {
+      "label": "La carga útil del evento no coincide con el esquema",
+      "hint": "La carga útil del evento no coincide con el esquema del flujo de trabajo y no se configuró un mapeo."
+    },
+    "payload_mapping_failed": {
+      "label": "Falló el mapeo de la carga útil",
+      "hint": "No se pudo aplicar el mapeo de carga útil del disparador al evento."
+    },
+    "payload_validation_failed": {
+      "label": "Falló la validación de la carga útil",
+      "hint": "La carga útil mapeada no superó el esquema de carga útil del flujo de trabajo."
+    },
+    "launch_failed": {
+      "label": "Falló el lanzamiento",
+      "hint": "El worker aceptó el evento, pero falló el inicio de la ejecución del flujo de trabajo."
+    },
+    "paused": {
+      "label": "Flujo de trabajo en pausa",
+      "hint": "El flujo de trabajo está en pausa, por lo que los eventos no se lanzan intencionalmente."
+    },
+    "lineage_loop_guard": {
+      "label": "Protección de bucle (linaje)",
+      "hint": "El evento se originó en el propio linaje de este flujo de trabajo; omitido para evitar un bucle."
+    },
+    "self_trigger_guard": {
+      "label": "Protección de autodisparo",
+      "hint": "El evento fue emitido por este mismo flujo de trabajo; omitido para evitar el autodisparo."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profundidad de causalidad excedida",
+      "hint": "La cadena de eventos causados superó la profundidad máxima; omitido para evitar bucles descontrolados."
+    }
   }
 }

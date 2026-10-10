@@ -602,7 +602,12 @@
       "waitStepLine": "Etapa: {{value}}",
       "matchedRunLabel": "Execução correspondente",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Carga útil"
+      "payloadLabel": "Carga útil",
+      "launchSkips": {
+        "title": "Fluxos de trabalho não iniciados",
+        "unknownWorkflow": "Fluxo de trabalho excluído",
+        "intentional": "Intencional"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Falha ao carregar eventos de fluxo de trabalho",
@@ -1370,6 +1375,39 @@
       "unsaved": "Alterações não salvas",
       "savedAgo": "Salvo · {{ago}}",
       "saved": "Salvo"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} evento ignorado nos últimos {{days}} dias — {{reasons}}",
+        "summary_other": "{{count}} eventos ignorados nos últimos {{days}} dias — {{reasons}}",
+        "lastSkipped": "Último ignorado {{when}}",
+        "view": "Ver eventos ignorados"
+      },
+      "drawer": {
+        "title": "Eventos ignorados",
+        "windowLabel": "Período",
+        "window": {
+          "24h": "Últimas 24 horas",
+          "7d": "Últimos 7 dias",
+          "30d": "Últimos 30 dias"
+        },
+        "allReasons": "Todos os motivos",
+        "reasonLabel": "Motivo",
+        "groupAttention": "Requer atenção",
+        "groupGuarded": "Protegido / pausado (intencional)",
+        "lastSeen": "Visto pela última vez {{when}}",
+        "columns": {
+          "received": "Recebido",
+          "event": "Evento",
+          "reason": "Motivo",
+          "message": "Mensagem"
+        },
+        "issuesTitle": "Problemas de validação",
+        "issueRoot": "(conteúdo)",
+        "openEvent": "Abrir evento",
+        "loadError": "Falha ao carregar os eventos ignorados.",
+        "empty": "Nenhum evento ignorado neste período."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2664,6 +2702,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "este fluxo de trabalho"
+      },
+      "launchSkips": {
+        "badge": "{{count}} ignorados",
+        "badgeTitle": "Eventos para os quais este fluxo de trabalho não foi iniciado nos últimos 7 dias"
       }
     },
     "eventsCatalog": {
@@ -3059,5 +3101,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Pesquisar campos",
     "noMatches": "Nenhum campo correspondente"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Referência do esquema de payload ausente",
+      "hint": "O fluxo de trabalho não tem referência de esquema de payload, então o payload do evento não pode ser validado."
+    },
+    "unknown_schema_ref": {
+      "label": "Referência do esquema de payload desconhecida",
+      "hint": "A referência do esquema de payload do fluxo de trabalho não existe no registro de esquemas."
+    },
+    "missing_source_schema": {
+      "label": "Esquema de origem ausente",
+      "hint": "O evento não tem esquema de origem para comparar com o esquema do fluxo de trabalho."
+    },
+    "schema_mismatch": {
+      "label": "O payload do evento não corresponde ao esquema",
+      "hint": "O payload do evento não corresponde ao esquema do fluxo de trabalho e nenhum mapeamento foi configurado."
+    },
+    "payload_mapping_failed": {
+      "label": "Falha no mapeamento do payload",
+      "hint": "O mapeamento de payload do gatilho não pôde ser aplicado ao evento."
+    },
+    "payload_validation_failed": {
+      "label": "Falha na validação do payload",
+      "hint": "O payload mapeado não passou no esquema de payload do fluxo de trabalho."
+    },
+    "launch_failed": {
+      "label": "Falha ao iniciar",
+      "hint": "O worker aceitou o evento, mas a inicialização da execução do fluxo de trabalho falhou."
+    },
+    "paused": {
+      "label": "Fluxo de trabalho pausado",
+      "hint": "O fluxo de trabalho está pausado, então os eventos intencionalmente não são iniciados."
+    },
+    "lineage_loop_guard": {
+      "label": "Proteção contra loop (linhagem)",
+      "hint": "O evento se originou da própria linhagem deste fluxo de trabalho; ignorado para evitar um loop."
+    },
+    "self_trigger_guard": {
+      "label": "Proteção contra autoacionamento",
+      "hint": "O evento foi emitido por este próprio fluxo de trabalho; ignorado para evitar autoacionamento."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profundidade de causalidade excedida",
+      "hint": "A cadeia de eventos causados excedeu a profundidade máxima; ignorado para evitar loops descontrolados."
+    }
   }
 }

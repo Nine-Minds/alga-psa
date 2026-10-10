@@ -602,7 +602,12 @@
       "waitStepLine": "Steg: {{value}}",
       "matchedRunLabel": "Matchad körning",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Nyttolast"
+      "payloadLabel": "Nyttolast",
+      "launchSkips": {
+        "title": "Arbetsflöden som inte startades",
+        "unknownWorkflow": "Borttaget arbetsflöde",
+        "intentional": "Avsiktligt"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Det gick inte att läsa in arbetsflödeshändelser",
@@ -1370,6 +1375,39 @@
       "unsaved": "Osparade ändringar",
       "savedAgo": "Sparat · {{ago}}",
       "saved": "Sparat"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} händelse hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "summary_other": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "lastSkipped": "Senast överhoppad {{when}}",
+        "view": "Visa överhoppade händelser"
+      },
+      "drawer": {
+        "title": "Överhoppade händelser",
+        "windowLabel": "Tidsperiod",
+        "window": {
+          "24h": "Senaste 24 timmarna",
+          "7d": "Senaste 7 dagarna",
+          "30d": "Senaste 30 dagarna"
+        },
+        "allReasons": "Alla orsaker",
+        "reasonLabel": "Orsak",
+        "groupAttention": "Kräver uppmärksamhet",
+        "groupGuarded": "Skyddad / pausad (avsiktligt)",
+        "lastSeen": "Senast sedd {{when}}",
+        "columns": {
+          "received": "Mottagen",
+          "event": "Händelse",
+          "reason": "Orsak",
+          "message": "Meddelande"
+        },
+        "issuesTitle": "Valideringsproblem",
+        "issueRoot": "(nyttolast)",
+        "openEvent": "Öppna händelse",
+        "loadError": "Det gick inte att läsa in överhoppade händelser.",
+        "empty": "Inga överhoppade händelser under denna period."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2664,6 +2702,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "det här arbetsflödet"
+      },
+      "launchSkips": {
+        "badge": "{{count}} överhoppade",
+        "badgeTitle": "Händelser som detta arbetsflöde inte startades för de senaste 7 dagarna"
       }
     },
     "eventsCatalog": {
@@ -3059,5 +3101,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Sök fält",
     "noMatches": "Inga matchande fält"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Referens till payload-schema saknas",
+      "hint": "Arbetsflödet saknar referens till payload-schema, så händelsens payload kan inte valideras."
+    },
+    "unknown_schema_ref": {
+      "label": "Okänd referens till payload-schema",
+      "hint": "Arbetsflödets referens till payload-schema finns inte i schemaregistret."
+    },
+    "missing_source_schema": {
+      "label": "Källschema saknas",
+      "hint": "Händelsen saknar källschema att jämföra med arbetsflödets schema."
+    },
+    "schema_mismatch": {
+      "label": "Händelsens payload matchar inte schemat",
+      "hint": "Händelsens payload matchar inte arbetsflödets schema och ingen mappning är konfigurerad."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload-mappning misslyckades",
+      "hint": "Triggerns payload-mappning kunde inte tillämpas på händelsen."
+    },
+    "payload_validation_failed": {
+      "label": "Payload-validering misslyckades",
+      "hint": "Den mappade payloaden klarade inte arbetsflödets payload-schema."
+    },
+    "launch_failed": {
+      "label": "Start misslyckades",
+      "hint": "Workern accepterade händelsen, men start av arbetsflödeskörningen misslyckades."
+    },
+    "paused": {
+      "label": "Arbetsflödet är pausat",
+      "hint": "Arbetsflödet är pausat, så händelser startas avsiktligt inte."
+    },
+    "lineage_loop_guard": {
+      "label": "Loopskydd (ursprung)",
+      "hint": "Händelsen härstammar från detta arbetsflödes egen kedja; hoppades över för att förhindra en loop."
+    },
+    "self_trigger_guard": {
+      "label": "Skydd mot självutlösning",
+      "hint": "Händelsen skickades av detta arbetsflöde självt; hoppades över för att förhindra självutlösning."
+    },
+    "causation_depth_exceeded": {
+      "label": "Orsakskedjans djup överskreds",
+      "hint": "Kedjan av orsakade händelser överskred maxdjupet; hoppades över för att förhindra skenande loopar."
+    }
   }
 }

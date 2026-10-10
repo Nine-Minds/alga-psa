@@ -602,7 +602,12 @@
       "waitStepLine": "Krok: {{value}}",
       "matchedRunLabel": "Dopasowane uruchomienie",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Ładunek"
+      "payloadLabel": "Ładunek",
+      "launchSkips": {
+        "title": "Nieuruchomione workflowy",
+        "unknownWorkflow": "Usunięty workflow",
+        "intentional": "Zamierzone"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Nie udało się wczytać zdarzeń workflow",
@@ -1492,6 +1497,41 @@
       "unsaved": "Niezapisane zmiany",
       "savedAgo": "Zapisano · {{ago}}",
       "saved": "Zapisano"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "Pominięto {{count}} zdarzenie w ciągu ostatnich {{days}} dni — {{reasons}}",
+        "summary_few": "Pominięto {{count}} zdarzenia w ciągu ostatnich {{days}} dni — {{reasons}}",
+        "summary_many": "Pominięto {{count}} zdarzeń w ciągu ostatnich {{days}} dni — {{reasons}}",
+        "summary_other": "Pominięto {{count}} zdarzeń w ciągu ostatnich {{days}} dni — {{reasons}}",
+        "lastSkipped": "Ostatnio pominięto {{when}}",
+        "view": "Pokaż pominięte zdarzenia"
+      },
+      "drawer": {
+        "title": "Pominięte zdarzenia",
+        "windowLabel": "Przedział czasu",
+        "window": {
+          "24h": "Ostatnie 24 godziny",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni"
+        },
+        "allReasons": "Wszystkie powody",
+        "reasonLabel": "Powód",
+        "groupAttention": "Wymaga uwagi",
+        "groupGuarded": "Zabezpieczone / wstrzymane (zamierzone)",
+        "lastSeen": "Ostatnio widziano {{when}}",
+        "columns": {
+          "received": "Odebrano",
+          "event": "Zdarzenie",
+          "reason": "Powód",
+          "message": "Komunikat"
+        },
+        "issuesTitle": "Problemy z walidacją",
+        "issueRoot": "(ładunek)",
+        "openEvent": "Otwórz zdarzenie",
+        "loadError": "Nie udało się wczytać pominiętych zdarzeń.",
+        "empty": "Brak pominiętych zdarzeń w tym przedziale czasu."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2788,6 +2828,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "ten workflow"
+      },
+      "launchSkips": {
+        "badge": "Pominięto: {{count}}",
+        "badgeTitle": "Zdarzenia, dla których ten workflow nie został uruchomiony w ciągu ostatnich 7 dni"
       }
     },
     "eventsCatalog": {
@@ -3183,5 +3227,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Szukaj pól",
     "noMatches": "Brak pasujących pól"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Brak odwołania do schematu ładunku",
+      "hint": "Workflow nie ma odwołania do schematu ładunku, więc nie można zwalidować ładunku zdarzenia."
+    },
+    "unknown_schema_ref": {
+      "label": "Nieznane odwołanie do schematu ładunku",
+      "hint": "Odwołanie do schematu ładunku workflow nie istnieje w rejestrze schematów."
+    },
+    "missing_source_schema": {
+      "label": "Brak schematu źródłowego",
+      "hint": "Zdarzenie nie ma schematu źródłowego do porównania ze schematem workflow."
+    },
+    "schema_mismatch": {
+      "label": "Ładunek zdarzenia nie pasuje do schematu",
+      "hint": "Ładunek zdarzenia nie pasuje do schematu workflow, a mapowanie nie zostało skonfigurowane."
+    },
+    "payload_mapping_failed": {
+      "label": "Mapowanie ładunku nie powiodło się",
+      "hint": "Nie udało się zastosować mapowania ładunku wyzwalacza do zdarzenia."
+    },
+    "payload_validation_failed": {
+      "label": "Walidacja ładunku nie powiodła się",
+      "hint": "Zmapowany ładunek nie przeszedł walidacji schematu ładunku workflow."
+    },
+    "launch_failed": {
+      "label": "Uruchomienie nie powiodło się",
+      "hint": "Worker przyjął zdarzenie, ale uruchomienie workflow nie powiodło się."
+    },
+    "paused": {
+      "label": "Workflow wstrzymany",
+      "hint": "Workflow jest wstrzymany, więc zdarzenia celowo nie są uruchamiane."
+    },
+    "lineage_loop_guard": {
+      "label": "Ochrona przed pętlą (rodowód)",
+      "hint": "Zdarzenie pochodzi z własnego rodowodu tego workflow; pominięto, aby zapobiec pętli."
+    },
+    "self_trigger_guard": {
+      "label": "Ochrona przed samouruchomieniem",
+      "hint": "Zdarzenie zostało wyemitowane przez ten workflow; pominięto, aby zapobiec samouruchomieniu."
+    },
+    "causation_depth_exceeded": {
+      "label": "Przekroczono głębokość przyczynowości",
+      "hint": "Łańcuch wywołanych zdarzeń przekroczył maksymalną głębokość; pominięto, aby zapobiec niekontrolowanym pętlom."
+    }
   }
 }

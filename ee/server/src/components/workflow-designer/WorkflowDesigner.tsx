@@ -52,6 +52,7 @@ import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
+import WorkflowLaunchSkipBanner from './WorkflowLaunchSkipBanner';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowDesignerAuditPanel from './WorkflowDesignerAuditPanel';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
@@ -5990,6 +5991,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             workflowStepQuotaCard
           ) : null}
         </div>
+        {isEditorDesignerMode && activeWorkflowId && (
+          <WorkflowLaunchSkipBanner
+            workflowId={activeWorkflowId}
+            isPublished={hasPublishedVersion}
+          />
+        )}
       </div>
 
       <WorkflowRunDialog
