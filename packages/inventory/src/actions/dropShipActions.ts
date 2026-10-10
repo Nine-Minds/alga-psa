@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventorySalesOrderPayload, buildInventoryPurchaseOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -237,11 +238,7 @@ export const createDropShipForSoLine = withAuth(
         return { ...(po as IPurchaseOrder), lines: [line as IPurchaseOrderLine] };
       });
 
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
-        tenant,
-        po_id: result.po_id,
-        user_id: user.user_id,
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', buildInventoryPurchaseOrderPayload({ tenant, poId: result.po_id, userId: user.user_id }));
 
       return result;
     } catch (error) {
@@ -553,18 +550,8 @@ export const confirmDropShipShipment = withAuth(
       }
     }
     await publishInventoryEvent('INVENTORY_SO_FULFILLED', core.so_fulfilled_event);
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-      tenant,
-      po_id: core.po_line.po_id,
-      user_id: user.user_id,
-      changed_fields: ['status', 'quantity_received'],
-    }));
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: core.so_line.so_id,
-      user_id: user.user_id,
-      changed_fields: ['status', 'quantity_fulfilled'],
-    }));
+    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant, poId: core.po_line.po_id, userId: user.user_id, changedFields: ['status', 'quantity_received'] }));
+    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: core.so_line.so_id, userId: user.user_id, changedFields: ['status', 'quantity_fulfilled'] }));
     for (const unit of core.units) {
       await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
         tenant,

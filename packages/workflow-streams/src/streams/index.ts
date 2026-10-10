@@ -14,6 +14,7 @@ export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentGen
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailFeedbackEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/externalMappingEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationConnectionEventBuilders';

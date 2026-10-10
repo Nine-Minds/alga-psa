@@ -10,6 +10,7 @@ import { surveyContracts } from './contracts/surveys';
 import { emailContracts } from './contracts/email';
 import { notificationContracts } from './contracts/notifications';
 import { integrationContracts } from './contracts/integrations';
+import { inventoryContracts } from './contracts/inventory';
 import { assetContracts } from './contracts/assets';
 
 /**
@@ -42,6 +43,7 @@ export const emitterContracts: EmitterContracts = {
   ...notificationContracts,
   ...integrationContracts,
   ...assetContracts,
+  ...inventoryContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -70,14 +72,4 @@ export const emitterContracts: EmitterContracts = {
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
   INVENTORY_SO_FULFILLED: schemaNotRegistered('INVENTORY_SO_FULFILLED', 'payload.InventorySoFulfilled.v1'),
   INVENTORY_RMA_CREATED: schemaNotRegistered('INVENTORY_RMA_CREATED', 'payload.InventoryRmaCreated.v1'),
-  INVENTORY_SALES_ORDER_CREATED: pendingMigration('INVENTORY_SALES_ORDER_CREATED', 'remaining'),
-  INVENTORY_SALES_ORDER_UPDATED: pendingMigration('INVENTORY_SALES_ORDER_UPDATED', 'remaining'),
-  INVENTORY_SALES_ORDER_DELETED: pendingMigration('INVENTORY_SALES_ORDER_DELETED', 'remaining'),
-  INVENTORY_PURCHASE_ORDER_CREATED: pendingMigration('INVENTORY_PURCHASE_ORDER_CREATED', 'remaining'),
-  INVENTORY_PURCHASE_ORDER_UPDATED: pendingMigration('INVENTORY_PURCHASE_ORDER_UPDATED', 'remaining'),
-  INVENTORY_PURCHASE_ORDER_DELETED: pendingMigration('INVENTORY_PURCHASE_ORDER_DELETED', 'remaining'),
-  INVENTORY_TRANSFER_DISPATCHED: pendingMigration('INVENTORY_TRANSFER_DISPATCHED', 'remaining'),
-  INVENTORY_TRANSFER_RECEIVED: pendingMigration('INVENTORY_TRANSFER_RECEIVED', 'remaining'),
-  INVENTORY_COUNT_SUBMITTED: pendingMigration('INVENTORY_COUNT_SUBMITTED', 'remaining'),
-  INVENTORY_COUNT_APPROVED: pendingMigration('INVENTORY_COUNT_APPROVED', 'remaining'),
 };

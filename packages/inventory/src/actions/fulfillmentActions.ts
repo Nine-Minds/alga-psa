@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventorySalesOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -527,12 +528,7 @@ export const fulfillSalesOrderLine = withAuth(
         if (signal) await publishInventoryEvent('INVENTORY_STOCK_LOW', signal);
       }
       await publishInventoryEvent('INVENTORY_SO_FULFILLED', core.so_fulfilled_event);
-      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-        tenant,
-        so_id: core.so_id,
-        user_id: user.user_id,
-        changed_fields: ['status', 'quantity_fulfilled'],
-      }));
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', buildInventorySalesOrderPayload({ tenant, soId: core.so_id, userId: user.user_id, changedFields: ['status', 'quantity_fulfilled'] }));
       for (const unitId of core.unit_ids) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
           tenant,
