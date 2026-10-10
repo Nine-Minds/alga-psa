@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -31,7 +32,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import QuickAddCategory from '../QuickAddCategory';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
@@ -200,6 +201,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     suppressInternalNotifications: false,
   });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
@@ -1319,6 +1321,18 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             ) : null}
           </div>
+          {/* Personal "My group" control: sits under the title row, outside the shared field grid.
+              Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
+          {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl
+            ? activityCrossFeature.renderActivityGroupControl({
+                id: `${id}-activity-group`,
+                activityType: 'ticket',
+                activityId: ticket.ticket_id,
+                // Built from SAVED state (props), not unsaved form edits.
+                assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.user_id)),
+              })
+            : null}
+
           {/* Unsaved changes alert banner */}
           {hasUnsavedChanges && (
             <Alert variant="warning" className="mb-4">

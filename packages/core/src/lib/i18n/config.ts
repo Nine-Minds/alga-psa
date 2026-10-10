@@ -215,8 +215,8 @@ export const ROUTE_NAMESPACES = {
   // msp/time-entry loads on ticket and project surfaces because the shared
   // time-entry launcher (period picker + blocked-launch feedback) is opened
   // from both.
-  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry'],
-  '/msp/projects': ['common', 'msp/core', 'features/projects', 'msp/time-entry'],
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities'],
+  '/msp/projects': ['common', 'msp/core', 'features/projects', 'msp/time-entry', 'msp/user-activities'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing', 'msp/billing-settings'],
@@ -235,7 +235,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
-  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities'],
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],

@@ -1,8 +1,8 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { ScheduleSection } from './ScheduleSection';
 import { TicketsSection } from './TicketsSection';
@@ -15,6 +15,7 @@ import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ACTIVITY_BOARD_PARAM, parseActivityKey } from '../lib/activityBoardLink';
 
 export function UserActivitiesDashboard() {
   const { t } = useTranslation('msp/user-activities');
@@ -22,6 +23,20 @@ export function UserActivitiesDashboard() {
   // Bell "View all notifications" deep-links here with ?focus=notifications. Treat it
   // as an EPHEMERAL card-view override (task 29.8.46).
   const focusNotifications = searchParams?.get('focus') === 'notifications';
+  const router = useRouter();
+  const pathname = usePathname();
+  // "Show on my activities" deep-links here with ?activity=<type>:<id>. Like the focus link it
+  // is an EPHEMERAL override: it forces the table view for this visit only and never writes
+  // the saved view preference. An unparseable value is ignored.
+  const activityParam = searchParams?.get(ACTIVITY_BOARD_PARAM) ?? null;
+  const [focusActivityKey, setFocusActivityKey] = useState<string | null>(
+    () => (parseActivityKey(activityParam) ? activityParam : null)
+  );
+  useEffect(() => {
+    if (activityParam && parseActivityKey(activityParam)) {
+      setFocusActivityKey(activityParam);
+    }
+  }, [activityParam]);
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
 
@@ -99,6 +114,20 @@ export function UserActivitiesDashboard() {
   // The table falls back to its own DEFAULT_FILTERS when the user has no saved preference.
   const currentTableFilters: ActivityFiltersType = tableInitialFilters || {};
 
+  // The section resolved the deep link (highlighted, or reported not found): consume the param
+  // so a refresh / back navigation doesn't repeat it, and pin the table view for this visit
+  // (the saved preference stays untouched).
+  const handleFocusConsumed = useCallback(() => {
+    setFocusActivityKey(null);
+    setEphemeralView((prev) => prev ?? 'table');
+    if (searchParams?.get(ACTIVITY_BOARD_PARAM)) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete(ACTIVITY_BOARD_PARAM);
+      const query = next.toString();
+      router.replace(query ? `${pathname}?${query}` : (pathname ?? ''));
+    }
+  }, [pathname, router, searchParams]);
+
   // Table view content - Defined before use and memoized to prevent unnecessary re-renders
   const tableViewContent = useMemo(() => (
     <ActivitiesDataTableSection
@@ -107,8 +136,10 @@ export function UserActivitiesDashboard() {
         : t('dashboard.allActivitiesTitle', { defaultValue: 'All Activities' })}
       initialFilters={currentTableFilters}
       id="all-activities-table-section"
+      focusActivityKey={focusActivityKey}
+      onFocusConsumed={handleFocusConsumed}
     />
-  ), [currentTableFilters, tableInitialFilters, t]
+  ), [currentTableFilters, tableInitialFilters, t, focusActivityKey, handleFocusConsumed]
   );
 
   // Card view content - Defined before use and memoized to prevent unnecessary re-renders
@@ -200,10 +231,10 @@ export function UserActivitiesDashboard() {
     }
   };
 
-  // Effective view mode: an ephemeral override wins, else the focus deep link
-  // forces cards, else the saved preference.
+  // Effective view mode: an ephemeral override wins, else the activity deep link forces the
+  // table, else the focus deep link forces cards, else the saved preference.
   const effectiveViewMode: UserActivitiesViewMode =
-    ephemeralView ?? (focusNotifications ? 'cards' : viewMode);
+    ephemeralView ?? (focusActivityKey ? 'table' : focusNotifications ? 'cards' : viewMode);
 
   // Focus-mode card layout: notifications expanded to full mode, the other
   // sections rendered collapsed below — still present and expandable.

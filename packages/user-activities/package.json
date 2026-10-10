@@ -22,6 +22,14 @@
       "import": "./src/components/ActivityDrawerProvider.tsx",
       "types": "./src/components/ActivityDrawerProvider.tsx"
     },
+    "./components/ActivityGroupControl": {
+      "import": "./src/components/ActivityGroupControl.tsx",
+      "types": "./src/components/ActivityGroupControl.tsx"
+    },
+    "./components/MyActivityGroupsProvider": {
+      "import": "./src/components/MyActivityGroupsProvider.tsx",
+      "types": "./src/components/MyActivityGroupsProvider.tsx"
+    },
     "./components/UserActivitiesDashboard": {
       "import": "./src/components/UserActivitiesDashboard.tsx",
       "types": "./src/components/UserActivitiesDashboard.tsx"

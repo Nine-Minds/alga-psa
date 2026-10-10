@@ -7,6 +7,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketInfo from '../TicketInfo';
 
 const getTicketStatusesMock = vi.fn();
+const crossFeatureRef = vi.hoisted(() => ({ value: null as any }));
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: null, status: 'unauthenticated' }),
@@ -18,7 +19,7 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: vi.fn(),
-  useOptionalActivityCrossFeature: () => null,
+  useOptionalActivityCrossFeature: () => crossFeatureRef.value,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -261,129 +262,54 @@ function renderTicketInfo(overrides: Partial<React.ComponentProps<typeof TicketI
   );
 }
 
-describe('TicketInfo live editing awareness', () => {
+describe('TicketInfo "My group" host', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getTicketStatusesMock.mockResolvedValue([
-      { status_id: 'status-a', name: 'Open', is_closed: false },
-      { status_id: 'status-b', name: 'Closed', is_closed: true },
-    ]);
+    crossFeatureRef.value = null;
+    getTicketStatusesMock.mockResolvedValue([{ status_id: 'status-a', name: 'Open', is_closed: false }]);
   });
 
-  it('T040: focusing status sets editingField and blurring clears it', async () => {
-    const onLiveEditingFieldChange = vi.fn();
-
-    renderTicketInfo({ onLiveEditingFieldChange });
-
-    const statusSelect = screen.getAllByRole('combobox')[0];
-    fireEvent.focus(statusSelect);
-    fireEvent.blur(statusSelect);
-
-    expect(onLiveEditingFieldChange).toHaveBeenCalledWith('status_id');
-    expect(onLiveEditingFieldChange).toHaveBeenCalledWith(null);
+  it('renders normally and does not throw without a cross-feature provider (AlgaDesk)', () => {
+    renderTicketInfo();
+    expect(screen.queryByTestId('group-control')).toBeNull();
+    expect(screen.getByText('Board-specific status test')).toBeTruthy();
   });
 
-  it('T041: remote priority awareness dims the field and renders the editing caption', () => {
-    renderTicketInfo({ liveEditingUsers: { priority_id: ['Alex'] } });
-
-    expect(screen.getByTestId('ticket-info-priority-editing-indicator')).toHaveTextContent('Alex is editing');
-    expect(screen.getByTestId('priority-select').closest('[data-live-field="priority_id"]')).toHaveAttribute('data-live-editing', 'true');
+  it('renders normally when the provider has no renderActivityGroupControl', () => {
+    crossFeatureRef.value = {};
+    renderTicketInfo();
+    expect(screen.queryByTestId('group-control')).toBeNull();
   });
 
-  it('T042: editing indicator clears when the remote awareness disappears', () => {
-    const view = renderTicketInfo({ liveEditingUsers: { priority_id: ['Alex'] } });
-    expect(screen.getByTestId('ticket-info-priority-editing-indicator')).toHaveTextContent('Alex is editing');
-
-    view.rerender(
-      <TicketInfo
-        id="ticket-info"
-        ticket={baseTicket}
-        conversations={[]}
-        statusOptions={[
-          { value: 'status-a', label: 'Open' },
-          { value: 'status-b', label: 'Closed' },
-        ]}
-        agentOptions={[]}
-        boardOptions={[
-          { value: 'board-a', label: 'Board A' },
-          { value: 'board-b', label: 'Board B' },
-        ]}
-        priorityOptions={[
-          { value: 'priority-1', label: 'Priority 1' },
-          { value: 'priority-2', label: 'Priority 2' },
-        ]}
-        onSelectChange={vi.fn()}
-        onSaveChanges={vi.fn().mockResolvedValue(true)}
-        responseStateTrackingEnabled={false}
-        liveEditingUsers={{}}
-      />
-    );
-
-    expect(screen.queryByTestId('ticket-info-priority-editing-indicator')).not.toBeInTheDocument();
-  });
-
-  it('T043: remote status awareness does not hard-lock the field while the local user focuses it', async () => {
-    const onLiveEditingFieldChange = vi.fn();
-
+  it('passes ticket type, ticket id and a saved-state assignmentKey, outside the field grid', () => {
+    const renderActivityGroupControl = vi.fn((p: any) => (
+      <span data-testid="group-control">{p.activityType}:{p.activityId}</span>
+    ));
+    crossFeatureRef.value = { renderActivityGroupControl };
     renderTicketInfo({
-      liveEditingUsers: { status_id: ['Alex'] },
-      onLiveEditingFieldChange,
+      ticket: { ...baseTicket, assigned_to: 'user-1' },
+      additionalAgents: [{ user_id: 'u-b', name: 'B' }, { user_id: 'u-a', name: 'A' }],
     });
-
-    const statusSelect = screen.getAllByRole('combobox')[0];
-    expect(screen.getByTestId('ticket-info-status-editing-indicator')).toHaveTextContent('Alex is editing');
-    await waitFor(() => {
-      expect(statusSelect).not.toBeDisabled();
+    const control = screen.getByTestId('group-control');
+    expect(control.textContent).toBe('ticket:ticket-1');
+    expect(renderActivityGroupControl).toHaveBeenCalledWith({
+      id: 'ticket-info-activity-group',
+      activityType: 'ticket',
+      activityId: 'ticket-1',
+      assignmentKey: 'user-1|u-a,u-b',
     });
-
-    fireEvent.focus(statusSelect);
-
-    expect(onLiveEditingFieldChange).toHaveBeenCalledWith('status_id');
+    // not inside the shared two-column field grid
+    expect(control.closest('.grid-cols-2')).toBeNull();
   });
 
-  it('T058: focusing the title input reports title editing and renders the remote pill variant', () => {
-    const onLiveEditingFieldChange = vi.fn();
-
-    const view = renderTicketInfo({
-      liveEditingUsers: { title: ['Alex'] },
-      onLiveEditingFieldChange,
-    });
-
-    expect(screen.getByTestId('ticket-info-title-editing-pill')).toHaveTextContent('Alex is editing');
-
-    fireEvent.click(screen.getByTitle('Edit title'));
-    const titleInput = screen.getByDisplayValue('Board-specific status test');
-    fireEvent.focus(titleInput);
-    fireEvent.blur(titleInput);
-
-    expect(onLiveEditingFieldChange).toHaveBeenCalledWith('title');
-    expect(onLiveEditingFieldChange).toHaveBeenCalledWith(null);
-
-    view.rerender(
-      <TicketInfo
-        id="ticket-info"
-        ticket={baseTicket}
-        conversations={[]}
-        statusOptions={[
-          { value: 'status-a', label: 'Open' },
-          { value: 'status-b', label: 'Closed' },
-        ]}
-        agentOptions={[]}
-        boardOptions={[
-          { value: 'board-a', label: 'Board A' },
-          { value: 'board-b', label: 'Board B' },
-        ]}
-        priorityOptions={[
-          { value: 'priority-1', label: 'Priority 1' },
-          { value: 'priority-2', label: 'Priority 2' },
-        ]}
-        onSelectChange={vi.fn()}
-        onSaveChanges={vi.fn().mockResolvedValue(true)}
-        responseStateTrackingEnabled={false}
-        liveEditingUsers={{}}
-      />
-    );
-
-    expect(screen.queryByTestId('ticket-info-title-editing-pill')).not.toBeInTheDocument();
+  it('assignmentKey follows the saved ticket prop, not unsaved form edits', () => {
+    const renderActivityGroupControl = vi.fn((_p: any) => <span data-testid="group-control" />);
+    crossFeatureRef.value = { renderActivityGroupControl };
+    renderTicketInfo({ ticket: { ...baseTicket, assigned_to: 'user-1' } });
+    const first = renderActivityGroupControl.mock.calls.at(-1)![0] as any;
+    // Editing an unsaved field never changes the key.
+    fireEvent.change(screen.getByTestId('priority-select'), { target: { value: 'priority-2' } });
+    const last = renderActivityGroupControl.mock.calls.at(-1)![0] as any;
+    expect(last.assignmentKey).toBe(first.assignmentKey);
   });
 });

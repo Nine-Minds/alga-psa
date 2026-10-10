@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   PrintOptionsDialog,
@@ -45,6 +46,8 @@ import { GroupedActivitiesView } from './GroupedActivitiesView';
 import { PrintableActivitiesView } from './PrintableActivitiesView';
 import { ActivitiesTableFilters } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { useMyActivityGroups } from './MyActivityGroupsProvider';
+import { ActivityGroupMenuScope } from './ActivityGroupMenuScope';
 import { useActivityCrossFeature } from '@alga-psa/ui/context';
 import { useActivitiesCache } from '../hooks/useActivitiesCache';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
@@ -62,6 +65,14 @@ interface ActivitiesDataTableSectionProps {
   title?: string;
   initialFilters?: ActivityFilters;
   id?: string;
+  /**
+   * Deep link target (`${type}:${id}`, from `?activity=`). Forces myself + grouped mode for THIS
+   * VISIT ONLY (nothing is written to saved preferences), then scrolls to and highlights the
+   * item. See `onFocusConsumed`.
+   */
+  focusActivityKey?: string | null;
+  /** Called once the deep link has been resolved (found + highlighted, or reported not found). */
+  onFocusConsumed?: () => void;
 }
 
 const DEFAULT_FILTERS: ActivityFilters = {
@@ -72,6 +83,12 @@ const DEFAULT_FILTERS: ActivityFilters = {
 type ListViewMode = 'flat' | 'grouped';
 
 const PRINT_FALLBACK_PAGE_SIZE = 500;
+
+// Single source for the loaded/current key comparison that gates deep-link focus.
+function buildLoadedKey(filters: ActivityFilters, viewMode: string): string {
+  return JSON.stringify([filters, viewMode]);
+}
+const NO_GROUPS: ActivityGroup[] = [];
 
 function dedupeRecurringActivities(activities: Activity[]): Activity[] {
   const uniqueUpcomingActivities: Activity[] = [];
@@ -100,7 +117,9 @@ function dedupeRecurringActivities(activities: Activity[]): Activity[] {
 export function ActivitiesDataTableSection({
   title,
   initialFilters = {},
-  id = "activities-data-table-section"
+  id = "activities-data-table-section",
+  focusActivityKey = null,
+  onFocusConsumed,
 }: ActivitiesDataTableSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('table.title.all', { defaultValue: 'All Activities' });
@@ -121,6 +140,8 @@ function formatActivityPrintDate(dateString?: string): string {
   const [isAddingAdHoc, setIsAddingAdHoc] = useState(false);
   const { openActivityDrawer } = useActivityDrawer();
   const ctx = useActivityCrossFeature();
+  const myGroups = useMyActivityGroups();
+  const { refresh: refreshMyGroups } = myGroups;
 
   // "Viewing": whose activities to show. Empty string = the current user. Other values
   // require the caller to hold the schedule "view others" permission (resolved server-side).
@@ -146,7 +167,7 @@ function formatActivityPrintDate(dateString?: string): string {
   const viewingOther = canViewOthers && targetUserId !== '';
 
   // Flat vs grouped mode (persisted per user)
-  const { value: listViewMode, setValue: setListViewMode } = useUserPreference<ListViewMode>(
+  const { value: savedListViewMode, setValue: setListViewMode } = useUserPreference<ListViewMode>(
     'activitiesListViewMode',
     {
       defaultValue: 'flat',
@@ -154,6 +175,29 @@ function formatActivityPrintDate(dateString?: string): string {
       debounceMs: 300,
     }
   );
+  // Deep link: grouped mode for this visit only. Never written to the saved preference; an
+  // explicit ViewSwitcher choice replaces it.
+  const [ephemeralListViewMode, setEphemeralListViewMode] = useState<ListViewMode | null>(
+    focusActivityKey ? 'grouped' : null
+  );
+  const listViewMode: ListViewMode = ephemeralListViewMode ?? savedListViewMode;
+
+  // Deep-link focus: the key waiting to be scrolled to, and the "not in view" alert state.
+  const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(focusActivityKey);
+  const [focusAlert, setFocusAlert] = useState<'notInView' | 'notOnList' | null>(null);
+  const [focusFiltersCleared, setFocusFiltersCleared] = useState(false);
+  // The effective filters/mode the current `activities` were loaded for.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+
+  // A new deep link (re)targets myself in grouped mode, for this visit only.
+  useEffect(() => {
+    if (!focusActivityKey) return;
+    setPendingFocusKey(focusActivityKey);
+    setEphemeralListViewMode('grouped');
+    setTargetUserId('');
+    setFocusAlert(null);
+    setFocusFiltersCleared(false);
+  }, [focusActivityKey]);
 
   // Determine if explicit filters were passed (e.g., from "View All" in cards view)
   const hasExplicitFilters = initialFilters.types && initialFilters.types.length > 0;
@@ -222,24 +266,31 @@ function formatActivityPrintDate(dateString?: string): string {
     { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed' }
   );
 
-  // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView)
-  const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
+  // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView).
+  // Myself: the workspace-wide store (shared with the ticket/task "My group" control and the
+  // action menu, so changes made anywhere show here immediately). Another user: a read-only
+  // direct fetch that never touches the store.
+  const [otherUserGroups, setOtherUserGroups] = useState<ActivityGroup[]>([]);
+  const activityGroups = viewingOther ? otherUserGroups : (myGroups.groups ?? NO_GROUPS);
   const [printActivities, setPrintActivities] = useState<Activity[] | null>(null);
 
   // Groups belong to whoever is being viewed (self by default). Passing the
   // selected user id makes the grouped view show that user's groups instead of
   // the caller's. Depends on targetUserId so switching users reloads groups.
   const loadActivityGroups = useCallback(async (): Promise<ActivityGroup[]> => {
+    if (!viewingOther) {
+      return refreshMyGroups();
+    }
     try {
       const groups = await getUserActivityGroups(targetUserId || undefined);
-      setActivityGroups(groups);
+      setOtherUserGroups(groups);
       return groups;
     } catch (err) {
       console.error('Error loading activity groups:', err);
-      setActivityGroups([]);
+      setOtherUserGroups([]);
       return [];
     }
-  }, [targetUserId]);
+  }, [viewingOther, targetUserId, refreshMyGroups]);
 
   // Load groups when grouped mode is active (and reload when the viewed user changes)
   useEffect(() => {
@@ -357,6 +408,9 @@ function formatActivityPrintDate(dateString?: string): string {
       const effectivePage = listViewMode === 'grouped' ? 1 : currentPage;
       const effectivePageSize = listViewMode === 'grouped' ? 500 : pageSize;
 
+      // Compute the key before awaiting so it reflects exactly what was requested.
+      const requestKey = buildLoadedKey(effectiveFilters, listViewMode);
+
       const result = await getActivities(
         effectiveFilters,
         effectivePage,
@@ -365,6 +419,7 @@ function formatActivityPrintDate(dateString?: string): string {
 
       setActivities(result.activities);
       setTotalItems(result.totalCount);
+      setLoadedKey(requestKey);
       setError(null);
     } catch (err) {
       console.error(`Error loading activities:`, err);
@@ -413,6 +468,11 @@ function formatActivityPrintDate(dateString?: string): string {
     setCurrentPage(1);
   }, [setSavedFilters]);
 
+  const currentKey = useMemo(
+    () => buildLoadedKey(getEffectiveFilters(), listViewMode),
+    [getEffectiveFilters, listViewMode]
+  );
+
   const handleTargetUserChange = useCallback((value: string) => {
     setTargetUserId(value);
     setCurrentPage(1);
@@ -451,6 +511,48 @@ function formatActivityPrintDate(dateString?: string): string {
   const filteredActivitiesForTable = useMemo(() => (
     dedupeRecurringActivities(activities)
   ), [activities]);
+
+  // ---- Deep-link focus ------------------------------------------------------------------
+  // Resolve only once everything the answer depends on is current: the activities for the
+  // present filters/mode, the (late-arriving) saved filters, and my groups.
+  const groupsReady = viewingOther || myGroups.status === 'ready' || myGroups.status === 'error';
+  const focusReady =
+    pendingFocusKey !== null &&
+    listViewMode === 'grouped' &&
+    !viewingOther &&
+    !error &&
+    (filtersLoaded || hasExplicitFilters || focusFiltersCleared) &&
+    groupsReady &&
+    loadedKey === currentKey;
+  const focusFound = focusReady && filteredActivitiesForTable.some((a) => `${a.type}:${a.id}` === pendingFocusKey);
+
+  useEffect(() => {
+    if (!focusReady) return;
+    if (focusFound) {
+      setFocusAlert(null);
+      return;
+    }
+    setFocusAlert(focusFiltersCleared ? 'notOnList' : 'notInView');
+    // Reported: drop the URL param so a refresh doesn't repeat this. The alert's retry button
+    // keeps working off the section's own pending key.
+    onFocusConsumed?.();
+  }, [focusReady, focusFound, focusFiltersCleared, onFocusConsumed]);
+
+  const handleFocusHandled = useCallback(() => {
+    setPendingFocusKey(null);
+    setFocusAlert(null);
+    onFocusConsumed?.();
+  }, [onFocusConsumed]);
+
+  // "Clear filters": for this visit only (saved filters are NOT written), show every table type
+  // and drop the closed restriction, then retry the focus.
+  const handleClearFiltersForFocus = useCallback(() => {
+    userEditedFiltersRef.current = true;
+    setFilters({ types: DEFAULT_TABLE_TYPES });
+    setCurrentPage(1);
+    setFocusFiltersCleared(true);
+    setFocusAlert(null);
+  }, []);
 
   const activityPrintColumns = useMemo<PrintColumnOption<Activity>[]>(() => [
     {
@@ -512,7 +614,12 @@ function formatActivityPrintDate(dateString?: string): string {
           <ViewSwitcher<ListViewMode>
             options={LIST_VIEW_OPTIONS}
             currentView={listViewMode}
-            onChange={(v) => setListViewMode(v)}
+            onChange={(v) => {
+              // An explicit choice wins over the deep-link override and is the only thing that
+              // writes the saved preference.
+              setEphemeralListViewMode(v);
+              setListViewMode(v);
+            }}
           />
           <Button
             id={`${id}-refresh-button`}
@@ -549,6 +656,7 @@ function formatActivityPrintDate(dateString?: string): string {
         </div>
       </CardHeader>
       <CardContent>
+        <ActivityGroupMenuScope enabled={!viewingOther}>
         {(canViewOthers || !viewingOther) && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {!viewingOther && (
@@ -600,6 +708,28 @@ function formatActivityPrintDate(dateString?: string): string {
             )}
           </div>
         )}
+        {focusAlert && (
+          <Alert id={`${id}-deep-link-alert`} variant="info" className="mb-4">
+            <AlertDescription className="flex flex-wrap items-center gap-3">
+              <span>
+                {focusAlert === 'notInView'
+                  ? t('deepLink.notInView', { defaultValue: "This item isn't in your current view." })
+                  : t('deepLink.notOnList', { defaultValue: 'This item is no longer on your activities list.' })}
+              </span>
+              {focusAlert === 'notInView' && (
+                <Button
+                  id={`${id}-deep-link-clear-filters`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearFiltersForFocus}
+                >
+                  {t('deepLink.clearFilters', { defaultValue: 'Clear filters' })}
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
         <ActivitiesTableFilters
           filters={filters}
           onChange={handleFilterChange}
@@ -627,6 +757,8 @@ function formatActivityPrintDate(dateString?: string): string {
           </div>
         ) : listViewMode === 'grouped' ? (
           <GroupedActivitiesView
+            focusActivityKey={focusFound ? pendingFocusKey : null}
+            onFocusHandled={handleFocusHandled}
             activities={filteredActivitiesForTable}
             serverGroups={activityGroups}
             onGroupsChange={async () => {
@@ -651,6 +783,7 @@ function formatActivityPrintDate(dateString?: string): string {
             onSortChange={handleSortChange}
           />
         )}
+        </ActivityGroupMenuScope>
       </CardContent>
     </Card>
     <PrintableActivitiesView

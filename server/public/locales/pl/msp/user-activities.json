@@ -543,5 +543,32 @@
   "actions": {
     "print": "Drukuj",
     "printOptions": "Opcje drukowania"
+  },
+  "actionMenu": {
+    "moveToGroup": "Przenieś do grupy",
+    "loadingGroups": "Ładowanie…",
+    "newGroupTitle": "Nowa grupa"
+  },
+  "deepLink": {
+    "notInView": "Tego elementu nie ma w bieżącym widoku.",
+    "notOnList": "Tego elementu nie ma już na Twojej liście aktywności.",
+    "clearFilters": "Wyczyść filtry"
+  },
+  "myGroup": {
+    "label": "Moja grupa",
+    "chip": "Moja grupa: {{name}}",
+    "ungrouped": "Bez grupy",
+    "privacyHint": "Widzisz to tylko Ty. Porządkuje Twoją listę aktywności.",
+    "selectPlaceholder": "Wybierz grupę",
+    "newGroup": "Nowa grupa…",
+    "newGroupPlaceholder": "Nazwa grupy",
+    "create": "Utwórz",
+    "cancel": "Anuluj",
+    "showOnBoard": "Pokaż w moich aktywnościach",
+    "errors": {
+      "load": "Nie udało się wczytać Twoich grup.",
+      "move": "Nie udało się zmienić grupy. Spróbuj ponownie.",
+      "create": "Nie udało się utworzyć grupy. Spróbuj ponownie."
+    }
   }
 }
