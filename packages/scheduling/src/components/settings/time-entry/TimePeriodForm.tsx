@@ -13,6 +13,12 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { toPlainDate } from '@alga-psa/core';
 import { TimePeriodSuggester } from '../../../lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
+import {
+    exclusiveEndToLastIncludedDay,
+    toDialogDates,
+    toStoredPeriod,
+    validateDialogPeriod,
+} from '../../../lib/timePeriodDisplay';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -63,7 +69,8 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
     // Define the form state interface
     interface FormState {
         startDate: Temporal.PlainDate | null;
-        endDate: Temporal.PlainDate | null;
+        // Last day INCLUDED in the period (stored end_date is exclusive; see timePeriodDisplay)
+        lastDay: Temporal.PlainDate | null;
         error: string | null;
         // The "no settings yet" branch shows an extra link. Carried as a code because the
         // message it used to be compared against stops being that sentence once translated.
@@ -73,7 +80,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
     // Define the initial form state
     const initialFormState: FormState = {
         startDate: null,
-        endDate: null,
+        lastDay: null,
         error: null,
         errorCode: null
     };
@@ -93,8 +100,9 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             case 'INITIALIZE_EDIT_MODE':
                 const period = action.payload.selectedPeriod;
                 return {
-                    startDate: toPlainDate(period.start_date),
-                    endDate: period.end_date ? toPlainDate(period.end_date) : null,
+                    ...(period.end_date
+                        ? toDialogDates({ start_date: period.start_date, end_date: period.end_date })
+                        : { startDate: toPlainDate(period.start_date), lastDay: null }),
                     error: null,
                     errorCode: null
                 };
@@ -128,8 +136,9 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 const { start_date: suggestedStart, end_date: suggestedEnd } = suggestion.data;
 
                 return {
-                    startDate: toPlainDate(suggestedStart),
-                    endDate: suggestedEnd ? toPlainDate(suggestedEnd) : null,
+                    ...(suggestedEnd
+                        ? toDialogDates({ start_date: suggestedStart, end_date: suggestedEnd })
+                        : { startDate: toPlainDate(suggestedStart), lastDay: null }),
                     error: null,
                     errorCode: null
                 };
@@ -147,7 +156,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             case 'SET_END_DATE':
                 return {
                     ...state,
-                    endDate: action.payload
+                    lastDay: action.payload
                 };
             case 'RESET':
                 return initialFormState;
@@ -158,7 +167,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
     // Use the reducer
     const [formState, dispatch] = useReducer(formReducer, initialFormState);
-    const { startDate, endDate, error, errorCode } = formState;
+    const { startDate, lastDay, error, errorCode } = formState;
 
     // Additional state that doesn't need to be part of the reducer
     const [override, setOverride] = useState<boolean>(false);
@@ -194,8 +203,9 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         // Auto-calculate end date if not in override mode
         if (settings && !override && newStartDate) {
             try {
-                const newEndDate = TimePeriodSuggester.calculateEndDate(newStartDate, settings[0]);
-                dispatch({ type: 'SET_END_DATE', payload: newEndDate });
+                // calculateEndDate returns the exclusive (stored) end; the picker shows the last included day
+                const exclusiveEnd = TimePeriodSuggester.calculateEndDate(newStartDate, settings[0]);
+                dispatch({ type: 'SET_END_DATE', payload: exclusiveEndToLastIncludedDay(exclusiveEnd) });
             } catch {
                 dispatch({ type: 'SET_END_DATE', payload: null });
             }
@@ -218,61 +228,29 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
         try {
             // Client-side validations
-            if (!startDate) {
-                dispatch({
-                    type: 'SET_ERROR',
-                    payload: { message: t('timeEntry.periods.errors.startDateRequired') }
-                });
+            const validationError = validateDialogPeriod(
+                { startDate, lastDay },
+                existingTimePeriods,
+                mode === 'edit' ? selectedPeriod?.period_id : undefined
+            );
+            if (validationError) {
+                const messageKey = {
+                    startDateRequired: 'timeEntry.periods.errors.startDateRequired',
+                    startAfterEnd: 'timeEntry.periods.errors.startBeforeEnd',
+                    overlap: 'timeEntry.periods.errors.overlap',
+                }[validationError];
+                dispatch({ type: 'SET_ERROR', payload: { message: t(messageKey) } });
                 return;
             }
 
-            if (endDate && Temporal.PlainDate.compare(startDate, endDate) >= 0) {
-                dispatch({
-                    type: 'SET_ERROR',
-                    payload: { message: t('timeEntry.periods.errors.startBeforeEnd') }
-                });
-                return;
-            }
-
-            // Skip overlap check for the current period in edit mode
-            const overlappingPeriod = existingTimePeriods.find((period) => {
-                if (mode === 'edit' && selectedPeriod && period.period_id === selectedPeriod.period_id) {
-                    return false;
-                }
-                // Safely convert dates to PlainDate objects
-                try {
-                    const existingStart = toPlainDate(period.start_date);
-                    const existingEnd = period.end_date ? toPlainDate(period.end_date) : existingStart;
-                const newStart = startDate;
-                const newEnd = endDate || newStart;
-
-                    // Overlap occurs if existing.start_date < newEnd AND existing.end_date > newStart
-                    // This allows periods to touch at boundaries (e.g., newStart == existingEnd)
-                    return (
-                        Temporal.PlainDate.compare(existingStart, newEnd) < 0 &&
-                        Temporal.PlainDate.compare(existingEnd, newStart) > 0
-                    );
-                } catch (error) {
-                    console.error('Error comparing dates:', error);
-                    return false; // Skip this period if there's an error
-                }
-            });
-
-            if (overlappingPeriod) {
-                dispatch({
-                    type: 'SET_ERROR',
-                    payload: { message: t('timeEntry.periods.errors.overlap') }
-                });
-                return;
-            }
+            // startDate is non-null after validation. "No End Date" is unsupported by storage
+            // (kept as-is: lastDay! throws and surfaces via the catch below).
+            const storedPeriod = toStoredPeriod({ startDate: startDate!, lastDay: lastDay! });
 
             let updatedPeriod;
             if (mode === 'edit' && selectedPeriod?.period_id) {
                 // Update existing period - pass string dates (server converts to Temporal)
-                const modelPeriod = await updateTimePeriod(selectedPeriod.period_id, {
-                    start_date: startDate.toString(),
-                    end_date: endDate!.toString()
-                });
+                const modelPeriod = await updateTimePeriod(selectedPeriod.period_id, storedPeriod);
                 if (isTimePeriodActionError(modelPeriod)) {
                     dispatch({
                         type: 'SET_ERROR',
@@ -288,10 +266,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 };
             } else {
                 // Create new period - pass string dates (server converts to Temporal)
-                const modelPeriod = await createTimePeriod({
-                    start_date: startDate.toString(),
-                    end_date: endDate!.toString()
-                });
+                const modelPeriod = await createTimePeriod(storedPeriod);
                 if (isTimePeriodActionError(modelPeriod)) {
                     dispatch({
                         type: 'SET_ERROR',
@@ -471,11 +446,14 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                                     <Label htmlFor="time-period-end-date-picker">{t('timeEntry.periods.form.endDate')}</Label>
                                     <DatePicker
                                         id="time-period-end-date-picker"
-                                        value={plainDateToDate(endDate)}
+                                        value={plainDateToDate(lastDay)}
                                         onChange={handleEndDateChange}
                                         disabled={!override}
                                         placeholder={t('timeEntry.periods.form.endDatePlaceholder')}
                                     />
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {t('timeEntry.periods.form.endDateHelp')}
+                                    </p>
                                 </>
                             )}
                         </div>

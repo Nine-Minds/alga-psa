@@ -335,6 +335,7 @@ export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promi
 });
 
 // Helper function to get the end of a period based on frequency unit
+// LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
   const frequency = setting.frequency || 1;
   const startDatePlain = Temporal.PlainDate.from(startDate);

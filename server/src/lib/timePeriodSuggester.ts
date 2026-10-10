@@ -5,6 +5,7 @@ import { ITimePeriodSettings, ITimePeriod, ITimePeriodView } from 'server/src/in
 
 export type TimePeriodSettings = ITimePeriodSettings;
 
+// LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
 export class TimePeriodSuggester {
   private static parseDateValue(date: string | Temporal.PlainDate): Temporal.PlainDate {
     if (date instanceof Temporal.PlainDate) {

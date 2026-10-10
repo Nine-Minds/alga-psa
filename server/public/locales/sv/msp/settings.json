@@ -2057,7 +2057,7 @@
       "openMenu": "Öppna meny",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen",
         "actions": "Åtgärder"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Välj startdatum",
         "noEndDate": "Inget slutdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen i perioden",
+        "endDateHelp": "Perioden inkluderar denna dag.",
         "endDatePlaceholder": "Välj slutdatum",
         "deletePeriod": "Radera period",
         "confirmDeleteTitle": "Bekräfta radering",
@@ -2083,7 +2084,7 @@
         "noSettings": "Inga tidsperiodsinställningar är tillgängliga. Det går inte att skapa en ny tidsperiod.",
         "settingsRequired": "Det går inte att hantera tidsperioden utan inställningar.",
         "startDateRequired": "Startdatum måste anges.",
-        "startBeforeEnd": "Startdatum måste infalla före slutdatum.",
+        "startBeforeEnd": "Slutdatumet får inte vara före startdatumet.",
         "overlap": "Tidsperioden överlappar en befintlig period.",
         "overlapRetry": "Tidsperioden överlappar en befintlig period. Välj andra datum.",
         "create": "Det gick inte att skapa tidsperioden.",
