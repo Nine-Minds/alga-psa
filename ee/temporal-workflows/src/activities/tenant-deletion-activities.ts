@@ -139,7 +139,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
   'hour_blocks',
 
-  // Time tracking
+  // Time tracking. Stopwatch sessions, their segments and suggestion
+  // dismissals FK only to users (segments cascade from sessions).
+  'time_tracking_session_segments', 'time_tracking_sessions', 'time_entry_suggestion_dismissals',
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',
 

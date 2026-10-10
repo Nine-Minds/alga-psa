@@ -1,5 +1,5 @@
 /**
- * Migration 20261010120100: open time_entries rows become stopwatch sessions.
+ * Migration 20261009120100: open time_entries rows become stopwatch sessions.
  * NOTE: plain Postgres only; Citus-specific behaviour is not exercised.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import { createTenant } from '../../../../test-utils/testDataFactory';
 import { createStopwatchUser, seedBucketClient, type BucketSeed } from './stopwatchTestSeed';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const migration = require('../../../../migrations/20261010120100_convert_open_time_entries_to_sessions.cjs');
+const migration = require('../../../../migrations/20261009120100_convert_open_time_entries_to_sessions.cjs');
 
 let db: Knex;
 let tenant: string;
@@ -44,7 +44,7 @@ async function insertOpenEntry(user: string, startIso: string, notes: string): P
 describe('open time entries -> stopwatch sessions migration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
-    // The later end_time NOT NULL migration (20261010140000) has already run on a freshly migrated DB;
+    // The later end_time NOT NULL migration (20261009140000) has already run on a freshly migrated DB;
     // the legacy open rows this test seeds need the column nullable, as it was when the conversion shipped.
     await db.raw('ALTER TABLE time_entries ALTER COLUMN end_time DROP NOT NULL');
     tenant = await createTenant(db, 'Conversion tenant');

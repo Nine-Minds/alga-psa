@@ -2,7 +2,7 @@
  * Restore time_entries.end_time NOT NULL (stopwatch plan D8, phase 3).
  *
  * Open time entries (end_time IS NULL) were the old mobile timer. The phase-1 conversion migration
- * (20261010120100) turned them into stopwatch sessions and deleted the rows, and the legacy mobile
+ * (20261009120100) turned them into stopwatch sessions and deleted the rows, and the legacy mobile
  * endpoints now run on sessions, so nothing writes NULL end_time any more.
  *
  * Safety: if any NULL end_time row exists this migration ABORTS with a clear error. It never deletes or
@@ -69,7 +69,7 @@ exports.up = async function up(knex) {
     throw new Error(
       `Cannot restore time_entries.end_time NOT NULL: ${nullCount} open time entr${nullCount === 1 ? 'y' : 'ies'} ` +
         `(end_time IS NULL) remain. Convert them to stopwatch sessions first ` +
-        `(see migration 20261010120100_convert_open_time_entries_to_sessions); no data was changed.`,
+        `(see migration 20261009120100_convert_open_time_entries_to_sessions); no data was changed.`,
     );
   }
 

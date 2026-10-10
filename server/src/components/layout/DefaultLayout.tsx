@@ -434,7 +434,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   return (
     <MspClientTagsProvider>
     <DrawerProvider>
-      {/* Mounted here (not WorkspaceProviders): the header indicator sits above the per-route provider stack. */}
+      {/* Mounted in the shell (not the per-route workspace stack): the header indicator sits above it. */}
       <StopwatchProvider>
       <div className="fixed inset-0 flex overflow-hidden app-shell-ground">
         <SidebarWithFeatureFlags

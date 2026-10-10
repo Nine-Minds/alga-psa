@@ -228,7 +228,7 @@ describe('Stopwatch API E2E Tests', () => {
   });
 
   describe('Discard (DELETE /api/v1/stopwatch/{id})', () => {
-    it('discards the session with 204 and a second discard is a 409', async () => {
+    it('discards the session with 204, a repeat discard is an idempotent 204, and the session is closed', async () => {
       const { response } = await startSession();
       const id = response.data.data.session_id;
       const discarded = await env.apiClient.delete(`${API_BASE}/${id}`);
@@ -236,7 +236,11 @@ describe('Stopwatch API E2E Tests', () => {
 
       const active = await env.apiClient.get(`${API_BASE}/active`);
       expect(active.data.data).toBeNull();
-      assertError(await env.apiClient.delete(`${API_BASE}/${id}`), 409);
+      // DELETE is idempotent (plan D4; stopwatchCore discardSession): a second tab's discard is a no-op.
+      expect((await env.apiClient.delete(`${API_BASE}/${id}`)).status).toBe(204);
+      const paused = await env.apiClient.post(`${API_BASE}/${id}/pause`);
+      assertError(paused, 409);
+      expect(paused.data.error.details.reason).toContain('notOpen');
     });
   });
 

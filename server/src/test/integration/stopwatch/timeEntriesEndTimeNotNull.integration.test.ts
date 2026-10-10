@@ -1,5 +1,5 @@
 /**
- * Migration 20261010140000: time_entries.end_time is NOT NULL again (plan D8).
+ * Migration 20261009140000: time_entries.end_time is NOT NULL again (plan D8).
  * NOTE: plain Postgres only. The Citus branch (run_command_on_shards + pg_attribute sync) is not exercised.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import { createTenant } from '../../../../test-utils/testDataFactory';
 import { createStopwatchUser, seedBucketClient, type BucketSeed } from './stopwatchTestSeed';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const migration = require('../../../../migrations/20261010140000_time_entries_end_time_not_null.cjs');
+const migration = require('../../../../migrations/20261009140000_time_entries_end_time_not_null.cjs');
 
 let db: Knex;
 let tenant: string;
