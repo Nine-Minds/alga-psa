@@ -472,7 +472,8 @@
       "workItemNotFound": "No se encontró el elemento de trabajo de este cronómetro.",
       "unsupportedWorkItem": "El cronómetro solo se puede iniciar en tickets y tareas de proyecto.",
       "boardDisabled": "El cronómetro está desactivado para el tablero de este ticket.",
-      "alreadyOpen": "Ya tiene un cronómetro en marcha. Deténgalo o descártelo primero."
+      "alreadyOpen": "Ya tiene un cronómetro en marcha. Deténgalo o descártelo primero.",
+      "serviceRequired": "Elige un servicio antes de registrar esta sesión del cronómetro."
     }
   },
   "workItemEntry": {

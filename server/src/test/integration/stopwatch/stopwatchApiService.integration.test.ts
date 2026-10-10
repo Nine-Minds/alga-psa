@@ -248,7 +248,9 @@ describe('StopwatchApiService and legacy tracking adapters (real DB)', () => {
       const { ctx } = await userWithSheet('api-log-override');
       const started = await asTenant(() => stopwatch.start({ work_item_type: 'ticket', work_item_id: bucket.ticketId }, ctx));
       await asTenant(() => stopwatch.pause(started.session_id, ctx));
-      await expectError(asTenant(() => stopwatch.log(started.session_id, {}, ctx)), ValidationError);
+      const missingService = await expectError(asTenant(() => stopwatch.log(started.session_id, {}, ctx)), ValidationError);
+      expect(missingService.details.reason).toBe('msp/time-entry:errors.stopwatch.serviceRequired');
+      expect((await asTenant(() => stopwatch.getActive(ctx)))?.status).toBe('paused');
       const start = new Date(Date.now() - 2 * 3_600_000);
       const end = new Date(start.getTime() + 90 * 60_000);
       const { time_entry } = await asTenant(() => stopwatch.log(started.session_id, {

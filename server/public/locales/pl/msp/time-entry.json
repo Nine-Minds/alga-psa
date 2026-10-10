@@ -472,7 +472,8 @@
       "workItemNotFound": "Nie znaleziono elementu pracy dla tego stopera.",
       "unsupportedWorkItem": "Stoper można uruchomić tylko dla zgłoszeń i zadań projektu.",
       "boardDisabled": "Stoper jest wyłączony dla tablicy tego zgłoszenia.",
-      "alreadyOpen": "Stoper jest już uruchomiony. Najpierw go zatrzymaj lub odrzuć."
+      "alreadyOpen": "Stoper jest już uruchomiony. Najpierw go zatrzymaj lub odrzuć.",
+      "serviceRequired": "Wybierz usługę przed zarejestrowaniem tej sesji stopera."
     }
   },
   "workItemEntry": {

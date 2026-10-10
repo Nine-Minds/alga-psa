@@ -472,7 +472,8 @@
       "workItemNotFound": "Het werkitem van deze stopwatch kon niet worden gevonden.",
       "unsupportedWorkItem": "De stopwatch kan alleen worden gestart op tickets en projecttaken.",
       "boardDisabled": "De stopwatch is uitgeschakeld voor het bord van dit ticket.",
-      "alreadyOpen": "Er loopt al een stopwatch. Stop of verwerp deze eerst."
+      "alreadyOpen": "Er loopt al een stopwatch. Stop of verwerp deze eerst.",
+      "serviceRequired": "Kies een dienst voordat je deze stopwatchsessie registreert."
     }
   },
   "workItemEntry": {

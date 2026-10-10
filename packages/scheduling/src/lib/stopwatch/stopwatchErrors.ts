@@ -13,7 +13,8 @@ export type StopwatchErrorKind =
   | 'notOpen'
   | 'workItemNotFound'
   | 'unsupportedWorkItem'
-  | 'boardDisabled';
+  | 'boardDisabled'
+  | 'serviceRequired';
 
 const MESSAGES: Record<StopwatchErrorKind, { message: string; key: string }> = {
   notFound: {
@@ -35,6 +36,10 @@ const MESSAGES: Record<StopwatchErrorKind, { message: string; key: string }> = {
   boardDisabled: {
     message: "The stopwatch is turned off for this ticket's board.",
     key: 'msp/time-entry:errors.stopwatch.boardDisabled',
+  },
+  serviceRequired: {
+    message: 'Choose a service before logging this stopwatch session.',
+    key: 'msp/time-entry:errors.stopwatch.serviceRequired',
   },
 };
 

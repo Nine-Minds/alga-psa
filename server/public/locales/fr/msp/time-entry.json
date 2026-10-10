@@ -472,7 +472,8 @@
       "workItemNotFound": "L'élément de travail de ce chronomètre est introuvable.",
       "unsupportedWorkItem": "Le chronomètre ne peut être démarré que sur des tickets et des tâches de projet.",
       "boardDisabled": "Le chronomètre est désactivé pour le tableau de ce ticket.",
-      "alreadyOpen": "Vous avez déjà un chronomètre en cours. Arrêtez-le ou abandonnez-le d'abord."
+      "alreadyOpen": "Vous avez déjà un chronomètre en cours. Arrêtez-le ou abandonnez-le d'abord.",
+      "serviceRequired": "Choisissez un service avant d'enregistrer cette session de chronomètre."
     }
   },
   "workItemEntry": {

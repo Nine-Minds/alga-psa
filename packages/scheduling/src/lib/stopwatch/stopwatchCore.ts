@@ -401,7 +401,7 @@ export async function logSession(
 
   const serviceId = input.service_id ?? session.service_id ?? undefined;
   if (!serviceId?.trim()) {
-    throw new Error('Service is required for time entries');
+    throw new StopwatchError('serviceRequired');
   }
 
   const nowIso = now.toISOString();

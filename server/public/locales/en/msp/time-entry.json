@@ -472,7 +472,8 @@
       "workItemNotFound": "The work item for this stopwatch could not be found.",
       "unsupportedWorkItem": "The stopwatch can only be started on tickets and project tasks.",
       "boardDisabled": "The stopwatch is turned off for this ticket's board.",
-      "alreadyOpen": "You already have a stopwatch running. Stop or discard it first."
+      "alreadyOpen": "You already have a stopwatch running. Stop or discard it first.",
+      "serviceRequired": "Choose a service before logging this stopwatch session."
     }
   },
   "workItemEntry": {

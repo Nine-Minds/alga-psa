@@ -472,7 +472,8 @@
       "workItemNotFound": "Das Arbeitselement dieser Stoppuhr wurde nicht gefunden.",
       "unsupportedWorkItem": "Die Stoppuhr kann nur für Tickets und Projektaufgaben gestartet werden.",
       "boardDisabled": "Die Stoppuhr ist für das Board dieses Tickets deaktiviert.",
-      "alreadyOpen": "Es läuft bereits eine Stoppuhr. Beenden oder verwerfen Sie sie zuerst."
+      "alreadyOpen": "Es läuft bereits eine Stoppuhr. Beenden oder verwerfen Sie sie zuerst.",
+      "serviceRequired": "Wählen Sie vor dem Erfassen dieser Stoppuhr-Sitzung eine Leistung aus."
     }
   },
   "workItemEntry": {
