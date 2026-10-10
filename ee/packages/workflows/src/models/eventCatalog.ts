@@ -8,6 +8,19 @@ import {
   type IUpdateEventCatalogEntry,
 } from '@alga-psa/workflows/types';
 
+// Ticket events: userId is the acting user and is absent when nobody acted.
+// Keep in step with server/migrations/20261010120000_ticket_event_catalog_optional_user_id.cjs.
+const TICKET_EVENT_USER_ID = {
+  type: 'string',
+  format: 'uuid',
+  description: 'Acting user. Absent when no user acted; see actorType.'
+};
+const TICKET_EVENT_ACTOR_PROPERTIES = {
+  actorType: { type: 'string', enum: ['USER', 'CONTACT', 'SYSTEM'], description: 'Who acted' },
+  actorUserId: { type: 'string', format: 'uuid', description: 'Acting user, when actorType is USER' },
+  actorContactId: { type: 'string', format: 'uuid', description: 'Acting contact, when actorType is CONTACT' }
+};
+
 const SYSTEM_EVENT_CATALOG_TENANT = '__workflow_system_event_catalog__';
 
 const assertTenant = (tenantId: string | null | undefined): string => {
@@ -258,9 +271,10 @@ export class EventCatalogModel extends BaseModel {
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
             ticketId: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' }
+            userId: TICKET_EVENT_USER_ID,
+            ...TICKET_EVENT_ACTOR_PROPERTIES
           },
-          required: ['tenantId', 'ticketId', 'userId']
+          required: ['tenantId', 'ticketId']
         },
         tenant: tenantId
       },
@@ -274,12 +288,13 @@ export class EventCatalogModel extends BaseModel {
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
             ticketId: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' },
+            userId: TICKET_EVENT_USER_ID,
+            ...TICKET_EVENT_ACTOR_PROPERTIES,
             changes: { type: 'object' },
             suppressContactNotifications: { type: 'boolean', default: false },
             suppressInternalNotifications: { type: 'boolean', default: false }
           },
-          required: ['tenantId', 'ticketId', 'userId']
+          required: ['tenantId', 'ticketId']
         },
         tenant: tenantId
       },
@@ -293,7 +308,8 @@ export class EventCatalogModel extends BaseModel {
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
             ticketId: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' },
+            userId: TICKET_EVENT_USER_ID,
+            ...TICKET_EVENT_ACTOR_PROPERTIES,
             suppressContactNotifications: { type: 'boolean', default: false },
             suppressInternalNotifications: { type: 'boolean', default: false },
             changes: { 
@@ -308,7 +324,7 @@ export class EventCatalogModel extends BaseModel {
               }
             }
           },
-          required: ['tenantId', 'ticketId', 'userId']
+          required: ['tenantId', 'ticketId']
         },
         tenant: tenantId
       },

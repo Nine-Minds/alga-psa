@@ -60,7 +60,7 @@ export const EXPRESSION_SYNTAX_EXAMPLES: readonly ExpressionSyntaxExample[] = [
   {
     key: 'list',
     label: 'List',
-    example: '[vars.ticket.ticket.assigned_to, payload.userId]',
+    example: '[vars.ticket.ticket.assigned_to, payload.actorUserId]',
     description: 'Put values in square brackets, separated by commas, for inputs that take a list.',
   },
   {

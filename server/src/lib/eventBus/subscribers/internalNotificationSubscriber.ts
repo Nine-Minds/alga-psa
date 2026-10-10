@@ -922,20 +922,23 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change
-    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
-      .select('user_id', 'first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
+    // Get user who made the change. userId is absent when nobody acted (system/contact
+    // actor); an undefined .where() value throws, so only look it up when present.
+    const performedByUser = userId
+      ? await tenantScopedTable(db, 'users', tenantId)
+          .select('user_id', 'first_name', 'last_name')
+          .where('user_id', userId)
+          .first()
+      : null;
 
-    const performedByName = userDisplayName(performedByUser, 'Someone');
+    const performedByName = userDisplayName(performedByUser, userId ? 'Someone' : 'System');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      performedById: userId
+      ...(userId ? { performedById: userId } : {})
     };
 
     // Process changes to get human-readable names
@@ -1035,7 +1038,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
     } else {
       // Notify all assigned agents
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-      const notifiedUserIds = new Set<string>([userId]); // Don't notify the person who made the change
+      const notifiedUserIds = new Set<string>(userId ? [userId] : []); // Don't notify the person who made the change
 
       for (const assigneeId of allAssignees) {
         if (!notifiedUserIds.has(assigneeId)) {
@@ -1150,7 +1153,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
     } else {
       // Notify all assigned agents
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-      const notifiedUserIds = new Set<string>([userId]);
+      const notifiedUserIds = new Set<string>(userId ? [userId] : []);
 
       for (const assigneeId of allAssignees) {
         if (!notifiedUserIds.has(assigneeId)) {
@@ -1772,15 +1775,17 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    // Get author name
-    const author = await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
+    // Get author name. userId is absent for inbound-email/system comments.
+    const author = userId
+      ? await tenantScopedTable(db, 'users', tenantId)
+          .select('first_name', 'last_name')
+          .where('user_id', userId)
+          .first()
+      : null;
 
-    // No user row means a system/sentinel actor (inbound email); the payload
+    // No user row means a system/contact actor (inbound email); the payload
     // already carries the real sender identity, so prefer it over 'Someone'.
-    const authorName = userDisplayName(author, usableDisplayName(comment?.author) || 'Someone');
+    const authorName = userDisplayName(author, usableDisplayName(comment?.author) || (userId ? 'Someone' : 'System'));
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1855,7 +1860,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId,
+                ...(userId ? { commentAuthorId: userId } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1906,7 +1911,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 id: comment?.id,
                 text: commentPreview,
                 author: authorName,
-                authorId: userId,
+                ...(userId ? { authorId: userId } : {}),
                 isInternal: false
               }
             }
@@ -1958,7 +1963,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
               id: comment?.id,
               text: commentPreview,
               author: authorName,
-              authorId: userId,
+              ...(userId ? { authorId: userId } : {}),
               isInternal: false
             }
           }
@@ -1984,7 +1989,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 /**
  * Handle ticket comment updated events
  */
-async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Promise<void> {
+async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, oldComment, newComment } = payload;
 
@@ -1996,7 +2001,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
   });
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -2009,13 +2014,15 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
       return;
     }
 
-    // Get author name
-    const author = await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
+    // Get author name. userId is absent when no user edited the comment.
+    const author = userId
+      ? await tenantScopedTable(db, 'users', tenantId)
+          .select('first_name', 'last_name')
+          .where('user_id', userId)
+          .first()
+      : null;
 
-    const authorName = userDisplayName(author, 'Someone');
+    const authorName = userDisplayName(author, usableDisplayName(newComment?.author) || (userId ? 'Someone' : 'System'));
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -2085,7 +2092,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId,
+                ...(userId ? { commentAuthorId: userId } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -2106,6 +2113,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
       ticketId,
       tenantId
     });
+    if (opts?.propagateErrors) throw error;
   }
 }
 
@@ -3414,6 +3422,7 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketUpdated,
   handleTicketClosed,
   handleTicketCommentAdded,
+  handleTicketCommentUpdated,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
   handleCalendarShareGranted,

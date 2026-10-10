@@ -13,6 +13,7 @@
  * notification consumers dedupe that stable event id.
  */
 
+import { scrubLegacyTicketIdActor } from '@alga-psa/event-schemas';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
 import {
@@ -96,7 +97,9 @@ export async function processInboundOutboxJob(
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
     await publishEvent(
-      { eventType: row.event_type as any, payload: row.payload as any },
+      // Rows written before ticket events stopped using the ticket id as the actor
+      // carry userId === ticketId; heal that on replay.
+      { eventType: row.event_type as any, payload: scrubLegacyTicketIdActor(row.payload as any) },
       options as any
     );
     published = true;

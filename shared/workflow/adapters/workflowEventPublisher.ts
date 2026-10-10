@@ -4,7 +4,12 @@
  * events to both the workflow stream and notification channels.
  */
 
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import {
+  buildWorkflowPayload,
+  resolveTicketEventActor,
+  ticketEventActorFields,
+} from '@alga-psa/event-schemas';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
@@ -38,6 +43,28 @@ async function publishNotificationEvent(
     console.error(`[WorkflowEventPublisher] Failed to publish ${eventType} through event bus:`, error);
     // Don't throw - notification failure shouldn't break ticket operations
   }
+}
+
+/**
+ * Base ticket/comment payload with an honest actor. `userId` is only ever a real user id;
+ * when nobody acted it is omitted and actorType states who did (never the ticket id).
+ * Stamping through buildWorkflowPayload adds occurredAt so the payload also validates
+ * on the domain schema branch.
+ */
+function ticketEventPayload(
+  data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor },
+  fields: Record<string, unknown>
+): Record<string, any> {
+  const actor = data.actor ?? resolveTicketEventActor({ userId: data.userId });
+  return buildWorkflowPayload(
+    {
+      tenantId: data.tenantId,
+      ticketId: data.ticketId,
+      ...ticketEventActorFields(actor),
+      ...fields,
+    },
+    { tenantId: data.tenantId }
+  );
 }
 
 export class WorkflowEventPublisher implements IEventPublisher {
@@ -81,14 +108,10 @@ export class WorkflowEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      ...data.metadata
-    };
+    const payload = ticketEventPayload(data, { ...data.metadata });
 
     await this.publish('TICKET_CREATED', payload);
   }
@@ -97,16 +120,11 @@ export class WorkflowEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      changes: data.changes,
-      ...data.metadata
-    };
+    const payload = ticketEventPayload(data, { changes: data.changes, ...data.metadata });
 
     await this.publish('TICKET_UPDATED', payload);
   }
@@ -115,14 +133,10 @@ export class WorkflowEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      ...data.metadata
-    };
+    const payload = ticketEventPayload(data, { ...data.metadata });
 
     await this.publish('TICKET_CLOSED', payload);
   }
@@ -132,19 +146,18 @@ export class WorkflowEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
+    const payload = ticketEventPayload(data, {
+      commentId: data.commentId,
       comment: {
         id: data.commentId,
         content: data.metadata?.content || '',
         author: data.metadata?.author || 'System',
         isInternal: data.metadata?.isInternal || false
       }
-    };
+    });
 
     // Inbound replies fan out to internal + email channels (like the other publish*
     // methods) so the assigned tech/resources are emailed. The email subscriber excludes
