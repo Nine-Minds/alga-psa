@@ -534,7 +534,8 @@
         "anniversary": "el próximo aniversario del cliente",
         "renewal": "la fecha de decisión de renovación del contrato",
         "contractEnd": "la fecha de finalización del contrato",
-        "warrantyEnd": "la fecha de fin de garantía del activo"
+        "warrantyEnd": "la fecha de fin de garantía del activo",
+        "ticketStatusAge": "el día en que el ticket alcanza el número de días en el estado"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Aún no publicado. Al publicar se creará v{{next}}.",
       "tenantTimezoneOption": "Zona horaria del inquilino (predeterminada)",
       "searchTimezones": "Buscar zonas horarias",
-      "inputDataEventPending": "Elija el evento de arriba; sus pasos leerán los datos que ese evento envía."
+      "inputDataEventPending": "Elija el evento de arriba; sus pasos leerán los datos que ese evento envía.",
+      "dateSourceTicketStatusAge": "Ticket en estado durante N días",
+      "statusAgeStatus": "Estado",
+      "statusAgeStatusPlaceholder": "Seleccionar un estado",
+      "statusAgeStatusMissing": "No existe ningún estado con este nombre en el tablero seleccionado.",
+      "statusAgeOptionsFailed": "No se pudieron cargar los estados y tableros.",
+      "statusAgeMatchByName": "Los estados se comparan por nombre. Si se renombra un estado, este disparador deja de coincidir.",
+      "statusAgeBoard": "Tablero (opcional)",
+      "statusAgeAnyBoard": "Cualquier tablero",
+      "statusAgeDays": "Días en el estado",
+      "statusAgeRepeat": "Repetir mientras esté en el estado",
+      "statusAgeRepeatEvery": "Repetir cada (días)",
+      "statusAgeNoActivity": "Solo si no ha habido actividad (comentarios o cambios de personas) durante ese tiempo",
+      "statusAgeSummary": "Se ejecuta a diario a las {{time}} ({{timezone}}) para cada ticket que lleve el número de días indicado en el estado elegido"
     },
     "stepPanel": {
       "readOnly": "Acceso de solo lectura: la edición de pasos está deshabilitada.",
@@ -2095,7 +2109,8 @@
     "dateTiming": {
       "before": "{{count}} días antes",
       "after": "{{count}} días después",
-      "onTheDay": "el mismo día"
+      "onTheDay": "el mismo día",
+      "daysInStatus": "{{count}} días en el estado"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

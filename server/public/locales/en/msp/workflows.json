@@ -534,7 +534,8 @@
         "anniversary": "the client's next anniversary",
         "renewal": "the contract's renewal decision date",
         "contractEnd": "the contract's end date",
-        "warrantyEnd": "the asset's warranty end date"
+        "warrantyEnd": "the asset's warranty end date",
+        "ticketStatusAge": "the day the ticket reaches the number of days in status"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Not published yet. Publishing creates v{{next}}.",
       "tenantTimezoneOption": "Tenant timezone (default)",
       "searchTimezones": "Search timezones",
-      "inputDataEventPending": "Choose the event above; your steps will read the data that event sends."
+      "inputDataEventPending": "Choose the event above; your steps will read the data that event sends.",
+      "dateSourceTicketStatusAge": "Ticket in status for N days",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Select a status",
+      "statusAgeStatusMissing": "No status with this name exists on the selected board.",
+      "statusAgeOptionsFailed": "Could not load statuses and boards.",
+      "statusAgeMatchByName": "Statuses are matched by name. Renaming a status stops this trigger from matching.",
+      "statusAgeBoard": "Board (optional)",
+      "statusAgeAnyBoard": "Any board",
+      "statusAgeDays": "Days in status",
+      "statusAgeRepeat": "Repeat while in status",
+      "statusAgeRepeatEvery": "Repeat every (days)",
+      "statusAgeNoActivity": "Only if there has been no activity (comments or changes by people) for that long",
+      "statusAgeSummary": "Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days"
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
@@ -1973,7 +1987,8 @@
     "dateTiming": {
       "before": "{{count}} days before",
       "after": "{{count}} days after",
-      "onTheDay": "on the day"
+      "onTheDay": "on the day",
+      "daysInStatus": "{{count}} days in the status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

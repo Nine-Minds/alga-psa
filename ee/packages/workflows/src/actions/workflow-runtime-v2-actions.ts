@@ -77,6 +77,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
   signalWorkflowRuntimeV2QuotaResume
 } from '../lib/workflowRuntimeV2Temporal';
+import { getDateTriggerSourceDefinition } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
 import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
@@ -2258,14 +2259,8 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   // Publish-time inference: for inferred mode, prefer the trigger event's schemaRef as the workflow payload contract.
   const schemaRegistry = getSchemaRegistry();
-  const dateSourcePayloadSchemaRefs: Record<string, string> = {
-    'client.anniversary': 'payload.ClientAnniversary.v1',
-    'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-    'contract.end': 'payload.ContractEndDate.v1',
-    'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-  };
   const dateTrigger = (definition as any)?.trigger;
-  if (dateTrigger?.type === 'date' && dateSourcePayloadSchemaRefs[dateTrigger.source] !== definition.payloadSchemaRef) {
+  if (dateTrigger?.type === 'date' && getDateTriggerSourceDefinition(dateTrigger.source)?.payloadSchemaRef !== definition.payloadSchemaRef) {
     return {
       ok: false,
       errors: [{ severity: 'error', stepPath: 'root.payloadSchemaRef', code: 'DATE_TRIGGER_SCHEMA_MISMATCH', message: 'Date trigger payload schema must match its selected source.' }],

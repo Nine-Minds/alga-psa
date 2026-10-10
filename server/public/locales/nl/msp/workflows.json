@@ -534,7 +534,8 @@
         "anniversary": "de volgende jubileumdatum van de klant",
         "renewal": "de beslisdatum voor verlenging van het contract",
         "contractEnd": "de einddatum van het contract",
-        "warrantyEnd": "de einddatum van de garantie van het asset"
+        "warrantyEnd": "de einddatum van de garantie van het asset",
+        "ticketStatusAge": "de dag waarop het ticket het aantal dagen in de status bereikt"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Nog niet gepubliceerd. Publiceren maakt v{{next}} aan.",
       "tenantTimezoneOption": "Tijdzone van de tenant (standaard)",
       "searchTimezones": "Tijdzones zoeken",
-      "inputDataEventPending": "Kies hierboven de gebeurtenis; uw stappen lezen de gegevens die die gebeurtenis verstuurt."
+      "inputDataEventPending": "Kies hierboven de gebeurtenis; uw stappen lezen de gegevens die die gebeurtenis verstuurt.",
+      "dateSourceTicketStatusAge": "Ticket N dagen in status",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Selecteer een status",
+      "statusAgeStatusMissing": "Op het geselecteerde bord bestaat geen status met deze naam.",
+      "statusAgeOptionsFailed": "Statussen en borden konden niet worden geladen.",
+      "statusAgeMatchByName": "Statussen worden op naam vergeleken. Als een status wordt hernoemd, past deze trigger niet meer.",
+      "statusAgeBoard": "Bord (optioneel)",
+      "statusAgeAnyBoard": "Elk bord",
+      "statusAgeDays": "Dagen in status",
+      "statusAgeRepeat": "Herhalen zolang in status",
+      "statusAgeRepeatEvery": "Herhaal elke (dagen)",
+      "statusAgeNoActivity": "Alleen als er in die tijd geen activiteit is geweest (reacties of wijzigingen door personen)",
+      "statusAgeSummary": "Wordt dagelijks om {{time}} ({{timezone}}) uitgevoerd voor elk ticket dat het ingestelde aantal dagen in de gekozen status staat"
     },
     "stepPanel": {
       "readOnly": "Alleen-lezentoegang: het bewerken van stappen is uitgeschakeld.",
@@ -2095,7 +2109,8 @@
     "dateTiming": {
       "before": "{{count}} dagen ervoor",
       "after": "{{count}} dagen erna",
-      "onTheDay": "op de dag zelf"
+      "onTheDay": "op de dag zelf",
+      "daysInStatus": "{{count}} dagen in de status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
