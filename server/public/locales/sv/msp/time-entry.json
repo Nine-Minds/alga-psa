@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Visa intervall",
       "grid": "Rutnät",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Förslag"
     }
   },
   "approval": {
@@ -412,7 +412,6 @@
     "createdFromNote_other": "Skapad från {{count}} intervall",
     "selectedCount_one": "{{count}} intervall markerat",
     "selectedCount_other": "{{count}} intervall markerade",
-    "title": "Tidsintervall för ärenden",
     "hideShortIntervals": "Dölj intervall under 1 minut",
     "totalTime": "Total tid: {{value}}",
     "selectedOne": "{{count}} intervall markerat",
@@ -422,25 +421,13 @@
       "deleteSelected": "Radera markerade intervall",
       "mergeSelected": "Slå ihop markerade intervall"
     },
-    "actions": {
-      "selectAll": "Markera alla",
-      "deselectAll": "Avmarkera alla",
-      "merge": "Slå ihop"
-    },
     "states": {
       "loading": "Läser in intervall…",
-      "noIntervalsThisPeriod": "Inga intervall hittades för den här tidsperioden",
       "noIntervalsThisTicket": "Inga intervall hittades för det här ärendet",
       "noIntervalsLongerThanMinute": "Inga intervall längre än 1 minut hittades"
     },
     "entryName": "Tidpost för ärende",
     "messages": {
-      "cannotFindTimeSheet": "Det går inte att skapa tidposten – det gick inte att hitta eller skapa en tidrapport",
-      "mergeFirst": "Slå ihop intervallen innan du skapar en tidpost",
-      "sameTicketOnly": "Tidposter kan bara skapas från intervall för samma ärende",
-      "mergeSameTicketOnly": "Endast intervall från samma ärende kan slås ihop",
-      "mergeSuccess": "Intervallen har slagits ihop",
-      "failedMerge": "Det gick inte att slå ihop intervallen",
       "noActivePeriod": "Ingen aktiv tidsperiod hittades",
       "failedFetchTimeSheet": "Det gick inte att skapa eller hämta tidrapporten",
       "failedPrepareTimeEntry": "Det gick inte att förbereda tidposten",
@@ -548,5 +535,30 @@
     "noPeriods": "Inga tidsperioder har skapats ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
     "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
     "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
+  },
+  "suggestions": {
+    "title": "Förslag",
+    "description": "Ärenden du arbetat med under perioden som ännu saknar loggad tid. Ingenting loggas förrän du väljer Logga tid.",
+    "loading": "Läser in förslag...",
+    "empty": "Inga förslag för den här perioden",
+    "dismissAllForDay": "Avfärda alla för den här dagen",
+    "logTime": "Logga tid",
+    "dismiss": "Avfärda",
+    "estimatedNotice": "Dessa tider är uppskattade utifrån din aktivitet på ärendet. Justera dem så att de stämmer med tiden du faktiskt arbetade.",
+    "dismissFailed": "Det gick inte att avfärda förslaget",
+    "activitySummary_one": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärd ({{kinds}})",
+    "activitySummary_other": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
+    "kinds": {
+      "created": "skapat",
+      "commented": "kommenterat",
+      "internalNote": "intern anteckning",
+      "statusChanged": "status ändrad",
+      "priorityChanged": "prioritet ändrad",
+      "assignmentChanged": "tilldelning ändrad",
+      "documentsChanged": "dokument ändrade",
+      "checklistChanged": "checklista ändrad",
+      "linksChanged": "länkar ändrade",
+      "updated": "uppdaterat"
+    }
   }
 }

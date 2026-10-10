@@ -555,6 +555,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   ticket_resources: { scope: 'tenant' },
   time_entries: { scope: 'tenant' },
   time_entry_change_requests: { scope: 'tenant' },
+  time_entry_suggestion_dismissals: { scope: 'tenant' },
   time_tracking_session_segments: { scope: 'tenant' },
   time_tracking_sessions: { scope: 'tenant' },
   time_periods: { scope: 'tenant' },

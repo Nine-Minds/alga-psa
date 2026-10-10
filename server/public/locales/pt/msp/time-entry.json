@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Mostrar intervalos",
       "grid": "Grade",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Sugestões"
     }
   },
   "approval": {
@@ -412,7 +412,6 @@
     "createdFromNote_other": "Criado a partir de intervalos {{count}}",
     "selectedCount_one": "Intervalo {{count}} selecionado",
     "selectedCount_other": "Intervalos {{count}} selecionados",
-    "title": "Intervalos de tempo do ticket",
     "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
     "totalTime": "Tempo total: {{value}}",
     "selectedOne": "Intervalo {{count}} selecionado",
@@ -422,25 +421,13 @@
       "deleteSelected": "Excluir intervalos selecionados",
       "mergeSelected": "Mesclar intervalos selecionados"
     },
-    "actions": {
-      "selectAll": "Selecionar tudo",
-      "deselectAll": "Desmarcar tudo",
-      "merge": "Mesclar"
-    },
     "states": {
       "loading": "Carregando intervalos...",
-      "noIntervalsThisPeriod": "Nenhum intervalo encontrado para este período",
       "noIntervalsThisTicket": "Nenhum intervalo encontrado para este ticket",
       "noIntervalsLongerThanMinute": "Nenhum intervalo maior que 1 minuto encontrado"
     },
     "entryName": "Entrada de tempo de ticket",
     "messages": {
-      "cannotFindTimeSheet": "Não é possível criar a entrada de horas - não foi possível encontrar ou criar a planilha de horas",
-      "mergeFirst": "Por favor, mescle os intervalos antes de criar uma entrada de tempo",
-      "sameTicketOnly": "Só é possível criar entradas de tempo a partir de intervalos do mesmo ticket",
-      "mergeSameTicketOnly": "Só é possível mesclar intervalos do mesmo ticket",
-      "mergeSuccess": "Intervalos mesclados com sucesso",
-      "failedMerge": "Falha ao mesclar intervalos",
       "noActivePeriod": "Nenhum período ativo encontrado",
       "failedFetchTimeSheet": "Falha ao criar ou buscar planilha de horas",
       "failedPrepareTimeEntry": "Falha ao preparar a entrada de horário",
@@ -548,5 +535,30 @@
     "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
     "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
     "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
+  },
+  "suggestions": {
+    "title": "Sugestões",
+    "description": "Tickets em que você trabalhou neste período e que ainda não têm tempo registrado. Nada é registrado até você escolher Registrar tempo.",
+    "loading": "Carregando sugestões...",
+    "empty": "Nenhuma sugestão para este período",
+    "dismissAllForDay": "Dispensar tudo deste dia",
+    "logTime": "Registrar tempo",
+    "dismiss": "Dispensar",
+    "estimatedNotice": "Estes horários são estimados com base na sua atividade neste ticket. Ajuste-os para o tempo que você realmente trabalhou.",
+    "dismissFailed": "Falha ao dispensar a sugestão",
+    "activitySummary_one": "primeira atividade {{first}} · última {{last}} · {{count}} ação ({{kinds}})",
+    "activitySummary_other": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
+    "kinds": {
+      "created": "criado",
+      "commented": "comentado",
+      "internalNote": "nota interna",
+      "statusChanged": "status alterado",
+      "priorityChanged": "prioridade alterada",
+      "assignmentChanged": "atribuição alterada",
+      "documentsChanged": "documentos alterados",
+      "checklistChanged": "checklist alterado",
+      "linksChanged": "links alterados",
+      "updated": "atualizado"
+    }
   }
 }

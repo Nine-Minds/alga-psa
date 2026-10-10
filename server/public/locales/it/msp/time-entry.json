@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Stato:",
-      "showIntervals": "Mostra intervalli",
       "grid": "Griglia",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Suggerimenti"
     }
   },
   "approval": {
@@ -412,7 +412,6 @@
     "createdFromNote_other": "Creato da {{count}} intervalli",
     "selectedCount_one": "{{count}} intervallo selezionato",
     "selectedCount_other": "{{count}} intervalli selezionati",
-    "title": "Intervalli di tempo del ticket",
     "hideShortIntervals": "Nascondi intervalli inferiori a 1 minuto",
     "totalTime": "Tempo totale: {{value}}",
     "selectedOne": "{{count}} intervallo selezionato",
@@ -422,25 +421,13 @@
       "deleteSelected": "Elimina gli intervalli selezionati",
       "mergeSelected": "Unisci gli intervalli selezionati"
     },
-    "actions": {
-      "selectAll": "Seleziona tutto",
-      "deselectAll": "Deseleziona tutto",
-      "merge": "Unisci"
-    },
     "states": {
       "loading": "Caricamento intervalli...",
-      "noIntervalsThisPeriod": "Nessun intervallo trovato per questo periodo di tempo",
       "noIntervalsThisTicket": "Nessun intervallo trovato per questo ticket",
       "noIntervalsLongerThanMinute": "Nessun intervallo più lungo di 1 minuto trovato"
     },
     "entryName": "Inserimento orario ticket",
     "messages": {
-      "cannotFindTimeSheet": "Impossibile creare l'inserimento dell'orario: impossibile trovare o creare il foglio ore",
-      "mergeFirst": "Unisci gli intervalli prima di creare una voce temporale",
-      "sameTicketOnly": "È possibile creare voci orari solo da intervalli dello stesso ticket",
-      "mergeSameTicketOnly": "È possibile unire solo gli intervalli dello stesso ticket",
-      "mergeSuccess": "Gli intervalli sono stati uniti correttamente",
-      "failedMerge": "Impossibile unire gli intervalli",
       "noActivePeriod": "Nessun periodo di tempo attivo trovato",
       "failedFetchTimeSheet": "Impossibile creare o recuperare il foglio ore",
       "failedPrepareTimeEntry": "Impossibile preparare l'immissione dell'ora",
@@ -548,5 +535,30 @@
     "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
     "noEditablePeriods": "Tutte le schede attività sono inviate o approvate, quindi non c’è alcun giorno a cui aggiungere tempo. Chiedi a un approvatore di riaprire una scheda o a un amministratore di aggiungere un periodo.",
     "prepareFailed": "Si è verificato un errore durante la preparazione dell'inserimento ore. Riprova."
+  },
+  "suggestions": {
+    "title": "Suggerimenti",
+    "description": "Ticket su cui hai lavorato in questo periodo e che non hanno ancora tempo registrato. Non viene registrato nulla finché non scegli Registra tempo.",
+    "loading": "Caricamento dei suggerimenti...",
+    "empty": "Nessun suggerimento per questo periodo",
+    "dismissAllForDay": "Ignora tutto per questo giorno",
+    "logTime": "Registra tempo",
+    "dismiss": "Ignora",
+    "estimatedNotice": "Questi orari sono stimati in base alla tua attività su questo ticket. Modificali in base al tempo effettivamente lavorato.",
+    "dismissFailed": "Impossibile ignorare il suggerimento",
+    "activitySummary_one": "prima attività {{first}} · ultima {{last}} · {{count}} azione ({{kinds}})",
+    "activitySummary_other": "prima attività {{first}} · ultima {{last}} · {{count}} azioni ({{kinds}})",
+    "kinds": {
+      "created": "creato",
+      "commented": "commentato",
+      "internalNote": "nota interna",
+      "statusChanged": "stato modificato",
+      "priorityChanged": "priorità modificata",
+      "assignmentChanged": "assegnazione modificata",
+      "documentsChanged": "documenti modificati",
+      "checklistChanged": "checklist modificata",
+      "linksChanged": "link modificati",
+      "updated": "aggiornato"
+    }
   }
 }

@@ -138,4 +138,6 @@ export interface TimeEntryWorkItemContext {
   serviceSource?: ProjectServiceSource;
   elapsedTime?: number;
   timeDescription?: string;
+  /** Explanation shown above the time entry form (e.g. times estimated from activity). */
+  notice?: string;
 }

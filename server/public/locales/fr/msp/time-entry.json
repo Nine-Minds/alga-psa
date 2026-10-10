@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Statut :",
-      "showIntervals": "Afficher les intervalles",
       "grid": "Grille",
-      "list": "Liste"
+      "list": "Liste",
+      "showSuggestions": "Suggestions"
     }
   },
   "approval": {
@@ -412,7 +412,6 @@
     "createdFromNote_other": "Créé à partir de {{count}} intervalles",
     "selectedCount_one": "{{count}} intervalle sélectionné",
     "selectedCount_other": "{{count}} intervalles sélectionnés",
-    "title": "Intervalles de temps des tickets",
     "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
     "totalTime": "Durée totale: {{value}}",
     "selectedOne": "{{count}} intervalle sélectionné",
@@ -422,25 +421,13 @@
       "deleteSelected": "Supprimer les intervalles sélectionnés",
       "mergeSelected": "Fusionner les intervalles sélectionnés"
     },
-    "actions": {
-      "selectAll": "Sélectionner tout",
-      "deselectAll": "Désélectionner tout",
-      "merge": "Fusionner"
-    },
     "states": {
       "loading": "Intervalles de chargement...",
-      "noIntervalsThisPeriod": "Aucun intervalle trouvé pour cette période",
       "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
       "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
     },
     "entryName": "Entrée de temps du ticket",
     "messages": {
-      "cannotFindTimeSheet": "Impossible de créer une saisie de temps - impossible de trouver ou de créer une feuille de temps",
-      "mergeFirst": "Veuillez fusionner les intervalles avant de créer une entrée de temps",
-      "sameTicketOnly": "Peut uniquement créer des entrées de temps à partir d'intervalles du même ticket",
-      "mergeSameTicketOnly": "Ne peut fusionner que les intervalles du même ticket",
-      "mergeSuccess": "Les intervalles ont été fusionnés avec succès",
-      "failedMerge": "Échec de la fusion des intervalles",
       "noActivePeriod": "Aucune période active trouvée",
       "failedFetchTimeSheet": "Échec de la création ou de la récupération de la feuille de temps",
       "failedPrepareTimeEntry": "Échec de la préparation de la saisie du temps",
@@ -548,5 +535,30 @@
     "noPeriods": "Aucune période de temps n'est configurée, la saisie du temps est donc impossible. Demandez à un administrateur de créer des périodes de temps sous Paramètres → Saisie du temps.",
     "noEditablePeriods": "Toutes les feuilles de temps sont soumises ou approuvées ; il n’y a donc aucun jour où ajouter du temps. Demandez à un approbateur de rouvrir une feuille, ou à un administrateur d’ajouter une période.",
     "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer."
+  },
+  "suggestions": {
+    "title": "Suggestions",
+    "description": "Tickets sur lesquels vous avez travaillé pendant cette période sans temps enregistré. Rien n'est enregistré tant que vous ne choisissez pas Saisir le temps.",
+    "loading": "Chargement des suggestions...",
+    "empty": "Aucune suggestion pour cette période",
+    "dismissAllForDay": "Ignorer tout pour ce jour",
+    "logTime": "Saisir le temps",
+    "dismiss": "Ignorer",
+    "estimatedNotice": "Ces heures sont estimées à partir de votre activité sur ce ticket. Ajustez-les selon le temps réellement travaillé.",
+    "dismissFailed": "Échec du rejet de la suggestion",
+    "activitySummary_one": "première activité {{first}} · dernière {{last}} · {{count}} action ({{kinds}})",
+    "activitySummary_other": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})",
+    "kinds": {
+      "created": "créé",
+      "commented": "commenté",
+      "internalNote": "note interne",
+      "statusChanged": "statut modifié",
+      "priorityChanged": "priorité modifiée",
+      "assignmentChanged": "affectation modifiée",
+      "documentsChanged": "documents modifiés",
+      "checklistChanged": "liste de contrôle modifiée",
+      "linksChanged": "liens modifiés",
+      "updated": "mis à jour"
+    }
   }
 }

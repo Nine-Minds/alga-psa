@@ -19,7 +19,7 @@ export async function createStopwatchUser(db: Knex, tenant: string, label: strin
   return userId;
 }
 
-async function grantPermissions(
+export async function grantPermissions(
   connection: Knex,
   tenant: string,
   userId: string,

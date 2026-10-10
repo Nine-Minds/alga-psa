@@ -1020,6 +1020,7 @@ export class TicketService extends BaseService<ITicket> {
           data.user_id,
           data.role ?? 'support',
           notificationSuppression,
+          'api',
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -1062,7 +1063,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, resource.assignment_id);
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
     });
   }
 

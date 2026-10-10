@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Pokaż interwały",
       "grid": "Siatka",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Sugestie"
     }
   },
   "approval": {
@@ -416,7 +416,6 @@
     "selectedCount_few": "Wybrano {{count}} interwały",
     "selectedCount_many": "Wybrano {{count}} interwałów",
     "selectedCount_other": "Wybrano {{count}} interwałów",
-    "title": "Przedziały czasowe zgłoszeń",
     "hideShortIntervals": "Ukryj interwały poniżej 1 minuty",
     "totalTime": "Całkowity czas: {{value}}",
     "selectedOne": "Wybrano {{count}} interwał",
@@ -426,25 +425,13 @@
       "deleteSelected": "Usuń wybrane interwały",
       "mergeSelected": "Połącz wybrane interwały"
     },
-    "actions": {
-      "selectAll": "Wybierz wszystko",
-      "deselectAll": "Odznacz wszystko",
-      "merge": "Łączyć"
-    },
     "states": {
       "loading": "Interwały ładowania...",
-      "noIntervalsThisPeriod": "Nie znaleziono interwałów dla tego okresu",
       "noIntervalsThisTicket": "Nie znaleziono interwałów dla tego zgłoszenia",
       "noIntervalsLongerThanMinute": "Nie znaleziono interwałów dłuższych niż 1 minuta"
     },
     "entryName": "Wpis czasu zgłoszenia",
     "messages": {
-      "cannotFindTimeSheet": "Nie można utworzyć wpisu czasu — nie można znaleźć ani utworzyć arkusza czasu pracy",
-      "mergeFirst": "Przed utworzeniem wpisu czasu należy najpierw połączyć przedziały",
-      "sameTicketOnly": "Można tworzyć wpisy czasowe tylko z przedziałów tego samego zgłoszenia",
-      "mergeSameTicketOnly": "Można łączyć tylko interwały z tego samego zgłoszenia",
-      "mergeSuccess": "Przedziały zostały pomyślnie połączone",
-      "failedMerge": "Nie udało się scalić interwałów",
       "noActivePeriod": "Nie znaleziono aktywnego okresu",
       "failedFetchTimeSheet": "Nie udało się utworzyć lub pobrać arkusza czasu pracy",
       "failedPrepareTimeEntry": "Nie udało się przygotować wpisu czasu",
@@ -552,5 +539,32 @@
     "noPeriods": "Nie skonfigurowano jeszcze okresów czasu, więc nie można rejestrować czasu. Poproś administratora o utworzenie okresów czasu w Ustawienia → Ewidencja czasu.",
     "noEditablePeriods": "Wszystkie arkusze czasu są przesłane lub zatwierdzone, więc nie ma dnia, do którego można dodać czas. Poproś osobę zatwierdzającą o ponowne otwarcie arkusza lub administratora o dodanie okresu.",
     "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie."
+  },
+  "suggestions": {
+    "title": "Sugestie",
+    "description": "Zgłoszenia, nad którymi pracowano w tym okresie i dla których nie zarejestrowano jeszcze czasu. Nic nie jest rejestrowane, dopóki nie wybierzesz Zarejestruj czas.",
+    "loading": "Ładowanie sugestii...",
+    "empty": "Brak sugestii dla tego okresu",
+    "dismissAllForDay": "Odrzuć wszystkie z tego dnia",
+    "logTime": "Zarejestruj czas",
+    "dismiss": "Odrzuć",
+    "estimatedNotice": "Te godziny zostały oszacowane na podstawie Twojej aktywności w tym zgłoszeniu. Dostosuj je do faktycznie przepracowanego czasu.",
+    "dismissFailed": "Nie udało się odrzucić sugestii",
+    "activitySummary_one": "pierwsza aktywność {{first}} · ostatnia {{last}} · {{count}} działanie ({{kinds}})",
+    "activitySummary_other": "pierwsza aktywność {{first}} · ostatnia {{last}} · {{count}} działania ({{kinds}})",
+    "activitySummary_few": "pierwsza aktywność {{first}} · ostatnia {{last}} · {{count}} działania ({{kinds}})",
+    "activitySummary_many": "pierwsza aktywność {{first}} · ostatnia {{last}} · {{count}} działań ({{kinds}})",
+    "kinds": {
+      "created": "utworzono",
+      "commented": "skomentowano",
+      "internalNote": "notatka wewnętrzna",
+      "statusChanged": "zmieniono status",
+      "priorityChanged": "zmieniono priorytet",
+      "assignmentChanged": "zmieniono przypisanie",
+      "documentsChanged": "zmieniono dokumenty",
+      "checklistChanged": "zmieniono listę kontrolną",
+      "linksChanged": "zmieniono łącza",
+      "updated": "zaktualizowano"
+    }
   }
 }

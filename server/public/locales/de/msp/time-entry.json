@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Intervalle anzeigen",
       "grid": "Raster",
-      "list": "Liste"
+      "list": "Liste",
+      "showSuggestions": "Vorschläge"
     }
   },
   "approval": {
@@ -412,7 +412,6 @@
     "createdFromNote_other": "Aus {{count}} Intervallen erstellt",
     "selectedCount_one": "{{count}} Intervall ausgewählt",
     "selectedCount_other": "{{count}} Intervalle ausgewählt",
-    "title": "Ticketzeitintervalle",
     "hideShortIntervals": "Intervalle unter 1 Minute ausblenden",
     "totalTime": "Gesamtzeit: {{value}}",
     "selectedOne": "{{count}} Intervall ausgewählt",
@@ -422,25 +421,13 @@
       "deleteSelected": "Ausgewählte Intervalle löschen",
       "mergeSelected": "Ausgewählte Intervalle zusammenführen"
     },
-    "actions": {
-      "selectAll": "Wählen Sie „Alle“ aus",
-      "deselectAll": "Alle abwählen",
-      "merge": "Verschmelzen"
-    },
     "states": {
       "loading": "Ladeintervalle...",
-      "noIntervalsThisPeriod": "Für diesen Zeitraum wurden keine Intervalle gefunden",
       "noIntervalsThisTicket": "Für dieses Ticket wurden keine Intervalle gefunden",
       "noIntervalsLongerThanMinute": "Es wurden keine Intervalle gefunden, die länger als 1 Minute sind"
     },
     "entryName": "Ticketzeiteintrag",
     "messages": {
-      "cannotFindTimeSheet": "Zeiteintrag kann nicht erstellt werden – Arbeitszeitnachweis konnte nicht gefunden oder erstellt werden",
-      "mergeFirst": "Bitte führen Sie zunächst Intervalle zusammen, bevor Sie einen Zeiteintrag erstellen",
-      "sameTicketOnly": "Es können nur Zeiteinträge aus Intervallen desselben Tickets erstellt werden",
-      "mergeSameTicketOnly": "Es können nur Intervalle desselben Tickets zusammengeführt werden",
-      "mergeSuccess": "Intervalle erfolgreich zusammengeführt",
-      "failedMerge": "Intervalle konnten nicht zusammengeführt werden",
       "noActivePeriod": "Kein aktiver Zeitraum gefunden",
       "failedFetchTimeSheet": "Zeitnachweis konnte nicht erstellt oder abgerufen werden",
       "failedPrepareTimeEntry": "Zeiteintrag konnte nicht vorbereitet werden",
@@ -548,5 +535,30 @@
     "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
     "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
     "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "suggestions": {
+    "title": "Vorschläge",
+    "description": "Tickets, an denen Sie in diesem Zeitraum gearbeitet haben und für die noch keine Zeit erfasst ist. Es wird nichts erfasst, bis Sie Zeit erfassen wählen.",
+    "loading": "Vorschläge werden geladen...",
+    "empty": "Keine Vorschläge für diesen Zeitraum",
+    "dismissAllForDay": "Alle für diesen Tag verwerfen",
+    "logTime": "Zeit erfassen",
+    "dismiss": "Verwerfen",
+    "estimatedNotice": "Diese Zeiten wurden anhand Ihrer Aktivität an diesem Ticket geschätzt. Passen Sie sie an die tatsächlich gearbeitete Zeit an.",
+    "dismissFailed": "Vorschlag konnte nicht verworfen werden",
+    "activitySummary_one": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktion ({{kinds}})",
+    "activitySummary_other": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "kinds": {
+      "created": "erstellt",
+      "commented": "kommentiert",
+      "internalNote": "interne Notiz",
+      "statusChanged": "Status geändert",
+      "priorityChanged": "Priorität geändert",
+      "assignmentChanged": "Zuweisung geändert",
+      "documentsChanged": "Dokumente geändert",
+      "checklistChanged": "Checkliste geändert",
+      "linksChanged": "Links geändert",
+      "updated": "aktualisiert"
+    }
   }
 }
