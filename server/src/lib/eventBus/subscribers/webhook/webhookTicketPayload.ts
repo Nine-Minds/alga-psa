@@ -116,7 +116,13 @@ export type TicketWebhookPayload = {
 
 type CachedTicketWebhookPayload = Omit<
   TicketWebhookPayload,
-  'changes' | 'comment' | 'suppress_contact_notifications' | 'suppress_internal_notifications'
+  | 'changes'
+  | 'comment'
+  | 'suppress_contact_notifications'
+  | 'suppress_internal_notifications'
+  // response_state is mutated by comments/status changes in the same transaction
+  // as the event, so it is never cached; it is read fresh on every build.
+  | 'response_state'
 >;
 
 type TicketWebhookRow = {
@@ -140,7 +146,6 @@ type TicketWebhookRow = {
   category_id: string | null;
   subcategory_id: string | null;
   is_closed: boolean | null;
-  response_state: string | null;
   entered_at: string | null;
   updated_at: string | null;
   closed_at: string | null;
@@ -179,6 +184,7 @@ export async function buildTicketWebhookPayload(
   const basePayload = await getCachedTicketWebhookPayload(knex, tenantId, ticketId);
   const payload: TicketWebhookPayload = {
     ...basePayload,
+    response_state: await fetchCurrentResponseState(knex, tenantId, ticketId),
     tags: [...basePayload.tags],
     suppress_contact_notifications: internalEvent.payload.suppressContactNotifications === true,
     suppress_internal_notifications: internalEvent.payload.suppressInternalNotifications === true,
@@ -206,16 +212,16 @@ export async function buildTicketWebhookPayload(
     };
     payload.previous_response_state = asResponseState(eventPayload.previousState ?? eventPayload.previousResponseState);
     payload.new_response_state = asResponseState(eventPayload.newState ?? eventPayload.newResponseState);
-    // The snapshot may predate this transition (60s cache), so the event is
-    // authoritative: make the snapshot agree with it and drop the stale entry
-    // so following events re-read the ticket.
+    // The event is authoritative for its own transition, even if a later
+    // change has already moved the row on.
     payload.response_state = payload.new_response_state;
-    ticketWebhookCache.delete(`${tenantId}:${ticketId}`);
   }
 
   const comment = normalizeCommentPayload(internalEvent);
   if (comment) {
-    const commentId = (internalEvent.payload as { commentId?: unknown }).commentId;
+    // The consumer-side schema parse can strip top-level `commentId`, but keeps `comment.id`.
+    const eventPayload = internalEvent.payload as { commentId?: unknown; comment?: { id?: unknown } | null };
+    const commentId = eventPayload.commentId ?? eventPayload.comment?.id;
     if (typeof commentId === 'string' && commentId.length > 0) {
       Object.assign(comment, await fetchCommentAuthorFields(knex, tenantId, commentId));
     }
@@ -227,6 +233,19 @@ export async function buildTicketWebhookPayload(
 
 function asResponseState(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+async function fetchCurrentResponseState(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<string | null> {
+  const row = await tenantDb(knex, tenantId)
+    .table('tickets')
+    .select('response_state')
+    .where({ ticket_id: ticketId })
+    .first();
+  return asResponseState(row?.response_state);
 }
 
 async function fetchCommentAuthorFields(
@@ -318,7 +337,6 @@ async function fetchTicketWebhookPayload(
     category_id: ticket.category_id ?? null,
     subcategory_id: ticket.subcategory_id ?? null,
     is_closed: Boolean(ticket.is_closed),
-    response_state: asResponseState(ticket.response_state),
     entered_at: ticket.entered_at ?? null,
     updated_at: ticket.updated_at ?? null,
     closed_at: ticket.closed_at ?? null,
@@ -366,7 +384,6 @@ async function fetchTicketWebhookRow(
       't.category_id',
       't.subcategory_id',
       knex.raw('COALESCE(t.is_closed, s.is_closed, false) as is_closed'),
-      't.response_state',
       't.entered_at',
       't.updated_at',
       't.closed_at',

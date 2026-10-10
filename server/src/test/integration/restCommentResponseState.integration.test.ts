@@ -63,17 +63,34 @@ vi.mock('server/src/lib/analytics/posthog', () => ({ analytics: { capture: vi.fn
 
 // The in-process "bus": publishEvent records the event and hands it to whatever
 // the real webhook subscriber registered through getEventBus().subscribe.
+// Like the real Redis consumer (packages/event-bus/src/eventBus.ts) it runs the
+// event through EventSchemas[eventType].parse(...) first, so fields the schema
+// does not declare are stripped exactly as in production.
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
     state.published.push({ eventType: event.eventType, payload: event.payload });
     const handler = state.handlers.get(event.eventType);
     if (handler) {
-      await handler({
+      const { EventSchemas } = await import('@alga-psa/event-bus/schemas/eventBusSchema');
+      const schema = (EventSchemas as Record<string, { parse: (v: unknown) => unknown } | undefined>)[event.eventType];
+      if (!schema) {
+        throw new Error(`No EventSchemas entry for ${event.eventType}; refusing to skip the consumer parse`);
+      }
+      const parsed = schema.parse({
         id: uuidv4(),
-        timestamp: new Date().toISOString(),
         eventType: event.eventType,
+        timestamp: new Date().toISOString(),
         payload: event.payload,
-      });
+      }) as unknown;
+      if (event.eventType === 'TICKET_RESPONSE_STATE_CHANGED') {
+        // In production this event is consumed after the comment.added event of
+        // the same transaction (separate stream messages, possibly other pods).
+        // Deliver it late so the comment.added build cannot benefit from this
+        // event's side effects.
+        setTimeout(() => { void handler(parsed).catch(() => undefined); }, 250);
+      } else {
+        await handler(parsed);
+      }
     }
   }),
   publishWorkflowEvent: vi.fn(async () => {}),
@@ -229,6 +246,30 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     return ticketId;
   }
 
+  let commentHookCreated = false;
+  async function ensureCommentHook() {
+    if (commentHookCreated) return;
+    const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
+    process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = 'true';
+    await webhookService.createWebhook(
+      {
+        name: 'RS comment hook',
+        url: 'http://127.0.0.1:9/unused',
+        method: 'POST',
+        event_types: ['ticket.comment.added'],
+        payload_format: 'json',
+        content_type: 'application/json',
+        verify_ssl: false,
+      } as any,
+      tenantId,
+      staffUserId,
+    );
+    commentHookCreated = true;
+  }
+
+  const commentJobFor = (ticketId: string) =>
+    waitFor(() => state.jobs.find((j) => j.eventType === 'ticket.comment.added' && j.payload?.ticket_id === ticketId));
+
   async function responseStateOf(ticketId: string) {
     const row = await table('tickets').where({ ticket_id: ticketId }).first('response_state');
     return row?.response_state ?? null;
@@ -294,6 +335,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   const stateEvents = () => state.published.filter((e) => e.eventType === 'TICKET_RESPONSE_STATE_CHANGED');
 
   it('1. REST client-visible comment by an internal user sets author_type=internal and awaiting_client', async () => {
+    await ensureCommentHook();
     const ticketId = await createTicket(null);
     const comment = await service.addComment(
       ticketId,
@@ -313,6 +355,11 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
       newResponseState: 'awaiting_client',
       trigger: 'comment',
     });
+
+    // The delivered payload went through the consumer-side schema parse: the
+    // top-level comment must still carry author fields.
+    const job = await commentJobFor(ticketId);
+    expect(job.payload.comment.author_type).toBe('internal');
   });
 
   it('2. REST internal note leaves response_state unchanged and emits nothing', async () => {
@@ -331,12 +378,22 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   });
 
   it('REST comment from a client user records author_type=client + contact and sets awaiting_internal', async () => {
+    await ensureCommentHook();
     const ticketId = await createTicket('awaiting_client');
     const comment = await service.addComment(ticketId, { comment_text: 'any update?', is_internal: false } as any, clientCtx());
     const row = await table('comments').where({ comment_id: comment.comment_id }).first();
     expect(row.author_type).toBe('client');
     expect(row.contact_id).toBe(contactId);
     expect(await responseStateOf(ticketId)).toBe('awaiting_internal');
+
+    const job = await commentJobFor(ticketId);
+    expect(job.payload.comment).toMatchObject({
+      author_type: 'client',
+      contact_id: contactId,
+      contact_name: 'Casey Contact',
+    });
+    expect(job.payload.comments.find((c: any) => c.contact_name === 'Casey Contact'))
+      .toMatchObject({ author_type: 'client', contact_id: contactId });
   });
 
   it('REST close clears response_state and emits a close-triggered change', async () => {
@@ -434,22 +491,28 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     clearTicketWebhookPayloadCache();
   });
 
+  it('5b. comment.added data.response_state is read fresh from the DB even when the snapshot cache was warmed earlier', async () => {
+    await ensureCommentHook();
+    clearTicketWebhookPayloadCache();
+    const ticketId = await createTicket(null);
+
+    // Warm the per-ticket snapshot cache while response_state is null.
+    const warm = await buildTicketWebhookPayload(
+      { eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId, ticketId } }, db);
+    expect(warm.response_state).toBeNull();
+
+    // A client-visible staff comment moves the state to awaiting_client.
+    await service.addComment(ticketId, { comment_text: 'warm cache check', is_internal: false } as any, staffCtx());
+    const dbState = await responseStateOf(ticketId);
+    expect(dbState).toBe('awaiting_client');
+
+    const job = await commentJobFor(ticketId);
+    expect(job.payload.response_state).toBe(dbState);
+    clearTicketWebhookPayloadCache();
+  });
+
   it('5. a contact comment webhook payload carries author_type + contact_name in comment and comments[]', async () => {
-    const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
-    process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = 'true';
-    await webhookService.createWebhook(
-      {
-        name: 'RS comment hook',
-        url: 'http://127.0.0.1:9/unused',
-        method: 'POST',
-        event_types: ['ticket.comment.added'],
-        payload_format: 'json',
-        content_type: 'application/json',
-        verify_ssl: false,
-      } as any,
-      tenantId,
-      staffUserId,
-    );
+    await ensureCommentHook();
 
     const ticketId = await createTicket(null);
     await service.addComment(ticketId, { comment_text: 'from the contact', is_internal: false } as any, clientCtx());
