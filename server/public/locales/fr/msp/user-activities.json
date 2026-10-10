@@ -533,5 +533,32 @@
   "actions": {
     "print": "Imprimer",
     "printOptions": "Options d'impression"
+  },
+  "actionMenu": {
+    "moveToGroup": "Déplacer vers le groupe",
+    "loadingGroups": "Chargement…",
+    "newGroupTitle": "Nouveau groupe"
+  },
+  "deepLink": {
+    "notInView": "Cet élément n'est pas dans votre vue actuelle.",
+    "notOnList": "Cet élément ne figure plus dans votre liste d'activités.",
+    "clearFilters": "Effacer les filtres"
+  },
+  "myGroup": {
+    "label": "Mon groupe",
+    "chip": "Mon groupe : {{name}}",
+    "ungrouped": "Non groupé",
+    "privacyHint": "Vous seul pouvez le voir. Cela organise votre liste d'activités.",
+    "selectPlaceholder": "Choisir un groupe",
+    "newGroup": "Nouveau groupe…",
+    "newGroupPlaceholder": "Nom du groupe",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "showOnBoard": "Afficher dans mes activités",
+    "errors": {
+      "load": "Impossible de charger vos groupes.",
+      "move": "Impossible de changer votre groupe. Réessayez.",
+      "create": "Impossible de créer le groupe. Réessayez."
+    }
   }
 }

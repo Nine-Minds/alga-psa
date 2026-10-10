@@ -533,5 +533,32 @@
   "actions": {
     "print": "Skriv ut",
     "printOptions": "Utskriftsalternativ"
+  },
+  "actionMenu": {
+    "moveToGroup": "Flytta till grupp",
+    "loadingGroups": "Läser in…",
+    "newGroupTitle": "Ny grupp"
+  },
+  "deepLink": {
+    "notInView": "Det här objektet finns inte i din nuvarande vy.",
+    "notOnList": "Det här objektet finns inte längre i din aktivitetslista.",
+    "clearFilters": "Rensa filter"
+  },
+  "myGroup": {
+    "label": "Min grupp",
+    "chip": "Min grupp: {{name}}",
+    "ungrouped": "Ogrupperad",
+    "privacyHint": "Bara du kan se detta. Det organiserar din aktivitetslista.",
+    "selectPlaceholder": "Välj en grupp",
+    "newGroup": "Ny grupp…",
+    "newGroupPlaceholder": "Gruppnamn",
+    "create": "Skapa",
+    "cancel": "Avbryt",
+    "showOnBoard": "Visa i mina aktiviteter",
+    "errors": {
+      "load": "Det gick inte att läsa in dina grupper.",
+      "move": "Det gick inte att ändra din grupp. Försök igen.",
+      "create": "Det gick inte att skapa gruppen. Försök igen."
+    }
   }
 }

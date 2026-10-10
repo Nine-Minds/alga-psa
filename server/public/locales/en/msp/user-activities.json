@@ -533,5 +533,32 @@
   "actions": {
     "print": "Print",
     "printOptions": "Print options"
+  },
+  "actionMenu": {
+    "moveToGroup": "Move to group",
+    "loadingGroups": "Loading…",
+    "newGroupTitle": "New group"
+  },
+  "deepLink": {
+    "notInView": "This item isn't in your current view.",
+    "notOnList": "This item is no longer on your activities list.",
+    "clearFilters": "Clear filters"
+  },
+  "myGroup": {
+    "label": "My group",
+    "chip": "My group: {{name}}",
+    "ungrouped": "Ungrouped",
+    "privacyHint": "Only you can see this. It organizes your activities list.",
+    "selectPlaceholder": "Choose a group",
+    "newGroup": "New group…",
+    "newGroupPlaceholder": "Group name",
+    "create": "Create",
+    "cancel": "Cancel",
+    "showOnBoard": "Show on my activities",
+    "errors": {
+      "load": "Couldn't load your groups.",
+      "move": "Couldn't change your group. Try again.",
+      "create": "Couldn't create the group. Try again."
+    }
   }
 }
