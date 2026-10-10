@@ -1469,10 +1469,24 @@ export const createClientContractFromWizard = withAuth(async (
     enableProration: submission.enable_proration,
   });
 
-    if (filteredFixedServices.length > 0) {
+    for (const [lineIndex, fixedLine] of writableFixedLines.entries()) {
+      // Per-line timing and proration; cadence owner stays contract-level.
+      const fixedLinePolicy = resolveRecurringAuthoringPolicy({
+        cadenceOwner: submission.cadence_owner,
+        defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+        billingTiming: fixedLine.billing_timing ?? submission.billing_timing,
+        enableProration: fixedLine.enable_proration,
+      });
       const createdFixedLine = await ContractLine.create(trx, {
-        contract_line_name: `${submission.contract_name} - Fixed Fee`,
-        billing_frequency: submission.fixed_billing_frequency ?? submission.billing_frequency ?? 'monthly',
+        contract_line_name: resolveFixedLineName(
+          submission.contract_name,
+          fixedLine,
+          lineIndex,
+          writableFixedLines.length,
+        ),
+        description: fixedLine.description ?? null,
+        location_id: fixedLine.location_id ?? null,
+        billing_frequency: fixedLine.billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Fixed',
@@ -1488,8 +1502,8 @@ export const createClientContractFromWizard = withAuth(async (
         display_order: nextDisplayOrder,
         custom_rate: null,
         rate_provenance: 'inherited',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: fixedLinePolicy.billingTiming,
+        cadence_owner: fixedLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
@@ -1499,83 +1513,15 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       // The line base rate is the bundle total and covers ONLY bundle members.
-      // Unit members bill quantity × unit rate on their own, so they take no
-      // share of it (a share would double-bill every seat).
-      const lineHasBundleMember = hasBundleFixedService(filteredFixedServices);
-      const bundleLineBaseRate = lineHasBundleMember ? (submission.fixed_base_rate ?? null) : null;
-      const bundleShares = bundleLineBaseRate
-        ? allocateBundleBaseRate(filteredFixedServices, bundleLineBaseRate)
-        : null;
-
-      for (const [index, service] of filteredFixedServices.entries()) {
-        const isUnit = isUnitFixedService(service);
-        // A unit quantity of zero is a stored zero — never defaulted to 1.
-        const quantity = isUnit ? Number(service.quantity) : (service.quantity ?? 1);
-
-        await tenantDb(trx, tenant).table('contract_line_services').insert({
-          tenant,
-          contract_line_id: planId,
-          service_id: service.service_id,
-        });
-
-        if (isUnit) {
-          // Same creation path as CreateCustomContractLineDialog: the unit rate
-          // is the member's own explicit (custom) fixed base_rate, and later
-          // quantity/rate edits are routed through the revision service.
-          await planServiceConfigService.createConfiguration(
-            {
-              contract_line_id: planId,
-              service_id: service.service_id,
-              configuration_type: 'Fixed',
-              quantity,
-              tenant,
-              custom_rate: undefined,
-            },
-            {
-              pricing_basis: 'unit',
-              base_rate: service.unit_rate as number,
-              rate_provenance: 'custom',
-            },
-          );
-          continue;
-        }
-
-        // The operator's explicit rate is a snapshot (`custom`); absent one the
-        // member is left rate-less (`inherited`) so a later catalog change
-        // reaches it. Snapshotting the catalog here would shadow it forever.
-        let serviceBaseRate: number | null = null;
-        let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
-        if (bundleShares) {
-          serviceBaseProvenance = 'custom';
-          serviceBaseRate = bundleShares[index];
-        } else {
-          // A configured fixed-mode default is a chosen rate for this service,
-          // and the rate resolver does not read that table — so it must be
-          // preserved as a custom member rate or it is silently lost. The
-          // legacy currency-untagged catalog `default_rate` is deliberately NOT
-          // snapshotted: absent a mode default the line follows the effective
-          // `service_prices` catalog.
-          const modeDefault = firstPositiveRateInCents(
-            fixedModeDefaultsByServiceId.get(service.service_id),
-          );
-          if (modeDefault !== undefined) {
-            serviceBaseRate = modeDefault;
-            serviceBaseProvenance = 'custom';
-          }
-        }
-
-        await planServiceConfigService.createConfiguration(
-          {
-            contract_line_id: planId,
-            service_id: service.service_id,
-            configuration_type: 'Fixed',
-            quantity,
-            tenant,
-            custom_rate: undefined,
-          },
-          { base_rate: serviceBaseRate, rate_provenance: serviceBaseProvenance }
-        );
-      }
+      // A service-less (custom) line keeps its recurring amount on the line itself.
+      const { bundleLineBaseRate } = await writeFixedLineMembers(
+        trx,
+        tenant,
+        planServiceConfigService,
+        planId,
+        fixedLine,
+        fixedModeDefaultsByServiceId,
+      );
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
@@ -1583,9 +1529,9 @@ export const createClientContractFromWizard = withAuth(async (
         // No operator rate means "follow the catalog" (null + inherited), not a
         // stored zero that would shadow it forever. Already in cents when set.
         // A line of only unit members has no bundle total at all.
-        base_rate: bundleLineBaseRate,
-        enable_proration: recurringAuthoringPolicy.enableProration,
-        billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
+        base_rate: fixedLine.services.length === 0 ? (fixedLine.base_rate ?? null) : bundleLineBaseRate,
+        enable_proration: fixedLinePolicy.enableProration,
+        billing_cycle_alignment: fixedLinePolicy.billingCycleAlignment,
         tenant,
       });
 
