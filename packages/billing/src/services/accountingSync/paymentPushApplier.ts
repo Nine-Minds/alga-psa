@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier bridges billing to the QuickBooks client only for the legacy (no-adapter) path
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { AccountingExportAdapter, AccountingProviderOperations } from '@alga-psa/types';
@@ -30,6 +31,8 @@ interface RecordPaymentPayload {
   amountCents: number;
   referenceNumber: string;
   provider: string;
+  /** ISO currency of the invoice; drives minor-unit scaling. Ops queued before this field existed are 2-digit (USD). */
+  currencyCode?: string;
 }
 
 /** QBO PaymentRefNum is limited to 21 characters. */
@@ -286,7 +289,8 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
-    const amountDollars = Math.round(payload.amountCents) / 100;
+    const currency = payload.currencyCode ?? 'USD';
+    const amountDollars = fromMinorUnits(Math.round(payload.amountCents), 'en-US', currency);
 
     try {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
@@ -301,6 +305,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
           externalCustomerId: customerId,
           amountCents: payload.amountCents,
           reference: payload.referenceNumber,
+          currency: payload.currencyCode,
           depositAccountRef: depositAccountRef ?? null
         });
         externalPaymentId = result.externalPaymentId;
@@ -331,7 +336,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
         syncToken = String(createdPayment?.SyncToken ?? createdPayment?.payment?.SyncToken ?? '0');
         const entity = createdPayment?.Id ? createdPayment : createdPayment?.payment;
         const unappliedAmt = Number(entity?.UnappliedAmt ?? 0);
-        unappliedCents = Number.isFinite(unappliedAmt) ? Math.round(unappliedAmt * 100) : undefined;
+        unappliedCents = Number.isFinite(unappliedAmt) ? toMinorUnits(unappliedAmt, 'en-US', currency) : undefined;
       }
 
       // Write mapping row. The sync_token stored here is what paymentApplier
@@ -387,7 +392,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
             external_invoice_id: invoiceExternalId,
             amount_cents: payload.amountCents,
             unapplied_amount_cents: unappliedCents,
-            ...(providerOps ? {} : { unapplied_amount: unappliedCents / 100 }),
+            ...(providerOps ? {} : { unapplied_amount: fromMinorUnits(unappliedCents, 'en-US', currency) }),
             message:
               `${providerLabel} accepted the payment but recorded it as unapplied customer credit — ` +
               `the linked invoice had no open balance. Apply or refund the credit in ${providerLabel}.`,

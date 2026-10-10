@@ -6,6 +6,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { toMinorUnits } from '@alga-psa/core';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,14 +16,16 @@ export interface QboInvoiceRow {
   TotalAmt?: number | string;
   SyncToken?: string;
   CustomerRef?: { value: string; name?: string };
+  CurrencyRef?: { value: string; name?: string };
 }
 
 export interface AlgaInvoiceRow {
   invoice_id: string;
   invoice_number: string;
-  /** total_amount stored as integer cents in Alga */
+  /** total_amount stored as integer minor units in Alga */
   total_amount: number;
   client_id: string | null;
+  currency_code?: string | null;
 }
 
 export interface HistMatch {
@@ -48,11 +51,17 @@ export type AlgaInvoiceFetcher = (options?: { windowStart?: string }) => Promise
 
 // ─── Core matching logic ──────────────────────────────────────────────────────
 
-const CENT_TOLERANCE = 1; // 1 cent
+// One minor unit of the document's currency (1 cent for USD, 1 yen for JPY).
+const CENT_TOLERANCE = 1;
 
-function toCents(value: number | string | undefined | null): number {
+function toCents(value: number | string | undefined | null, currency: string): number {
   const n = Number(value ?? 0);
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  return Number.isFinite(n) ? toMinorUnits(n, 'en-US', currency) : 0;
+}
+
+/** The QBO document's own currency, else the Alga invoice's. */
+function matchCurrency(qi: QboInvoiceRow, ai: AlgaInvoiceRow): string {
+  return qi.CurrencyRef?.value || ai.currency_code || 'USD';
 }
 
 /**
@@ -93,7 +102,7 @@ export function matchHistoricalInvoices(
     if (candidates.length > 1) {
       // Collision: doc number maps to multiple QBO invoices → all go to review
       for (const qi of candidates) {
-        const externalTotal = toCents(qi.TotalAmt);
+        const externalTotal = toCents(qi.TotalAmt, matchCurrency(qi, ai));
         review.push({
           invoiceId: ai.invoice_id,
           invoiceNumber: ai.invoice_number,
@@ -110,8 +119,8 @@ export function matchHistoricalInvoices(
     }
 
     const qi = candidates[0];
-    const externalTotal = toCents(qi.TotalAmt);
-    const algaTotal = ai.total_amount; // already in cents
+    const externalTotal = toCents(qi.TotalAmt, matchCurrency(qi, ai));
+    const algaTotal = ai.total_amount; // already in minor units
 
     const totalDiff = Math.abs(externalTotal - algaTotal);
 

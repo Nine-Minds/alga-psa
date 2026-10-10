@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+import { fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier bridges billing to the QuickBooks client only for the legacy (no-adapter) path
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import type { AccountingExportAdapter, AccountingProviderOperations } from '@alga-psa/types';
@@ -27,6 +28,8 @@ interface ApplyCreditPayload {
   creditNoteInvoiceId: string;
   targetInvoiceId: string;
   amountCents: number;
+  /** ISO currency of the target invoice; drives minor-unit scaling. Ops queued before this field existed are 2-digit (USD). */
+  currencyCode?: string;
 }
 
 /** How long an apply_credit op may wait on missing mappings before we surface it. */
@@ -306,7 +309,9 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
         const qboCreditMemo = await qboClient!.read<any>('CreditMemo', qboCreditMemoId);
         creditMemoMissing = !qboCreditMemo;
         const remainingDollars = Number(qboCreditMemo?.Balance);
-        remainingCents = Number.isFinite(remainingDollars) ? Math.round(remainingDollars * 100) : null;
+        remainingCents = Number.isFinite(remainingDollars)
+          ? toMinorUnits(remainingDollars, 'en-US', qboCreditMemo?.CurrencyRef?.value ?? payload.currencyCode ?? 'USD')
+          : null;
       }
 
       if (creditMemoMissing || (remainingCents !== null && remainingCents < payload.amountCents)) {
@@ -457,7 +462,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     }
 
     // ── Create the zero-dollar link between CreditMemo → Invoice ─────────
-    const amountDollars = Math.round(payload.amountCents) / 100;
+    const amountDollars = fromMinorUnits(Math.round(payload.amountCents), 'en-US', payload.currencyCode ?? 'USD');
     const paymentPayload = {
       CustomerRef: { value: qboCustomerId },
       TotalAmt: 0,
@@ -482,7 +487,8 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
           externalCreditNoteId: qboCreditMemoId,
           externalInvoiceId: qboInvoiceId,
           externalCustomerId: qboCustomerId,
-          amountCents: payload.amountCents
+          amountCents: payload.amountCents,
+          currency: payload.currencyCode
         });
         externalPaymentId = created.externalPaymentId;
       } else {

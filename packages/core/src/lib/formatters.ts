@@ -145,6 +145,20 @@ export function fromMinorUnits(value: number, locale: string = 'en-US', currency
 }
 
 /**
+ * Plain decimal text for a signed minor-unit amount — ungrouped, `.` separator, exactly the
+ * currency's fraction digits (USD `1050` → "10.50", JPY `10000` → "10000", USD `-500` → "-5.00").
+ * The string form of {@link fromMinorUnits} for file exports (CSV/IIF); unlike the strict
+ * {@link minorUnitsToDecimalText} it accepts negative amounts and rounds non-integer input.
+ */
+export function minorUnitsToPlainDecimalText(value: number, locale: string = 'en-US', currency: string = 'USD'): string {
+  const digits = currencyFractionDigits(currency, locale);
+  const rounded = Math.round(value);
+  const text = String(Math.abs(rounded)).padStart(digits + 1, '0');
+  const unsigned = digits ? `${text.slice(0, -digits)}.${text.slice(-digits)}` : text;
+  return rounded < 0 ? `-${unsigned}` : unsigned;
+}
+
+/**
  * Format a date as a string
  * @param date The date to format
  * @param locale The locale to use (default: 'en-US')

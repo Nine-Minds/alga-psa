@@ -37,7 +37,7 @@ import { buildNormalizedCompanyPayload } from '../../services/companySync/compan
 import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
-import { AppError } from '@alga-psa/core';
+import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
 
 const XERO_MAX_QUANTITY_DECIMALS = 4;
@@ -533,7 +533,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           taxComponents = normalizeTaxComponents(
             lineResolution.taxComponents ??
               serviceMetadata.taxComponents ??
-              (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null)
+              (taxMapping?.metadata ? (taxMapping.metadata as Record<string, any>)?.components : null),
+            invoice.currency_code ?? exportLines[0]?.currency_code ?? 'USD'
           );
 
           taxAmountCents = coerceChargeCents(charge.tax_amount);
@@ -806,7 +807,9 @@ export class XeroAdapter implements AccountingExportAdapter {
         // explicitly by the drift detector (it adopts the first observed
         // document as the baseline instead of silently ignoring changes).
         const rawTotal = Number(rawInvoice?.Total);
-        const exportedTotal = Number.isFinite(rawTotal) ? rawTotal : payload.invoice.amountCents / 100;
+        const exportedTotal = Number.isFinite(rawTotal)
+          ? rawTotal
+          : fromMinorUnits(payload.invoice.amountCents, 'en-US', payload.invoice.currency ?? 'USD');
         const metadata = {
           last_exported_at: new Date().toISOString(),
           invoiceNumber: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
@@ -1033,6 +1036,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       // Map Xero line items to external invoice charges with full tax component details
       const charges: ExternalInvoiceChargeTax[] = xeroInvoice.lineItems.map((line, index) => {
         // Calculate effective tax rate from the line if available
+        // (percentage — dimensionless ratio × 100, not a minor-unit conversion)
         const effectiveRate = line.lineAmount > 0
           ? (line.taxAmount / line.lineAmount) * 100
           : undefined;
@@ -1267,7 +1271,8 @@ function normalizeXeroPayment(record: Record<string, any>): AccountingExternalCh
   if (!externalId) {
     return null;
   }
-  const amountCents = Math.round(Number(record?.Amount) * 100);
+  const currency = typeof record?.CurrencyCode === 'string' ? String(record.CurrencyCode) : undefined;
+  const amountCents = toMinorUnits(Number(record?.Amount), 'en-US', currency ?? 'USD');
   const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
   const invoiceId = record?.Invoice?.InvoiceID;
   if (invoiceId && Number.isFinite(amountCents) && amountCents > 0) {
@@ -1281,6 +1286,7 @@ function normalizeXeroPayment(record: Record<string, any>): AccountingExternalCh
 
   const normalized: NormalizedExternalPaymentPayload = {
     reference,
+    currency,
     txnDate: xeroDateToIso(record?.Date) ?? undefined,
     totalCents: Number.isFinite(amountCents) ? amountCents : undefined,
     allocations,
@@ -1355,9 +1361,10 @@ function normalizeXeroCreditAllocations(record: Record<string, any>): Accounting
 
   const rawAllocations = Array.isArray(record?.Allocations) ? record.Allocations : [];
   const allocations: NormalizedXeroAllocation[] = [];
+  const creditNoteCurrency = typeof record?.CurrencyCode === 'string' ? String(record.CurrencyCode) : 'USD';
   for (const allocation of rawAllocations) {
     const invoiceId = allocation?.Invoice?.InvoiceID;
-    const amountCents = Math.round(Number(allocation?.Amount) * 100);
+    const amountCents = toMinorUnits(Number(allocation?.Amount), 'en-US', creditNoteCurrency);
     if (!invoiceId || !Number.isFinite(amountCents) || amountCents <= 0) {
       continue;
     }
@@ -1480,7 +1487,7 @@ function mergeTrackingOptions(
   return merged.size > 0 ? Array.from(merged.values()) : undefined;
 }
 
-function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | undefined {
+function normalizeTaxComponents(input: unknown, currency: string): XeroTaxComponentPayload[] | undefined {
   if (!input) return undefined;
   if (!Array.isArray(input)) {
     return undefined;
@@ -1505,9 +1512,10 @@ function normalizeTaxComponents(input: unknown): XeroTaxComponentPayload[] | und
       normalized.rate = raw.rate;
     }
     if (typeof raw.amountCents === 'number') {
+      // Already minor units — round only, no scaling.
       normalized.amountCents = Math.round(raw.amountCents);
     } else if (typeof raw.amount === 'number') {
-      normalized.amountCents = Math.round(raw.amount * 100);
+      normalized.amountCents = toMinorUnits(raw.amount, 'en-US', currency);
     }
 
     if (Object.keys(normalized).length > 0) {

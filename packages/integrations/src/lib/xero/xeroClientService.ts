@@ -13,7 +13,7 @@ import {
   resolveXeroDefaultSelection,
   type XeroDefaultSelection
 } from './xeroRealmIdentity';
-import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
+import { AppError, fromMinorUnits, sanitizeProviderMessage, toMinorUnits, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
@@ -745,6 +745,7 @@ export class XeroClientService {
 
   private mapInvoiceDetails(invoice: Record<string, any>): XeroInvoiceDetails {
     const lineItems = Array.isArray(invoice.LineItems) ? invoice.LineItems : [];
+    const currency = typeof invoice.CurrencyCode === 'string' && invoice.CurrencyCode ? invoice.CurrencyCode : 'USD';
 
     return {
       invoiceId: invoice.InvoiceID,
@@ -752,21 +753,21 @@ export class XeroClientService {
       reference: invoice.Reference ?? undefined,
       status: invoice.Status ?? undefined,
       currencyCode: invoice.CurrencyCode ?? undefined,
-      total: typeof invoice.Total === 'number' ? decimalToCents(invoice.Total) : 0,
-      totalTax: typeof invoice.TotalTax === 'number' ? decimalToCents(invoice.TotalTax) : 0,
-      subTotal: typeof invoice.SubTotal === 'number' ? decimalToCents(invoice.SubTotal) : 0,
+      total: typeof invoice.Total === 'number' ? toMinorUnits(invoice.Total, 'en-US', currency) : 0,
+      totalTax: typeof invoice.TotalTax === 'number' ? toMinorUnits(invoice.TotalTax, 'en-US', currency) : 0,
+      subTotal: typeof invoice.SubTotal === 'number' ? toMinorUnits(invoice.SubTotal, 'en-US', currency) : 0,
       lineAmountTypes: invoice.LineAmountTypes ?? 'Exclusive',
-      lineItems: lineItems.map((line: Record<string, any>) => this.mapLineItemDetails(line)),
+      lineItems: lineItems.map((line: Record<string, any>) => this.mapLineItemDetails(line, currency)),
       raw: invoice
     };
   }
 
-  private mapLineItemDetails(line: Record<string, any>): XeroLineItemDetails {
+  private mapLineItemDetails(line: Record<string, any>, currency: string): XeroLineItemDetails {
     const taxComponents = Array.isArray(line.TaxComponents)
       ? line.TaxComponents.map((component: Record<string, any>) => ({
           name: component.Name ?? '',
           rate: typeof component.Rate === 'number' ? component.Rate : 0,
-          amount: typeof component.TaxAmount === 'number' ? decimalToCents(component.TaxAmount) : 0
+          amount: typeof component.TaxAmount === 'number' ? toMinorUnits(component.TaxAmount, 'en-US', currency) : 0
         }))
       : undefined;
 
@@ -774,9 +775,9 @@ export class XeroClientService {
       lineItemId: line.LineItemID ?? undefined,
       description: line.Description ?? undefined,
       quantity: typeof line.Quantity === 'number' ? line.Quantity : 1,
-      unitAmount: typeof line.UnitAmount === 'number' ? decimalToCents(line.UnitAmount) : 0,
-      lineAmount: typeof line.LineAmount === 'number' ? decimalToCents(line.LineAmount) : 0,
-      taxAmount: typeof line.TaxAmount === 'number' ? decimalToCents(line.TaxAmount) : 0,
+      unitAmount: typeof line.UnitAmount === 'number' ? toMinorUnits(line.UnitAmount, 'en-US', currency) : 0,
+      lineAmount: typeof line.LineAmount === 'number' ? toMinorUnits(line.LineAmount, 'en-US', currency) : 0,
+      taxAmount: typeof line.TaxAmount === 'number' ? toMinorUnits(line.TaxAmount, 'en-US', currency) : 0,
       taxType: line.TaxType ?? undefined,
       accountCode: line.AccountCode ?? undefined,
       itemCode: line.ItemCode ?? undefined,
@@ -1369,7 +1370,8 @@ async function getAppSecrets(tenantId: string, secretProvider?: ISecretProvider)
 
 function mapInvoicePayload(payload: XeroInvoicePayload): Record<string, unknown> {
   const invoiceNumber = payload.reference ?? payload.invoiceId;
-  const lineItems = payload.lines.map((line) => mapInvoiceLine(line));
+  const currency = payload.currency ?? 'USD';
+  const lineItems = payload.lines.map((line) => mapInvoiceLine(line, currency));
 
   const invoice: Record<string, unknown> = {
     Type: 'ACCREC',
@@ -1389,11 +1391,13 @@ function mapInvoicePayload(payload: XeroInvoicePayload): Record<string, unknown>
   return pruneUndefined(invoice);
 }
 
-function mapInvoiceLine(line: XeroInvoiceLinePayload): Record<string, unknown> {
+function mapInvoiceLine(line: XeroInvoiceLinePayload, currency: string): Record<string, unknown> {
   const quantity = typeof line.quantity === 'number' ? line.quantity : 1;
   const unitAmount =
-    typeof line.unitAmountCents === 'number' ? centsToDecimal(line.unitAmountCents) : undefined;
-  const lineAmount = centsToDecimal(line.amountCents);
+    typeof line.unitAmountCents === 'number'
+      ? fromMinorUnits(Math.round(line.unitAmountCents), 'en-US', currency)
+      : undefined;
+  const lineAmount = fromMinorUnits(Math.round(line.amountCents), 'en-US', currency);
   const tracking = normalizeTracking(line.tracking);
 
   const payload: Record<string, unknown> = {
@@ -1410,7 +1414,9 @@ function mapInvoiceLine(line: XeroInvoiceLinePayload): Record<string, unknown> {
     AccountCode: line.accountCode ?? undefined,
     TaxType: line.taxType ?? undefined,
     TaxAmount:
-      typeof line.taxAmountCents === 'number' ? centsToDecimal(line.taxAmountCents) : undefined,
+      typeof line.taxAmountCents === 'number'
+        ? fromMinorUnits(Math.round(line.taxAmountCents), 'en-US', currency)
+        : undefined,
     Tracking: tracking && tracking.length > 0 ? tracking : undefined
   };
 
@@ -1443,14 +1449,6 @@ function normalizeTracking(
   }
 
   return undefined;
-}
-
-function centsToDecimal(value: number): number {
-  return Math.round(value) / 100;
-}
-
-function decimalToCents(value: number): number {
-  return Math.round(value * 100);
 }
 
 function formatDate(value?: string | null): string | undefined {

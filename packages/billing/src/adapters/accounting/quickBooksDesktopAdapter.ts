@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { fromMinorUnits } from '@alga-psa/core';
 import {
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
@@ -28,7 +29,7 @@ export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     const header = '!TRNS\tTRNSID\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tNAME\tMEMO';
     const rows = context.lines.map((line) => {
-      return `TRNS\t${line.line_id}\tINVOICE\t${context.batch.created_at}\tACCOUNTS_RECEIVABLE\t${line.amount_cents / 100}\t${line.client_id ?? ''}\tInvoice ${line.document_id}`;
+      return `TRNS\t${line.line_id}\tINVOICE\t${context.batch.created_at}\tACCOUNTS_RECEIVABLE\t${fromMinorUnits(line.amount_cents, 'en-US', line.currency_code ?? 'USD')}\t${line.client_id ?? ''}\tInvoice ${line.document_id}`;
     });
 
     const content = [header, ...rows, 'ENDTRNS'].join('\n');
