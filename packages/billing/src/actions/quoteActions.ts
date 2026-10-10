@@ -557,6 +557,7 @@ const renderQuoteEmail = async ({
   const templateContext = {
     quote: {
       number: quote.quote_number ?? quote.quote_id,
+      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
       amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
       validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
     },

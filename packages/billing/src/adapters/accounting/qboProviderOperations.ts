@@ -108,6 +108,7 @@ export async function createQboProviderOperations(
       const amountDollars = fromMinorUnits(Math.round(request.amountCents), 'en-US', request.currency ?? 'USD');
       const paymentPayload = {
         CustomerRef: request.externalCustomerId ? { value: request.externalCustomerId } : undefined,
+        CurrencyRef: request.currency ? { value: request.currency } : undefined,
         TotalAmt: 0,
         Line: [
           {

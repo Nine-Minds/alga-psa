@@ -465,6 +465,7 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     const amountDollars = fromMinorUnits(Math.round(payload.amountCents), 'en-US', payload.currencyCode ?? 'USD');
     const paymentPayload = {
       CustomerRef: { value: qboCustomerId },
+      ...(payload.currencyCode ? { CurrencyRef: { value: payload.currencyCode } } : {}),
       TotalAmt: 0,
       Line: [
         {

@@ -314,6 +314,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       } else {
         const qboPaymentPayload: Record<string, unknown> = {
           CustomerRef: { value: customerId },
+          ...(payload.currencyCode ? { CurrencyRef: { value: payload.currencyCode } } : {}),
           TotalAmt: amountDollars,
           PaymentRefNum: truncateRef(payload.referenceNumber),
           PrivateNote: `Alga payment ${payload.referenceNumber}`,

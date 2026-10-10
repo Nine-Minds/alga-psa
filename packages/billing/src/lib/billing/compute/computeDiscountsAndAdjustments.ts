@@ -128,6 +128,7 @@ function formatCents(cents: number, currencyCode: string): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode || "USD",
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
   }).format(cents / 100);
 }
 
