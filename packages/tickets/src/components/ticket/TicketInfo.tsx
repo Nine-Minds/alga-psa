@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -1328,10 +1329,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 activityType: 'ticket',
                 activityId: ticket.ticket_id,
                 // Built from SAVED state (props), not unsaved form edits.
-                assignmentKey: [
-                  ticket.assigned_to ?? '',
-                  (additionalAgents ?? []).map((a) => a.user_id).sort().join(','),
-                ].join('|'),
+                assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.user_id)),
               })
             : null}
 
