@@ -95,9 +95,11 @@ function createQueryBuilder(rows: Row[], tableName: string) {
       if (typeof columnOrCriteria === 'function') {
         const scopedWhere: any = {
           where: vi.fn(() => scopedWhere),
+          orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
+          orWhereNotNull: vi.fn(() => scopedWhere),
         };
-        columnOrCriteria.call(scopedWhere);
+        columnOrCriteria.call(scopedWhere, scopedWhere);
         return builder;
       }
 

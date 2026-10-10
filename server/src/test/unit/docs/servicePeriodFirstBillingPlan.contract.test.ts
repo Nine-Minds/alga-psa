@@ -146,6 +146,8 @@ const servicePeriodPostInventoryRefs = new Set([
   'shared/billingClients/resolveFixedLineRate.ts',
   // alga-2026-0002499: contract-scoped client-cadence billed-boundary regression test.
   'server/src/test/unit/billing/clientCadenceContractBoundary.regeneration.test.ts',
+  // alga-2026-0002499: generation guard now reads the contract-scoped billed boundary.
+  'server/src/test/infrastructure/billing/invoices/clientCadenceGenerationGuard.test.ts',
   // Invoice ticket presentation (origin/main a81661446e) added template
   // descriptors and behavioral coverage after this historical snapshot.
   'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
