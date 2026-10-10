@@ -460,7 +460,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
             billingCycleId: null,
             executionIdentityKey: 'exec-1',
             executionWindowKind: 'contract_cadence_window' as const,
-            errorMessage: 'Failed to generate invoice for this billing cycle.',
+            errorMessage: 'Invoice generation did not complete.',
           },
         ],
       });
@@ -469,7 +469,7 @@ describe('AutomaticInvoices PO overage dialog', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Failed to generate invoice for this billing cycle\./),
+          screen.getByText(/Invoice generation did not complete\./),
         ).toBeInTheDocument();
       });
       expect(screen.queryByText(/has no billing email/i)).toBeNull();

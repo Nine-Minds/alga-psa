@@ -2556,7 +2556,8 @@
       "conflict": "Ta zmiana umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola umowy.",
-      "missingFieldNamed": "Brakuje wymaganego pola umowy: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola umowy: {{field}}.",
+      "deleteFailed": "Coś poszło nie tak podczas usuwania tej umowy. Podaj numer referencyjny {{ref}} podczas kontaktu z pomocą techniczną."
     },
     "wizard": {
       "permissions": {

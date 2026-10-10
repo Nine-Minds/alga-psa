@@ -2552,7 +2552,8 @@
       "conflict": "Avtalsändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av avtalsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt avtalsfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}.",
+      "deleteFailed": "Något gick fel när avtalet skulle raderas. Ange referensen {{ref}} när du kontaktar supporten."
     },
     "wizard": {
       "permissions": {

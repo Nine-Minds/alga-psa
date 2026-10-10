@@ -2552,7 +2552,8 @@
       "conflict": "Este cambio del contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
       "notAllowed": "Uno de los valores del contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del contrato.",
-      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}.",
+      "deleteFailed": "Algo salió mal al eliminar este contrato. Indique la referencia {{ref}} al contactar con soporte."
     },
     "wizard": {
       "permissions": {

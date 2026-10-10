@@ -14,6 +14,7 @@ import {
 } from './billingCycleAnchors';
 import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandidatesToObligationBounds';
+import { whereLiveClientCadenceRecurringLine } from './liveClientCadenceRecurringLine';
 import { getClientBillingCycleAnchor } from './billingSchedule';
 import {
   backfillRecurringServicePeriods,
@@ -312,16 +313,7 @@ async function loadClientCadenceRecurringObligations(
   // client-owned contract that owns the live cloned lines.
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-  return query
-    .andWhere('cc.client_id', params.clientId)
-    .where('cc.is_active', true)
-    .where('ct.is_active', true)
-    .where('cl.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-    )
-    .where('cl.cadence_owner', 'client')
-    .whereNotNull('cl.billing_timing')
+  return whereLiveClientCadenceRecurringLine(query.andWhere('cc.client_id', params.clientId))
     .select(
       'cl.contract_line_id as client_contract_line_id',
       'cc.start_date',

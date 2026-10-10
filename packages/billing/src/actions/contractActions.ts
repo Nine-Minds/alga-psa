@@ -38,6 +38,7 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
+import { newSupportReference } from './invoiceGenerationActionErrors';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
@@ -717,12 +718,20 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
     });
   } catch (error) {
-    console.error('Error deleting contract:', error);
     const expected = contractActionErrorFrom(error);
     if (expected) {
+      console.error('Error deleting contract:', error);
       return expected;
     }
-    throw error;
+    // Next masks messages thrown from server actions in production, which left the
+    // operator with no reason. Return a keyed generic error; the ref ties it to the log.
+    const ref = newSupportReference();
+    console.error('Error deleting contract:', { ref, contractId }, error);
+    return actionError(
+      `Something went wrong deleting this contract. Quote reference ${ref} when contacting support.`,
+      'msp/contracts:errors.contract.deleteFailed',
+      { ref },
+    );
   }
 });
 

@@ -430,13 +430,14 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: blockedTarget.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
+          errorMessage: expect.stringContaining('Quote reference'),
         }),
       ],
     });
-    // Approval blockers are not a structured, known failure: they stay generic
-    // (no code), so the UI cannot translate them as client remediation.
-    expect((result.failures[0] as { code?: string })?.code).toBeUndefined();
+    // Unmapped errors are reported as UNEXPECTED with a support ref, never as raw text.
+    expect(JSON.stringify(result)).not.toContain('Blocked until approval');
   });
 
   it('preserves a localized approval blocker count through a grouped run', async () => {
@@ -560,9 +561,10 @@ describe('recurring billing run actions', () => {
       billingCycleId: 'cycle-unknown-mixed',
       executionIdentityKey: unknownTarget.executionWindow.identityKey,
       executionWindowKind: 'contract_cadence_window',
-      errorMessage: 'Failed to generate invoice for this billing cycle.',
+      code: 'UNEXPECTED',
+      params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
     });
-    expect(unknown.code).toBeUndefined();
+    expect(String(unknown.errorMessage)).toContain('Quote reference');
   });
 
   it('keeps unsupported coded errors off the recurring-run UI as raw text', async () => {
@@ -587,12 +589,14 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: target.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
+          errorMessage: expect.stringContaining('Quote reference'),
         }),
       ],
     });
     const failure = (result as { failures: Array<{ code?: string }> }).failures[0];
-    expect(failure?.code).toBeUndefined();
+    expect(failure?.code).toBe('UNEXPECTED');
     expect(JSON.stringify(result)).not.toContain('service-9');
   });
 
@@ -630,7 +634,7 @@ describe('recurring billing run actions', () => {
     });
   });
 
-  it('logs the actionable underlying exception while returning the generic failure for the UI', async () => {
+  it('logs the actionable underlying exception while returning a coded UNEXPECTED failure with a ref', async () => {
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
@@ -650,12 +654,15 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: contractTarget.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
+          errorMessage: expect.stringContaining('Quote reference'),
         }),
       ],
     });
 
-    expect((result as { failures: Array<{ code?: string }> }).failures[0]?.code).toBeUndefined();
+    const failure = (result as { failures: Array<{ params?: { ref: string } }> }).failures[0];
+    expect(JSON.stringify(result)).not.toContain('Distinctive linkage failure');
 
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     const [, loggedContext] = consoleErrorSpy.mock.calls[0] as [string, Record<string, unknown>];
@@ -665,6 +672,7 @@ describe('recurring billing run actions', () => {
       tenantId: 'tenant-1',
       executionIdentityKey: contractTarget.executionWindow.identityKey,
       executionWindowKind: 'contract_cadence_window',
+      ref: failure.params?.ref,
       error: {
         name: 'Error',
         message: 'Distinctive linkage failure: recurring service period could not be claimed',

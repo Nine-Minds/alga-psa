@@ -82,3 +82,17 @@ export const FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY =
  */
 export const FIXED_LINE_NO_SERVICES_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.FIXED_LINE_NO_SERVICES';
+
+/**
+ * Namespaced message keys for the three expected engine refusals that used to
+ * reach the operator as bare English sentences (or, in the recurring run, as a
+ * generic failure string). Keyed so the run recovers the code
+ * (`RECURRING_PERIODS_NOT_MATERIALIZED`, `NO_ACTIVE_CONTRACT_LINES`,
+ * `NOTHING_TO_BILL`) without matching the sentence the localization boundary rewrites.
+ */
+export const RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED';
+export const NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.NO_ACTIVE_CONTRACT_LINES';
+export const NOTHING_TO_BILL_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.NOTHING_TO_BILL';

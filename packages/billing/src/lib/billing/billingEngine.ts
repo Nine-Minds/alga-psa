@@ -2544,6 +2544,7 @@ export class BillingEngine {
       "cl.contract_line_id",
     );
 
+    // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
     const rows = await eligibleLinesQuery
       .where({
         "cc.client_id": input.clientId,
