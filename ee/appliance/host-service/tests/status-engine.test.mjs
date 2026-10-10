@@ -851,3 +851,103 @@ test('collectStatusSnapshot maps failure phases to expected categories', () => {
     process.env.PATH = originalPath;
   }
 });
+
+// ---- email-service /status (alga0002256) -----------------------------------
+
+function healthyClusterRunner(emailServiceResponse) {
+  return (command) => {
+    const ok = (stdout) => Promise.resolve({ ok: true, status: 0, command, stdout, stderr: '' });
+    if (command.includes('get nodes -o json')) {
+      return ok(JSON.stringify({ items: [{ metadata: { name: 'node-1' }, status: { conditions: [{ type: 'Ready', status: 'True' }] } }] }));
+    }
+    if (command.includes('get pods -A --no-headers')) {
+      return ok('msp alga-core-abc Running\nmsp email-service-abc Running\n');
+    }
+    if (command.includes('-n msp get jobs --no-headers')) return ok('alga-core-bootstrap 1/1 1 1m\n');
+    if (command.includes('get helmreleases')) return ok(['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'].map((n) => `${n} 1h True ok`).join('\n'));
+    if (command.includes('get events -A -o json')) return ok('{"items":[]}');
+    if (command.includes('/services/http:email-service:http/proxy/status')) {
+      return typeof emailServiceResponse === 'function' ? emailServiceResponse(command) : emailServiceResponse;
+    }
+    return Promise.resolve({ ok: false, status: 1, command, stdout: '', stderr: 'unexpected command' });
+  };
+}
+
+const emailStatusOk = (body) => ({ ok: true, status: 0, command: 'x', stdout: JSON.stringify(body), stderr: '' });
+
+async function emailSnapshot(emailServiceResponse) {
+  return collectStatusSnapshotAsync({
+    stateFile: writeStateFile({ phase: 'app-readiness', status: 'complete' }),
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: healthyClusterRunner(emailServiceResponse)
+  });
+}
+
+test('a degraded email-service /status adds a background blocker and clears backgroundReady', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({
+    version: 1,
+    status: 'degraded',
+    reasons: [
+      { code: 'microsoft_subscriptions_expired', severity: 'degraded', message: '2 Microsoft subscriptions have expired', count: 2 },
+      { code: 'dlq_nonzero', severity: 'info', message: 'info only' }
+    ]
+  }));
+
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.tiers.fullyHealthy, false);
+  assert.equal(snapshot.rollup.state, 'ready_with_background_issues');
+  assert.equal(snapshot.emailService.health, 'degraded');
+  const blocker = snapshot.topBlockers.find((b) => b.step === 'email-service-health');
+  assert.ok(blocker);
+  assert.equal(blocker.severity, 'background');
+  assert.equal(blocker.loginBlocking, false);
+  assert.match(blocker.reason, /2 Microsoft subscriptions have expired/);
+  assert.doesNotMatch(blocker.reason, /info only/);
+});
+
+test('a down email-service /status is treated like degraded and never blocks login', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({
+    version: 1,
+    status: 'down',
+    reasons: [{ code: 'redis_unreachable', severity: 'down', message: 'Redis is unreachable' }]
+  }));
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.emailService.health, 'down');
+});
+
+test('an ok email-service /status leaves the snapshot fully healthy', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({ version: 1, status: 'ok', reasons: [] }));
+  assert.equal(snapshot.tiers.backgroundReady, true);
+  assert.equal(snapshot.tiers.fullyHealthy, true);
+  assert.equal(snapshot.rollup.state, 'fully_healthy');
+  assert.equal(snapshot.emailService.health, 'ok');
+});
+
+test('a 404, failing command or invalid JSON from /status never degrades the snapshot', async () => {
+  const responses = [
+    { ok: false, status: 1, command: 'x', stdout: '', stderr: 'Error from server (NotFound): the server could not find the requested resource' },
+    { ok: false, status: 124, command: 'x', stdout: '', stderr: 'command timed out' },
+    { ok: true, status: 0, command: 'x', stdout: 'not json', stderr: '' },
+    emailStatusOk({ version: 2, status: 'down', reasons: [] })
+  ];
+  for (const response of responses) {
+    const snapshot = await emailSnapshot(response);
+    assert.equal(snapshot.tiers.backgroundReady, true);
+    assert.equal(snapshot.tiers.fullyHealthy, true);
+    assert.equal(snapshot.emailService.health, 'unavailable');
+    assert.equal(snapshot.topBlockers.some((b) => b.step === 'email-service-health'), false);
+  }
+});
+
+test('the email-service status read goes through the API-server service proxy', async () => {
+  const seen = [];
+  await emailSnapshot((command) => {
+    seen.push(command);
+    return Promise.resolve({ ok: true, status: 0, command, stdout: '{}', stderr: '' });
+  });
+  assert.equal(seen.length, 1);
+  assert.match(seen[0], /get --raw \/api\/v1\/namespaces\/msp\/services\/http:email-service:http\/proxy\/status$/);
+});
