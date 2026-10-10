@@ -32,7 +32,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
-import { groupDueServicePeriodsForInvoiceCandidates, isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
+import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
 import { evaluateCalendarMonthEndEarlyCloseEligibility } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
 import {
     listCanonicalClientCadenceWindowPeriods,
@@ -52,7 +52,7 @@ import {
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import {
     loadClientCadenceContractBilledBoundaries,
-    resolveClientCadenceObligationStart,
+    isClientCadenceLineExpectedInWindow,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
 import {
@@ -634,16 +634,13 @@ async function fetchClientCadenceMaterializationGaps(
                 continue;
             }
 
-            const obligationStart = resolveClientCadenceObligationStart({
+            if (!isClientCadenceLineExpectedInWindow({
+                duePosition,
                 assignmentStart: row.start_date,
+                assignmentEnd: row.end_date ? normalizeDateOnly(row.end_date) : null,
                 billedBoundaryEnd:
                     billedBoundariesByClient.get(period.client_id)?.get(row.contract_id) ?? null,
                 fallbackStart,
-            });
-            if (!isRecurringLineExpectedInClientCadenceWindow({
-                duePosition,
-                assignmentStart: obligationStart,
-                assignmentEnd: row.end_date ? normalizeDateOnly(row.end_date) : null,
                 windowStart: invoiceWindowForGap.period_start_date,
                 windowEnd: invoiceWindowForGap.period_end_date,
             })) {

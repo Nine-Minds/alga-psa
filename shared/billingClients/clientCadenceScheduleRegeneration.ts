@@ -14,6 +14,7 @@ import {
 } from './billingCycleAnchors';
 import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandidatesToObligationBounds';
+import { isRecurringLineExpectedInClientCadenceWindow } from './recurringTiming';
 import { getClientBillingCycleAnchor } from './billingSchedule';
 import {
   backfillRecurringServicePeriods,
@@ -158,6 +159,37 @@ export function resolveClientCadenceObligationStart(input: {
   return input.billedBoundaryEnd
     ? maxIsoDateOnly(assignmentStart, input.billedBoundaryEnd)
     : assignmentStart;
+}
+
+/**
+ * The single "does this client-cadence line owe a service period in this
+ * invoice window?" rule: the window expectation evaluated from the line's
+ * contract-scoped obligation start (resolveClientCadenceObligationStart), not
+ * the raw assignment start. Gap discovery and the generation guard both call
+ * this so listing, discovery and generation can never disagree.
+ */
+export function isClientCadenceLineExpectedInWindow(input: {
+  duePosition: DuePosition;
+  assignmentStart: unknown;
+  assignmentEnd?: unknown;
+  /** Boundary of the line's OWN contract (loadClientCadenceContractBilledBoundaries). */
+  billedBoundaryEnd: ISO8601String | null;
+  fallbackStart: ISO8601String;
+  windowStart: string;
+  windowEnd: string;
+}): boolean {
+  const obligationStart = resolveClientCadenceObligationStart({
+    assignmentStart: input.assignmentStart,
+    billedBoundaryEnd: input.billedBoundaryEnd,
+    fallbackStart: input.fallbackStart,
+  });
+  return isRecurringLineExpectedInClientCadenceWindow({
+    duePosition: input.duePosition,
+    assignmentStart: obligationStart,
+    assignmentEnd: normalizeDateOnlyValue(input.assignmentEnd) ?? null,
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+  });
 }
 
 function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
