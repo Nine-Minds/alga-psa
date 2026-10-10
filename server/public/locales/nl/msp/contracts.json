@@ -2552,7 +2552,8 @@
       "conflict": "Deze contractwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
       "notAllowed": "Een van de contractwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht contractveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}.",
+      "deleteFailed": "Er is iets misgegaan bij het verwijderen van dit contract. Vermeld referentie {{ref}} als u contact opneemt met support."
     },
     "wizard": {
       "permissions": {

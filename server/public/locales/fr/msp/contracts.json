@@ -2552,7 +2552,8 @@
       "conflict": "Cette modification du contrat entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs du contrat n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire du contrat est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du contrat est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du contrat est manquant : {{field}}.",
+      "deleteFailed": "Une erreur s'est produite lors de la suppression de ce contrat. Indiquez la référence {{ref}} en contactant le support."
     },
     "wizard": {
       "permissions": {

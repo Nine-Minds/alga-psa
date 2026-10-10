@@ -709,7 +709,7 @@ export async function convertQuoteToDraftContract(
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      is_active: false,
+      is_active: true,
       location_id: item.location_id ?? null,
       created_at: nowIso,
       updated_at: nowIso,
@@ -830,7 +830,9 @@ export async function convertQuoteToDraftContract(
     contract_id: contract.contract_id,
     start_date: quote.accepted_at || quote.quote_date || nowIso,
     end_date: null,
-    is_active: true,
+    // Draft contracts keep an inactive assignment until Set to Active; lines are always enabled.
+    // LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice
+    is_active: false,
     created_at: nowIso,
     updated_at: nowIso,
   });

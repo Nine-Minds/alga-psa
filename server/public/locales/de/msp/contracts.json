@@ -2552,7 +2552,8 @@
       "conflict": "Diese Vertragsänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "notAllowed": "Einer der Vertragswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Vertragsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Vertragsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Vertragsfeld fehlt: {{field}}.",
+      "deleteFailed": "Beim Löschen dieses Vertrags ist ein Fehler aufgetreten. Nennen Sie dem Support die Referenz {{ref}}."
     },
     "wizard": {
       "permissions": {

@@ -2552,7 +2552,8 @@
       "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the contract values is not allowed. Please review the form and try again.",
       "missingField": "Missing required contract field.",
-      "missingFieldNamed": "Missing required contract field: {{field}}."
+      "missingFieldNamed": "Missing required contract field: {{field}}.",
+      "deleteFailed": "Something went wrong deleting this contract. Quote reference {{ref}} when contacting support."
     },
     "wizard": {
       "permissions": {

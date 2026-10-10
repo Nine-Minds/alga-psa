@@ -120,6 +120,13 @@ import {
 } from '../lib/billing/recurringPricingIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
+  explainedPreviewFailureFromMessage,
+  invoiceGenerationActionErrorFrom,
+  newSupportReference,
+  unexpectedInvoiceFailureMessage,
+  type InvoiceGenerationActionError,
+} from './invoiceGenerationActionErrors';
+import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
 } from './recurringApprovalBlockers';
@@ -132,7 +139,6 @@ import {
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
-type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
 
 function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
   return Boolean(
@@ -960,50 +966,6 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
 }
 
 /**
- * Expected preview refusals the billing engine raises as bare sentences. Each
- * gets a stable code (the UI translates by it) and an English message that says
- * what to do next, used when the UI has no translation for the code.
- */
-const EXPLAINED_PREVIEW_FAILURES: ReadonlyArray<{
-  matches: (message: string) => boolean;
-  code: Extract<
-    HandledRecurringFailureCode,
-    'RECURRING_PERIODS_NOT_MATERIALIZED' | 'NO_ACTIVE_CONTRACT_LINES' | 'NOTHING_TO_BILL'
-  >;
-  message: string;
-}> = [
-  {
-    matches: (message) => message.startsWith('Recurring service periods were not materialized'),
-    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
-    message:
-      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
-  },
-  {
-    matches: (message) =>
-      message === 'No active contract lines found for this client in the selected billing period.',
-    code: 'NO_ACTIVE_CONTRACT_LINES',
-    message:
-      'No contract line is active for this billing period. Check the contract start and end dates and that the contract is active.',
-  },
-  {
-    matches: (message) => message === 'Nothing to bill',
-    code: 'NOTHING_TO_BILL',
-    message:
-      'Nothing is ready to invoice for this window. Contracts billed in arrears can only be invoiced after their service period ends, so check the billing timing and dates.',
-  },
-];
-
-function explainedPreviewFailureFromMessage(
-  message: string,
-): { message: string; code: HandledRecurringFailureCode } | null {
-  // LEVERAGE: friction engine-failure-identity — the engine identifies these refusals only by
-  // their English sentence, so preview must string-match; typed errors from the engine would
-  // remove this table.
-  const explained = EXPLAINED_PREVIEW_FAILURES.find((entry) => entry.matches(message));
-  return explained ? { message: explained.message, code: explained.code } : null;
-}
-
-/**
  * Maps a preview failure to the user-safe message plus the structured, known
  * failure (code/params) the UI needs to render localized, actionable guidance.
  * Unknown/internal failures carry no code, so the UI keeps the generic string.
@@ -1091,8 +1053,10 @@ function previewInvoiceErrorInfo(error: unknown): {
   }
 
   // Unknown/internal exceptions never leak their raw message to the user; the
-  // full cause stays server-side in logPreviewInvoiceFailure.
-  return { message: 'An error occurred while previewing the invoice' };
+  // full cause stays server-side, tied to a short reference the operator can quote.
+  const ref = newSupportReference();
+  console.error('[previewInvoiceErrorInfo] Unexpected preview failure', { ref }, error);
+  return { message: unexpectedInvoiceFailureMessage(ref), code: 'UNEXPECTED', params: { ref } };
 }
 
 function logPreviewInvoiceFailure(
@@ -1101,119 +1065,6 @@ function logPreviewInvoiceFailure(
   error: unknown,
 ): void {
   console.error(`[${action}] Invoice preview failed:`, context, error);
-}
-
-/**
- * Maps a coded billing validation error (`ManualInvoiceError`) to the localized
- * message key the recurring run uses to recover the structured failure. Codes the
- * recurring flow does not handle deliberately have no key, so they fall back to the
- * generic action-error string.
- */
-function manualInvoiceErrorMessageKey(
-  code: HandledManualInvoiceErrorCode,
-): string | undefined {
-  switch (code) {
-    case 'NO_BILLING_EMAIL':
-      return NO_BILLING_EMAIL_MESSAGE_KEY;
-    case 'TIME_APPROVAL_REQUIRED':
-      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
-    case 'USAGE_RECORDS_MISSING':
-      return USAGE_RECORDS_MISSING_MESSAGE_KEY;
-    case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
-      return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
-    case 'USAGE_PERIOD_TOTAL_STALE':
-      return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
-    case 'RECURRING_PRICING_STALE':
-      return RECURRING_PRICING_STALE_MESSAGE_KEY;
-    case 'USAGE_CALCULATION_ERROR':
-      return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
-    case 'FIXED_LINE_RATE_UNRESOLVED':
-      return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
-    case 'FIXED_LINE_NO_SERVICES':
-      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
-    default:
-      return undefined;
-  }
-}
-
-function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
-  if (error instanceof Error) {
-    if (error.message.startsWith('Permission denied')) {
-      return permissionError(error.message);
-    }
-
-    // Coded billing validation error. Only the allowlisted code crosses this
-    // boundary as a keyed action error; unsupported codes are re-thrown so the
-    // recurring run's generic catch owns them (full logging, generic UI string).
-    // Checked before the message matching below, which would otherwise surface a
-    // raw, uncoded sentence for codes whose message happens to match a prefix.
-    if (error instanceof ManualInvoiceError) {
-      const messageKey = manualInvoiceErrorMessageKey(error.code);
-      return messageKey
-        ? actionError(error.message, messageKey, error.params)
-        : null;
-    }
-
-    // An expected, actionable refusal, not a failure: a contract covers these
-    // items but more than one line matched, so they may not be billed at
-    // catalog rate until someone decides (F139). The message names them.
-    if (error instanceof UnresolvedCatalogPricingError) {
-      return actionError(error.message);
-    }
-
-    if (error.message === 'Billing cycle not found') {
-      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.billingCycle.notFoundRefresh');
-    }
-    if (error.message === 'Invoice not found') {
-      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
-    }
-    if (error.message === 'Invalid billing cycle dates') {
-      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.', 'msp/invoicing:errors.billingCycle.invalidDates');
-    }
-    if (
-      error.message === 'No recurring execution windows selected' ||
-      error.message === 'No billing settings found' ||
-      error.message === 'Nothing to bill' ||
-      error.message === 'Project billing configuration not found' ||
-      error.message === 'Project is configured for recurring invoice generation' ||
-      error.message === 'Recurring selector input execution window kind is not supported.' ||
-      error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
-      error.message.startsWith('Purchase Order is required') ||
-      error.message.startsWith('Client ') ||
-      error.message.startsWith('Service "') ||
-      error.message.startsWith('Recurring service periods were not materialized') ||
-      error.message.includes('Mixed currency billing is not supported')
-    ) {
-      return actionError(error.message);
-    }
-
-    if (error.message.startsWith('Invoice already exists for this recurring execution window')) {
-      // Keyed so the recurring run can recognize it after the boundary translates it.
-      return actionError(error.message, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY);
-    }
-  }
-
-  const dbError = error as { code?: string; column?: string };
-  if (dbError?.code === '22P02') {
-    return actionError('One of the selected invoice values is invalid. Please refresh and try again.', 'msp/invoicing:errors.invoice.invalidValue');
-  }
-  if (dbError?.code === '23502') {
-    return dbError.column
-      ? actionError(
-          `Missing required invoice field: ${dbError.column}.`,
-          'msp/invoicing:errors.invoice.missingFieldNamed',
-          { field: dbError.column },
-        )
-      : actionError('Missing required invoice field.', 'msp/invoicing:errors.invoice.missingField');
-  }
-  if (dbError?.code === '23503') {
-    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.referenceMissing');
-  }
-  if (dbError?.code === '23505') {
-    return actionError('A conflicting invoice already exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.duplicate');
-  }
-
-  return null;
 }
 
 async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Promise<T | InvoiceGenerationActionError> {
