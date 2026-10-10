@@ -545,6 +545,7 @@
       "discard": "Kassera nuvarande, starta sedan (den spårade tiden raderas)",
       "confirm": "Fortsätt",
       "cancel": "Avbryt"
-    }
+    },
+    "ticketFallbackName": "Ärende {{number}}"
   }
 }

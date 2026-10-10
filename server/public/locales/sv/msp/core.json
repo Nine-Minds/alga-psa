@@ -601,7 +601,9 @@
       "resume": "Återuppta",
       "pause": "Pausa",
       "stop": "Stoppa och logga",
-      "discard": "Kassera"
+      "discard": "Kassera",
+      "pausedNoDrawer": "Stoppuret pausat vid {{clock}}. Öppna arbetsobjektet för att logga tiden.",
+      "openTicket": "Öppna ärende"
     }
   },
   "dialogs": {

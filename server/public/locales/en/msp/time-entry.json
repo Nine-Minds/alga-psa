@@ -545,6 +545,7 @@
       "discard": "Discard current, then start (the tracked time is deleted)",
       "confirm": "Continue",
       "cancel": "Cancel"
-    }
+    },
+    "ticketFallbackName": "Ticket {{number}}"
   }
 }

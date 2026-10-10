@@ -545,6 +545,7 @@
       "discard": "Huidige verwijderen, dan starten (de bijgehouden tijd wordt verwijderd)",
       "confirm": "Doorgaan",
       "cancel": "Annuleren"
-    }
+    },
+    "ticketFallbackName": "Ticket {{number}}"
   }
 }

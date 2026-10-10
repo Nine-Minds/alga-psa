@@ -601,7 +601,9 @@
       "resume": "Resume",
       "pause": "Pause",
       "stop": "Stop and log",
-      "discard": "Discard"
+      "discard": "Discard",
+      "pausedNoDrawer": "Stopwatch paused at {{clock}}. Open the work item to log the time.",
+      "openTicket": "Open ticket"
     }
   },
   "dialogs": {

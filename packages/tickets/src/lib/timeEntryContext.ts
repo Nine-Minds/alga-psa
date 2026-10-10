@@ -41,8 +41,8 @@ export function buildTicketTimeEntryContext({
 type Translate = (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
 
 interface StopwatchContextOptions {
-  /** Translator for the paused notice (msp/time-entry namespace). English fallback when omitted. */
-  translate?: Translate;
+  /** Translator for the notice and fallback name (msp/time-entry namespace). Required: no literals here. */
+  translate: Translate;
   locale?: string;
   /** Description typed on the ticket screen; wins over the session's stored notes when non-empty. */
   descriptionOverride?: string;
@@ -58,7 +58,7 @@ interface StopwatchContextOptions {
 export function stopwatchSessionToTimeEntryContext(
   session: StopwatchSessionView,
   span: StopwatchEntrySpanView,
-  options: StopwatchContextOptions = {},
+  options: StopwatchContextOptions,
 ): TimeEntryWorkItemContext {
   const { translate, locale, descriptionOverride, masterTicketId, masterTicketNumber } = options;
   const isTicket = session.work_item_type === 'ticket';
@@ -70,19 +70,19 @@ export function stopwatchSessionToTimeEntryContext(
       paused: formatStopwatchDuration(span.pausedMs, locale),
       count: span.segmentCount,
     };
-    notice = translate
-      ? translate(
-          'stopwatch.pausedNotice',
-          'Tracked {{active}} across {{count}} segments (paused {{paused}})',
-          values,
-        )
-      : `Tracked ${values.active} across ${values.count} segments (paused ${values.paused})`;
+    notice = translate(
+      'stopwatch.pausedNotice',
+      'Tracked {{active}} across {{count}} segments (paused {{paused}})',
+      values,
+    );
   }
 
   return {
     workItemId: session.work_item_id ?? '',
     workItemType: isTicket ? 'ticket' : 'project_task',
-    workItemName: session.work_item_title || (session.ticket_number ? `Ticket ${session.ticket_number}` : ''),
+    workItemName: session.work_item_title || (session.ticket_number
+      ? translate('stopwatch.ticketFallbackName', 'Ticket {{number}}', { number: session.ticket_number })
+      : ''),
     ticketNumber: isTicket ? session.ticket_number ?? undefined : undefined,
     masterTicketId: masterTicketId ?? null,
     masterTicketNumber: masterTicketNumber ?? null,

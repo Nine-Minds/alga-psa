@@ -249,7 +249,9 @@
       "resume": "Wznów",
       "pause": "Wstrzymaj",
       "stop": "Zatrzymaj i zapisz",
-      "discard": "Odrzuć"
+      "discard": "Odrzuć",
+      "pausedNoDrawer": "Stoper wstrzymany na {{clock}}. Otwórz element pracy, aby zarejestrować czas.",
+      "openTicket": "Otwórz zgłoszenie"
     }
   },
   "dialogs": {

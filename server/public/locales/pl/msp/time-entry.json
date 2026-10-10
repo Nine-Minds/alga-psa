@@ -549,6 +549,7 @@
       "discard": "Odrzuć bieżący, a następnie uruchom (zarejestrowany czas zostanie usunięty)",
       "confirm": "Kontynuuj",
       "cancel": "Anuluj"
-    }
+    },
+    "ticketFallbackName": "Zgłoszenie {{number}}"
   }
 }

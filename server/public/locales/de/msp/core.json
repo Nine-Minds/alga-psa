@@ -249,7 +249,9 @@
       "resume": "Fortsetzen",
       "pause": "Pausieren",
       "stop": "Stoppen und erfassen",
-      "discard": "Verwerfen"
+      "discard": "Verwerfen",
+      "pausedNoDrawer": "Stoppuhr bei {{clock}} pausiert. Öffnen Sie das Arbeitselement, um die Zeit zu erfassen.",
+      "openTicket": "Ticket öffnen"
     }
   },
   "dialogs": {

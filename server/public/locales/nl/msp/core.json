@@ -249,7 +249,9 @@
       "resume": "Hervatten",
       "pause": "Pauzeren",
       "stop": "Stoppen en registreren",
-      "discard": "Verwijderen"
+      "discard": "Verwijderen",
+      "pausedNoDrawer": "Stopwatch gepauzeerd op {{clock}}. Open het werkitem om de tijd te registreren.",
+      "openTicket": "Ticket openen"
     }
   },
   "dialogs": {

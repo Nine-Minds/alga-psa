@@ -5,7 +5,7 @@ interface CreateStopwatchLogLauncherParams {
   openDrawer: OpenDrawerFn;
   closeDrawer: () => void;
   launchTimeEntry: SchedulingCallbacks['launchTimeEntry'];
-  translate?: (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
+  translate: (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
   locale?: string;
   descriptionOverride?: string;
   masterTicketId?: string | null;

@@ -249,7 +249,9 @@
       "resume": "Retomar",
       "pause": "Pausar",
       "stop": "Parar e registrar",
-      "discard": "Descartar"
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronômetro pausado em {{clock}}. Abra o item de trabalho para registrar o tempo.",
+      "openTicket": "Abrir ticket"
     }
   },
   "dialogs": {

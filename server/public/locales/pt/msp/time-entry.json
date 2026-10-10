@@ -545,6 +545,7 @@
       "discard": "Descartar o atual, depois iniciar (o tempo registrado é excluído)",
       "confirm": "Continuar",
       "cancel": "Cancelar"
-    }
+    },
+    "ticketFallbackName": "Ticket {{number}}"
   }
 }

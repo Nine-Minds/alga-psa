@@ -2,6 +2,7 @@
 
 import React, { useCallback } from 'react';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import { Pause, Play, StopCircle, Timer, Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
@@ -10,6 +11,7 @@ import { formatStopwatchClock, useStopwatch, useStopwatchElapsedMs } from '@alga
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { launchTimeEntryForWorkItem } from '@alga-psa/scheduling/lib/timeEntryLauncher';
 import { createStopwatchLogLauncher } from '@alga-psa/tickets/lib/stopwatchLogLauncher';
+import { createHeaderStopLauncher } from './stopwatchHeaderStop';
 
 /**
  * Header chip for the user's open stopwatch session (plan D9). Visible on every MSP page, hidden
@@ -19,19 +21,46 @@ export default function StopwatchHeaderIndicator() {
   const { t } = useTranslation('msp/core');
   const { t: tTimeEntry } = useTranslation('msp/time-entry');
   const { locale } = useFormatters();
-  const { openDrawer, closeDrawer } = useDrawer();
+  const { openDrawer, closeDrawer, hasOutlet } = useDrawer();
   const { session, state, pause, resume, requestStop, requestDiscard } = useStopwatch();
   const elapsedMs = useStopwatchElapsedMs();
 
   const handleStop = useCallback(() => {
-    void requestStop(createStopwatchLogLauncher({
+    const drawerLauncher = createStopwatchLogLauncher({
       openDrawer,
       closeDrawer,
       launchTimeEntry: launchTimeEntryForWorkItem,
       translate: (key, defaultValue, options) => tTimeEntry(key, { defaultValue, ...options }),
       locale,
+    });
+    void requestStop(createHeaderStopLauncher({
+      hasOutlet,
+      drawerLauncher,
+      notifyPausedWithoutDrawer: (paused) => {
+        const clock = formatStopwatchClock(paused.active_ms);
+        const href = paused.work_item_type === 'ticket' && paused.work_item_id
+          ? `/msp/tickets/${paused.work_item_id}`
+          : null;
+        toast(
+          <span>
+            {t('header.stopwatch.pausedNoDrawer', {
+              defaultValue: 'Stopwatch paused at {{clock}}. Open the work item to log the time.',
+              clock,
+            })}
+            {href ? (
+              <>
+                {' '}
+                <Link id="stopwatch-header-toast-open-ticket" href={href} className="font-semibold underline">
+                  {t('header.stopwatch.openTicket', { defaultValue: 'Open ticket' })}
+                </Link>
+              </>
+            ) : null}
+          </span>,
+          { duration: 12000 },
+        );
+      },
     }));
-  }, [closeDrawer, locale, openDrawer, requestStop, tTimeEntry]);
+  }, [closeDrawer, hasOutlet, locale, openDrawer, requestStop, t, tTimeEntry]);
 
   if (!session || state === 'idle') {
     return null;

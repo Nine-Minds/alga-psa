@@ -65,9 +65,12 @@ describe('ticket time entry context helpers', () => {
   });
 });
 
+const translate = (_key: string, defaultValue: string, values?: Record<string, unknown>) =>
+  defaultValue.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(values?.[name] ?? ''));
+
 describe('stopwatchSessionToTimeEntryContext', () => {
   it('prefills times, service, notes and the session id from the span', () => {
-    const context = stopwatchSessionToTimeEntryContext(session, span());
+    const context = stopwatchSessionToTimeEntryContext(session, span(), { translate });
 
     expect(context.workItemType).toBe('ticket');
     expect(context.workItemId).toBe('ticket-1');
@@ -81,8 +84,8 @@ describe('stopwatchSessionToTimeEntryContext', () => {
   });
 
   it('prefers a non-empty description typed on the screen over stored notes', () => {
-    expect(stopwatchSessionToTimeEntryContext(session, span(), { descriptionOverride: 'typed' }).timeDescription).toBe('typed');
-    expect(stopwatchSessionToTimeEntryContext(session, span(), { descriptionOverride: '  ' }).timeDescription).toBe('stored notes');
+    expect(stopwatchSessionToTimeEntryContext(session, span(), { translate, descriptionOverride: 'typed' }).timeDescription).toBe('typed');
+    expect(stopwatchSessionToTimeEntryContext(session, span(), { translate, descriptionOverride: '  ' }).timeDescription).toBe('stored notes');
   });
 
   it('adds a paused notice only when time was paused', () => {
@@ -95,10 +98,20 @@ describe('stopwatchSessionToTimeEntryContext', () => {
     expect(context.notice).toContain('|2');
   });
 
+  it('routes the ticket fallback name through the translator', () => {
+    const context = stopwatchSessionToTimeEntryContext(
+      { ...session, work_item_title: '' },
+      span(),
+      { translate: (key, _d, values) => `${key}:${values?.number}` },
+    );
+    expect(context.workItemName).toBe('stopwatch.ticketFallbackName:T-100');
+  });
+
   it('maps project task sessions', () => {
     const context = stopwatchSessionToTimeEntryContext(
       { ...session, work_item_type: 'project_task', ticket_number: null, work_item_title: 'Build it', project_name: 'Proj' },
       span(),
+      { translate },
     );
 
     expect(context.workItemType).toBe('project_task');
