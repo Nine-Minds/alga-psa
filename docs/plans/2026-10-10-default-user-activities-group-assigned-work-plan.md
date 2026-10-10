@@ -166,3 +166,31 @@ Manual smoke on the dev server (`http://feature-alga0002045-follow-up-default-us
 - **Reorder pins:** reordering inside the default group pins the listed items (D3). After that, changing the default leaves them behind. This is consistent with "explicit actions pin", and it is documented in the badge hint and the PR.
 - **No backfill:** existing rows default to `false`, so behaviour after deploy is unchanged until a user opts in.
 - **API consumers:** `isDefault` is an additive field, so there is no version bump.
+
+## 9. Deployment order and manual apply
+
+**The migration must run before the code is deployed.** `getUserActivityGroupsForApi` and any other query that selects `is_default` throws (`column "is_default" does not exist`) on a database that has not been migrated. We deliberately do not add runtime column detection or try/catch fallbacks, because they would hide schema drift.
+
+The migration (`server/migrations/20261010040154_add_is_default_to_user_activity_groups.cjs`) is idempotent: `ADD COLUMN IF NOT EXISTS` plus `CREATE UNIQUE INDEX IF NOT EXISTS idx_user_activity_groups_one_default ... WHERE is_default`. `down()` drops the index and the column with `IF EXISTS`.
+
+### Manual apply on the shared dev database (`server`, compose project alga-psa-local-test, postgres :5472)
+
+`knex migrate:up` refuses to run there because the shared database records migrations from other branches. An operator (not an agent) applies it by hand with the admin credentials from `server/.env.local` (`DB_USER_ADMIN` / `DB_PASSWORD_ADMIN`, `DB_HOST`, `DB_PORT`, `DB_NAME_SERVER`):
+
+1. Run the module's `up()` through the knex library (not the CLI migrator), from `server/`:
+   ```js
+   const knex = require('knex')({ client: 'pg', connection: { host, port, database, user, password } }); // admin creds
+   await require('./migrations/20261010040154_add_is_default_to_user_activity_groups.cjs').up(knex);
+   ```
+   Or run the two SQL statements directly:
+   ```sql
+   ALTER TABLE user_activity_groups ADD COLUMN IF NOT EXISTS is_default boolean NOT NULL DEFAULT false;
+   CREATE UNIQUE INDEX IF NOT EXISTS idx_user_activity_groups_one_default ON user_activity_groups (tenant, user_id) WHERE is_default;
+   ```
+2. Record it so later `knex migrate` runs do not retry it (copy `batch` from the current max, or use max+1; check the table's columns first):
+   ```sql
+   INSERT INTO knex_migrations (name, batch, migration_time)
+   VALUES ('20261010040154_add_is_default_to_user_activity_groups.cjs',
+           (SELECT COALESCE(MAX(batch), 0) FROM knex_migrations), now());
+   ```
+3. Verify: `\d user_activity_groups` shows `is_default` and the partial unique index.
