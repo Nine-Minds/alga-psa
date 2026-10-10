@@ -124,7 +124,7 @@ export function UserActivitiesDashboard() {
       const next = new URLSearchParams(searchParams.toString());
       next.delete(ACTIVITY_BOARD_PARAM);
       const query = next.toString();
-      router.replace(query ? `${pathname}?${query}` : (pathname ?? ''));
+      router.replace(query ? `${pathname}?${query}` : (pathname ?? ''), { scroll: false });
     }
   }, [pathname, router, searchParams]);
 
