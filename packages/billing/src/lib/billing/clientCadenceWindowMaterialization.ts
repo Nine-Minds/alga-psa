@@ -2,7 +2,10 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
+import {
+  isClientCadenceLineExpectedInWindow,
+  loadClientCadenceContractBilledBoundaries,
+} from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 
 /**
  * Canonical client-cadence window materialization.
@@ -125,11 +128,18 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
     params.knex,
     async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, params.tenant);
+      // Contract-scoped billed boundary: the same rule gap discovery uses, so
+      // a line added to a billed contract is expected where its first period
+      // actually lands, not where the raw assignment start implies.
+      const boundaries = await loadClientCadenceContractBilledBoundaries(trx, {
+        tenant: params.tenant,
+        clientId: params.clientId,
+      });
       const query = db.table('client_contracts as cc');
       db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
       db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
-      return query
+      const rows = await query
         .where({
           'cc.client_id': params.clientId,
           'cc.is_active': true,
@@ -142,10 +152,21 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
           this.where('cc.end_date', '>=', windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id', 'cl.billing_timing', 'cc.start_date', 'cc.end_date');
+        .select(
+          'cl.contract_line_id',
+          'cl.contract_id',
+          'cl.billing_timing',
+          'cc.start_date',
+          'cc.end_date',
+        );
+      return rows.map((row) => ({
+        ...row,
+        billed_boundary_end: boundaries.get(row.contract_id) ?? null,
+      }));
     },
   );
 
+  const fallbackStart = new Date().toISOString();
   const activeRecurringLineIds = Array.from(
     new Set(
       activeRecurringLineRows
@@ -154,10 +175,12 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
         // window start bills its first period in a later window, and demanding
         // materialization for it would falsely block every other line here.
         .filter((row) =>
-          isRecurringLineExpectedInClientCadenceWindow({
+          isClientCadenceLineExpectedInWindow({
             duePosition: row.billing_timing === 'arrears' ? 'arrears' : 'advance',
-            assignmentStart: toDateOnly(row.start_date),
+            assignmentStart: row.start_date,
             assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
+            billedBoundaryEnd: row.billed_boundary_end,
+            fallbackStart,
             windowStart,
             windowEnd,
           }),

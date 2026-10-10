@@ -97,8 +97,9 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
           where: vi.fn(() => scopedWhere),
           orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
+          orWhereNotNull: vi.fn(() => scopedWhere),
         };
-        columnOrCriteria.call(scopedWhere);
+        columnOrCriteria.call(scopedWhere, scopedWhere);
         return builder;
       }
 
