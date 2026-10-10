@@ -117,6 +117,7 @@ describe('buildTicketWebhookPayload (T020)', () => {
       'category_id',
       'subcategory_id',
       'is_closed',
+      'response_state',
       'entered_at',
       'updated_at',
       'closed_at',
@@ -216,14 +217,15 @@ describe('buildTicketWebhookPayload (T020)', () => {
     }
   );
 
-  it('caches by (tenant, ticket_id) within 60s — second call hits neither the join nor the tag query', async () => {
+  it('caches by (tenant, ticket_id) within 60s — second call hits neither the snapshot join nor the tag query', async () => {
     tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'urgent' }]);
     const { knex, calls } = createFakeKnex(makeTicketRow());
 
     const first = await buildTicketWebhookPayload(ASSIGNED_EVENT, knex);
     const second = await buildTicketWebhookPayload(ASSIGNED_EVENT, knex);
 
-    expect(calls.ticketsCalls).toBe(1);
+    // One cached snapshot join + one fresh response_state read per build.
+    expect(calls.ticketsCalls).toBe(3);
     expect(tagMappingState.getByEntityMock).toHaveBeenCalledTimes(1);
 
     // Cache returns the same field values (tags array is cloned so callers can't mutate the cache).

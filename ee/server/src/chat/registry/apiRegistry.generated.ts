@@ -45958,6 +45958,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "response_state",
+        "in": "query",
+        "required": false,
+        "description": "Only tickets whose turn it is: awaiting_client (we replied, waiting on the client) or awaiting_internal (the client replied, waiting on us).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "awaiting_client",
+            "awaiting_internal"
+          ]
+        }
+      },
+      {
         "name": "entered_from",
         "in": "query",
         "required": false,

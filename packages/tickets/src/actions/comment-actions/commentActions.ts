@@ -11,11 +11,10 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
-import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
+import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -118,84 +117,6 @@ async function assertClientCanCreateComment(
   }
 }
 
-/**
- * Helper function to determine the new response state based on comment properties
- * and update the ticket's response_state accordingly.
- *
- * Logic:
- * - Internal note (is_internal=true): No change to response state
- * - Client-visible comment from internal user: Set to 'awaiting_client'
- * - Comment from client: Set to 'awaiting_internal'
- */
-async function updateTicketResponseState(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  // Skip response state tracking when disabled for this tenant
-  const trackingEnabled = await isResponseStateTrackingEnabled(tenant, trx);
-  if (!trackingEnabled) {
-    return { previousState: null, newState: null };
-  }
-
-  // Get current ticket response state
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('response_state')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const previousState = (ticket?.response_state || null) as TicketResponseState;
-  let newState: TicketResponseState = previousState;
-
-  // Internal notes don't change response state
-  if (isInternal) {
-    return { previousState, newState };
-  }
-
-  // Determine new state based on author type
-  if (authorType === 'internal') {
-    // Internal staff posting client-visible comment -> awaiting client response
-    newState = 'awaiting_client';
-  } else if (authorType === 'client') {
-    // Client posting comment -> awaiting internal response
-    newState = 'awaiting_internal';
-  }
-
-  // Only update if state actually changed
-  if (newState !== previousState) {
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({ response_state: newState });
-
-    // Publish response state change event
-    try {
-      await publishEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
-          ticketId,
-          userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
-          previousState,
-          newState,
-          trigger: 'comment'
-        }
-      });
-      console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
-    } catch (eventError) {
-      console.error(`[updateTicketResponseState] Failed to publish event:`, eventError);
-      // Don't throw - allow comment creation to succeed even if event publishing fails
-    }
-  }
-
-  return { previousState, newState };
-}
-
 export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
@@ -246,21 +167,13 @@ export const createComment = withAuth(async (
       user_id: comment.user_id
     });
 
-    // Get user's type to set author_type
+    // Resolve author_type through the shared rules (same as the REST API path)
     if (comment.user_id) {
       const { knex: db } = await createTenantKnex();
-      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'users', tenant!)
-          .select('user_type')
-          .where('user_id', comment.user_id)
-          .first();
+      const author = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await resolveCommentAuthor(trx, tenant!, comment.user_id);
       });
-
-      if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
-      } else {
-        comment.author_type = 'unknown';
-      }
+      comment.author_type = author.authorType;
     } else {
       comment.author_type = 'unknown';
     }
@@ -362,14 +275,13 @@ export const createComment = withAuth(async (
       // Update ticket response state based on comment (F005-F008)
       const isScheduled = comment.publish_state === 'scheduled';
       if (!isScheduled && comment.ticket_id && commentTenant) {
-        const { previousState, newState } = await updateTicketResponseState(
-          trx,
-          commentTenant,
-          comment.ticket_id,
-          comment.author_type as 'internal' | 'client' | 'unknown',
-          comment.is_internal || false,
-          comment.user_id || null
-        );
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant: commentTenant,
+          ticketId: comment.ticket_id,
+          authorType: comment.author_type as 'internal' | 'client' | 'unknown',
+          isInternal: comment.is_internal || false,
+          userId: comment.user_id || null,
+        });
         console.log(`[createComment] Response state updated: ${previousState} -> ${newState}`);
       }
 

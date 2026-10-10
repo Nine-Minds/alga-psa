@@ -221,6 +221,8 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   is_open: booleanTransform.optional(),
   is_closed: booleanTransform.optional(),
   has_assignment: booleanTransform.optional(),
+  // Whose turn it is: awaiting_client (we replied) or awaiting_internal (client replied).
+  response_state: z.enum(['awaiting_client', 'awaiting_internal']).optional(),
   entered_from: z.string().datetime().optional(),
   entered_to: z.string().datetime().optional(),
   closed_from: z.string().datetime().optional(),

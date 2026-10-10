@@ -1,6 +1,7 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
@@ -2048,6 +2049,18 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Closing clears the response state in the same write, matching the UI
+      // close path, so a closed ticket never reads as awaiting a response.
+      const clearsResponseStateOnClose = Boolean(
+        statusChanged
+        && nextStatus?.is_closed
+        && !previousStatus?.is_closed
+        && currentTicket.response_state
+      );
+      if (clearsResponseStateOnClose) {
+        updateData.response_state = null;
+      }
+
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
       const isChangingAssignment =
@@ -2073,6 +2086,17 @@ export class TicketService extends BaseService<ITicket> {
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+      }
+
+      if (clearsResponseStateOnClose) {
+        publishResponseStateChange(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          userId: context.userId ?? null,
+          previousState: currentTicket.response_state,
+          newState: null,
+          trigger: 'close',
+        });
       }
 
       // Handle tags if provided
@@ -2599,6 +2623,13 @@ export class TicketService extends BaseService<ITicket> {
         throw error;
       }
 
+      // author_type comes from the authenticated key's user, via the same
+      // resolver the UI action uses; a client user also records its contact.
+      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
+      if (apiIsInternal && apiAuthor.authorType !== 'internal') {
+        throw new ForbiddenError('Only MSP users can create internal comments');
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2608,6 +2639,8 @@ export class TicketService extends BaseService<ITicket> {
         is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
+        author_type: apiAuthor.authorType,
+        contact_id: apiAuthor.contactId,
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
@@ -2652,7 +2685,18 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      // A scheduled public comment is not a client reply until publication.
+      // A scheduled public comment is not a client reply until publication
+      // (the scheduled-publish worker applies the state then).
+      if (!scheduledPublication) {
+        await applyCommentResponseState(trx, {
+          tenant: context.tenant,
+          ticketId,
+          authorType: apiAuthor.authorType,
+          isInternal: Boolean(comment.is_internal),
+          userId: context.userId ?? null,
+        });
+      }
+
       if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
@@ -3150,6 +3194,9 @@ export class TicketService extends BaseService<ITicket> {
                 .andWhere('s.is_closed', true)
             );
           }
+          break;
+        case 'response_state':
+          query.where('t.response_state', value);
           break;
         case 'has_assignment':
           if (value) {
