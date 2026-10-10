@@ -4,6 +4,7 @@ import { ticketContracts } from './contracts/tickets';
 import { projectContracts } from './contracts/projects';
 import { schedulingContracts } from './contracts/scheduling';
 import { billingContracts } from './contracts/billing';
+import { crmContracts } from './contracts/crm';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -26,6 +27,8 @@ export const emitterContracts: EmitterContracts = {
   ...schedulingContracts,
   // ---- billing ----
   ...billingContracts,
+  // ---- crm / tags ----
+  ...crmContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -40,23 +43,6 @@ export const emitterContracts: EmitterContracts = {
   PROJECT_BILLING_SCHEDULE_ENTRY_DELETED: schemaNotRegistered('PROJECT_BILLING_SCHEDULE_ENTRY_DELETED', 'payload.ProjectBillingScheduleEntryDeleted.v1'),
   PROJECT_BILLING_PAYMENT_STATUS_CHANGED: schemaNotRegistered('PROJECT_BILLING_PAYMENT_STATUS_CHANGED', 'payload.ProjectBillingPaymentStatusChanged.v1'),
   // ---- crm ----
-  CLIENT_ARCHIVED: pendingMigration('CLIENT_ARCHIVED', 'crm'),
-  CLIENT_CREATED: pendingMigration('CLIENT_CREATED', 'crm'),
-  CLIENT_MERGED: pendingMigration('CLIENT_MERGED', 'crm'),
-  CLIENT_OWNER_ASSIGNED: pendingMigration('CLIENT_OWNER_ASSIGNED', 'crm'),
-  CLIENT_STATUS_CHANGED: pendingMigration('CLIENT_STATUS_CHANGED', 'crm'),
-  CLIENT_UPDATED: pendingMigration('CLIENT_UPDATED', 'crm'),
-  CONTACT_ARCHIVED: pendingMigration('CONTACT_ARCHIVED', 'crm'),
-  CONTACT_CREATED: pendingMigration('CONTACT_CREATED', 'crm'),
-  CONTACT_MERGED: pendingMigration('CONTACT_MERGED', 'crm'),
-  CONTACT_PRIMARY_SET: pendingMigration('CONTACT_PRIMARY_SET', 'crm'),
-  CONTACT_UPDATED: pendingMigration('CONTACT_UPDATED', 'crm'),
-  INTERACTION_LOGGED: pendingMigration('INTERACTION_LOGGED', 'crm'),
-  NOTE_CREATED: pendingMigration('NOTE_CREATED', 'crm'),
-  TAG_APPLIED: pendingMigration('TAG_APPLIED', 'crm'),
-  TAG_DEFINITION_CREATED: pendingMigration('TAG_DEFINITION_CREATED', 'crm'),
-  TAG_DEFINITION_UPDATED: pendingMigration('TAG_DEFINITION_UPDATED', 'crm'),
-  TAG_REMOVED: pendingMigration('TAG_REMOVED', 'crm'),
   OPPORTUNITY_CREATED: schemaNotRegistered('OPPORTUNITY_CREATED', 'payload.OpportunityCreated.v1'),
   OPPORTUNITY_STAGE_CHANGED: schemaNotRegistered('OPPORTUNITY_STAGE_CHANGED', 'payload.OpportunityStageChanged.v1'),
   OPPORTUNITY_STATUS_CHANGED: schemaNotRegistered('OPPORTUNITY_STATUS_CHANGED', 'payload.OpportunityStatusChanged.v1'),
@@ -64,7 +50,6 @@ export const emitterContracts: EmitterContracts = {
   OPPORTUNITY_ESCALATED: schemaNotRegistered('OPPORTUNITY_ESCALATED', 'payload.OpportunityEscalated.v1'),
   OPPORTUNITY_NEXT_ACTION_OVERDUE: schemaNotRegistered('OPPORTUNITY_NEXT_ACTION_OVERDUE', 'payload.OpportunityNextActionOverdue.v1'),
   OPPORTUNITY_SUGGESTION_CREATED: schemaNotRegistered('OPPORTUNITY_SUGGESTION_CREATED', 'payload.OpportunitySuggestionCreated.v1'),
-  CLIENT_ANNIVERSARY_UPCOMING: pendingMigration('CLIENT_ANNIVERSARY_UPCOMING', 'crm'),
   // ---- documents ----
   DOCUMENT_ASSOCIATED: pendingMigration('DOCUMENT_ASSOCIATED', 'documents'),
   DOCUMENT_DELETED: pendingMigration('DOCUMENT_DELETED', 'documents'),

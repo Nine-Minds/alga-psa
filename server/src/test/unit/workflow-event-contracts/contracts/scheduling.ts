@@ -84,7 +84,7 @@ export const schedulingContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${SCHEDULE}#createScheduleEntry`,
+        site: `${SCHEDULE}#addScheduleEntry`,
         build: () =>
           buildAppointmentCreatedPayload({ entry: ticketEntry, ticketId: tid, timezone: 'UTC', createdByUserId: IDS.user }),
       },
@@ -108,7 +108,7 @@ export const schedulingContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${SCHEDULE}#createScheduleEntry`,
+        site: `${SCHEDULE}#addScheduleEntry`,
         build: () => buildAppointmentAssignedPayload({ appointmentId: apptId, ticketId: tid, newAssigneeId: IDS.assignee }),
       },
       {
@@ -252,7 +252,7 @@ export const schedulingContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${SCHEDULE}#createScheduleEntry`,
+        site: `${SCHEDULE}#addScheduleEntry`,
         build: () => buildScheduleBlockCreatedPayload({ entry: privateBlock, timezone: 'UTC' }),
       },
       {
@@ -279,7 +279,7 @@ export const schedulingContracts = {
     status: 'covered',
     cases: [
       {
-        site: `${SCHEDULE}#createScheduleEntry`,
+        site: `${SCHEDULE}#addScheduleEntry`,
         build: () =>
           buildTechnicianDispatchedPayload({
             appointmentId: apptId,
