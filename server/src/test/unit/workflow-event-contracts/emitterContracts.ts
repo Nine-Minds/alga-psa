@@ -6,6 +6,7 @@ import { schedulingContracts } from './contracts/scheduling';
 import { billingContracts } from './contracts/billing';
 import { crmContracts } from './contracts/crm';
 import { documentContracts } from './contracts/documents';
+import { surveyContracts } from './contracts/surveys';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -32,6 +33,7 @@ export const emitterContracts: EmitterContracts = {
   ...crmContracts,
   // ---- documents / storage / media ----
   ...documentContracts,
+  ...surveyContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -63,7 +65,6 @@ export const emitterContracts: EmitterContracts = {
   ASSET_UNASSIGNED: pendingMigration('ASSET_UNASSIGNED', 'comms'),
   ASSET_UPDATED: pendingMigration('ASSET_UPDATED', 'comms'),
   ASSET_WARRANTY_EXPIRING: pendingMigration('ASSET_WARRANTY_EXPIRING', 'comms'),
-  CSAT_ALERT_TRIGGERED: pendingMigration('CSAT_ALERT_TRIGGERED', 'comms'),
   EMAIL_BOUNCED: pendingMigration('EMAIL_BOUNCED', 'comms'),
   EMAIL_COMPLAINT_RECEIVED: pendingMigration('EMAIL_COMPLAINT_RECEIVED', 'comms'),
   EMAIL_DELIVERED: pendingMigration('EMAIL_DELIVERED', 'comms'),
@@ -85,10 +86,6 @@ export const emitterContracts: EmitterContracts = {
   OUTBOUND_EMAIL_FAILED: pendingMigration('OUTBOUND_EMAIL_FAILED', 'comms'),
   OUTBOUND_EMAIL_QUEUED: pendingMigration('OUTBOUND_EMAIL_QUEUED', 'comms'),
   OUTBOUND_EMAIL_SENT: pendingMigration('OUTBOUND_EMAIL_SENT', 'comms'),
-  SURVEY_EXPIRED: pendingMigration('SURVEY_EXPIRED', 'comms'),
-  SURVEY_REMINDER_SENT: pendingMigration('SURVEY_REMINDER_SENT', 'comms'),
-  SURVEY_RESPONSE_RECEIVED: pendingMigration('SURVEY_RESPONSE_RECEIVED', 'comms'),
-  SURVEY_SENT: pendingMigration('SURVEY_SENT', 'comms'),
   // ---- remaining ----
   INVENTORY_STOCK_LOW: schemaNotRegistered('INVENTORY_STOCK_LOW', 'payload.InventoryStockLow.v1'),
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
