@@ -1768,7 +1768,7 @@
   },
   "assetGroups": {
     "kinds": {
-      "bundle": "Bundle",
+      "bundle": "Pacchetto",
       "shared_workspace": "Postazione condivisa"
     },
     "drawerTitle": "Gruppo",
