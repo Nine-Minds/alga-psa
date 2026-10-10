@@ -995,7 +995,9 @@
       "fork_confirm": "Use custom statuses",
       "phase_uses_custom": "This phase has its own status columns and no longer inherits project defaults.",
       "rename_impact_title": "Where this rename lands",
-      "rename_impact": "Renaming updates {{live}} project column(s) immediately. {{unaffected}} older project column(s) keep their current name.",
+      "rename_impact_following": "Follows this rename immediately: {{columns}} column(s) in {{projects}}.",
+      "rename_impact_keeping": "Keeps the name \"{{name}}\": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.",
+      "rename_impact_more": "and {{remaining}} more",
       "rename_impact_none": "This status is not used as a column in any project yet."
     }
   },

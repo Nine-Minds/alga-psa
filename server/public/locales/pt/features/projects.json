@@ -995,7 +995,9 @@
       "fork_confirm": "Usar status personalizados",
       "phase_uses_custom": "Esta fase tem as próprias colunas de status e já não herda os padrões do projeto.",
       "rename_impact_title": "Onde esta renomeação se aplica",
-      "rename_impact": "A renomeação atualiza {{live}} coluna(s) de projeto imediatamente. {{unaffected}} coluna(s) de projeto mais antigas mantêm o nome atual.",
+      "rename_impact_following": "Adota esta renomeação imediatamente: {{columns}} coluna(s) em {{projects}}.",
+      "rename_impact_keeping": "Mantém o nome «{{name}}»: {{columns}} coluna(s) em {{projects}}. Estas colunas não estão ligadas a este status da sua Biblioteca de status de tarefas, por isso esses projetos continuam a reportar o nome antigo até você renomear a coluna lá.",
+      "rename_impact_more": "e mais {{remaining}}",
       "rename_impact_none": "Este status ainda não é usado como coluna em nenhum projeto."
     }
   },

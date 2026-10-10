@@ -995,7 +995,9 @@
       "fork_confirm": "Benutzerdefinierte Status verwenden",
       "phase_uses_custom": "Diese Phase hat eigene Statusspalten und erbt die Projektstandards nicht mehr.",
       "rename_impact_title": "Wohin diese Umbenennung wirkt",
-      "rename_impact": "Die Umbenennung aktualisiert {{live}} Projektspalte(n) sofort. {{unaffected}} ältere Projektspalte(n) behalten ihren aktuellen Namen.",
+      "rename_impact_following": "Übernimmt diese Umbenennung sofort: {{columns}} Spalte(n) in {{projects}}.",
+      "rename_impact_keeping": "Behält den Namen „{{name}}“: {{columns}} Spalte(n) in {{projects}}. Diese Spalten sind nicht mit diesem Status aus Ihrer Aufgaben-Statusbibliothek verknüpft, daher melden diese Projekte weiterhin den alten Namen, bis Sie die Spalte dort umbenennen.",
+      "rename_impact_more": "und {{remaining}} weitere",
       "rename_impact_none": "Dieser Status wird noch in keinem Projekt als Spalte verwendet."
     }
   },

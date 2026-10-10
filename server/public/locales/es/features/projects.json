@@ -995,7 +995,9 @@
       "fork_confirm": "Usar estados personalizados",
       "phase_uses_custom": "Esta fase tiene sus propias columnas de estado y ya no hereda los valores predeterminados del proyecto.",
       "rename_impact_title": "Dónde se aplica este cambio de nombre",
-      "rename_impact": "El cambio de nombre actualiza {{live}} columna(s) de proyecto de inmediato. {{unaffected}} columna(s) de proyecto más antiguas conservan su nombre actual.",
+      "rename_impact_following": "Adopta este cambio de nombre de inmediato: {{columns}} columna(s) en {{projects}}.",
+      "rename_impact_keeping": "Conserva el nombre «{{name}}»: {{columns}} columna(s) en {{projects}}. Estas columnas no están vinculadas a este estado de su Biblioteca de estados de tareas, por lo que esos proyectos seguirán informando el nombre anterior hasta que cambie el nombre de la columna allí.",
+      "rename_impact_more": "y {{remaining}} más",
       "rename_impact_none": "Este estado todavía no se usa como columna en ningún proyecto."
     }
   },

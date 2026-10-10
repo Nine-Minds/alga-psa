@@ -14,9 +14,10 @@ import {
   reorderTenantProjectStatuses,
   getProjectStatusRenameImpact
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
+import type { ProjectStatusRenameImpact } from '@alga-psa/projects/lib/projectStatusRenameImpact';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import type { DeletionValidationResult, IStatus, IStandardStatus } from '@alga-psa/types';
-import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette, Info } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette, Info, AlertTriangle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
@@ -53,7 +54,7 @@ export function TenantProjectTaskStatusSettings() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [renameImpact, setRenameImpact] = useState<{ live: number; pinned: number; standardMapped: number } | null>(null);
+  const [renameImpact, setRenameImpact] = useState<ProjectStatusRenameImpact | null>(null);
   const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
@@ -99,6 +100,17 @@ export function TenantProjectTaskStatusSettings() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Name the affected projects rather than only counting them, capped so a
+  // tenant with dozens of projects still gets a readable sentence.
+  function formatProjectList(projects: string[]): string {
+    const visible = projects.slice(0, 4);
+    const remaining = projects.length - visible.length;
+    if (remaining <= 0) {
+      return visible.join(', ');
+    }
+    return `${visible.join(', ')} ${t('settings.statuses.rename_impact_more', 'and {{remaining}} more', { remaining })}`;
   }
 
   function openCreateDialog() {
@@ -509,21 +521,48 @@ export function TenantProjectTaskStatusSettings() {
               {editingStatus && renameImpact && (
                 <div
                   id="status-rename-impact"
-                  className="flex items-start gap-2 rounded-lg border border-[rgb(var(--color-border-200))] bg-gray-50 p-3 text-xs text-gray-600 dark:bg-[rgb(var(--color-border-50))] dark:text-gray-300"
+                  className={renameImpact.keeping.columns > 0
+                    ? 'flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
+                    : 'flex items-start gap-2 rounded-lg border border-[rgb(var(--color-border-200))] bg-gray-50 p-3 text-xs text-gray-600 dark:bg-[rgb(var(--color-border-50))] dark:text-gray-300'}
                 >
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-                  <div>
-                    <p className="font-medium text-gray-700 dark:text-gray-200">
+                  {renameImpact.keeping.columns > 0
+                    ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                    : <Info className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />}
+                  <div className="space-y-1">
+                    <p className="font-medium">
                       {t('settings.statuses.rename_impact_title', 'Where this rename lands')}
                     </p>
-                    <p>
-                      {renameImpact.live + renameImpact.pinned + renameImpact.standardMapped === 0
-                        ? t('settings.statuses.rename_impact_none', 'This status is not used as a column in any project yet.')
-                        : t('settings.statuses.rename_impact', {
-                            live: renameImpact.live,
-                            unaffected: renameImpact.pinned + renameImpact.standardMapped,
-                          })}
-                    </p>
+                    {renameImpact.following.columns === 0 && renameImpact.keeping.columns === 0 ? (
+                      <p>{t('settings.statuses.rename_impact_none', 'This status is not used as a column in any project yet.')}</p>
+                    ) : (
+                      <>
+                        {renameImpact.following.columns > 0 && (
+                          <p id="status-rename-impact-following">
+                            {t(
+                              'settings.statuses.rename_impact_following',
+                              'Follows this rename immediately: {{columns}} column(s) in {{projects}}.',
+                              {
+                                columns: renameImpact.following.columns,
+                                projects: formatProjectList(renameImpact.following.projects),
+                              }
+                            )}
+                          </p>
+                        )}
+                        {renameImpact.keeping.columns > 0 && (
+                          <p id="status-rename-impact-keeping">
+                            {t(
+                              'settings.statuses.rename_impact_keeping',
+                              'Keeps the name "{{name}}": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.',
+                              {
+                                columns: renameImpact.keeping.columns,
+                                name: renameImpact.statusName,
+                                projects: formatProjectList(renameImpact.keeping.projects),
+                              }
+                            )}
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               )}

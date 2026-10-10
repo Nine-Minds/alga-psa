@@ -70,6 +70,33 @@ describe('phase-aware project status settings contracts', () => {
     expect(editorSource.match(/<button\s+type="button"/g)?.length).toBe(rawButtons);
   });
 
+  it('rename impact widens the match set past status_id so divergent columns are found', () => {
+    // UX finding #3: older projects label a column via custom_name pinned
+    // against standard_statuses, so matching on status_id alone reported
+    // "0 columns keep their current name" while a live project still showed
+    // the old name. The match set has to include label-equal columns.
+    expect(actionsSource).toContain(
+      "orWhereRaw('lower(trim(COALESCE(psm.custom_name, s.name, ss.name))) = ?', ["
+    );
+    expect(actionsSource).toContain(
+      "scoped.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });"
+    );
+    expect(actionsSource).toContain('return bucketProjectStatusRenameImpact(rows, statusId, status.name);');
+    // The dead standard_status_id lookup on `statuses` (no such column) is gone.
+    expect(actionsSource).not.toContain('status.standard_status_id');
+
+    const tenantSettingsSource = readFileSync(
+      path.resolve(__dirname, 'TenantProjectTaskStatusSettings.tsx'),
+      'utf8'
+    );
+    expect(tenantSettingsSource).toContain("'settings.statuses.rename_impact_following'");
+    expect(tenantSettingsSource).toContain("'settings.statuses.rename_impact_keeping'");
+    expect(tenantSettingsSource).toContain('formatProjectList(renameImpact.keeping.projects)');
+    // Columns that keep the old name are a warning, not a neutral note.
+    expect(tenantSettingsSource).toContain('renameImpact.keeping.columns > 0');
+    expect(tenantSettingsSource).toContain('<AlertTriangle');
+  });
+
   it('T062: status deletion still blocks removing the last remaining status mapping', () => {
     expect(actionsSource).toContain("const remainingQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)");
     expect(actionsSource).toContain("const remainingCount = await remainingQuery.count('* as count').first();");

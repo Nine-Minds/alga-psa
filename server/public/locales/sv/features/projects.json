@@ -995,7 +995,9 @@
       "fork_confirm": "Använd anpassade statusar",
       "phase_uses_custom": "Den här fasen har egna statuskolumner och ärver inte längre projektets standardinställningar.",
       "rename_impact_title": "Var namnbytet slår igenom",
-      "rename_impact": "Namnbytet uppdaterar {{live}} projektkolumn(er) direkt. {{unaffected}} äldre projektkolumn(er) behåller sitt nuvarande namn.",
+      "rename_impact_following": "Följer namnbytet direkt: {{columns}} kolumn(er) i {{projects}}.",
+      "rename_impact_keeping": "Behåller namnet ”{{name}}”: {{columns}} kolumn(er) i {{projects}}. Dessa kolumner är inte kopplade till den här statusen i statusbiblioteket för uppgifter, så de projekten rapporterar det gamla namnet till du byter namn på kolumnen där.",
+      "rename_impact_more": "och {{remaining}} till",
       "rename_impact_none": "Den här statusen används inte som kolumn i något projekt ännu."
     }
   },

@@ -995,7 +995,9 @@
       "fork_confirm": "Utiliser des statuts personnalisés",
       "phase_uses_custom": "Cette phase possède ses propres colonnes de statut et n'hérite plus des valeurs par défaut du projet.",
       "rename_impact_title": "Où ce renommage s’applique",
-      "rename_impact": "Le renommage met à jour {{live}} colonne(s) de projet immédiatement. {{unaffected}} colonne(s) de projet plus anciennes conservent leur nom actuel.",
+      "rename_impact_following": "Reprend ce renommage immédiatement : {{columns}} colonne(s) dans {{projects}}.",
+      "rename_impact_keeping": "Conserve le nom « {{name}} » : {{columns}} colonne(s) dans {{projects}}. Ces colonnes ne sont pas liées à ce statut de votre Bibliothèque des statuts de tâches, donc ces projets continueront d’afficher l’ancien nom jusqu’à ce que vous renommiez la colonne sur place.",
+      "rename_impact_more": "et {{remaining}} de plus",
       "rename_impact_none": "Ce statut n'est encore utilisé comme colonne dans aucun projet."
     }
   },

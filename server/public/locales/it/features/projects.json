@@ -995,7 +995,9 @@
       "fork_confirm": "Usa stati personalizzati",
       "phase_uses_custom": "Questa fase ha colonne di stato proprie e non eredita più i predefiniti del progetto.",
       "rename_impact_title": "Dove si applica questa rinomina",
-      "rename_impact": "La rinomina aggiorna subito {{live}} colonna/e di progetto. {{unaffected}} colonna/e di progetto più vecchie mantengono il nome attuale.",
+      "rename_impact_following": "Recepisce subito questa rinomina: {{columns}} colonna/e in {{projects}}.",
+      "rename_impact_keeping": "Mantiene il nome «{{name}}»: {{columns}} colonna/e in {{projects}}. Queste colonne non sono collegate a questo stato della Libreria stati attività, quindi quei progetti continueranno a riportare il nome precedente finché non rinomini la colonna lì.",
+      "rename_impact_more": "e altre {{remaining}}",
       "rename_impact_none": "Questo stato non è ancora usato come colonna in nessun progetto."
     }
   },

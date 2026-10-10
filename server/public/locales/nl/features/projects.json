@@ -995,7 +995,9 @@
       "fork_confirm": "Aangepaste statussen gebruiken",
       "phase_uses_custom": "Deze fase heeft eigen statuskolommen en erft de projectstandaarden niet meer.",
       "rename_impact_title": "Waar deze naamswijziging terechtkomt",
-      "rename_impact": "De naamswijziging werkt {{live}} projectkolom(men) direct bij. {{unaffected}} oudere projectkolom(men) houden hun huidige naam.",
+      "rename_impact_following": "Neemt deze naamswijziging direct over: {{columns}} kolom(men) in {{projects}}.",
+      "rename_impact_keeping": "Houdt de naam ‘{{name}}’: {{columns}} kolom(men) in {{projects}}. Deze kolommen zijn niet gekoppeld aan deze status uit de Taakstatusbibliotheek, dus die projecten blijven de oude naam rapporteren totdat u de kolom daar hernoemt.",
+      "rename_impact_more": "en {{remaining}} meer",
       "rename_impact_none": "Deze status wordt nog in geen enkel project als kolom gebruikt."
     }
   },
