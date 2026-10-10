@@ -54,7 +54,7 @@ const baseData = (): any => ({
   start_date: '2026-01-01',
   billing_frequency: 'monthly',
   currency_code: 'USD',
-  fixed_services: [],
+  fixed_lines: [],
   hourly_services: [],
   enable_proration: true,
   cadence_owner: 'client',

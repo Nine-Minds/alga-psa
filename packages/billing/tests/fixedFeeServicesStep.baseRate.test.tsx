@@ -252,4 +252,22 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
 
     await waitFor(() => expect(baseRateInput().value).toBe(''));
   });
+
+  it('renders two lines with independent base rates', async () => {
+    const initial = baseData();
+    initial.fixed_lines = [
+      { line_key: 'a', enable_proration: true, base_rate: 100000, services: [] },
+      { line_key: 'b', enable_proration: true, base_rate: 250000, services: [] },
+    ];
+    render(<Harness initial={initial} />);
+
+    const first = document.getElementById('fixed-line-0-base-rate') as HTMLInputElement;
+    const second = document.getElementById('fixed-line-1-base-rate') as HTMLInputElement;
+    expect(first.value).toBe('1000.00');
+    expect(second.value).toBe('2500.00');
+
+    fireEvent.change(second, { target: { value: '300.00' } });
+    await waitFor(() => expect(second.value).toBe('300.00'));
+    expect(first.value).toBe('1000.00');
+  });
 });
