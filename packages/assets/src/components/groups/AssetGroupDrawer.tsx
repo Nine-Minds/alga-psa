@@ -290,7 +290,7 @@ export function AssetGroupDrawer({
         <Button
           id="asset-group-delete"
           variant="outline"
-          className="text-[rgb(var(--color-danger-600))]"
+          className="text-[rgb(var(--color-destructive))]"
           disabled={saving}
           onClick={() => setConfirmDelete(true)}
         >
