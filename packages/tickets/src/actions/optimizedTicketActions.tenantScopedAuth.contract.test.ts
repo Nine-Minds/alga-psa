@@ -251,7 +251,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
 
   it('uses structural tenant scoping for optimized comment mirroring and bundle child roots', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
-    const commentStart = source.indexOf('export const addTicketCommentWithCache');
+    const commentStart = source.indexOf('export async function addTicketCommentInTransaction');
     const commentEnd = source.indexOf('export async function addTicketCommentWithCacheForCurrentUser', commentStart);
     const bundleStart = source.indexOf('export const fetchBundleChildrenForMaster');
     const bundleEnd = source.indexOf('export const getTicketsForListWithCursor', bundleStart);

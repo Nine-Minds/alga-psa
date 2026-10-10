@@ -88,7 +88,7 @@ import {
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
-  addTicketCommentWithCache,
+  addTicketCommentInTransaction,
   updateTicketWithCache,
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
@@ -2403,40 +2403,41 @@ export const bulkUpdateTicketStatus = withAuth(async (
   }
 
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  // The resolution comment and the status change share that one transaction, so a
+  // failed close rolls the comment (and its after-commit notifications/events) back
+  // and a retry does not stack a second resolution comment.
   for (const ticketId of uniqueIds) {
+    let phase = 'status' as 'resolution' | 'status';
     try {
-      if (resolutionContent) {
-        const commentResult = await addTicketCommentWithCache(
-          ticketId,
-          resolutionContent,
-          resolutionComment?.isInternal === true,
-          true,
-          true,
-          {
-            suppressContactNotifications: statusOptions.suppressContactNotifications,
-            suppressInternalNotifications: statusOptions.suppressInternalNotifications,
-          },
-        );
-        if (isTicketActionError(commentResult)) {
-          const payload = commentResult as { actionError?: string; permissionError?: string };
-          failed.push({
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (resolutionContent) {
+          phase = 'resolution';
+          await addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
             ticketId,
-            message: payload.actionError ?? payload.permissionError ?? 'Failed to add resolution comment',
+            content: resolutionContent,
+            isInternal: resolutionComment?.isInternal === true,
+            isResolution: true,
+            closesTicket: true,
+            notificationSuppression: {
+              suppressContactNotifications: statusOptions.suppressContactNotifications,
+              suppressInternalNotifications: statusOptions.suppressInternalNotifications,
+            },
           });
-          continue;
+          phase = 'status';
         }
-      }
 
-      await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions),
-      );
+        await updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions);
+      });
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({
         ticketId,
         message: error instanceof TicketCloseValidationError
           ? error.message
-          : await ticketBulkFailureMessage(error, 'Failed to update status'),
+          : await ticketBulkFailureMessage(
+              error,
+              phase === 'resolution' ? 'Failed to add resolution comment' : 'Failed to update status',
+            ),
         closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
