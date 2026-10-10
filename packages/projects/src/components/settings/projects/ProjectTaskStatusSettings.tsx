@@ -60,8 +60,10 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
 
   const selectedPhaseId = selectedScope === DEFAULT_SCOPE ? null : selectedScope;
 
-  const loadStatuses = useCallback(async () => {
-    setLoading(true);
+  // `silent` re-reads after a mutation without flashing the whole editor back
+  // to a loading placeholder (which would tear down the open add picker).
+  const loadStatuses = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const defaults = await getProjectStatusMappings(projectId);
 
@@ -77,7 +79,7 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     } catch (error) {
       console.error('Failed to load statuses:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [projectId, selectedPhaseId]);
 
@@ -157,11 +159,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
       const result = await reorderProjectStatuses(projectId, updates, selectedPhaseId);
       if (isReturnedActionError(result)) {
         toast.error(getErrorMessage(result));
-        await loadStatuses();
+        await loadStatuses({ silent: true });
       }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
-      await loadStatuses();
+      await loadStatuses({ silent: true });
     }
   }
 
@@ -191,7 +193,7 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
       }
       toast.success(t('settings.statuses.removed_success', 'Status removed successfully'));
       setDeleteRequest(null);
-      await loadStatuses();
+      await loadStatuses({ silent: true });
     } catch (error) {
       console.error('Failed to delete status:', error);
       toast.error(t('settings.statuses.delete_error', 'Failed to delete status'));
@@ -209,7 +211,7 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
         return;
       }
       toast.success(t('settings.statuses.added_success', 'Status added successfully'));
-      await loadStatuses();
+      await loadStatuses({ silent: true });
     } catch (error) {
       console.error('Failed to add status:', error);
       toast.error(t('settings.statuses.add_task_status_failed', 'Failed to add status'));
