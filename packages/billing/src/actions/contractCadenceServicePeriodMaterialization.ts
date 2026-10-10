@@ -12,6 +12,7 @@ import {
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
+import { scopeToLiveRecurringContractLines } from '@shared/billingClients/liveRecurringLineScope';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
 import {
@@ -724,8 +725,12 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  scopeToLiveRecurringContractLines(
+    query,
+    { cc: 'cc', ct: 'ct', cl: 'cl' },
+    { excludeSystemManagedDefault: true },
+  );
   const rows = await query
-    .where('cl.is_active', true)
     .where('cl.cadence_owner', 'contract')
     .whereIn('cl.billing_timing', ['advance', 'arrears'])
     // Keep eligibility identical to CONTRACT_CADENCE_COVERAGE_AUDIT_SQL. An
@@ -735,11 +740,6 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
     // locked/edited/skipped periods.
     .whereRaw(
       "lower(cl.billing_frequency) in ('monthly', 'quarterly', 'semi-annually', 'semiannually', 'annually', 'annual')",
-    )
-    .where('cc.is_active', true)
-    .where('ct.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
     )
     .whereNotNull('cc.start_date')
     .andWhere('cc.start_date', '<=', asOfDate)

@@ -1,3 +1,12 @@
+import {
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+  messageKeyForInvoiceFailureCode,
+} from '../errors/invoiceFailureMessageKeys';
+
+// The keys below are derived from the code <-> key registry
+// (`errors/invoiceFailureMessageKeys.ts`); they remain exported here so existing
+// imports keep working.
+
 export const DUPLICATE_RECURRING_INVOICE_CODE = 'DUPLICATE_RECURRING_INVOICE';
 
 /**
@@ -5,7 +14,7 @@ export const DUPLICATE_RECURRING_INVOICE_CODE = 'DUPLICATE_RECURRING_INVOICE';
  * billing run branches on this rather than on the sentence, which the localization
  * boundary rewrites.
  */
-export const DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY = 'msp/billing:errors.duplicateRecurringInvoice';
+export { DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY };
 
 /**
  * Namespaced message key for the missing-billing-recipient failure. The boundary
@@ -13,10 +22,9 @@ export const DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY = 'msp/billing:errors.dupli
  * recognize the coded validation failure (`NO_BILLING_EMAIL`) without matching the
  * English sentence, which the localization boundary rewrites.
  */
-export const NO_BILLING_EMAIL_MESSAGE_KEY = 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL';
+export const NO_BILLING_EMAIL_MESSAGE_KEY = messageKeyForInvoiceFailureCode('NO_BILLING_EMAIL');
 
-export const TIME_APPROVAL_REQUIRED_MESSAGE_KEY =
-  'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval';
+export const TIME_APPROVAL_REQUIRED_MESSAGE_KEY = messageKeyForInvoiceFailureCode('TIME_APPROVAL_REQUIRED');
 
 /**
  * Namespaced message key for the missing-usage-records preview failure
@@ -25,7 +33,7 @@ export const TIME_APPROVAL_REQUIRED_MESSAGE_KEY =
  * UI needs the coded failure to render the period and an actionable route to
  * record usage instead of a bare "Nothing to bill".
  */
-export const USAGE_RECORDS_MISSING_MESSAGE_KEY = 'msp/invoicing:manualInvoices.errors.USAGE_RECORDS_MISSING';
+export const USAGE_RECORDS_MISSING_MESSAGE_KEY = messageKeyForInvoiceFailureCode('USAGE_RECORDS_MISSING');
 
 /**
  * Namespaced message key for the mixed-invoice omission acknowledgement failure
@@ -34,8 +42,7 @@ export const USAGE_RECORDS_MISSING_MESSAGE_KEY = 'msp/invoicing:manualInvoices.e
  * period: interactive generation retries with an explicit acknowledgement, and
  * the automated recurring run reports the coded incomplete-usage failure.
  */
-export const USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.USAGE_RECORDS_MISSING_ACK_REQUIRED';
+export const USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY = messageKeyForInvoiceFailureCode('USAGE_RECORDS_MISSING_ACK_REQUIRED');
 
 /**
  * Namespaced message key for the stale-preview consistency failure
@@ -44,8 +51,7 @@ export const USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY =
  * deleted, or already consumed after the preview, generation refuses and the
  * operator re-previews.
  */
-export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.USAGE_PERIOD_TOTAL_STALE';
+export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY = messageKeyForInvoiceFailureCode('USAGE_PERIOD_TOTAL_STALE');
 
 /**
  * Namespaced message key for the stale recurring quantity/price revision
@@ -54,8 +60,7 @@ export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
  * after the preview, generation refuses and the operator re-previews rather
  * than being charged a different amount silently.
  */
-export const RECURRING_PRICING_STALE_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.RECURRING_PRICING_STALE';
+export const RECURRING_PRICING_STALE_MESSAGE_KEY = messageKeyForInvoiceFailureCode('RECURRING_PRICING_STALE');
 
 /**
  * Namespaced message key for a per-service usage pricing failure
@@ -63,8 +68,7 @@ export const RECURRING_PRICING_STALE_MESSAGE_KEY =
  * is a calculation error, never "unreported": preview surfaces the typed state
  * and generation refuses rather than silently omitting the recorded charge.
  */
-export const USAGE_CALCULATION_ERROR_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.USAGE_CALCULATION_ERROR';
+export const USAGE_CALCULATION_ERROR_MESSAGE_KEY = messageKeyForInvoiceFailureCode('USAGE_CALCULATION_ERROR');
 
 /**
  * Namespaced message key for a fixed-fee contract line whose rate could not be
@@ -72,13 +76,11 @@ export const USAGE_CALCULATION_ERROR_MESSAGE_KEY =
  * preview names it and generation refuses rather than billing a short invoice.
  * A line whose rate legitimately resolves to zero is not this failure.
  */
-export const FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.FIXED_LINE_RATE_UNRESOLVED';
+export const FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY = messageKeyForInvoiceFailureCode('FIXED_LINE_RATE_UNRESOLVED');
 
 /**
  * Namespaced message key for a fixed-fee contract line that has a rate but no
  * service to bill it on (`FIXED_LINE_NO_SERVICES`). Distinct from a missing
  * rate: the fix is to add a service to the line, not to set a rate.
  */
-export const FIXED_LINE_NO_SERVICES_MESSAGE_KEY =
-  'msp/invoicing:manualInvoices.errors.FIXED_LINE_NO_SERVICES';
+export const FIXED_LINE_NO_SERVICES_MESSAGE_KEY = messageKeyForInvoiceFailureCode('FIXED_LINE_NO_SERVICES');

@@ -1852,6 +1852,96 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
   });
 
+  it('renders translated Fix all guidance for a RECURRING_PERIODS_NOT_MATERIALIZED run failure', async () => {
+    const contractRow = createContractRow();
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-not-materialized',
+      selectionKey: 'run-not-materialized-selection',
+      retryKey: 'run-not-materialized-retry',
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        {
+          billingCycleId: null,
+          executionIdentityKey: contractRow.executionIdentityKey,
+          executionWindowKind: 'contract_cadence_window',
+          code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+          params: { periodStart: '2025-02-08', periodEnd: '2025-03-08' },
+          errorMessage:
+            "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or regenerate them under Billing > Service Periods, then preview again.",
+        },
+      ],
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Fix all/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders the quote-reference sentence for an UNEXPECTED run failure', async () => {
+    const contractRow = createContractRow();
+
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([contractRow])],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+    generateInvoicesAsRecurringBillingRunMock.mockResolvedValue({
+      runId: 'run-unexpected',
+      selectionKey: 'run-unexpected-selection',
+      retryKey: 'run-unexpected-retry',
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        {
+          billingCycleId: null,
+          executionIdentityKey: contractRow.executionIdentityKey,
+          executionWindowKind: 'contract_cadence_window',
+          code: 'UNEXPECTED',
+          params: { ref: 'ab12cd34' },
+          errorMessage: 'insert into "invoices" failed: raw driver text',
+        },
+      ],
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    });
+
+    const readyTable = screen.getAllByTestId('automatic-invoices-table').at(-1)!;
+    fireEvent.click(within(readyTable).getAllByRole('checkbox')[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /Generate Invoices \(1\)/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Quote reference ab12cd34/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/raw driver text/i)).not.toBeInTheDocument();
+  });
+
   it('T083: recurring generation errors for unbridged rows display execution identity when client-name keys are unavailable', async () => {
     const contractRow = {
       ...createContractRow(),

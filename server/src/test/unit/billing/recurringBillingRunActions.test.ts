@@ -430,13 +430,14 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: blockedTarget.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          errorMessage: expect.stringMatching(/^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/),
         }),
       ],
     });
     // Approval blockers are not a structured, known failure: they stay generic
     // (no code), so the UI cannot translate them as client remediation.
-    expect((result.failures[0] as { code?: string })?.code).toBeUndefined();
+    expect((result.failures[0] as { code?: string })?.code).toBe('UNEXPECTED');
   });
 
   it('preserves a localized approval blocker count through a grouped run', async () => {
@@ -560,9 +561,10 @@ describe('recurring billing run actions', () => {
       billingCycleId: 'cycle-unknown-mixed',
       executionIdentityKey: unknownTarget.executionWindow.identityKey,
       executionWindowKind: 'contract_cadence_window',
-      errorMessage: 'Failed to generate invoice for this billing cycle.',
+      code: 'UNEXPECTED',
+          errorMessage: expect.stringMatching(/^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/),
     });
-    expect(unknown.code).toBeUndefined();
+    expect(unknown.code).toBe('UNEXPECTED');
   });
 
   it('keeps unsupported coded errors off the recurring-run UI as raw text', async () => {
@@ -587,13 +589,62 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: target.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          errorMessage: expect.stringMatching(/^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/),
         }),
       ],
     });
     const failure = (result as { failures: Array<{ code?: string }> }).failures[0];
-    expect(failure?.code).toBeUndefined();
+    expect(failure?.code).toBe('UNEXPECTED');
     expect(JSON.stringify(result)).not.toContain('service-9');
+  });
+
+  it.each([
+    ['RECURRING_PERIODS_NOT_MATERIALIZED', { periodStart: '2025-02-08', periodEnd: '2025-03-08' }],
+    ['NOTHING_TO_BILL', {}],
+    ['NO_ACTIVE_CONTRACT_LINES', {}],
+  ] as const)('carries a thrown typed %s through the run as a coded failure with params', async (code, params) => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { ManualInvoiceError } = await import('../../../../../packages/billing/src/errors/manualInvoiceErrors');
+    const target = buildContractCadenceTarget({ contractLineId: `line-${code}` });
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(new ManualInvoiceError(code, `English text for ${code}`, params));
+
+    const result = await generateInvoicesAsRecurringBillingRun({ targets: [target] });
+
+    const failure = (result as { failures: Array<{ code?: string; params?: Record<string, string>; errorMessage: string }> }).failures[0];
+    expect(failure.code).toBe(code);
+    expect(failure.params).toEqual(params);
+    expect(failure.errorMessage).not.toContain('Quote reference');
+    vi.restoreAllMocks();
+  });
+
+  it('never leaks raw exception text for an arbitrary throw and ties the shown ref to the log', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const target = buildContractCadenceTarget({ contractLineId: 'line-boom' });
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(new Error('boom'));
+
+    const result = await generateInvoicesAsRecurringBillingRun({ targets: [target] });
+
+    const failure = (result as { failures: Array<{ code?: string; params?: { ref?: string }; errorMessage: string }> }).failures[0];
+    expect(failure.code).toBe('UNEXPECTED');
+    expect(failure.errorMessage).not.toContain('boom');
+    const [, loggedContext] = consoleErrorSpy.mock.calls[0] as [string, Record<string, unknown>];
+    expect(failure.params?.ref).toMatch(/^[0-9a-f]{8}$/);
+    expect(loggedContext.ref).toBe(failure.params?.ref);
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('maps a thrown keyed database error (23503) through the boundary, not to UNEXPECTED', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const target = buildContractCadenceTarget({ contractLineId: 'line-fk' });
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(Object.assign(new Error('fk violation'), { code: '23503' }));
+
+    const result = await generateInvoicesAsRecurringBillingRun({ targets: [target] });
+
+    const failure = (result as { failures: Array<{ code?: string; errorMessage: string }> }).failures[0];
+    expect(failure.code).not.toBe('UNEXPECTED');
+    expect(failure.errorMessage).toContain('no longer exists');
+    vi.restoreAllMocks();
   });
 
   it('skips duplicate recurring invoices without marking the canonical recurring run failed', async () => {
@@ -630,7 +681,7 @@ describe('recurring billing run actions', () => {
     });
   });
 
-  it('logs the actionable underlying exception while returning the generic failure for the UI', async () => {
+  it('logs the actionable underlying exception while returning a ref-coded UNEXPECTED failure for the UI', async () => {
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
@@ -650,15 +701,21 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: contractTarget.executionWindow.identityKey,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
+          code: 'UNEXPECTED',
+          errorMessage: expect.stringMatching(/^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/),
         }),
       ],
     });
 
-    expect((result as { failures: Array<{ code?: string }> }).failures[0]?.code).toBeUndefined();
+    const failure = (result as { failures: Array<{ code?: string; errorMessage: string; params?: { ref?: string } }> }).failures[0];
+    expect(failure.code).toBe('UNEXPECTED');
+    expect(failure.errorMessage).not.toContain('Distinctive');
 
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     const [, loggedContext] = consoleErrorSpy.mock.calls[0] as [string, Record<string, unknown>];
+    // The ref shown to the operator is the ref in the log line, so support can find the exception.
+    expect(failure.params?.ref).toBeTruthy();
+    expect(loggedContext.ref).toBe(failure.params?.ref);
     expect(loggedContext).toMatchObject({
       event: 'billing.recurringBillingRun.invoiceFailure',
       runId: result.runId,

@@ -28,5 +28,6 @@ export * from './bucketUsageService';
 export * from './hourBlockService';
 export * from './clientCadenceScheduleRegeneration';
 export * from './applyClientCadenceChange';
+export * from './liveRecurringLineScope';
 export * from './clipRecurringCandidatesToObligationBounds';
 export * from './calendarMonthEndClosePolicy';

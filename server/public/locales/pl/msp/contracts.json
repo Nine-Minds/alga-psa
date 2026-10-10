@@ -2551,6 +2551,7 @@
     },
     "contract": {
       "hasInvoices": "Ta umowa ma powiązane faktury i nie można jej usunąć.",
+      "stillReferenced": "Ta umowa jest nadal używana w {{table}} i nie można jej usunąć.",
       "invalidValue": "Jedna z wybranych wartości umowy jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
       "referenceMissing": "Wybrana umowa, klient lub powiązany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "conflict": "Ta zmiana umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",

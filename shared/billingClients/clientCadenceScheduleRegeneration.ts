@@ -15,6 +15,7 @@ import {
 import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandidatesToObligationBounds';
 import { getClientBillingCycleAnchor } from './billingSchedule';
+import { scopeToLiveRecurringContractLines } from './liveRecurringLineScope';
 import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
@@ -312,14 +313,13 @@ async function loadClientCadenceRecurringObligations(
   // client-owned contract that owns the live cloned lines.
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+  scopeToLiveRecurringContractLines(
+    query,
+    { cc: 'cc', ct: 'ct', cl: 'cl' },
+    { excludeSystemManagedDefault: true },
+  );
   return query
     .andWhere('cc.client_id', params.clientId)
-    .where('cc.is_active', true)
-    .where('ct.is_active', true)
-    .where('cl.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-    )
     .where('cl.cadence_owner', 'client')
     .whereNotNull('cl.billing_timing')
     .select(
@@ -619,11 +619,12 @@ async function loadClientsWithClientCadenceObligations(
   const query = db.table('client_contracts as cc');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+  scopeToLiveRecurringContractLines(
+    query,
+    { cc: 'cc', ct: 'ct', cl: 'cl' },
+    { excludeSystemManagedDefault: true },
+  );
   const ids = await query
-    .where('cc.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-    )
     .where('cl.cadence_owner', 'client')
     .whereNotNull('cl.billing_timing')
     .distinct('cc.client_id')

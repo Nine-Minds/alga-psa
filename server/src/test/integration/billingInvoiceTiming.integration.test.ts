@@ -2797,8 +2797,10 @@ it('T104: generation blocks partially materialized client-cadence windows when e
 
   await expect(
     generateInvoiceForSelectionInput(blockedMember!.selectorInput),
-  ).resolves.toEqual({
+  ).resolves.toMatchObject({
     actionError: 'Recurring service periods were not materialized for this recurring execution window.',
+    messageKey: 'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED',
+    messageParams: { periodStart: '2025-01-01', periodEnd: '2025-02-01' },
   });
 }, HOOK_TIMEOUT);
 

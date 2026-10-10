@@ -18,18 +18,11 @@ import {
   generateInvoiceForSelectionInput,
   generateInvoiceForSelectionInputs,
 } from './invoiceGeneration';
+import { invoiceGenerationActionErrorFrom } from './invoiceGenerationActionErrors';
+import { invoiceFailureCodeFromMessageKey } from '../errors/invoiceFailureMessageKeys';
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
-  NO_BILLING_EMAIL_MESSAGE_KEY,
-  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
-  USAGE_RECORDS_MISSING_MESSAGE_KEY,
-  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
-  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
-  RECURRING_PRICING_STALE_MESSAGE_KEY,
-  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
-  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
-  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
@@ -85,80 +78,25 @@ function getRecurringBillingRunActionErrorMessage(error: RecurringBillingRunActi
 
 /**
  * Recovers the structured, known failure (code/params) from a keyed action error
- * returned by the invoice-generation boundary. Recognized by message key, never by
- * the English sentence, which the localization boundary rewrites. Unknown/internal
- * errors carry nothing, so the failure keeps the generic message for the UI.
+ * returned by the invoice-generation boundary, through the shared code <-> key
+ * registry. Recognized by message key, never by the English sentence, which the
+ * localization boundary rewrites. Keys that stand for no failure code carry
+ * nothing, so the failure keeps its message for the UI.
  */
 function handledRecurringFailureFromActionError(error: RecurringBillingRunActionError): {
   code?: HandledRecurringFailureCode;
   params?: Record<string, string>;
 } {
-  if (error.messageKey === TIME_APPROVAL_REQUIRED_MESSAGE_KEY) {
-    return { code: 'TIME_APPROVAL_REQUIRED', params: error.messageParams as Record<string, string> | undefined };
+  const code = invoiceFailureCodeFromMessageKey(error.messageKey);
+  if (!code || code === 'UNEXPECTED') {
+    return {};
   }
-  if (error.messageKey === NO_BILLING_EMAIL_MESSAGE_KEY) {
-    return {
-      code: 'NO_BILLING_EMAIL',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // Incomplete-usage windows: whether the whole window is unreported
-  // (USAGE_RECORDS_MISSING) or billable charges would omit unreported usage
-  // services (…_ACK_REQUIRED), the automated run reports the coded,
-  // actionable incomplete-usage failure instead of silently finalizing a
-  // partial period. The acknowledgement variant keeps its
-  // `acknowledgeRequired` param so the UI can offer an explicit
-  // generate-anyway confirmation.
-  if (
-    error.messageKey != null &&
-    (error.messageKey === USAGE_RECORDS_MISSING_MESSAGE_KEY ||
-      error.messageKey === USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY)
-  ) {
-    return {
-      code: 'USAGE_RECORDS_MISSING',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A stale previewed period total refused finalization: the operator must
-  // re-preview, so the coded failure (not a generic string) reaches the UI.
-  if (error.messageKey === USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY) {
-    return {
-      code: 'USAGE_PERIOD_TOTAL_STALE',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A scheduled recurring quantity/price revision (or its inherited catalog
-  // price) changed after the preview that was approved: the run reports the
-  // coded stale-pricing failure so the operator re-previews before generating.
-  if (error.messageKey === RECURRING_PRICING_STALE_MESSAGE_KEY) {
-    return {
-      code: 'RECURRING_PRICING_STALE',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // Recorded usage the engine could not price keeps its structured
-  // per-service diagnostics across the run boundary.
-  if (error.messageKey === USAGE_CALCULATION_ERROR_MESSAGE_KEY) {
-    return {
-      code: 'USAGE_CALCULATION_ERROR',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A fixed-fee line with no resolvable rate refused generation; the coded
-  // failure names the line instead of a generic error string.
-  if (error.messageKey === FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY) {
-    return {
-      code: 'FIXED_LINE_RATE_UNRESOLVED',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  if (error.messageKey === FIXED_LINE_NO_SERVICES_MESSAGE_KEY) {
-    return {
-      code: 'FIXED_LINE_NO_SERVICES',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  return {};
+  return {
+    // The acknowledgement variant reports as the incomplete-usage failure; the UI
+    // offers the explicit generate-anyway confirmation from its params.
+    code: code === 'USAGE_RECORDS_MISSING_ACK_REQUIRED' ? 'USAGE_RECORDS_MISSING' : code,
+    params: error.messageParams as Record<string, string> | undefined,
+  };
 }
 
 function normalizeRecurringBillingRunTargets(params: {
@@ -252,6 +190,67 @@ function isDuplicateRecurringInvoiceActionError(error: RecurringBillingRunAction
 }
 
 /**
+ * Builds the failure row for an exception thrown while generating one window.
+ * Expected, coded refusals (the same ones the boundary returns as keyed action
+ * errors) keep their code and params. Anything else becomes `UNEXPECTED` with a
+ * short `ref`, logged beside the full cause, so support can find the stack; the
+ * raw exception text is never put on the row.
+ *
+ * Returns null when the exception means the window is already invoiced.
+ */
+function recurringFailureFromThrownError(params: {
+  runId: string;
+  tenantId: string;
+  error: unknown;
+  billingCycleId?: string | null;
+  executionWindow: { identityKey: string; kind: NonNullable<RecurringBillingRunInvoiceFailure['executionWindowKind']> };
+}): RecurringBillingRunInvoiceFailure | null {
+  const { runId, tenantId, error, billingCycleId, executionWindow } = params;
+  const base = {
+    billingCycleId: billingCycleId ?? null,
+    executionIdentityKey: executionWindow.identityKey,
+    executionWindowKind: executionWindow.kind,
+  };
+
+  const mapped = invoiceGenerationActionErrorFrom(error);
+  if (mapped) {
+    if (mapped.messageKey === DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY) {
+      return null;
+    }
+    logRecurringBillingRunInvoiceFailure({
+      runId,
+      tenantId,
+      error,
+      billingCycleId,
+      executionIdentityKey: executionWindow.identityKey,
+      executionWindowKind: executionWindow.kind,
+    });
+    return {
+      ...base,
+      errorMessage: getRecurringBillingRunActionErrorMessage(mapped),
+      ...handledRecurringFailureFromActionError(mapped),
+    };
+  }
+
+  const ref = uuidv4().replace(/-/g, '').slice(0, 8);
+  logRecurringBillingRunInvoiceFailure({
+    runId,
+    tenantId,
+    error,
+    billingCycleId,
+    executionIdentityKey: executionWindow.identityKey,
+    executionWindowKind: executionWindow.kind,
+    ref,
+  });
+  return {
+    ...base,
+    errorMessage: `Something went wrong generating the invoice. Quote reference ${ref} when contacting support.`,
+    code: 'UNEXPECTED',
+    params: { ref },
+  };
+}
+
+/**
  * Logs the actionable underlying invoice-generation exception for a recurring
  * run failure while the caller keeps the generic user-facing message. Only
  * safe identifiers already present in the run are included; no invoice
@@ -264,6 +263,8 @@ function logRecurringBillingRunInvoiceFailure(params: {
   billingCycleId?: string | null;
   executionIdentityKey: string;
   executionWindowKind: string;
+  /** Short reference shown to the user for an unexpected failure. */
+  ref?: string;
 }) {
   const {
     runId,
@@ -272,6 +273,7 @@ function logRecurringBillingRunInvoiceFailure(params: {
     billingCycleId,
     executionIdentityKey,
     executionWindowKind,
+    ref,
   } = params;
   const normalizedError =
     error instanceof Error
@@ -284,6 +286,7 @@ function logRecurringBillingRunInvoiceFailure(params: {
     billingCycleId: billingCycleId ?? null,
     executionIdentityKey,
     executionWindowKind,
+    ...(ref ? { ref } : {}),
     error: normalizedError,
   });
 }
@@ -391,21 +394,16 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
           continue;
         }
 
-        logRecurringBillingRunInvoiceFailure({
+        const thrownFailure = recurringFailureFromThrownError({
           runId,
           tenantId,
           error: err,
           billingCycleId: target.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
+          executionWindow,
         });
-
-        failures.push({
-          billingCycleId: target.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
-        });
+        if (thrownFailure) {
+          failures.push(thrownFailure);
+        }
       }
     }
 
@@ -861,21 +859,16 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
           continue;
         }
 
-        logRecurringBillingRunInvoiceFailure({
+        const thrownFailure = recurringFailureFromThrownError({
           runId,
           tenantId,
           error: err,
           billingCycleId: group.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
+          executionWindow,
         });
-
-        failures.push({
-          billingCycleId: group.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
-        });
+        if (thrownFailure) {
+          failures.push(thrownFailure);
+        }
       }
     }
 

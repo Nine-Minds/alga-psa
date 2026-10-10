@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
+import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
@@ -891,7 +892,10 @@ describe('invoice preview recurring timing', () => {
     ],
     ['Nothing to bill', 'NOTHING_TO_BILL', 'Nothing is ready to invoice for this window'],
   ])('returns a stable code and actionable message when the engine refuses with "%s"', async (engineMessage, code, fallback) => {
-    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(new Error(engineMessage));
+    // The engine throws typed errors (the sentence is only the English text; the code is the identity).
+    mocks.calculateBillingForExecutionWindow.mockRejectedValueOnce(
+      new ManualInvoiceError(code as 'NO_ACTIVE_CONTRACT_LINES' | 'NOTHING_TO_BILL', engineMessage),
+    );
 
     const selectorInput = buildContractCadenceDueSelectionInput({
       clientId: 'client-1',
@@ -1090,7 +1094,7 @@ describe('invoice preview recurring timing', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('routes unsupported coded validation errors to the generic path instead of surfacing them raw', async () => {
+  it('keeps unsupported coded errors generic in preview while generation returns them keyed', async () => {
     mocks.validateClientBillingEmail.mockResolvedValue({
       valid: false,
       code: 'SERVICE_NOT_FOUND',
@@ -1106,6 +1110,7 @@ describe('invoice preview recurring timing', () => {
       windowEnd: '2025-03-08',
     });
 
+    // Preview keeps its generic fallback for codes outside its allowlist: no raw detail, no code.
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
     expect(previewResult).toMatchObject({
       success: false,
@@ -1114,12 +1119,12 @@ describe('invoice preview recurring timing', () => {
     expect(previewResult).not.toHaveProperty('code');
     expect(JSON.stringify(previewResult)).not.toContain('service-9');
 
-    // The generation boundary must not return the raw coded message as an action
-    // error: it re-throws so the recurring run's generic catch owns it.
-    const generationError = await generateInvoiceForSelectionInput(selectorInput).catch((error) => error);
-    expect(generationError).toBeInstanceOf(Error);
-    expect(generationError).not.toHaveProperty('actionError');
-    expect(generationError).not.toHaveProperty('messageKey');
+    // The generation boundary maps any ManualInvoiceError to a keyed action error
+    // (the recurring run recovers the code from the key, never from the sentence).
+    const generationResult = await generateInvoiceForSelectionInput(selectorInput);
+    expect(generationResult).toMatchObject({
+      messageKey: 'msp/invoicing:manualInvoices.errors.SERVICE_NOT_FOUND',
+    });
   });
 
   it('T050: selector-input recurring generation still enforces PO-required contract validation', async () => {

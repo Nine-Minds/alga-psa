@@ -2547,6 +2547,7 @@
     },
     "contract": {
       "hasInvoices": "Questo contratto ha fatture associate e non può essere eliminato.",
+      "stillReferenced": "Questo contratto è ancora referenziato da {{table}} e non può essere eliminato.",
       "invalidValue": "Uno dei valori del contratto selezionati non è valido. Aggiornare la pagina e riprovare.",
       "referenceMissing": "Il contratto, il cliente o il record correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "conflict": "Questa modifica del contratto è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",

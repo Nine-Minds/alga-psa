@@ -2547,6 +2547,7 @@
     },
     "contract": {
       "hasInvoices": "Dit contract heeft gekoppelde facturen en kan niet worden verwijderd.",
+      "stillReferenced": "Dit contract wordt nog gebruikt door {{table}} en kan niet worden verwijderd.",
       "invalidValue": "Een van de geselecteerde contractwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Het geselecteerde contract, de klant of het gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "conflict": "Deze contractwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",

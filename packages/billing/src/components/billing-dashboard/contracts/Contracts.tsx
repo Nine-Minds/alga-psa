@@ -184,6 +184,8 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchContracts();
         setContractToDelete(null);
         return;
       }
@@ -194,6 +196,7 @@ const Contracts: React.FC = () => {
         ? err.message
         : t('contractsList.toasts.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchContracts();
     } finally {
       setIsDeletingContract(false);
     }
@@ -230,6 +233,7 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(draftToDiscard.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       await fetchContracts();
@@ -237,6 +241,7 @@ const Contracts: React.FC = () => {
       setDraftToDiscard(null);
     } catch (err) {
       handleError(err, t('contractsList.toasts.failedToDiscardDraft', { defaultValue: 'Failed to discard draft' }));
+      await fetchContracts();
     } finally {
       setIsDiscardingDraft(false);
     }

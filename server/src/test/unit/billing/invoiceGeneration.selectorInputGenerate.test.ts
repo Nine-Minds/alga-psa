@@ -650,9 +650,10 @@ describe('selector-input recurring generation', () => {
       windowEnd: '2025-03-08',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toMatchObject({
       actionError:
         'Recurring service periods were not materialized for this recurring execution window.',
+      messageKey: 'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED',
     });
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });

@@ -140,6 +140,11 @@ import {
 } from "@alga-psa/shared/billingClients/recurringUnitPricing";
 import { resolveMemberRate } from "@alga-psa/shared/billingClients/resolveFixedLineRate";
 import {
+  ManualInvoiceError,
+  type HandledManualInvoiceErrorCode,
+} from "../../errors/manualInvoiceErrors";
+import { scopeToLiveRecurringContractLines } from "@alga-psa/shared/billingClients/liveRecurringLineScope";
+import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionReason,
@@ -231,8 +236,19 @@ type ProjectBillingContext = {
 export type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 import type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 
+/**
+ * A billing calculation result. A refusal is returned as `error`; when the
+ * refusal has a stable code, `errorCode` carries it so generation can re-throw it
+ * typed instead of as a bare sentence.
+ */
+export type BillingResult = IBillingResult & {
+  error?: string;
+  errorCode?: HandledManualInvoiceErrorCode;
+};
+
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
+  errorCode?: HandledManualInvoiceErrorCode;
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
   warnings?: string[];
 };
@@ -1131,7 +1147,7 @@ export class BillingEngine {
     endDate: ISO8601String,
     billingCycleId: string,
     options: CalculateBillingOptions = {},
-  ): Promise<IBillingResult & { error?: string }> {
+  ): Promise<BillingResult> {
     this.clientDefaultTaxRegionCodeCache.clear();
     this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
@@ -1150,7 +1166,7 @@ export class BillingEngine {
     startDate: ISO8601String,
     endDate: ISO8601String,
     options: CalculateBillingOptions = {},
-  ): Promise<IBillingResult & { error?: string }> {
+  ): Promise<BillingResult> {
     this.clientDefaultTaxRegionCodeCache.clear();
     this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
@@ -1349,8 +1365,13 @@ export class BillingEngine {
         );
 
       if (persistedSelections === null) {
-        throw new Error(
+        throw new ManualInvoiceError(
+          "RECURRING_PERIODS_NOT_MATERIALIZED",
           `Recurring service periods have not been materialized for client ${clientId} in execution window ${billingPeriod.startDate} to ${billingPeriod.endDate}`,
+          {
+            periodStart: billingPeriod.startDate,
+            periodEnd: billingPeriod.endDate,
+          },
         );
       }
 
@@ -1449,7 +1470,7 @@ export class BillingEngine {
     endDate: ISO8601String,
     billingCycleId: string,
     options: CalculateBillingOptions = {},
-  ): Promise<IBillingResult & { error?: string }> {
+  ): Promise<BillingResult> {
     try {
       await this.initKnex();
       if (!this.tenant) {
@@ -1794,6 +1815,7 @@ export class BillingEngine {
           warnings: runWarnings,
           error:
             "No active contract lines found for this client in the selected billing period.",
+          errorCode: "NO_ACTIVE_CONTRACT_LINES",
         };
       }
 
@@ -2544,10 +2566,15 @@ export class BillingEngine {
       "cl.contract_line_id",
     );
 
+    scopeToLiveRecurringContractLines(
+      eligibleLinesQuery,
+      { cc: "cc", ct: "c", cl: "cl" },
+      { excludeSystemManagedDefault: false },
+    );
+
     const rows = await eligibleLinesQuery
       .where({
         "cc.client_id": input.clientId,
-        "cc.is_active": true,
         "cls.service_id": input.serviceId,
       })
       .where("cc.start_date", "<=", input.workDate)
@@ -3257,10 +3284,18 @@ export class BillingEngine {
       "c.contract_id",
     );
 
+    // Same definition of a live line as the period materializer and the
+    // materialization guard (cc + contract + line all active). System-managed
+    // default contracts are not excluded: they carry ad-hoc time.
+    scopeToLiveRecurringContractLines(
+      clientContractLinesQuery,
+      { cc: "cc", ct: "c", cl: "cl" },
+      { excludeSystemManagedDefault: false },
+    );
+
     const clientContractLines = await clientContractLinesQuery
       .where({
         "cc.client_id": clientId,
-        "cc.is_active": true,
         "cc.tenant": this.tenant,
       })
       // [start, end) semantics: a contract starting exactly on period end is not active within the period.
@@ -3278,7 +3313,9 @@ export class BillingEngine {
         "cl.service_category",
         "cc.start_date",
         "cc.end_date",
-        "cc.is_active",
+        // The line's own flag (the scope guarantees the assignment is active
+        // too), so the `line.is_active` checks downstream test the line.
+        "cl.is_active",
         "cc.client_contract_id",
         "cc.template_contract_id",
         "c.contract_id",

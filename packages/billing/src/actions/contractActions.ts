@@ -16,7 +16,7 @@ import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
@@ -50,6 +50,15 @@ class ContractActionDomainError extends Error {
   }
 }
 
+/** A foreign-key violation raised while deleting a contract, naming the referencing table. */
+class ContractDeleteReferenceError extends Error {
+  readonly code = '23503';
+  constructor(readonly table: string) {
+    super(`Contract is still referenced by ${table}`);
+    this.name = 'ContractDeleteReferenceError';
+  }
+}
+
 function contractActionErrorFrom(error: unknown): ContractActionError | null {
   if (error instanceof ContractActionDomainError) {
     if (error.message.startsWith('Permission denied:')) {
@@ -74,7 +83,7 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
     }
   }
 
-  const dbError = error as { code?: string; column?: string; constraint?: string };
+  const dbError = error as { code?: string; column?: string; constraint?: string; table?: string };
   if (dbError?.code === '22P02') {
     return actionError('One of the selected contract values is invalid. Please refresh and try again.', 'msp/contracts:errors.contract.invalidValue');
   }
@@ -86,6 +95,13 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
           { field: dbError.column },
         )
       : actionError('Missing required contract field.', 'msp/contracts:errors.contract.missingField');
+  }
+  if (dbError?.code === '23503' && error instanceof ContractDeleteReferenceError) {
+    return actionError(
+      `This contract is still referenced by ${error.table} and cannot be deleted.`,
+      'msp/contracts:errors.contract.stillReferenced',
+      { table: error.table },
+    );
   }
   if (dbError?.code === '23503') {
     return actionError('The selected contract, client, or related record no longer exists. Please refresh and try again.', 'msp/contracts:errors.contract.referenceMissing');
@@ -680,16 +696,45 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       .where({ contract_id: contractId })
       .select('client_contract_id', 'client_id');
 
-    await Contract.delete(knex, tenant, contractId);
+    try {
+      await withTransaction(knex, async (trx) => {
+        await Contract.delete(trx, tenant, contractId);
+      });
+    } catch (deleteError) {
+      const fk = deleteError as { code?: string; table?: string };
+      if (fk?.code === '23503' && fk.table) {
+        throw new ContractDeleteReferenceError(fk.table);
+      }
+      throw deleteError;
+    }
     const occurredAt = new Date().toISOString();
 
-    for (const clientContract of clientContracts) {
+    // The delete is committed; event publication failures must not turn a
+    // successful delete into a reported failure.
+    try {
+      for (const clientContract of clientContracts) {
+        await publishWorkflowEvent({
+          eventType: 'CLIENT_CONTRACT_DELETED',
+          payload: {
+            clientContractId: clientContract.client_contract_id,
+            contractId,
+            clientId: clientContract.client_id,
+            userId: user.user_id,
+            timestamp: occurredAt,
+          },
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: maybeUserActor(user),
+          },
+          idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
+        });
+      }
+
       await publishWorkflowEvent({
-        eventType: 'CLIENT_CONTRACT_DELETED',
+        eventType: 'CONTRACT_DELETED',
         payload: {
-          clientContractId: clientContract.client_contract_id,
           contractId,
-          clientId: clientContract.client_id,
           userId: user.user_id,
           timestamp: occurredAt,
         },
@@ -698,24 +743,11 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
           occurredAt,
           actor: maybeUserActor(user),
         },
-        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
+        idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
       });
+    } catch (eventError) {
+      console.error('Contract deleted but workflow event publication failed:', eventError);
     }
-
-    await publishWorkflowEvent({
-      eventType: 'CONTRACT_DELETED',
-      payload: {
-        contractId,
-        userId: user.user_id,
-        timestamp: occurredAt,
-      },
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
-    });
   } catch (error) {
     console.error('Error deleting contract:', error);
     const expected = contractActionErrorFrom(error);

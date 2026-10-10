@@ -9,7 +9,8 @@ import type {
   QuoteConversionPreview,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { Temporal } from '@js-temporal/polyfill';
+import { tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -352,6 +353,19 @@ function existingSalesOrderDiscountError(
     return stored?.quantity === value.quantity && stored.amount === value.amount;
   });
   return matches ? null : `Sales order ${salesOrder.so_number || salesOrder.so_id} does not match the quote's discounted product quantities and amounts. Reconcile the sales order with the quote before creating the remaining invoice.`;
+}
+
+/**
+ * Date-only value of an instant (or date) in the tenant's effective time zone.
+ * `client_contracts.start_date` is a date column; handing the database a
+ * timestamp would let the session time zone pick the day.
+ */
+function toDateOnlyInTimeZone(value: string | Date, timeZone: string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const iso = value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return Temporal.Instant.from(iso).toZonedDateTimeISO(timeZone).toPlainDate().toString();
 }
 
 async function resolveProductServiceIds(
@@ -709,7 +723,9 @@ export async function convertQuoteToDraftContract(
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      is_active: false,
+      // The header carries draft-ness (client_contracts.is_active below), exactly
+      // like a wizard draft; an inactive line is never materialized or billed.
+      is_active: true,
       location_id: item.location_id ?? null,
       created_at: nowIso,
       updated_at: nowIso,
@@ -823,14 +839,17 @@ export async function convertQuoteToDraftContract(
   }
 
   const clientContractId = uuidv4();
+  const effectiveTimeZone = await resolveEffectiveTimeZone(knexOrTrx, tenant);
   await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
     client_id: quote.client_id,
     contract_id: contract.contract_id,
-    start_date: quote.accepted_at || quote.quote_date || nowIso,
+    start_date: toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone),
     end_date: null,
-    is_active: true,
+    // Same draft shape as the wizard: the assignment is inactive while the header
+    // is a draft, and "Set to Active" flips it.
+    is_active: false,
     created_at: nowIso,
     updated_at: nowIso,
   });

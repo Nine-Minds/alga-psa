@@ -19,6 +19,7 @@ import {
 let db: Knex;
 let tenantId: string;
 let convertQuoteToDraftContract: typeof import('../../../../packages/billing/src/services/quoteConversionService').convertQuoteToDraftContract;
+let activateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').activateClientContractForBilling;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let Quote: any;
@@ -145,6 +146,7 @@ describe('quote conversion: per-seat recurring services', () => {
     Quote = (await import('../../../../packages/billing/src/models/quote')).default;
     QuoteItem = (await import('../../../../packages/billing/src/models/quoteItem')).default;
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ activateClientContractForBilling } = await import('@alga-psa/billing/actions/billingClientsActions'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -187,16 +189,19 @@ describe('quote conversion: per-seat recurring services', () => {
       expect(Number(row.base_rate)).toBe(rate);
     }
 
-    // Activate the draft (what accepting the draft contract does) and invoice.
-    await tenantTable(db, tenantId, 'contracts')
-      .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ status: 'active', is_active: true });
-    await tenantTable(db, tenantId, 'contract_lines')
-      .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ is_active: true });
+    // Activate the draft through the real Set to Active action (what accepting the
+    // draft contract does), after pinning the assignment to the billed window.
     await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ start_date: '2024-12-01', is_active: true });
+      .update({ start_date: '2024-12-01' });
+    const activation: any = await activateClientContractForBilling(
+      (
+        await tenantTable(db, tenantId, 'client_contracts')
+          .where({ tenant: tenantId, contract_id: result.contract.contract_id })
+          .first()
+      ).client_contract_id,
+    );
+    expect(activation?.actionError).toBeUndefined();
     for (const line of lines as any[]) {
       await db.transaction((trx) =>
         syncRecurringServicePeriodsForContractLine(trx, {

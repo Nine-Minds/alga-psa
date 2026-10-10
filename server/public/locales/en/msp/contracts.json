@@ -2547,6 +2547,7 @@
     },
     "contract": {
       "hasInvoices": "This contract has associated invoices and cannot be deleted.",
+      "stillReferenced": "This contract is still referenced by {{table}} and cannot be deleted.",
       "invalidValue": "One of the selected contract values is invalid. Please refresh and try again.",
       "referenceMissing": "The selected contract, client, or related record no longer exists. Please refresh and try again.",
       "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",

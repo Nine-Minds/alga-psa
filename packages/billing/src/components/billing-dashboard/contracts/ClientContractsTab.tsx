@@ -158,6 +158,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchClientContracts();
         setContractToDelete(null);
         return;
       }
@@ -169,6 +171,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
         ? err.message
         : t('clientContracts.toasts.failedToDelete', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchClientContracts();
     } finally {
       setIsDeletingContract(false);
     }
