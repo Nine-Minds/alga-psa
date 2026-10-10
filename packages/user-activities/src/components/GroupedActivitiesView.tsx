@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -59,6 +59,9 @@ import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const UNGROUPED_ID = '__ungrouped__';
+
+/** How long the deep-link highlight stays on the focused row. */
+const FOCUS_HIGHLIGHT_MS = 3000;
 
 /**
  * Wraps a SortableContext container with a droppable area so that activities
@@ -152,6 +155,14 @@ interface GroupedActivitiesViewProps {
    * otherwise target the caller's own groups, which is not what's displayed.
    */
   readOnly?: boolean;
+  /**
+   * Deep-link target (`${type}:${id}`). Once set, the view expands the item's group LOCALLY
+   * (no `updateActivityGroup` write, so saved collapse state is untouched), scrolls to the row,
+   * highlights it briefly, then calls `onFocusHandled`. The caller only passes a key that is
+   * present in `activities` and once the groups have loaded.
+   */
+  focusActivityKey?: string | null;
+  onFocusHandled?: () => void;
 }
 
 interface LocalGroup {
@@ -210,9 +221,10 @@ interface SortableActivityRowProps {
   onActionComplete?: () => void;
   onOpenDrawer: (activity: Activity) => void;
   readOnly?: boolean;
+  highlighted?: boolean;
 }
 
-function SortableActivityRow({ activity, onActionComplete, onOpenDrawer, readOnly = false }: SortableActivityRowProps) {
+function SortableActivityRow({ activity, onActionComplete, onOpenDrawer, readOnly = false, highlighted = false }: SortableActivityRowProps) {
   const { t } = useTranslation('msp/user-activities');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `${activity.type}:${activity.id}`,
@@ -224,12 +236,21 @@ function SortableActivityRow({ activity, onActionComplete, onOpenDrawer, readOnl
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : undefined,
+    // Deep-link highlight: inline because this file's Tailwind classes aren't all scanned.
+    ...(highlighted
+      ? {
+          boxShadow: 'inset 0 0 0 2px rgb(var(--color-primary-500))',
+          backgroundColor: 'rgb(var(--color-primary-50) / 0.6)',
+        }
+      : null),
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      data-activity-key={`${activity.type}:${activity.id}`}
+      data-highlighted={highlighted ? 'true' : undefined}
       className={cn(
         'relative flex items-center gap-3 px-3 py-2 border-b border-border/50 bg-background',
         'hover:bg-muted/30 transition-colors group'
@@ -414,9 +435,20 @@ export function GroupedActivitiesView({
   onGroupsChange,
   onActionComplete,
   readOnly = false,
+  focusActivityKey = null,
+  onFocusHandled,
 }: GroupedActivitiesViewProps) {
   const { t } = useTranslation('msp/user-activities');
   const { openActivityDrawer } = useActivityDrawer();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Deep-link focus state. Expansion is local-only: it never touches the saved collapse state.
+  const [focusExpandedGroupIds, setFocusExpandedGroupIds] = useState<Set<string>>(() => new Set());
+  const [ungroupedForceExpanded, setUngroupedForceExpanded] = useState(false);
+  const [pendingScrollKey, setPendingScrollKey] = useState<string | null>(null);
+  const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+  const handledFocusKeyRef = useRef<string | null>(null);
+  const onFocusHandledRef = useRef(onFocusHandled);
+  onFocusHandledRef.current = onFocusHandled;
 
   const [localGroups, setLocalGroups] = useState<LocalGroup[]>([]);
   const [ungrouped, setUngrouped] = useState<Activity[]>([]);
@@ -440,9 +472,48 @@ export function GroupedActivitiesView({
   // Recompute local state whenever activities or server groups change
   useEffect(() => {
     const { groups, ungrouped: ung } = buildLocalGroups(activities, serverGroups);
-    setLocalGroups(groups);
+    setLocalGroups(
+      focusExpandedGroupIds.size === 0
+        ? groups
+        : groups.map((g) => (focusExpandedGroupIds.has(g.groupId) ? { ...g, isCollapsed: false } : g))
+    );
     setUngrouped(ung);
-  }, [activities, serverGroups]);
+  }, [activities, serverGroups, focusExpandedGroupIds]);
+
+  // Deep link, step 1: work out where the item lives and expand that section locally.
+  useEffect(() => {
+    if (!focusActivityKey || handledFocusKeyRef.current === focusActivityKey) return;
+    if (!activities.some((a) => `${a.type}:${a.id}` === focusActivityKey)) return;
+    handledFocusKeyRef.current = focusActivityKey;
+
+    const { groups } = buildLocalGroups(activities, serverGroups);
+    const owner = groups.find((g) => g.activities.some((a) => `${a.type}:${a.id}` === focusActivityKey));
+    if (owner) {
+      setFocusExpandedGroupIds((prev) => new Set(prev).add(owner.groupId));
+    } else {
+      setUngroupedForceExpanded(true);
+    }
+    setPendingScrollKey(focusActivityKey);
+  }, [focusActivityKey, activities, serverGroups]);
+
+  // Deep link, step 2: once the row is in the DOM (the expansion has rendered), scroll to it
+  // and highlight it, then hand the key back so the caller can consume the URL param.
+  useEffect(() => {
+    if (!pendingScrollKey) return;
+    const rows = containerRef.current?.querySelectorAll<HTMLElement>('[data-activity-key]');
+    const row = rows ? Array.from(rows).find((el) => el.getAttribute('data-activity-key') === pendingScrollKey) : undefined;
+    if (!row) return; // not rendered yet; re-runs when the local groups update
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setHighlightedKey(pendingScrollKey);
+    setPendingScrollKey(null);
+    onFocusHandledRef.current?.();
+  }, [pendingScrollKey, localGroups, ungrouped, ungroupedForceExpanded]);
+
+  useEffect(() => {
+    if (!highlightedKey) return;
+    const timer = setTimeout(() => setHighlightedKey(null), FOCUS_HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightedKey]);
 
   const handleOpenDrawer = useCallback((activity: Activity) => {
     openActivityDrawer(activity);
@@ -473,6 +544,13 @@ export function GroupedActivitiesView({
   }, [onGroupsChange]);
 
   const handleToggleCollapse = useCallback(async (group: LocalGroup) => {
+    // A manual toggle supersedes any deep-link expansion of this group.
+    setFocusExpandedGroupIds((prev) => {
+      if (!prev.has(group.groupId)) return prev;
+      const next = new Set(prev);
+      next.delete(group.groupId);
+      return next;
+    });
     // Optimistic update
     setLocalGroups((prev) =>
       prev.map((g) => (g.groupId === group.groupId ? { ...g, isCollapsed: !g.isCollapsed } : g))
@@ -710,7 +788,7 @@ export function GroupedActivitiesView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
+      <div className="space-y-4" ref={containerRef}>
         {/* Toolbar — group management is hidden when viewing another user's groups */}
         {!readOnly && (
         <div className="flex items-center gap-2">
@@ -791,6 +869,7 @@ export function GroupedActivitiesView({
                 onOpenDrawer={handleOpenDrawer}
                 onActionComplete={onActionComplete}
                 readOnly={readOnly}
+                highlightedKey={highlightedKey}
               />
             );
           })}
@@ -802,6 +881,9 @@ export function GroupedActivitiesView({
           onOpenDrawer={handleOpenDrawer}
           onActionComplete={onActionComplete}
           readOnly={readOnly}
+          highlightedKey={highlightedKey}
+          forceExpanded={ungroupedForceExpanded}
+          onClearForceExpanded={() => setUngroupedForceExpanded(false)}
         />
       </div>
 
@@ -843,6 +925,7 @@ interface GroupSectionProps {
   onOpenDrawer: (activity: Activity) => void;
   onActionComplete?: () => void;
   readOnly?: boolean;
+  highlightedKey?: string | null;
 }
 
 function GroupSection({
@@ -858,6 +941,7 @@ function GroupSection({
   onOpenDrawer,
   onActionComplete,
   readOnly = false,
+  highlightedKey = null,
 }: GroupSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const itemIds = useMemo(
@@ -999,6 +1083,7 @@ function GroupSection({
                   onOpenDrawer={onOpenDrawer}
                   onActionComplete={onActionComplete}
                   readOnly={readOnly}
+                  highlighted={highlightedKey === `${activity.type}:${activity.id}`}
                 />
               ))
             )}
@@ -1018,14 +1103,27 @@ interface UngroupedSectionProps {
   onOpenDrawer: (activity: Activity) => void;
   onActionComplete?: () => void;
   readOnly?: boolean;
+  highlightedKey?: string | null;
+  /** Deep link: show the section even if the saved preference says collapsed (not persisted). */
+  forceExpanded?: boolean;
+  onClearForceExpanded?: () => void;
 }
 
-function UngroupedSection({ activities, onOpenDrawer, onActionComplete, readOnly = false }: UngroupedSectionProps) {
+function UngroupedSection({
+  activities,
+  onOpenDrawer,
+  onActionComplete,
+  readOnly = false,
+  highlightedKey = null,
+  forceExpanded = false,
+  onClearForceExpanded,
+}: UngroupedSectionProps) {
   const { t } = useTranslation('msp/user-activities');
-  const { value: collapsed, setValue: setCollapsed } = useUserPreference<boolean>(
+  const { value: savedCollapsed, setValue: setCollapsed } = useUserPreference<boolean>(
     'activitiesUngroupedCollapsed',
     { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed', debounceMs: 300 }
   );
+  const collapsed = savedCollapsed && !forceExpanded;
   const itemIds = useMemo(
     () => activities.map((a) => `${a.type}:${a.id}`),
     [activities]
@@ -1035,7 +1133,16 @@ function UngroupedSection({ activities, onOpenDrawer, onActionComplete, readOnly
     <div className="border border-dashed border-border rounded-md bg-background">
       <div
         className="flex items-center gap-2 px-3 py-2 bg-muted/10 border-b border-dashed border-border cursor-pointer"
-        onClick={() => setCollapsed((prev) => !prev)}
+        onClick={() => {
+          // Toggling while force-expanded only drops the local override (the saved preference
+          // is still "collapsed", so the section collapses without a write).
+          if (forceExpanded && savedCollapsed) {
+            onClearForceExpanded?.();
+            return;
+          }
+          onClearForceExpanded?.();
+          setCollapsed((prev) => !prev);
+        }}
       >
         {collapsed ? (
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -1062,6 +1169,7 @@ function UngroupedSection({ activities, onOpenDrawer, onActionComplete, readOnly
                 onOpenDrawer={onOpenDrawer}
                 onActionComplete={onActionComplete}
                 readOnly={readOnly}
+                highlighted={highlightedKey === `${activity.type}:${activity.id}`}
               />
             ))
           )}
