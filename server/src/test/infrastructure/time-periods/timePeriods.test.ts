@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
 import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from '../../../types/types.d';
 import * as tenantModule from '../../../lib/tenant';
 import { TestContext } from '../../../../test-utils/testContext';
@@ -399,6 +401,96 @@ describe('Time Periods Infrastructure', () => {
       const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 5));
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('first period on any day (#3206)', () => {
+    const sundayWeekly = (effectiveFrom: string): ITimePeriodSettings => ({
+      time_period_settings_id: uuidv4(),
+      start_day: 7,
+      end_day: 0,
+      frequency: 1,
+      frequency_unit: 'week',
+      is_active: true,
+      effective_from: effectiveFrom,
+      effective_to: undefined,
+      created_at: createTestDateISO({}),
+      updated_at: createTestDateISO({}),
+      tenant: tenantId,
+    });
+
+    const insertSetting = async (setting: ITimePeriodSettings) => {
+      await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
+    };
+
+    const storedPeriods = async () => {
+      const rows = await tenantTable(context, 'time_periods').orderBy('start_date', 'asc');
+      return rows.map((r: any) => [toPlainDate(r.start_date).toString(), toPlainDate(r.end_date).toString()]);
+    };
+
+    afterEach(() => {
+      unfreezeTime();
+    });
+
+    it('15. createNextTimePeriod bootstraps on a non-start day', async () => {
+      freezeTime({ year: 2024, month: 1, day: 17 }); // Wednesday
+      const setting = sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 }));
+      await insertSetting(setting);
+
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod([setting], 5));
+
+      expect(result).not.toBeNull();
+      // [01-14, 01-21) is the current week; 01-21 is within 5 days, so 01-21..01-28 follows.
+      expect(await storedPeriods()).toEqual([
+        ['2024-01-14', '2024-01-21'],
+        ['2024-01-21', '2024-01-28'],
+      ]);
+    });
+
+    it('16. bootstrap honours the threshold for a future effective_from', async () => {
+      const today = Temporal.PlainDate.from('2024-01-17');
+      const far = sundayWeekly('2024-02-04T00:00:00.000Z'); // 18 days out
+      await insertSetting(far);
+      expect(await runWithTenant(tenantId, () => createNextTimePeriod([far], 5, { today }))).toBeNull();
+      expect(await storedPeriods()).toEqual([]);
+
+      const near = { ...far, effective_from: '2024-01-21T00:00:00.000Z' }; // 4 days out
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod([near], 5, { today }));
+      expect(result).not.toBeNull();
+      expect((await storedPeriods())[0]).toEqual(['2024-01-21', '2024-01-28']);
+    });
+
+    it('17. ensureTimePeriodCoversDate creates the current period once and no-ops without settings', async () => {
+      const date = Temporal.PlainDate.from('2024-01-17');
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([]); // no settings
+
+      await insertSetting(sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 })));
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([['2024-01-14', '2024-01-21']]);
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, date);
+      expect(await storedPeriods()).toEqual([['2024-01-14', '2024-01-21']]);
+    });
+
+    it('18. ensureTimePeriodCoversDate fills a two-week gap through the containing period', async () => {
+      await insertSetting(sundayWeekly(createTestDateISO({ year: 2023, month: 1, day: 1 })));
+      await tenantTable(context, 'time_periods').insert({
+        period_id: uuidv4(),
+        tenant: tenantId,
+        start_date: '2023-12-24',
+        end_date: '2023-12-31',
+      });
+
+      await ensureTimePeriodCoversDate(context.db, tenantId, Temporal.PlainDate.from('2024-01-17'));
+
+      expect(await storedPeriods()).toEqual([
+        ['2023-12-24', '2023-12-31'],
+        ['2023-12-31', '2024-01-07'],
+        ['2024-01-07', '2024-01-14'],
+        ['2024-01-14', '2024-01-21'],
+      ]);
     });
   });
 });

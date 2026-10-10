@@ -1,7 +1,9 @@
 'use server'
 
 import { Knex } from 'knex'; // Import Knex type
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db';
+import { Temporal } from '@js-temporal/polyfill';
+import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
 import {
   ITimeSheet,
   ITimeSheetView,
@@ -242,6 +244,10 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     const {knex: db} = await createTenantKnex();
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
+
+    // Time entry reads materialize the current period (in the subject user's zone) when settings exist.
+    const subjectTimeZone = await resolveUserTimeZone(db, tenant, validatedParams.userId);
+    await ensureTimePeriodCoversDate(db, tenant, Temporal.Now.plainDateISO(subjectTimeZone));
 
     const facade = tenantDb(db, tenant);
     const timeEntrySummaries = facade.table('time_sheets as summary_ts');

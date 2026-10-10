@@ -4,130 +4,206 @@ import type { ITimePeriod, ITimePeriodSettings, ITimePeriodView } from '@alga-ps
 
 export type TimePeriodSettings = ITimePeriodSettings;
 
-export class TimePeriodSuggester {
-  private static parseDateValue(date: string | Temporal.PlainDate): Temporal.PlainDate {
-    if (date instanceof Temporal.PlainDate) {
-      return date;
-    }
-    return Temporal.PlainDate.from(date.split('T')[0]);
+function parseDateValue(date: string | Temporal.PlainDate): Temporal.PlainDate {
+  if (date instanceof Temporal.PlainDate) {
+    return date;
   }
+  return Temporal.PlainDate.from(date.split('T')[0]);
+}
 
+type Cell = { start: Temporal.PlainDate; end: Temporal.PlainDate };
+
+// LEVERAGE: pattern period-grid — the suggester grid (alignedPeriodStart/cellEnd/periodContaining) and
+// generateTimePeriods/alignToWeekday/alignToMonthDay in timePeriodsActions.ts are two period grids.
+// Once the end-day convention (issue item 3) settles, re-express the generator through these helpers.
+
+function floorDiv(a: number, b: number): number {
+  return Math.floor(a / b);
+}
+
+function monthIndex(date: Temporal.PlainDate): number {
+  return date.year * 12 + (date.month - 1);
+}
+
+/** Day `day` of the month at `index` (see monthIndex), clamped to the month's length. */
+function clampedMonthDay(index: number, day: number): Temporal.PlainDate {
+  const first = Temporal.PlainDate.from({ year: floorDiv(index, 12), month: (((index % 12) + 12) % 12) + 1, day: 1 });
+  return first.with({ day: Math.min(day, first.daysInMonth) });
+}
+
+function monthStartDay(setting: ITimePeriodSettings): number {
+  return typeof setting.start_day === 'number' && setting.start_day > 0 ? setting.start_day : 1;
+}
+
+function weekStartDay(setting: ITimePeriodSettings): number {
+  return typeof setting.start_day === 'number' && setting.start_day >= 1 && setting.start_day <= 7 ? setting.start_day : 1;
+}
+
+function yearBoundary(setting: ITimePeriodSettings, year: number): Temporal.PlainDate {
+  const first = Temporal.PlainDate.from({ year, month: setting.start_month || 1, day: 1 });
+  return first.with({ day: Math.min(setting.start_day_of_month || 1, first.daysInMonth) });
+}
+
+/** Is the setting in force on date D? effective_from <= D <= effective_to (date parts). */
+// LEVERAGE: pattern period-grid — see note above
+export function isSettingEffectiveOn(setting: ITimePeriodSettings, date: Temporal.PlainDate): boolean {
+  if (setting.effective_from && Temporal.PlainDate.compare(parseDateValue(setting.effective_from), date) > 0) {
+    return false;
+  }
+  if (setting.effective_to && Temporal.PlainDate.compare(date, parseDateValue(setting.effective_to)) > 0) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Most recent grid boundary on or before D. Phase for frequency > 1 is anchored at the most recent
+ * natural boundary on or before effective_from. Null only if the unit is unsupported.
+ */
+// LEVERAGE: pattern period-grid — see note above
+export function alignedPeriodStart(setting: ITimePeriodSettings, date: Temporal.PlainDate): Temporal.PlainDate | null {
+  const frequency = Math.max(1, setting.frequency || 1);
+  const from = setting.effective_from ? parseDateValue(setting.effective_from) : date;
+
+  switch (setting.frequency_unit) {
+    case 'day': {
+      const diff = from.until(date, { largestUnit: 'day' }).days;
+      return from.add({ days: floorDiv(diff, frequency) * frequency });
+    }
+    case 'week': {
+      const startDay = weekStartDay(setting);
+      const natural = (d: Temporal.PlainDate) => d.subtract({ days: (d.dayOfWeek - startDay + 7) % 7 });
+      const anchor = natural(from);
+      const boundary = natural(date);
+      const weeks = floorDiv(anchor.until(boundary, { largestUnit: 'day' }).days / 7, frequency) * frequency;
+      return anchor.add({ weeks });
+    }
+    case 'month': {
+      const startDay = monthStartDay(setting);
+      const natural = (d: Temporal.PlainDate) => {
+        const candidate = clampedMonthDay(monthIndex(d), startDay);
+        return Temporal.PlainDate.compare(candidate, d) > 0 ? clampedMonthDay(monthIndex(d) - 1, startDay) : candidate;
+      };
+      const anchorIdx = monthIndex(natural(from));
+      const boundaryIdx = monthIndex(natural(date));
+      const steps = floorDiv(boundaryIdx - anchorIdx, frequency) * frequency;
+      return clampedMonthDay(anchorIdx + steps, startDay);
+    }
+    case 'year': {
+      const natural = (d: Temporal.PlainDate) => {
+        const candidate = yearBoundary(setting, d.year);
+        return Temporal.PlainDate.compare(candidate, d) > 0 ? yearBoundary(setting, d.year - 1) : candidate;
+      };
+      const anchorYear = natural(from).year;
+      const steps = floorDiv(natural(date).year - anchorYear, frequency) * frequency;
+      return yearBoundary(setting, anchorYear + steps);
+    }
+    default:
+      return null;
+  }
+}
+
+/** Exclusive end of the cell that starts at boundary B. */
+// LEVERAGE: pattern period-grid — see note above
+export function cellEnd(setting: ITimePeriodSettings, boundary: Temporal.PlainDate): Temporal.PlainDate {
+  const frequency = Math.max(1, setting.frequency || 1);
+
+  switch (setting.frequency_unit) {
+    case 'day':
+      return boundary.add({ days: frequency });
+    case 'week':
+      return boundary.add({ weeks: frequency });
+    case 'month': {
+      const startDay = monthStartDay(setting);
+      const endDay = typeof setting.end_day === 'number' ? setting.end_day : 0;
+      const idx = monthIndex(boundary);
+      if (endDay === 0) {
+        return clampedMonthDay(idx + frequency, 1);
+      }
+      // end_day is inclusive; storage is exclusive, hence +1 day.
+      const monthOffset = endDay >= startDay ? frequency - 1 : frequency;
+      return clampedMonthDay(idx + monthOffset, endDay).add({ days: 1 });
+    }
+    case 'year':
+      return yearBoundary(setting, boundary.year + frequency);
+    default:
+      throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
+  }
+}
+
+/** The cell containing D: { start: max(B, effective_from), end }, or null. */
+// LEVERAGE: pattern period-grid — see note above
+export function periodContaining(setting: ITimePeriodSettings, date: Temporal.PlainDate): Cell | null {
+  if (!isSettingEffectiveOn(setting, date)) return null;
+  const boundary = alignedPeriodStart(setting, date);
+  if (!boundary) return null;
+  const end = cellEnd(setting, boundary);
+  if (Temporal.PlainDate.compare(date, end) >= 0) return null;
+  const from = setting.effective_from ? parseDateValue(setting.effective_from) : boundary;
+  const start = Temporal.PlainDate.compare(boundary, from) < 0 ? from : boundary;
+  return { start, end };
+}
+
+function maxCycleDays(settings: ITimePeriodSettings[]): number {
+  const perUnit = { day: 1, week: 7, month: 31, year: 366 } as const;
+  return settings.reduce((max, s) => Math.max(max, perUnit[s.frequency_unit] * Math.max(1, s.frequency || 1)), 1);
+}
+
+export class TimePeriodSuggester {
   // Define a result type that includes success status and error message
   static suggestNewTimePeriod(
     settings: TimePeriodSettings[],
-    existingPeriods: ITimePeriod[] = []
+    existingPeriods: ITimePeriod[] = [],
+    options: { today?: Temporal.PlainDate | string } = {}
   ): { success: boolean; data?: ITimePeriodView; error?: string; errorKey?: string } {
-    let currentDate = Temporal.Now.plainDateISO();
+    const today = options.today ? parseDateValue(options.today) : Temporal.Now.plainDateISO();
 
-    if (existingPeriods.length > 0) {
-      const latestEndDate = existingPeriods.reduce((maxDate, period) => {
-        const endDate = this.parseDateValue(period.end_date);
-        return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
-      }, this.parseDateValue(existingPeriods[0].end_date));
-      currentDate = latestEndDate;
-    }
-
-    // Find the next applicable setting based on the next period's start date
-    const nextPeriodStartDate =
-      existingPeriods.length > 0
-        ? existingPeriods.reduce((maxDate, period) => {
-            const endDate = this.parseDateValue(period.end_date);
-            return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
-          }, this.parseDateValue(existingPeriods[0].end_date))
-        : currentDate;
-
-    const applicableSettings = settings.filter((setting) => {
-      // If no start_day is configured, the setting is always applicable
-      if (setting.start_day === null || setting.start_day === undefined) return true;
-
-      const startDay = setting.start_day;
-
-      // For weekly settings, use dayOfWeek (1=Monday, 7=Sunday in ISO)
-      // For monthly/yearly settings, use day of month
-      if (setting.frequency_unit === 'week') {
-        const dayOfWeek = nextPeriodStartDate.dayOfWeek;
-        // end_day = 0 means "end of week" (Sunday = 7)
-        if (typeof setting.end_day === 'number') {
-          const endDay = setting.end_day === 0 ? 7 : setting.end_day;
-          return dayOfWeek >= startDay && dayOfWeek <= endDay;
-        }
-        return dayOfWeek >= startDay;
-      }
-
-      // For monthly/yearly settings, check day of month
-      // end_day = 0 means "end of month"
-      if (typeof setting.end_day === 'number') {
-        const endDay = setting.end_day === 0 ? nextPeriodStartDate.daysInMonth : setting.end_day;
-        return nextPeriodStartDate.day >= startDay && nextPeriodStartDate.day <= endDay;
-      }
-
-      return nextPeriodStartDate.day >= startDay;
-    });
-
-    if (applicableSettings.length === 0) {
-      return {
-        success: false,
-        error: 'No applicable time period settings found.',
-        errorKey: 'timeEntry.periods.errors.noApplicableSettings',
-      };
-    }
-
-    // Use the first applicable setting (could be enhanced to handle multiple)
-    const setting = applicableSettings[0];
-    const startDate = currentDate;
-    let endDate: Temporal.PlainDate;
-
-    switch (setting.frequency_unit) {
-      case 'day':
-        // Time periods are half-open intervals [start, end) — TimePeriod
-        // .findOverlapping says so, and every other arm here (and
-        // generateTimePeriods) adds the whole frequency. Subtracting a day made
-        // daily periods one day short of their configured frequency, so a
-        // 7-day setting produced 6-day periods on the create-next-period path
-        // while the bulk generator produced 7-day ones.
-        endDate = startDate.add({ days: setting.frequency });
-        break;
-      case 'week':
-        endDate = startDate.add({ weeks: setting.frequency });
-        break;
-      case 'month': {
-        // Handle semi-monthly periods
-        const daysInMonth = startDate.daysInMonth;
-        const endDay = setting.end_day === 0 ? daysInMonth : Math.min(setting.end_day || 1, daysInMonth);
-
-        // Determine base date for month calculations
-        const baseDate = setting.start_day === 1 ? startDate : startDate.with({ day: 1 });
-
-        if (setting.start_day === 1 && startDate.day === 1) {
-          // First semi-monthly period (1st-16th)
-          endDate = startDate.with({ day: endDay }).add({ days: 1 });
-        } else {
-          // Second semi-monthly period (16th-EOM) or mid-month start
-          endDate = baseDate.add({ months: 1 }).with({ day: 1 });
-
-          // If we're in the same month, use calculated end day
-          if (endDate.month === startDate.month) {
-            endDate = startDate.with({ day: endDay });
-          }
-        }
-        break;
-      }
-      case 'year':
-        endDate = startDate.add({ years: setting.frequency });
-        break;
-      default:
-        throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
-    }
-
-    // Find the period with the latest end date to use its ID
     const latestPeriod =
       existingPeriods.length > 0
-        ? existingPeriods.reduce((latest, period) => {
-            const endDate = this.parseDateValue(period.end_date);
-            const latestEndDate = this.parseDateValue(latest.end_date);
-            return Temporal.PlainDate.compare(endDate, latestEndDate) > 0 ? period : latest;
-          }, existingPeriods[0])
+        ? existingPeriods.reduce((latest, period) =>
+            Temporal.PlainDate.compare(parseDateValue(period.end_date), parseDateValue(latest.end_date)) > 0 ? period : latest
+          , existingPeriods[0])
         : null;
+
+    const target = latestPeriod ? parseDateValue(latestPeriod.end_date) : today;
+
+    let cell: Cell | null = null;
+    for (const setting of settings) {
+      cell = periodContaining(setting, target);
+      if (cell) break;
+    }
+
+    let startDate: Temporal.PlainDate;
+    let endDate: Temporal.PlainDate;
+
+    if (cell) {
+      // Bootstrap returns the whole current cell; otherwise bridge from the latest end to the cell's end.
+      startDate = latestPeriod ? target : cell.start;
+      endDate = cell.end;
+    } else {
+      // No cell contains the target: earliest cell starting after it, within a bounded horizon.
+      const horizon = 2 * maxCycleDays(settings);
+      let found: Cell | null = null;
+      for (let offset = 1; offset <= horizon && !found; offset++) {
+        const day = target.add({ days: offset });
+        for (const setting of settings) {
+          const candidate = periodContaining(setting, day);
+          if (candidate && Temporal.PlainDate.compare(candidate.start, day) === 0) {
+            found = candidate;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        return {
+          success: false,
+          error: 'No applicable time period settings found.',
+          errorKey: 'timeEntry.periods.errors.noApplicableSettings',
+        };
+      }
+      startDate = found.start;
+      endDate = found.end;
+    }
 
     // Return view type with string dates
     return {
