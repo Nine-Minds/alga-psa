@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildRmmTicketCreatedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 interface PublishRmmTicketCreatedArgs {
   tenantId: string;
@@ -25,7 +26,7 @@ export async function publishRmmTicketCreated({
   const publish = () =>
     publishWorkflowEvent({
       eventType: 'TICKET_CREATED' as any,
-      payload: { tenantId, ticketId, source },
+      payload: buildRmmTicketCreatedPayload({ ticketId, source }),
       ctx: { tenantId, actor: { actorType: 'SYSTEM' } },
     });
 

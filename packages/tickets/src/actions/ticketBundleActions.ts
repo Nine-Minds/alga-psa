@@ -26,6 +26,10 @@ import {
 } from './ticketBundleUtils';
 import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagation';
 import {
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import {
   BundleConcurrentModificationError,
   type ClosedMasterChoice,
 } from '../lib/ticketBundlePolicy';
@@ -498,12 +502,12 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     eventType: 'TICKET_MERGED',
     ctx: workflowCtx,
     eventName: 'Ticket Merged',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: occurredAt,
       reason: 'bundle:promote_master',
-    },
+    }),
   });
 
   return result;
@@ -617,12 +621,12 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
     eventType: 'TICKET_SPLIT',
     ctx: workflowCtx,
     eventName: 'Ticket Split',
-    payload: {
+    payload: buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: occurredAt,
       reason: 'bundle:remove_child',
-    },
+    }),
   });
 
   return result;
@@ -789,12 +793,12 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
       eventType: 'TICKET_SPLIT',
       ctx: workflowCtx,
       eventName: 'Ticket Split',
-      payload: {
+      payload: buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: occurredAt,
         reason: 'bundle:unbundle_master',
-      },
+      }),
     });
   }
 

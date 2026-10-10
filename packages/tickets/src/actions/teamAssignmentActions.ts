@@ -2,7 +2,8 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketTeamAssignedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 import {
@@ -41,17 +42,17 @@ export const assignTeamToTicket = withAuth(async (
     });
 
     // Emit event after transaction commits so subscribers can see the data
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TICKET_ASSIGNED',
-      payload: {
-        tenantId: tenant,
+      payload: buildTicketTeamAssignedPayload({
         ticketId,
-        userId: assignedTo,
+        assignedToUserId: assignedTo,
         assignedByUserId: user.user_id,
-        changes: { assigned_team_id: teamId },
+        teamId,
         suppressContactNotifications,
         suppressInternalNotifications,
-      }
+      }),
+      ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
     });
 
     // Invalidate ticket list cache so team badge appears on navigation back

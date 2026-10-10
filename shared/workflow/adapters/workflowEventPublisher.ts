@@ -8,6 +8,12 @@ import type { IEventPublisher } from '@alga-psa/types';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
+import {
+  buildInboundPublisherTicketAssignedPayload,
+  buildInboundPublisherTicketClosedPayload,
+  buildInboundPublisherTicketCreatedPayload,
+  buildInboundPublisherTicketUpdatedPayload,
+} from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-event-publisher — ticket-event publishing is wired per call site (this adapter, TicketModelEventPublisher, publishTicketEvent in createTicketWithSideEffects); one ticket-event publisher layer would unify them
 
@@ -83,14 +89,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      ...data.metadata
-    };
-
-    await this.publish('TICKET_CREATED', payload);
+    await this.publish('TICKET_CREATED', buildInboundPublisherTicketCreatedPayload(data));
   }
 
   async publishTicketUpdated(data: {
@@ -100,15 +99,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      changes: data.changes,
-      ...data.metadata
-    };
-
-    await this.publish('TICKET_UPDATED', payload);
+    await this.publish('TICKET_UPDATED', buildInboundPublisherTicketUpdatedPayload(data));
   }
 
   async publishTicketClosed(data: {
@@ -117,14 +108,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      ...data.metadata
-    };
-
-    await this.publish('TICKET_CLOSED', payload);
+    await this.publish('TICKET_CLOSED', buildInboundPublisherTicketClosedPayload(data));
   }
 
   async publishCommentCreated(data: {
@@ -166,13 +150,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId: string;
     assignedByUserId?: string;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      assignedByUserId: data.assignedByUserId
-    };
-
-    await this.publish('TICKET_ASSIGNED', payload);
+    await this.publish('TICKET_ASSIGNED', buildInboundPublisherTicketAssignedPayload(data));
   }
 }

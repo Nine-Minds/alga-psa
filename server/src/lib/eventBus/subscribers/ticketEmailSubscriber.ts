@@ -1,3 +1,4 @@
+import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getEventBus } from '../index';
 import {
   EventType,
@@ -2472,7 +2473,7 @@ async function sendTicketAssignedNotifications(
       safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
 
     // Detect team assignment via event payload changes
-    const assignedTeamId = (payload as any).changes?.assigned_team_id as string | undefined;
+    const assignedTeamId = readAssignedTeamId(payload);
     let teamName: string | undefined;
     if (assignedTeamId) {
       const team = await tenantDb(db, tenantId).table('teams')

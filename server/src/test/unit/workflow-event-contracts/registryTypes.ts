@@ -21,6 +21,13 @@ export type KnownDriftEntry = {
   status: 'known-drift';
   ticket: TicketRef;
   reason: string;
+  /**
+   * Set when the failure is structural rather than payload drift. `schema_not_registered`: the
+   * catalog names a payload schema ref that the workflow worker's schema registry does not have,
+   * so the worker would throw on every such event. The main test asserts that exact code (not
+   * just "fails"), so registering the schema turns it red and forces the entry to be updated.
+   */
+  failureCode?: 'schema_not_registered';
   cases: [EmitterCase, ...EmitterCase[]];
 };
 
@@ -68,5 +75,20 @@ export function pendingMigration(eventType: WorkflowCatalogEventType, domain: st
         },
       },
     ],
+  };
+}
+
+/**
+ * Catalogued event whose payload schema ref is missing from the worker's schema registry. No
+ * builder can pass until the schema is registered (schema collapse, plan step B), so the entry is
+ * asserted to fail with `schema_not_registered` specifically.
+ */
+export function schemaNotRegistered(eventType: WorkflowCatalogEventType, schemaRef: string): KnownDriftEntry {
+  return {
+    status: 'known-drift',
+    ticket: TRACKING_TICKET,
+    reason: `schema_not_registered: ${schemaRef}`,
+    failureCode: 'schema_not_registered',
+    cases: [{ site: `unregistered-schema#${eventType}`, build: () => ({}) }],
   };
 }

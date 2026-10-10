@@ -14,17 +14,21 @@ const COMMENT_ID = '33333333-3333-4333-8333-333333333333';
 const convertWithoutBackstop = (event: { payload: Record<string, unknown> }) => ({ payload: event.payload });
 
 describe('harness self-test: drift replay', () => {
-  it('alga0002101: {previousState,newState} with no occurredAt is rejected at occurredAt when the backstop is bypassed', () => {
+  it('alga0002101: {previousState,newState} with no occurredAt is flagged at occurredAt, previousResponseState and newResponseState when the backstop is bypassed', () => {
     const result = runEmitterCase(
       'TICKET_RESPONSE_STATE_CHANGED' as WorkflowCatalogEventType,
       {
         site: 'selftest#alga0002101',
         build: () => ({ tenantId: 'tenant-contract', ticketId: TICKET_ID, previousState: null, newState: 'awaiting_client' }),
+        expectFields: ['previousResponseState', 'newResponseState'],
       },
       { publishPath: 'rawPublishEvent', convert: convertWithoutBackstop as never }
     );
     expect(result.ok).toBe(false);
-    expect(result.issues.map((i) => i.path)).toContain('occurredAt');
+    const paths = result.issues.map((i) => i.path);
+    expect(paths).toContain('occurredAt');
+    expect(paths).toContain('previousResponseState');
+    expect(paths).toContain('newResponseState');
   });
 
   it('the real backstop would have hidden alga0002101 (why the bypass seam exists)', () => {

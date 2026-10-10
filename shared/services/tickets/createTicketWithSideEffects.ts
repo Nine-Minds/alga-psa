@@ -16,6 +16,7 @@ import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
 import { buildTicketResolutionSlaStageEnteredEvent } from './ticketSlaStageEvents';
+import { buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
  * Who is creating the ticket.
@@ -254,12 +255,14 @@ export async function createTicketWithSideEffects(
     registerAfterCommit(
       trx,
       () =>
-        publishTicketEvent('TICKET_ASSIGNED', {
-          tenantId: tenant,
-          ticketId,
-          userId: assignee,
-          ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
-        }),
+        publishTicketEvent(
+          'TICKET_ASSIGNED',
+          buildTicketAssignedPayload({
+            ticketId,
+            userId: assignee,
+            ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
+          }),
+        ),
       `TICKET_ASSIGNED ticket=${ticketId}`,
     );
   }

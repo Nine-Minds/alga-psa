@@ -37,6 +37,12 @@ export type EmitterCase = {
    * express "optional, but the emitter always sends it".
    */
   expectFields?: readonly string[];
+  /**
+   * `rawPublishEvent` for emitters that still hand the event bus their payload as-is (no
+   * `buildWorkflowPayload` envelope): the inbound-email outbox dispatcher and WorkflowEventPublisher.
+   * Default is `publishWorkflowEvent`. A harness option of the same name overrides this.
+   */
+  publishPath?: 'publishWorkflowEvent' | 'rawPublishEvent';
 };
 
 export type HarnessIssue = { path: string; code: string; message: string };
@@ -99,7 +105,7 @@ export function runEmitterCase(
 
   const built = emitterCase.build();
   const payload =
-    options.publishPath === 'rawPublishEvent'
+    (options.publishPath ?? emitterCase.publishPath) === 'rawPublishEvent'
       ? built
       : buildWorkflowPayload(built, {
           tenantId: HARNESS_TENANT_ID,

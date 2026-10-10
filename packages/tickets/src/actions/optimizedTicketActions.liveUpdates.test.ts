@@ -840,11 +840,14 @@ describe('updateTicketWithCache live updates', () => {
       'alga-psa:ticket-updates:tenant-1:ticket-1',
       expect.stringContaining('"updatedFields":["status_id","response_state"]')
     );
-    expect(publishEventMock).toHaveBeenCalledWith({
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
+      ctx: expect.objectContaining({
         tenantId: 'tenant-1',
         occurredAt: expect.any(String),
+        actor: { actorType: 'USER', actorUserId: 'user-1' },
+      }),
+      payload: {
         ticketId: 'ticket-1',
         userId: 'user-1',
         previousResponseState: 'awaiting_client',

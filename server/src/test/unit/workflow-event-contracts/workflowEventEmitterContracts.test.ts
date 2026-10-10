@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WORKFLOW_EVENT_CATALOG, type WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { emitterContracts } from './emitterContracts';
-import { assertEmitterCase } from './harness';
+import { assertEmitterCase, runEmitterCase } from './harness';
 import { NO_EMITTER_UMBRELLA_TICKET } from './registryTypes';
 
 const eventTypes = Object.keys(WORKFLOW_EVENT_CATALOG) as WorkflowCatalogEventType[];
@@ -34,6 +34,11 @@ describe('workflow event emitter contracts', () => {
       if (entry.status === 'covered') {
         it(`${emitterCase.site} passes the worker schema`, () => {
           assertEmitterCase(eventType, emitterCase);
+        });
+      } else if (entry.failureCode) {
+        it(`[known-drift ${entry.ticket}] ${eventType} fails with ${entry.failureCode}: ${entry.reason}`, () => {
+          const result = runEmitterCase(eventType, emitterCase);
+          expect(result.issues.map((issue) => issue.code)).toEqual([entry.failureCode]);
         });
       } else {
         // Fixing the drift turns this red, which forces the exclusion to be removed.
