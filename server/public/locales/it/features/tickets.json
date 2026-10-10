@@ -761,6 +761,8 @@
       "failure": "Impossibile aggiornare lo stato",
       "failedHeading": "Stato non aggiornato sui seguenti ticket:",
       "resolutionLabel": "Commento di risoluzione (facoltativo)",
+      "resolutionLabelRequired": "Commento di risoluzione",
+      "resolutionRequiredHint": "Questa bacheca richiede un commento di risoluzione prima di poter chiudere i ticket.",
       "resolutionPlaceholder": "Descrivi come sono stati risolti questi ticket",
       "resolutionHelper": "Viene salvato come risoluzione su ogni ticket selezionato e soddisfa le bacheche che ne richiedono una prima della chiusura."
     },

@@ -849,6 +849,8 @@
       "failure": "Nie udało się zaktualizować statusu",
       "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
       "resolutionLabel": "Komentarz rozwiązania (opcjonalnie)",
+      "resolutionLabelRequired": "Komentarz rozwiązania",
+      "resolutionRequiredHint": "Ta tablica wymaga komentarza rozwiązania przed zamknięciem zgłoszeń.",
       "resolutionPlaceholder": "Opisz, jak rozwiązano te zgłoszenia",
       "resolutionHelper": "Zapisywany jako rozwiązanie w każdym wybranym zgłoszeniu i spełnia wymagania tablic, które wymagają go przed zamknięciem.",
       "confirm_few": "Zaktualizuj {{count}} zgłoszenia",

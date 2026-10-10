@@ -769,6 +769,8 @@
       "failure": "Failed to update status on selected tickets",
       "failedHeading": "Status could not be updated on the following tickets:",
       "resolutionLabel": "Resolution comment (optional)",
+      "resolutionLabelRequired": "Resolution comment",
+      "resolutionRequiredHint": "This board requires a resolution comment before tickets can be closed.",
       "resolutionPlaceholder": "Describe how these tickets were resolved",
       "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing."
     },

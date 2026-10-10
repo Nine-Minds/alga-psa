@@ -761,6 +761,8 @@
       "failure": "Bijwerken van status is mislukt",
       "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:",
       "resolutionLabel": "Oplossingscommentaar (optioneel)",
+      "resolutionLabelRequired": "Oplossingscommentaar",
+      "resolutionRequiredHint": "Dit bord vereist een oplossingscommentaar voordat tickets kunnen worden gesloten.",
       "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
       "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten."
     },

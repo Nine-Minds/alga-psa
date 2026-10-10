@@ -761,6 +761,8 @@
       "failure": "Fehler beim Aktualisieren des Status",
       "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:",
       "resolutionLabel": "Lösungskommentar (optional)",
+      "resolutionLabelRequired": "Lösungskommentar",
+      "resolutionRequiredHint": "Für dieses Board ist ein Lösungskommentar erforderlich, bevor Tickets geschlossen werden können.",
       "resolutionPlaceholder": "Beschreiben Sie, wie diese Tickets gelöst wurden",
       "resolutionHelper": "Wird als Lösung in jedem ausgewählten Ticket gespeichert und erfüllt Boards, die vor dem Schließen eine Lösung verlangen."
     },

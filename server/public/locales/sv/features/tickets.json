@@ -769,6 +769,8 @@
       "failure": "Det gick inte att uppdatera status för de markerade ärendena",
       "failedHeading": "Det gick inte att uppdatera status för följande ärenden:",
       "resolutionLabel": "Lösningskommentar (valfritt)",
+      "resolutionLabelRequired": "Lösningskommentar",
+      "resolutionRequiredHint": "Den här tavlan kräver en lösningskommentar innan ärenden kan stängas.",
       "resolutionPlaceholder": "Beskriv hur dessa ärenden löstes",
       "resolutionHelper": "Sparas som lösningen på varje markerat ärende och uppfyller tavlor som kräver en innan stängning."
     },

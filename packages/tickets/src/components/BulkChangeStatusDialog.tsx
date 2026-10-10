@@ -35,6 +35,11 @@ interface BulkChangeStatusDialogProps {
   statuses: SelectOption[];
   /** Status ids that close a ticket; picking one unlocks the resolution field. */
   closedStatusIds?: string[];
+  /**
+   * The board's close rules demand a resolution comment (enabled rules with
+   * require_resolution_comment). UX only; the server still enforces.
+   */
+  resolutionRequired?: boolean;
   isLoadingStatuses: boolean;
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
@@ -49,6 +54,7 @@ export default function BulkChangeStatusDialog({
   ticketIds,
   statuses,
   closedStatusIds,
+  resolutionRequired = false,
   isLoadingStatuses,
   failed,
   isSubmitting,
@@ -123,11 +129,16 @@ export default function BulkChangeStatusDialog({
   );
   const hasBundleMasters = bundleMasterIds.length > 0;
 
-  const canConfirm = !!selectedStatusId && !isLoadingStatuses && !isLoadingPreviews;
   // A closing status is the only one a resolution comment belongs to; the
   // server drops the text for any other status anyway.
   const isClosingStatus = !!selectedStatusId && (closedStatusIds ?? []).includes(selectedStatusId);
   const trimmedResolution = resolution.trim();
+  const isResolutionRequired = isClosingStatus && resolutionRequired;
+  const canConfirm =
+    !!selectedStatusId &&
+    !isLoadingStatuses &&
+    !isLoadingPreviews &&
+    (!isResolutionRequired || trimmedResolution.length > 0);
 
   const handleConfirm = async () => {
     if (!selectedStatusId) return;
@@ -148,6 +159,7 @@ export default function BulkChangeStatusDialog({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
+      hasUnsavedChanges={trimmedResolution.length > 0}
       id={`${idPrefix}-dialog`}
       title={t('bulk.status.dialogTitle', 'Change Status for Selected Tickets')}
       className="max-w-md"
@@ -190,7 +202,11 @@ export default function BulkChangeStatusDialog({
           <div className="mb-4 space-y-2">
             <TextArea
               id={`${idPrefix}-resolution`}
-              label={t('bulk.status.resolutionLabel', 'Resolution comment (optional)')}
+              label={
+                isResolutionRequired
+                  ? t('bulk.status.resolutionLabelRequired', 'Resolution comment')
+                  : t('bulk.status.resolutionLabel', 'Resolution comment (optional)')
+              }
               value={resolution}
               onChange={(event) => setResolution(event.target.value)}
               placeholder={t(
@@ -199,6 +215,9 @@ export default function BulkChangeStatusDialog({
               )}
               rows={3}
               disabled={isSubmitting}
+              required={isResolutionRequired}
+              aria-required={isResolutionRequired ? 'true' : undefined}
+              aria-describedby={`${idPrefix}-resolution-hint`}
             />
             <div className="flex items-center gap-2">
               <Switch
@@ -211,11 +230,16 @@ export default function BulkChangeStatusDialog({
                 {t('info.markResolutionInternal', 'Mark as Internal')}
               </Label>
             </div>
-            <p className="text-xs text-gray-600">
-              {t(
-                'bulk.status.resolutionHelper',
-                'Saved as the resolution on each selected ticket, satisfying boards that require one before closing.',
-              )}
+            <p id={`${idPrefix}-resolution-hint`} className="text-xs text-gray-600">
+              {isResolutionRequired
+                ? t(
+                    'bulk.status.resolutionRequiredHint',
+                    'This board requires a resolution comment before tickets can be closed.',
+                  )
+                : t(
+                    'bulk.status.resolutionHelper',
+                    'Saved as the resolution on each selected ticket, satisfying boards that require one before closing.',
+                  )}
             </p>
           </div>
         )}
