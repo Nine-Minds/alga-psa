@@ -21,6 +21,8 @@ export const WEBHOOK_TICKET_PAYLOAD_FIELDS = [
   'is_closed',
   'previous_status_id',
   'previous_status_name',
+  'previous_response_state',
+  'new_response_state',
   'priority_id',
   'priority_name',
   'client_id',

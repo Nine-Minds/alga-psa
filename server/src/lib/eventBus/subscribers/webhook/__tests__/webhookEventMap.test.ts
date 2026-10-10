@@ -14,6 +14,7 @@ const TABLE: Array<[TicketWebhookInternalEvent, TicketWebhookPublicEvent[]]> = [
   ['TICKET_ASSIGNED', ['ticket.assigned']],
   ['TICKET_CLOSED', ['ticket.closed']],
   ['TICKET_COMMENT_ADDED', ['ticket.comment.added']],
+  ['TICKET_RESPONSE_STATE_CHANGED', ['ticket.response_state_changed']],
 ];
 
 describe('publicEventsFor (T019)', () => {

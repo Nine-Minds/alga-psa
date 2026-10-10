@@ -18631,7 +18631,8 @@
           "ticket.status_changed",
           "ticket.assigned",
           "ticket.closed",
-          "ticket.comment.added"
+          "ticket.comment.added",
+          "ticket.response_state_changed"
         ],
         "description": "Ticket-domain webhook events emitted by the eventBus subscriber."
       },
@@ -18644,6 +18645,7 @@
           "ticket.assigned",
           "ticket.closed",
           "ticket.comment.added",
+          "ticket.response_state_changed",
           "project.created",
           "project.updated",
           "project.status_changed",
@@ -18759,6 +18761,8 @@
                     "is_closed",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -18828,7 +18832,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": "object",
@@ -19114,6 +19118,8 @@
                     "is_closed",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19183,7 +19189,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": [
@@ -20080,6 +20086,24 @@
           },
           "is_internal": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ],
+            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           }
         },
         "required": [
@@ -20110,6 +20134,23 @@
           },
           "is_resolution": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           },
           "created_at": {
             "type": "string",
@@ -20187,6 +20228,28 @@
               "null"
             ],
             "description": "Only populated on ticket.status_changed."
+          },
+          "previous_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
+          },
+          "new_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
           "priority_id": {
             "type": [
@@ -20554,6 +20617,39 @@
             "type": "string",
             "enum": [
               "ticket.comment.added"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketResponseStateChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.response_state_changed"
             ]
           },
           "occurred_at": {
@@ -134262,7 +134358,7 @@
     "ticket.comment.added": {
       "post": {
         "summary": "Outbound delivery: ticket.comment.added",
-        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
         "tags": [
           "Webhooks"
         ],
@@ -134337,6 +134433,99 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TicketCommentAddedDeliveryV1"
+              },
+              "description": "Signed JSON envelope."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoint accepted the delivery (any 2xx is treated as success)."
+          },
+          "410": {
+            "description": "Endpoint indicates the resource is permanently gone; webhook will be auto-disabled."
+          }
+        }
+      }
+    },
+    "ticket.response_state_changed": {
+      "post": {
+        "summary": "Outbound delivery: ticket.response_state_changed",
+        "description": "Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "tags": [
+          "Webhooks"
+        ],
+        "extensions": {
+          "x-alga-event-type": "ticket.response_state_changed",
+          "x-rbac-resource": "webhook"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`."
+            },
+            "required": true,
+            "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.",
+            "name": "x-alga-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-webhook-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-event-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/WebhookEventTypeV1"
+            },
+            "required": true,
+            "name": "x-alga-event-type",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-delivery-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stringified attempt count, starts at 1."
+            },
+            "required": true,
+            "description": "Stringified attempt count, starts at 1.",
+            "name": "x-alga-delivery-attempt",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Signed JSON envelope.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketResponseStateChangedDeliveryV1"
               },
               "description": "Signed JSON envelope."
             }

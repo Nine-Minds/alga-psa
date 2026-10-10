@@ -374,6 +374,7 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
+// LEVERAGE: pattern response-state-from-comment — duplicate of applyCommentResponseState (shared/lib/tickets/responseState.ts) minus the tracking-setting check; not swapped because the contract/live-update tests pin this local function and the swap adds the tracking check.
 async function updateTicketResponseStateFromComment(
   trx: Knex.Transaction,
   tenant: string,

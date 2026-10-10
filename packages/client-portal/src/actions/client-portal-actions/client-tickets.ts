@@ -679,6 +679,7 @@ export const addClientTicketComment = withAuth(async (
       const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
       if (!isInternal) {
+        // LEVERAGE: pattern response-state-from-comment — client portal writes awaiting_internal directly (no tracking check, no TICKET_RESPONSE_STATE_CHANGED); route through applyCommentResponseState in shared/lib/tickets/responseState.ts once portal behaviour change is accepted.
         await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: ticketId,
