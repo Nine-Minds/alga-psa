@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
 
 /**
  * Ticket lifecycle event engine.
@@ -188,6 +188,11 @@ export interface TicketCreationWithPayloadExtras {
   readonly reason: string;
   readonly publisher: IEventPublisher;
   readonly payloadExtras: Readonly<Record<string, unknown>>;
+  /**
+   * Explicit actor for TICKET_CREATED when it is not derivable from the `userId`
+   * argument (e.g. a CONTACT for inbound email). Forwarded to `publishTicketCreated`.
+   */
+  readonly actor?: WorkflowActor;
 }
 
 export type TicketCreationEvents = IEventPublisher | SilentTicketCreation | TicketCreationWithPayloadExtras;
@@ -215,6 +220,24 @@ export function contactSuppressedTicketCreation(
     publisher,
     payloadExtras: { suppressContactNotifications: true },
   };
+}
+
+/**
+ * Publish TICKET_CREATED through `publisher` with an explicit actor, e.g. the matched
+ * contact of an inbound email that has no user account.
+ */
+export function ticketCreationWithActor(
+  publisher: IEventPublisher,
+  actor: WorkflowActor,
+  reason: string
+): TicketCreationWithPayloadExtras {
+  if (!reason || !reason.trim()) {
+    throw new Error('ticketCreationWithActor requires a reason');
+  }
+  if (!publisher) {
+    throw new Error('ticketCreationWithActor requires a publisher');
+  }
+  return { __ticketCreationWithPayloadExtras: true, reason, publisher, payloadExtras: {}, actor };
 }
 
 export function isTicketCreationWithPayloadExtras(value: unknown): value is TicketCreationWithPayloadExtras {

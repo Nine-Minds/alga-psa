@@ -1853,9 +1853,10 @@ async function formatAccumulatedChanges(
           .where({ user_id: changeSet.userId })
           .first()
       : null;
+    // Never render a raw id: no user row (or no userId at all) reads as System.
     const updaterName = updater
       ? `${updater.first_name} ${updater.last_name}`
-      : (changeSet.userId || 'System');
+      : 'System';
 
     const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
@@ -2075,7 +2076,8 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
           `${u.first_name} ${u.last_name}`,
         ])
       );
-      const orderedNames = uniqueUpdaterIds.map((id) => idToName.get(id) || id);
+      // An id with no user row (deleted user, legacy non-user id) reads as System, never a UUID.
+      const orderedNames = Array.from(new Set(uniqueUpdaterIds.map((id) => idToName.get(id) ?? 'System')));
       updatedByDisplay = orderedNames.join(', ');
     }
 
@@ -2269,6 +2271,7 @@ async function sendTicketAssignedNotifications(
 ): Promise<void> {
   const { tenantId } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
+  // LEVERAGE: friction ticket-assigned-userid-overload — on TICKET_ASSIGNED `userId` is the assignee, so this fallback can show the assignee as the assigner; follow-up
   const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
@@ -2635,6 +2638,7 @@ async function sendTicketAssignedNotifications(
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  // LEVERAGE: friction ticket-assigned-userid-overload — on TICKET_ASSIGNED `userId` is the assignee, so this fallback can show the assignee as the assigner; follow-up
   const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
   const accumulator = NotificationAccumulator.getInstance();
 

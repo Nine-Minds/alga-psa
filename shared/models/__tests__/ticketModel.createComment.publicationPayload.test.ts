@@ -39,6 +39,10 @@ function createTrxHarness() {
         };
       case 'ticket_comment_attachments':
         return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
+      case 'contacts': {
+        const chain: any = { where: () => chain, select: () => chain, first: async () => ({ full_name: 'Contact Person' }) };
+        return chain;
+      }
       default:
         throw new Error(`Unexpected table in createComment publication payload test: ${table}`);
     }
@@ -81,8 +85,27 @@ describe('TicketModel.createComment publication payload', () => {
 
     const payload = persistedPayload();
     expect(payload.comment.author).toBe('Ada Lovelace');
-    expect(payload.userId).toBe(ticketId);
+    // Never the ticket id: a user-less comment is a SYSTEM actor with no userId.
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload.actorType).toBe('SYSTEM');
     expect(() => parseAsEvent(payload)).not.toThrow();
+  });
+
+  it('publishes a CONTACT actor and no userId when the comment has a contact', async () => {
+    const { trx, persistedPayload } = createTrxHarness();
+    const contactId = randomUUID();
+
+    await TicketModel.createComment(
+      { ticket_id: ticketId, content: 'Reply from a contact', contact_id: contactId },
+      tenant,
+      trx,
+      { publishCommentCreated: vi.fn() } as any
+    );
+
+    const payload = persistedPayload();
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
+    expect(parseAsEvent(payload).payload).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
   });
 
   it('falls back to the sender address when only an address was captured', async () => {
@@ -116,7 +139,9 @@ describe('TicketModel.createComment publication payload', () => {
 
     const payload = persistedPayload();
     expect(payload.comment.author).toBe('System');
-    expect(payload.userId).toBe(ticketId);
-    expect(parseAsEvent(payload).payload).toMatchObject({ userId: ticketId, comment: { author: 'System' } });
+    expect(payload).not.toHaveProperty('userId');
+    const parsed = parseAsEvent(payload).payload as any;
+    expect(parsed).not.toHaveProperty('userId');
+    expect(parsed).toMatchObject({ actorType: 'SYSTEM', comment: { author: 'System' } });
   });
 });

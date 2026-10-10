@@ -12,6 +12,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
@@ -1023,6 +1024,7 @@ export class TicketModel {
         ? eventPublisher.publisher
         : eventPublisher;
       const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
+      const creationActor = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.actor : undefined;
       try {
         // Tickets from inbound email or the portal often have no contact or
         // client. Carry real names plus the sender email so a workflow title
@@ -1033,6 +1035,8 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
+          // Only a contact/system actor is passed explicitly; otherwise the publisher derives it from userId.
+          ...(creationActor && !userId ? { actor: creationActor } : {}),
           metadata: {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
@@ -1606,15 +1610,19 @@ export class TicketModel {
           user_id: validatedData.author_id,
           metadata: validatedData.metadata,
         });
-        // The event schema requires a uuid; user-less comments reuse the ticket
-        // id as the sentinel actor, matching the inbound-email outbox publisher.
-        const eventUserId = userId || validatedData.author_id || validatedData.ticket_id;
+        // Never substitute a non-user id: a user-less comment is published as a CONTACT
+        // (matched sender) or SYSTEM actor with no payload.userId.
+        const actor = resolveTicketEventActor({
+          userId: userId || validatedData.author_id,
+          contactId: validatedData.contact_id,
+        });
 
         const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: eventUserId,
+          userId: userId || validatedData.author_id || undefined,
+          actor,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
@@ -1629,7 +1637,7 @@ export class TicketModel {
           await eventPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
+            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, ...ticketEventActorFields(actor),
             comment: { id: commentId, content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
           } });

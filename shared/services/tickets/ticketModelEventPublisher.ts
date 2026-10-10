@@ -1,7 +1,13 @@
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+
+/** The explicit actor if given, else derived from `userId` (never a substitute id). */
+function actorOf(data: { userId?: string; actor?: WorkflowActor }): WorkflowActor {
+  return data.actor ?? resolveTicketEventActor({ userId: data.userId });
+}
 
 export class TicketModelEventPublisher implements IEventPublisher {
   /**
@@ -22,11 +28,11 @@ export class TicketModelEventPublisher implements IEventPublisher {
     } = {},
   ) {}
 
-  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
+  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent('TICKET_CREATED', {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
-      userId: data.userId,
+      ...ticketEventActorFields(actorOf(data)),
       ...data.metadata,
       ...this.options.ticketCreatedPayload,
     });
@@ -36,23 +42,24 @@ export class TicketModelEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.safePublishEvent('TICKET_UPDATED', {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
-      userId: data.userId,
+      ...ticketEventActorFields(actorOf(data)),
       changes: data.changes,
       ...data.metadata,
     });
   }
 
-  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
+  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent('TICKET_CLOSED', {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
-      userId: data.userId,
+      ...ticketEventActorFields(actorOf(data)),
       ...data.metadata,
     });
   }
@@ -62,13 +69,14 @@ export class TicketModelEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.safePublishEvent('TICKET_COMMENT_ADDED', {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
       commentId: data.commentId,
-      userId: data.userId,
+      ...ticketEventActorFields(actorOf(data)),
       ...data.metadata,
     });
   }
@@ -83,10 +91,19 @@ export class TicketModelEventPublisher implements IEventPublisher {
   }
 
   private async safePublishEvent(eventType: string, payload: any): Promise<void> {
+    // The payload was built from an explicit/derived actor (ticketEventActorFields), so a
+    // CONTACT actor is carried by actorType + actorContactId. TICKET_ASSIGNED attributes
+    // the action to the assigner (falling back to the assignee), as before.
     const actorUserId =
       typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
         ? payload.assignedByUserId
         : (typeof payload?.userId === 'string' ? payload.userId : undefined);
+    const actor: WorkflowActor =
+      payload?.actorType === 'CONTACT' && typeof payload?.actorContactId === 'string'
+        ? { actorType: 'CONTACT', actorContactId: payload.actorContactId }
+        : actorUserId
+          ? { actorType: 'USER', actorUserId }
+          : { actorType: 'SYSTEM' };
 
     const publish = () =>
       publishWorkflowEvent({
@@ -94,7 +111,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
         payload,
         ctx: {
           tenantId: String(payload?.tenantId ?? ''),
-          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
+          actor
         }
       });
 
