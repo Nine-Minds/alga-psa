@@ -473,7 +473,7 @@
       "unsupportedWorkItem": "De stopwatch kan alleen worden gestart op tickets en projecttaken.",
       "boardDisabled": "De stopwatch is uitgeschakeld voor het bord van dit ticket.",
       "alreadyOpen": "Er loopt al een stopwatch. Stop of verwerp deze eerst.",
-      "serviceRequired": "Kies een dienst voordat je deze stopwatchsessie registreert."
+      "serviceRequired": "Kies een dienst voordat u deze stopwatchsessie registreert."
     }
   },
   "workItemEntry": {
