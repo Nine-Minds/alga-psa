@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
 import type { ITicketResource } from '@alga-psa/types';
 import { buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
@@ -48,7 +48,7 @@ export type TicketResourceNotificationSuppression = {
 
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
-  await publishWorkflowEvent({
+  await publishWorkflowEventByName({
     eventType: event.eventType,
     payload: event.payload,
     ctx: {

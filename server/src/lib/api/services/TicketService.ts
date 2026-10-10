@@ -61,7 +61,7 @@ import {
   type RemoveTeamFromTicketOptions,
 } from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEventByName } from 'server/src/lib/eventBus/publishers';
 import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
@@ -3293,8 +3293,8 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
+      await publishWorkflowEventByName({
+        eventType: eventType,
         payload,
         ctx: {
           tenantId: context.tenant,

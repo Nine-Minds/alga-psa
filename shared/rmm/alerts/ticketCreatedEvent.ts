@@ -25,7 +25,7 @@ export async function publishRmmTicketCreated({
 }: PublishRmmTicketCreatedArgs): Promise<void> {
   const publish = () =>
     publishWorkflowEvent({
-      eventType: 'TICKET_CREATED' as any,
+      eventType: 'TICKET_CREATED',
       payload: buildRmmTicketCreatedPayload({ ticketId, source }),
       ctx: { tenantId, actor: { actorType: 'SYSTEM' } },
     });

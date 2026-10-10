@@ -32,8 +32,8 @@ async function publishNotificationEvent(
   options?: PublishOptions
 ): Promise<void> {
   try {
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-    await publishEvent({ eventType: eventType as any, payload } as any, options);
+    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
+    await publishEventByName({ eventType, payload }, options);
 
     console.log(`[WorkflowEventPublisher] Published ${eventType} through event bus`, {
       tenantId: payload.tenantId,

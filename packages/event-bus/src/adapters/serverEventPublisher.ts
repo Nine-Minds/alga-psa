@@ -5,7 +5,7 @@
 
 import type { IEventPublisher } from '@alga-psa/types';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEvent } from '../publishers';
+import { publishWorkflowEventByName } from '../publishers';
 import {
   buildServerPublisherTicketAssignedPayload,
   buildServerPublisherTicketClosedPayload,
@@ -77,8 +77,8 @@ export class ServerEventPublisher implements IEventPublisher {
   ): Promise<void> {
     const publish = async () => {
       try {
-        await publishWorkflowEvent({
-          eventType: eventType as any,
+        await publishWorkflowEventByName({
+          eventType: eventType,
           payload,
           ctx: {
             tenantId,

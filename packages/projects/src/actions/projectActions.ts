@@ -30,7 +30,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent, publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
@@ -1148,7 +1148,7 @@ export const markPhaseComplete = withAuth(async (
     });
 
     for (const entry of result.ready_events) {
-        await publishEvent({
+        await publishCatalogEventPayload({
             eventType: 'PROJECT_MILESTONE_READY',
             payload: {
                 tenantId: tenant,
@@ -1159,7 +1159,7 @@ export const markPhaseComplete = withAuth(async (
                 trigger: 'phase',
             },
         });
-        await publishEvent({
+        await publishCatalogEventPayload({
             eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
             payload: {
                 tenantId: tenant,

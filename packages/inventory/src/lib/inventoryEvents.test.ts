@@ -5,7 +5,7 @@ const { publishEventMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: publishEventMock,
+  publishEventByName: publishEventMock,
 }));
 
 import { publishInventoryEvent } from './inventoryEvents';

@@ -66,7 +66,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { emitDateDomainEventOnce, toTenantLocalDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
     buildAssetAssignedPayload,
@@ -1595,7 +1595,7 @@ export async function deleteAssetRecord(
             }
 
             const occurredAt = new Date().toISOString();
-            await publishWorkflowEvent({
+            await publishNonCatalogWorkflowEvent({
                 eventType: 'ASSET_DELETED',
                 payload: {
                     assetId: asset_id,

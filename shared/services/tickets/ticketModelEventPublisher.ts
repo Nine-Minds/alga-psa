@@ -1,7 +1,7 @@
 import type { IEventPublisher } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
 import {
   buildModelPublisherTicketAssignedPayload,
   buildModelPublisherTicketClosedPayload,
@@ -76,8 +76,8 @@ export class TicketModelEventPublisher implements IEventPublisher {
         : (typeof payload?.userId === 'string' ? payload.userId : undefined);
 
     const publish = () =>
-      publishWorkflowEvent({
-        eventType: eventType as any,
+      publishWorkflowEventByName({
+        eventType: eventType,
         payload,
         ctx: {
           tenantId,

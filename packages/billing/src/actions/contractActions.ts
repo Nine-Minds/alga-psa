@@ -20,7 +20,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContractRecordCreatedPayload, buildContractRecordUpdatedPayload } from '@alga-psa/workflow-streams';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
@@ -689,7 +689,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     const occurredAt = new Date().toISOString();
 
     for (const clientContract of clientContracts) {
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'CLIENT_CONTRACT_DELETED',
         payload: {
           clientContractId: clientContract.client_contract_id,
@@ -707,7 +707,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CONTRACT_DELETED',
       payload: {
         contractId,

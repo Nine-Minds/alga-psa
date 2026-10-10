@@ -4,7 +4,7 @@ const publishEventMock = vi.fn();
 const registerAfterCommitMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishEventByName: (...args: any[]) => publishEventMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({

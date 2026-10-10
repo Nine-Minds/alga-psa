@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
@@ -243,8 +243,8 @@ export async function createTicketWithSideEffects(
     payload: Record<string, unknown>,
     extra: { occurredAt?: string; idempotencyKey?: string; provenanceOnly?: boolean } = {},
   ) =>
-    publishWorkflowEvent({
-      eventType: eventType as any,
+    publishWorkflowEventByName({
+      eventType: eventType,
       payload: { ...payload, ...(extra.provenanceOnly ? provenance : eventExtras) },
       ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },
       ...(extra.idempotencyKey ? { idempotencyKey: extra.idempotencyKey } : {}),

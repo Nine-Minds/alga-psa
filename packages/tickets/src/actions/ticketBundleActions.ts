@@ -7,7 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEventByName, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -175,8 +175,8 @@ function registerBundlePublications(
     registerAfterCommit(
       trx,
       () =>
-        publishWorkflowEvent({
-          eventType: publication.eventType as any,
+        publishWorkflowEventByName({
+          eventType: publication.eventType,
           payload: publication.payload,
           ctx: workflowCtx,
           eventName: publication.eventName,
@@ -498,7 +498,7 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     return { oldMasterTicketId: data.oldMasterTicketId, newMasterTicketId: data.newMasterTicketId };
   });
 
-  await publishWorkflowEvent({
+  await publishWorkflowEventByName({
     eventType: 'TICKET_MERGED',
     ctx: workflowCtx,
     eventName: 'Ticket Merged',
@@ -617,7 +617,7 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
     return { masterTicketId, childTicketId: data.childTicketId, remainingChildren: remaining };
   });
 
-  await publishWorkflowEvent({
+  await publishWorkflowEventByName({
     eventType: 'TICKET_SPLIT',
     ctx: workflowCtx,
     eventName: 'Ticket Split',
@@ -789,7 +789,7 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
   });
 
   if (result.childTicketIds.length > 0) {
-    await publishWorkflowEvent({
+    await publishWorkflowEventByName({
       eventType: 'TICKET_SPLIT',
       ctx: workflowCtx,
       eventName: 'Ticket Split',

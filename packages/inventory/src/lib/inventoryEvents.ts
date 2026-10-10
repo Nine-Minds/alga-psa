@@ -24,8 +24,8 @@ export async function publishInventoryEvent(
   payload: InventoryEventPayload,
 ): Promise<void> {
   try {
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-    await publishEvent({ eventType, payload } as never);
+    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
+    await publishEventByName({ eventType, payload: payload as Record<string, unknown> });
   } catch (error) {
     console.error(`[InventoryEvents] Failed to publish ${eventType}:`, error);
   }

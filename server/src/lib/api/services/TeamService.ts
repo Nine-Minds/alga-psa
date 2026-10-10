@@ -41,7 +41,7 @@ import {
 import { ListOptions } from '../controllers/types';
 // Removed user actions import - will query users directly
 // TeamModel removed - functionality implemented directly in service
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { 
   generateResourceLinks, 
   generateComprehensiveLinks,
@@ -401,7 +401,7 @@ export class TeamService extends BaseService<ITeam> {
         }
   
         // Publish team created event
-        await publishEvent({
+        await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -479,7 +479,7 @@ export class TeamService extends BaseService<ITeam> {
         .update(updateData);
 
       // Publish team updated event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -520,7 +520,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish team deleted event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -586,7 +586,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish member added event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -631,7 +631,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish member removed event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -699,7 +699,7 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
 
       // Publish bulk members added event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -737,7 +737,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish bulk members removed event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -795,7 +795,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Publish manager assigned event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -910,7 +910,7 @@ export class TeamService extends BaseService<ITeam> {
         });
 
       // Publish hierarchy created event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -928,7 +928,7 @@ export class TeamService extends BaseService<ITeam> {
       .del();
 
     // Publish hierarchy removed event
-    await publishEvent({
+    await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -974,7 +974,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish permission granted event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -1004,7 +1004,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
     // Publish permission revoked event
-    await publishEvent({
+    await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });
@@ -1086,7 +1086,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish assignment event
-      await publishEvent({
+      await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
       });

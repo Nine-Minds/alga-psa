@@ -49,7 +49,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(async (event: unknown) => {
+  publishCatalogEventPayload: vi.fn(async (event: unknown) => {
     state.publishedEvents.push(event);
   }),
 }));

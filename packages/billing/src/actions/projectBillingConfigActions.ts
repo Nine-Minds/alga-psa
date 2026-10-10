@@ -16,7 +16,7 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -581,7 +581,7 @@ export const createProjectBillingConfig = withAuth(withProjectBillingActionError
     }, trx);
   });
   revalidateProjectBilling(created.project_id);
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: 'PROJECT_BILLING_CONFIG_CREATED',
     payload: {
       tenantId: tenant,
@@ -662,7 +662,7 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     return Object.assign(updated, { allocation_warning: allocationWarning });
   });
   revalidateProjectBilling(result.project_id);
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
     payload: {
       tenantId: tenant,
@@ -766,7 +766,7 @@ export const recalculateProjectTotalFromSchedule = withAuth(withProjectBillingAc
   });
 
   revalidateProjectBilling(result.projectId);
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
     payload: {
       tenantId: tenant,
@@ -801,7 +801,7 @@ export const deleteProjectBillingConfig = withAuth(withProjectBillingActionError
     return config;
   });
   revalidateProjectBilling(deletedConfig.project_id);
-  await publishEvent({
+  await publishCatalogEventPayload({
     eventType: 'PROJECT_BILLING_CONFIG_DELETED',
     payload: {
       tenantId: tenant,

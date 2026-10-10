@@ -4,7 +4,7 @@ import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishWorkflowEventByName: publishWorkflowEventMock,
 }));
 
 function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {

@@ -20,7 +20,7 @@ import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
 import {
   sanitizeUserForResponse,
@@ -647,7 +647,7 @@ export const addUser = withAuth(async (
 
     if (result.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_CREATED',
         payload: {
           userId: result.user.user_id,
@@ -947,7 +947,7 @@ export const deleteUser = withAuth(async (
 
     if (response.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_DELETED',
         payload: {
           userId,
@@ -1154,7 +1154,7 @@ export const updateUser = withAuth(async (
         (field) => userData[field as keyof typeof userData] !== undefined
       );
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_UPDATED',
         payload: {
           userId,
@@ -1471,7 +1471,7 @@ export const deactivateUserWithDisposition = withAuth(
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
-        await publishWorkflowEvent({
+        await publishNonCatalogWorkflowEvent({
           eventType: "USER_UPDATED",
           payload: {
             userId,
@@ -1546,7 +1546,7 @@ export const updateUserRoles = withAuth(async (
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'USER_ROLES_UPDATED',
       payload: {
         userId,

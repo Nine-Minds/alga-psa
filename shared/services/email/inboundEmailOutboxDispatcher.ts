@@ -13,6 +13,7 @@
  * notification consumers dedupe that stable event id.
  */
 
+import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
 import {
@@ -24,6 +25,14 @@ import {
   transitionOutboxRow,
   type InboundOutboxRecord,
 } from './inboundEmailDurableStore';
+
+/** Outbox payloads are JSON objects; refuse anything else instead of casting it to `any`. */
+function outboxPayload(payload: unknown): Record<string, unknown> {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('inbound email outbox row has a non-object payload');
+  }
+  return payload as Record<string, unknown>;
+}
 
 function publishOptionsFor(row: InboundOutboxRecord): Record<string, unknown> | null {
   return row.publish_options ?? null;
@@ -88,16 +97,16 @@ export async function processInboundOutboxJob(
   let published = false;
   let publishError: string | null = null;
   try {
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
     const publishOptions = publishOptionsFor(row);
-    const options: Record<string, unknown> = {
+    const options: PublishOptions = {
       eventId: row.outbox_id,
       strict: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await publishEvent(
-      { eventType: row.event_type as any, payload: row.payload as any },
-      options as any
+    await publishEventByName(
+      { eventType: String(row.event_type), payload: outboxPayload(row.payload) },
+      options
     );
     published = true;
   } catch (error: any) {
@@ -174,17 +183,17 @@ export async function processInboundOutboxRepublishJob(
   }
 
   try {
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
     const publishOptions = publishOptionsFor(row);
-    const options: Record<string, unknown> = {
+    const options: PublishOptions = {
       eventId: row.outbox_id,
       strict: true,
       force: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await publishEvent(
-      { eventType: row.event_type as any, payload: row.payload as any },
-      options as any
+    await publishEventByName(
+      { eventType: String(row.event_type), payload: outboxPayload(row.payload) },
+      options
     );
     console.log('[InboundEmailOutboxDispatcher] recovery republished outbox event', {
       event: 'inbound_email_outbox_republished',

@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
-import { Event } from '../events';
+import { isWorkflowCatalogEventType, type WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { EVENT_TYPES, type Event, type EventType } from '../events';
 import { getEventBus } from '../index';
 import { buildWorkflowPayload, type WorkflowEventPublishContext } from '../workflow/workflowEventPublishHelpers';
 import type { WorkflowPublishHooks } from '../schemas/eventBusSchema';
@@ -75,8 +76,63 @@ const INTERNAL_NOTIFICATION_EVENT_TYPES = new Set<Event['eventType']>([
   'CALENDAR_SHARE_GRANTED'
 ]);
 
+/**
+ * Event types with no workflow catalog entry (no registered payload schema). These are the only
+ * types `publishEvent` accepts directly; catalogued types must go through `publishWorkflowEvent`
+ * (builder payload + context, validated by the contract tests) or `publishCatalogEventPayload`.
+ */
+export type NonCatalogEventType = Exclude<EventType, WorkflowCatalogEventType>;
+
+/** Shape accepted by the narrowed `publishEvent`. */
+export type NonCatalogEvent = {
+  eventType: NonCatalogEventType;
+  payload: Record<string, unknown>;
+};
+
 export async function publishEvent(
-  event: Omit<Event, 'id' | 'timestamp'>,
+  event: NonCatalogEvent,
+  options?: PublishOptions
+): Promise<void> {
+  await publishEventUnchecked(event, options);
+}
+
+/**
+ * Raw path for a payload that is ALREADY built for a catalogued event (WorkflowEventPublisher,
+ * the inbound-email outbox dispatcher, inventory). The event type is constrained to the catalog at
+ * compile time; payload shape is covered by the emitter contract tests.
+ */
+export async function publishCatalogEventPayload<T extends WorkflowCatalogEventType>(
+  event: { eventType: T; payload: Record<string, unknown> },
+  options?: PublishOptions
+): Promise<void> {
+  await publishEventUnchecked(event, options);
+}
+
+/**
+ * For adapters whose event type is only known as a string at runtime (stored outbox rows, generic
+ * IEventPublisher). Catalogued types take the catalog path; anything else must be a known event
+ * type or the call throws, instead of silently casting to `any`.
+ */
+export async function publishEventByName(
+  event: { eventType: string; payload: Record<string, unknown> },
+  options?: PublishOptions
+): Promise<void> {
+  if (isWorkflowCatalogEventType(event.eventType)) {
+    await publishCatalogEventPayload({ eventType: event.eventType, payload: event.payload }, options);
+    return;
+  }
+  if (!isKnownEventType(event.eventType)) {
+    throw new Error(`[EventPublisher] Unknown event type: ${event.eventType}`);
+  }
+  await publishEvent({ eventType: event.eventType, payload: event.payload }, options);
+}
+
+function isKnownEventType(eventType: string): eventType is NonCatalogEventType {
+  return (EVENT_TYPES as readonly string[]).includes(eventType);
+}
+
+async function publishEventUnchecked(
+  event: { eventType: EventType; payload: Record<string, unknown> },
   options?: PublishOptions
 ): Promise<void> {
   try {
@@ -133,8 +189,8 @@ export async function publishEvent(
   }
 }
 
-export async function publishWorkflowEvent(params: {
-  eventType: Event['eventType'];
+export async function publishWorkflowEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
   payload: Record<string, unknown>;
   ctx: WorkflowEventPublishContext;
   idempotencyKey?: string;
@@ -151,10 +207,58 @@ export async function publishWorkflowEvent(params: {
     toState: params.toState,
   };
 
-  await publishEvent(
-    { eventType: params.eventType, payload } as any,
+  await publishCatalogEventPayload(
+    { eventType: params.eventType, payload },
     { ...options, workflow }
   );
+}
+
+/**
+ * `publishWorkflowEvent` for event types that have NO workflow catalog entry (e.g. USER_*,
+ * ASSET_DELETED, *_DELETED search events, TICKET_SLA_THRESHOLD_REACHED). Same context/idempotency
+ * handling, but there is no registered payload schema, so the emitter contract test cannot cover it.
+ */
+export async function publishNonCatalogWorkflowEvent<T extends NonCatalogEventType>(params: {
+  eventType: T;
+  payload: Record<string, unknown>;
+  ctx: WorkflowEventPublishContext;
+  idempotencyKey?: string;
+  eventName?: string;
+  fromState?: string;
+  toState?: string;
+}, options?: Omit<PublishOptions, 'workflow'>): Promise<void> {
+  const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+  const payload = buildWorkflowPayload(params.payload, ctx);
+  const workflow: WorkflowPublishHooks = {
+    executionId: ctx.correlationId,
+    eventName: params.eventName,
+    fromState: params.fromState,
+    toState: params.toState,
+  };
+  await publishEvent({ eventType: params.eventType, payload }, { ...options, workflow });
+}
+
+/**
+ * `publishWorkflowEvent` for adapters that only know the event type as a string. Catalogued types
+ * take the catalog path, other known event types the non-catalog path, and an unknown type throws
+ * (instead of an `as any` cast reaching the transport).
+ */
+export async function publishWorkflowEventByName(params: {
+  eventType: string;
+  payload: Record<string, unknown>;
+  ctx: WorkflowEventPublishContext;
+  idempotencyKey?: string;
+  eventName?: string;
+  fromState?: string;
+  toState?: string;
+}, options?: Omit<PublishOptions, 'workflow'>): Promise<void> {
+  if (isWorkflowCatalogEventType(params.eventType)) {
+    return publishWorkflowEvent({ ...params, eventType: params.eventType }, options);
+  }
+  if (isKnownEventType(params.eventType)) {
+    return publishNonCatalogWorkflowEvent({ ...params, eventType: params.eventType }, options);
+  }
+  throw new Error(`[EventPublisher] Unknown event type: ${params.eventType}`);
 }
 
 export type { WorkflowActor, WorkflowEventPublishContext } from '../workflow/workflowEventPublishHelpers';

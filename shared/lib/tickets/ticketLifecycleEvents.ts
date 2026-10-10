@@ -380,10 +380,10 @@ export async function publishTicketTransitionsAfterCommit(
   registerAfterCommit(
     trx,
     async () => {
-      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      const { publishWorkflowEventByName } = await import('@alga-psa/event-bus/publishers');
       for (const ev of events) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType as any,
+        await publishWorkflowEventByName({
+          eventType: ev.eventType,
           payload:
             ev.eventType === 'TICKET_STATUS_CHANGED' && params.statusChangedPayloadExtras
               ? { ...ev.payload, ...params.statusChangedPayloadExtras }

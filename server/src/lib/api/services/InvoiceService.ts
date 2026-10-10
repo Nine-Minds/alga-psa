@@ -13,7 +13,7 @@ import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
-import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';
+import { publishEvent, publishUnregisteredEventType, publishWorkflowEvent } from '../../eventBus/publishers';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import {
   buildInvoiceDueDateChangedPayload,
@@ -1292,7 +1292,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
-	      deferredEvents.push(() => publishEvent({
+	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_PAYMENT_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1466,7 +1466,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
 
         // Publish event
-        deferredEvents.push(() => publishEvent({
+        deferredEvents.push(() => publishUnregisteredEventType({
           eventType: 'INVOICE_CREDIT_APPLIED',
           payload: {
             tenantId: context.tenant,
@@ -1634,7 +1634,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
-	      deferredEvents.push(() => publishEvent({
+	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_REFUND_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1798,7 +1798,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Publish bulk event
-      deferredEvents.push(() => publishEvent({
+      deferredEvents.push(() => publishUnregisteredEventType({
         eventType: 'INVOICE_BULK_STATUS_UPDATE',
         payload: {
           tenantId: context.tenant,
