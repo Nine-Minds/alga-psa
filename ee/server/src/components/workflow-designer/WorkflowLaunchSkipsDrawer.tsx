@@ -149,8 +149,11 @@ export default function WorkflowLaunchSkipsDrawer({ workflowId, isOpen, onClose 
       {
         title: t('designer.launchSkips.drawer.columns.reason', { defaultValue: 'Reason' }),
         dataIndex: 'reason',
+        width: '180px',
         render: (_value: unknown, record: WorkflowLaunchSkipListItem) => (
-          <Badge variant={record.intentional ? 'default-muted' : 'warning'}>{reasonLabel(record.reason)}</Badge>
+          <Badge variant={record.intentional ? 'default-muted' : 'warning'} className="whitespace-normal text-left">
+            {reasonLabel(record.reason)}
+          </Badge>
         ),
       },
       {

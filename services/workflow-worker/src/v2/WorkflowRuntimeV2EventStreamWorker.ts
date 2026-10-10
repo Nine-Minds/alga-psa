@@ -43,16 +43,41 @@ type WorkerConfig = {
 /**
  * One decision not to launch one workflow for one event. Every skip is
  * persisted to workflow_event_launch_skips and counted in the metrics.
+ * `message` is stored on the skip record, which is already scoped to one
+ * workflow, so it is human-readable and carries no workflow id/key.
  * `errorMessageSection` only controls how the skip contributes to the event
- * row's legacy `error_message` (unchanged behaviour).
+ * row's legacy `error_message` (unchanged behaviour), which keeps the
+ * workflow-labelled `legacyMessage`.
  */
 type LaunchSkip = {
   workflowId: string;
   workflowVersion: number | null;
   reason: WorkflowLaunchSkipReason;
   message: string;
+  /** Workflow-labelled text for the event row's joined error_message. */
+  legacyMessage: string;
   details: Record<string, unknown> | null;
   errorMessageSection: 'validation' | 'diagnostic' | null;
+};
+
+/**
+ * The shared mapping resolver throws plain `{ category, message, path }`
+ * objects (not Errors); pull the real text out instead of "[object Object]".
+ */
+const describeMappingError = (error: unknown): { message: string; path: string | null } => {
+  if (error instanceof Error) {
+    const path = (error as { path?: unknown }).path;
+    return { message: error.message, path: typeof path === 'string' && path ? path : null };
+  }
+  if (error && typeof error === 'object') {
+    const { message, path } = error as { message?: unknown; path?: unknown };
+    const text = typeof message === 'string' && message ? message : null;
+    const pathText = typeof path === 'string' && path ? path : null;
+    if (text || pathText) {
+      return { message: text ?? `Invalid mapping value at ${pathText}`, path: pathText };
+    }
+  }
+  return { message: String(error), path: null };
 };
 
 const expandDottedKeys = (input: Record<string, unknown>): Record<string, unknown> => {
@@ -341,8 +366,16 @@ export class WorkflowRuntimeV2EventStreamWorker {
     // Every reason a matching workflow was NOT launched, collected per workflow
     // and persisted after the loop (including when other workflows launched).
     const skips: LaunchSkip[] = [];
-    const recordSkip = (skip: Omit<LaunchSkip, 'errorMessageSection'> & { errorMessageSection?: LaunchSkip['errorMessageSection'] }) => {
-      skips.push({ errorMessageSection: null, ...skip });
+    const recordSkip = (
+      skip: Omit<LaunchSkip, 'errorMessageSection' | 'legacyMessage'> & {
+        errorMessageSection?: LaunchSkip['errorMessageSection'];
+        legacyMessage?: string;
+      },
+      skipLabel?: string,
+    ) => {
+      const legacyMessage = skip.legacyMessage
+        ?? (skipLabel ? `Skipped ${skipLabel}: ${skip.message.charAt(0).toLowerCase()}${skip.message.slice(1)}` : skip.message);
+      skips.push({ errorMessageSection: null, ...skip, legacyMessage });
     };
     // Workflow ids that caused this event (stamped by an action such as tickets.create when a
     // workflow run published it). A workflow already in the chain never relaunches itself, which
@@ -358,7 +391,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'paused',
-          message: `Skipped workflow ${workflow.key ?? workflow.workflow_id}: workflow is paused`,
+          message: 'Workflow is paused',
           details: null,
         });
         continue;
@@ -371,10 +404,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'lineage_loop_guard',
-          message: `Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`,
+          message: `Workflow is already in the event lineage (trigger loop guard)`,
           details: { guardReason: 'lineage_loop_guard', workflowLineage: eventLineage },
           errorMessageSection: 'diagnostic',
-        });
+        }, skipLabel);
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -396,10 +429,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'missing_schema_ref',
-          message: `Skipped ${skipLabel}: no payload schema reference is set on the workflow`,
+          message: `No payload schema reference is set on the workflow`,
           details: null,
           errorMessageSection: 'diagnostic',
-        });
+        }, skipLabel);
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
@@ -407,10 +440,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'unknown_schema_ref',
-          message: `Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`,
+          message: `Payload schema ${workflowPayloadSchemaRef} is not registered`,
           details: { workflowPayloadSchemaRef },
           errorMessageSection: 'diagnostic',
-        });
+        }, skipLabel);
         continue;
       }
 
@@ -425,10 +458,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'missing_source_schema',
-          message: `Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`,
+          message: `No source payload schema is known for event ${event.event_type}`,
           details: { workflowPayloadSchemaRef },
           errorMessageSection: 'diagnostic',
-        });
+        }, skipLabel);
         continue;
       }
 
@@ -440,10 +473,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'schema_mismatch',
-          message: `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`,
+          message: `Event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`,
           details: { workflowPayloadSchemaRef, sourcePayloadSchemaRef: effectiveSourceSchemaRef },
           errorMessageSection: 'diagnostic',
-        });
+        }, skipLabel);
         continue;
       }
 
@@ -467,19 +500,22 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
           mappingApplied = true;
         } catch (mappingError) {
-          const mappingErrorMessage = mappingError instanceof Error ? mappingError.message : String(mappingError);
+          const { message: mappingErrorMessage, path: mappingErrorPath } = describeMappingError(mappingError);
           recordSkip({
             workflowId: workflow.workflow_id,
             workflowVersion: latest.version ?? null,
             reason: 'payload_mapping_failed',
-            message: `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingErrorMessage}`,
+            message: mappingErrorPath
+              ? `Trigger payload mapping failed at ${mappingErrorPath}: ${mappingErrorMessage}`
+              : `Trigger payload mapping failed: ${mappingErrorMessage}`,
             details: {
               workflowPayloadSchemaRef,
               sourcePayloadSchemaRef: effectiveSourceSchemaRef,
               error: mappingErrorMessage,
+              ...(mappingErrorPath ? { path: mappingErrorPath } : {}),
             },
             errorMessageSection: 'diagnostic',
-          });
+          }, skipLabel);
           continue;
         }
       }
@@ -497,7 +533,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'payload_validation_failed',
-          message: validationMessage,
+          message: `Payload validation failed using ${workflowPayloadSchemaRef}: ${JSON.stringify(issues)}`,
+          legacyMessage: validationMessage,
           details: {
             issues,
             workflowPayloadSchemaRef,
@@ -545,8 +582,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowVersion: latest.version ?? null,
           reason: selfTriggerReason,
           message: selfTriggerReason === 'causation_depth_exceeded'
-            ? `Skipped ${skipLabel}: workflow causation depth limit exceeded`
-            : `Skipped ${skipLabel}: event was caused by this workflow chain (self-trigger guard)`,
+            ? 'Workflow causation depth limit exceeded'
+            : 'Event was caused by this workflow chain (self-trigger guard)',
           details: {
             guardReason: selfTrigger.reason,
             causationDepth: selfTrigger.causationDepth,
@@ -598,7 +635,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
           workflowId: workflow.workflow_id,
           workflowVersion: latest.version ?? null,
           reason: 'launch_failed',
-          message: launchErrorMessage,
+          message: `Failed to launch Temporal workflow: ${error instanceof Error ? error.message : String(error)}`,
           details: { error: error instanceof Error ? error.message : String(error) },
         });
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to launch workflow', {
@@ -670,8 +707,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
     // Legacy event-row error_message: validation messages first, then the other
     // diagnostics, each in collection order (paused / self-trigger / launch
     // failures never contributed here).
-    const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.message);
-    const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.message);
+    const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.legacyMessage);
+    const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.legacyMessage);
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
     if (matchedRunId) {

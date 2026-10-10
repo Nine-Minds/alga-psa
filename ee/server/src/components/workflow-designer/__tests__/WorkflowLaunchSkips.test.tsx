@@ -232,6 +232,13 @@ describe('WorkflowLaunchSkipsDrawer', () => {
     expect(screen.queryByText(skipItem.skipId)).not.toBeInTheDocument();
   });
 
+  it('lets the reason badge wrap instead of clipping long labels', async () => {
+    renderOpen();
+    await waitFor(() => expect(screen.getByTestId('row-skip-1')).toBeInTheDocument());
+    const badge = within(screen.getByTestId('row-skip-1')).getByText('Event payload does not match schema');
+    expect(badge.className).toContain('whitespace-normal');
+  });
+
   it('requests the default 7-day alarming view', async () => {
     renderOpen();
     await waitFor(() => expect(actionMocks.listWorkflowLaunchSkipsPagedAction).toHaveBeenCalled());

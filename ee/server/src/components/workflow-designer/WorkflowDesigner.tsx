@@ -1467,6 +1467,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setDesignerSidebarWidth(readStoredWorkflowDesignerSidebarWidth());
   }, []);
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
+  // Page header (title, toolbar, async launch-skip banner). Its height moves the float anchor without resizing it.
+  const designerHeaderRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
     top: number;
     left: number;
@@ -1566,6 +1568,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
     if (resizeObserver && el) {
       resizeObserver.observe(el);
+      // Anything above the anchor (e.g. the async launch-skip banner) shifts it without
+      // resizing it, so the header's own size changes must re-anchor the floating panels too.
+      if (designerHeaderRef.current) {
+        resizeObserver.observe(designerHeaderRef.current);
+      }
     }
 
     update();
@@ -5830,7 +5837,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   return (
     <div className="h-full min-h-0 flex flex-col">
-      <div className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
+      <div ref={designerHeaderRef} className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             {isEditorDesignerMode && (

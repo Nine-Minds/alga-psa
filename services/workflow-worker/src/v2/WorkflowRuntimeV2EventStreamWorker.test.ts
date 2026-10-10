@@ -1050,9 +1050,9 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       definition_json: { id: 'wf', version: 3, payloadSchemaRef: 'payload.WorkflowEvent.v1', trigger, steps: [], ...overrides },
     });
 
-    const setWorkflows = (workflows: Array<{ id: string; paused?: boolean; version: ReturnType<typeof definition> }>) => {
+    const setWorkflows = (workflows: Array<{ id: string; key?: string | null; paused?: boolean; version: ReturnType<typeof definition> }>) => {
       workflowDefinitionListMock.mockResolvedValue(
-        workflows.map((w) => ({ workflow_id: w.id, key: `${w.id}-key`, status: 'published', is_paused: w.paused ?? false, trigger: { type: 'event', eventName: 'PING' } }))
+        workflows.map((w) => ({ workflow_id: w.id, key: w.key === undefined ? `${w.id}-key` : w.key, status: 'published', is_paused: w.paused ?? false, trigger: { type: 'event', eventName: 'PING' } }))
       );
       workflowDefinitionVersionListByWorkflowMock.mockImplementation(async (_k: unknown, id: string) => [
         workflows.find((w) => w.id === id)!.version,
@@ -1112,7 +1112,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       setWorkflows([{ id: 'wf-1', version: definition({ payloadSchemaRef: undefined }) }]);
       await deliver();
       const row = expectSingleSkip('missing_schema_ref', false);
-      expect(row.message).toContain('no payload schema reference is set');
+      expect(row.message).toContain('No payload schema reference is set');
     });
 
     it('unknown_schema_ref', async () => {
@@ -1126,7 +1126,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       catalogSchemaRef = null as any;
       await deliver();
       const row = expectSingleSkip('missing_source_schema', false);
-      expect(row.message).toContain('no source payload schema is known');
+      expect(row.message).toContain('No source payload schema is known');
     });
 
     it('schema_mismatch', async () => {
@@ -1146,8 +1146,65 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       resolveInputMappingMock.mockRejectedValue(new Error('boom'));
       await deliver();
       const row = expectSingleSkip('payload_mapping_failed', false);
-      expect(row.message).toContain('trigger payload mapping failed: boom');
+      expect(row.message).toContain('Trigger payload mapping failed: boom');
       expect(row.details).toMatchObject({ error: 'boom' });
+    });
+
+    it('payload_mapping_failed with a plain-object resolver error reports its message and path, never [object Object]', async () => {
+      setWorkflows([
+        { id: 'wf-1', version: definition({}, { type: 'event', eventName: 'PING', payloadMapping: { a: { $expr: 'x' } } }) },
+      ]);
+      resolveInputMappingMock.mockRejectedValue({ category: 'ValidationError', message: 'Unknown field clientName', path: '/clientName' });
+      await deliver();
+      const row = expectSingleSkip('payload_mapping_failed', false);
+      expect(row.message).toBe('Trigger payload mapping failed at /clientName: Unknown field clientName');
+      expect(row.message).not.toContain('[object Object]');
+      expect(row.details).toMatchObject({ error: 'Unknown field clientName', path: '/clientName' });
+    });
+
+    describe('key = null workflows', () => {
+      const UUID = '77d392e6-1a2b-4c3d-8e4f-5a6b7c8d9e0f';
+      const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+      it('stores skip messages without workflow ids, while the event error_message keeps the labelled legacy text', async () => {
+        setWorkflows([{ id: UUID, key: null, version: definition({ payloadSchemaRef: 'payload.Other.v1' }) }]);
+        await deliver();
+        const rows = persisted();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].reason).toBe('schema_mismatch');
+        expect(rows[0].message).not.toMatch(UUID_RE);
+        expect(rows[0].message).toBe(
+          'Event payload schema payload.WorkflowEvent.v1 differs from workflow schema payload.Other.v1 and no payload mapping is configured'
+        );
+        const errorUpdate = workflowRuntimeEventUpdateMock.mock.calls.find(([, , patch]) => 'error_message' in (patch as object));
+        expect((errorUpdate![2] as any).error_message).toBe(
+          `Skipped workflow ${UUID} (${UUID}): event payload schema payload.WorkflowEvent.v1 differs from workflow schema payload.Other.v1 and no payload mapping is configured`
+        );
+      });
+
+      it.each([
+        ['paused', () => setWorkflows([{ id: UUID, key: null, paused: true, version: definition() }]), {}],
+        ['lineage', () => setWorkflows([{ id: UUID, key: null, version: definition() }]), { workflowLineage: [UUID] }],
+        ['missing schema ref', () => setWorkflows([{ id: UUID, key: null, version: definition({ payloadSchemaRef: undefined }) }]), {}],
+        ['unknown schema ref', () => { setWorkflows([{ id: UUID, key: null, version: definition() }]); schemaRegistryHasMock.mockReturnValue(false); }, {}],
+      ])('has no uuid in the %s skip message', async (_name, arrange, extraPayload) => {
+        arrange();
+        await deliver({ foo: 'bar', ...extraPayload });
+        const rows = persisted();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].message).not.toMatch(UUID_RE);
+      });
+
+      it('has no uuid in the payload validation skip message but keeps the legacy label', async () => {
+        setWorkflows([{ id: UUID, key: null, version: definition() }]);
+        schemaRegistryGetMock.mockReturnValue({
+          safeParse: () => ({ success: false, error: { issues: [{ path: ['a'], code: 'invalid_type', message: 'Required' }] } }),
+        });
+        await deliver();
+        expect(persisted()[0].message).not.toMatch(UUID_RE);
+        const errorUpdate = workflowRuntimeEventUpdateMock.mock.calls.find(([, , patch]) => 'error_message' in (patch as object));
+        expect((errorUpdate![2] as any).error_message).toContain(`Payload validation failed for workflow ${UUID} (${UUID})`);
+      });
     });
 
     it('payload_validation_failed', async () => {
