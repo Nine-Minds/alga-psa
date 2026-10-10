@@ -1623,6 +1623,12 @@
     "threecxDialing": "Ringer från din 3CX-anknytning",
     "threecxFailed": "Det gick inte att ringa samtalet via telefonväxeln"
   },
+  "unsavedChangesGuard": {
+    "title": "Förkasta osparade ändringar?",
+    "message": "Du har osparade ändringar som går förlorade om du stänger detta. Vill du förkasta dem?",
+    "discard": "Förkasta ändringar",
+    "keepEditing": "Fortsätt redigera"
+  },
   "editor": {
     "attachFiles": "Bifoga filer",
     "uploadingFiles": "Laddar upp filer…",

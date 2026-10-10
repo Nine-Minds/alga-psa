@@ -1657,6 +1657,12 @@
     "threecxDialing": "Wybieranie numeru z Twojego numeru wewnętrznego 3CX",
     "threecxFailed": "Centrala nie mogła nawiązać połączenia"
   },
+  "unsavedChangesGuard": {
+    "title": "Odrzucić niezapisane zmiany?",
+    "message": "Masz niezapisane zmiany, które zostaną utracone po zamknięciu. Czy chcesz je odrzucić?",
+    "discard": "Odrzuć zmiany",
+    "keepEditing": "Kontynuuj edycję"
+  },
   "editor": {
     "attachFiles": "Załącz pliki",
     "uploadingFiles": "Przesyłanie plików…",
