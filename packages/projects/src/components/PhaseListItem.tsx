@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { IProjectPhase } from '@alga-psa/types';
-import { AlertTriangle, Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Pencil, Trash2, GripVertical, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -12,7 +12,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
-import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
+import { PhaseStatusScopeChip } from './status-columns';
 import { phaseBadgeClasses, timeEntryServiceChoices, type PhaseBillingBadge, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
@@ -58,6 +58,12 @@ interface PhaseListItemProps {
   allTasksClosed?: boolean;
   onMarkComplete?: (phase: IProjectPhase) => void;
   onReopen?: (phase: IProjectPhase) => void;
+  /**
+   * Phase-scoped status column count (0 = inherits project defaults). Resolved
+   * once for the whole project so the inheritance chip can show in display
+   * mode without a per-phase round trip.
+   */
+  customStatusCount?: number | null;
 }
 
 export const PhaseListItem: React.FC<PhaseListItemProps> = ({
@@ -97,6 +103,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   allTasksClosed,
   onMarkComplete,
   onReopen,
+  customStatusCount,
 }) => {
   const { t } = useTranslation('features/projects');
   // toLocaleDateString() with no locale follows the browser, not the app.
@@ -111,20 +118,9 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
     : null;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
   const itemRef = useRef<HTMLLIElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLTextAreaElement>(null);
-
-  // Load phase custom status count when entering edit mode or after dialog closes
-  useEffect(() => {
-    if (!effectiveIsEditing && !showStatusDialog) return;
-    let cancelled = false;
-    getProjectStatusMappings(projectId, phase.phase_id)
-      .then((mappings) => { if (!cancelled) setCustomStatusCount(mappings.length); })
-      .catch(() => { if (!cancelled) setCustomStatusCount(null); });
-    return () => { cancelled = true; };
-  }, [effectiveIsEditing, showStatusDialog, projectId, phase.phase_id]);
 
   // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
@@ -368,20 +364,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
             {/* Status columns indicator */}
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <Tooltip content={`${t('phases.statusColumns')}: ${
-                customStatusCount != null && customStatusCount > 0
-                  ? t('phases.statusColumnsCustom', { count: customStatusCount })
-                  : t('phases.statusColumnsProjectDefaults')
-              }`}>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <Columns3 className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    {customStatusCount != null && customStatusCount > 0
-                      ? t('phases.statusColumnsCustom', { count: customStatusCount })
-                      : t('phases.statusColumnsProjectDefaults')}
-                  </span>
-                </div>
-              </Tooltip>
+              <PhaseStatusScopeChip
+                customStatusCount={customStatusCount ?? 0}
+                id={`phase-status-scope-edit-${phase.phase_id}`}
+              />
               <button
                 type="button"
                 onClick={(e) => {
@@ -458,6 +444,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: formatDate(new Date(phase.completed_at as string), { dateStyle: 'medium' }) })}>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
+                )}
+                {!isBillingView && (
+                  <PhaseStatusScopeChip
+                    customStatusCount={customStatusCount}
+                    id={`phase-status-scope-${phase.phase_id}`}
+                  />
                 )}
                 <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                   {t('phases.taskCount', { count: taskCount ?? 0 })}

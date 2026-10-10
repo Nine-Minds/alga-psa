@@ -441,6 +441,49 @@ export const getProjectStatusMappings = withAuth(async (
 });
 
 /**
+ * How many phase-scoped status columns each phase of a project owns, resolved
+ * in one query. A phase with zero rows is inheriting the project defaults; any
+ * other count means it has forked. Boards and phase lists use this to show
+ * which phases are forked instead of making the user open every Configure
+ * dialog one by one.
+ */
+export const getPhaseCustomStatusCounts = withAuth(async (
+  user,
+  { tenant },
+  projectId: string
+): Promise<Record<string, number> | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+      const rows = (await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_id: projectId })
+        .whereNotNull('phase_id')
+        .groupBy('phase_id')
+        .select('phase_id')
+        .count('* as count')) as unknown as Array<{ phase_id: string; count: string | number }>;
+
+      const counts: Record<string, number> = {};
+      for (const row of rows) {
+        counts[row.phase_id] = Number(row.count) || 0;
+      }
+      return counts;
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
  * Copy project default statuses into a phase as custom mappings.
  */
 export const copyProjectStatusesToPhase = withAuth(async (

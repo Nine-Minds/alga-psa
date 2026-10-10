@@ -13,3 +13,7 @@ export {
   AddStatusColumnControls,
   type AddStatusColumnControlsProps,
 } from './AddStatusColumnControls';
+export {
+  PhaseStatusScopeChip,
+  type PhaseStatusScopeChipProps,
+} from './PhaseStatusScopeChip';

@@ -52,6 +52,8 @@ interface ProjectPhasesProps {
   phaseBillingBadges?: Record<string, PhaseBillingBadge>;
   /** Per-phase "all tasks closed" flags for the completion nudge (F138). */
   phaseAllTasksClosed?: Record<string, boolean>;
+  /** Per-phase count of phase-scoped status columns; 0/absent = inherits project defaults. */
+  phaseCustomStatusCounts?: Record<string, number>;
   /** Whether the user can mark phases complete / reopen them (F137). */
   canCompletePhase?: boolean;
   onMarkPhaseComplete?: (phase: IProjectPhase) => void;
@@ -95,6 +97,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onImport,
   phaseBillingBadges,
   phaseAllTasksClosed,
+  phaseCustomStatusCounts,
   canCompletePhase,
   onMarkPhaseComplete,
   onReopenPhase,
@@ -303,6 +306,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onStatusesChanged={onStatusesChanged}
               billingBadge={phaseBillingBadges?.[phase.phase_id]}
               allTasksClosed={phaseAllTasksClosed?.[phase.phase_id]}
+              customStatusCount={phaseCustomStatusCounts ? phaseCustomStatusCounts[phase.phase_id] ?? 0 : undefined}
               canCompletePhase={canCompletePhase}
               onMarkComplete={onMarkPhaseComplete}
               onReopen={onReopenPhase}
