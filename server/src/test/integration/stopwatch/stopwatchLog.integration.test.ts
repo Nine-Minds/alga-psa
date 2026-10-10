@@ -242,7 +242,7 @@ describe('stopwatch log (real DB)', () => {
     const noService = await seedPausedSession(user, bucket.ticketId, null);
     const failure = await inTrx((trx) => logSession(trx, tenantId, { ...actor, user_id: user }, noService, {}, { now: at(121) }))
       .then(() => null, (e) => e);
-    expect(failure?.message).toContain('Service is required');
+    expect(failure?.message).toContain('serviceRequired');
     expect(await entriesFor(user)).toHaveLength(0);
 
     await inTrx((trx) => logSession(trx, tenantId, { ...actor, user_id: user }, noService, { service_id: bucket.serviceId }, { now: at(121) }));
