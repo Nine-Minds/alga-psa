@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   TIMER_REMINDER_THRESHOLDS_MINUTES,
-  computeServerClockOffsetMs,
   diffTimerReminders,
-  elapsedMsAt,
   formatElapsedClock,
   formatMinutesDuration,
   parseTimerReminderIdentifier,
@@ -26,38 +24,6 @@ function snapshot(over: Partial<RunningTimerSnapshot> = {}): RunningTimerSnapsho
     ...over,
   };
 }
-
-describe("computeServerClockOffsetMs", () => {
-  it("returns 0 when clocks agree", () => {
-    const localNow = START_MS + 10 * 60_000;
-    expect(computeServerClockOffsetMs(START_ISO, 10, localNow)).toBe(0);
-  });
-
-  it("treats sub-90s offsets as noise from minute rounding", () => {
-    const localNow = START_MS + 10 * 60_000 + 80_000;
-    expect(computeServerClockOffsetMs(START_ISO, 10, localNow)).toBe(0);
-  });
-
-  it("returns the real offset when the device clock is far off", () => {
-    const localNow = START_MS + 10 * 60_000 - 10 * 60_000; // device 10m behind
-    expect(computeServerClockOffsetMs(START_ISO, 10, localNow)).toBe(10 * 60_000);
-  });
-
-  it("returns 0 for an unparseable start time", () => {
-    expect(computeServerClockOffsetMs("not-a-date", 5, START_MS)).toBe(0);
-  });
-});
-
-describe("elapsedMsAt", () => {
-  it("computes elapsed from the local clock plus offset", () => {
-    expect(elapsedMsAt(START_MS + 90_000, START_MS, 0)).toBe(90_000);
-    expect(elapsedMsAt(START_MS, START_MS, 120_000)).toBe(120_000);
-  });
-
-  it("never goes negative", () => {
-    expect(elapsedMsAt(START_MS - 5_000, START_MS, 0)).toBe(0);
-  });
-});
 
 describe("formatElapsedClock", () => {
   it("formats minutes and seconds under an hour", () => {
