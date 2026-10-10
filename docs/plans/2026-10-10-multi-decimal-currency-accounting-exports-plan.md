@@ -340,3 +340,21 @@ USD-unchanged guarantee is locked in.
 - `packages/types/src/interfaces/accountingExportAdapter.interfaces.ts` (add `currency?` to `ProviderCreditApplicationRequest`)
 - New Vitest specs under `packages/billing/src/adapters/accounting/` (and applier round-trip)
 - `// LEVERAGE:` markers only (no behavioural change) at the out-of-scope display/compute sites listed above
+
+## Mitigation round (2026-10-10, after smoke)
+
+Smoke reproduced one import site the sweep above missed:
+`packages/integrations/src/services/xeroCsvTaxImportService.ts` converted the
+Xero Invoice Details report tax with `Math.round(totalTax * 100)`, so a JPY
+invoice with 1000 yen of report tax persisted `external_tax_amount=100000` and
+`total_amount=110000`.
+
+Fix: both `invoices` lookups (preview and import) also select `currency_code`;
+it is passed into `importTaxForSingleInvoice` and the report tax is converted
+with `toMinorUnits(totalTax, 'en-US', invoiceCurrency)`. Fallback to `'USD'`
+only when the invoice row has no `currency_code`.
+
+Coverage: `xeroCsvTaxImportService.db.test.ts` — real service against a
+recreated Postgres (`actions/_dbTestUtils`), one JPY and one USD
+`pending_external` invoice, asserting `external_tax_amount`, `total_amount`
+and the `external_tax_imports` record land in each invoice's own minor units.
