@@ -770,9 +770,13 @@ describe('AMP migration pipeline integration', () => {
     expect(Number(completedAssets.applied_count)).toBe(2);
     expect(Number(completedAssets.failed_count)).toBe(0);
     const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
-    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox', controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    // FR-A4: manufacturer and model land in their own columns, so `attributes`
+    // only ever holds the mapped custom fields.
+    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    expect({ manufacturer: asset.manufacturer, model: asset.model }).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
     const blankAsset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Blank Fields' }).first();
-    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
+    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({});
+    expect({ manufacturer: blankAsset.manufacturer, model: blankAsset.model }).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
   }, HOOK_TIMEOUT);
 
   it('re-running the same job creates no duplicates', async () => {
