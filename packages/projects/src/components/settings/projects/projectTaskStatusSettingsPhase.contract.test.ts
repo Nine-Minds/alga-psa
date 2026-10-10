@@ -20,23 +20,48 @@ describe('phase-aware project status settings contracts', () => {
     expect(settingsSource).toContain("const DEFAULT_SCOPE = '__project_defaults__';");
     expect(settingsSource).toContain("{ value: DEFAULT_SCOPE, label: t('settings.statuses.scope_project_defaults') },");
     expect(settingsSource).toContain("{t('settings.statuses.scope_label')}");
-    expect(settingsSource).toContain('const isUsingProjectDefaults = Boolean(selectedPhaseId) && !hasCustomStatuses;');
+    expect(settingsSource).toContain('const isUsingProjectDefaults = Boolean(selectedPhaseId) && !effectiveCustomStatuses;');
     expect(settingsSource).toContain("{t('settings.statuses.use_project_defaults')}");
     expect(settingsSource).toContain("{t('settings.statuses.custom_statuses')}");
   });
 
   it('T041/T042/T043: settings expose copy-from-defaults and revert-to-default flows for phases', () => {
     // Copying project defaults into a phase now happens via the
-    // 'Custom statuses' toggle, and both directions are confirmed through a
-    // ConfirmationDialog instead of persisting on the first click.
-    expect(settingsSource).toContain('async function handleEnableCustomStatuses() {');
-    expect(settingsSource).toContain('await copyProjectStatusesToPhase(projectId, selectedPhaseId);');
-    expect(settingsSource).toContain('onClick={() => setForkConfirmation(true)}');
+    // 'Custom statuses' toggle: both directions are confirmed and then staged,
+    // and the write only happens when the host form saves (UX finding #11).
+    expect(settingsSource).toContain('function handleEnableCustomStatuses() {');
+    expect(settingsSource).toContain('await copyProjectStatusesToPhase(projectId, phaseId)');
+    expect(settingsSource).toContain('setForkConfirmation(true);');
     expect(settingsSource).toContain('onConfirm={handleEnableCustomStatuses}');
-    expect(settingsSource).toContain('async function handleRevertToDefaults() {');
-    expect(settingsSource).toContain('onClick={() => setRevertConfirmation(true)}');
+    expect(settingsSource).toContain('function handleRevertToDefaults() {');
+    expect(settingsSource).toContain('setRevertConfirmation(true);');
     expect(settingsSource).toContain('onConfirm={handleRevertToDefaults}');
-    expect(settingsSource).toContain('await removePhaseStatuses(selectedPhaseId);');
+    expect(settingsSource).toContain('await removePhaseStatuses(phaseId);');
+  });
+
+  it('scope and order edits are staged and only written by the host form save', () => {
+    // UX finding #11: clicking a scope toggle used to persist the fork before
+    // any save, and Cancel could not undo it. Both directions now stage.
+    expect(settingsSource).toContain('function stagePhaseScope(mode: PendingScopeMode) {');
+    expect(settingsSource).toContain('const commitPendingChanges = useCallback(async (): Promise<boolean> => {');
+    expect(settingsSource).toContain('hasPendingChanges: () => hasPendingChanges,');
+    expect(settingsSource).toContain('commitPendingChanges,');
+    // A drag / arrow move only stages the new order.
+    expect(settingsSource).toContain('onReorder={stageOrder}');
+    expect(settingsSource).toContain('onReorderCommit={stageOrder}');
+    // Staged work is visible before saving and named per phase.
+    expect(settingsSource).toContain("id=\"project-status-pending-banner\"");
+    expect(settingsSource).toContain("'settings.statuses.pending_fork'");
+    expect(settingsSource).toContain("'settings.statuses.pending_revert'");
+    expect(settingsSource).toContain("'settings.statuses.pending_apply_hint'");
+
+    const drawerSource = readFileSync(path.resolve(__dirname, '../../ProjectDetailsEdit.tsx'), 'utf8');
+    expect(drawerSource).toContain('statusSettingsRef.current?.commitPendingChanges()');
+    expect(drawerSource).toContain('ref={statusSettingsRef}');
+
+    const phaseItemSource = readFileSync(path.resolve(__dirname, '../../PhaseListItem.tsx'), 'utf8');
+    expect(phaseItemSource).toContain('statusSettingsRef.current?.commitPendingChanges()');
+    expect(phaseItemSource).toContain('onPendingChangesChange={setStatusChangesPending}');
   });
 
   it('T044/T045: the inline add controls forward the selected scope when adding phase statuses', () => {

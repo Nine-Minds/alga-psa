@@ -11,7 +11,10 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
-import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from './settings/projects/ProjectTaskStatusSettings';
 import { PhaseStatusScopeChip } from './status-columns';
 import { phaseBadgeClasses, timeEntryServiceChoices, type PhaseBillingBadge, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
@@ -118,9 +121,30 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
     : null;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  // The status editor stages scope/order edits; this dialog's Save writes them.
+  const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
+  const [statusChangesPending, setStatusChangesPending] = useState(false);
+  const [isSavingStatuses, setIsSavingStatuses] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const closeStatusDialog = () => {
+    setShowStatusDialog(false);
+    setStatusChangesPending(false);
+    onStatusesChanged?.();
+  };
+
+  const saveStatusDialog = async () => {
+    setIsSavingStatuses(true);
+    try {
+      const committed = await statusSettingsRef.current?.commitPendingChanges();
+      if (committed === false) return;
+      closeStatusDialog();
+    } finally {
+      setIsSavingStatuses(false);
+    }
+  };
 
   // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
@@ -539,23 +563,40 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       {!isBillingView && showStatusDialog && (
         <Dialog
           isOpen
-          onClose={() => { setShowStatusDialog(false); onStatusesChanged?.(); }}
+          onClose={closeStatusDialog}
           title={`${t('settings.statuses.project.title')} — ${phase.phase_name}`}
         >
           <ProjectTaskStatusSettings
+            ref={statusSettingsRef}
             projectId={projectId}
             initialPhaseId={phase.phase_id}
+            onPendingChangesChange={setStatusChangesPending}
           />
-          <div className="flex justify-end pt-3 mt-3 border-t">
+          <div className="flex justify-end gap-2 pt-3 mt-3 border-t">
+            {statusChangesPending && (
+              <Button
+                id={`cancel-phase-statuses-dialog-${phase.phase_id}`}
+                variant="outline"
+                disabled={isSavingStatuses}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeStatusDialog();
+                }}
+              >
+                {t('common:actions.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+            )}
             <Button
               id={`close-phase-statuses-dialog-${phase.phase_id}`}
+              disabled={isSavingStatuses}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowStatusDialog(false);
-                onStatusesChanged?.();
+                void saveStatusDialog();
               }}
             >
-              {t('common:actions.done', { defaultValue: 'Done' })}
+              {statusChangesPending
+                ? t('common:actions.save', { defaultValue: 'Save' })
+                : t('common:actions.done', { defaultValue: 'Done' })}
             </Button>
           </div>
         </Dialog>

@@ -5,8 +5,11 @@ import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ProjectTaskStatusSettings } from '../ProjectTaskStatusSettings';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from '../ProjectTaskStatusSettings';
 
 const getProjectStatusMappings = vi.fn();
 const getStatusMappingTaskCount = vi.fn();
@@ -127,13 +130,14 @@ afterEach(() => {
 });
 
 async function renderInForm(onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault())) {
+  const handle = React.createRef<ProjectTaskStatusSettingsHandle>();
   const view = render(
     <form onSubmit={onSubmit}>
-      <ProjectTaskStatusSettings projectId="proj-1" />
+      <ProjectTaskStatusSettings ref={handle} projectId="proj-1" />
     </form>
   );
   await screen.findByText('Waiting on Client');
-  return { ...view, onSubmit };
+  return { ...view, onSubmit, handle };
 }
 
 describe('ProjectTaskStatusSettings delete flow', () => {
@@ -168,12 +172,20 @@ describe('ProjectTaskStatusSettings delete flow', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('reorders through the arrow controls without submitting the host form', async () => {
-    const { container, onSubmit } = await renderInForm();
+  it('stages an arrow reorder and writes it only when the host saves', async () => {
+    const { container, onSubmit, handle } = await renderInForm();
 
     fireEvent.click(container.querySelector('#project-status-move-down-m1') as HTMLElement);
 
-    await waitFor(() => expect(reorderProjectStatuses).toHaveBeenCalledWith(
+    await waitFor(() => expect(container.querySelector('#project-status-pending-banner')).not.toBeNull());
+    expect(reorderProjectStatuses).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await handle.current?.commitPendingChanges();
+    });
+
+    expect(reorderProjectStatuses).toHaveBeenCalledWith(
       'proj-1',
       [
         { mapping_id: 'm2', display_order: 1 },
@@ -181,36 +193,79 @@ describe('ProjectTaskStatusSettings delete flow', () => {
         { mapping_id: 'm3', display_order: 3 },
       ],
       null
-    ));
+    );
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('writes a staged order before an immediate delete so it is not lost', async () => {
+    const { container, handle } = await renderInForm();
+
+    fireEvent.click(container.querySelector('#project-status-move-down-m1') as HTMLElement);
+    await waitFor(() => expect(container.querySelector('#project-status-pending-banner')).not.toBeNull());
+
+    fireEvent.click(container.querySelector('#project-status-delete-m2') as HTMLElement);
+    await screen.findByText('Remove "Waiting on Client"?');
+    fireEvent.click(container.querySelector('#project-status-confirm-delete') as HTMLElement);
+
+    await waitFor(() => expect(deleteProjectStatusMapping).toHaveBeenCalledWith('m2', undefined));
+    expect(reorderProjectStatuses).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(handle.current?.hasPendingChanges()).toBe(false));
   });
 });
 
 describe('ProjectTaskStatusSettings phase fork', () => {
-  it('does not fork the phase until the confirmation is accepted', async () => {
-    const { container } = await renderInForm();
+  async function stageFork() {
+    const view = await renderInForm();
 
     // Switch scope to the phase; it currently inherits the project defaults.
     getProjectStatusMappings.mockImplementation(async (_projectId: string, phaseId?: string | null) =>
       (phaseId ? [] : DEFAULT_MAPPINGS));
-    fireEvent.change(container.querySelector('#phase-status-scope-select') as HTMLElement, {
+    fireEvent.change(view.container.querySelector('#phase-status-scope-select') as HTMLElement, {
       target: { value: 'p1' },
     });
 
     const forkButton = await waitFor(() => {
-      const button = container.querySelector('#use-custom-statuses-button') as HTMLButtonElement | null;
+      const button = view.container.querySelector('#use-custom-statuses-button') as HTMLButtonElement | null;
       expect(button?.disabled).toBe(false);
       return button as HTMLButtonElement;
     });
 
     fireEvent.click(forkButton);
 
-    await screen.findByText('Use custom status columns for this phase?');
+    await screen.findByText(/Use custom status columns for this phase\?/);
     expect(copyProjectStatusesToPhase).not.toHaveBeenCalled();
 
-    fireEvent.click(container.querySelector('#confirm-phase-status-fork-confirm') as HTMLElement);
+    fireEvent.click(view.container.querySelector('#confirm-phase-status-fork-confirm') as HTMLElement);
 
-    await waitFor(() => expect(copyProjectStatusesToPhase).toHaveBeenCalledWith('proj-1', 'p1'));
+    // Confirming only stages the fork — the phase still inherits until a save.
+    await screen.findByText('Phase 1 will switch to its own status columns.');
+    expect(copyProjectStatusesToPhase).not.toHaveBeenCalled();
+    return view;
+  }
+
+  it('stages the fork on confirm and forks only when the host saves', async () => {
+    const { handle } = await stageFork();
+
+    expect(handle.current?.hasPendingChanges()).toBe(true);
+
+    await act(async () => {
+      await handle.current?.commitPendingChanges();
+    });
+
+    expect(copyProjectStatusesToPhase).toHaveBeenCalledWith('proj-1', 'p1');
+  });
+
+  it('never forks when the staged change is abandoned instead of saved', async () => {
+    const { container, unmount } = await stageFork();
+
+    // Flipping back to project defaults drops the staged fork without a write.
+    fireEvent.click(container.querySelector('#use-project-defaults-button') as HTMLElement);
+    await waitFor(() => expect(container.querySelector('#project-status-pending-banner')).toBeNull());
+
+    unmount();
+
+    expect(copyProjectStatusesToPhase).not.toHaveBeenCalled();
+    expect(removePhaseStatuses).not.toHaveBeenCalled();
   });
 });
 
