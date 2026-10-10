@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Parece ser {{contact}}",
+      "mapDialogDescription": "Se recordará «{{user}}» para esta organización RMM.",
+      "mapDialogTitle": "Asignar usuario con sesión iniciada a un contacto",
+      "mapFailed": "No se pudo guardar la asignación.",
+      "mapToContact": "Asignar a un contacto…"
+    },
     "health": "Estado de salud",
     "security": "Seguridad",
     "openTickets": "Tickets abiertos",

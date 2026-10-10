@@ -1479,6 +1479,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Verkar vara {{contact}}",
+      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
+      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
+      "mapFailed": "Kunde inte spara kopplingen.",
+      "mapToContact": "Koppla till kontakt…"
+    },
     "health": "Hälsa",
     "security": "Säkerhet",
     "openTickets": "Öppna ärenden",

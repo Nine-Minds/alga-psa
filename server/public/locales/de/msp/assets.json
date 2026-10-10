@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Vermutlich {{contact}}",
+      "mapDialogDescription": "„{{user}}“ wird für diese RMM-Organisation gespeichert.",
+      "mapDialogTitle": "Angemeldeten Benutzer einem Kontakt zuordnen",
+      "mapFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+      "mapToContact": "Kontakt zuordnen…"
+    },
     "health": "Zustand",
     "security": "Sicherheit",
     "openTickets": "Offene Tickets",

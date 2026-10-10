@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Il semble s’agir de {{contact}}",
+      "mapDialogDescription": "« {{user}} » sera mémorisé pour cette organisation RMM.",
+      "mapDialogTitle": "Associer l’utilisateur connecté à un contact",
+      "mapFailed": "Impossible d’enregistrer l’association.",
+      "mapToContact": "Associer à un contact…"
+    },
     "health": "État",
     "security": "Sécurité",
     "openTickets": "Tickets ouverts",

@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Prawdopodobnie {{contact}}",
+      "mapDialogDescription": "„{{user}}” zostanie zapamiętany dla tej organizacji RMM.",
+      "mapDialogTitle": "Mapowanie zalogowanego użytkownika na kontakt",
+      "mapFailed": "Nie udało się zapisać mapowania.",
+      "mapToContact": "Mapuj na kontakt…"
+    },
     "health": "Kondycja",
     "security": "Bezpieczeństwo",
     "openTickets": "Otwarte zgłoszenia",

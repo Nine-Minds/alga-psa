@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Parece ser {{contact}}",
+      "mapDialogDescription": "“{{user}}” será lembrado para esta organização RMM.",
+      "mapDialogTitle": "Associar usuário conectado a um contato",
+      "mapFailed": "Não foi possível salvar a associação.",
+      "mapToContact": "Associar a um contato…"
+    },
     "health": "Integridade",
     "security": "Segurança",
     "openTickets": "Chamados abertos",

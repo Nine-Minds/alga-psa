@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Looks like {{contact}}",
+      "mapDialogDescription": "“{{user}}” will be remembered for this RMM organization.",
+      "mapDialogTitle": "Map signed-in user to a contact",
+      "mapFailed": "Unable to save the mapping.",
+      "mapToContact": "Map to contact…"
+    },
     "health": "Health",
     "security": "Security",
     "openTickets": "Open tickets",

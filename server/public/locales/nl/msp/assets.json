@@ -1507,6 +1507,13 @@
     }
   },
   "assetBento": {
+    "rmmUser": {
+      "looksLike": "· Waarschijnlijk {{contact}}",
+      "mapDialogDescription": "‘{{user}}’ wordt onthouden voor deze RMM-organisatie.",
+      "mapDialogTitle": "Ingelogde gebruiker aan een contact koppelen",
+      "mapFailed": "De koppeling kon niet worden opgeslagen.",
+      "mapToContact": "Aan contact koppelen…"
+    },
     "health": "Toestand",
     "security": "Beveiliging",
     "openTickets": "Openstaande tickets",
