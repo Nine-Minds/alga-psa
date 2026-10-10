@@ -1464,7 +1464,8 @@
       "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema.",
       "recurringUnitRateRequired": "Voer een eenheidstarief in voor elke terugkerende dienst.",
       "recurringQuantityWholeNumber": "De terugkerende hoeveelheid moet een geheel getal zijn.",
-      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn."
+      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn.",
+      "fixedLineNoService": "Vaste regel \"{{lineName}}\" heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt."
     },
     "nav": {
       "back": "Terug",
@@ -1478,6 +1479,19 @@
     "simulation": {
       "description": "Test dit niet-opgeslagen concept met verwachte activiteit. De simulatie slaat niets op en geeft niets uit.",
       "title": "Simuleren vóór het aanmaken"
+    },
+    "fixedLines": {
+      "addLine": "Vaste regel toevoegen",
+      "nameLabel": "Regelnaam (optioneel)",
+      "namePlaceholder": "Vaste regel {{number}}",
+      "removeLine": "Vaste regel verwijderen",
+      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan."
+    },
+    "recurringChange": {
+      "title": "Wijziging van het terugkerende totaal bevestigen",
+      "message": "Hierdoor verandert de geschatte maandelijkse terugkerende waarde van het contract van {{before}} naar {{after}}.",
+      "confirm": "Bevestigen en doorgaan",
+      "cancel": "Terug"
     }
   },
   "wizardBasics": {
@@ -1791,7 +1805,8 @@
       "fixedFeeServices": "Vaste-vergoedingsservices",
       "products": "Producten",
       "hourlyServices": "Uurservices",
-      "usageBasedServices": "Verbruiksgebaseerde services"
+      "usageBasedServices": "Verbruiksgebaseerde services",
+      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})"
     },
     "fields": {
       "client": "Klant",
@@ -1911,7 +1926,8 @@
     "total": {
       "title": "Geschat maandtotaal",
       "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
-      "perMonth": "per maand"
+      "perMonth": "per maand",
+      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
     },
     "finalChecklist": {
       "title": "Voor u afrondt:",
@@ -2568,7 +2584,8 @@
       "missingClient": "Bij het conceptcontract ontbreekt de klanttoewijzing",
       "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
       "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard."
+      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
+      "resumeUnsupportedShape": "Dit concept kan niet in de wizard worden hervat zonder de prijzen te wijzigen: {{lines}}"
     },
     "pricingSchedule": {
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",

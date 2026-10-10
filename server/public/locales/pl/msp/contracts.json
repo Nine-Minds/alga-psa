@@ -1464,7 +1464,8 @@
       "unsupportedRecurringAuthoringCombination": "Nieobsługiwana kombinacja tworzenia cyklu dla usług {{lineType}}: rytm rocznicy umowy obsługuje obecnie częstotliwości rozliczeń {{supportedFrequencies}}. {{billingFrequency}} nie jest jeszcze obsługiwana. Użyj jednej z obsługiwanych częstotliwości lub fakturuj według harmonogramu rozliczeń klienta.",
       "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej.",
       "recurringQuantityWholeNumber": "Ilość cykliczna musi być liczbą całkowitą.",
-      "fixedQuantityInvalid": "Ilość musi wynosić zero lub więcej."
+      "fixedQuantityInvalid": "Ilość musi wynosić zero lub więcej.",
+      "fixedLineNoService": "Linia stała „{{lineName}}\" ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem."
     },
     "nav": {
       "back": "Wstecz",
@@ -1478,6 +1479,19 @@
     "simulation": {
       "description": "Przetestuj tę niezapisaną wersję roboczą z zakładaną aktywnością. Symulacja niczego nie zapisuje ani nie wystawia.",
       "title": "Symuluj przed utworzeniem"
+    },
+    "fixedLines": {
+      "addLine": "Dodaj linię stałą",
+      "nameLabel": "Nazwa linii (opcjonalnie)",
+      "namePlaceholder": "Linia stała {{number}}",
+      "removeLine": "Usuń linię stałą",
+      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą."
+    },
+    "recurringChange": {
+      "title": "Potwierdź zmianę sumy cyklicznej",
+      "message": "To zmienia szacowaną miesięczną wartość cykliczną umowy z {{before}} na {{after}}.",
+      "confirm": "Potwierdź i kontynuuj",
+      "cancel": "Wstecz"
     }
   },
   "wizardBasics": {
@@ -1795,7 +1809,8 @@
       "fixedFeeServices": "Usługi z opłatą stałą",
       "products": "Produkty",
       "hourlyServices": "Usługi godzinowe",
-      "usageBasedServices": "Usługi rozliczane według zużycia"
+      "usageBasedServices": "Usługi rozliczane według zużycia",
+      "fixedFeeServicesNumbered": "Usługi o stałej opłacie ({{number}})"
     },
     "fields": {
       "client": "Klient",
@@ -1915,7 +1930,8 @@
     "total": {
       "title": "Szacowana suma miesięczna",
       "description": "Tylko opłaty stałe. Usługi godzinowe i rozliczane według zużycia są rozliczane osobno na podstawie rzeczywistego użycia.",
-      "perMonth": "miesięcznie"
+      "perMonth": "miesięcznie",
+      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
     },
     "finalChecklist": {
       "title": "Zanim zakończysz:",
@@ -2572,7 +2588,8 @@
       "missingClient": "W roboczej wersji umowy brakuje przypisania klienta",
       "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
       "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Pasujący rekord kreatora umowy już istnieje."
+      "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
+      "resumeUnsupportedShape": "Tej wersji roboczej nie można wznowić w kreatorze bez zmiany jej cen: {{lines}}"
     },
     "pricingSchedule": {
       "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",

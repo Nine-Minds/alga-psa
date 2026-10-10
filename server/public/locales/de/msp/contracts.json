@@ -1464,7 +1464,8 @@
       "unsupportedRecurringAuthoringCombination": "Nicht unterstützte Kombination für wiederkehrende Erstellung bei {{lineType}}-Services: Der Vertragsjubiläumsrhythmus unterstützt derzeit {{supportedFrequencies}} Abrechnungsfrequenzen. {{billingFrequency}} wird noch nicht unterstützt. Verwenden Sie eine der unterstützten Frequenzen oder rechnen Sie stattdessen nach dem Kundenabrechnungsplan ab.",
       "recurringUnitRateRequired": "Geben Sie für jeden wiederkehrenden Service einen Stückpreis ein.",
       "recurringQuantityWholeNumber": "Die wiederkehrende Menge muss eine ganze Zahl sein.",
-      "fixedQuantityInvalid": "Die Menge muss null oder größer sein."
+      "fixedQuantityInvalid": "Die Menge muss null oder größer sein.",
+      "fixedLineNoService": "Die feste Position „{{lineName}}\" hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu."
     },
     "nav": {
       "back": "Zurück",
@@ -1478,6 +1479,19 @@
     "simulation": {
       "description": "Diesen ungespeicherten Entwurf mit angenommener Aktivität testen. Die Simulation speichert nichts und stellt nichts aus.",
       "title": "Vor dem Erstellen simulieren"
+    },
+    "fixedLines": {
+      "addLine": "Feste Position hinzufügen",
+      "nameLabel": "Positionsname (optional)",
+      "namePlaceholder": "Feste Position {{number}}",
+      "removeLine": "Feste Position entfernen",
+      "noServiceWarning": "Diese Position hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu; als Entwurf können Sie sie weiterhin speichern."
+    },
+    "recurringChange": {
+      "title": "Änderung der wiederkehrenden Summe bestätigen",
+      "message": "Dadurch ändert sich der geschätzte monatliche wiederkehrende Wert des Vertrags von {{before}} auf {{after}}.",
+      "confirm": "Bestätigen und fortfahren",
+      "cancel": "Zurück"
     }
   },
   "wizardBasics": {
@@ -1791,7 +1805,8 @@
       "fixedFeeServices": "Festgebühren-Services",
       "products": "Produkte",
       "hourlyServices": "Stunden-Services",
-      "usageBasedServices": "Nutzungsbasierte Services"
+      "usageBasedServices": "Nutzungsbasierte Services",
+      "fixedFeeServicesNumbered": "Feste Services ({{number}})"
     },
     "fields": {
       "client": "Kunde",
@@ -1911,7 +1926,8 @@
     "total": {
       "title": "Geschätzte monatliche Summe",
       "description": "Nur feste Gebühren. Stunden- und nutzungsbasierte Services werden separat basierend auf der tatsächlichen Nutzung abgerechnet.",
-      "perMonth": "pro Monat"
+      "perMonth": "pro Monat",
+      "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
     },
     "finalChecklist": {
       "title": "Bevor Sie abschließen:",
@@ -2568,7 +2584,8 @@
       "missingClient": "Dem Vertragsentwurf fehlt die Kundenzuordnung",
       "invalidStartDate": "Der Vertragsentwurf hat ein ungültiges Startdatum",
       "recordInvalid": "Einer der ausgewählten Datensätze des Vertragsassistenten ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits."
+      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits.",
+      "resumeUnsupportedShape": "Dieser Entwurf kann im Assistenten nicht fortgesetzt werden, ohne seine Preise zu ändern: {{lines}}"
     },
     "pricingSchedule": {
       "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",
