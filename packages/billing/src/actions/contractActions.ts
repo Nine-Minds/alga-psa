@@ -16,7 +16,7 @@ import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
@@ -672,16 +672,23 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       return;
     }
 
-    const currentContract = await Contract.getById(knex, tenant, contractId);
-    if (currentContract?.is_system_managed_default === true) {
-      throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
-    }
+    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
+    // statements but leaves the transaction to its caller, so every caller must remember
+    // to wrap it or a mid-way failure orphans the contract header.
+    // Everything commits together or rolls back; events are published only after commit.
+    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const currentContract = await Contract.getById(trx, tenant, contractId);
+      if (currentContract?.is_system_managed_default === true) {
+        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
+      }
 
-    const clientContracts = await tenantScopedTable(knex, tenant, 'client_contracts')
-      .where({ contract_id: contractId })
-      .select('client_contract_id', 'client_id');
+      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
+        .where({ contract_id: contractId })
+        .select('client_contract_id', 'client_id');
 
-    await Contract.delete(knex, tenant, contractId);
+      await Contract.delete(trx, tenant, contractId);
+      return rows;
+    });
     const occurredAt = new Date().toISOString();
 
     for (const clientContract of clientContracts) {

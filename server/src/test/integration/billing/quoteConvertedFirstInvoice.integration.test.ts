@@ -491,14 +491,57 @@ describe('quote-converted contract: first invoice (alga0002168)', () => {
     );
     await db.raw(`CREATE OR REPLACE FUNCTION ${triggerDel}() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'injected contract delete fault'; END; $$ LANGUAGE plpgsql`);
     await db.raw(`CREATE TRIGGER ${triggerDel} BEFORE DELETE ON contracts FOR EACH ROW EXECUTE FUNCTION ${triggerDel}()`);
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    const publishMock = vi.mocked(publishWorkflowEvent);
+    const countRows = async (table: string, column = 'contract_id') =>
+      (await tenantTable(db, tenantId, table).where({ tenant: tenantId, [column]: faulty.contractId })).length;
+    const linesAndConfigs = async () => {
+      const lines = await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId, contract_id: faulty.contractId });
+      const lineIds = lines.map((l: any) => l.contract_line_id);
+      const configs = lineIds.length
+        ? await tenantTable(db, tenantId, 'contract_line_service_configuration')
+            .where({ tenant: tenantId })
+            .whereIn('contract_line_id', lineIds)
+        : [];
+      return { lines: lines.length, configs: configs.length };
+    };
+    let droppedFault = false;
+    const dropFault = async () => {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerDel} ON contracts`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${triggerDel}()`);
+      droppedFault = true;
+    };
     try {
+      publishMock.mockClear();
       const generic: any = await deleteContract(faulty.contractId);
       expect(generic?.messageKey).toBe('msp/contracts:errors.contract.deleteFailed');
       expect(generic.messageParams?.ref ?? generic.params?.ref).toMatch(/^[0-9a-f]{8}$/);
       expect(generic.actionError).not.toContain('injected');
+
+      // Atomicity: the failed delete rolled back completely, children included.
+      expect(await countRows('contracts')).toBe(1);
+      expect(await countRows('client_contracts')).toBeGreaterThanOrEqual(1);
+      const before = await linesAndConfigs();
+      expect(before.lines).toBeGreaterThanOrEqual(1);
+      expect(before.configs).toBeGreaterThanOrEqual(1);
+      // No delete events were published for the failed attempt.
+      const deleteEvents = publishMock.mock.calls.filter(([arg]: any[]) =>
+        ['CLIENT_CONTRACT_DELETED', 'CONTRACT_DELETED'].includes(arg?.eventType),
+      );
+      expect(deleteEvents).toHaveLength(0);
+
+      // With the fault removed the same delete succeeds in full and publishes after commit.
+      await dropFault();
+      const retried: any = await deleteContract(faulty.contractId);
+      expect(retried?.messageKey).toBeUndefined();
+      expect(await countRows('contracts')).toBe(0);
+      expect(await countRows('client_contracts')).toBe(0);
+      expect(await linesAndConfigs()).toEqual({ lines: 0, configs: 0 });
+      const published = publishMock.mock.calls.map(([arg]: any[]) => arg?.eventType);
+      expect(published).toContain('CONTRACT_DELETED');
+      expect(published).toContain('CLIENT_CONTRACT_DELETED');
     } finally {
-      await db.raw(`DROP TRIGGER IF EXISTS ${triggerDel} ON contracts`);
-      await db.raw(`DROP FUNCTION IF EXISTS ${triggerDel}()`);
+      if (!droppedFault) await dropFault();
       errorSpy.mockRestore();
     }
   }, HOOK_TIMEOUT);
