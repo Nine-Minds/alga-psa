@@ -50,8 +50,9 @@ const usageActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/usageActions.ts'),
   'utf8',
 );
+// Contract line resolution lives in the shared time-entry write core (saveTimeEntry delegates to it).
 const timeEntryCrudActionsSource = readFileSync(
-  resolve(__dirname, '../../../../../packages/scheduling/src/actions/timeEntryCrudActions.ts'),
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryWriteCore.ts'),
   'utf8',
 );
 const contractLinesUiSource = readFileSync(
