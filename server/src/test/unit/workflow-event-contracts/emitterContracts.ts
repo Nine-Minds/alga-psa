@@ -7,6 +7,7 @@ import { billingContracts } from './contracts/billing';
 import { crmContracts } from './contracts/crm';
 import { documentContracts } from './contracts/documents';
 import { surveyContracts } from './contracts/surveys';
+import { emailContracts } from './contracts/email';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -34,6 +35,7 @@ export const emitterContracts: EmitterContracts = {
   // ---- documents / storage / media ----
   ...documentContracts,
   ...surveyContracts,
+  ...emailContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -57,20 +59,12 @@ export const emitterContracts: EmitterContracts = {
   OPPORTUNITY_SUGGESTION_CREATED: schemaNotRegistered('OPPORTUNITY_SUGGESTION_CREATED', 'payload.OpportunitySuggestionCreated.v1'),
   // ---- documents ----
   // ---- comms ----
-  INBOUND_EMAIL_RECEIVED: pendingMigration('INBOUND_EMAIL_RECEIVED', 'comms'),
-  EMAIL_PROVIDER_CONNECTED: pendingMigration('EMAIL_PROVIDER_CONNECTED', 'comms'),
-  EMAIL_PROVIDER_DISCONNECTED: pendingMigration('EMAIL_PROVIDER_DISCONNECTED', 'comms'),
   ASSET_ASSIGNED: pendingMigration('ASSET_ASSIGNED', 'comms'),
   ASSET_CREATED: pendingMigration('ASSET_CREATED', 'comms'),
   ASSET_UNASSIGNED: pendingMigration('ASSET_UNASSIGNED', 'comms'),
   ASSET_UPDATED: pendingMigration('ASSET_UPDATED', 'comms'),
   ASSET_WARRANTY_EXPIRING: pendingMigration('ASSET_WARRANTY_EXPIRING', 'comms'),
-  EMAIL_BOUNCED: pendingMigration('EMAIL_BOUNCED', 'comms'),
-  EMAIL_COMPLAINT_RECEIVED: pendingMigration('EMAIL_COMPLAINT_RECEIVED', 'comms'),
-  EMAIL_DELIVERED: pendingMigration('EMAIL_DELIVERED', 'comms'),
-  EMAIL_UNSUBSCRIBED: pendingMigration('EMAIL_UNSUBSCRIBED', 'comms'),
   EXTERNAL_MAPPING_CHANGED: pendingMigration('EXTERNAL_MAPPING_CHANGED', 'comms'),
-  INBOUND_EMAIL_REPLY_RECEIVED: pendingMigration('INBOUND_EMAIL_REPLY_RECEIVED', 'comms'),
   INTEGRATION_CONNECTED: pendingMigration('INTEGRATION_CONNECTED', 'comms'),
   INTEGRATION_DISCONNECTED: pendingMigration('INTEGRATION_DISCONNECTED', 'comms'),
   INTEGRATION_SYNC_COMPLETED: pendingMigration('INTEGRATION_SYNC_COMPLETED', 'comms'),
@@ -83,9 +77,6 @@ export const emitterContracts: EmitterContracts = {
   NOTIFICATION_FAILED: pendingMigration('NOTIFICATION_FAILED', 'comms'),
   NOTIFICATION_READ: pendingMigration('NOTIFICATION_READ', 'comms'),
   NOTIFICATION_SENT: pendingMigration('NOTIFICATION_SENT', 'comms'),
-  OUTBOUND_EMAIL_FAILED: pendingMigration('OUTBOUND_EMAIL_FAILED', 'comms'),
-  OUTBOUND_EMAIL_QUEUED: pendingMigration('OUTBOUND_EMAIL_QUEUED', 'comms'),
-  OUTBOUND_EMAIL_SENT: pendingMigration('OUTBOUND_EMAIL_SENT', 'comms'),
   // ---- remaining ----
   INVENTORY_STOCK_LOW: schemaNotRegistered('INVENTORY_STOCK_LOW', 'payload.InventoryStockLow.v1'),
   INVENTORY_PO_RECEIVED: schemaNotRegistered('INVENTORY_PO_RECEIVED', 'payload.InventoryPoReceived.v1'),
