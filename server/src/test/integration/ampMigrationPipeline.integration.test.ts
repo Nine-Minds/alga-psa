@@ -81,6 +81,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   // Domain rows, children before parents.
   await tenantTable(tenantId, 'asset_history').del();
   await tenantTable(tenantId, 'assets').del();
+  await tenantTable(tenantId, 'asset_statuses').del();
   await tenantTable(tenantId, 'comments').del();
   await tenantTable(tenantId, 'comment_threads').del();
   await tenantTable(tenantId, 'tickets').del();
@@ -399,6 +400,14 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(statusColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
     ...(hasColumn(statusColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
+
+  // The asset applier resolves an imported status against this registry and
+  // falls back to `active`; a tenant built straight in SQL has no rows unless
+  // the fixture puts them there.
+  await tenantTable(tenantId, 'asset_statuses').insert([
+    { tenant: tenantId, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
+    { tenant: tenantId, slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 3 },
+  ]);
 
   return { tenantId, ownerUserId, clientId, boardId, statusOpenId, priorityId };
 }

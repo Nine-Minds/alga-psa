@@ -186,7 +186,12 @@ describe('asset statuses', () => {
     expect(assetActionErrorFrom(created)).toBeNull();
     expect(created.status).toBe('in_repair');
 
-    const rejected: any = await createAsset(baseAsset(clientId, 'not_a_status') as any);
+    // An unknown slug throws the validation payload the form reads; the UI maps
+    // the throw back through assetActionErrorFrom.
+    const rejected = await createAsset(baseAsset(clientId, 'not_a_status') as any)
+      .catch((error: unknown) => error);
+    expect(rejected).toBeInstanceOf(Error);
+    expect((rejected as Error).message).toContain('unknown_status');
     expect(assetActionErrorFrom(rejected)).not.toBeNull();
   });
 

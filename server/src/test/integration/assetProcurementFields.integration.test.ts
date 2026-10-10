@@ -113,6 +113,11 @@ async function seedTenant(currency?: string): Promise<{ tenantId: string; userId
     }).onConflict(['tenant']).merge({ default_currency_code: currency });
   }
 
+  // A tenant made straight in SQL misses the onboarding seed that gives real
+  // tenants their builtin statuses, and every asset write validates its slug.
+  await table(tenantId, 'asset_statuses')
+    .insert(BUILTIN_STATUSES.map((status) => ({ tenant: tenantId, ...status, is_builtin: true, is_active: true })));
+
   actionAuth.tenant = tenantId;
   actionAuth.userId = userId;
   return { tenantId, userId, clientId, vendorId };
@@ -120,11 +125,16 @@ async function seedTenant(currency?: string): Promise<{ tenantId: string; userId
 
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
-  for (const name of ['asset_history', 'assets', 'vendors', 'default_billing_settings', 'clients', 'users']) {
+  for (const name of ['asset_history', 'assets', 'asset_statuses', 'vendors', 'default_billing_settings', 'clients', 'users']) {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
 }
+
+const BUILTIN_STATUSES = [
+  { slug: 'active', label: 'Active', kind: 'deployable', display_order: 0 },
+  { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
+];
 
 const baseAsset = (clientId: string) => ({
   asset_type: 'unknown',
@@ -166,7 +176,7 @@ describe('asset procurement fields', () => {
     }
 
     const fk = await db.raw(
-      `SELECT array_agg(att.attname ORDER BY att.attname) AS cols
+      `SELECT array_agg(att.attname::text ORDER BY att.attname) AS cols
          FROM pg_constraint con
          JOIN pg_attribute att
            ON att.attrelid = con.conrelid AND att.attnum = ANY (con.conkey)
@@ -211,16 +221,20 @@ describe('asset procurement fields', () => {
     actionAuth.tenant = own.tenantId;
     actionAuth.userId = own.userId;
 
-    const crossTenant: any = await createAsset({
+    // Validation failures throw, as every other unavailable-selection check in
+    // createAsset does; the UI maps the throw through assetActionErrorFrom.
+    const crossTenant = await createAsset({
       ...baseAsset(own.clientId),
       vendor_id: other.vendorId,
-    } as any);
+    } as any).catch((error: unknown) => error);
+    expect(crossTenant).toBeInstanceOf(Error);
     expect(assetActionErrorFrom(crossTenant)).not.toBeNull();
 
-    const missing: any = await createAsset({
+    const missing = await createAsset({
       ...baseAsset(own.clientId),
       vendor_id: randomUUID(),
-    } as any);
+    } as any).catch((error: unknown) => error);
+    expect(missing).toBeInstanceOf(Error);
     expect(assetActionErrorFrom(missing)).not.toBeNull();
   });
 
