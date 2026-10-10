@@ -44,6 +44,9 @@ async function insertOpenEntry(user: string, startIso: string, notes: string): P
 describe('open time entries -> stopwatch sessions migration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
+    // The later end_time NOT NULL migration (20261010140000) has already run on a freshly migrated DB;
+    // the legacy open rows this test seeds need the column nullable, as it was when the conversion shipped.
+    await db.raw('ALTER TABLE time_entries ALTER COLUMN end_time DROP NOT NULL');
     tenant = await createTenant(db, 'Conversion tenant');
     userA = await createStopwatchUser(db, tenant, 'conv-a');
     userB = await createStopwatchUser(db, tenant, 'conv-b');

@@ -402,39 +402,6 @@
     "title": "Abrechnungsfähige Legende",
     "description": "Farbindikatoren für abrechnungsfähige Zeitverhältnisse"
   },
-  "intervalItem": {
-    "now": "Jetzt",
-    "autoClosed": "Automatisch geschlossen",
-    "active": "Aktiv"
-  },
-  "intervals": {
-    "createdFromNote_one": "Aus {{count}} Intervall erstellt",
-    "createdFromNote_other": "Aus {{count}} Intervallen erstellt",
-    "selectedCount_one": "{{count}} Intervall ausgewählt",
-    "selectedCount_other": "{{count}} Intervalle ausgewählt",
-    "hideShortIntervals": "Intervalle unter 1 Minute ausblenden",
-    "totalTime": "Gesamtzeit: {{value}}",
-    "selectedOne": "{{count}} Intervall ausgewählt",
-    "selectedOther": "{{count}} Intervalle ausgewählt",
-    "tooltips": {
-      "createTimeEntry": "Zeiteintrag aus ausgewählten Intervallen erstellen",
-      "deleteSelected": "Ausgewählte Intervalle löschen",
-      "mergeSelected": "Ausgewählte Intervalle zusammenführen"
-    },
-    "states": {
-      "loading": "Ladeintervalle...",
-      "noIntervalsThisTicket": "Für dieses Ticket wurden keine Intervalle gefunden",
-      "noIntervalsLongerThanMinute": "Es wurden keine Intervalle gefunden, die länger als 1 Minute sind"
-    },
-    "entryName": "Ticketzeiteintrag",
-    "messages": {
-      "noActivePeriod": "Kein aktiver Zeitraum gefunden",
-      "failedFetchTimeSheet": "Zeitnachweis konnte nicht erstellt oder abgerufen werden",
-      "failedPrepareTimeEntry": "Zeiteintrag konnte nicht vorbereitet werden",
-      "savedSuccess": "Zeiteintrag erfolgreich gespeichert",
-      "failedSave": "Zeiteintrag konnte nicht gespeichert werden"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Arbeitselement hinzufügen",
     "description": "Wählen Sie ein Arbeitselement aus, das der Arbeitszeittabelle hinzugefügt werden soll",

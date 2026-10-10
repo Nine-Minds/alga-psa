@@ -673,8 +673,8 @@
           "suppressAiHelp": "Nur Enterprise AI Assistant Add-on. Falls nicht verfügbar, öffnen Antworten normal wieder."
         },
         "liveTimer": {
-          "label": "Live-Ticket-Timer aktivieren",
-          "help": "Zeigt den Live-Timer und erfasste Zeitintervalle auf Tickets in diesem Board an. Manuelle Zeiterfassung bleibt verfügbar."
+          "label": "Stoppuhr bei Tickets anzeigen",
+          "help": "Zeigt die Stoppuhr-Steuerung bei Tickets in diesem Board an. Deaktivieren Sie die Option, um die Stoppuhr hier auszublenden; die manuelle Zeiterfassung bleibt verfügbar. Eine bereits laufende Stoppuhr läuft weiter."
         },
         "clientPortalVisible": {
           "label": "Im Kundenportal sichtbar",
@@ -851,7 +851,7 @@
           "statuses": "Prioritäten & Status",
           "statusesHelp": "Standardpriorität und die Ticket-Status für dieses Board",
           "display": "Anzeige & Verhalten",
-          "displayHelp": "Live-Timer und Board-Typ"
+          "displayHelp": "Stoppuhr und Board-Typ"
         },
         "saveChanges": "Änderungen speichern",
         "unsaved": "Ungespeichert",

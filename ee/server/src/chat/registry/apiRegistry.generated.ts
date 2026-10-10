@@ -34888,7 +34888,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean"
         },
         "enable_live_ticket_timer": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board's tickets; a stopwatch already running keeps running. Defaults to true."
         },
         "client_portal_visible": {
           "type": "boolean"

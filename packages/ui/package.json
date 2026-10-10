@@ -91,10 +91,6 @@
     "./editor/*": {
       "types": "./src/editor/*.tsx",
       "import": "./dist/editor/*.mjs"
-    },
-    "./services": {
-      "types": "./src/services/index.ts",
-      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {

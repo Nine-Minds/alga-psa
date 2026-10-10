@@ -402,39 +402,6 @@
     "title": "Legenda faturável",
     "description": "Indicadores coloridos para taxas de tempo faturáveis"
   },
-  "intervalItem": {
-    "now": "Agora",
-    "autoClosed": "Fechado automaticamente",
-    "active": "Ativo"
-  },
-  "intervals": {
-    "createdFromNote_one": "Criado a partir do intervalo {{count}}",
-    "createdFromNote_other": "Criado a partir de intervalos {{count}}",
-    "selectedCount_one": "Intervalo {{count}} selecionado",
-    "selectedCount_other": "Intervalos {{count}} selecionados",
-    "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
-    "totalTime": "Tempo total: {{value}}",
-    "selectedOne": "Intervalo {{count}} selecionado",
-    "selectedOther": "Intervalos {{count}} selecionados",
-    "tooltips": {
-      "createTimeEntry": "Criar entrada de tempo a partir de intervalos selecionados",
-      "deleteSelected": "Excluir intervalos selecionados",
-      "mergeSelected": "Mesclar intervalos selecionados"
-    },
-    "states": {
-      "loading": "Carregando intervalos...",
-      "noIntervalsThisTicket": "Nenhum intervalo encontrado para este ticket",
-      "noIntervalsLongerThanMinute": "Nenhum intervalo maior que 1 minuto encontrado"
-    },
-    "entryName": "Entrada de tempo de ticket",
-    "messages": {
-      "noActivePeriod": "Nenhum período ativo encontrado",
-      "failedFetchTimeSheet": "Falha ao criar ou buscar planilha de horas",
-      "failedPrepareTimeEntry": "Falha ao preparar a entrada de horário",
-      "savedSuccess": "Entrada de tempo salva com sucesso",
-      "failedSave": "Falha ao salvar a entrada de tempo"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Adicionar item de trabalho",
     "description": "Selecione um item de trabalho para adicionar à planilha de horas",

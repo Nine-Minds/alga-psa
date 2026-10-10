@@ -31,12 +31,10 @@ import {
   StopwatchDiscardDialog,
   type StopwatchConflictChoice,
 } from '../components/stopwatch/StopwatchDiscardDialog';
+import { purgeLegacyTicketTimerStore } from '../lib/stopwatch/purgeLegacyTicketTimerStore';
 
 const POLL_INTERVAL_MS = 15_000;
 const CHANNEL_NAME = 'alga-stopwatch';
-
-// LEGACY STORE PURGE (D16): `purgeLegacyTicketTimerStore()` (indexedDB.deleteDatabase('TicketTimeTrackingDB'),
-// gated by a localStorage flag) is mounted here by the removal change; intentionally absent from this one.
 
 function isOpen(session: StopwatchSessionView | null | undefined): session is StopwatchSessionView {
   return !!session && (session.status === 'running' || session.status === 'paused');
@@ -108,6 +106,11 @@ export function StopwatchProvider({ children }: StopwatchProviderProps) {
   }, [apply]);
 
   const { runNow } = useActionPolling(fetchOpenSession, { intervalMs: POLL_INTERVAL_MS });
+
+  // One-time removal of the retired IndexedDB timer store (D16); see the file for the removal date.
+  useEffect(() => {
+    purgeLegacyTicketTimerStore();
+  }, []);
 
   useEffect(() => {
     const refreshIfVisible = () => {

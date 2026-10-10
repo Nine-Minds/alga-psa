@@ -402,39 +402,6 @@
     "title": "⟦Ɓīŀŀȧƀŀḗ Ŀḗɠḗƞḓ⟧",
     "description": "⟦Ƈȯŀȯř īƞḓīƈȧŧȯřş ƒȯř ƀīŀŀȧƀŀḗ ŧīḿḗ řȧŧīȯş⟧"
   },
-  "intervalItem": {
-    "now": "⟦Ƞȯẇ⟧",
-    "autoClosed": "⟦Ȧŭŧȯ-ƈŀȯşḗḓ⟧",
-    "active": "⟦Ȧƈŧīṽḗ⟧"
-  },
-  "intervals": {
-    "createdFromNote_one": "⟦Ƈřḗȧŧḗḓ ƒřȯḿ {{count}} īƞŧḗřṽȧŀ⟧",
-    "createdFromNote_other": "⟦Ƈřḗȧŧḗḓ ƒřȯḿ {{count}} īƞŧḗřṽȧŀş⟧",
-    "selectedCount_one": "⟦{{count}} īƞŧḗřṽȧŀ şḗŀḗƈŧḗḓ⟧",
-    "selectedCount_other": "⟦{{count}} īƞŧḗřṽȧŀş şḗŀḗƈŧḗḓ⟧",
-    "hideShortIntervals": "⟦Ħīḓḗ īƞŧḗřṽȧŀş ŭƞḓḗř 1 ḿīƞŭŧḗ⟧",
-    "totalTime": "⟦Ŧȯŧȧŀ ŧīḿḗ: {{value}}⟧",
-    "selectedOne": "⟦{{count}} īƞŧḗřṽȧŀ şḗŀḗƈŧḗḓ⟧",
-    "selectedOther": "⟦{{count}} īƞŧḗřṽȧŀş şḗŀḗƈŧḗḓ⟧",
-    "tooltips": {
-      "createTimeEntry": "⟦Ƈřḗȧŧḗ ŧīḿḗ ḗƞŧřẏ ƒřȯḿ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧",
-      "deleteSelected": "⟦Ḓḗŀḗŧḗ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧",
-      "mergeSelected": "⟦Ḿḗřɠḗ şḗŀḗƈŧḗḓ īƞŧḗřṽȧŀş⟧"
-    },
-    "states": {
-      "loading": "⟦Ŀȯȧḓīƞɠ īƞŧḗřṽȧŀş...⟧",
-      "noIntervalsThisTicket": "⟦Ƞȯ īƞŧḗřṽȧŀş ƒȯŭƞḓ ƒȯř ŧħīş ŧīƈķḗŧ⟧",
-      "noIntervalsLongerThanMinute": "⟦Ƞȯ īƞŧḗřṽȧŀş ŀȯƞɠḗř ŧħȧƞ 1 ḿīƞŭŧḗ ƒȯŭƞḓ⟧"
-    },
-    "entryName": "⟦Ŧīƈķḗŧ Ŧīḿḗ Ḗƞŧřẏ⟧",
-    "messages": {
-      "noActivePeriod": "⟦Ƞȯ ȧƈŧīṽḗ ŧīḿḗ ƥḗřīȯḓ ƒȯŭƞḓ⟧",
-      "failedFetchTimeSheet": "⟦Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ ȯř ƒḗŧƈħ ŧīḿḗ şħḗḗŧ⟧",
-      "failedPrepareTimeEntry": "⟦Ƒȧīŀḗḓ ŧȯ ƥřḗƥȧřḗ ŧīḿḗ ḗƞŧřẏ⟧",
-      "savedSuccess": "⟦Ŧīḿḗ ḗƞŧřẏ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
-      "failedSave": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧīḿḗ ḗƞŧřẏ⟧"
-    }
-  },
   "addWorkItemDialog": {
     "title": "⟦Ȧḓḓ Ẇȯřķ Īŧḗḿ⟧",
     "description": "⟦Şḗŀḗƈŧ ȧ ẇȯřķ īŧḗḿ ŧȯ ȧḓḓ ŧȯ ŧīḿḗşħḗḗŧ⟧",

@@ -402,39 +402,6 @@
     "title": "Färgförklaring för debiterbar tid",
     "description": "Färgindikatorer för andelen debiterbar tid"
   },
-  "intervalItem": {
-    "now": "Nu",
-    "autoClosed": "Automatiskt avslutat",
-    "active": "Aktivt"
-  },
-  "intervals": {
-    "createdFromNote_one": "Skapad från {{count}} intervall",
-    "createdFromNote_other": "Skapad från {{count}} intervall",
-    "selectedCount_one": "{{count}} intervall markerat",
-    "selectedCount_other": "{{count}} intervall markerade",
-    "hideShortIntervals": "Dölj intervall under 1 minut",
-    "totalTime": "Total tid: {{value}}",
-    "selectedOne": "{{count}} intervall markerat",
-    "selectedOther": "{{count}} intervall markerade",
-    "tooltips": {
-      "createTimeEntry": "Skapa tidpost från markerade intervall",
-      "deleteSelected": "Radera markerade intervall",
-      "mergeSelected": "Slå ihop markerade intervall"
-    },
-    "states": {
-      "loading": "Läser in intervall…",
-      "noIntervalsThisTicket": "Inga intervall hittades för det här ärendet",
-      "noIntervalsLongerThanMinute": "Inga intervall längre än 1 minut hittades"
-    },
-    "entryName": "Tidpost för ärende",
-    "messages": {
-      "noActivePeriod": "Ingen aktiv tidsperiod hittades",
-      "failedFetchTimeSheet": "Det gick inte att skapa eller hämta tidrapporten",
-      "failedPrepareTimeEntry": "Det gick inte att förbereda tidposten",
-      "savedSuccess": "Tidposten har sparats",
-      "failedSave": "Det gick inte att spara tidposten"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Lägg till arbetspost",
     "description": "Välj en arbetspost att lägga till i tidrapporten",

@@ -402,39 +402,6 @@
     "title": "Legenda fatturabile",
     "description": "Indicatori colorati per i rapporti temporali fatturabili"
   },
-  "intervalItem": {
-    "now": "Ora",
-    "autoClosed": "Chiusura automatica",
-    "active": "Attivo"
-  },
-  "intervals": {
-    "createdFromNote_one": "Creato da {{count}} intervallo",
-    "createdFromNote_other": "Creato da {{count}} intervalli",
-    "selectedCount_one": "{{count}} intervallo selezionato",
-    "selectedCount_other": "{{count}} intervalli selezionati",
-    "hideShortIntervals": "Nascondi intervalli inferiori a 1 minuto",
-    "totalTime": "Tempo totale: {{value}}",
-    "selectedOne": "{{count}} intervallo selezionato",
-    "selectedOther": "{{count}} intervalli selezionati",
-    "tooltips": {
-      "createTimeEntry": "Crea l'immissione dell'ora dagli intervalli selezionati",
-      "deleteSelected": "Elimina gli intervalli selezionati",
-      "mergeSelected": "Unisci gli intervalli selezionati"
-    },
-    "states": {
-      "loading": "Caricamento intervalli...",
-      "noIntervalsThisTicket": "Nessun intervallo trovato per questo ticket",
-      "noIntervalsLongerThanMinute": "Nessun intervallo più lungo di 1 minuto trovato"
-    },
-    "entryName": "Inserimento orario ticket",
-    "messages": {
-      "noActivePeriod": "Nessun periodo di tempo attivo trovato",
-      "failedFetchTimeSheet": "Impossibile creare o recuperare il foglio ore",
-      "failedPrepareTimeEntry": "Impossibile preparare l'immissione dell'ora",
-      "savedSuccess": "Inserimento dell'ora salvato correttamente",
-      "failedSave": "Impossibile salvare l'immissione del tempo"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Aggiungi elemento di lavoro",
     "description": "Seleziona un elemento di lavoro da aggiungere alla scheda attività",

@@ -11720,6 +11720,9 @@ components:
           type:
             - boolean
             - "null"
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type:
             - boolean
@@ -11793,6 +11796,9 @@ components:
           type: boolean
         enable_live_ticket_timer:
           type: boolean
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
       required:
@@ -11829,6 +11835,9 @@ components:
           type: boolean
         enable_live_ticket_timer:
           type: boolean
+          description: Show the stopwatch on tickets in this board. When false, the
+            stopwatch cannot be started on this board's tickets; a stopwatch
+            already running keeps running. Defaults to true.
         client_portal_visible:
           type: boolean
       description: Payload for updating a board. All fields are optional.

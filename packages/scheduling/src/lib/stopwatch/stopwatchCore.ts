@@ -193,7 +193,8 @@ async function assertWorkItemStartable(
     db.tenantJoin(query, 'boards', 'tickets.board_id', 'boards.board_id', { type: 'left' });
     const ticket = await query.first('tickets.ticket_id', 'boards.enable_live_ticket_timer');
     if (!ticket) throw new StopwatchError('workItemNotFound');
-    // D12: the board flag now means "show the stopwatch on tickets in this board". Missing = enabled.
+    // D12: the board flag now means "show the stopwatch on tickets in this board". Missing = enabled
+    // (same rule as resolveBoardStopwatchEnabled in @alga-psa/tickets, which scheduling cannot import).
     if (ticket.enable_live_ticket_timer === false) throw new StopwatchError('boardDisabled');
     return;
   }

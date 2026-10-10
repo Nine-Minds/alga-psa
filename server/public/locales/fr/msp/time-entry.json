@@ -402,39 +402,6 @@
     "title": "Légende facturable",
     "description": "Indicateurs de couleur pour les ratios de temps facturables"
   },
-  "intervalItem": {
-    "now": "Maintenant",
-    "autoClosed": "Fermeture automatique",
-    "active": "Actif"
-  },
-  "intervals": {
-    "createdFromNote_one": "Créé à partir de {{count}} intervalle",
-    "createdFromNote_other": "Créé à partir de {{count}} intervalles",
-    "selectedCount_one": "{{count}} intervalle sélectionné",
-    "selectedCount_other": "{{count}} intervalles sélectionnés",
-    "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
-    "totalTime": "Durée totale: {{value}}",
-    "selectedOne": "{{count}} intervalle sélectionné",
-    "selectedOther": "{{count}} intervalles sélectionnés",
-    "tooltips": {
-      "createTimeEntry": "Créer une entrée de temps à partir d'intervalles sélectionnés",
-      "deleteSelected": "Supprimer les intervalles sélectionnés",
-      "mergeSelected": "Fusionner les intervalles sélectionnés"
-    },
-    "states": {
-      "loading": "Intervalles de chargement...",
-      "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
-      "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
-    },
-    "entryName": "Entrée de temps du ticket",
-    "messages": {
-      "noActivePeriod": "Aucune période active trouvée",
-      "failedFetchTimeSheet": "Échec de la création ou de la récupération de la feuille de temps",
-      "failedPrepareTimeEntry": "Échec de la préparation de la saisie du temps",
-      "savedSuccess": "La saisie du temps a été enregistrée avec succès",
-      "failedSave": "Échec de l'enregistrement de la saisie du temps"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Ajouter un élément de travail",
     "description": "Sélectionnez un élément de travail à ajouter à la feuille de temps",

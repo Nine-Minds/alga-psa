@@ -51,6 +51,7 @@ import { resolveTicketCallPhone } from './ticketCallPhone';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
+import { resolveBoardStopwatchEnabled } from '../../../lib/boardLiveTicketTimer';
 
 export interface TicketBentoLayoutProps {
   id: string;
@@ -635,7 +636,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           id={`${id}-timer`}
           ticketId={ticketId}
           variant="tile"
-          enabled={props.isLiveTicketTimerEnabled ?? true}
+          enabled={resolveBoardStopwatchEnabled(props.isLiveTicketTimerEnabled)}
           timeDescription={props.timeDescription}
           onTimeDescriptionChange={props.onTimeDescriptionChange}
           masterTicketId={ticket.master_ticket_id ?? null}

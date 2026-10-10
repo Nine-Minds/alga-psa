@@ -673,8 +673,8 @@
           "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
         },
         "liveTimer": {
-          "label": "Enable live ticket timer",
-          "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+          "label": "Show stopwatch on tickets",
+          "help": "Shows the stopwatch controls on tickets in this board. Turn this off to hide the stopwatch here; manual time entry stays available. A stopwatch that is already running keeps running."
         },
         "clientPortalVisible": {
           "label": "Visible in client portal",
@@ -851,7 +851,7 @@
           "statuses": "Priorities & statuses",
           "statusesHelp": "Default priority and the ticket statuses for this board",
           "display": "Display & behaviour",
-          "displayHelp": "Live timer and board type"
+          "displayHelp": "Stopwatch and board type"
         },
         "saveChanges": "Save Changes",
         "unsaved": "Unsaved",

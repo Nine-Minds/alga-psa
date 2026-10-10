@@ -402,39 +402,6 @@
     "title": "Billable Legend",
     "description": "Color indicators for billable time ratios"
   },
-  "intervalItem": {
-    "now": "Now",
-    "autoClosed": "Auto-closed",
-    "active": "Active"
-  },
-  "intervals": {
-    "createdFromNote_one": "Created from {{count}} interval",
-    "createdFromNote_other": "Created from {{count}} intervals",
-    "selectedCount_one": "{{count}} interval selected",
-    "selectedCount_other": "{{count}} intervals selected",
-    "hideShortIntervals": "Hide intervals under 1 minute",
-    "totalTime": "Total time: {{value}}",
-    "selectedOne": "{{count}} interval selected",
-    "selectedOther": "{{count}} intervals selected",
-    "tooltips": {
-      "createTimeEntry": "Create time entry from selected intervals",
-      "deleteSelected": "Delete selected intervals",
-      "mergeSelected": "Merge selected intervals"
-    },
-    "states": {
-      "loading": "Loading intervals...",
-      "noIntervalsThisTicket": "No intervals found for this ticket",
-      "noIntervalsLongerThanMinute": "No intervals longer than 1 minute found"
-    },
-    "entryName": "Ticket Time Entry",
-    "messages": {
-      "noActivePeriod": "No active time period found",
-      "failedFetchTimeSheet": "Failed to create or fetch time sheet",
-      "failedPrepareTimeEntry": "Failed to prepare time entry",
-      "savedSuccess": "Time entry saved successfully",
-      "failedSave": "Failed to save time entry"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Add Work Item",
     "description": "Select a work item to add to timesheet",

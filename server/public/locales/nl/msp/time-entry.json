@@ -402,39 +402,6 @@
     "title": "Factureerbare legende",
     "description": "Kleurindicatoren voor factureerbare tijdratio's"
   },
-  "intervalItem": {
-    "now": "Nu",
-    "autoClosed": "Automatisch gesloten",
-    "active": "Actief"
-  },
-  "intervals": {
-    "createdFromNote_one": "Gemaakt op basis van {{count}} interval",
-    "createdFromNote_other": "Gemaakt op basis van {{count}} intervallen",
-    "selectedCount_one": "{{count}} interval geselecteerd",
-    "selectedCount_other": "{{count}} intervallen geselecteerd",
-    "hideShortIntervals": "Verberg intervallen van minder dan 1 minuut",
-    "totalTime": "Totale tijd: {{value}}",
-    "selectedOne": "{{count}} interval geselecteerd",
-    "selectedOther": "{{count}} intervallen geselecteerd",
-    "tooltips": {
-      "createTimeEntry": "Maak tijdinvoer op basis van geselecteerde intervallen",
-      "deleteSelected": "Geselecteerde intervallen verwijderen",
-      "mergeSelected": "Voeg geselecteerde intervallen samen"
-    },
-    "states": {
-      "loading": "Laadintervallen...",
-      "noIntervalsThisTicket": "Er zijn geen intervallen gevonden voor dit ticket",
-      "noIntervalsLongerThanMinute": "Geen intervallen langer dan 1 minuut gevonden"
-    },
-    "entryName": "Tickettijdinvoer",
-    "messages": {
-      "noActivePeriod": "Geen actieve periode gevonden",
-      "failedFetchTimeSheet": "Kan urenstaat niet maken of ophalen",
-      "failedPrepareTimeEntry": "Het voorbereiden van de tijdinvoer is mislukt",
-      "savedSuccess": "Tijdinvoer succesvol opgeslagen",
-      "failedSave": "Kan tijdinvoer niet opslaan"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Werkitem toevoegen",
     "description": "Selecteer een werkitem dat u aan de urenstaat wilt toevoegen",

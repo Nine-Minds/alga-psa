@@ -15,11 +15,9 @@
      - [Constraints and Validation](#constraints-and-validation)
    - [Generating Time Periods](#generating-time-periods)
    - [Time Sheets and Billing](#time-sheets-and-billing)
-4. [Interval Tracking](#interval-tracking)
-   - [Automatic Ticket Time Tracking](#automatic-ticket-time-tracking)
-   - [Mobile App Time Tracking](#mobile-app-time-tracking)
-   - [Interval Management](#interval-management)
-   - [Converting Intervals to Time Entries](#converting-intervals-to-time-entries)
+4. [Stopwatch and Suggested Entries](#stopwatch-and-suggested-entries)
+   - [Stopwatch](#stopwatch)
+   - [Suggested Entries](#suggested-entries)
    - [Integration Points](#integration-points)
 5. [Approvals](#approvals)
    - [Time Sheets](#time-sheets)
@@ -36,7 +34,7 @@
 
 ## Overview
 
-The Time Entry system enables users to log work time, submit entries for approval, and manage time periods according to configurable settings. The system supports both manual time entry and automatic interval tracking for ticket work. Approvers can review submissions, request changes, or approve time sheets, facilitating accurate time tracking and billing after approvals.
+The Time Entry system enables users to log work time, submit entries for approval, and manage time periods according to configurable settings. The system supports both manual time entry, a server-side stopwatch and activity-based suggestions for ticket work. Approvers can review submissions, request changes, or approve time sheets, facilitating accurate time tracking and billing after approvals.
 
 ---
 
@@ -188,129 +186,21 @@ The generated time periods serve as templates or headers for **Time Sheets**. Us
 
 ---
 
-## Interval Tracking
+## Stopwatch and Suggested Entries
 
-The system includes time-tracking features that automatically capture when users interact with tickets, providing a foundation for accurate time entries with minimal manual effort. Two separate tracking mechanisms exist: a browser-based tracker (web app) and a server-backed tracker (mobile app).
+Time can be captured with a **server-side stopwatch** (web and mobile) and, for time that was not tracked live, **suggested entries** derived from ticket activity. Opening a ticket never starts a timer or records anything.
 
-### Automatic Ticket Time Tracking
+### Stopwatch
 
-When users interact with tickets in the **web application**, their viewing sessions are automatically tracked using the browser's IndexedDB:
+- A stopwatch session belongs to one user and one work item (a ticket or project task). A user can have one open (running or paused) session at a time; starting another asks whether to switch.
+- Sessions and their running/paused segments are stored on the server (`time_tracking_sessions`, `time_tracking_session_segments`), so a session survives page reloads, app kills and device switches. The displayed time is always derived from segment timestamps, never from a local tick.
+- API: `/api/v1/stopwatch` (start, active, pause, resume, log, discard). The older `/api/v1/time-tracking/start-tracking`, `active-session` and `stop-tracking` endpoints remain as adapters over sessions for installed mobile builds.
+- Web: the ticket stopwatch tile and a header indicator offer Start, Pause, Resume, Stop and Discard. Stop opens the time entry drawer pre-filled from the session; saving logs the session. The board setting `enable_live_ticket_timer` means "show the stopwatch on tickets in this board".
+- Time entries always have an `end_time`; there are no open time entry rows.
 
-- **Start Time**: Recorded when a user opens a ticket
-- **End Time**: Captured when the user navigates away from the ticket
-- **Storage**: Intervals are stored locally in the browser's IndexedDB
-- **Privacy**: Intervals remain local until explicitly converted to time entries
+### Suggested Entries
 
-**Interval Data Structure:**
-
-```typescript
-interface TicketInterval {
-  id: string;                 // Unique identifier for the interval
-  ticketId: string;           // ID of the ticket being viewed
-  ticketNumber: string;       // Ticket number for display purposes
-  ticketTitle: string;        // Title of the ticket for display
-  startTime: string;          // ISO timestamp when viewing started
-  endTime: string | null;     // ISO timestamp when viewing ended (null if still open)
-  duration: number | null;    // Duration in seconds (null if still open)
-  autoClosed: boolean;        // Flag indicating if interval was auto-closed
-  userId: string;             // User who viewed the ticket
-  selected: boolean;          // UI state for selection in the intervals list
-}
-```
-
-**Auto-Close Mechanism:**
-
-The system includes an intelligent auto-close feature for abandoned intervals:
-- Intervals from previous days with no end time are automatically closed at 5:00 PM of their start date
-- If the start time was after 5:00 PM, the interval is closed at the start time
-- Auto-closed intervals are clearly marked for user review
-
-### Mobile App Time Tracking
-
-The AlgaPSA mobile app (iOS and Android) uses a different, **server-backed** time tracking mechanism. Unlike the browser tracker, mobile timer sessions are persisted to the server so they survive app kills, relaunches, and device switches.
-
-**How it works — three REST endpoints drive the full lifecycle:**
-
-| Step | Endpoint | Description |
-|------|----------|-------------|
-| Start | `POST /api/v1/time-tracking/start-tracking` | Opens a server-side session for the current user, ticket, and selected service |
-| Restore | `GET /api/v1/time-tracking/active-session` | Returns the running session on app launch or device switch |
-| Stop | `POST /api/v1/time-tracking/stop-tracking` | Closes the session and creates a time entry |
-
-**Key differences from browser interval tracking:**
-
-| | Browser (IndexedDB) | Mobile (server-backed) |
-|---|---|---|
-| Storage | Local browser storage only | Server database |
-| Survives close | No — auto-closed at 5 PM of start date | Yes — session persists until explicitly stopped |
-| Multi-device | No | Yes — active session is visible on any signed-in device |
-| Privacy | Local until converted | Persisted to server on start |
-
-**Mobile-specific UX features:**
-
-- **One-tap start chip**: Appears on the ticket detail screen. The last-used service is remembered across sessions so technicians can start billing with a single tap.
-- **App-wide timer banner**: A live banner is displayed across all screens while a timer is running, giving technicians a constant reminder and one-tap access to stop.
-- **Stop-and-review modal**: When stopping, technicians see a modal to add notes, toggle billability, and adjust the end time before the entry is recorded.
-- **Android sticky notification**: A persistent notification in the notification shade shows the running timer and lets technicians stop it without reopening the app.
-- **Still-running reminders**: Notifications fire at 1, 2, 4, and 8 hours if the timer is still active, respecting the device's hide-sensitive-notifications setting.
-
-Stopping the mobile timer creates a standard time entry subject to the same time period boundaries and approval workflow as manually entered time.
-
-### Interval Management
-
-Users can review and manage their tracked intervals through dedicated interfaces:
-
-**Key Management Features:**
-- **View Intervals**: Chronological list of intervals per ticket
-- **Select Intervals**: Choose one or more intervals for actions
-- **Merge Intervals**: Combine multiple intervals into a single span
-- **Adjust Timestamps**: Manually modify start and end times
-- **Delete Intervals**: Remove unwanted or incorrect intervals
-
-**Filtering and Organization:**
-- Group intervals by ticket
-- Filter by date range
-- Sort by duration or timestamp
-- Identify auto-closed intervals with visual indicators
-
-### Converting Intervals to Time Entries
-
-The primary purpose of interval tracking is to facilitate accurate time entry creation:
-
-**Conversion Process:**
-1. User selects one or more intervals
-2. System calculates the total duration and date range
-3. User can review and adjust details before creating the time entry
-4. Upon confirmation, a time entry is created and the intervals are removed
-
-**Conversion Rules:**
-- When converting multiple intervals, the earliest start time and latest end time are used
-- If any selected interval is still open (no end time), the current time is used as the end
-- Intervals must belong to the same ticket when creating a time entry
-- The system validates that the resulting time entry falls within a valid time period
-
-### Integration Points
-
-Interval tracking is integrated throughout the system:
-
-**Ticket Details View:**
-- Automatic tracking begins when viewing ticket details
-- Intervals for the current ticket can be viewed and managed
-
-**Time Sheet Interface:**
-- Toggle to show/hide intervals within the time sheet view
-- Filter intervals by time period
-- Create time entries directly from intervals
-
-**Ticketing Dashboard:**
-- Access all intervals through a dedicated drawer
-- View counts of tracked intervals
-- Manage intervals across multiple tickets
-
-**Continuous Tracking:**
-- When reopening a ticket with an existing open interval, the system uses that interval
-- When creating a new interval for a ticket viewed earlier in the day, the system uses the end time of the previous interval as the start time
-- If no previous interval exists for the day, 8:00 AM is used as the default start time
+The time sheet shows a Suggestions section built on read from the ticket audit log (comments, status changes and so on the user performed), grouped by ticket and local work date. A suggestion is hidden once the user has an entry for that ticket and date, while a stopwatch is running on the ticket, or after it is dismissed. Log time opens the time entry dialog with times estimated from the first and last activity.
 
 ---
 
@@ -440,36 +330,6 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 }
 ```
 
-**Interval Tracking Service:**
-
-The `IntervalTrackingService` class manages the storage and retrieval of ticket viewing intervals in the browser:
-
-```typescript
-// Key methods in IntervalTrackingService
-class IntervalTrackingService {
-  // Initialize IndexedDB
-  async initDatabase(): Promise<IDBDatabase>;
-  
-  // Start tracking when a ticket is opened
-  async startInterval(ticketId: string, ticketNumber: string, ticketTitle: string): Promise<string>;
-  
-  // End tracking when a ticket is closed
-  async endInterval(intervalId: string): Promise<void>;
-  
-  // Get intervals for a specific ticket
-  async getIntervalsByTicket(ticketId: string): Promise<TicketInterval[]>;
-  
-  // Get all intervals for the current user
-  async getUserIntervals(): Promise<TicketInterval[]>;
-  
-  // Merge multiple intervals into one
-  async mergeIntervals(intervalIds: string[]): Promise<TicketInterval>;
-  
-  // Delete intervals
-  async deleteIntervals(intervalIds: string[]): Promise<void>;
-}
-```
-
 ### Frontend Components
 
 **ApprovalActions.tsx**
@@ -480,29 +340,20 @@ Handles the user interface for approvers to interact with time sheets.
 - **Displays:** Buttons for approve, reject, and request changes.
 - **Contains:** Dialog components for additional input when rejecting or requesting changes.
 
-**IntervalManagement.tsx**
+**SuggestedEntriesSection.tsx**
 
-Provides an interface for managing ticket viewing intervals:
+Lists activity-based suggestions on the time sheet:
 
-- **Displays:** List of intervals with start/end times and durations
-- **Actions:** Select, merge, delete intervals and create time entries
-- **Filtering:** Group by ticket, filter by date range
-- **Integration:** Used in both ticket details and time sheet views
-
-**IntervalItem.tsx**
-
-Renders an individual interval with selection capability:
-
-- **Shows:** Start time, end time, duration, and auto-close status
-- **Interaction:** Selection checkbox for batch operations
-- **Styling:** Visual indicators for different interval states
+- **Displays:** Ticket, client, work date, first/last activity and the kinds of action
+- **Actions:** Log time (opens the time entry dialog with estimated times) and Dismiss
+- **Visibility:** Only for the sheet owner or an allowed delegate
 
 **TimeSheetHeader.tsx**
 
-Enhanced to include interval toggle functionality:
+Enhanced to include suggestions toggle functionality:
 
-- **Toggle:** Button to show/hide intervals in the time sheet view
-- **Indicator:** Shows count of available intervals
+- **Toggle:** Button to show/hide suggestions in the time sheet view
+- **Indicator:** Shows count of available suggestions
 
 ---
 
