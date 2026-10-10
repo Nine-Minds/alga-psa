@@ -19,10 +19,6 @@ import {
   backfillRecurringServicePeriods,
   type IRecurringServicePeriodBackfillPlan,
 } from './backfillRecurringServicePeriods';
-import {
-  buildPersistedClientCadencePostDropObligationRef,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from './postDropRecurringObligationIdentity';
 
 type ClientCadenceRecurringObligationRow = {
   client_contract_line_id: string;
@@ -42,7 +38,6 @@ type RecurringServicePeriodDbRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: string;
   charge_family: RecurringChargeFamily;
   cadence_owner: 'client' | 'contract';
   due_position: DuePosition;
@@ -182,7 +177,6 @@ function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurr
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type as IRecurringServicePeriodRecord['sourceObligation']['obligationType'],
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -236,7 +230,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -286,7 +279,6 @@ export async function loadClientBilledLedgerBoundary(
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
   const lastBilled = await query
-    .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
     .where('rsp.cadence_owner', 'client')
     .where('ct.owner_client_id', params.clientId)
     .where((builder) => {
@@ -338,7 +330,6 @@ async function loadExistingRecurringServicePeriodRecords(
   const rows = await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       obligation_id: params.obligationId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
     })
     .orderBy('service_period_start', 'asc')
@@ -350,7 +341,6 @@ async function loadExistingRecurringServicePeriodRecords(
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -470,11 +460,11 @@ async function computeClientCadenceRegeneration(
       asOf: regenerationStart,
       materializedAt,
       billingCycle: params.billingCycle,
-      sourceObligation: buildPersistedClientCadencePostDropObligationRef({
+      sourceObligation: {
         tenant: params.tenant,
-        contractLineId: obligation.client_contract_line_id,
+        obligationId: obligation.client_contract_line_id,
         chargeFamily: resolveRecurringChargeFamily(obligation.contract_line_type),
-      }),
+      },
       duePosition,
       sourceRuleVersion,
       sourceRunKey,
@@ -601,7 +591,6 @@ export async function retireFutureClientCadenceRowsForLine(
   await tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       obligation_id: params.contractLineId,
-      obligation_type: CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
       cadence_owner: 'client',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])

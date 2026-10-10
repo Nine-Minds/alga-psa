@@ -321,11 +321,10 @@ describe('InvoiceService recurring coexistence integration', () => {
     await ctx.db('recurring_service_periods').insert({
       record_id: uuidv4(),
       tenant: ctx.tenantId,
-      schedule_key: `schedule:${ctx.tenantId}:contract_line:${canonicalObligationId}:contract:advance`,
+      schedule_key: `schedule:${ctx.tenantId}:${canonicalObligationId}:contract:advance`,
       period_key: 'period:2025-02-01:2025-03-01',
       revision: 1,
       obligation_id: canonicalObligationId,
-      obligation_type: 'contract_line',
       charge_family: 'fixed',
       cadence_owner: 'contract',
       due_position: 'advance',

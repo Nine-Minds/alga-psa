@@ -43,10 +43,10 @@ export async function seedUpgradeV150(db: Knex, hashedPassword: string, baseline
       const billing = await createInvoiceTicketSourceFixture(tx, { tenant, userId }, undefined, { materializeServicePeriods: false });
       for (const [lineId, chargeFamily] of [[billing.lineId, 'hourly'], [billing.usageLineId, 'usage']] as const) {
         await tx('recurring_service_periods').insert({ tenant, record_id: randomUUID(),
-          schedule_key: buildRecurringServicePeriodScheduleKey({ tenant, obligationType: 'client_contract_line',
+          schedule_key: buildRecurringServicePeriodScheduleKey({ tenant, 
             obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
           period_key: buildRecurringServicePeriodPeriodKey({ start: '2026-08-01', end: '2026-09-01' }),
-          revision: 1, obligation_id: lineId, obligation_type: 'client_contract_line', charge_family: chargeFamily,
+          revision: 1, obligation_id: lineId, charge_family: chargeFamily,
           cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'generated',
           service_period_start: '2026-08-01', service_period_end: '2026-09-01',
           invoice_window_start: '2026-09-01', invoice_window_end: '2026-10-01',

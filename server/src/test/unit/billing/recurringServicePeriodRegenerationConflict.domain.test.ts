@@ -7,7 +7,7 @@ describe('recurring service period regeneration conflicts', () => {
   it('T299: source-rule changes that conflict with preserved user edits surface explicit conflict records instead of being silently discarded', () => {
     const editedOverride = buildRecurringServicePeriodRecord({
       recordId: 'rsp_override',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:client:advance',
       periodKey: 'period:2026-06-10:2026-07-10',
       lifecycleState: 'edited',
       servicePeriod: {

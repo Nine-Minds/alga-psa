@@ -134,10 +134,9 @@ const mocks = vi.hoisted(() => {
         record_id: 'record-1',
         tenant: 'tenant-1',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         obligation_id: 'line-1',
         lifecycle_state: 'active',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-1:client:advance',
         period_key: 'period:2025-02-01:2025-03-01',
         service_period_start: '2025-02-01',
         service_period_end: '2025-03-01',
@@ -268,7 +267,7 @@ describe('invoice generation duplicate prevention', () => {
   it('T020: duplicate-invoice prevention blocks a second invoice for the same client-cadence recurring window without consulting invoices.billing_cycle_id', async () => {
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',

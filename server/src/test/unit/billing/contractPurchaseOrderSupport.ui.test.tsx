@@ -152,7 +152,6 @@ function createClientRow(input: {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: `${input.clientId}-line-1`,
-        obligationType: 'client_contract_line',
         chargeFamily: 'fixed',
       },
       scheduleKey: input.scheduleKey,
@@ -177,14 +176,14 @@ function createPeriods() {
       clientId: 'client-1',
       clientName: 'Alpha Co',
       billingCycleId: 'cycle-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:alpha-line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:alpha-line-1:client:advance',
       periodKey: 'period:2025-01-01:2025-02-01:alpha',
     }),
     createClientRow({
       clientId: 'client-2',
       clientName: 'Beta Co',
       billingCycleId: 'cycle-2',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:beta-line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:beta-line-1:client:advance',
       periodKey: 'period:2025-01-01:2025-02-01:beta',
     }),
   ] as any;
@@ -242,7 +241,6 @@ function createContractRow() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {

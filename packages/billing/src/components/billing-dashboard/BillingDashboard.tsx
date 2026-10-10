@@ -37,6 +37,7 @@ import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
+import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -263,7 +264,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="service-periods">
-          <RecurringServicePeriodsTab initialScheduleKey={searchParams?.get('scheduleKey') ?? undefined} />
+          <RecurringServicePeriodsTab
+            initialScheduleKey={(() => {
+              const scheduleKey = searchParams?.get('scheduleKey');
+              // Bookmarked pre-alga0002072 deep links carry a 6-segment key.
+              return scheduleKey ? canonicalizeRecurringServicePeriodScheduleKey(scheduleKey) : undefined;
+            })()}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">

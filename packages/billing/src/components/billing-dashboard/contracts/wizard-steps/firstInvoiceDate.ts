@@ -70,7 +70,6 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const PREVIEW_OBLIGATION: IPersistedRecurringObligationRef = {
   tenant: 'first-invoice-preview',
   obligationId: 'first-invoice-preview-line',
-  obligationType: 'contract_line',
   chargeFamily: 'fixed',
 };
 

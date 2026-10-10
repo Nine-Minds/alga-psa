@@ -47,12 +47,11 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
     obligation_id: 'line-1',
     // This query stub supplies joined rows, including the contract owner.
     owner_client_id: 'client-1',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -70,11 +69,10 @@ function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-contract-1',
     tenant: 'tenant-1',
     cadence_owner: 'contract',
-    obligation_type: 'contract_line',
     obligation_id: 'line-1',
     client_id: 'client-1',
     contract_id: 'contract-1',
-    schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:contract:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -717,7 +715,7 @@ describe('invoice preview recurring timing', () => {
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -768,7 +766,7 @@ describe('invoice preview recurring timing', () => {
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',

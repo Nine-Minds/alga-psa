@@ -496,7 +496,6 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
       sourceObligation: {
         tenant: tenantId,
         obligationId: line.contractLineId,
-        obligationType: 'client_contract_line',
         chargeFamily: 'fixed',
       },
       duePosition: line.duePosition,
@@ -613,7 +612,6 @@ it('T029: billed recurring service periods link back to invoice charge detail ro
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1122,7 +1120,6 @@ it('T020/T030: billed recurring service periods link back to invoice charge deta
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1203,7 +1200,6 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1295,7 +1291,6 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1367,7 +1362,6 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1443,7 +1437,6 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1595,7 +1588,6 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1677,7 +1669,6 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -1695,7 +1686,6 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -1773,7 +1763,6 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
     sourceObligation: {
       tenant: tenantId,
       obligationId: hourlyLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     },
     duePosition: 'advance',
@@ -2272,7 +2261,6 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2374,7 +2362,6 @@ it('T051/T078: invoiced-history reader returns client-cadence recurring invoices
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2458,7 +2445,6 @@ it('T052/T079/T084: invoiced-history reader returns bridge-free contract-cadence
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2539,7 +2525,6 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2636,7 +2621,6 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2653,7 +2637,6 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2740,7 +2723,6 @@ it('T104: generation blocks partially materialized client-cadence windows when e
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2757,7 +2739,6 @@ it('T104: generation blocks partially materialized client-cadence windows when e
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2835,7 +2816,6 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2905,7 +2885,6 @@ it('T034/T079: reversing a contract-cadence recurring invoice repairs service-pe
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -2969,7 +2948,6 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientFixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3031,7 +3009,6 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractFixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3101,7 +3078,6 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3215,7 +3191,6 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
     sourceObligation: {
       tenant: tenantId,
       obligationId: firstLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3268,7 +3243,6 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
     sourceObligation: {
       tenant: tenantId,
       obligationId: secondLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3479,7 +3453,6 @@ it('T108: recurring due-work assertions validate candidate-level contracts direc
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3550,7 +3523,6 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3593,7 +3565,6 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3689,7 +3660,6 @@ it('T079: deleting a contract-cadence recurring invoice makes the same execution
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3773,7 +3743,6 @@ it('T078: reversing a client-cadence recurring invoice restores due selection by
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -3998,7 +3967,6 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
       // The engine resolves obligations by joining contract_lines on
       // obligation_id, so the live contract_line_id is the canonical id.
       obligationId: clientCadenceLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4019,7 +3987,6 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
       // Contract-cadence rows are persisted with the live contract_line_id and
       // the 'contract_line' obligation type that the invoice engine queries.
       obligationId: contractCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4143,7 +4110,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   const sourceObligation = {
     tenant: tenantId,
     obligationId: fixedLine.clientContractLineId,
-    obligationType: 'client_contract_line',
     chargeFamily: 'fixed',
   } as const;
 
@@ -4271,7 +4237,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
-      obligation_type: 'client_contract_line',
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .where('invoice_window_start', currentPeriodStart)
@@ -4382,7 +4347,6 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
     .where({
       tenant: tenantId,
       obligation_id: fixedLine.clientContractLineId,
-      obligation_type: 'client_contract_line',
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .where('invoice_window_start', currentPeriodStart)
@@ -4454,7 +4418,6 @@ it('T320/T301: DB-backed billing-staff inspection and edit flows list future cli
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4583,7 +4546,6 @@ it('T321: DB-backed boundary edits move due selection without rewriting already 
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4736,7 +4698,6 @@ it('T322/T328: DB-backed skipped client-cadence periods block invoice generation
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'client_contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4850,7 +4811,6 @@ it('T325: DB-backed future contract-cadence service periods can be inspected and
     sourceObligation: {
       tenant: tenantId,
       obligationId: fixedLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -4991,7 +4951,6 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
     sourceObligation: {
       tenant: tenantId,
       obligationId: clientCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -5009,7 +4968,6 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
     sourceObligation: {
       tenant: tenantId,
       obligationId: contractCadenceLine.contractLineId,
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     duePosition: 'advance',
@@ -6107,7 +6065,6 @@ async function upsertRecurringServicePeriodRecord(record: IRecurringServicePerio
       period_key: record.periodKey,
       revision: record.revision,
       obligation_id: record.sourceObligation.obligationId,
-      obligation_type: record.sourceObligation.obligationType,
       charge_family: record.sourceObligation.chargeFamily,
       cadence_owner: record.cadenceOwner,
       due_position: record.duePosition,
@@ -6137,7 +6094,6 @@ async function upsertRecurringServicePeriodRecord(record: IRecurringServicePerio
       period_key: record.periodKey,
       revision: record.revision,
       obligation_id: record.sourceObligation.obligationId,
-      obligation_type: record.sourceObligation.obligationType,
       charge_family: record.sourceObligation.chargeFamily,
       cadence_owner: record.cadenceOwner,
       due_position: record.duePosition,
@@ -6198,7 +6154,6 @@ function mapRecurringServicePeriodRowToRecord(row: any): IRecurringServicePeriod
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type,
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -6257,7 +6212,6 @@ async function loadRecurringServicePeriodRecords(params: {
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',

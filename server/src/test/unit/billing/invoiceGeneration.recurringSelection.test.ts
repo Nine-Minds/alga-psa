@@ -37,7 +37,7 @@ describe('invoice generation recurring selection', () => {
     } as any;
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:contract-line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:contract-line-1:client:arrears',
       periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -96,7 +96,7 @@ describe('invoice generation recurring selection', () => {
     };
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-02-08:2025-03-08',
       windowStart: '2025-02-08',
       windowEnd: '2025-03-08',
@@ -196,7 +196,7 @@ describe('invoice generation recurring selection', () => {
     } as any;
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:contract-line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:contract-line-1:client:arrears',
       periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',

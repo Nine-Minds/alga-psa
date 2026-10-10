@@ -71,6 +71,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog'; // Corrected import
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { parseRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
@@ -463,12 +464,7 @@ const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate
 
   const scheduleKey = member.scheduleKey?.trim();
   if (scheduleKey) {
-    const contractLineMatch = scheduleKey.match(/contract_line:([^:]+)/);
-    if (contractLineMatch?.[1]) {
-      return 'Assigned contract line';
-    }
-    const clientContractLineMatch = scheduleKey.match(/client_contract_line:([^:]+)/);
-    if (clientContractLineMatch?.[1]) {
+    if (parseRecurringServicePeriodScheduleKey(scheduleKey)?.obligationId) {
       return 'Assigned contract line';
     }
   }

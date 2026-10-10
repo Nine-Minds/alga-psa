@@ -47,10 +47,6 @@ import {
     buildRecurringServicePeriodScheduleKey,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import {
-    buildClientCadencePostDropObligationRef,
-    CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import {
     loadClientBilledLedgerBoundary,
     resolveClientCadenceObligationStart,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
@@ -407,7 +403,6 @@ async function fetchPersistedRecurringDueWorkDbRows(
         },
     });
     contractLineRowsQuery
-        .where('rsp.obligation_type', 'contract_line')
         .where((builder) =>
             builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
         )
@@ -446,69 +441,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
         dateColumn: 'rsp.service_period_start',
     });
 
-    const clientContractLineRowsQuery = db.table('recurring_service_periods as rsp');
-    // Post-drop compatibility: client-cadence recurring rows still use
-    // obligation_type=client_contract_line, but obligation_id resolves to contract_line_id.
-    db.tenantJoin(clientContractLineRowsQuery, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
-    db.tenantJoin(clientContractLineRowsQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-    db.tenantJoin(clientContractLineRowsQuery, 'clients as c', 'c.client_id', 'ct.owner_client_id');
-    db.tenantJoin(clientContractLineRowsQuery, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id', {
-        type: 'left',
-        on(join) {
-            join.andOn('cc.client_id', '=', 'c.client_id')
-                .andOn('cc.is_active', '=', trx.raw('?', [true]));
-        },
-    });
-    db.tenantJoin(clientContractLineRowsQuery, 'client_tax_settings as cts', 'cts.client_id', 'c.client_id', { type: 'left' });
-    db.tenantJoin(clientContractLineRowsQuery, 'client_billing_cycles as cbc', 'cbc.client_id', 'c.client_id', {
-        type: 'left',
-        on(join) {
-            join.andOn('cbc.period_start_date', '=', 'rsp.invoice_window_start')
-                .andOn('cbc.period_end_date', '=', 'rsp.invoice_window_end');
-        },
-    });
-    clientContractLineRowsQuery
-        .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
-        .where((builder) =>
-            builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-        )
-        .whereIn('rsp.lifecycle_state', dueStates)
-        .whereNull('rsp.invoice_charge_detail_id')
-        .select(
-            'rsp.record_id',
-            'rsp.schedule_key',
-            'rsp.period_key',
-            'rsp.lifecycle_state',
-            'rsp.reason_code',
-            'rsp.charge_family',
-            'rsp.cadence_owner',
-            'rsp.due_position',
-            'rsp.service_period_start',
-            'rsp.service_period_end',
-            'rsp.invoice_window_start',
-            'rsp.invoice_window_end',
-            'c.client_id',
-            'c.client_name',
-            'cbc.billing_cycle_id',
-            'ct.contract_id',
-            'ct.contract_name',
-            'ct.is_system_managed_default',
-            'cl.contract_line_id',
-            'cl.contract_line_name',
-            'cl.contract_line_type',
-            'cc.client_contract_id',
-            'cc.po_required',
-            'ct.currency_code',
-            'cts.tax_source_override as tax_source',
-        );
-
-    applyBillingPeriodSearchAndDateFilters(clientContractLineRowsQuery, options, {
-        clientNameColumn: 'c.client_name',
-        dateColumn: 'rsp.service_period_start',
-    });
-
-    const contractLineRows = await contractLineRowsQuery;
-    const clientContractLineRows = await clientContractLineRowsQuery as PersistedRecurringDueWorkDbRow[];
+    const dueRows = await contractLineRowsQuery as PersistedRecurringDueWorkDbRow[];
 
     // The client_billing_cycles left-join matches on invoice window dates, so
     // duplicate cycle rows for the same period fan a single persisted
@@ -518,7 +451,7 @@ async function fetchPersistedRecurringDueWorkDbRows(
     // preferring a resolved billing cycle and then the lowest id so repeated
     // reads stay deterministic.
     const rowsByRecordId = new Map<string, PersistedRecurringDueWorkDbRow>();
-    for (const row of [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[]) {
+    for (const row of dueRows) {
         const existing = rowsByRecordId.get(row.record_id);
         if (!existing) {
             rowsByRecordId.set(row.record_id, row);
@@ -652,15 +585,9 @@ async function fetchClientCadenceMaterializationGaps(
                 continue;
             }
 
-            const sourceObligation = buildClientCadencePostDropObligationRef({
-                tenant,
-                contractLineId: row.client_contract_line_id,
-                chargeFamily: 'fixed',
-            });
             const scheduleKey = buildRecurringServicePeriodScheduleKey({
                 tenant,
-                obligationType: sourceObligation.obligationType,
-                obligationId: sourceObligation.obligationId,
+                obligationId: row.client_contract_line_id,
                 cadenceOwner: 'client',
                 duePosition: duePosition as DuePosition,
             });
@@ -1315,7 +1242,6 @@ function buildRecurringDueWorkInvoiceCandidates(
                 duePosition: row.duePosition,
                 sourceObligation: {
                     obligationId: row.executionIdentityKey,
-                    obligationType: row.contractLineId ? 'contract_line' : 'client_contract_line',
                     chargeFamily: 'fixed',
                 },
                 start: row.servicePeriodStart,

@@ -94,9 +94,9 @@ export async function createRecurringBillingFixture(db: Knex, sourceEmail: strin
         const start = month(offset), end = month(offset + 1);
         await trx('recurring_service_periods').insert({ ...scope, record_id: randomUUID(),
           schedule_key: buildRecurringServicePeriodScheduleKey({ tenant: tenant.tenantId,
-            obligationType: 'client_contract_line', obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
+            obligationId: lineId, cadenceOwner: 'client', duePosition: 'arrears' }),
           period_key: buildRecurringServicePeriodPeriodKey({ start, end }), revision: 1,
-          obligation_id: lineId, obligation_type: 'client_contract_line', charge_family: chargeFamily,
+          obligation_id: lineId, charge_family: chargeFamily,
           cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'generated',
           service_period_start: `${start}T00:00:00Z`, service_period_end: `${end}T00:00:00Z`,
           invoice_window_start: `${end}T00:00:00Z`, invoice_window_end: `${month(offset + 2)}T00:00:00Z`,
