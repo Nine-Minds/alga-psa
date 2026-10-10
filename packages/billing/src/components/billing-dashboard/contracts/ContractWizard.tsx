@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import dynamic from "next/dynamic";
 import { v4 as uuidv4 } from "uuid";
-import { useCurrencyFormat } from "@alga-psa/ui/lib";
 import type {
   ContractDraftSimulationInput,
   ContractWizardFixedLine,
@@ -47,7 +46,7 @@ import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
-import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import type { ContractAuthoringRateSource } from "../../../lib/contractAuthoringRate";
 import {
   createEmptyFixedLine,
@@ -323,7 +322,12 @@ export function ContractWizard({
   initialClientId,
 }: ContractWizardProps) {
   const { t } = useTranslation("msp/contracts");
-  const { money } = useCurrencyFormat();
+  const { formatCurrency } = useFormatters();
+  const money = (minorUnits: number, currencyCode: string) =>
+    formatCurrency(minorUnits / 100, currencyCode || "USD", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);

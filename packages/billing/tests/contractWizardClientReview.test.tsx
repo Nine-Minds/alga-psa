@@ -82,7 +82,7 @@ const buildData = (overrides: Partial<ContractWizardData> = {}): ContractWizardD
   billing_frequency: 'monthly',
   currency_code: 'USD',
   enable_proration: true,
-  fixed_services: [],
+  fixed_lines: [],
   product_services: [],
   hourly_services: [],
   usage_services: [],

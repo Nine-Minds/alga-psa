@@ -84,8 +84,7 @@ const baseData = (): any => ({
   start_date: '2026-01-01',
   billing_frequency: 'monthly',
   currency_code: 'USD',
-  fixed_services: [],
-  fixed_base_rate: undefined,
+  fixed_lines: [{ line_key: 'line-1', enable_proration: true, base_rate: null, services: [] }],
   enable_proration: true,
   cadence_owner: 'client',
   billing_timing: 'arrears',
@@ -96,15 +95,15 @@ function Harness({ initial = baseData() }: { initial?: any }) {
   return (
     <FixedFeeServicesStep
       data={data}
-      updateData={(patch) => setData((prev) => ({ ...prev, ...patch }))}
+      updateData={(patch) => setData((prev) => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }))}
     />
   );
 }
 
 const addServiceRow = () => fireEvent.click(screen.getByRole('button', { name: 'Add Service' }));
-const baseRateInput = () => document.getElementById('fixed_base_rate') as HTMLInputElement;
+const baseRateInput = () => document.getElementById('fixed-line-0-base-rate') as HTMLInputElement;
 const quantityInput = (index: number) =>
-  document.getElementById(`quantity-${index}`) as HTMLInputElement;
+  document.getElementById(`fixed-line-0-quantity-${index}`) as HTMLInputElement;
 
 describe('FixedFeeServicesStep base rate suggestion', () => {
   beforeEach(() => {
@@ -126,7 +125,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: 10000,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-0')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0')!);
     await waitFor(() => expect(baseRateInput().value).toBe('100.00'));
 
     fireEvent.change(quantityInput(0), { target: { value: '2' } });
@@ -144,7 +143,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: undefined,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-1')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-1')!);
     await waitFor(() => expect(baseRateInput().value).toBe('270.00'));
 
     fireEvent.change(quantityInput(1), { target: { value: '3' } });
@@ -166,7 +165,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: undefined,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-0')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0')!);
     await waitFor(() => expect(baseRateInput().value).toBe('90.00'));
 
     addServiceRow();
@@ -181,10 +180,10 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: undefined,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-1')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-1')!);
     await waitFor(() => expect(baseRateInput().value).toBe('130.00'));
 
-    fireEvent.click(document.getElementById('remove-fixed-service-1')!);
+    fireEvent.click(document.getElementById('fixed-line-0-remove-service-1')!);
     await waitFor(() => expect(baseRateInput().value).toBe('90.00'));
   });
 
@@ -203,7 +202,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: undefined,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-0')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0')!);
     await waitFor(() => expect(baseRateInput().value).toBe('100.00'));
 
     fireEvent.change(baseRateInput(), { target: { value: '999.00' } });
@@ -213,7 +212,8 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
   });
 
   it('T006: treats a resumed populated base rate as authoritative from mount', async () => {
-    const initial = { ...baseData(), fixed_base_rate: 55000 };
+    const initial = baseData();
+    initial.fixed_lines[0].base_rate = 55000;
     render(<Harness initial={initial} />);
 
     addServiceRow();
@@ -228,7 +228,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: undefined,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-0')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0')!);
 
     await waitFor(() => expect(baseRateInput().value).toBe('550.00'));
   });
@@ -248,7 +248,7 @@ describe('FixedFeeServicesStep base rate suggestion', () => {
       currency_rate: null,
       description: null,
     };
-    fireEvent.click(document.getElementById('service-select-0')!);
+    fireEvent.click(document.getElementById('fixed-line-0-service-select-0')!);
 
     await waitFor(() => expect(baseRateInput().value).toBe(''));
   });
