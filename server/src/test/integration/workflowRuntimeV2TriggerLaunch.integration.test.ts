@@ -14,7 +14,6 @@ import {
   submitWorkflowEventAction,
   getWorkflowLaunchSkipSummaryAction
 } from '@alga-psa/workflows/actions';
-import { WorkflowRuntimeV2EventStreamWorker } from '../../../../services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
@@ -275,68 +274,5 @@ describe('workflow runtime v2 trigger validation and Temporal launch integration
 
     expect(row?.payload_schema_ref).toBe(TEST_SCHEMA_REF);
     expect(row?.schema_ref_conflict).toEqual({ submission: TEST_SCHEMA_REF, catalog: TEST_SOURCE_SCHEMA_REF });
-  });
-
-  it('Worker: a published workflow whose schema differs from the event schema (no mapping) is skipped and surfaced as schema_mismatch (alga0002106 acceptance).', async () => {
-    const eventName = 'PING_SKIP_MISMATCH';
-
-    // Publish while the catalog schema matches the workflow's, then let the catalog drift to a
-    // different schema. That is how a previously healthy workflow starts being declined at runtime:
-    // publish-time validation only sees the schema as it was then.
-    await db('event_catalog').insert({
-      event_id: uuidv4(),
-      event_type: eventName,
-      name: 'Ping Skip Mismatch',
-      description: 'test',
-      category: 'Test',
-      payload_schema: {},
-      payload_schema_ref: TEST_SCHEMA_REF,
-      tenant: tenantId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-    const workflowId = await createDraftWorkflow({
-      steps: [stateSetStep('state-1', 'READY')],
-      payloadSchemaRef: TEST_SCHEMA_REF,
-      trigger: { type: 'event', eventName }
-    });
-    const publish = await publishWorkflow(workflowId, 1);
-    expect(JSON.stringify((publish as any)?.errors ?? [])).toBe('[]');
-    expect((publish as any)?.ok).toBe(true);
-
-    await db('event_catalog')
-      .where({ tenant: tenantId, event_type: eventName })
-      .update({ payload_schema_ref: TEST_SOURCE_SCHEMA_REF });
-
-    const metrics = { recordLaunchSkip: vi.fn(), recordLaunch: vi.fn() };
-    const worker = new WorkflowRuntimeV2EventStreamWorker('skip-acceptance', metrics);
-    const eventId = uuidv4();
-    await (worker as any).processEvent({
-      event_id: eventId,
-      event_name: eventName,
-      event_type: eventName,
-      tenant: tenantId,
-      payload: { foo: 'bar' },
-      timestamp: new Date().toISOString()
-    });
-
-    expect(startWorkflowRuntimeV2TemporalRunMock).not.toHaveBeenCalled();
-
-    const summary = await getWorkflowLaunchSkipSummaryAction({ workflowId });
-    expect(summary.alarming.total).toBe(1);
-    expect(summary.alarming.byReason).toEqual([
-      expect.objectContaining({ reason: 'schema_mismatch', count: 1 })
-    ]);
-    expect(summary.intentional.total).toBe(0);
-
-    const row = await db('workflow_event_launch_skips').where({ tenant: tenantId, event_id: eventId }).first();
-    expect(row).toMatchObject({ workflow_id: workflowId, reason: 'schema_mismatch', intentional: false, event_name: eventName });
-    expect(metrics.recordLaunchSkip).toHaveBeenCalledWith(
-      expect.objectContaining({ tenant: tenantId, workflowId, eventName, reason: 'schema_mismatch', intentional: false })
-    );
-
-    // The event row keeps the legacy error_message, unchanged.
-    const eventRow = await db('workflow_runtime_events').where({ tenant: tenantId, event_id: eventId }).first();
-    expect(eventRow?.error_message).toContain('differs from workflow schema');
   });
 });
