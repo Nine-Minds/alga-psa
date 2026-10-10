@@ -1,29 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { AddStatusDialog } from './AddStatusDialog';
 import {
+  addStatusToProject,
+  copyProjectStatusesToPhase,
+  deleteProjectStatusMapping,
   getProjectStatusMappings,
   getStatusMappingTaskCount,
-  deleteProjectStatusMapping,
+  getTenantProjectStatuses,
+  removePhaseStatuses,
   reorderProjectStatuses,
-  copyProjectStatusesToPhase,
-  removePhaseStatuses
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
-import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { getProjectMetadata } from '@alga-psa/projects/actions/projectActions';
-import type { IProjectPhase, IProjectStatusMapping } from '@alga-psa/types';
-import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import type { IProjectPhase, IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  AddStatusColumnControls,
+  DeleteStatusColumnDialog,
+  StatusColumnsEditor,
+  type DeleteStatusColumnRequest,
+} from '../../status-columns';
 
 interface ProjectTaskStatusSettingsProps {
   projectId: string;
@@ -36,55 +41,29 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+function mappingName(mapping: IProjectStatusMapping): string {
+  return mapping.custom_name || mapping.status_name || mapping.name || 'Unnamed Status';
+}
+
 export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: ProjectTaskStatusSettingsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const [statuses, setStatuses] = useState<IProjectStatusMapping[]>([]);
-  const [projectDefaultStatuses, setProjectDefaultStatuses] = useState<IProjectStatusMapping[]>([]);
   const [phases, setPhases] = useState<IProjectPhase[]>([]);
+  const [library, setLibrary] = useState<IStatus[]>([]);
   const [selectedScope, setSelectedScope] = useState<string>(initialPhaseId || DEFAULT_SCOPE);
   const [hasCustomStatuses, setHasCustomStatuses] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    mappingId: string;
-    statusName: string;
-    taskCount: number;
-    moveToMappingId: string;
-  } | null>(null);
+  const [deleteRequest, setDeleteRequest] = useState<DeleteStatusColumnRequest | null>(null);
   const [revertConfirmation, setRevertConfirmation] = useState(false);
+  const [forkConfirmation, setForkConfirmation] = useState(false);
 
   const selectedPhaseId = selectedScope === DEFAULT_SCOPE ? null : selectedScope;
 
-  useEffect(() => {
-    loadStatuses();
-  }, [projectId, selectedScope]);
-
-  useEffect(() => {
-    loadPhases();
-  }, [projectId]);
-
-
-  async function loadPhases() {
-    try {
-      const metadata = await getProjectMetadata(projectId);
-      if (isReturnedActionError(metadata)) {
-        toast.error(getErrorMessage(metadata));
-        return;
-      }
-      if (metadata && 'phases' in metadata) {
-        setPhases(metadata.phases);
-      }
-    } catch (error) {
-      console.error('Failed to load project phases:', error);
-    }
-  }
-
-  async function loadStatuses() {
+  const loadStatuses = useCallback(async () => {
     setLoading(true);
     try {
       const defaults = await getProjectStatusMappings(projectId);
-      setProjectDefaultStatuses(defaults);
 
       if (selectedPhaseId) {
         const phaseStatuses = await getProjectStatusMappings(projectId, selectedPhaseId);
@@ -100,57 +79,89 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId, selectedPhaseId]);
 
-  async function handleMoveUp(index: number) {
-    if (index === 0) return;
-    if (selectedPhaseId && !hasCustomStatuses) return;
-
-    const newStatuses = [...statuses];
-    [newStatuses[index - 1], newStatuses[index]] = [newStatuses[index], newStatuses[index - 1]];
-
-    const updates = newStatuses.map((item, idx) => ({
-      mapping_id: item.project_status_mapping_id,
-      display_order: idx + 1
-    }));
-
-    setStatuses(newStatuses);
-
+  const loadLibrary = useCallback(async () => {
     try {
-      const result = await reorderProjectStatuses(projectId, updates, selectedPhaseId);
-      if (isReturnedActionError(result)) {
-        toast.error(getErrorMessage(result));
-        loadStatuses();
+      const data = await getTenantProjectStatuses();
+      if (isReturnedActionError(data)) {
+        toast.error(getErrorMessage(data));
+        return;
       }
+      setLibrary(data);
     } catch (error) {
-      console.error('Failed to reorder statuses:', error);
-      loadStatuses();
+      console.error('Failed to load tenant statuses:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    void loadStatuses();
+  }, [loadStatuses]);
+
+  useEffect(() => {
+    void loadLibrary();
+  }, [loadLibrary]);
+
+  useEffect(() => {
+    async function loadPhases() {
+      try {
+        const metadata = await getProjectMetadata(projectId);
+        if (isReturnedActionError(metadata)) {
+          toast.error(getErrorMessage(metadata));
+          return;
+        }
+        if (metadata && 'phases' in metadata) {
+          setPhases(metadata.phases);
+        }
+      } catch (error) {
+        console.error('Failed to load project phases:', error);
+      }
+    }
+    void loadPhases();
+  }, [projectId]);
+
+  const canMutateStatuses = !selectedPhaseId || hasCustomStatuses;
+  const isUsingProjectDefaults = Boolean(selectedPhaseId) && !hasCustomStatuses;
+
+  const items = useMemo(
+    () => statuses.map((status) => ({
+      id: status.project_status_mapping_id,
+      name: mappingName(status),
+      isClosed: Boolean(status.is_closed),
+    })),
+    [statuses]
+  );
+
+  const usedStatusIds = useMemo(
+    () => new Set(statuses.map((status) => status.status_id).filter(Boolean) as string[]),
+    [statuses]
+  );
+  const availableStatuses = useMemo(
+    () => library.filter((status) => !usedStatusIds.has(status.status_id)),
+    [library, usedStatusIds]
+  );
+
+  function applyOrder(orderedIds: string[]) {
+    setStatuses((previous) => {
+      const byId = new Map(previous.map((status) => [status.project_status_mapping_id, status]));
+      return orderedIds
+        .map((id) => byId.get(id))
+        .filter((status): status is IProjectStatusMapping => Boolean(status));
+    });
   }
 
-  async function handleMoveDown(index: number) {
-    if (index === statuses.length - 1) return;
-    if (selectedPhaseId && !hasCustomStatuses) return;
-
-    const newStatuses = [...statuses];
-    [newStatuses[index], newStatuses[index + 1]] = [newStatuses[index + 1], newStatuses[index]];
-
-    const updates = newStatuses.map((item, idx) => ({
-      mapping_id: item.project_status_mapping_id,
-      display_order: idx + 1
-    }));
-
-    setStatuses(newStatuses);
-
+  async function persistOrder(orderedIds: string[]) {
+    if (!canMutateStatuses) return;
+    const updates = orderedIds.map((id, index) => ({ mapping_id: id, display_order: index + 1 }));
     try {
       const result = await reorderProjectStatuses(projectId, updates, selectedPhaseId);
       if (isReturnedActionError(result)) {
         toast.error(getErrorMessage(result));
-        loadStatuses();
+        await loadStatuses();
       }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
-      loadStatuses();
+      await loadStatuses();
     }
   }
 
@@ -161,38 +172,57 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
         toast.error(getErrorMessage(taskCount));
         return;
       }
-      // Find the first other status to default the move target
-      const otherStatuses = statuses.filter(s => s.project_status_mapping_id !== mappingId);
-      setDeleteConfirmation({
-        mappingId,
-        statusName,
-        taskCount,
-        moveToMappingId: otherStatuses[0]?.project_status_mapping_id || '',
-      });
+      setDeleteRequest({ id: mappingId, name: statusName, taskCount });
     } catch (error) {
       console.error('Failed to check task count:', error);
-      setDeleteConfirmation({ mappingId, statusName, taskCount: 0, moveToMappingId: '' });
+      setDeleteRequest({ id: mappingId, name: statusName, taskCount: 0 });
     }
   }
 
-  async function handleDelete() {
-    if (!deleteConfirmation) return;
+  async function handleDelete(moveToMappingId?: string) {
+    if (!deleteRequest) return;
 
     setIsMutating(true);
     try {
-      const moveTarget = deleteConfirmation.taskCount > 0 ? deleteConfirmation.moveToMappingId : undefined;
-      const result = await deleteProjectStatusMapping(deleteConfirmation.mappingId, moveTarget);
+      const result = await deleteProjectStatusMapping(deleteRequest.id, moveToMappingId);
       if (isReturnedActionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      toast.success(t('settings.statuses.removed_success', 'Status removed successfully'));
+      setDeleteRequest(null);
       await loadStatuses();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete status:', error);
+      toast.error(t('settings.statuses.delete_error', 'Failed to delete status'));
     } finally {
       setIsMutating(false);
-      setDeleteConfirmation(null);
     }
+  }
+
+  async function handleAddExisting(statusId: string) {
+    setIsMutating(true);
+    try {
+      const result = await addStatusToProject(projectId, { status_id: statusId }, selectedPhaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      toast.success(t('settings.statuses.added_success', 'Status added successfully'));
+      await loadStatuses();
+    } catch (error) {
+      console.error('Failed to add status:', error);
+      toast.error(t('settings.statuses.add_task_status_failed', 'Failed to add status'));
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function handleStatusCreated(status: IStatus) {
+    setLibrary((previous) => (previous.some((item) => item.status_id === status.status_id)
+      ? previous
+      : [...previous, status]));
+    await handleAddExisting(status.status_id);
   }
 
   async function handleEnableCustomStatuses() {
@@ -208,9 +238,10 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
       await loadStatuses();
     } catch (error) {
       console.error('Failed to copy project defaults to phase:', error);
-      alert(t('settings.statuses.copy_failed'));
+      toast.error(t('settings.statuses.copy_failed'));
     } finally {
       setIsMutating(false);
+      setForkConfirmation(false);
     }
   }
 
@@ -227,7 +258,7 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
       await loadStatuses();
     } catch (error) {
       console.error('Failed to remove phase statuses:', error);
-      alert(t('settings.statuses.revert_failed'));
+      toast.error(t('settings.statuses.revert_failed'));
     } finally {
       setIsMutating(false);
       setRevertConfirmation(false);
@@ -246,24 +277,15 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     }))
   ];
 
-  const isUsingProjectDefaults = Boolean(selectedPhaseId) && !hasCustomStatuses;
-  const canMutateStatuses = !selectedPhaseId || hasCustomStatuses;
-
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
+      <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {t('settings.statuses.project.title')}
         </label>
-        <Button
-          onClick={() => setShowAddDialog(true)}
-          size="sm"
-          variant="outline"
-          id="add-status-button"
-          disabled={Boolean(selectedPhaseId) && !hasCustomStatuses}
-        >
-          {t('settings.statuses.project.add_from_library')}
-        </Button>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t('settings.statuses.arrange_hint')}
+        </p>
       </div>
 
       {phases.length > 0 && (
@@ -296,137 +318,81 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
                 <Button
                   variant={!isUsingProjectDefaults ? 'default' : 'outline'}
                   size="sm"
-                  onClick={handleEnableCustomStatuses}
+                  onClick={() => setForkConfirmation(true)}
+                  disabled={hasCustomStatuses || isMutating}
                   id="use-custom-statuses-button"
                 >
                   {t('settings.statuses.custom_statuses')}
                 </Button>
               </div>
 
-              {isUsingProjectDefaults && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('settings.statuses.phase_uses_defaults')}
-                </p>
-              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {isUsingProjectDefaults
+                  ? t('settings.statuses.phase_uses_defaults')
+                  : t('settings.statuses.phase_uses_custom')}
+              </p>
             </div>
           )}
         </div>
       )}
 
-      <div className="space-y-1">
-        {statuses.map((status, index) => {
-          const displayName = status.custom_name || status.status_name || status.name || 'Unnamed Status';
-          return (
-            <div
-              key={status.project_status_mapping_id}
-              className="flex items-center justify-between p-3 bg-white dark:bg-[rgb(var(--color-card))] border rounded-lg"
-            >
-              <div className="flex items-center gap-2 flex-1">
-                <div className="flex flex-col gap-0.5">
-                  <button
-                    onClick={() => handleMoveUp(index)}
-                    disabled={index === 0 || !canMutateStatuses}
-                    className="p-0.5 hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Move up"
-                    id={`move-up-${status.project_status_mapping_id}`}
-                  >
-                    <ChevronUp className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => handleMoveDown(index)}
-                    disabled={index === statuses.length - 1 || !canMutateStatuses}
-                    className="p-0.5 hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Move down"
-                    id={`move-down-${status.project_status_mapping_id}`}
-                  >
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">{displayName}</span>
-                  {status.is_closed && (
-                    <span className="ml-2 text-xs px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
-                      {t('settings.statuses.closed')}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {canMutateStatuses && (
-                <button
-                  onClick={() => initiateDelete(status.project_status_mapping_id, displayName)}
-                  className="p-1 hover:bg-destructive/15 rounded text-destructive"
-                  title={t('common:actions.delete')}
-                  id={`delete-status-${status.project_status_mapping_id}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <StatusColumnsEditor
+        items={items}
+        editable={canMutateStatuses}
+        idPrefix="project-status"
+        onReorder={applyOrder}
+        onReorderCommit={persistOrder}
+        onRequestDelete={(item) => void initiateDelete(item.id, item.name)}
+        canDelete={() => statuses.length > 1}
+        emptyState={(
+          <div className="rounded-lg border-2 border-dashed p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p className="font-medium">{t('settings.statuses.none_selected')}</p>
+            <p>{t('settings.statuses.selector_none_selected_hint')}</p>
+          </div>
+        )}
+      />
 
-      {showAddDialog && (
-        <AddStatusDialog
-          projectId={projectId}
-          phaseId={selectedPhaseId}
-          onClose={() => setShowAddDialog(false)}
-          onAdded={loadStatuses}
+      {canMutateStatuses && (
+        <AddStatusColumnControls
+          availableStatuses={availableStatuses}
+          existingStatuses={library}
+          isBusy={isMutating}
+          onRefresh={loadLibrary}
+          onAddExisting={handleAddExisting}
+          onStatusCreated={handleStatusCreated}
+          idPrefix="project-status"
         />
       )}
 
-      {deleteConfirmation && (
-        <Dialog
+      <DeleteStatusColumnDialog
+        request={deleteRequest}
+        moveTargets={statuses
+          .filter((status) => status.project_status_mapping_id !== deleteRequest?.id)
+          .map((status) => ({
+            id: status.project_status_mapping_id,
+            name: mappingName(status),
+            isClosed: Boolean(status.is_closed),
+          }))}
+        isDeleting={isMutating}
+        onCancel={() => setDeleteRequest(null)}
+        onConfirm={handleDelete}
+        idPrefix="project-status"
+      />
+
+      {forkConfirmation && (
+        <ConfirmationDialog
           isOpen={true}
-          onClose={() => setDeleteConfirmation(null)}
-          title={t('settings.statuses.confirm_delete_title')}
-          className="max-w-sm"
-        >
-          <div className="space-y-4">
-            {deleteConfirmation.taskCount > 0 ? (
-              <>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings.statuses.delete_has_tasks', {
-                    statusName: deleteConfirmation.statusName,
-                    count: deleteConfirmation.taskCount,
-                    defaultValue: '"{{statusName}}" has {{count}} task(s). Move them to:',
-                  })}
-                </p>
-                <CustomSelect
-                  value={deleteConfirmation.moveToMappingId}
-                  onValueChange={(val) => setDeleteConfirmation({ ...deleteConfirmation, moveToMappingId: val })}
-                  options={statuses
-                    .filter(s => s.project_status_mapping_id !== deleteConfirmation.mappingId)
-                    .map(s => ({
-                      value: s.project_status_mapping_id,
-                      label: s.custom_name || s.status_name || s.name || 'Status',
-                    }))}
-                  id="move-tasks-target-select"
-                />
-              </>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('settings.statuses.confirm_delete', { statusName: deleteConfirmation.statusName })}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button id="cancel-delete-status" variant="outline" size="sm" onClick={() => setDeleteConfirmation(null)}>
-                {t('common:actions.cancel')}
-              </Button>
-              <Button
-                id="confirm-delete-status"
-                variant="destructive"
-                size="sm"
-                onClick={handleDelete}
-                disabled={isMutating || (deleteConfirmation.taskCount > 0 && !deleteConfirmation.moveToMappingId)}
-              >
-                {deleteConfirmation.taskCount > 0
-                  ? t('settings.statuses.delete_and_move', { defaultValue: 'Move & Delete' })
-                  : t('common:actions.delete')}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
+          onClose={() => setForkConfirmation(false)}
+          onConfirm={handleEnableCustomStatuses}
+          title={t('settings.statuses.fork_title', 'Use custom status columns for this phase?')}
+          message={t(
+            'settings.statuses.fork_message',
+            'This phase will stop inheriting the project default columns. Status columns you add to Project Defaults later will not appear here until you switch the phase back.'
+          )}
+          confirmLabel={t('settings.statuses.fork_confirm', 'Use custom statuses')}
+          cancelLabel={t('common:actions.cancel')}
+          id="confirm-phase-status-fork"
+        />
       )}
 
       {revertConfirmation && (
@@ -438,6 +404,7 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
           message={t('settings.statuses.revert_message')}
           confirmLabel={t('settings.statuses.revert_confirm')}
           cancelLabel={t('common:actions.cancel')}
+          id="confirm-phase-status-revert"
         />
       )}
     </div>

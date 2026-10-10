@@ -67,7 +67,6 @@ describe('T002: static i18n wiring audit', () => {
     // Sub-batch C: settings + small
     'settings/projects/TenantProjectTaskStatusSettings.tsx',
     'settings/projects/ProjectStatusSettings.tsx',
-    'ProjectTaskStatusEditor.tsx',
     'CreateTaskFromTicketDialog.tsx',
     'LinkTicketToTaskDialog.tsx',
     'DeadlineFilter.tsx',
@@ -77,7 +76,10 @@ describe('T002: static i18n wiring audit', () => {
     'ProjectInfo.tsx',
     'DuplicateTaskDialog.tsx',
     'TicketLinkedTasksBadge.tsx',
-    'settings/projects/AddStatusDialog.tsx',
+    'settings/projects/ProjectTaskStatusSettings.tsx',
+    'status-columns/StatusColumnsEditor.tsx',
+    'status-columns/AddStatusColumnControls.tsx',
+    'status-columns/DeleteStatusColumnDialog.tsx',
     'ProjectPhases.tsx',
     'TaskStatusSelect.tsx',
     'TicketSelect.tsx',
@@ -414,11 +416,14 @@ describe('T013: /msp/settings/project-settings i18n coverage', () => {
     expect(source).toContain("useTranslation");
   });
 
-  it('AddStatusDialog.tsx wires add-status dialog keys backed by xx pseudo-locale', () => {
-    const source = read('./settings/projects/AddStatusDialog.tsx');
-    expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'addStatusDialog.addStatus')).toMatch(pseudoPattern('xx'));
-    expect(getLeaf(pseudo, 'addStatusDialog.placeholder')).toMatch(pseudoPattern('xx'));
+  it('the shared status-columns editor wires its keys backed by xx pseudo-locale', () => {
+    expect(read('./status-columns/StatusColumnsEditor.tsx')).toContain("useTranslation");
+    expect(read('./status-columns/AddStatusColumnControls.tsx')).toContain("useTranslation");
+    expect(read('./status-columns/DeleteStatusColumnDialog.tsx')).toContain("useTranslation");
+    expect(getLeaf(pseudo, 'settings.statuses.add_existing')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.choose_status')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.closed_badge')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'settings.statuses.fork_message')).toMatch(pseudoPattern('xx'));
   });
 });
 

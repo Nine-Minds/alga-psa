@@ -943,7 +943,7 @@
       "choose_status": "Choisir un statut",
       "no_statuses_available": "Aucun statut disponible",
       "no_statuses_available_hint": "Créez d’abord des statuts dans Paramètres → Projets → Statuts.",
-      "task_status_library_title": "Bibliothèque des statuts de tâches de projet",
+      "task_status_library_title": "Bibliothèque des statuts de tâches",
       "task_status_library_description": "Gérez les statuts des tâches de projet de votre organisation. Ces statuts peuvent être utilisés dans tous les projets.",
       "task_status_library_empty": "Aucun statut de tâche de projet trouvé",
       "task_status_library_empty_hint": "Créez votre premier statut pour commencer",
@@ -983,12 +983,25 @@
       "last_closed_error": "Au moins un statut doit rester marqué comme fermé",
       "last_closed_delete_error": "Impossible de supprimer le dernier statut fermé pour ce type.",
       "addStatus": "Ajouter un nouveau statut",
-      "add_from_library": "Ajouter un statut"
+      "add_from_library": "Ajouter un statut",
+      "closed_badge": "(Fermé)",
+      "drag_to_reorder": "Glisser pour réorganiser",
+      "refresh_library": "Actualiser la bibliothèque de statuts",
+      "all_library_statuses_used": "Tous les statuts de la bibliothèque sont déjà des colonnes ici. Utilisez « Créer » pour en ajouter un autre.",
+      "delete_no_move_target": "Il n'existe aucune autre colonne de statut vers laquelle déplacer ces tâches. Ajoutez d'abord une autre colonne.",
+      "delete_scope_help": "Cela supprime la colonne uniquement dans cette portée. Le statut reste dans votre Bibliothèque des statuts de tâches.",
+      "fork_title": "Utiliser des colonnes de statut personnalisées pour cette phase ?",
+      "fork_message": "Cette phase cessera d'hériter des colonnes par défaut du projet. Les colonnes de statut que vous ajouterez ensuite aux valeurs par défaut du projet n'apparaîtront ici qu'après avoir rebasculé la phase.",
+      "fork_confirm": "Utiliser des statuts personnalisés",
+      "phase_uses_custom": "Cette phase possède ses propres colonnes de statut et n'hérite plus des valeurs par défaut du projet.",
+      "rename_impact_title": "Où ce renommage s’applique",
+      "rename_impact": "Le renommage met à jour {{live}} colonne(s) de projet immédiatement. {{unaffected}} colonne(s) de projet plus anciennes conservent leur nom actuel.",
+      "rename_impact_none": "Ce statut n'est encore utilisé comme colonne dans aucun projet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gérer les colonnes de statut",
+      "manage_title": "Colonnes de statut des tâches",
       "manage_description": "Définissez les colonnes de statut pour les tâches de ce modèle. Glissez pour réorganiser.",
       "template_defaults": "Valeurs par défaut du modèle",
       "added": "Colonne de statut ajoutée",
@@ -1014,7 +1027,8 @@
       "replaced": "Colonne de statut remplacée",
       "replace_failed": "Échec du remplacement de la colonne de statut",
       "repair_status_columns": "Réparer les colonnes de statut",
-      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})"
+      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})",
+      "pending_row_hint": "Complétez la colonne de statut vide avant d’en ajouter une autre."
     },
     "list": {
       "title": "Modèles de projet",
@@ -1458,18 +1472,6 @@
     "title": "Phases du projet",
     "import": "Importer"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Ajouter un statut de phase depuis la bibliothèque",
-    "projectTitle": "Ajouter un statut depuis la bibliothèque",
-    "selectLabel": "Sélectionner depuis la bibliothèque de statuts",
-    "placeholder": "Choisir un statut",
-    "helpText": "Sélectionnez un statut de la bibliothèque de votre locataire à ajouter à ce projet.",
-    "noStatusesTitle": "Aucun statut disponible",
-    "noStatusesDescription": "Créez des statuts dans Paramètres → Projets → Statuts.",
-    "adding": "Ajout...",
-    "addStatus": "Ajouter un statut",
-    "addFailed": "Échec de l'ajout du statut. Veuillez réessayer."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Statut de la tâche",
     "selectStatus": "Sélectionner le statut"
@@ -1554,7 +1556,7 @@
     "statusColor": "Couleur du statut",
     "changeColor": "Changer la couleur",
     "markClosed": "Marquer comme statut fermé",
-    "markClosedDescription": "Les tâches dans les statuts fermés sont considérées comme terminées",
+    "markClosedDescription": "Les tâches avec ce statut seront considérées comme terminées",
     "creating": "Création...",
     "createButton": "Créer le statut",
     "nameRequired": "Le nom du statut est requis",

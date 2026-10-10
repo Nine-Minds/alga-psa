@@ -943,7 +943,7 @@
       "choose_status": "Kies een status",
       "no_statuses_available": "Geen statussen beschikbaar",
       "no_statuses_available_hint": "Maak eerst statussen aan in Instellingen → Projecten → Statussen.",
-      "task_status_library_title": "Statusbibliotheek van projecttaak",
+      "task_status_library_title": "Taakstatusbibliotheek",
       "task_status_library_description": "Beheer de projecttaakstatussen van uw organisatie. Deze statussen kunnen in alle projecten worden gebruikt.",
       "task_status_library_empty": "Geen projecttaakstatussen gevonden",
       "task_status_library_empty_hint": "Maak uw eerste status aan om aan de slag te gaan",
@@ -983,12 +983,25 @@
       "last_closed_error": "Er moet ten minste één status gemarkeerd blijven als gesloten",
       "last_closed_delete_error": "Kan de laatste gesloten status voor dit type niet verwijderen.",
       "addStatus": "Nieuwe status toevoegen",
-      "add_from_library": "Status toevoegen"
+      "add_from_library": "Status toevoegen",
+      "closed_badge": "(Gesloten)",
+      "drag_to_reorder": "Sleep om te herschikken",
+      "refresh_library": "Statusbibliotheek vernieuwen",
+      "all_library_statuses_used": "Elke status uit de bibliotheek is hier al een kolom. Gebruik ‘Nieuw maken’ om er een toe te voegen.",
+      "delete_no_move_target": "Er is geen andere statuskolom om deze taken naartoe te verplaatsen. Voeg eerst een kolom toe.",
+      "delete_scope_help": "Dit verwijdert de kolom alleen binnen dit bereik. De status blijft in de Taakstatusbibliotheek.",
+      "fork_title": "Aangepaste statuskolommen voor deze fase gebruiken?",
+      "fork_message": "Deze fase erft dan niet langer de standaardkolommen van het project. Statuskolommen die je later aan de projectstandaarden toevoegt, verschijnen hier pas als je de fase terugzet.",
+      "fork_confirm": "Aangepaste statussen gebruiken",
+      "phase_uses_custom": "Deze fase heeft eigen statuskolommen en erft de projectstandaarden niet meer.",
+      "rename_impact_title": "Waar deze naamswijziging terechtkomt",
+      "rename_impact": "De naamswijziging werkt {{live}} projectkolom(men) direct bij. {{unaffected}} oudere projectkolom(men) houden hun huidige naam.",
+      "rename_impact_none": "Deze status wordt nog in geen enkel project als kolom gebruikt."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Statuskolommen beheren",
+      "manage_title": "Taakstatuskolommen",
       "manage_description": "Definieer de statuskolommen voor taken in dit sjabloon. Sleep om te herordenen.",
       "template_defaults": "Sjabloonstandaarden",
       "added": "Statuskolom toegevoegd",
@@ -1014,7 +1027,8 @@
       "replaced": "Statuskolom vervangen",
       "replace_failed": "Statuskolom vervangen mislukt",
       "repair_status_columns": "Statuskolommen repareren",
-      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})"
+      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})",
+      "pending_row_hint": "Vul de lege statuskolom in voordat je er een toevoegt."
     },
     "list": {
       "title": "Projectsjablonen",
@@ -1458,18 +1472,6 @@
     "title": "Projectfasen",
     "import": "Importeren"
   },
-  "addStatusDialog": {
-    "phaseTitle": "Fasestatus toevoegen vanuit bibliotheek",
-    "projectTitle": "Status toevoegen vanuit bibliotheek",
-    "selectLabel": "Selecteer uit statusbibliotheek",
-    "placeholder": "Kies een status",
-    "helpText": "Selecteer een status uit de statusbibliotheek van uw tenant om aan dit project toe te voegen.",
-    "noStatusesTitle": "Geen statussen beschikbaar",
-    "noStatusesDescription": "Maak statussen aan in Instellingen → Projecten → Statussen.",
-    "adding": "Toevoegen...",
-    "addStatus": "Status toevoegen",
-    "addFailed": "Kan status niet toevoegen. Probeer het opnieuw."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Taakstatus",
     "selectStatus": "Selecteer status"
@@ -1554,7 +1556,7 @@
     "statusColor": "Statuskleur",
     "changeColor": "Kleur wijzigen",
     "markClosed": "Markeren als gesloten status",
-    "markClosedDescription": "Taken in gesloten statussen worden als voltooid beschouwd",
+    "markClosedDescription": "Taken met deze status worden als voltooid beschouwd",
     "creating": "Aanmaken...",
     "createButton": "Status aanmaken",
     "nameRequired": "Statusnaam is verplicht",

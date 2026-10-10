@@ -6,8 +6,8 @@ const settingsSource = readFileSync(
   path.resolve(__dirname, 'ProjectTaskStatusSettings.tsx'),
   'utf8'
 );
-const addDialogSource = readFileSync(
-  path.resolve(__dirname, 'AddStatusDialog.tsx'),
+const addControlsSource = readFileSync(
+  path.resolve(__dirname, '../../status-columns/AddStatusColumnControls.tsx'),
   'utf8'
 );
 const actionsSource = readFileSync(
@@ -27,27 +27,47 @@ describe('phase-aware project status settings contracts', () => {
 
   it('T041/T042/T043: settings expose copy-from-defaults and revert-to-default flows for phases', () => {
     // Copying project defaults into a phase now happens via the
-    // 'Custom statuses' toggle (handleEnableCustomStatuses), and the revert
-    // flow is confirmed through a ConfirmationDialog instead of confirm().
+    // 'Custom statuses' toggle, and both directions are confirmed through a
+    // ConfirmationDialog instead of persisting on the first click.
     expect(settingsSource).toContain('async function handleEnableCustomStatuses() {');
     expect(settingsSource).toContain('await copyProjectStatusesToPhase(projectId, selectedPhaseId);');
-    expect(settingsSource).toContain('onClick={handleEnableCustomStatuses}');
+    expect(settingsSource).toContain('onClick={() => setForkConfirmation(true)}');
+    expect(settingsSource).toContain('onConfirm={handleEnableCustomStatuses}');
     expect(settingsSource).toContain('async function handleRevertToDefaults() {');
     expect(settingsSource).toContain('onClick={() => setRevertConfirmation(true)}');
     expect(settingsSource).toContain('onConfirm={handleRevertToDefaults}');
     expect(settingsSource).toContain('await removePhaseStatuses(selectedPhaseId);');
   });
 
-  it('T044/T045: AddStatusDialog accepts phaseId and forwards it when adding phase statuses', () => {
-    expect(settingsSource).toContain('<AddStatusDialog');
-    expect(settingsSource).toContain('phaseId={selectedPhaseId}');
-    expect(addDialogSource).toContain('phaseId?: string | null;');
-    expect(addDialogSource).toContain('export function AddStatusDialog({ projectId, phaseId, onClose, onAdded }: AddStatusDialogProps)');
-    expect(addDialogSource).toContain("await addStatusToProject(projectId, {");
-    expect(addDialogSource).toContain('}, phaseId);');
-    expect(addDialogSource).toContain(
-      "title={phaseId ? t('addStatusDialog.phaseTitle', 'Add Phase Status from Library') : t('addStatusDialog.projectTitle', 'Add Status from Library')}"
+  it('T044/T045: the inline add controls forward the selected scope when adding phase statuses', () => {
+    // AddStatusDialog was absorbed into the shared status-columns editor: the
+    // library picker and the inline Create New flow now live in the editor and
+    // add straight into the selected scope.
+    expect(settingsSource).toContain('<AddStatusColumnControls');
+    expect(settingsSource).toContain('onAddExisting={handleAddExisting}');
+    expect(settingsSource).toContain('onStatusCreated={handleStatusCreated}');
+    expect(settingsSource).toContain(
+      'await addStatusToProject(projectId, { status_id: statusId }, selectedPhaseId);'
     );
+    expect(addControlsSource).toContain('onAddExisting: (statusId: string) => void | Promise<void>;');
+    expect(addControlsSource).toContain('onStatusCreated: (status: IStatus) => void | Promise<void>;');
+    // Re-reads the library on open so a status created elsewhere shows up
+    // without a page reload.
+    expect(addControlsSource).toContain('await onRefresh?.();');
+  });
+
+  it('phase forking is confirmed before it persists and never submits a host form', () => {
+    expect(settingsSource).toContain("id=\"confirm-phase-status-fork\"");
+    expect(settingsSource).toContain("'settings.statuses.fork_message'");
+    // The move/delete controls live in the shared editor, which marks every
+    // control type="button" so the project edit drawer stops self-submitting.
+    const editorSource = readFileSync(
+      path.resolve(__dirname, '../../status-columns/StatusColumnsEditor.tsx'),
+      'utf8'
+    );
+    const rawButtons = editorSource.match(/<button\b/g)?.length ?? 0;
+    expect(rawButtons).toBeGreaterThan(0);
+    expect(editorSource.match(/<button\s+type="button"/g)?.length).toBe(rawButtons);
   });
 
   it('T062: status deletion still blocks removing the last remaining status mapping', () => {

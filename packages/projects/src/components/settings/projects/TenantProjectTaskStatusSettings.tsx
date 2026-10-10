@@ -22,6 +22,7 @@ import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components/dialogs/ConflictResolutionDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { StatusColumnName } from '../../status-columns';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -440,12 +441,11 @@ export function TenantProjectTaskStatusSettings() {
                     )}
                   </div>
                   <div>
-                    <span className="font-medium">{status.name}</span>
-                    {status.is_closed && (
-                      <span className="ml-2 text-xs px-2 py-1 bg-gray-200 rounded">
-                        {t('settings.statuses.closed', 'Closed')}
-                      </span>
-                    )}
+                    <StatusColumnName
+                      name={status.name}
+                      isClosed={status.is_closed}
+                      className="font-medium"
+                    />
                   </div>
                 </div>
                 <div className="flex gap-2">
