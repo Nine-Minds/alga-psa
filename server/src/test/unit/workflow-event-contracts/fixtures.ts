@@ -34,6 +34,8 @@ export const IDS = {
   task: 'f0f0f0f0-0000-4000-8000-000000000003',
   blockerTask: 'f0f0f0f0-0000-4000-8000-000000000004',
   taskStatusMapping: 'f0f0f0f0-0000-4000-8000-000000000005',
+  scheduleEntry: 'abababab-0000-4000-8000-000000000001',
+  technician: '22222222-2222-4222-8222-555555555555',
 } as const;
 
 export const NOW = '2026-07-16T12:00:00.000Z';

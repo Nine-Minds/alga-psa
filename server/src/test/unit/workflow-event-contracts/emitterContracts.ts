@@ -2,6 +2,7 @@ import type { EmitterContracts } from './registryTypes';
 import { pendingMigration, schemaNotRegistered } from './registryTypes';
 import { ticketContracts } from './contracts/tickets';
 import { projectContracts } from './contracts/projects';
+import { schedulingContracts } from './contracts/scheduling';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -20,20 +21,9 @@ export const emitterContracts: EmitterContracts = {
   ...ticketContracts,
   // ---- projects ----
   ...projectContracts,
+  // ---- scheduling / dispatch ----
+  ...schedulingContracts,
   // ---- scheduling ----
-  APPOINTMENT_ASSIGNED: pendingMigration('APPOINTMENT_ASSIGNED', 'scheduling'),
-  APPOINTMENT_CANCELED: pendingMigration('APPOINTMENT_CANCELED', 'scheduling'),
-  APPOINTMENT_COMPLETED: pendingMigration('APPOINTMENT_COMPLETED', 'scheduling'),
-  APPOINTMENT_CREATED: pendingMigration('APPOINTMENT_CREATED', 'scheduling'),
-  APPOINTMENT_NO_SHOW: pendingMigration('APPOINTMENT_NO_SHOW', 'scheduling'),
-  APPOINTMENT_RESCHEDULED: pendingMigration('APPOINTMENT_RESCHEDULED', 'scheduling'),
-  CAPACITY_THRESHOLD_REACHED: pendingMigration('CAPACITY_THRESHOLD_REACHED', 'scheduling'),
-  SCHEDULE_BLOCK_CREATED: pendingMigration('SCHEDULE_BLOCK_CREATED', 'scheduling'),
-  SCHEDULE_BLOCK_DELETED: pendingMigration('SCHEDULE_BLOCK_DELETED', 'scheduling'),
-  TECHNICIAN_ARRIVED: pendingMigration('TECHNICIAN_ARRIVED', 'scheduling'),
-  TECHNICIAN_CHECKED_OUT: pendingMigration('TECHNICIAN_CHECKED_OUT', 'scheduling'),
-  TECHNICIAN_DISPATCHED: pendingMigration('TECHNICIAN_DISPATCHED', 'scheduling'),
-  TECHNICIAN_EN_ROUTE: pendingMigration('TECHNICIAN_EN_ROUTE', 'scheduling'),
   // ---- billing ----
   INVOICE_GENERATED: pendingMigration('INVOICE_GENERATED', 'billing'),
   INVOICE_FINALIZED: pendingMigration('INVOICE_FINALIZED', 'billing'),
