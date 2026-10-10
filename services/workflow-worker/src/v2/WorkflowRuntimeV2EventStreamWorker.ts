@@ -534,32 +534,30 @@ export class WorkflowRuntimeV2EventStreamWorker {
     });
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
-    if (matchedRunId) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        matched_run_id: matchedRunId,
-        processed_at: processedAt,
-      });
+    const nothingLaunchedOrSignaled = startedRuns.length === 0 && signaledRuns.size === 0;
+
+    // One error_message per event, combined in a fixed order so no reason masks another:
+    //   delivery errors, payload validation errors, skip diagnostics.
+    // Skip diagnostics are always persisted. Payload validation errors are persisted when nothing
+    // launched/signaled (as before) or when skip diagnostics exist (a validation failure is itself
+    // a skip reason, so it travels with the others). With a started/signaled run and no skip
+    // diagnostics, validation errors stay unstamped so the event does not read as an error.
+    const messageParts: string[] = [...deliveryErrors];
+    if (payloadValidationErrors.length > 0 && (nothingLaunchedOrSignaled || skipDiagnostics.length > 0)) {
+      messageParts.push(...payloadValidationErrors);
+    }
+    messageParts.push(...skipDiagnostics);
+    if (messageParts.length === 0 && missingCorrelationWarning && nothingLaunchedOrSignaled) {
+      messageParts.push(missingCorrelationWarning);
     }
 
-    if (deliveryErrors.length > 0) {
+    // A single update carries matched_run_id, processed_at and error_message together.
+    if (matchedRunId || messageParts.length > 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: deliveryErrors.join('\n'),
-        processed_at: processedAt,
-      });
-    } else if (
-      (payloadValidationErrors.length > 0 || skipDiagnostics.length > 0) &&
-      startedRuns.length === 0 &&
-      signaledRuns.size === 0
-    ) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: [...payloadValidationErrors, ...skipDiagnostics].join('\n'),
+        ...(matchedRunId ? { matched_run_id: matchedRunId } : {}),
+        ...(messageParts.length > 0 ? { error_message: messageParts.join('\n') } : {}),
         processed_at: processedAt,
       }, event.tenant);
-    } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
-      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: missingCorrelationWarning,
-        processed_at: processedAt,
-      });
     }
   }
 
