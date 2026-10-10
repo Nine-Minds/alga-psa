@@ -66,7 +66,7 @@ export function RmmUserContactMappingPanel({
   contacts: IContact[];
   idPrefix?: string;
 }) {
-  const { t } = useTranslation('integrations');
+  const { t } = useTranslation('msp/integrations');
   const [rows, setRows] = useState<SignedInUserRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

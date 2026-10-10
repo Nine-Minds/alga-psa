@@ -28,7 +28,7 @@ export function RmmOrganizationClientChangeDialog({
   onConfirm: () => void;
   isConfirming?: boolean;
 }) {
-  const { t } = useTranslation('integrations');
+  const { t } = useTranslation('msp/integrations');
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function RmmOrganizationClientChangeDialog({
         client: pendingClientName ?? '',
       })}
       confirmLabel={t('integrations.rmm.clientChange.confirm', { defaultValue: 'Move devices' })}
-      cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      cancelLabel={t('common:actions.cancel', { defaultValue: 'Cancel' })}
       isConfirming={isConfirming}
     />
   );
