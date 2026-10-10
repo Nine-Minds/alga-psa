@@ -61,6 +61,7 @@ const servicePriceSchema = z.object({
   rate: z.union([z.string(), z.number()]).transform(val =>
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
+  display_order: z.number().int().optional(),
   effective_date: z.union([z.string(), z.date()]).transform(val =>
     val instanceof Date ? val.toISOString().slice(0, 10) : String(val).slice(0, 10)
   ).nullable().optional(),
@@ -164,6 +165,12 @@ function todayCalendarDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Primary-price order: `display_order`, then `currency_code`. */
+function comparePriceDisplayOrder(a: IServicePrice, b: IServicePrice): number {
+  return (a.display_order ?? 0) - (b.display_order ?? 0)
+    || a.currency_code.localeCompare(b.currency_code);
+}
+
 /**
  * Split a service's `service_prices` rows into the price effective now (one per
  * currency: the latest row effective on or before today) and the future-dated
@@ -200,10 +207,15 @@ export function splitServicePricesByEffectiveDate(
 
   scheduled.sort((a, b) =>
     calendarDateOf(a.effective_date).localeCompare(calendarDateOf(b.effective_date))
+    || comparePriceDisplayOrder(a, b)
   );
 
+  // `current[0]` is the primary price, so the order is the explicit
+  // display_order of the row that is actually current, not row arrival order.
   return {
-    current: currencyOrder.map((currency) => currentByCurrency.get(currency)!),
+    current: currencyOrder
+      .map((currency) => currentByCurrency.get(currency)!)
+      .sort(comparePriceDisplayOrder),
     scheduled
   };
 }
@@ -331,6 +343,7 @@ const Service = {
         ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
             .whereIn('service_id', serviceIds)
             .select('*')
+            .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
         : [];
 
       // Group prices by service_id
@@ -399,7 +412,8 @@ const Service = {
       // Fetch prices for this service
       const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
         .where({ service_id })
-        .select('*');
+        .select('*')
+        .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
       log.info(`[Service.getById] Found service: ${serviceData.service_name} with ${prices.length} price(s)`);
       const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
@@ -687,7 +701,8 @@ const Service = {
       // Fetch prices for this service
       const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
         .where({ service_id })
-        .select('*');
+        .select('*')
+        .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
       const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
       // Validate and transform the DB result using the final schema's parse method
@@ -886,6 +901,7 @@ const Service = {
         ? await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
             .whereIn('service_id', serviceIds)
             .select('*')
+            .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
         : [];
 
       // Group prices by service_id
@@ -915,7 +931,7 @@ const Service = {
     const prices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
       .where({ service_id })
       .select('*')
-      .orderBy('currency_code', 'asc');
+      .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
     return prices;
   },
@@ -937,116 +953,9 @@ const Service = {
     return price || null;
   },
 
-  /**
-   * Set a price for a service in a given currency (upsert)
-   */
-  setPrice: async (
-    knexOrTrx: Knex | Knex.Transaction,
-    service_id: string,
-    currency_code: string,
-    rate: number
-  ): Promise<IServicePrice> => {
-    const tenant = await requireTenantId(knexOrTrx);
-
-    const normalizedRate = Math.round(Number(rate || 0));
-    if (!Number.isFinite(normalizedRate) || normalizedRate < 0) {
-      throw new Error('rate must be a non-negative number');
-    }
-
-    // Target the currently-effective row only: with effective-dated prices an
-    // unordered `.first()` could return a future row and silently overwrite a
-    // scheduled increase. (The `setServicePrice` action that reaches this has
-    // no in-repo callers, but the writer is kept safe regardless.)
-    const existingPrice = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id, currency_code })
-      .where('effective_date', '<=', todayCalendarDate())
-      .orderBy('effective_date', 'desc')
-      .first();
-
-    if (existingPrice) {
-      // Update existing price
-      const [updatedPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-        .where({ price_id: existingPrice.price_id })
-        .update({
-          rate: normalizedRate,
-          updated_at: knexOrTrx.fn.now()
-        })
-        .returning('*');
-
-      log.info(`[Service.setPrice] Updated price for service ${service_id} in ${currency_code}: ${normalizedRate}`);
-      return updatedPrice;
-    } else {
-      // Insert new price effective now
-      const [newPrice] = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-        .insert({
-          price_id: uuidv4(),
-          tenant,
-          service_id,
-          currency_code,
-          rate: normalizedRate,
-          effective_date: '1970-01-01'
-        })
-        .returning('*');
-
-      log.info(`[Service.setPrice] Created price for service ${service_id} in ${currency_code}: ${normalizedRate}`);
-      return newPrice;
-    }
-  },
-
-  /**
-   * Set multiple prices for a service at once, as of now.
-   *
-   * This is the ordinary "save the price" write (used by `updateServicePricing`
-   * and `setServicePrices`), and it is deliberately scoped to the currently
-   * effective window: it replaces the row(s) effective on or before today and
-   * writes the submitted rates at the epoch. **Future-dated rows are left in
-   * place.** A scheduled catalog increase (`applyServicePriceChange` with a
-   * future `effective_date`) is therefore not silently revoked by an unrelated
-   * edit such as fixing a typo in the description. The scheduled rows stay
-   * visible to the catalog read as `scheduled_prices` so the operator can see
-   * them; documenting this is deliberate, not incidental.
-   */
-  setPrices: async (
-    knexOrTrx: Knex | Knex.Transaction,
-    service_id: string,
-    prices: Array<{ currency_code: string; rate: number }>
-  ): Promise<IServicePrice[]> => {
-    const tenant = await requireTenantId(knexOrTrx);
-    const today = todayCalendarDate();
-
-    // Replace only the currently-effective window; keep scheduled future rows.
-    await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
-      .where({ service_id })
-      .where('effective_date', '<=', today)
-      .del();
-
-    if (prices.length === 0) {
-      return [];
-    }
-
-    // Insert new prices effective now (the epoch row).
-    const pricesToInsert = prices.map(p => ({
-      price_id: uuidv4(),
-      tenant,
-      service_id,
-      currency_code: p.currency_code,
-      rate: (() => {
-        const normalizedRate = Math.round(Number(p.rate || 0));
-        if (!Number.isFinite(normalizedRate) || normalizedRate < 0) {
-          throw new Error('rate must be a non-negative number');
-        }
-        return normalizedRate;
-      })(),
-      effective_date: '1970-01-01'
-    }));
-
-    const insertedPrices = await tenantScopedTable<IServicePrice>(knexOrTrx, tenant, 'service_prices')
-      .insert(pricesToInsert)
-      .returning('*');
-
-    log.info(`[Service.setPrices] Set ${prices.length} price(s) for service ${service_id}`);
-    return insertedPrices;
-  },
+  // Catalog price writes live in one place: `writeServiceCatalogPricing`
+  // (lib/catalog/serviceCatalogPricing.ts). There is deliberately no setPrice /
+  // setPrices on this model.
 
   /**
    * Remove a currency's price for a service.
@@ -1064,6 +973,7 @@ const Service = {
   ): Promise<boolean> => {
     const tenant = await requireTenantId(knexOrTrx);
 
+    // LEVERAGE: friction catalog-price-writer — per-currency delete across all windows is the one write not expressible through writeServiceCatalogPricing (no caller in-repo).
     const deletedCount = await tenantScopedTable(knexOrTrx, tenant, 'service_prices')
       .where({ service_id, currency_code })
       .del();

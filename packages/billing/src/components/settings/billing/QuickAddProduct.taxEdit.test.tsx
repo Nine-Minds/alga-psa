@@ -32,7 +32,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   updateService: (...args: unknown[]) => mocks.updateService(...args),
-  createService: (...args: unknown[]) => mocks.createService(...args),
+  createServiceWithPricing: (...args: unknown[]) => mocks.createService(...args),
   getServiceTypesForSelection: (...args: unknown[]) => mocks.getServiceTypesForSelection(...args),
   setServicePrices: (...args: unknown[]) => mocks.setServicePrices(...args),
   createServiceTypeInline: (...args: unknown[]) => mocks.createServiceTypeInline(...args),

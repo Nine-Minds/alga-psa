@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
 import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
+import {
+  scheduledServicePricesInputSchema,
+  servicePricesInputSchema,
+} from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 
 const billingMethodSchema = z.enum(['usage']);
 
@@ -25,11 +29,6 @@ const descriptionSchema = z.union([z.string().max(2048), z.null()]);
 // default_billing_settings.default_currency_code (falling back to 'USD' only as
 // a last resort) and sets cost_currency explicitly before insert.
 const currencyCodeSchema = z.string().length(3); // ISO 4217 currency code
-
-const priceSchema = z.object({
-  currency_code: z.string().length(3),
-  rate: z.number().min(0)
-});
 
 const productShape = {
   service_name: z.string().min(1).max(255),
@@ -59,7 +58,11 @@ const productShape = {
   license_billing_cadence: z.union([z.string().max(64), z.null()]).optional(),
   is_active: z.boolean().optional().default(true),
 
-  prices: z.array(priceSchema).optional()
+  // Shared with the services API: validated against CURRENCY_OPTIONS, integer
+  // minor units, `prices[0]` is primary. `prices` replaces the current window,
+  // `scheduled_prices` the future window.
+  prices: servicePricesInputSchema.optional().describe('Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique.'),
+  scheduled_prices: scheduledServicePricesInputSchema.optional().describe('Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate.')
 } as const;
 
 export const createProductSchema = z.object(productShape);

@@ -23,7 +23,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import { writeServiceCatalogPricing } from '../lib/catalog/serviceCatalogPricing';
 import {
   loadFixedLineRateInputs,
   toResolverInput,
@@ -484,19 +484,37 @@ export const applyServicePriceChange = withAuth(
     const { knex } = await createTenantKnex();
     try {
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await lockTenantBilling(trx, tenant);
-        const db = tenantDb(trx, tenant);
-
-        const primaryRate =
-          normalizedPrices.length > 0 ? normalizedPrices[0].rate : null;
         const today = new Date().toISOString().slice(0, 10);
         // A scheduled write must not move `default_rate` (the catalog's display
-        // and comparison price) to the future rate. Keep it at the
-        // currently-effective price so the list and the edit dialog still show
-        // what bills today and a later price change still re-opens the rollout
-        // dialog. Only an immediate write mirrors the submitted rate.
+        // and comparison price) to the future rate: the writer only mirrors the
+        // primary price for an immediate write, so the list and the edit dialog
+        // still show what bills today and a later price change still re-opens
+        // the rollout dialog.
         const isFutureEffective =
           Boolean(input.effectiveDate) && input.effectiveDate! > today;
+
+        // One writer for both branches. Immediate (no date, or a date that is
+        // not in the future) replaces the whole current window; a future date
+        // upserts the submitted currencies at that date. It takes the tenant
+        // billing lock before any row is touched.
+        // An apply with no prices is a service-field-only save: it must not
+        // clear the price window.
+        const { servicePatch: pricingPatch } = normalizedPrices.length === 0
+          ? { servicePatch: {} }
+          : await writeServiceCatalogPricing(
+              trx,
+              tenant,
+              input.serviceId,
+              isFutureEffective
+                ? {
+                    scheduledAt: {
+                      effectiveDate: input.effectiveDate!,
+                      prices: normalizedPrices,
+                    },
+                  }
+                : { current: normalizedPrices },
+            );
+
         // Route service fields through Service.update: it strips virtual fields
         // (service_type_name, prices, scheduled_prices), ignores undefined, and
         // normalizes `default_rate`. The previous raw update wrote an
@@ -506,52 +524,11 @@ export const applyServicePriceChange = withAuth(
           ...(input.servicePatch as Partial<IService> | undefined),
         };
         delete servicePatch.default_rate;
-        if (!isFutureEffective && primaryRate !== null) {
-          servicePatch.default_rate = primaryRate;
-        }
+        Object.assign(servicePatch, pricingPatch);
         // An empty patch (future write with no servicePatch) would make knex
         // reject an empty .update(); skip it rather than throw.
         if (Object.values(servicePatch).some((value) => value !== undefined)) {
           await Service.update(trx, input.serviceId, servicePatch);
-        }
-
-        for (const price of normalizedPrices) {
-          if (input.effectiveDate) {
-            await db
-              .table('service_prices')
-              .insert({
-                tenant,
-                service_id: input.serviceId,
-                currency_code: price.currency_code,
-                rate: price.rate,
-                effective_date: input.effectiveDate,
-              })
-              .onConflict([
-                'tenant',
-                'service_id',
-                'currency_code',
-                'effective_date',
-              ])
-              .merge({ rate: price.rate });
-          } else {
-            // Immediate write: replace only the currently-effective window and
-            // leave scheduled future rows alone (same rule as Service.setPrices).
-            await db
-              .table('service_prices')
-              .where({
-                service_id: input.serviceId,
-                currency_code: price.currency_code,
-              })
-              .where('effective_date', '<=', today)
-              .del();
-            await db.table('service_prices').insert({
-              tenant,
-              service_id: input.serviceId,
-              currency_code: price.currency_code,
-              rate: price.rate,
-              effective_date: '1970-01-01',
-            });
-          }
         }
 
         try {

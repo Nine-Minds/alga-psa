@@ -17843,7 +17843,12 @@
             "maxLength": 3
           },
           "rate": {
-            "type": "number"
+            "type": "number",
+            "description": "Rate in integer minor units (e.g. cents)."
+          },
+          "display_order": {
+            "type": "integer",
+            "description": "Position within its window; 0 is the primary price. Responses are sorted by display_order, then currency_code."
           },
           "effective_date": {
             "type": [
@@ -18095,7 +18100,12 @@
             "maxLength": 3
           },
           "rate": {
-            "type": "number"
+            "type": "number",
+            "description": "Rate in integer minor units (e.g. cents)."
+          },
+          "display_order": {
+            "type": "integer",
+            "description": "Position within its window; 0 is the primary price. Responses are sorted by display_order, then currency_code."
           },
           "effective_date": {
             "type": [
@@ -79515,7 +79525,7 @@
       },
       "post": {
         "summary": "Create service",
-        "description": "Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings.",
+        "description": "Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings. Supply prices (rates in integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate, so default_rate may then be omitted. scheduled_prices sets future-dated prices.",
         "tags": [
           "Services",
           "Service Catalog"
@@ -79617,13 +79627,71 @@
                   },
                   "is_active": {
                     "type": "boolean"
+                  },
+                  "prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+                  },
+                  "scheduled_prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
+                  },
+                  "currency_code": {
+                    "description": "Not accepted. Send prices[].currency_code instead; a top-level currency_code returns 400."
                   }
                 },
                 "required": [
                   "service_name",
                   "custom_service_type_id",
-                  "billing_method",
-                  "default_rate"
+                  "billing_method"
                 ]
               },
               "description": "Service creation payload."
@@ -79642,7 +79710,7 @@
             }
           },
           "400": {
-            "description": "Validation error.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
             "content": {
               "application/json": {
                 "schema": {
@@ -79756,7 +79824,7 @@
       },
       "put": {
         "summary": "Update service",
-        "description": "Updates a service catalog entry by UUID.",
+        "description": "Updates a service catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
         "tags": [
           "Services",
           "Service Catalog"
@@ -79871,6 +79939,65 @@
                   },
                   "is_active": {
                     "type": "boolean"
+                  },
+                  "prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+                  },
+                  "scheduled_prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
+                  },
+                  "currency_code": {
+                    "description": "Not accepted. Send prices[].currency_code instead; a top-level currency_code returns 400."
                   }
                 }
               },
@@ -79890,7 +80017,7 @@
             }
           },
           "400": {
-            "description": "Validation error.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
             "content": {
               "application/json": {
                 "schema": {
@@ -80181,7 +80308,7 @@
       },
       "post": {
         "summary": "Create product",
-        "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage.",
+        "description": "Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate.",
         "tags": [
           "Products",
           "Service Catalog"
@@ -80427,20 +80554,55 @@
                       "type": "object",
                       "properties": {
                         "currency_code": {
-                          "type": "string",
-                          "minLength": 3,
-                          "maxLength": 3
+                          "type": "string"
                         },
                         "rate": {
-                          "type": "number",
+                          "type": "integer",
                           "minimum": 0
-                        }
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
                       },
                       "required": [
                         "currency_code",
                         "rate"
-                      ]
-                    }
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+                  },
+                  "scheduled_prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
                   }
                 },
                 "required": [
@@ -80464,7 +80626,7 @@
             }
           },
           "400": {
-            "description": "Validation error.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
             "content": {
               "application/json": {
                 "schema": {
@@ -80588,7 +80750,7 @@
       },
       "put": {
         "summary": "Update product",
-        "description": "Updates a product catalog entry by UUID.",
+        "description": "Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.",
         "tags": [
           "Products",
           "Service Catalog"
@@ -80847,20 +81009,55 @@
                       "type": "object",
                       "properties": {
                         "currency_code": {
-                          "type": "string",
-                          "minLength": 3,
-                          "maxLength": 3
+                          "type": "string"
                         },
                         "rate": {
-                          "type": "number",
+                          "type": "integer",
                           "minimum": 0
-                        }
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
                       },
                       "required": [
                         "currency_code",
                         "rate"
-                      ]
-                    }
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique."
+                  },
+                  "scheduled_prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "currency_code": {
+                          "type": "string"
+                        },
+                        "rate": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "effective_date": {},
+                        "price_id": {},
+                        "service_id": {},
+                        "tenant": {},
+                        "created_at": {},
+                        "updated_at": {},
+                        "display_order": {}
+                      },
+                      "required": [
+                        "currency_code",
+                        "rate"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
                   }
                 }
               },
@@ -80880,7 +81077,7 @@
             }
           },
           "400": {
-            "description": "Validation error.",
+            "description": "Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.",
             "content": {
               "application/json": {
                 "schema": {
