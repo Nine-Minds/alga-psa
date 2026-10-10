@@ -38,7 +38,7 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
-import { newSupportReference } from './invoiceGenerationActionErrors';
+import { newSupportReference } from '../lib/supportReference';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;

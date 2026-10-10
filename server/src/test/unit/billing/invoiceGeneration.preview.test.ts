@@ -17,6 +17,20 @@ vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importO
 
 type Row = Record<string, any>;
 
+// Unknown preview failures surface only a coded UNEXPECTED result whose message
+// carries a short support reference; the raw cause stays in the server log.
+const UNEXPECTED_PREVIEW_FAILURE = {
+  error: expect.stringMatching(
+    /^Something went wrong generating the invoice\. Quote reference [0-9a-f]{8} when contacting support\.$/,
+  ),
+  code: 'UNEXPECTED',
+  params: { ref: expect.stringMatching(/^[0-9a-f]{8}$/) },
+};
+
+function expectReferenceInMessage(result: any): void {
+  expect(result.error).toContain(result.params.ref);
+}
+
 function normalizeTableName(tableName: string): string {
   return tableName.split(/\s+as\s+/i)[0].trim();
 }
@@ -703,9 +717,10 @@ describe('invoice preview recurring timing', () => {
       const result = await previewInvoiceForSelectionInput(selectorInput);
       expect(result).toMatchObject({
         success: false,
-        error: 'An error occurred while previewing the invoice',
+        ...UNEXPECTED_PREVIEW_FAILURE,
         executionIdentityKey: selectorInput.executionWindow.identityKey,
       });
+      expectReferenceInMessage(result);
       expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
     } finally {
       row[column] = original;
@@ -1073,10 +1088,10 @@ describe('invoice preview recurring timing', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      ...UNEXPECTED_PREVIEW_FAILURE,
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
-    expect(result).not.toHaveProperty('code');
+    expectReferenceInMessage(result);
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain('client_contract_id');
     expect(serialized).not.toContain('TypeError');
@@ -1086,6 +1101,11 @@ describe('invoice preview recurring timing', () => {
     const [, , loggedError] = consoleErrorSpy.mock.calls[0] as [string, unknown, unknown];
     expect(loggedError).toBeInstanceOf(Error);
     expect((loggedError as Error).message).toContain('client_contract_id');
+    // The reference shown to the operator is logged next to that cause.
+    const refLog = consoleErrorSpy.mock.calls.find(
+      ([, context]) => (context as { ref?: string } | undefined)?.ref === (result as any).params.ref,
+    );
+    expect(refLog?.[2]).toBe(loggedError);
 
     consoleErrorSpy.mockRestore();
   });
@@ -1109,9 +1129,9 @@ describe('invoice preview recurring timing', () => {
     const previewResult = await previewInvoiceForSelectionInput(selectorInput);
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      ...UNEXPECTED_PREVIEW_FAILURE,
     });
-    expect(previewResult).not.toHaveProperty('code');
+    expectReferenceInMessage(previewResult);
     expect(JSON.stringify(previewResult)).not.toContain('service-9');
 
     // The generation boundary must not return the raw coded message as an action

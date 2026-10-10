@@ -339,7 +339,15 @@ describe('Quote conversion infrastructure', () => {
 
     expect(assignment.client_id).toBe(context.clientId);
     expect(new Date(assignment.start_date).toISOString().startsWith('2026-03-14')).toBe(true);
-    expect(assignment.is_active).toBe(true);
+    // The draft's assignment stays inactive until Set to Active; its lines are
+    // enabled from the start so activation alone makes them billable.
+    expect(result.contract.status).toBe('draft');
+    expect(assignment.is_active).toBe(false);
+
+    const lines = await context.db('contract_lines')
+      .where({ tenant: context.tenantId, contract_id: result.contract.contract_id });
+    expect(lines).toHaveLength(1);
+    expect(lines.every((line: { is_active: boolean }) => line.is_active === true)).toBe(true);
   });
 
   it('T109: contract conversion stores converted_contract_id on the source quote', async () => {

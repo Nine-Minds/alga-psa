@@ -1,6 +1,5 @@
 // Not a 'use server' module on purpose: these are synchronous helpers shared by the
 // invoice-generation and recurring-run server actions, and unit-testable on their own.
-import { randomUUID } from 'node:crypto';
 import {
   actionError,
   permissionError,
@@ -31,13 +30,7 @@ import {
 
 export type InvoiceGenerationActionError = ActionMessageErrorShape | ActionPermissionErrorShape;
 
-/**
- * Short opaque reference for an unexpected failure. The operator quotes it to
- * support; the same value is written next to the full cause in the server log.
- */
-export function newSupportReference(): string {
-  return randomUUID().replace(/-/g, '').slice(0, 8);
-}
+export { newSupportReference } from '../lib/supportReference';
 
 export function unexpectedInvoiceFailureMessage(ref: string): string {
   return `Something went wrong generating the invoice. Quote reference ${ref} when contacting support.`;
