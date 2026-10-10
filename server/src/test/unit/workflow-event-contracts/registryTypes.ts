@@ -51,33 +51,6 @@ export const TRACKING_TICKET: TicketRef = 'alga0002106';
  */
 export const NO_EMITTER_UMBRELLA_TICKET: TicketRef = 'alga0002106';
 
-export class EmitterNotMigratedError extends Error {
-  constructor(eventType: string, domain: string) {
-    super(`${eventType}: builder extraction for the "${domain}" domain has not landed yet`);
-    this.name = 'EmitterNotMigratedError';
-  }
-}
-
-/**
- * Placeholder for an entry whose domain has not been migrated to a builder yet. The single case
- * throws, so under `it.fails` the suite is green while the gap stays visible in the summary.
- */
-export function pendingMigration(eventType: WorkflowCatalogEventType, domain: string): KnownDriftEntry {
-  return {
-    status: 'known-drift',
-    ticket: TRACKING_TICKET,
-    reason: `Builder extraction pending (${domain} domain).`,
-    cases: [
-      {
-        site: `pending#${eventType}`,
-        build: () => {
-          throw new EmitterNotMigratedError(eventType, domain);
-        },
-      },
-    ],
-  };
-}
-
 /**
  * Catalogued event whose payload schema ref is missing from the worker's schema registry. No
  * builder can pass until the schema is registered (schema collapse, plan step B), so the entry is

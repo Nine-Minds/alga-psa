@@ -1,5 +1,5 @@
 import type { EmitterContracts } from './registryTypes';
-import { pendingMigration, schemaNotRegistered } from './registryTypes';
+import { schemaNotRegistered } from './registryTypes';
 import { ticketContracts } from './contracts/tickets';
 import { projectContracts } from './contracts/projects';
 import { schedulingContracts } from './contracts/scheduling';
