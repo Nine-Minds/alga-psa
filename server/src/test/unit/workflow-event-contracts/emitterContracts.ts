@@ -5,6 +5,7 @@ import { projectContracts } from './contracts/projects';
 import { schedulingContracts } from './contracts/scheduling';
 import { billingContracts } from './contracts/billing';
 import { crmContracts } from './contracts/crm';
+import { documentContracts } from './contracts/documents';
 
 /**
  * Emitter contract registry. One entry per workflow-catalogued event type.
@@ -29,6 +30,8 @@ export const emitterContracts: EmitterContracts = {
   ...billingContracts,
   // ---- crm / tags ----
   ...crmContracts,
+  // ---- documents / storage / media ----
+  ...documentContracts,
   // ---- scheduling ----
   // ---- billing ----
   PROJECT_MILESTONE_READY: schemaNotRegistered('PROJECT_MILESTONE_READY', 'payload.ProjectMilestoneReady.v1'),
@@ -51,17 +54,6 @@ export const emitterContracts: EmitterContracts = {
   OPPORTUNITY_NEXT_ACTION_OVERDUE: schemaNotRegistered('OPPORTUNITY_NEXT_ACTION_OVERDUE', 'payload.OpportunityNextActionOverdue.v1'),
   OPPORTUNITY_SUGGESTION_CREATED: schemaNotRegistered('OPPORTUNITY_SUGGESTION_CREATED', 'payload.OpportunitySuggestionCreated.v1'),
   // ---- documents ----
-  DOCUMENT_ASSOCIATED: pendingMigration('DOCUMENT_ASSOCIATED', 'documents'),
-  DOCUMENT_DELETED: pendingMigration('DOCUMENT_DELETED', 'documents'),
-  DOCUMENT_DETACHED: pendingMigration('DOCUMENT_DETACHED', 'documents'),
-  DOCUMENT_GENERATED: pendingMigration('DOCUMENT_GENERATED', 'documents'),
-  DOCUMENT_SIGNATURE_EXPIRED: pendingMigration('DOCUMENT_SIGNATURE_EXPIRED', 'documents'),
-  DOCUMENT_SIGNATURE_REQUESTED: pendingMigration('DOCUMENT_SIGNATURE_REQUESTED', 'documents'),
-  DOCUMENT_SIGNED: pendingMigration('DOCUMENT_SIGNED', 'documents'),
-  DOCUMENT_UPLOADED: pendingMigration('DOCUMENT_UPLOADED', 'documents'),
-  FILE_UPLOADED: pendingMigration('FILE_UPLOADED', 'documents'),
-  MEDIA_PROCESSING_FAILED: pendingMigration('MEDIA_PROCESSING_FAILED', 'documents'),
-  MEDIA_PROCESSING_SUCCEEDED: pendingMigration('MEDIA_PROCESSING_SUCCEEDED', 'documents'),
   // ---- comms ----
   INBOUND_EMAIL_RECEIVED: pendingMigration('INBOUND_EMAIL_RECEIVED', 'comms'),
   EMAIL_PROVIDER_CONNECTED: pendingMigration('EMAIL_PROVIDER_CONNECTED', 'comms'),
