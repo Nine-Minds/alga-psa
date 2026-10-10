@@ -136,6 +136,15 @@ export function toMinorUnits(value: number, locale: string = 'en-US', currency: 
 }
 
 /**
+ * Convert a currency's integer minor units (e.g. cents) back to a major-unit number
+ * (e.g. dollars), using the currency's own exponent — so JPY divides by 1, not 100.
+ * The numeric inverse of {@link toMinorUnits}; replaces hardcoded `/ 100`.
+ */
+export function fromMinorUnits(value: number, locale: string = 'en-US', currency: string = 'USD'): number {
+  return value / Math.pow(10, currencyFractionDigits(currency, locale));
+}
+
+/**
  * Format a date as a string
  * @param date The date to format
  * @param locale The locale to use (default: 'en-US')
