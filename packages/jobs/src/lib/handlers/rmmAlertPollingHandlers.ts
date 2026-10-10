@@ -106,16 +106,34 @@ interface IntegrationPollState {
   active: boolean;
   pollingEnabled: boolean;
   intervalMinutes: number;
+  /** Credentials are known-dead; every provider call would throw until the user reconnects. */
+  reconnectRequired: boolean;
 }
 
-function parseRmmPollState(row: { is_active: boolean; settings: unknown }): IntegrationPollState {
-  const settings = typeof row.settings === 'string' ? safeParse(row.settings) : (row.settings ?? {});
-  const polling = ((settings as Record<string, unknown>).alertPolling ?? {}) as Record<string, unknown>;
+function parseIntegrationSettings(settings: unknown): Record<string, unknown> {
+  return typeof settings === 'string' ? safeParse(settings) : ((settings ?? {}) as Record<string, unknown>);
+}
+
+/**
+ * Deliberately the same condition as NinjaOneClient.isReconnectRequired, so the
+ * gate fires exactly when the client would throw and never skips a run the
+ * client would have allowed. Provider-agnostic: any provider that adopts the
+ * same tokenLifecycle shape is honoured; others simply never match.
+ */
+export function isIntegrationReconnectRequired(settings: Record<string, unknown>): boolean {
+  const lifecycle = settings.tokenLifecycle as { status?: unknown } | null | undefined;
+  return lifecycle?.status === 'reconnect_required';
+}
+
+export function parseRmmPollState(row: { is_active: boolean; settings: unknown }): IntegrationPollState {
+  const settings = parseIntegrationSettings(row.settings);
+  const polling = (settings.alertPolling ?? {}) as Record<string, unknown>;
   const rawInterval = Number(polling.intervalMinutes);
   return {
     active: Boolean(row.is_active),
     pollingEnabled: polling.enabled !== false,
     intervalMinutes: Number.isFinite(rawInterval) ? Math.min(60, Math.max(5, Math.round(rawInterval))) : 15,
+    reconnectRequired: isIntegrationReconnectRequired(settings),
   };
 }
 
@@ -125,8 +143,8 @@ function parseRmmPollState(row: { is_active: boolean; settings: unknown }): Inte
  * not acquire a schedule on upgrade.
  */
 export function parseRmmDeviceSyncState(row: { is_active: boolean; settings: unknown }): IntegrationPollState {
-  const settings = typeof row.settings === 'string' ? safeParse(row.settings) : (row.settings ?? {});
-  const deviceSync = ((settings as Record<string, unknown>).deviceSync ?? {}) as Record<string, unknown>;
+  const settings = parseIntegrationSettings(row.settings);
+  const deviceSync = (settings.deviceSync ?? {}) as Record<string, unknown>;
   const rawInterval = Number(deviceSync.intervalMinutes);
   return {
     active: Boolean(row.is_active),
@@ -134,16 +152,20 @@ export function parseRmmDeviceSyncState(row: { is_active: boolean; settings: unk
     intervalMinutes: Number.isFinite(rawInterval)
       ? Math.min(DEVICE_SYNC_MAX_MINUTES, Math.max(DEVICE_SYNC_MIN_MINUTES, Math.round(rawInterval)))
       : DEVICE_SYNC_DEFAULT_MINUTES,
+    reconnectRequired: isIntegrationReconnectRequired(settings),
   };
 }
 
 function parseHuntressPollState(row: { is_active: boolean; settings: unknown }): IntegrationPollState {
-  const settings = typeof row.settings === 'string' ? safeParse(row.settings) : (row.settings ?? {});
-  const rawInterval = Number((settings as Record<string, unknown>).pollIntervalMinutes);
+  const settings = parseIntegrationSettings(row.settings);
+  const rawInterval = Number(settings.pollIntervalMinutes);
   return {
     active: Boolean(row.is_active),
     pollingEnabled: true,
     intervalMinutes: Number.isFinite(rawInterval) ? Math.min(1440, Math.max(5, Math.round(rawInterval))) : 5,
+    // Huntress has no tokenLifecycle, so this is always false; it still goes
+    // through the predicate so the three parsers stay uniform.
+    reconnectRequired: isIntegrationReconnectRequired(settings),
   };
 }
 
@@ -154,6 +176,29 @@ export function intervalMinutesToCron(minutes: number): string {
     return hours === 1 ? '0 * * * *' : `0 */${hours} * * *`;
   }
   return `*/${minutes} * * * *`;
+}
+
+/**
+ * Did this run fail because the integration needs a reconnect? Covers the race
+ * where the gate read `healthy` and the lifecycle flipped mid-run.
+ *
+ * (a) is the cheap path: the alert route propagates the client's error object.
+ * (b) is authoritative and type-agnostic: the client only throws when the DB
+ * says reconnect_required, and device sync loses the error type through the
+ * Temporal workflow result. Matching on name avoids importing EE types here.
+ */
+async function isReconnectRequiredFailure(
+  error: unknown,
+  recheck: () => Promise<{ settings: unknown } | null | undefined>
+): Promise<boolean> {
+  if (error instanceof Error && error.name === 'NinjaOneReconnectRequiredError') return true;
+  try {
+    const row = await recheck();
+    return Boolean(row) && isIntegrationReconnectRequired(parseIntegrationSettings(row!.settings));
+  } catch {
+    // Can't tell; treat as a real failure so it is surfaced, not swallowed.
+    return false;
+  }
 }
 
 export async function rmmAlertReconciliationHandler(
@@ -171,6 +216,10 @@ export async function rmmAlertReconciliationHandler(
     logger.info('[RmmAlertReconciliationJob] Skipping: integration inactive or polling disabled', data);
     return;
   }
+  if (state.reconnectRequired) {
+    logger.info('[RmmAlertReconciliationJob] Skipping: integration requires reconnect', data);
+    return;
+  }
   if (!getRmmAlertFetcher(data.provider)) {
     logger.warn('[RmmAlertReconciliationJob] No fetcher for provider; skipping', data);
     return;
@@ -179,10 +228,25 @@ export async function rmmAlertReconciliationHandler(
   // Job handlers already run inside the tenant context (both runners wrap
   // execution in runWithTenant).
   const { knex } = await createTenantKnex();
-  const result = await runRmmAlertReconciliation(
-    { knex, deps: buildRmmAlertPipelineDeps() },
-    { tenantId: data.tenantId, integrationId: data.integrationId, provider: data.provider }
-  );
+  let result: Awaited<ReturnType<typeof runRmmAlertReconciliation>>;
+  try {
+    result = await runRmmAlertReconciliation(
+      { knex, deps: buildRmmAlertPipelineDeps() },
+      { tenantId: data.tenantId, integrationId: data.integrationId, provider: data.provider }
+    );
+  } catch (error) {
+    const reconnectRequired = await isReconnectRequiredFailure(error, () =>
+      tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+        .where({ integration_id: data.integrationId })
+        .first('settings')
+    );
+    if (!reconnectRequired) throw error;
+    logger.info('[RmmAlertReconciliationJob] Skipping: integration requires reconnect', {
+      ...data,
+      detectedDuring: 'run',
+    });
+    return;
+  }
   for (const warning of result.warnings) {
     logger.warn('[RmmAlertReconciliationJob] warning', { ...data, warning });
   }
@@ -320,6 +384,14 @@ export async function rmmDeviceSyncHandler(
     return;
   }
 
+  // Gate before any strategy or client is touched. Deliberately writes no
+  // sync_status / sync_error / cursor: the last real outcome stays visible and
+  // the window is re-read after reconnect.
+  if (state.reconnectRequired) {
+    logger.info('[RmmDeviceSyncJob] Skipping: integration requires reconnect', data);
+    return;
+  }
+
   const strategy = getRmmDeviceSyncStrategy(data.provider);
   if (!strategy) {
     logger.warn('[RmmDeviceSyncJob] No device sync strategy for provider; skipping', data);
@@ -361,7 +433,21 @@ export async function rmmDeviceSyncHandler(
       .catch(() => undefined);
 
     logger.warn('[RmmDeviceSyncJob] cycle failed', { ...data, error: message });
-    throw error;
+
+    // The failure above is recorded truthfully, but a reconnect-required
+    // integration is an expected state, not a job failure: return so the
+    // message is acked instead of redelivered. The re-read is needed because
+    // the Temporal adapter loses the error type.
+    const reconnectRequired = await isReconnectRequiredFailure(error, () =>
+      tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+        .where({ integration_id: data.integrationId })
+        .first('settings')
+    );
+    if (!reconnectRequired) throw error;
+    logger.info('[RmmDeviceSyncJob] Skipping: integration requires reconnect', {
+      ...data,
+      detectedDuring: 'run',
+    });
   }
 }
 
@@ -450,6 +536,7 @@ async function reconcileAlertScheduleForIntegration(
     state.active
     && state.pollingEnabled
     && !row.tenant_suspended_at
+    && !state.reconnectRequired
     && (isHuntress || Boolean(getRmmAlertFetcher(provider)));
   const desiredCron = intervalMinutesToCron(state.intervalMinutes);
 
@@ -486,6 +573,7 @@ async function reconcileDeviceSyncForIntegration(
     state.active
     && state.pollingEnabled
     && !row.tenant_suspended_at
+    && !state.reconnectRequired
     && RMM_DEVICE_SYNC_PROVIDERS.includes(provider);
   const desiredCron = intervalMinutesToCron(state.intervalMinutes);
 
