@@ -19,6 +19,7 @@ import {
 let db: Knex;
 let tenantId: string;
 let convertQuoteToDraftContract: typeof import('../../../../packages/billing/src/services/quoteConversionService').convertQuoteToDraftContract;
+let buildQuoteConversionPreview: typeof import('../../../../packages/billing/src/services/quoteConversionService').buildQuoteConversionPreview;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let Quote: any;
@@ -141,7 +142,7 @@ describe('quote conversion: per-seat recurring services', () => {
     await db.migrate.latest();
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
-    ({ convertQuoteToDraftContract } = await import('../../../../packages/billing/src/services/quoteConversionService'));
+    ({ convertQuoteToDraftContract, buildQuoteConversionPreview } = await import('../../../../packages/billing/src/services/quoteConversionService'));
     Quote = (await import('../../../../packages/billing/src/models/quote')).default;
     QuoteItem = (await import('../../../../packages/billing/src/models/quoteItem')).default;
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
@@ -224,7 +225,7 @@ describe('quote conversion: per-seat recurring services', () => {
     expect(Number(configs[0].quantity)).toBe(1);
   }, HOOK_TIMEOUT);
 
-  it('keeps bundle pricing for products and custom items', async () => {
+  it('keeps bundle pricing for products', async () => {
     const [service, product] = await createSeatCatalog(db, tenantId, [
       { name: 'Managed Service', rateCents: 5000 },
       { name: 'Router', rateCents: 30000 },
@@ -235,18 +236,41 @@ describe('quote conversion: per-seat recurring services', () => {
     const client = await createSeatClient(db, tenantId);
     const quoteId = await acceptedQuote(client.clientId, 'USD', [
       { serviceId: product.serviceId, description: 'Hosted router', quantity: 3, unitPrice: 30000 },
-      { serviceId: null, description: 'Custom retainer', quantity: 1, unitPrice: 70000 },
     ]);
     const { lines, configs } = await convert(quoteId);
 
     const productLine: any = lines.find((line: any) => line.contract_line_name?.includes('router') || line.description === 'Hosted router');
-    const customLine: any = lines.find((line: any) => line.description === 'Custom retainer');
     // Exactly what conversion wrote before this change.
     expect(Number(productLine.custom_rate)).toBe(30000);
-    expect(Number(customLine.custom_rate)).toBe(70000);
     expect(configs).toHaveLength(1);
     expect(configs[0].pricing_basis ?? 'bundle').toBe('bundle');
     expect(Number(configs[0].base_rate)).toBe(30000);
     expect(service.serviceId).toBeTruthy();
+  }, HOOK_TIMEOUT);
+
+  it('blocks the preview and the conversion of a service-less recurring item', async () => {
+    const [service] = await createSeatCatalog(db, tenantId, [{ name: 'Managed Seat', rateCents: 5000 }]);
+    const client = await createSeatClient(db, tenantId);
+    const quoteId = await acceptedQuote(client.clientId, 'USD', [
+      { serviceId: service.serviceId, description: 'Seats', quantity: 5, unitPrice: 5000 },
+      { serviceId: null, description: 'Custom retainer', quantity: 1, unitPrice: 70000 },
+    ]);
+
+    const quote = await Quote.getById(db, tenantId, quoteId);
+    const preview = await buildQuoteConversionPreview(quote, db, tenantId);
+    expect(preview.contract_blocked_reason).toBe(
+      'Recurring item "Custom retainer" must reference a catalog service before contract conversion',
+    );
+    expect(preview.available_actions).not.toContain('contract');
+    expect(preview.available_actions).not.toContain('both');
+    expect(preview.excluded_items.map((item: any) => item.description)).toContain('Custom retainer');
+
+    await expect(
+      db.transaction((trx) => convertQuoteToDraftContract(trx, tenantId, quoteId, null)),
+    ).rejects.toThrow('Recurring item "Custom retainer" must reference a catalog service before contract conversion');
+    const written = await tenantTable(db, tenantId, 'contracts')
+      .where({ tenant: tenantId, contract_name: quote.title })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(written[0].count)).toBe(0);
   }, HOOK_TIMEOUT);
 });
