@@ -85,7 +85,7 @@ const DICT: Record<string, string> = {
   'templates.statuses.replace_failed': 'Failed to replace status column',
   'templates.statuses.replace_placeholder': 'Select replacement status...',
   'templates.statuses.repair_status_columns': 'Repair status columns',
-  'templates.statuses.manage_title': 'Manage Status Columns',
+  'templates.statuses.manage_title': 'Task Status Columns',
   'templates.statuses.manage_description': 'Define the status columns for tasks in this template.',
   'templates.statuses.template_defaults': 'Template Defaults',
   'templates.statuses.empty': 'No status columns yet',
