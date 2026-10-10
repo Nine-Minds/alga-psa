@@ -15,6 +15,8 @@ import {
 import { createUser } from '../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
+import { createRequire } from 'node:module';
+import { isPeriodAlreadyInvoiced } from '@alga-psa/billing/lib/billing/pricing/isPeriodAlreadyInvoiced';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { ATTRIBUTION_TABLES } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import Invoice from '@alga-psa/billing/models/invoice';
@@ -3420,6 +3422,137 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
   expect(normalizeDateValue(historyRow?.invoiceWindowStart)).toBe(currentPeriodStart);
   expect(normalizeDateValue(historyRow?.invoiceWindowEnd)).toBe(nextPeriodStart);
 }, HOOK_TIMEOUT);
+
+  describe('alga0002072: periods persisted under the legacy contract_line label', () => {
+    const collapse = createRequire(import.meta.url)(
+      '../../../migrations/20261010120000_collapse_recurring_service_period_obligation_type.cjs',
+    );
+
+    async function seedLegacyShapedClientLine(clientName: string, userId: string) {
+      setupCommonMocks({ tenantId, userId, permissionCheck: () => true });
+      const { contextLike, currentPeriodStart, nextPeriodStart } = await createClientWithRecurringCycles({
+        clientName,
+        billingCycle: 'monthly',
+        previousPeriodStart: '2024-12-01',
+        currentPeriodStart: '2025-01-01',
+        nextPeriodStart: '2025-02-01',
+      });
+      const line = await createFixedContractLine(contextLike, {
+        serviceName: `${clientName} Service`,
+        planName: `${clientName} Plan`,
+        baseRateCents: 211,
+        startDate: currentPeriodStart,
+        billingTiming: 'advance',
+        billingFrequency: 'monthly',
+        cadenceOwner: 'client',
+      });
+      await syncContractLineRecurringPeriods(line.contractLineId);
+      return { line, currentPeriodStart, nextPeriodStart };
+    }
+
+    const canonicalKey = (lineId: string) => `schedule:${tenantId}:${lineId}:client:advance`;
+    const legacyKey = (lineId: string) => `schedule:${tenantId}:contract_line:${lineId}:client:advance`;
+
+    async function dueRowsFor(clientName: string, lineId: string, from: string, to: string) {
+      const dueWork = await getAvailableRecurringDueWorkAction({
+        page: 1, pageSize: 20, searchTerm: clientName, dateRange: { from, to },
+      });
+      return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+        .filter((row) => row.scheduleKey === canonicalKey(lineId));
+    }
+
+    it('regression: a client-cadence period persisted as contract_line is selected, invoiced and linked exactly once after collapse', async () => {
+      const clientName = 'Legacy Label Regression Client';
+      const { line, currentPeriodStart, nextPeriodStart } = await seedLegacyShapedClientLine(clientName, 'legacy-label-user');
+
+      // Pre-migration shape: legacy 6-segment key (the obligation_type column no longer exists in the
+      // test schema, so the key is the only label carrier). Then run the migration's per-tenant rewrite.
+      await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .update({ schedule_key: legacyKey(line.contractLineId) });
+      const summary = await collapse.collapseTenant(db, tenantId, { log: () => undefined });
+      expect(summary.rewritten).toBeGreaterThan(0);
+
+      const rows = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId });
+      expect(rows.every((row) => row.schedule_key === canonicalKey(line.contractLineId))).toBe(true);
+
+      // selected exactly once, under the canonical key
+      const windowRows = (await dueRowsFor(clientName, line.contractLineId, currentPeriodStart, nextPeriodStart))
+        .filter((row) => normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart);
+      expect(windowRows).toHaveLength(1);
+      expect(windowRows[0].scheduleKey).toBe(canonicalKey(line.contractLineId));
+      const dueRecord = rows.find((row) => normalizeDateValue(row.invoice_window_start) === currentPeriodStart
+        && row.lifecycle_state !== 'superseded')!;
+
+      // invoiced and linked exactly once
+      const invoice = await generateInvoiceForSelectionInput(windowRows[0].selectorInput);
+      expect(invoice).toBeTruthy();
+      expect((invoice as any).actionError).toBeUndefined();
+      const countDetails = async () => Number((await db('invoice_charge_details as d')
+        .join('invoice_charges as c', function joinCharges() { this.on('c.item_id', 'd.item_id').andOn('c.tenant', 'd.tenant'); })
+        .where({ 'c.tenant': tenantId, 'c.invoice_id': invoice!.invoice_id })
+        .count('* as n').first())!.n);
+      expect(await countDetails()).toBe(1);
+      const linked = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, record_id: dueRecord.record_id })
+        .first(['lifecycle_state', 'invoice_id', 'invoice_charge_detail_id']);
+      expect(linked).toMatchObject({ lifecycle_state: 'billed', invoice_id: invoice!.invoice_id });
+      expect(linked!.invoice_charge_detail_id).toBeTruthy();
+      const detail = await db('invoice_charge_details')
+        .where({ tenant: tenantId, item_detail_id: linked!.invoice_charge_detail_id }).first();
+      expect(detail).toBeTruthy();
+
+      // the second generate hits the duplicate guard and creates nothing
+      const second = await generateInvoiceForSelectionInput(windowRows[0].selectorInput);
+      expect((second as any).actionError).toMatch(/already exists for this recurring execution window/);
+      expect(await countDetails()).toBe(1);
+      const client = await db('clients').where({ tenant: tenantId, client_name: clientName }).first();
+      const invoiceCount = await db('invoices').where({ tenant: tenantId, client_id: client.client_id }).count('* as n').first();
+      expect(Number(invoiceCount!.n)).toBe(1);
+
+      expect(await isPeriodAlreadyInvoiced(db, tenantId, line.contractLineId,
+        { start: currentPeriodStart, end: nextPeriodStart })).toBe(true);
+    }, HOOK_TIMEOUT);
+
+    it('regression (collision): with both labels present the superseded loser is never selected as due', async () => {
+      const clientName = 'Legacy Label Collision Client';
+      const { line, currentPeriodStart, nextPeriodStart } = await seedLegacyShapedClientLine(clientName, 'legacy-collision-user');
+      const canonicalRow = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .whereRaw('invoice_window_start = ?', [currentPeriodStart])
+        .first();
+      expect(canonicalRow).toBeTruthy();
+
+      // An unbilled twin written under the contract_line label for the same period.
+      const loserId = uuidv4();
+      const { created_at: _c, updated_at: _u, ...twin } = canonicalRow;
+      await tenantTable(db, tenantId, 'recurring_service_periods').insert({
+        ...twin, record_id: loserId, schedule_key: legacyKey(line.contractLineId), revision: 1,
+      });
+
+      const summary = await collapse.collapseTenant(db, tenantId, { log: () => undefined });
+      expect(summary.collisionGroups).toBeGreaterThanOrEqual(1);
+      // Both twins are identical in state/label/time, so the deterministic tiebreak (smallest record_id) picks
+      // the winner; exactly one of the pair must lose and carry the collapse reason.
+      const pair = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .whereIn('record_id', [loserId, canonicalRow.record_id]);
+      const superseded = pair.filter((row) => row.lifecycle_state === 'superseded');
+      expect(superseded).toHaveLength(1);
+      expect(superseded[0].reason_code).toBe('obligation_label_collapse');
+      expect(pair.map((row) => row.schedule_key)).toEqual([canonicalKey(line.contractLineId), canonicalKey(line.contractLineId)]);
+      const live = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: line.contractLineId })
+        .whereNot({ lifecycle_state: 'superseded' })
+        .whereRaw('invoice_window_start = ?', [currentPeriodStart]);
+      expect(live).toHaveLength(1);
+
+      const dueRows = (await dueRowsFor(clientName, line.contractLineId, currentPeriodStart, nextPeriodStart))
+        .filter((row) => normalizeDateValue(row.invoiceWindowStart) === currentPeriodStart);
+      expect(dueRows).toHaveLength(1);
+      expect(dueRows[0].scheduleKey).toBe(canonicalKey(line.contractLineId));
+    }, HOOK_TIMEOUT);
+  });
 
 it('T108: recurring due-work assertions validate candidate-level contracts directly without flattening invoiceCandidates members', async () => {
   setupCommonMocks({ tenantId, userId: 'candidate-contract-assertions-user', permissionCheck: () => true });

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -69,6 +69,7 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
   let preDir: string;
   const tenant = randomUUID();
   const ids = Object.fromEntries(['a', 'b', 'c', 'd', 'e', 'f'].map((k) => [k, randomUUID()]));
+  const warnings: string[] = [];
   const rec = Object.fromEntries(
     ['a', 'b', 'c', 'dGen', 'dLinked', 'eOne', 'eTwo', 'fOld1', 'fOld2', 'fLive'].map((k) => [k, randomUUID()]),
   );
@@ -103,7 +104,8 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
       schedule_key: legacy(tenant, 'contract_line', ids.b, 'contract') });
     // (c) non-canonical label for the cadence
     await insertRow({ record_id: rec.c, obligation_id: ids.c, obligation_type: 'contract_line',
-      schedule_key: legacy(tenant, 'contract_line', ids.c, 'client') });
+      schedule_key: legacy(tenant, 'contract_line', ids.c, 'client'),
+      source_run_key: `operator-repair:${legacy(tenant, 'contract_line', ids.c, 'client')}:1767225600000` });
     // (d) collision: unlinked canonical-label row vs linked non-canonical row
     await insertRow({ record_id: rec.dGen, obligation_id: ids.d, obligation_type: 'client_contract_line',
       schedule_key: legacy(tenant, 'client_contract_line', ids.d, 'client') });
@@ -122,7 +124,9 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
     await insertRow({ record_id: rec.fLive, obligation_id: ids.f, obligation_type: 'contract_line', revision: 1,
       schedule_key: legacy(tenant, 'contract_line', ids.f, 'client') });
 
-    const result = await db.migrate.up({ directory: preDir, name: TARGET_MIGRATION });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => { warnings.push(args.map(String).join(' ')); });
+    let result: any;
+    try { result = await db.migrate.up({ directory: preDir, name: TARGET_MIGRATION }); } finally { warnSpy.mockRestore(); }
     expect(result[1]).toContain(TARGET_MIGRATION);
   }, 300_000);
 
@@ -148,6 +152,7 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
     expect((await get(rec.a)).source_run_key).toBe(`run:${canonical(tenant, ids.a, 'client')}`);
     expect((await get(rec.b)).schedule_key).toBe(canonical(tenant, ids.b, 'contract'));
     expect((await get(rec.c)).schedule_key).toBe(canonical(tenant, ids.c, 'client'));
+    expect((await get(rec.c)).source_run_key).toBe(`operator-repair:${canonical(tenant, ids.c, 'client')}:1767225600000`);
   });
 
   it('(d) the linked row wins with the highest revision and the loser is superseded', async () => {
@@ -161,7 +166,7 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
     expect(winner.schedule_key).toBe(loser.schedule_key);
   });
 
-  it('regression: a legacy-labelled key resolves to the single winning record, which is already invoiced', async () => {
+  it('lookup: a legacy-labelled key resolves to the single winning record, which is already invoiced', async () => {
     const legacyKey = legacy(tenant, 'contract_line', ids.d, 'client');
     const resolved = canonicalizeRecurringServicePeriodScheduleKey(legacyKey);
     const rows = await db(TABLE).where({ tenant, schedule_key: resolved, period_key: '2026-08-01:2026-09-01' }).whereNot({ lifecycle_state: 'superseded' });
@@ -180,6 +185,11 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
     expect(two.lifecycle_state).toBe('billed');
     expect(one.schedule_key).toBe(two.schedule_key);
     expect(one.revision).not.toBe(two.revision);
+    const entries = warnings.filter((line) => line.includes('double-billed-collision') && line.includes(tenant));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toContain(canonical(tenant, ids.e, 'client'));
+    expect(entries[0]).toContain(rec.eOne);
+    expect(entries[0]).toContain(rec.eTwo);
   });
 
   it('(f) renumbers revisions contiguously with a single live row', async () => {
@@ -212,6 +222,14 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
     expect((await get(rec.a)).obligation_type).toBe('client_contract_line');
     expect((await get(rec.b)).schedule_key).toBe(legacy(tenant, 'contract_line', ids.b, 'contract'));
     expect((await get(rec.b)).obligation_type).toBe('contract_line');
+    expect((await get(rec.c)).source_run_key).toBe(`operator-repair:${legacy(tenant, 'client_contract_line', ids.c, 'client')}:1767225600000`);
+    const col = await db.raw(`SELECT is_nullable FROM information_schema.columns WHERE table_name = 'recurring_service_periods' AND column_name = 'obligation_type'`);
+    expect(col.rows[0].is_nullable).toBe('NO');
+    const chk = await db.raw(`SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'recurring_service_periods_obligation_type_check'`);
+    expect(chk.rows).toHaveLength(1);
+    for (const label of ['contract_line', 'client_contract_line', 'template_line', 'preset_line']) {
+      expect(chk.rows[0].def).toContain(label);
+    }
 
     await db.migrate.up({ directory: preDir, name: TARGET_MIGRATION });
     const after = await db(TABLE).where({ tenant }).orderBy('record_id');
