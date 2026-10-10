@@ -18,12 +18,15 @@ describe('ticket event actor schemas', () => {
     },
   );
 
-  it('TICKET_UPDATED with flat changes and no userId keeps changes and actor fields', () => {
+  it('TICKET_UPDATED with flat changes, comment and actor fields, no userId, keeps them all after parse', () => {
     const contactId = randomUUID();
+    const comment = { id: randomUUID(), content: 'hi', author: 'Jane', isInternal: false };
     const parsed = (EventSchemas as any).TICKET_UPDATED.parse(wrap('TICKET_UPDATED', {
-      tenantId, ticketId, actorType: 'CONTACT', actorContactId: contactId, changes: { status_id: 'a' },
+      tenantId, ticketId, actorType: 'CONTACT', actorContactId: contactId, changes: { status_id: 'x' }, comment,
     })).payload;
-    expect(parsed).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId, changes: { status_id: 'a' } });
+    expect(parsed.changes).toEqual({ status_id: 'x' });
+    expect(parsed.comment).toMatchObject({ id: comment.id, content: 'hi' });
+    expect(parsed).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
     expect(parsed).not.toHaveProperty('userId');
   });
 

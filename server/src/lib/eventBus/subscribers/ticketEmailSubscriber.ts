@@ -1897,6 +1897,33 @@ async function formatAccumulatedChanges(
   return formattedSections.join('');
 }
 
+/** Display string for the "Updated By" row of an accumulated-update email. */
+async function resolveUpdatedByDisplay(
+  db: any,
+  tenantId: string,
+  accumulatedChanges: AccumulatedChange[]
+): Promise<string> {
+  const uniqueUpdaterIds = Array.from(
+    new Set(
+      accumulatedChanges
+        .map((c) => c.userId)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  if (uniqueUpdaterIds.length === 0) return 'System';
+  const updaterRows = await tenantDb(db, tenantId).table('users')
+    .whereIn('user_id', uniqueUpdaterIds)
+    .select('user_id', 'first_name', 'last_name');
+  const idToName = new Map<string, string>(
+    updaterRows.map((u: { user_id: string; first_name: string; last_name: string }) => [
+      u.user_id,
+      `${u.first_name} ${u.last_name}`,
+    ])
+  );
+  // An id with no user row (deleted user, legacy non-user id) reads as System, never a UUID.
+  return Array.from(new Set(uniqueUpdaterIds.map((id) => idToName.get(id) ?? 'System'))).join(', ');
+}
+
 /**
  * Handle accumulated ticket updates - called by the NotificationAccumulator flush
  */
@@ -2057,29 +2084,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     // Format all accumulated changes
     const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
 
-    // Resolve display name for the "Updated By" row from the set of accumulated updaters.
-    const uniqueUpdaterIds = Array.from(
-      new Set(
-        accumulatedChanges
-          .map((c) => c.userId)
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-    let updatedByDisplay = 'System';
-    if (uniqueUpdaterIds.length > 0) {
-      const updaterRows = await tenantDb(db, tenantId).table('users')
-        .whereIn('user_id', uniqueUpdaterIds)
-        .select('user_id', 'first_name', 'last_name');
-      const idToName = new Map<string, string>(
-        updaterRows.map((u: { user_id: string; first_name: string; last_name: string }) => [
-          u.user_id,
-          `${u.first_name} ${u.last_name}`,
-        ])
-      );
-      // An id with no user row (deleted user, legacy non-user id) reads as System, never a UUID.
-      const orderedNames = Array.from(new Set(uniqueUpdaterIds.map((id) => idToName.get(id) ?? 'System')));
-      updatedByDisplay = orderedNames.join(', ');
-    }
+    const updatedByDisplay = await resolveUpdatedByDisplay(db, tenantId, accumulatedChanges);
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -3859,6 +3864,8 @@ export const ticketEmailSubscriberTestHarness = {
   handleTicketCommentAdded,
   handleTicketClosed,
   handleTicketEvent,
+  formatAccumulatedChanges,
+  resolveUpdatedByDisplay,
 };
 
 /**
