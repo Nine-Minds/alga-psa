@@ -27,7 +27,8 @@
       "sendToClient": "Send to Client",
       "setAsDefault": "Set as Default",
       "submitForApproval": "Submit for Approval",
-      "done": "Done"
+      "done": "Done",
+      "markAccepted": "Mark as accepted"
     },
     "badges": {
       "standard": "Standard"
@@ -158,7 +159,8 @@
       "backToQuotes": "Back to Quotes",
       "backToTemplates": "Back to Quote Templates",
       "convertToSalesOrder": "Convert to Sales Order",
-      "convert": "Convert to…"
+      "convert": "Convert to…",
+      "markAccepted": "Mark as accepted"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -217,6 +219,12 @@
         "message": "Message",
         "from": "From",
         "useDefault": "Use default sender"
+      },
+      "markAccepted": {
+        "title": "Mark Quote as Accepted",
+        "description": "Record that the client accepted this quote outside the client portal (for example by phone or email). The quote moves to Accepted and can be converted like any accepted quote. Your name and the time are recorded.",
+        "note": "Note (optional)",
+        "notePlaceholder": "For example: Accepted by email on the 3rd"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "resend quote",
       "sendQuote": "send quote",
       "sendReminder": "send reminder",
-      "submitForApproval": "submit for approval"
+      "submitForApproval": "submit for approval",
+      "markAccepted": "mark quote as accepted"
     },
     "errors": {
       "convert": "Failed to convert quote",
@@ -252,7 +261,8 @@
       "requestedChanges": "Quote returned to draft with requested changes.",
       "resent": "Quote resent.",
       "sent": "Quote sent to the client.",
-      "submittedForApproval": "Quote submitted for internal approval."
+      "submittedForApproval": "Quote submitted for internal approval.",
+      "markedAccepted": "Quote marked as accepted."
     },
     "readOnlyNotice": "This quote is read-only. To make changes, create a new revision.",
     "validation": {
@@ -441,7 +451,8 @@
       "saveAsTemplate": "Failed to save quote as template",
       "send": "Failed to send quote",
       "sendReminder": "Failed to send quote reminder",
-      "submitForApproval": "Failed to submit quote for approval"
+      "submitForApproval": "Failed to submit quote for approval",
+      "markAccepted": "Failed to mark quote as accepted"
     },
     "labels": {
       "phase": "Phase: {{phase}}",
@@ -460,7 +471,8 @@
       "submittedForApproval": "Quote submitted for internal approval.",
       "templateAssigned": "Document template assigned.",
       "templateCleared": "Document template cleared (using default).",
-      "createdSalesOrder": "Created draft sales order {{number}}. Product lines will bill on fulfillment."
+      "createdSalesOrder": "Created draft sales order {{number}}. Product lines will bill on fulfillment.",
+      "markedAccepted": "Quote marked as accepted."
     },
     "preview": {
       "loading": "Loading preview..."
@@ -691,7 +703,14 @@
       "load": "Failed to load quote approvals",
       "settings": "Failed to update quote approval settings"
     },
-    "loading": "Loading approval queue..."
+    "loading": "Loading approval queue...",
+    "soleApprover": {
+      "title": "You are the only quote approver",
+      "description": "No other active user can approve quotes, so you can approve your own quotes. Self-approvals are recorded in the quote activity.",
+      "draftDescription": "You are the only user who can approve quotes. After you submit this quote for approval, you can approve it yourself and then send it.",
+      "pendingDescription": "You are the only user who can approve quotes, so you can approve this quote yourself. Choose Approve to make it ready to send.",
+      "dialogNote": "You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval."
+    }
   },
   "quoteTemplates": {
     "title": "Templates",
@@ -857,7 +876,9 @@
       "conflict": "This quote change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the quote values is not allowed. Please review the form and try again.",
       "missingField": "Missing required quote field.",
-      "missingFieldNamed": "Missing required quote field: {{field}}."
+      "missingFieldNamed": "Missing required quote field: {{field}}.",
+      "templateCannotBeAccepted": "Quote templates cannot be marked as accepted",
+      "onlySentCanBeAccepted": "Only sent quotes can be marked as accepted"
     }
   }
 }

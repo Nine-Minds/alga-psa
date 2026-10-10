@@ -30,7 +30,7 @@ import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSett
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
-import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, markQuoteAccepted, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
@@ -39,6 +39,8 @@ import {
   collectDistinctLocationIds,
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
+import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
@@ -233,6 +235,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  // Current user is the tenant's only possible approver (may approve own quotes).
+  const [isSoleApprover, setIsSoleApprover] = useState(false);
+  const [isMarkAcceptedOpen, setIsMarkAcceptedOpen] = useState(false);
+  const [markAcceptedNote, setMarkAcceptedNote] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
@@ -353,6 +359,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setDefaultCurrency(tenantCurrency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
         throw new Error(getErrorMessage(fetchedContacts));
       }
@@ -894,6 +901,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     }
   };
 
+  // LEVERAGE: pattern quote-workflow-action-handlers — QuoteDetail and QuoteForm each re-implement the approve/request-changes/mark-accepted handlers, dialogs and notices; a shared quote-workflow hook/component layer is missing.
+  const handleMarkAccepted = async () => {
+    if (!quote) return;
+    const result = await runWorkflowAction(
+      t('quoteForm.errorActions.markAccepted', { defaultValue: 'mark quote as accepted' }),
+      () => markQuoteAccepted(quote.quote_id, markAcceptedNote),
+      { notifyStatusChanged: true },
+    );
+    if (result) {
+      setIsMarkAcceptedOpen(false);
+      setMarkAcceptedNote('');
+      setNotice(t('quoteForm.notices.markedAccepted', { defaultValue: 'Quote marked as accepted.' }));
+    }
+  };
+
   const handleSendReminder = async () => {
     if (!quote) return;
     const result = await runWorkflowAction(
@@ -1296,6 +1318,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       return [
         { id: 'quote-form-resend', label: t('quoteForm.actions.resend', { defaultValue: 'Resend' }), onClick: () => void handleResendQuote(), disabled: isWorking },
         { id: 'quote-form-reminder', label: t('quoteForm.actions.sendReminder', { defaultValue: 'Send reminder' }), onClick: () => void handleSendReminder(), disabled: isWorking },
+        { id: 'quote-form-mark-accepted', label: t('quoteForm.actions.markAccepted', { defaultValue: 'Mark as accepted' }), onClick: () => setIsMarkAcceptedOpen(true), disabled: isWorking },
         { id: 'quote-form-cancel-quote', label: t('quoteForm.actions.cancelQuote', { defaultValue: 'Cancel quote' }), onClick: () => void handleCancelQuote(), disabled: isWorking },
       ];
     }
@@ -1941,6 +1964,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <p className="mt-2 text-sm text-muted-foreground">
                     {t('quoteForm.sidebar.approvalMessage', { defaultValue: 'Quotes need sales lead approval before sending.' })}
                   </p>
+                  {isSoleApprover && (
+                    <div className="mt-3">
+                      <QuoteSoleApproverNotice
+                        id="quote-form-sole-approver-notice"
+                        context={quoteStatus === 'pending_approval' ? 'pending' : 'draft'}
+                      />
+                    </div>
+                  )}
                   {quoteStatus === 'draft' && (
                     <Button
                       id="quote-form-sidebar-submit-approval"
@@ -2055,6 +2086,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         </DialogContent>
       </Dialog>
 
+      <QuoteMarkAcceptedDialog
+        isOpen={isMarkAcceptedOpen}
+        isWorking={isWorking}
+        note={markAcceptedNote}
+        onNoteChange={setMarkAcceptedNote}
+        onConfirm={() => void handleMarkAccepted()}
+        onClose={() => { setIsMarkAcceptedOpen(false); setMarkAcceptedNote(''); }}
+      />
+
       {/* Approval dialog */}
       <Dialog
         id="quote-form-approval-dialog"
@@ -2092,6 +2132,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 defaultValue: 'Return this quote to draft with requested changes.',
               })}
           </DialogDescription>
+          {approvalDialogMode === 'approve' && isSoleApprover ? (
+            <p id="quote-form-approval-sole-approver-note" className="text-sm text-muted-foreground">
+              {t('quoteApproval.soleApprover.dialogNote', {
+                defaultValue: 'You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval.',
+              })}
+            </p>
+          ) : null}
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {approvalDialogMode === 'approve'
