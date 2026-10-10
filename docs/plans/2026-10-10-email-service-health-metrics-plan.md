@@ -164,7 +164,7 @@ Apply this to both `UnifiedInboundEmailQueueConsumer` and `...V2`:
      - For `delivery_mode = 'webhook'`, compute the subscription state with a CASE: `webhook_expires_at IS NULL` → `missing`, `< now` → `expired`, `< now + 12h` → `expiring_lt_12h`, else `healthy`.
      - Count `webhook_silent_runs > 0`.
   5. **Gmail:** join `google_email_provider_config`, active and unpaused. Compute the watch state from `watch_expiration` with the same CASE.
-  6. **Liveness (F3):** active, unpaused, `status <> 'disconnected'`. The liveness timestamp depends on provider type:
+  6. **Liveness (F3):** active, unpaused, `status NOT IN ('disconnected','configuring')`. The liveness timestamp depends on provider type:
      - imap: `ep.last_sync_at`, which is updated on every sync loop;
      - microsoft: `GREATEST(ep.last_sync_at, mpc.last_reconciliation_at, mpc.last_webhook_delivery_at)`;
      - google: `GREATEST(ep.last_sync_at, gpc.last_push_received_at)`.

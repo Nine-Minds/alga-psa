@@ -16,6 +16,9 @@ import {
   type InboundEmailHealthSnapshot,
 } from '@alga-psa/shared/services/email/inboundEmailHealthSnapshot';
 
+import { buildStatusSummary } from '../../../../services/email-service/src/observability/statusSummary';
+import type { CollectorCache } from '../../../../services/email-service/src/observability/healthCollector';
+
 const describeDb = await describeWithDb();
 
 let testDb: Knex;
@@ -267,5 +270,110 @@ describeDb('inbound email health snapshot (integration)', () => {
       expect(serialized).not.toContain(id);
     }
     expect(serialized).not.toMatch(/@example\.com/);
+  }, 60_000);
+
+  it("ignores unfinished ('configuring') providers in sync, delivery-mode, subscription and watch gauges", async () => {
+    const now = new Date();
+    const tenant = uuidv4();
+    tenants.push(tenant);
+    await fixtureTenants().insert({
+      tenant,
+      client_name: `Health ${tenant.slice(0, 6)}`,
+      email: `health-${tenant.slice(0, 6)}@client.com`,
+      created_at: now,
+      updated_at: now,
+    });
+    const recent = new Date(now.getTime() - 5 * 60_000);
+    const longAgo = new Date(now.getTime() - 30 * 24 * HOUR);
+
+    const baseline = await collectInboundEmailHealthSnapshot({ knex: testDb, now, includeDurable: false });
+
+    // Healthy connected providers (webhook MS, Gmail, IMAP).
+    await seed(tenant, {
+      type: 'microsoft',
+      lastSyncAt: recent,
+      msc: { webhook_expires_at: new Date(now.getTime() + 48 * HOUR), last_reconciliation_at: recent },
+    });
+    await seed(tenant, {
+      type: 'google',
+      lastSyncAt: recent,
+      gmc: { watch_expiration: new Date(now.getTime() + 48 * HOUR), last_push_received_at: recent },
+    });
+    await seed(tenant, { type: 'imap', lastSyncAt: recent });
+    // F4: status=error + webhook mode + expired subscription still counts as expired.
+    await seed(tenant, {
+      type: 'microsoft',
+      status: 'error',
+      lastSyncAt: recent,
+      msc: { webhook_expires_at: new Date(now.getTime() - HOUR), last_reconciliation_at: recent },
+    });
+
+    const healthy = await collectInboundEmailHealthSnapshot({ knex: testDb, now, includeDurable: false });
+    expect(healthy.microsoft.subscriptions.expired - baseline.microsoft.subscriptions.expired).toBe(1);
+
+    // Unfinished setups: NULL liveness, created long ago, delivery_mode polling, NULL watch.
+    await seed(tenant, {
+      type: 'microsoft',
+      status: 'configuring',
+      lastSyncAt: null,
+      createdAt: longAgo,
+      msc: { delivery_mode: 'polling', webhook_expires_at: null },
+    });
+    await seed(tenant, {
+      type: 'google',
+      status: 'configuring',
+      lastSyncAt: null,
+      createdAt: longAgo,
+      gmc: { watch_expiration: null },
+    });
+
+    const snap = await collectInboundEmailHealthSnapshot({ knex: testDb, now, includeDurable: false });
+
+    expect(snap.sync.stale).toEqual(healthy.sync.stale);
+    expect(snap.sync.oldestLivenessAgeSeconds).toEqual(healthy.sync.oldestLivenessAgeSeconds);
+    expect(snap.microsoft.deliveryMode).toEqual(healthy.microsoft.deliveryMode);
+    expect(snap.microsoft.subscriptions).toEqual(healthy.microsoft.subscriptions);
+    expect(snap.microsoft.silentWebhooks).toBe(healthy.microsoft.silentWebhooks);
+    expect(snap.gmail.watches).toEqual(healthy.gmail.watches);
+    // Section 1 still shows configuring rows by status.
+    expect(sumProviders(snap, 'microsoft', 'configuring') - sumProviders(healthy, 'microsoft', 'configuring')).toBe(1);
+
+    const summarize = (snapshot: InboundEmailHealthSnapshot) => {
+      const nowMs = now.getTime();
+      const collector: CollectorCache = {
+        snapshot,
+        snapshotAtMs: nowMs - 10_000,
+        queues: { v1: { ready: 0, processing: 0, inflight: 0, dlq: 0 }, v2: null },
+        queuesAtMs: nowMs - 10_000,
+        dlqGrowthLastHour: 0,
+        lastSuccessAtMs: nowMs - 10_000,
+        startedAtMs: nowMs - 3_600_000,
+        intervalMs: 60_000,
+        lastTick: { dbOk: true, redisOk: true },
+      };
+      return buildStatusSummary({
+        nowMs,
+        checks: { db: { ok: true }, redis: { ok: true }, consumer_v1: { ok: true, lastTickMs: nowMs - 1_000 } },
+        collector,
+        imap: { activeListeners: 1, providersLeased: 1 },
+      });
+    };
+    // Configuring rows must change nothing in the /status reasons.
+    expect(summarize(snap).reasons).toEqual(summarize(healthy).reasons);
+
+    // Without the F4 error provider and with no stale rows from other tests in
+    // this DB, the fleet is ok: the configuring rows alone never degrade it.
+    const baselineStale = baseline.sync.stale.imap + baseline.sync.stale.microsoft + baseline.sync.stale.google;
+    const baselineClean =
+      baselineStale === 0 && summarize(baseline).status === 'ok' && baseline.microsoft.subscriptions.expired === 0;
+    if (baselineClean) {
+      const okFleet = {
+        ...snap,
+        microsoft: { ...snap.microsoft, subscriptions: { ...snap.microsoft.subscriptions, expired: 0 } },
+      };
+      const okSummary = summarize(okFleet);
+      expect(okSummary.status).toBe('ok');
+      expect(okSummary.reasons.map((r) => r.code)).not.toContain('sync_stale');
+    }
   }, 60_000);
 });

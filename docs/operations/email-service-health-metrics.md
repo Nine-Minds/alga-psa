@@ -112,8 +112,11 @@ Fleet gauges (identical across replicas; use `max()`): `providers{provider_type,
 Semantics worth knowing:
 
 - Expired Microsoft subscriptions count providers with `is_active AND inbound_paused_at IS NULL AND delivery_mode='webhook'`
-  and an expired `webhook_expires_at`; `email_providers.status` is not consulted.
-- Stale sync uses a per-type liveness timestamp (IMAP `last_sync_at`; Microsoft
+  and an expired `webhook_expires_at`; `email_providers.status` is not consulted (so `error` rows still count),
+  except that `configuring` rows (setup never finished) are excluded.
+- Stale sync counts providers that are active, unpaused, and whose status is not `configuring` or `disconnected`
+  (so `error` still counts). `configuring` rows are also excluded from `microsoft_delivery_mode`,
+  `microsoft_subscriptions` and `gmail_watches`. It uses a per-type liveness timestamp (IMAP `last_sync_at`; Microsoft
   `GREATEST(last_sync_at, last_reconciliation_at, last_webhook_delivery_at)`; Google
   `GREATEST(last_sync_at, last_push_received_at)`) against the per-type thresholds above.
 - **Known limitation:** with durable mode `enforce`, Microsoft `last_reconciliation_at` only advances when

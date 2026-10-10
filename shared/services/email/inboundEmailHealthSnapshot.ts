@@ -29,6 +29,10 @@ import {
 
 const COLLECTOR_TENANT_LABEL = 'inbound-email-health-collector';
 const QUERY_TIMEOUT = '10s';
+// email_providers.status enum: connected | disconnected | error | configuring.
+// 'configuring' is the only pre-connection status (setup never finished): such
+// rows have no subscription/watch/sync history and must not feed health gauges.
+const PRE_CONNECTION_STATUS = 'configuring';
 const EXPIRING_WINDOW_SECONDS = 12 * 60 * 60;
 
 export type SyncProviderType = 'imap' | 'microsoft' | 'google';
@@ -186,8 +190,11 @@ export async function collectInboundEmailHealthSnapshot(
       sumInto(authFailingCounts, key, num(row.n));
     }
 
-    // 4. Microsoft. Deliberately NO `status` filter: renewal failure can set
-    // status='error' and that is exactly the expired-subscription case.
+    // 4. Microsoft. Deliberately NO positive `status` filter: renewal failure
+    // can set status='error' and that is exactly the expired-subscription case.
+    // Only never-finished setups (status='configuring') are excluded: their
+    // delivery_mode defaults to polling and would inflate the polling-surge
+    // signal. IS DISTINCT FROM keeps NULL-status rows counted.
     const msRoot = providerRoot();
     facade.tenantJoin(msRoot, 'microsoft_email_provider_config as mpc', 'ep.id', 'mpc.email_provider_id', {
       rootTenantColumn: 'ep.tenant',
@@ -195,6 +202,7 @@ export async function collectInboundEmailHealthSnapshot(
     const msRows = await msRoot
       .where('ep.is_active', true)
       .whereNull('ep.inbound_paused_at')
+      .whereRaw('ep.status IS DISTINCT FROM ?', [PRE_CONNECTION_STATUS])
       .select(
         'mpc.delivery_mode',
         trx.raw(
@@ -217,7 +225,8 @@ export async function collectInboundEmailHealthSnapshot(
       }
     }
 
-    // 5. Gmail watches.
+    // 5. Gmail watches. Never-finished setups (status='configuring') have no
+    // watch yet and are excluded so they do not show up as `missing`.
     const gRoot = providerRoot();
     facade.tenantJoin(gRoot, 'google_email_provider_config as gpc', 'ep.id', 'gpc.email_provider_id', {
       rootTenantColumn: 'ep.tenant',
@@ -225,6 +234,7 @@ export async function collectInboundEmailHealthSnapshot(
     const gRows = await gRoot
       .where('ep.is_active', true)
       .whereNull('ep.inbound_paused_at')
+      .whereRaw('ep.status IS DISTINCT FROM ?', [PRE_CONNECTION_STATUS])
       .select(trx.raw(`${expiryStateSql('gpc.watch_expiration')} AS state`, [nowIso, nowIso]))
       .count('* as n')
       .groupByRaw('1');
@@ -246,7 +256,8 @@ export async function collectInboundEmailHealthSnapshot(
     //               `enforce` mode the cursor only moves with staged
     //               messages, so a quiet mailbox's liveness can age.
     //  - google:    GREATEST(last_sync_at, last_push_received_at).
-    // NULL liveness counts as age since ep.created_at.
+    // NULL liveness counts as age since ep.created_at. 'configuring' and
+    // 'disconnected' are excluded; 'error' stays counted (renewal failure).
     const livenessExpr: Record<SyncProviderType, { table: string; alias: string; joinCol: string; expr: string }> = {
       imap: { table: '', alias: '', joinCol: '', expr: 'ep.last_sync_at' },
       microsoft: {
@@ -275,7 +286,7 @@ export async function collectInboundEmailHealthSnapshot(
         .where('ep.provider_type', type)
         .where('ep.is_active', true)
         .whereNull('ep.inbound_paused_at')
-        .whereNot('ep.status', 'disconnected')
+        .whereNotIn('ep.status', ['disconnected', PRE_CONNECTION_STATUS])
         .select(
           trx.raw(`MAX(${ageSql}) AS max_age`, [nowIso]),
           trx.raw(`SUM(CASE WHEN ${ageSql} > ? THEN 1 ELSE 0 END) AS stale_count`, [
