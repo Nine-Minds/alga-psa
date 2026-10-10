@@ -125,16 +125,20 @@ export async function draftContractToScenario(
     frequency: string,
     services: ScenarioLineService[],
     customRate: number | null = null,
+    overrides: {
+      billing_timing?: "arrears" | "advance";
+      enable_proration?: boolean;
+    } = {},
   ): ScenarioLine => ({
     key,
     origin_contract_line_id: null,
     contract_line_name: name,
     contract_line_type: type,
     billing_frequency: frequency,
-    billing_timing: timing,
+    billing_timing: overrides.billing_timing ?? timing,
     cadence_owner: cadenceOwner,
     custom_rate: customRate,
-    enable_proration: draft.enable_proration,
+    enable_proration: overrides.enable_proration ?? draft.enable_proration,
     location_id: null,
     enable_overtime: false,
     overtime_threshold: null,
@@ -143,8 +147,11 @@ export async function draftContractToScenario(
   });
 
   const lines: ScenarioLine[] = [];
-  if (draft.fixed_services.length > 0 || draft.fixed_base_rate != null) {
-    const services = draft.fixed_services.flatMap((item) => {
+  // One scenario line per wizard fixed line. A line with no service cannot be
+  // billed (the engine rejects a rate with no members), so it is not simulated.
+  const simulatedFixedLines = draft.fixed_lines.filter((fixedLine) => fixedLine.services.length > 0);
+  simulatedFixedLines.forEach((fixedLine, lineIndex) => {
+    const services = fixedLine.services.flatMap((item) => {
       const isUnit = item.pricing_basis === "unit";
       const primary = service(item.service_id, item.quantity, null, {
         configuration_type: "Fixed",
@@ -161,24 +168,27 @@ export async function draftContractToScenario(
     });
     lines.push(
       line(
-        "draft-fixed",
-        "Fixed services",
+        simulatedFixedLines.length === 1 ? "draft-fixed" : `draft-fixed-${lineIndex + 1}`,
+        fixedLine.contract_line_name?.trim() ||
+          (simulatedFixedLines.length === 1 ? "Fixed services" : `Fixed services ${lineIndex + 1}`),
         "Fixed",
-        draft.fixed_billing_frequency || draft.billing_frequency,
+        fixedLine.billing_frequency || draft.billing_frequency,
         services,
-        draft.fixed_base_rate == null
-          ? null
-          : Math.round(draft.fixed_base_rate),
+        fixedLine.base_rate == null ? null : Math.round(fixedLine.base_rate),
+        {
+          billing_timing: fixedLine.billing_timing,
+          enable_proration: fixedLine.enable_proration,
+        },
       ),
     );
-  }
+  });
   if (draft.product_services.length > 0) {
     lines.push(
       line(
         "draft-products",
         "Products and licenses",
         "Fixed",
-        draft.fixed_billing_frequency || draft.billing_frequency,
+        draft.billing_frequency,
         draft.product_services.map((item) =>
           service(item.service_id, item.quantity, item.custom_rate ?? null, {
             configuration_type: "Fixed",
