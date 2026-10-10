@@ -162,6 +162,17 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
  * per-unit configuration to, and a fractional quantity is not a seat count;
  * those keep the bundle pricing they always had.
  */
+/**
+ * The quoted recurring amount of a bundle-priced Fixed row: quantity x unit price in integer
+ * cents. Product rows keep their unit price (their per-unit rate lives on the member).
+ */
+function bundleLineTotal(item: IQuoteItem, productServiceIds: Set<string>): number {
+  if (isProductQuoteItem(item, productServiceIds)) {
+    return item.unit_price;
+  }
+  return Math.round(Number(item.quantity) * Number(item.unit_price));
+}
+
 function isUnitPricedRecurringItem(
   item: IQuoteItem,
   contractLineType: 'Fixed' | 'Hourly' | 'Usage',
@@ -726,7 +737,9 @@ export async function convertQuoteToDraftContract(
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
       // A per-unit line has no bundle total: quantity x unit rate is the charge.
-      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? item.unit_price : null,
+      // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
+      // amount (quantity x unit price), not the unit price alone.
+      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? bundleLineTotal(item, productServiceIds) : null,
       enable_proration: false,
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
@@ -787,7 +800,8 @@ export async function convertQuoteToDraftContract(
         tenant,
         config_id: configId,
         // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-        base_rate: item.unit_price,
+        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
