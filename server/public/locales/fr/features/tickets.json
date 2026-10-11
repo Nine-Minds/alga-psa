@@ -761,6 +761,8 @@
       "failure": "Échec de la mise à jour du statut",
       "failedHeading": "Le statut n’a pas pu être mis à jour sur les tickets suivants :",
       "resolutionLabel": "Commentaire de résolution (facultatif)",
+      "resolutionLabelRequired": "Commentaire de résolution",
+      "resolutionRequiredHint": "Ce tableau exige un commentaire de résolution avant de pouvoir clôturer les tickets.",
       "resolutionPlaceholder": "Décrivez comment ces tickets ont été résolus",
       "resolutionHelper": "Enregistré comme résolution sur chaque ticket sélectionné et satisfait les tableaux qui en exigent une avant la clôture."
     },

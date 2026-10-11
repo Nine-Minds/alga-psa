@@ -1623,6 +1623,12 @@
     "threecxDialing": "Marcando desde su extensión de 3CX",
     "threecxFailed": "La centralita no pudo realizar la llamada"
   },
+  "unsavedChangesGuard": {
+    "title": "¿Descartar los cambios sin guardar?",
+    "message": "Tiene cambios sin guardar que se perderán si cierra esto. ¿Desea descartarlos?",
+    "discard": "Descartar cambios",
+    "keepEditing": "Seguir editando"
+  },
   "editor": {
     "attachFiles": "Adjuntar archivos",
     "uploadingFiles": "Subiendo archivos…",
