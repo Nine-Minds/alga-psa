@@ -43,11 +43,23 @@ export interface EmailPaletteOverrides extends Partial<Record<EmailPaletteOverri
 export type EmailBrandingLogoShape = 'wide' | 'default';
 
 /**
+ * Which artwork of the shape goes into the header: read off the header color,
+ * or pinned by a tenant whose header the luminance rule reads the other way.
+ */
+export type EmailBrandingLogoArtwork = 'auto' | 'light' | 'dark';
+
+/**
  * Every file a brand-logo content-id can name. The shape is the tenant's
  * choice; the dark counterpart is chosen per template from the header the
- * palette paints, so it is never persisted.
+ * palette paints unless the tenant pinned one, so only the pin is persisted.
  */
 export type EmailBrandingLogoVariant = EmailBrandingLogoShape | 'dark' | 'wide-dark';
+
+export interface EmailBrandingLogo {
+  variant: EmailBrandingLogoShape;
+  /** Absent means auto: the artwork follows the header. */
+  artwork?: Exclude<EmailBrandingLogoArtwork, 'auto'>;
+}
 
 /** Shape persisted at `tenant_settings.settings.emailBranding`. */
 export interface EmailBrandingPalette {
@@ -56,7 +68,7 @@ export interface EmailBrandingPalette {
   secondary: string | null;
   overrides?: EmailPaletteOverrides;
   /** Enterprise only. */
-  logo?: { variant: EmailBrandingLogoShape };
+  logo?: EmailBrandingLogo;
   /** Enterprise only. */
   hideAttribution?: boolean;
   /** ISO timestamp of the last successful apply. */

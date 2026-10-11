@@ -316,6 +316,29 @@ export function getErrorMessage(error: unknown): string {
   return 'An unexpected error occurred';
 }
 
+/** An error whose message was written for the end user and may be displayed verbatim. */
+export class UserFacingError extends Error {
+  name = 'UserFacingError';
+}
+
+/**
+ * The message to show a user for `error`: a returned actionError/permissionError payload's text,
+ * a UserFacingError's message, otherwise `fallback`. Never returns the message of an arbitrary
+ * thrown error — those can carry driver/stack detail and belong in logs only.
+ */
+export function userFacingErrorMessage(error: unknown, fallback: string): string {
+  if (isActionPermissionError(error)) {
+    return error.permissionError;
+  }
+  if (isActionMessageError(error)) {
+    return error.actionError;
+  }
+  if (error instanceof UserFacingError) {
+    return error.message;
+  }
+  return fallback;
+}
+
 /**
  * Handle errors with appropriate UI feedback.
  * Shows permission errors with a ShieldAlert icon and other errors normally.

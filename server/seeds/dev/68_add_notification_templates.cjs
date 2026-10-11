@@ -22,6 +22,8 @@ const { getTemplate: authNoAccountFound } = require('../../migrations/utils/temp
 
 // Tickets
 const { getTemplate: ticketCreated } = require('../../migrations/utils/templates/email/tickets/ticketCreated.cjs');
+const { getTemplate: ticketBoardCreated } = require('../../migrations/utils/templates/email/tickets/ticketBoardCreated.cjs');
+const { getTemplate: ticketBoardStatusEntered } = require('../../migrations/utils/templates/email/tickets/ticketBoardStatusEntered.cjs');
 const { getTemplate: ticketCreatedClient } = require('../../migrations/utils/templates/email/tickets/ticketCreatedClient.cjs');
 const { getTemplate: ticketAssigned } = require('../../migrations/utils/templates/email/tickets/ticketAssigned.cjs');
 const { getTemplate: ticketUpdated } = require('../../migrations/utils/templates/email/tickets/ticketUpdated.cjs');
@@ -82,6 +84,8 @@ const TEMPLATE_GETTERS = [
   authNoAccountFound,
   ticketCreated,
   ticketCreatedClient,
+  ticketBoardCreated,
+  ticketBoardStatusEntered,
   ticketAssigned,
   ticketUpdated,
   ticketUpdatedClient,

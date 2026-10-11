@@ -41,6 +41,10 @@ const TEMPLATES = {
       title: '{{ownerName}} compartilhou a agenda com você',
       message: 'Agora você pode ver a agenda de {{ownerName}} ({{accessLevelLabel}}) na página Agenda.',
     },
+    sv: {
+      title: '{{ownerName}} har delat sin kalender med dig',
+      message: 'Du kan nu se kalendern för {{ownerName}} ({{accessLevelLabel}}) på sidan Schema.',
+    },
   },
 };
 

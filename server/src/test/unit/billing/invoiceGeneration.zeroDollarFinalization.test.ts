@@ -25,12 +25,11 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
     obligation_id: 'contract-line-1',
     // This query stub supplies joined rows, including the contract owner.
     owner_client_id: 'client-1',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:contract-line-1:client:advance',
+    schedule_key: 'schedule:tenant-1:contract-line-1:client:advance',
     period_key: 'period:2025-02-01:2025-03-01',
     service_period_start: '2025-02-01',
     service_period_end: '2025-03-01',
@@ -111,6 +110,8 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
     delete: vi.fn(async () => {
@@ -485,3 +486,15 @@ describe('invoice generation zero-dollar recurring handling', () => {
     expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

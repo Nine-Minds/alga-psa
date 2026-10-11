@@ -249,6 +249,7 @@ vi.mock('../lib/assetFactsService', () => ({
 }));
 
 import { createAsset, updateAsset } from './assetActions';
+import { isAssetValidationError, type AssetValidationError } from './assetActionErrors';
 import { getRemoteAccessLinksForAsset } from './remoteAccessLinkActions';
 
 const CLOUD_ACCOUNT_FIELDS = [
@@ -435,9 +436,12 @@ describe('updateAsset with custom asset types (T313)', () => {
     seedCloudAccountType();
     const asset = seedAsset();
 
-    await expect(updateAsset(asset.asset_id, { asset_type: 'door_access' })).rejects.toThrow(
-      /invalid_asset_type/
-    );
+    // alga0002283: updateAsset RETURNS the structured error (thrown messages are
+    // masked by Next.js in production builds).
+    const result = await updateAsset(asset.asset_id, { asset_type: 'door_access' });
+    expect(result).toMatchObject({
+      actionError: 'Asset type "door_access" is not available. Choose a valid asset type.',
+    });
     expect(h.dbState.assets[0].asset_type).toBe('cloud_account');
     expect(h.dbState.assets[0].attributes.account_name).toBe('Old Name');
   });
@@ -446,11 +450,9 @@ describe('updateAsset with custom asset types (T313)', () => {
     seedCloudAccountType();
     const asset = seedAsset();
 
-    await updateAsset(asset.asset_id, { attributes: { seats: 'five' } }).catch((error: Error) => {
-      const parsed = JSON.parse(error.message);
-      expect(parsed.kind).toBe('validation');
-      expect(parsed.issues[0].path).toEqual(['attributes', 'seats']);
-    });
+    const result = await updateAsset(asset.asset_id, { attributes: { seats: 'five' } });
+    expect(isAssetValidationError(result)).toBe(true);
+    expect((result as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'seats']);
 
     expect(h.dbState.assets[0].attributes).toEqual({
       account_name: 'Old Name',
@@ -461,9 +463,9 @@ describe('updateAsset with custom asset types (T313)', () => {
   it('validates built-in additional fields and merge-preserves sibling namespaces', async () => {
     h.dbState.asset_type_registry.push({ tenant: TENANT, slug: 'workstation', name: 'Workstation', is_builtin: true, fields_schema: JSON.stringify([{ key: 'sc_session', label: 'Session', kind: 'text' }]) });
     const asset = seedAsset({ asset_type: 'workstation', attributes: { hudu_fields: [{ label: 'Plan', value: 'Gold' }] } });
-    const rejection = await updateAsset(asset.asset_id, { attributes: { sc_session: 123 } }).then(() => null, (error: Error) => error);
-    expect(rejection).toBeInstanceOf(Error);
-    expect(JSON.parse((rejection as Error).message).issues[0].path).toEqual(['attributes', 'sc_session']);
+    const rejection = await updateAsset(asset.asset_id, { attributes: { sc_session: 123 } });
+    expect(isAssetValidationError(rejection)).toBe(true);
+    expect((rejection as unknown as AssetValidationError).validationIssues[0].path).toEqual(['attributes', 'sc_session']);
     await updateAsset(asset.asset_id, { attributes: { sc_session: 'sess-1' } });
     expect(h.dbState.assets[0].attributes).toEqual({ sc_session: 'sess-1', hudu_fields: [{ label: 'Plan', value: 'Gold' }] });
   });

@@ -53,3 +53,14 @@ jobs:
             ${{ runner.temp }}/browser-metric-reconciliation.json
           if-no-files-found: error
           retention-days: 14
+      # This workflow failed 175 times in a row before anyone noticed, because a
+      # workflow_run failure shows up nowhere a reviewer looks. Failures land in
+      # the test-metrics sheet (workflow_health tab), where CI health is tracked;
+      # a GitHub issue per streak was tried on 2026-09-29 and was noise there.
+      - name: Record the failure in the test-metrics sheet
+        if: failure()
+        run: node scripts/record-workflow-health.mjs "$RUNNER_TEMP/browser-metric-collection.json" "$RUNNER_TEMP/browser-metric-reconciliation.json"
+        env:
+          WORKFLOW_HEALTH_CONCLUSION: ${{ job.status }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

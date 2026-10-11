@@ -1,0 +1,13 @@
+import { describe, expect, it } from 'vitest';
+import { formatInvoiceTotal } from './formatInvoiceTotal';
+
+// Mentions react only in prose, and imports a type from a component module.
+import type { ReactNode } from 'react';
+
+describe('formatInvoiceTotal', () => {
+  it('rounds to the tenant currency', () => {
+    const unused: ReactNode = null;
+    expect(unused).toBeNull();
+    expect(formatInvoiceTotal(1234, 'USD')).toBe('$12.34');
+  });
+});

@@ -24,6 +24,12 @@ interface FixedServiceConfigPanelProps {
   idPrefix?: string;
   className?: string;
   disabled?: boolean;
+  /**
+   * Hide the line-level proration controls. Proration is a property of the
+   * contract line, so an authoring surface that already owns it (the contract
+   * wizard) hides the per-member copy instead of showing a duplicate switch.
+   */
+  hideProration?: boolean;
 }
 
 export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
@@ -37,6 +43,7 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
     idPrefix = '',
     className = '',
     disabled = false,
+    hideProration = false,
   } = props;
   const { t } = useTranslation('msp/service-catalog');
   const { money } = useCurrencyFormat();
@@ -204,6 +211,7 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
           </p>
         )}
 
+        {!hideProration && (
         <div className="flex items-center space-x-2 pt-2">
           <Switch
             id={`${idPrefix}fixed-service-enable-proration`}
@@ -217,8 +225,9 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
             })}
           </Label>
         </div>
+        )}
 
-        {enableProration && (
+        {!hideProration && enableProration && (
           <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
             <Label htmlFor={`${idPrefix}fixed-service-billing-cycle-alignment`}>
               {t('fixedConfig.fields.billingCycleAlignment.label', {

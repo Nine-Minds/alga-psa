@@ -3,6 +3,7 @@ import {
   ITimeEntry,
   ITimeEntryWithWorkItemString,
   ITimePeriodView,
+  ProjectServiceSource,
   TaxRegion,
 } from '@alga-psa/types';
 import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
@@ -26,6 +27,7 @@ export interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   _isServicePrefilled?: boolean; // True if service was auto-filled from work item
   _originalServiceId?: string | null; // Original prefilled service ID
   _serviceOverridden?: boolean; // True if user changed the prefilled service
+  _serviceSource?: ProjectServiceSource; // Which level the prefill came from (task/phase/project)
 }
 
 export interface TimeInputs {
@@ -94,6 +96,8 @@ export interface TimeEntrySelectionRequest {
   entries: ITimeEntryWithWorkItemString[];
   defaultStartTime?: string;
   defaultEndTime?: string;
+  /** Explanation shown above the form, e.g. that the times are estimated from activity. */
+  notice?: string;
 }
 
 export interface TimeSheetListFocusFilter {

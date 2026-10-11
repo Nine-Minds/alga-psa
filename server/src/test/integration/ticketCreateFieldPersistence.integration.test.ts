@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { TicketModel } from '@shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -241,7 +242,7 @@ describe('Ticket create field persistence integration', () => {
           impact_id: fixture.impactId,
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
     });
 
@@ -277,7 +278,7 @@ describe('Ticket create field persistence integration', () => {
           entered_by: fixture.userId,
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
     });
 
@@ -329,7 +330,7 @@ describe('Ticket create field persistence integration', () => {
             severity_id: foreignSeverityId,
           },
           fixture.tenantId,
-          trx,
+          trx, {}, silentTicketCreation('test fixture'),
         );
       }),
     ).rejects.toThrow();
@@ -354,7 +355,7 @@ describe('Ticket create field persistence integration', () => {
             severity_id: '',
           },
           fixture.tenantId,
-          trx,
+          trx, {}, silentTicketCreation('test fixture'),
         );
       }),
     ).rejects.toThrow(/severity_id/);
@@ -378,7 +379,7 @@ describe('Ticket create field persistence integration', () => {
           url: '',
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
     });
 

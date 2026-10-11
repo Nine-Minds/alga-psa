@@ -767,7 +767,7 @@ describe('DesignCanvas preview mode', () => {
     fireEvent.click(screen.getAllByText('INV-770')[0]);
     expect(onNodeSelect).not.toHaveBeenCalled();
     expect(container.querySelector('.cursor-se-resize')).toBeNull();
-    expect(container.querySelector('.opacity-65')).toBeNull();
+    expect(container.querySelector('.opacity-85')).toBeNull();
   });
 
   it('uses provided canvas scale conventions in preview mode', () => {

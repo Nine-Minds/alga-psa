@@ -9,11 +9,13 @@ import type {
   QuoteConversionPreview,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { Temporal } from '@js-temporal/polyfill';
+import { tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
-import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
+import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
+import { allocateIncludedQuoteDiscounts } from '../lib/quoteTotals';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
@@ -137,6 +139,7 @@ interface ContractLineMapping {
   item: IQuoteItem;
   contractLineId: string;
   contractLineType: 'Fixed' | 'Hourly' | 'Usage';
+  isUnitPriced: boolean;
 }
 
 function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 'Usage' {
@@ -151,15 +154,45 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
   return 'Fixed';
 }
 
+/**
+ * A recurring catalog service on a Fixed line converts to a per-unit service:
+ * the quoted quantity is the seat count and the quoted unit price is the rate
+ * per unit (contract_line_service_fixed_config.pricing_basis = 'unit'), so a
+ * later quantity change reprices through the normal revision path. Products are
+ * never units, custom items without a catalog service have nothing to attach a
+ * per-unit configuration to, and a fractional quantity is not a seat count;
+ * those keep the bundle pricing they always had.
+ */
+/**
+ * The quoted recurring amount of a bundle-priced Fixed row: quantity x unit price in integer
+ * cents. Product rows keep their unit price (their per-unit rate lives on the member).
+ */
+function bundleLineTotal(item: IQuoteItem, productServiceIds: Set<string>): number {
+  if (isProductQuoteItem(item, productServiceIds)) {
+    return item.unit_price;
+  }
+  return Math.round(Number(item.quantity) * Number(item.unit_price));
+}
+
+function isUnitPricedRecurringItem(
+  item: IQuoteItem,
+  contractLineType: 'Fixed' | 'Hourly' | 'Usage',
+  productServiceIds: Set<string>
+): boolean {
+  if (contractLineType !== 'Fixed' || !item.service_id) {
+    return false;
+  }
+  if (isProductQuoteItem(item, productServiceIds)) {
+    return false;
+  }
+  const quantity = Number(item.quantity);
+  return Number.isInteger(quantity) && quantity >= 0;
+}
+
 function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
   return item.billing_method === 'hourly' || item.billing_method === 'usage'
     ? 'arrears'
     : 'advance';
-}
-
-function isItemSelected(item: IQuoteItem): boolean {
-  if (!item.is_optional) return true;
-  return item.is_selected === true;
 }
 
 function toIntegerCents(value: unknown): number | null {
@@ -184,33 +217,15 @@ export interface QuoteDiscountConversionShare {
 
 /**
  * Resolve every quote discount to the share of its reduction that lands on
- * recurring versus one-time base rows, using the same shared allocation model
- * the quote document adapter and the editor use. Conversion must never apply a
- * whole persisted discount to a one-time invoice when part of that discount
- * reduces a recurring service.
+ * recurring versus one-time base rows, using the same shared allocation the
+ * quote document adapter, the editor and the persisted recalculation use
+ * (`quoteTotals`): included rows only — required rows and optional rows the
+ * customer selected — so what converts is exactly what was quoted and
+ * accepted. Conversion must never apply a whole persisted discount to a
+ * one-time invoice when part of that discount reduces a recurring service.
  */
 function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, QuoteDiscountConversionShare> {
-  const bases = items
-    .filter((item) => !item.is_discount && isItemSelected(item))
-    .map((item) => ({
-      id: item.quote_item_id,
-      serviceId: item.service_id ?? null,
-      amount: toIntegerCents(Number(item.quantity) * Number(item.unit_price)) ?? 0,
-      isRecurring: item.is_recurring === true,
-    }));
-
-  const discounts = items
-    .filter((item) => item.is_discount && isItemSelected(item))
-    .map((item) => ({
-      id: item.quote_item_id,
-      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
-      fixedAmount: Math.abs(toIntegerCents(Number(item.quantity ?? 1) * Number(item.unit_price)) ?? 0),
-      discountPercentage: item.discount_percentage != null ? Number(item.discount_percentage) : null,
-      appliesToItemId: item.applies_to_item_id ?? null,
-      appliesToServiceId: item.applies_to_service_id ?? null,
-    }));
-
-  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.quote_item_id);
   const shares = new Map<string, QuoteDiscountConversionShare>();
   for (const result of allocation.discounts) {
     const onetimeByBase = new Map<string, number>();
@@ -230,13 +245,22 @@ function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, 
   return shares;
 }
 
+/**
+ * A recurring item with no catalog service becomes a Fixed line with a recurring amount and
+ * nothing to bill it on; the billing engine refuses such a line (FIXED_LINE_NO_SERVICES), and
+ * the contract wizard cannot finish it. Conversion therefore refuses it up front.
+ */
+function serviceLessRecurringMessage(item: IQuoteItem): string {
+  return `Recurring item "${item.description}" must reference a catalog service before contract conversion`;
+}
+
 function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
   return items.filter((item) => {
     if (!item.is_recurring || item.is_discount) {
       return false;
     }
 
-    return isItemSelected(item);
+    return isQuoteItemIncluded(item);
   });
 }
 
@@ -247,7 +271,7 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
       return false;
     }
 
-    return isItemSelected(item);
+    return isQuoteItemIncluded(item);
   });
 
   return includedItems.filter((item) => {
@@ -349,6 +373,19 @@ function existingSalesOrderDiscountError(
     return stored?.quantity === value.quantity && stored.amount === value.amount;
   });
   return matches ? null : `Sales order ${salesOrder.so_number || salesOrder.so_id} does not match the quote's discounted product quantities and amounts. Reconcile the sales order with the quote before creating the remaining invoice.`;
+}
+
+/**
+ * Date-only value of an instant (or date) in the tenant's effective time zone.
+ * `client_contracts.start_date` is a date column; handing the database a
+ * timestamp would let the session time zone pick the day.
+ */
+function toDateOnlyInTimeZone(value: string | Date, timeZone: string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const iso = value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return Temporal.Instant.from(iso).toZonedDateTimeISO(timeZone).toPlainDate().toString();
 }
 
 async function resolveProductServiceIds(
@@ -517,6 +554,8 @@ export async function buildQuoteConversionPreview(
     : null;
 
   const contractItems: QuoteConversionPreviewItem[] = [];
+  let contractBlockedReason: string | null = null;
+  let contractBlockedItemDescription: string | null = null;
   const invoiceItems: QuoteConversionPreviewItem[] = [];
   const salesOrderItems: QuoteConversionPreviewItem[] = salesOrder
     ? salesOrder.lines.map((line) => {
@@ -538,6 +577,15 @@ export async function buildQuoteConversionPreview(
 
   for (const item of quoteItems) {
     if (recurringIds.has(item.quote_item_id)) {
+      if (!item.service_id) {
+        const message = serviceLessRecurringMessage(item);
+        if (!contractBlockedReason) {
+          contractBlockedReason = message;
+          contractBlockedItemDescription = item.description;
+        }
+        excludedItems.push(toPreviewItem(item, 'excluded', message, lookupName(item)));
+        continue;
+      }
       contractItems.push(toPreviewItem(item, 'contract', null, lookupName(item)));
       continue;
     }
@@ -580,7 +628,7 @@ export async function buildQuoteConversionPreview(
     }
 
     let reason = 'Item is not eligible for conversion';
-    if (item.is_optional && item.is_selected !== true) {
+    if (isPendingOptional(item)) {
       reason = 'Optional item was not selected by the client';
     } else if (item.is_discount && item.is_recurring) {
       reason = 'Recurring discount lines are excluded from contract conversion';
@@ -594,13 +642,13 @@ export async function buildQuoteConversionPreview(
   }
 
   const availableActions: Array<'contract' | 'invoice' | 'both'> = [];
-  if (contractItems.length > 0) {
+  if (contractItems.length > 0 && !contractBlockedReason) {
     availableActions.push('contract');
   }
   if (invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('invoice');
   }
-  if (contractItems.length > 0 && invoiceItems.length > 0 && !invoiceError) {
+  if (contractItems.length > 0 && !contractBlockedReason && invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('both');
   }
 
@@ -608,6 +656,8 @@ export async function buildQuoteConversionPreview(
     quote_id: quote.quote_id,
     available_actions: availableActions,
     invoice_error: invoiceError,
+    contract_blocked_reason: contractBlockedReason,
+    contract_blocked_item_description: contractBlockedItemDescription,
     contract_items: contractItems,
     invoice_items: invoiceItems,
     sales_order_items: salesOrderItems,
@@ -653,6 +703,11 @@ export async function convertQuoteToDraftContract(
     throw new Error('Quote does not contain any recurring items selected for contract conversion');
   }
 
+  const serviceLessItem = recurringItems.find((item) => !item.service_id);
+  if (serviceLessItem) {
+    throw new Error(serviceLessRecurringMessage(serviceLessItem));
+  }
+
   const billingFrequency = recurringItems[0]?.billing_frequency || 'monthly';
 
   if (!quote.client_id) {
@@ -676,15 +731,20 @@ export async function convertQuoteToDraftContract(
   });
 
   const nowIso = new Date().toISOString();
-  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => ({
-    item,
-    contractLineId: uuidv4(),
-    contractLineType: mapQuoteItemToContractLineType(item),
-  }));
+  const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, recurringItems);
+  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => {
+    const contractLineType = mapQuoteItemToContractLineType(item);
+    return {
+      item,
+      contractLineId: uuidv4(),
+      contractLineType,
+      isUnitPriced: isUnitPricedRecurringItem(item, contractLineType, productServiceIds),
+    };
+  });
 
   const db = tenantDb(knexOrTrx, tenant);
   await db.table('contract_lines').insert(
-    contractLineMappings.map(({ item, contractLineId, contractLineType }, index) => ({
+    contractLineMappings.map(({ item, contractLineId, contractLineType, isUnitPriced }, index) => ({
       tenant,
       contract_line_id: contractLineId,
       contract_id: contract.contract_id,
@@ -695,12 +755,15 @@ export async function convertQuoteToDraftContract(
       contract_line_type: contractLineType,
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
-      custom_rate: contractLineType === 'Fixed' ? item.unit_price : null,
+      // A per-unit line has no bundle total: quantity x unit rate is the charge.
+      // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
+      // amount (quantity x unit price), not the unit price alone.
+      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? bundleLineTotal(item, productServiceIds) : null,
       enable_proration: false,
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      is_active: false,
+      is_active: true,
       location_id: item.location_id ?? null,
       created_at: nowIso,
       updated_at: nowIso,
@@ -709,10 +772,11 @@ export async function convertQuoteToDraftContract(
 
   const configRows = contractLineMappings
     .filter(({ item }) => Boolean(item.service_id))
-    .map(({ item, contractLineId, contractLineType }) => ({
+    .map(({ item, contractLineId, contractLineType, isUnitPriced }) => ({
       item,
       contractLineId,
       contractLineType,
+      isUnitPriced,
       configId: uuidv4(),
       serviceId: item.service_id as string,
     }));
@@ -721,12 +785,12 @@ export async function convertQuoteToDraftContract(
     knexOrTrx,
     tenant,
     'contract_line_services',
-    configRows.map(({ contractLineId, serviceId, item }) => ({
+    configRows.map(({ contractLineId, serviceId, item, isUnitPriced }) => ({
       tenant,
       contract_line_id: contractLineId,
       service_id: serviceId,
       quantity: item.quantity,
-      custom_rate: item.unit_price,
+      custom_rate: isUnitPriced ? null : item.unit_price,
       created_at: nowIso,
       updated_at: nowIso,
     }))
@@ -734,13 +798,13 @@ export async function convertQuoteToDraftContract(
 
   if (configRows.length > 0) {
     await db.table('contract_line_service_configuration').insert(
-      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
+      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
         contract_line_id: contractLineId,
         service_id: serviceId,
         configuration_type: contractLineType,
-        custom_rate: item.unit_price,
+        custom_rate: isUnitPriced ? null : item.unit_price,
         quantity: item.quantity,
         created_at: nowIso,
         updated_at: nowIso,
@@ -751,10 +815,14 @@ export async function convertQuoteToDraftContract(
   const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
   if (fixedConfigRows.length > 0) {
     await db.table('contract_line_service_fixed_config').insert(
-      fixedConfigRows.map(({ configId, item }) => ({
+      fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
-        base_rate: item.unit_price,
+        // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
+        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
+        // Bundle rows are written exactly as before (column defaults).
+        ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
         updated_at: nowIso,
       }))
@@ -810,14 +878,17 @@ export async function convertQuoteToDraftContract(
   }
 
   const clientContractId = uuidv4();
+  const effectiveTimeZone = await resolveEffectiveTimeZone(knexOrTrx, tenant);
   await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
     client_id: quote.client_id,
     contract_id: contract.contract_id,
-    start_date: quote.accepted_at || quote.quote_date || nowIso,
+    start_date: toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone),
     end_date: null,
-    is_active: true,
+    // Draft contracts keep an inactive assignment until Set to Active; lines are always enabled.
+    // LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice
+    is_active: false,
     created_at: nowIso,
     updated_at: nowIso,
   });
@@ -1049,7 +1120,7 @@ export async function convertQuoteToDraftInvoice(
   // its product rows are claimed there and their allocated discount share is
   // excluded from this invoice.
   const oneTimeBaseItems = quoteItemsForInvoice.filter(
-    (item) => !item.is_recurring && !item.is_discount && isItemSelected(item),
+    (item) => !item.is_recurring && !item.is_discount && isQuoteItemIncluded(item),
   );
   if (salesOrderForQuote) {
     const error = existingSalesOrderDiscountError(
@@ -1065,7 +1136,7 @@ export async function convertQuoteToDraftInvoice(
   const invoiceableBaseIds = new Set(invoiceableBaseItems.map((item) => item.quote_item_id));
 
   const invoiceableDiscounts = quoteItemsForInvoice
-    .filter((item) => item.is_discount && isItemSelected(item))
+    .filter((item) => item.is_discount && isQuoteItemIncluded(item))
     .map((item) => ({
       item,
       amount: allocatedOneTimeAmountFor(shares, item.quote_item_id, invoiceableBaseIds),

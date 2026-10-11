@@ -199,6 +199,24 @@ export async function createTestDbConnection(
   return db;
 }
 
+/** Drop only a scratch calendar delivery DB created by the automatic-delivery harness. */
+export async function dropCalendarDeliveryTestDatabase(databaseName: string): Promise<void> {
+  if (!/^calendar_delivery_test_[a-f0-9]{12}$/.test(databaseName)) {
+    throw new Error('Refusing to drop a database outside the calendar delivery scratch-name boundary');
+  }
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
+  const adminUser = process.env.DB_USER_ADMIN || 'postgres';
+  const adminPassword = await resolveDbSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const admin = knex({ client: 'pg', connection: { host: dbHost, port: dbPort, user: adminUser, password: adminPassword, database: 'postgres' } });
+  try {
+    await admin.raw('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()', [databaseName]);
+    await admin.raw(`DROP DATABASE IF EXISTS "${databaseName}"`);
+  } finally {
+    await admin.destroy();
+  }
+}
+
 function adminConnection(
   databaseName: string,
   dbHost: string,

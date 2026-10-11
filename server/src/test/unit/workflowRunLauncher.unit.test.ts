@@ -154,7 +154,7 @@ describe('Workflow run launcher', () => {
       workflowVersion: 5,
       triggerType: null,
       executionKey: expect.stringMatching(/^launch-workflow-1-/)
-    });
+    }, { connectTimeoutMs: undefined });
     expect(updateRunMock).toHaveBeenCalledWith(
       knexMock,
       'run-started',
@@ -235,7 +235,7 @@ describe('Workflow run launcher', () => {
       workflowVersion: 5,
       triggerType: 'event',
       executionKey: 'exec-1'
-    });
+    }, { connectTimeoutMs: undefined });
     expect(startRunMock).toHaveBeenCalledWith(
       knexMock,
       expect.objectContaining({

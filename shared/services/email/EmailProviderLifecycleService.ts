@@ -13,6 +13,7 @@ import {
 import { persistIngressPointer } from './inboundEmailProducer';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
+import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
 
@@ -303,6 +304,7 @@ export class EmailProviderLifecycleService {
         return {
           count: Number(row.inbound_auth_failure_count || 0),
           autoPaused: false,
+          providerType: row.provider_type,
         };
       }
 
@@ -336,6 +338,15 @@ export class EmailProviderLifecycleService {
         pausedAt: shouldPause ? nowIso : undefined,
       };
     });
+
+    // Single choke point for classified auth-failure metrics: every path
+    // (V1 processor, IMAP listener, V2 ingress staging, renewal maintenance)
+    // lands here. Counted after the transaction commits so a rollback cannot
+    // over-count; every call counts, including on an already-paused row.
+    recordAuthFailure({ providerType: outcome.providerType, code: safeCode });
+    if (outcome.autoPaused) {
+      recordAutoPause({ providerType: outcome.providerType, code: safeCode });
+    }
 
     // Only the transaction that flipped an unpaused row to paused may tear
     // down subscriptions and notify admins — exactly once per pause.

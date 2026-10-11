@@ -39,13 +39,13 @@ const storeNamespaceEditorMetadata: WorkflowJsonSchemaMetadata = {
 
 const namespaceSchema = withWorkflowJsonSchemaMetadata(
   z.string().trim().min(1).max(MAX_LABEL_LENGTH),
-  'Collection that groups related values together, like a folder (e.g. invoice-dunning-sent).',
+  'Collection that groups related values, like a folder; the key names one value inside it.',
   storeNamespaceEditorMetadata
 );
 
 const keySchema = withWorkflowJsonSchemaMetadata(
   z.string().trim().min(1).max(MAX_LABEL_LENGTH),
-  'The name to save this value under (often an id). Read it back later with the same key.',
+  'Name of one value inside the namespace (often an id); read it back later with the same namespace and key.',
   {
     'x-workflow-editor': {
       kind: 'text',
@@ -190,7 +190,7 @@ export function registerDataStoreActions(): void {
     ui: {
       label: 'Get Stored Value',
       category: 'Data Store',
-      description: 'Read a persisted workflow key/value entry.',
+      description: 'Read a value saved earlier, by namespace and key.',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, workflowPermission.read);
@@ -218,7 +218,7 @@ export function registerDataStoreActions(): void {
     ui: {
       label: 'Set Stored Value',
       category: 'Data Store',
-      description: 'Persist a workflow key/value entry.',
+      description: 'Save a value under a namespace and key so later runs can read it.',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, workflowPermission.manage);
@@ -259,7 +259,7 @@ export function registerDataStoreActions(): void {
     ui: {
       label: 'Delete Stored Value',
       category: 'Data Store',
-      description: 'Delete a persisted workflow key/value entry.',
+      description: 'Delete a saved value by namespace and key.',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, workflowPermission.manage);
@@ -283,7 +283,7 @@ export function registerDataStoreActions(): void {
     ui: {
       label: 'Increment Stored Number',
       category: 'Data Store',
-      description: 'Atomically increment a persisted workflow number.',
+      description: 'Add to a saved number, such as a counter or tally, by namespace and key.',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, workflowPermission.manage);
@@ -326,7 +326,7 @@ export function registerDataStoreActions(): void {
     ui: {
       label: 'List Stored Values',
       category: 'Data Store',
-      description: 'List persisted workflow key/value entries in a namespace.',
+      description: 'List the values saved in one namespace.',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, workflowPermission.read);

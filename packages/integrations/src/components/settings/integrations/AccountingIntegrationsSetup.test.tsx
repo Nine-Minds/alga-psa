@@ -71,6 +71,23 @@ describe('AccountingIntegrationsSetup live Xero contracts', () => {
     vi.clearAllMocks();
   });
 
+  it.each(['quickbooks_online', 'xero'])('requires Pro for the live %s connection', async (integration) => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams({ accounting_integration: integration }));
+    const { default: Setup } = await import('./AccountingIntegrationsSetup');
+    render(<Setup canUseLiveIntegrations={false} />);
+    expect(screen.getByRole('heading', { name: /requires Pro/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('qbo-settings-stub')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('xero-settings-stub')).not.toBeInTheDocument();
+  });
+
+  it.each(['quickbooks_csv', 'xero_csv'])('allows %s without Pro', async (integration) => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams({ accounting_integration: integration }));
+    const { default: Setup } = await import('./AccountingIntegrationsSetup');
+    render(<Setup canUseLiveIntegrations={false} />);
+    expect(screen.getByTestId(integration === 'xero_csv' ? 'xero-csv-settings-stub' : 'quickbooks-csv-settings-stub')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /requires Pro/ })).not.toBeInTheDocument();
+  });
+
   it('T001: enterprise mode renders live Xero and QBO beside Xero CSV as active options (no Coming Soon)', async () => {
     const { default: AccountingIntegrationsSetup } = await import('./AccountingIntegrationsSetup');
 

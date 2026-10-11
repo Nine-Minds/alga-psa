@@ -27,6 +27,9 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { logger } from "../logging/logger";
 import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
 import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { IconButton } from "../ui/components/IconButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
 
@@ -52,6 +55,22 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   const [contact, setContact] = useState<ContactDetail | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const { features } = useCapabilities();
+
+  useEffect(() => {
+    if (!features.contactsUpdate || !contact) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          testID="contact-detail-edit"
+          icon={<Feather name="edit-2" size={20} color={theme.colors.text} />}
+          onPress={() => setEditOpen(true)}
+          accessibilityLabel={t("detail.edit")}
+        />
+      ),
+    });
+  }, [contact, features.contactsUpdate, navigation, t, theme.colors.text]);
 
   const fetchContact = useCallback(async () => {
     if (!client || !session) return;
@@ -288,6 +307,17 @@ export function ContactDetailScreen({ route, navigation }: Props) {
           <Text style={{ ...theme.typography.body, color: theme.colors.text }}>{notes}</Text>
         </SectionCard>
       ) : null}
+
+      <ContactFormModal
+        visible={editOpen}
+        mode="edit"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        initial={contact}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => void fetchContact()}
+      />
     </ScrollView>
   );
 }

@@ -37,6 +37,8 @@ const SIDEBAR_COOKIE_KEY = 'client_portal_sidebar_collapsed';
 interface SidebarPermissions {
   hasClientSettingsAccess: boolean;
   hasBillingAccess: boolean;
+  hasProjectAccess: boolean;
+  hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
 }
 
@@ -114,7 +116,11 @@ export function ClientPortalSidebar({
         { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
         { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: Ticket },
         { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
-        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo },
+        // Projects and Documents are role-gated; the routes enforce the same
+        // permissions server-side, so the links only appear once granted.
+        ...(permissions.hasProjectAccess
+          ? [{ key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: ListTodo }]
+          : []),
         ...(appointmentsEnabled
           ? [{ key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar }]
           : []),
@@ -131,7 +137,9 @@ export function ClientPortalSidebar({
         },
       ]
     : [
-        { key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText },
+        ...(permissions.hasDocumentAccess
+          ? [{ key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText }]
+          : []),
         {
           key: 'knowledge-base',
           href: '/client-portal/knowledge-base',

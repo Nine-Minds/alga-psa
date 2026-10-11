@@ -4,14 +4,11 @@ import type { PaginatedResponse } from "./tickets";
 
 // --- Clients ---
 
-export type ClientListItem = {
-  client_id: string;
-  client_name: string;
-  email?: string | null;
-  phone?: string | null;
-  is_inactive?: boolean;
-  logoUrl?: string | null;
-};
+// One row shape per entity; the richer api/clients and api/contacts types are the authority.
+export type { ClientListItem } from "./clients";
+export type { ContactListItem } from "./contacts";
+import type { ClientListItem } from "./clients";
+import type { ContactListItem } from "./contacts";
 
 export function listClients(
   client: ApiClient,
@@ -38,16 +35,6 @@ export function listClients(
 }
 
 // --- Contacts ---
-
-export type ContactListItem = {
-  contact_name_id: string;
-  full_name: string;
-  email?: string | null;
-  phone?: string | null;
-  client_id?: string | null;
-  is_inactive?: boolean;
-  avatarUrl?: string | null;
-};
 
 export function listContacts(
   client: ApiClient,

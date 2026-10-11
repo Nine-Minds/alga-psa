@@ -62,4 +62,23 @@ describe('tenant context', () => {
       expect(result).toEqual({ knex, tenant: 'tenant-ctx' });
     });
   });
+
+  it('runWithoutTenant clears an inherited tenant for the callback and its async work only', async () => {
+    const { getTenantContext, runWithTenant, runWithoutTenant } = await import('@alga-psa/db');
+
+    await runWithTenant('tenant-outer', async () => {
+      const seen = await runWithoutTenant(async () => {
+        const before = getTenantContext();
+        await Promise.resolve();
+        const afterAwait = getTenantContext();
+        const inTimer = await new Promise<string | undefined>((resolve) =>
+          setTimeout(() => resolve(getTenantContext()), 0)
+        );
+        return { before, afterAwait, inTimer };
+      });
+
+      expect(seen).toEqual({ before: undefined, afterAwait: undefined, inTimer: undefined });
+      expect(getTenantContext()).toBe('tenant-outer');
+    });
+  });
 });

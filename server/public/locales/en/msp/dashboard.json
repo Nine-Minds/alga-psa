@@ -9,6 +9,7 @@
   },
   "welcome": {
     "title": "Welcome to Your MSP Command Center",
+    "titleBranded": "Welcome to the {{companyName}} Command Center",
     "description": "Track onboarding progress, configure critical services, and keep every client experience consistent.",
     "titleCommunity": "Welcome back",
     "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard."

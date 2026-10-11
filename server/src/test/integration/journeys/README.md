@@ -133,7 +133,8 @@ and passwords drift). Mirror CI with throwaway containers:
 
 ```bash
 docker run -d --name journeys-pg -p 5499:5432 -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=test_password -e POSTGRES_DB=postgres ankane/pgvector:latest
+  -e POSTGRES_PASSWORD=test_password -e POSTGRES_DB=postgres \
+  "$(node scripts/lib/pinned-images.mjs pgvector)"
 docker run -d --name journeys-redis -p 6390:6379 redis:7-alpine
 
 cd server && TZ=UTC SECRET_FS_BASE_PATH=/nonexistent \

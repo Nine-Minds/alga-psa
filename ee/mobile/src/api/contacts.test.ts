@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildContactAvatarUri,
+  createContact,
   formatContactTypeLabel,
   getContact,
   getContactReachLine,
   listContacts,
+  updateContact,
   type ContactListItem,
 } from "./contacts";
 import type { ApiClient } from "./client";
@@ -152,5 +154,40 @@ describe("buildContactAvatarUri", () => {
   it("returns undefined without an avatar or base url", () => {
     expect(buildContactAvatarUri("https://host.example", null)).toBeUndefined();
     expect(buildContactAvatarUri(null, "/api/avatar/1")).toBeUndefined();
+  });
+});
+
+describe("contact writes", () => {
+  it("posts a new contact with its phone numbers", async () => {
+    const client = mockClient({ ok: true, data: { data: { contact_name_id: "contact-1" } } });
+
+    await createContact(client, {
+      apiKey: "api-key-1",
+      data: {
+        full_name: "Jane Doe",
+        email: "jane@acme.test",
+        client_id: "client-1",
+        phone_numbers: [{ phone_number: "+13202521658", canonical_type: "mobile", is_default: true }],
+      },
+    });
+
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "POST",
+      path: "/api/v1/contacts",
+      headers: { "x-api-key": "api-key-1" },
+      body: expect.objectContaining({ full_name: "Jane Doe", client_id: "client-1" }),
+    }));
+  });
+
+  it("puts partial updates to the contact route", async () => {
+    const client = mockClient({ ok: true, data: { data: { contact_name_id: "contact-1" } } });
+
+    await updateContact(client, { apiKey: "api-key-1", contactId: "contact-1", data: { role: "CTO" } });
+
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "PUT",
+      path: "/api/v1/contacts/contact-1",
+      body: { role: "CTO" },
+    }));
   });
 });

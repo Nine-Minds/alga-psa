@@ -36,6 +36,14 @@ export interface InlineReplyComposerProps {
   isSubmitting?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   searchMentions?: (query: string) => Promise<any[]>;
+  /**
+   * Extra controls rendered in the editor footer next to "Attach files"
+   * (e.g. the ticket comment Cc/Bcc control). Omit it and the composer renders
+   * exactly as before.
+   */
+  footerActions?: React.ReactNode;
+  /** Blocks Reply while the footer slot holds invalid input. */
+  submitDisabled?: boolean;
   onSubmit: (params: {
     parentCommentId: string;
     content: PartialBlock[];
@@ -55,6 +63,8 @@ export function InlineReplyComposer({
   isSubmitting = false,
   uploadFile,
   searchMentions,
+  footerActions,
+  submitDisabled = false,
   onSubmit,
   onCancel,
 }: InlineReplyComposerProps): React.ReactElement {
@@ -98,6 +108,7 @@ export function InlineReplyComposer({
         onContentChange={setContent}
         searchMentions={searchMentions}
         uploadFile={uploadFile}
+        footerActions={footerActions}
         autoFocus
       />
       <div className="mt-2 flex justify-end gap-2">
@@ -105,7 +116,7 @@ export function InlineReplyComposer({
           id={`${componentId}-submit`}
           type="button"
           onClick={() => onSubmit({ parentCommentId, content, isInternal })}
-          disabled={isSubmitting}
+          disabled={isSubmitting || submitDisabled}
         >
           {submitLabel}
         </Button>

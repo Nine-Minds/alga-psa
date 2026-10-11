@@ -4,6 +4,7 @@
  * using shared database patterns to avoid cross-package dependencies.
  */
 
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -1485,7 +1486,7 @@ export async function upsertTicketWatchListRecipients(
       })
       .update({
         attributes: nextAttributes ? JSON.stringify(nextAttributes) : null,
-        updated_at: new Date(),
+        ...ticketUpdateStamp(trx, null),
       });
 
     return { updated: true, watchList: mergedWatchList };

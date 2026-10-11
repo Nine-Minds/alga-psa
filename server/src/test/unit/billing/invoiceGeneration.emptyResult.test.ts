@@ -15,9 +15,8 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -97,6 +96,8 @@ function createQueryBuilder(rows: Row[]) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     raw: vi.fn((sql: string) => sql),
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>

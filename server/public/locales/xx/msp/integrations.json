@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "⟦Ɓŭŀķ ḿȧƥ⟧",
+        "columns": {
+          "ignore": "⟦Īɠƞȯřḗ⟧",
+          "select": "⟦Şȧṽḗ⟧",
+          "status": "⟦Şŧȧŧŭş⟧"
+        },
+        "exit": "⟦Ɓȧƈķ ŧȯ ḿȧƥƥīƞɠş⟧",
+        "filter": {
+          "all": "⟦Ȧŀŀ⟧",
+          "mapped": "⟦Ḿȧƥƥḗḓ⟧",
+          "unmapped": "⟦Ŭƞḿȧƥƥḗḓ⟧"
+        },
+        "ignoreAll": "⟦Īɠƞȯřḗ ȧŀŀ⟧",
+        "noRows": "⟦Ƞȯ řȯẇş ḿȧŧƈħ ŧħḗ ƈŭřřḗƞŧ ƒīŀŧḗř.⟧",
+        "possibleMatch": "⟦Ƥȯşşīƀŀḗ ḿȧŧƈħ⟧",
+        "rowIgnoreAria": "⟦Īɠƞȯřḗ {{name}}⟧",
+        "rowSelectAria": "⟦Īƞƈŀŭḓḗ {{name}} īƞ şȧṽḗ⟧",
+        "saveAll": "⟦Şȧṽḗ ȧŀŀ⟧",
+        "searchPlaceholder": "⟦Şḗȧřƈħ şḗřṽīƈḗş ȧƞḓ ŧȧřɠḗŧş...⟧",
+        "selectAll": "⟦Şḗŀḗƈŧ ȧŀŀ⟧",
+        "status": {
+          "ignored": "⟦Īɠƞȯřḗḓ⟧",
+          "mapped": "⟦Ḿȧƥƥḗḓ⟧",
+          "noResult": "⟦Ƞȯ řḗşŭŀŧ ẇȧş řḗŧŭřƞḗḓ ƒȯř ŧħīş řȯẇ.⟧",
+          "pending": "⟦Ƥḗƞḓīƞɠ⟧",
+          "saved": "⟦Şȧṽḗḓ⟧"
+        },
+        "suggested": "⟦Şŭɠɠḗşŧḗḓ⟧",
+        "toSave": "⟦{{total}} ŧȯ şȧṽḗ⟧"
+      },
       "dialog": {
         "cancel": "⟦Ƈȧƞƈḗŀ⟧",
         "enterPlaceholder": "⟦Ḗƞŧḗř {{field}}...⟧",
@@ -90,7 +121,8 @@
           "clients": "⟦Ƈŀīḗƞŧş⟧",
           "itemsServices": "⟦Īŧḗḿş / Şḗřṽīƈḗş⟧",
           "taxCodes": "⟦Ŧȧẋ Ƈȯḓḗş⟧",
-          "paymentTerms": "⟦Ƥȧẏḿḗƞŧ Ŧḗřḿş⟧"
+          "paymentTerms": "⟦Ƥȧẏḿḗƞŧ Ŧḗřḿş⟧",
+          "discounts": "⟦Ḓīşƈȯŭƞŧş⟧"
         }
       }
     },
@@ -111,6 +143,7 @@
           "failed": "⟦Ḗẋƥȯřŧ ƒȧīŀḗḓ⟧",
           "missingItemMapping": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ⟧",
           "missingItemMappingId": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ ({{serviceId}})⟧",
+          "missingDiscountMapping": "⟦Ḿīşşīƞɠ ḓīşƈȯŭƞŧ ḿȧƥƥīƞɠ (Ḓīşƈȯŭƞŧş ŧȧƀ)⟧",
           "missingItemMappingNamed": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ: {{serviceName}}⟧"
         },
         "fields": {
@@ -469,7 +502,8 @@
           "previousCount": "⟦Ƥřḗṽīȯŭş⟧",
           "syncFinished": "⟦Şẏƞƈ ƒīƞīşħḗḓ ƒȯř {{client}}.⟧",
           "syncing": "⟦Şẏƞƈīƞɠ…⟧",
-          "syncTrackingFailed": "⟦Ŧħḗ şẏƞƈ şŧȧřŧḗḓ, ƀŭŧ ŧħīş ƥȧɠḗ ƈȯŭŀḓ ƞȯŧ ƒȯŀŀȯẇ īŧ ŧȯ ƈȯḿƥŀḗŧīȯƞ. Řḗƒřḗşħ ŧȯ şḗḗ īŧş ŀȧŧḗşŧ řḗşŭŀŧ.⟧"
+          "syncTrackingFailed": "⟦Ŧħḗ şẏƞƈ şŧȧřŧḗḓ, ƀŭŧ ŧħīş ƥȧɠḗ ƈȯŭŀḓ ƞȯŧ ƒȯŀŀȯẇ īŧ ŧȯ ƈȯḿƥŀḗŧīȯƞ. Řḗƒřḗşħ ŧȯ şḗḗ īŧş ŀȧŧḗşŧ řḗşŭŀŧ.⟧",
+          "syncWorkerUnavailable": "⟦Ŧħḗ şẏƞƈ īş ʠŭḗŭḗḓ, ƀŭŧ ƞȯŧħīƞɠ īş ƥřȯƈḗşşīƞɠ ŧħḗ ƀȧƈķɠřȯŭƞḓ ʠŭḗŭḗ řīɠħŧ ƞȯẇ. Īŧ ẇīŀŀ řŭƞ ȯƞƈḗ ŧħḗ ẇȯřķḗř īş ƀȧƈķ; īƒ īŧ şŧȧẏş şŧŭƈķ, řḗşŧȧřŧ ŧħḗ ŧḗḿƥȯřȧŀ-ẇȯřķḗř şḗřṽīƈḗ.⟧"
         },
         "connection": {
           "changeAction": "⟦Ƈħȧƞɠḗ ƈȯƞƞḗƈŧīȯƞ⟧",

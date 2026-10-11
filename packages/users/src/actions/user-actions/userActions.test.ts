@@ -464,6 +464,8 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'calendars', 'calendar_shares',
   // named list views: private deleted, shared handed to the actor
   'list_views',
+  // board notification rules / default watchers (user rows deleted)
+  'board_notification_rule_recipients', 'board_default_watchers',
   // Always present in both editions:
   'users', 'clients',
 ]);

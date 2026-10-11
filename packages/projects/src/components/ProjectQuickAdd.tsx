@@ -17,6 +17,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
+import { getServices } from '../actions/serviceCatalogActions';
+import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -66,6 +68,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [taskStatuses, setTaskStatuses] = useState<IStatus[]>([]);
   const [selectedTaskStatuses, setSelectedTaskStatuses] = useState<Array<{ status_id: string; display_order: number }>>([]);
   const [budgetedHours, setBudgetedHours] = useState<string>('');
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
@@ -91,12 +95,14 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatusesResult, projectTaskStatuses] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTaskStatuses, servicesResponse] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
-          getTenantProjectStatuses()
+          getTenantProjectStatuses(),
+          getServices(1, 999)
         ]);
         setUsers(allUsers);
+        setServices(servicesResponse.services);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -175,7 +181,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         assigned_to: selectedUserId || null,
         contact_name_id: selectedContactId || null,
         budgeted_hours: budgetedHours ? Math.round(Number(budgetedHours) * 60) : null,
-        client_portal_config: clientPortalConfig
+        client_portal_config: clientPortalConfig,
+        service_id: selectedServiceId
       };
 
       // Create the project with selected task statuses in specified order
@@ -366,6 +373,28 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   step="1"
                   placeholder={t('quickAdd.budgetedHoursPlaceholder', 'Enter budgeted hours')}
                 />
+              </div>
+              {/* Default service for time entries on this project's tasks */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('quickAdd.serviceLabel', 'Default Service (for time entries)')}
+                </label>
+                <CustomSelect
+                  id="project-quick-add-service-select"
+                  value={selectedServiceId || ''}
+                  onValueChange={(value) => setSelectedServiceId(value || null)}
+                  options={[
+                    { value: '', label: t('quickAdd.noService', 'No service') },
+                    ...timeEntryServiceChoices(services, selectedServiceId).map((service): { value: string; label: string } => ({
+                      value: service.service_id,
+                      label: service.service_name
+                    }))
+                  ]}
+                  placeholder={t('quickAdd.servicePlaceholder', 'Select default service')}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('quickAdd.serviceHelp', 'Used for time entries on this project when neither the task nor its phase sets a service.')}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

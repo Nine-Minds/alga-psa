@@ -341,6 +341,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     },
     {
       title: '',
+      id: 'actions',
       dataIndex: 'user_id',
       width: '80px',
       sortable: false,

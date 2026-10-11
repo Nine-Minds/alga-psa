@@ -336,6 +336,7 @@ export class XeroEmulatorCore implements EmulatorCore {
       throw new XeroWireError(404, { Type: null, Title: 'Not Found', Status: 404, Detail: `Invoice ${existingId} not found` });
     }
     this.validateInvoiceLineCatalogRefs(payload);
+    this.validateInvoiceLineTotals(payload);
     const invoiceId = existingId ?? this.newId('inv');
     this.invoiceNumberCounter += 1;
     const existing = existingId ? data.invoices.get(existingId) : undefined;
@@ -388,6 +389,33 @@ export class XeroEmulatorCore implements EmulatorCore {
         Detail: validationErrors[0].Message,
         Elements: [{ ValidationErrors: validationErrors }],
       });
+    }
+  }
+
+  /**
+   * Mirror live Xero's line-total validation: a supplied LineAmount must equal
+   * Quantity × UnitAmount rounded to cents. Alga stores hours rounded while the
+   * amount comes from whole minutes, which is exactly the mismatch this catches.
+   */
+  private validateInvoiceLineTotals(payload: Record<string, unknown>): void {
+    const lines = Array.isArray(payload.LineItems) ? (payload.LineItems as Array<Record<string, unknown>>) : [];
+    for (const line of lines) {
+      if (line.LineAmount == null || line.UnitAmount == null) continue;
+      const quantity = line.Quantity == null ? 1 : Number(line.Quantity);
+      const unitAmount = Number(line.UnitAmount);
+      const lineAmount = Number(line.LineAmount);
+      if (![quantity, unitAmount, lineAmount].every(Number.isFinite)) continue;
+      const expected = Math.round(quantity * unitAmount * 100) / 100;
+      if (Math.round(lineAmount * 100) !== Math.round(expected * 100)) {
+        const message = `The line total ${lineAmount.toFixed(2)} does not match the expected line total ${expected.toFixed(2)}`;
+        throw new XeroWireError(400, {
+          Type: 'ValidationException',
+          Title: 'A validation exception occurred',
+          Status: 400,
+          Detail: message,
+          Elements: [{ ValidationErrors: [{ Message: message }] }],
+        });
+      }
     }
   }
 

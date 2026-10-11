@@ -234,7 +234,6 @@ const servicePeriod = (contractLineId: string) => ({
   tenant: TENANT,
   record_id: `rsp-${contractLineId}`,
   obligation_id: contractLineId,
-  obligation_type: 'client_contract_line',
   charge_family: 'fixed',
   cadence_owner: 'client',
   due_position: 'arrears',

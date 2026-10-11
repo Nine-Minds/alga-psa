@@ -173,6 +173,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
         const appointmentId = notification.metadata?.appointment_request_id;
         if (appointmentId) {
           // Open in new tab for consistency
+          // LEVERAGE: pattern appointment-request-review-link — rebuilds /msp/schedule?requestId= because notifications cannot import @alga-psa/scheduling; the stored notification.link is already canonical
           window.open(`/msp/schedule?requestId=${appointmentId}`, '_blank', 'noopener,noreferrer');
           if (onClose) {
             onClose();

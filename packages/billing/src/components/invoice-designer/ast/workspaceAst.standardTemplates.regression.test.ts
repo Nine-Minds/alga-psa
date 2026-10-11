@@ -73,7 +73,7 @@ describe('workspaceAst standard template regression coverage', () => {
   it.each([
     ['standard-quote-default', ['quote-number', 'line-items', 'totals', 'signature-block']] as const,
     ['standard-quote-detailed', ['phase-summary', 'line-items-detailed', 'version', 'signature-block']] as const,
-    ['standard-quote-grouped', ['monthly-items', 'onetime-items', 'terms-section', 'signature-block']] as const,
+    ['standard-quote-grouped', ['cadence-bands', 'cadence-band-items', 'cadence-optional-bands', 'terms-section', 'signature-block']] as const,
     ['standard-quote-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals', 'signature-block']] as const,
   ])('keeps quote template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardQuoteTemplateAstByCode(templateCode);

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -37,24 +37,6 @@ import {
   type WorkflowTimeSummaryGroupBy,
 } from './timeDomain';
 
-const TIME_WORKFLOW_PICKER_HINTS = {
-  user: 'Search users',
-  ticket: 'Search tickets',
-} as const;
-
-const withTimeWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof TIME_WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': TIME_WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 const withTimeWorkflowTextarea = <T extends z.ZodTypeAny>(schema: T, description: string): T =>
   withWorkflowJsonSchemaMetadata(schema, description, {
     'x-workflow-editor': {
@@ -78,7 +60,7 @@ export function registerTimeActions(): void {
     id: 'time.create_entry',
     version: 1,
     inputSchema: z.object({
-      user_id: withTimeWorkflowPicker(uuidSchema, 'User id that owns the time entry', 'user'),
+      user_id: withWorkflowPicker(uuidSchema, 'User id that owns the time entry', 'user'),
       start: isoDateTimeSchema.describe('Start timestamp in ISO-8601 format'),
       end: isoDateTimeSchema.optional().describe('End timestamp in ISO-8601 format'),
       duration_minutes: z.number().int().min(0).optional().describe('Duration in minutes (used when end is omitted)'),
@@ -104,7 +86,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_entry: z.object({
         entry_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         work_item_id: uuidSchema.nullable(),
         work_item_type: z.string().nullable(),
         service_id: uuidSchema,
@@ -212,11 +194,11 @@ export function registerTimeActions(): void {
         'billable',
         'work_date',
       ])).max(5).optional(),
-      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
+      user_id: withWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
-      client_id: uuidSchema.optional(),
-      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
+      client_id: withWorkflowPicker(uuidSchema.optional(), 'Client id', 'client'),
+      ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -285,11 +267,11 @@ export function registerTimeActions(): void {
     inputSchema: z.object({
       entry_ids: z.array(uuidSchema).max(500).optional(),
       require_timesheet: z.boolean().default(false),
-      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
+      user_id: withWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
-      client_id: uuidSchema.optional(),
-      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
+      client_id: withWorkflowPicker(uuidSchema.optional(), 'Client id', 'client'),
+      ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -347,11 +329,11 @@ export function registerTimeActions(): void {
     inputSchema: z.object({
       entry_ids: z.array(uuidSchema).max(500).optional(),
       require_timesheet: z.boolean().default(false),
-      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
+      user_id: withWorkflowPicker(uuidSchema.optional(), 'Optional user filter', 'user'),
       work_item_id: uuidSchema.optional(),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional(),
-      client_id: uuidSchema.optional(),
-      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
+      client_id: withWorkflowPicker(uuidSchema.optional(), 'Client id', 'client'),
+      ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket filter', 'ticket'),
       project_task_id: uuidSchema.optional(),
       time_sheet_id: uuidSchema.optional(),
       service_id: uuidSchema.optional(),
@@ -414,7 +396,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -482,7 +464,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -551,7 +533,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -619,7 +601,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -688,14 +670,14 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       comment: z.object({
         comment_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         comment: z.string(),
         is_approver: z.boolean(),
         created_at: isoDateTimeSchema,
       }),
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -763,7 +745,7 @@ export function registerTimeActions(): void {
     id: 'time.find_or_create_timesheet',
     version: 1,
     inputSchema: z.object({
-      user_id: withTimeWorkflowPicker(uuidSchema, 'Timesheet owner user id', 'user'),
+      user_id: withWorkflowPicker(uuidSchema, 'Timesheet owner user id', 'user'),
       period_id: uuidSchema.optional().describe('Optional explicit time period id'),
       work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Optional work date used to resolve an open period'),
     }).superRefine((value, issueCtx) => {
@@ -778,7 +760,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -849,7 +831,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheet: z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -864,7 +846,7 @@ export function registerTimeActions(): void {
       }),
       comments: z.array(z.object({
         comment_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         comment: z.string(),
         is_approver: z.boolean(),
         created_at: isoDateTimeSchema,
@@ -905,7 +887,7 @@ export function registerTimeActions(): void {
     id: 'time.find_timesheets',
     version: 1,
     inputSchema: z.object({
-      user_ids: z.array(withTimeWorkflowPicker(uuidSchema, 'User filter item', 'user')).max(100).optional().describe('Optional user filter'),
+      user_ids: z.array(withWorkflowPicker(uuidSchema, 'User filter item', 'user')).max(100).optional().describe('Optional user filter'),
       approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']).optional()
         .describe('Optional status filter'),
       period_start_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Lower period start bound (inclusive)'),
@@ -916,7 +898,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_sheets: z.array(z.object({
         time_sheet_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         period_id: uuidSchema,
         period_start_date: z.string(),
         period_end_date: z.string(),
@@ -1104,7 +1086,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_entry: z.object({
         entry_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         work_item_id: uuidSchema.nullable(),
         work_item_type: z.string().nullable(),
         service_id: uuidSchema,
@@ -1157,12 +1139,12 @@ export function registerTimeActions(): void {
     id: 'time.find_entries',
     version: 1,
     inputSchema: z.object({
-      user_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Filter by entry owner user id', 'user'),
+      user_id: withWorkflowPicker(uuidSchema.optional(), 'Filter by entry owner user id', 'user'),
       work_item_id: uuidSchema.optional().describe('Filter by work item id'),
       work_item_type: z.enum(['ticket', 'project', 'project_task', 'interaction', 'ad_hoc', 'non_billable_category']).optional()
         .describe('Filter by work item type'),
-      client_id: uuidSchema.optional().describe('Filter by client id inferred from linked work items'),
-      ticket_id: withTimeWorkflowPicker(uuidSchema.optional(), 'Filter by ticket id', 'ticket'),
+      client_id: withWorkflowPicker(uuidSchema.optional(), 'Filter by client id inferred from linked work items', 'client'),
+      ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Filter by ticket id', 'ticket'),
       project_task_id: uuidSchema.optional().describe('Filter by project task id'),
       time_sheet_id: uuidSchema.optional().describe('Filter by time sheet id'),
       service_id: uuidSchema.optional().describe('Filter by service id'),
@@ -1180,7 +1162,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       entries: z.array(z.object({
         entry_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         work_item_id: uuidSchema.nullable(),
         work_item_type: z.string().nullable(),
         service_id: uuidSchema,
@@ -1255,7 +1237,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_entry: z.object({
         entry_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         work_item_id: uuidSchema.nullable(),
         work_item_type: z.string().nullable(),
         service_id: uuidSchema,
@@ -1355,7 +1337,7 @@ export function registerTimeActions(): void {
     outputSchema: z.object({
       time_entry: z.object({
         entry_id: uuidSchema,
-        user_id: uuidSchema,
+        user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
         work_item_id: uuidSchema.nullable(),
         work_item_type: z.string().nullable(),
         service_id: uuidSchema,

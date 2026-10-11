@@ -65,6 +65,8 @@ export interface IContact {
   tenant?: string;
   full_name: string;
   client_id: string | null;
+  /** Reports-to: same client, acyclic. Drives portal "my staff" visibility. */
+  manager_contact_id?: string | null;
   phone_numbers: IContactPhoneNumber[];
   default_phone_number?: string | null;
   default_phone_type?: string | null;
@@ -95,6 +97,8 @@ export interface CreateContactInput {
   additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
+  /** null clears the manager on update; undefined leaves it unchanged. */
+  manager_contact_id?: string | null;
   inbound_ticket_defaults_id?: string | null;
   role?: string;
   notes?: string;
@@ -113,6 +117,8 @@ export interface UpdateContactInput {
   additional_email_addresses?: ContactEmailAddressInput[];
   phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
+  /** null clears the manager on update; undefined leaves it unchanged. */
+  manager_contact_id?: string | null;
   inbound_ticket_defaults_id?: string | null;
   role?: string;
   notes?: string;

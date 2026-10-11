@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import type { WorkItemType } from "../../../api/timeEntries";
 import { useTheme } from "../../../ui/ThemeContext";
 import { useTimer, useTimerElapsedMs } from "../TimerContext";
 import { formatElapsedClock } from "../timerLogic";
@@ -61,34 +62,60 @@ function TimerChip({
 }
 
 export function TicketTimerChip({ ticketId }: { ticketId: string }) {
+  return <WorkItemTimerChip workItemId={ticketId} workItemType="ticket" />;
+}
+
+/**
+ * Start/stop the shared timer against any work item. `preferredService` wins
+ * over the remembered default so a task's own service is what gets timed.
+ */
+export function WorkItemTimerChip({
+  workItemId,
+  workItemType,
+  preferredService = null,
+}: {
+  workItemId: string;
+  workItemType: WorkItemType;
+  preferredService?: { service_id: string; service_name: string } | null;
+}) {
   const { t } = useTranslation("timeEntries");
   const timer = useTimer();
   const elapsedMs = useTimerElapsedMs();
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
-  const runningHere =
-    timer.status === "running" && timer.session?.work_item_id === ticketId;
-  const runningElsewhere = timer.status === "running" && !runningHere;
+  const open = timer.status === "running" || timer.status === "paused";
+  const runningHere = open && timer.session?.work_item_id === workItemId;
+  const runningElsewhere = open && !runningHere;
+  const pausedHere = runningHere && timer.status === "paused";
+  const defaultService = preferredService ?? timer.defaultService;
 
   const startHere = (service: { service_id: string; service_name: string }) => {
-    void timer.start({ workItemId: ticketId, workItemType: "ticket", service });
+    void timer.start({ workItemId, workItemType, service });
   };
 
   if (runningHere) {
+    const elapsed = elapsedMs === null ? "" : formatElapsedClock(elapsedMs);
     return (
-      <TimerChip
-        label={t("timer.chip.stop", {
-          elapsed: elapsedMs === null ? "" : formatElapsedClock(elapsedMs),
-        })}
-        icon="stop-circle"
-        variant="active"
-        onPress={() => timer.openStopModal()}
-      />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <TimerChip
+          label={pausedHere ? t("timer.chip.resume", { elapsed }) : t("timer.chip.pause")}
+          icon={pausedHere ? "play" : "pause"}
+          variant={pausedHere ? "filled" : "muted"}
+          disabled={timer.mutating}
+          onPress={() => void (pausedHere ? timer.resume() : timer.pause())}
+        />
+        <TimerChip
+          label={pausedHere ? t("timer.chip.stopPaused") : t("timer.chip.stop", { elapsed })}
+          icon="stop-circle"
+          variant={pausedHere ? "muted" : "active"}
+          onPress={() => timer.openStopModal()}
+        />
+      </View>
     );
   }
 
   if (runningElsewhere) {
-    const service = timer.defaultService ??
+    const service = defaultService ??
       (timer.session?.service_id
         ? {
             service_id: timer.session.service_id,
@@ -103,7 +130,7 @@ export function TicketTimerChip({ ticketId }: { ticketId: string }) {
         onPress={() =>
           timer.openStopModal(
             service
-              ? { thenStart: { workItemId: ticketId, workItemType: "ticket", service } }
+              ? { thenStart: { workItemId, workItemType, service } }
               : undefined,
           )
         }
@@ -120,8 +147,8 @@ export function TicketTimerChip({ ticketId }: { ticketId: string }) {
         loading={timer.starting || timer.status === "loading"}
         disabled={timer.starting || timer.status === "loading"}
         onPress={() => {
-          if (timer.defaultService) {
-            startHere(timer.defaultService);
+          if (defaultService) {
+            startHere(defaultService);
           } else {
             setServicePickerOpen(true);
           }

@@ -96,7 +96,7 @@ export const getAssetDocuments = withAuth(async (
     user,
     { tenant },
     asset_id: string
-): Promise<(IDocument & { association_id: string, notes?: string })[] | AssetActionError> => {
+): Promise<(IDocument & { association_id: string })[] | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
@@ -121,7 +121,6 @@ export const getAssetDocuments = withAuth(async (
             .select(
                 'documents.*',
                 'da.association_id',
-                'da.notes',
                 trx.raw(`
                     COALESCE(dt.type_name, sdt.type_name) as type_name,
                     COALESCE(dt.icon, sdt.icon) as type_icon
@@ -139,42 +138,6 @@ export const getAssetDocuments = withAuth(async (
         });
     } catch (error) {
         console.error('Error getting asset documents:', error);
-        const expectedError = assetActionErrorFrom(error);
-        if (expectedError) {
-            return expectedError;
-        }
-        throw error;
-    }
-});
-
-export const updateAssetDocumentNotes = withAuth(async (
-    user,
-    { tenant },
-    association_id: string,
-    notes: string
-): Promise<IDocumentAssociation | AssetActionError> => {
-    const { knex } = await createTenantKnex();
-
-    // Check permission for asset updating
-    if (!await hasPermission(user, 'asset', 'update')) {
-        return permissionError('Permission denied: Cannot update asset document notes', 'msp/assets:errors.permissions.updateDocumentNotes');
-    }
-
-    try {
-        const [association] = await tenantScopedTable(knex, tenant, 'document_associations')
-            .where({ association_id })
-            .update({ notes })
-            .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'notes', 'created_by', 'entered_at']);
-
-        if (association) {
-            revalidatePath(`/assets/${association.entity_id}`);
-        } else {
-            return assetActionErrorFrom(new Error('Asset document association not found'))!;
-        }
-
-        return association;
-    } catch (error) {
-        console.error('Error updating asset document notes:', error);
         const expectedError = assetActionErrorFrom(error);
         if (expectedError) {
             return expectedError;

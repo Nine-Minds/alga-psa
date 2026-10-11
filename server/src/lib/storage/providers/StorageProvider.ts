@@ -15,7 +15,7 @@ export interface RangeOptions {
 
 export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
-    upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
+    upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
     getReadStream(path: string, range?: RangeOptions): Promise<Readable>;
     delete(path: string): Promise<void>;
@@ -51,7 +51,7 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
     }
 
     abstract getCapabilities(): StorageCapabilities;
-    abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
+    abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string>; size?: number }): Promise<UploadResult>;
     abstract download(path: string): Promise<Buffer>;
     
     async getReadStream(path: string, range?: RangeOptions): Promise<Readable> {

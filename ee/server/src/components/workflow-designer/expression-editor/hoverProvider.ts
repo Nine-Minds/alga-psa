@@ -8,59 +8,11 @@
  * - Operators with descriptions
  */
 
+import { WORKFLOW_CAUGHT_ERROR_FIELDS } from '@alga-psa/workflows/authoring';
 import type * as monaco from 'monaco-editor';
-import { findFunction } from './functionDefinitions';
+import { findFunction, findRuntimeFunction } from './functionDefinitions';
 import { LANGUAGE_ID } from './jsonataLanguage';
 import type { ExpressionContext, JsonSchema } from './completionProvider';
-
-const helperFunctionDocs: Record<string, { signature: string; description: string; parameters: Array<{ name: string; type: string; description: string; optional?: boolean }>; returnType: string; examples?: string[] }> = {
-  coalesce: {
-    signature: 'coalesce(value1, value2, ...)',
-    description: 'Returns the first non-null, non-undefined value.',
-    parameters: [
-      { name: 'value1', type: 'any', description: 'First candidate value' },
-      { name: 'value2', type: 'any', description: 'Fallback value' },
-      { name: '...', type: 'any', description: 'Additional fallbacks', optional: true },
-    ],
-    returnType: 'any',
-    examples: ['coalesce(payload.name, "Unknown")'],
-  },
-  nowIso: {
-    signature: 'nowIso()',
-    description: 'Returns the current timestamp as an ISO string.',
-    parameters: [],
-    returnType: 'string',
-    examples: ['nowIso()'],
-  },
-  len: {
-    signature: 'len(value)',
-    description: 'Returns the length of a string or array.',
-    parameters: [
-      { name: 'value', type: 'string | array', description: 'Value to measure' },
-    ],
-    returnType: 'number',
-    examples: ['len(payload.items)'],
-  },
-  toString: {
-    signature: 'toString(value)',
-    description: 'Converts a value to its string representation.',
-    parameters: [
-      { name: 'value', type: 'any', description: 'Value to convert' },
-    ],
-    returnType: 'string',
-    examples: ['toString(payload.count)'],
-  },
-  append: {
-    signature: 'append(array, items)',
-    description: 'Returns a new array with items appended to the end.',
-    parameters: [
-      { name: 'array', type: 'array', description: 'Base array' },
-      { name: 'items', type: 'array', description: 'Items to append' },
-    ],
-    returnType: 'array',
-    examples: ['append(coalesce(vars.items, []), [payload.item])'],
-  },
-};
 
 /**
  * Extract the word/path at a given position
@@ -229,7 +181,7 @@ function getContextRootHover(root: string, ctx: ExpressionContext): string | nul
       if (!ctx.inCatchBlock) {
         return `**error**: \`object\` *(only available in catch blocks)*\n\nThe caught error object.`;
       }
-      return `**error**: \`object\`\n\nThe caught error.\n\n**Properties:**\n- \`name\`: Error name\n- \`message\`: Error message\n- \`stack\`: Stack trace\n- \`nodePath\`: Location in workflow`;
+      return `**error**: \`object\`\n\nThe error caught by this Try/Catch.\n\n**Properties:**\n${WORKFLOW_CAUGHT_ERROR_FIELDS.map((field) => `- \`${field.name}\`: ${field.description}`).join('\n')}`;
     default:
       // Check for forEach item variable
       if (ctx.forEachItemVar && root === ctx.forEachItemVar) {
@@ -297,15 +249,15 @@ export function createHoverProvider(
         }
       }
 
-      // Check for helper functions (non-$)
-      const helperDoc = helperFunctionDocs[word];
+      // Runtime functions written without the $ prefix (truncate(...), coalesce(...)).
+      const helperDoc = /^[A-Za-z_][A-Za-z0-9_]*$/.test(word) ? findRuntimeFunction(`$${word}`) : undefined;
       if (helperDoc) {
         const examples = helperDoc.examples?.map(e => `  ${e}`).join('\n') || '';
         const content = [
           `**${word}**`,
           '',
           '```',
-          helperDoc.signature,
+          helperDoc.signature.replace(/^\$/, ''),
           '```',
           '',
           helperDoc.description,

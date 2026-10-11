@@ -92,7 +92,12 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
 
   const updatePriorityItem = async (updatedPriority: IPriority): Promise<void> => {
     try {
-      const result = await updatePriority(updatedPriority.priority_id, updatedPriority);
+      const result = await updatePriority(updatedPriority.priority_id, {
+        priority_name: updatedPriority.priority_name,
+        order_number: updatedPriority.order_number,
+        color: updatedPriority.color,
+        item_type: updatedPriority.item_type,
+      });
       if (isPriorityActionError(result)) {
         toast.error(getErrorMessage(result));
         return;

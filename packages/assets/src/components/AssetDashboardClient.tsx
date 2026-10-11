@@ -122,6 +122,7 @@ type ColumnKey =
   | 'patching'
   | 'coverage'
   | 'client_name'
+  | 'contact_name'
   | 'location'
   | 'actions';
 
@@ -786,13 +787,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const renderAssetDetails = useCallback((asset: Asset): string => {
     if (asset.workstation) {
-      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
+      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.network_device) {
       return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('assetDashboardClient.details.noIp', { defaultValue: 'No IP' })}`;
     }
     if (asset.server) {
-      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
+      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb != null ? `${asset.server.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.mobile_device) {
       return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;
@@ -1042,6 +1043,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         return <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl} />;
       }
     },
+    contact_name: {
+      dataIndex: 'contact_name',
+      title: t('assetDashboardClient.table.assignedTo', { defaultValue: 'Assigned to' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
     location: {
       dataIndex: 'location',
       title: t('assetDashboardClient.table.location', { defaultValue: 'Location' }),
@@ -1200,6 +1208,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         client_name: (asset) => asset.client?.client_name
           || clientNameById.get(asset.client_id)
           || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
+        contact_name: (asset) => asset.contact_name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
         location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
       },
     })

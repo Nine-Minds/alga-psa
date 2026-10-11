@@ -3,11 +3,11 @@ import {
   CONTACT_EMAIL_CANONICAL_TYPES,
   CONTACT_PHONE_CANONICAL_TYPES,
 } from '../../../interfaces/contact.interfaces';
-import { BaseDomainEventPayloadSchema, changesSchema, dateOnlySchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, dateOnlySchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
-const clientIdSchema = uuidSchema('Client ID');
-const contactIdSchema = uuidSchema('Contact ID');
-const userIdSchema = uuidSchema('User ID');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const contactIdSchema = entityIdSchema('Contact ID', 'contact');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const interactionIdSchema = uuidSchema('Interaction ID');
 const noteIdSchema = uuidSchema('Note ID');
 const tagIdSchema = uuidSchema('Tag ID');

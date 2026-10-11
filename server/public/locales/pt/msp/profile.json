@@ -53,6 +53,7 @@
         "fillRequiredFields": "Por favor preencha todos os campos obrigatórios",
         "loadFailed": "Falha ao carregar perfil",
         "saveFailed": "Falha ao salvar o perfil",
+        "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
         "errorPrefix": "Erro: {{error}}"
       }
     },
@@ -726,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "Falha ao vincular o SSO.",
+      "no_matching_user": "A conta com a qual você entrou é {{providerEmail}}, mas seu login do AlgaPSA é {{accountEmail}}. Vincule uma conta que use {{accountEmail}} ou peça ao administrador do seu provedor de identidade para definir {{accountEmail}} como o e-mail principal dessa conta.",
+      "missing_email": "Seu provedor de identidade não retornou um e-mail para essa conta, portanto ela não pode ser associada ao seu login do AlgaPSA {{accountEmail}}. Peça ao administrador do seu provedor de identidade para publicar um e-mail para a conta e tente novamente.",
+      "inactive_user": "O usuário do AlgaPSA para {{providerEmail}} está inativo, portanto não pode ser vinculado. Peça ao seu administrador para reativá-lo e tente novamente.",
+      "user_type_mismatch": "{{providerEmail}} corresponde a um usuário do portal do cliente, não a um usuário interno do AlgaPSA. Vincule uma conta que use {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} pertence a uma organização diferente de {{accountEmail}}. Vincule uma conta da sua própria organização.",
+      "generic": "Não foi possível vincular essa conta a {{accountEmail}}. Tente novamente ou fale com seu administrador.",
+      "unknownProviderEmail": "uma conta sem e-mail"
+    },
     "verify": {
       "title": "Proteja sua conta com SSO",
       "description": "Vincule o Azure AD ou o Google Workspace para reutilizar políticas organizacionais e ignorar solicitações locais de dois fatores.",

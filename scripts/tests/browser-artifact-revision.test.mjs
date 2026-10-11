@@ -107,10 +107,22 @@ for (const missing of [false, true]) test(`artifact collector→core ${missing ?
       file: 'test.spec.ts', journey: '["journey"]', required: true, observed: true, outcome: 'expected', first_attempt: 'passed', retry_count: 0 }])
       rows.push(BROWSER_HEADER.map(column => ({ ...common, ...fields })[column] ?? ''));
   }
+  const grid = [BROWSER_HEADER, ...rows];
   const request = async (url, options) => {
     if (url.endsWith('/actions/runs/123')) return Response.json(run);
     if (url.includes('/jobs?')) return Response.json({ total_count: jobs.length, jobs });
-    if (url.includes('/values/')) return Response.json({ majorDimension: 'ROWS', values: [BROWSER_HEADER, ...rows] });
+    // The collector scans run_url (column G), then batch-fetches the matched rows.
+    if (url.includes('/values:batchGet')) {
+      return Response.json({ valueRanges: new URL(url).searchParams.getAll('ranges').map(range => {
+        const [, first, last] = /!A(\d+):Y(\d+)$/.exec(range);
+        return { range, majorDimension: 'ROWS', values: grid.slice(Number(first) - 1, Number(last)) };
+      }) });
+    }
+    if (url.includes('/values/')) {
+      const [, first, last] = /!G(\d+):G(\d+)/.exec(decodeURIComponent(url));
+      return Response.json({ majorDimension: 'ROWS',
+        values: grid.slice(Number(first) - 1, Number(last)).map(row => (row[6] === '' ? [] : [row[6]])) });
+    }
     if (url.includes('sheets.googleapis.com')) return Response.json({ spreadsheetId: 'sheet', sheets: [{ properties: {
       title: 'browser_readiness', gridProperties: { rowCount: 10, columnCount: 25 } } }] });
     return artifactRequest(url, options);

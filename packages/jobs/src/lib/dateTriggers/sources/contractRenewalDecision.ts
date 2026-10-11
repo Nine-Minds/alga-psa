@@ -4,8 +4,8 @@ import type { DateTriggerSource } from '../types';
 import { buildContractRenewalUpcomingPayload } from '@alga-psa/workflow-streams';
 
 export const contractRenewalDecisionSource: DateTriggerSource = {
-  id: 'contract.renewal_decision', payloadSchemaRef: 'payload.ContractRenewalDate.v1',
-  domainEvent: { eventType: 'CONTRACT_RENEWAL_UPCOMING', windowDays: 90, buildPayload: (occurrence, daysUntil) => buildContractRenewalUpcomingPayload({ contractId: String(occurrence.payload.contractId), clientId: occurrence.clientId, renewalAt: String(occurrence.payload.endDate ?? occurrence.occursOn), decisionDueDate: occurrence.occursOn, daysUntilRenewal: daysUntil, daysUntilDecisionDue: daysUntil, renewalCycleKey: occurrence.cycleKey }) },
+  id: 'contract.renewal_decision',
+  buildDomainEventPayload: (occurrence, daysUntil) => buildContractRenewalUpcomingPayload({ contractId: String(occurrence.payload.contractId), clientId: occurrence.clientId, renewalAt: String(occurrence.payload.endDate ?? occurrence.occursOn), decisionDueDate: occurrence.occursOn, daysUntilRenewal: daysUntil, daysUntilDecisionDue: daysUntil, renewalCycleKey: occurrence.cycleKey }),
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string) {
     // LEVERAGE: pattern contract-date-source-query — same join as contractEnd.ts.
     const rows = await tenantDb(knex, tenant).table('client_contracts as cc').join('clients as c', function joinClient() { this.on('c.client_id', '=', 'cc.client_id').andOn('c.tenant', '=', 'cc.tenant'); })

@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 Object.assign(globalThis, { React });
 
-const { getContactMock, placeCallMock, translate, authValue } = vi.hoisted(() => ({
+const { getContactMock, placeCallMock, translate, authValue, capabilities } = vi.hoisted(() => ({
+  capabilities: { features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: "US", loaded: true },
   getContactMock: vi.fn(),
   placeCallMock: vi.fn(),
   // Stable identity across renders so the screen's fetch callback does not refire on every render.
@@ -28,6 +29,10 @@ vi.mock("../api", () => ({ createApiClient: () => ({ request: vi.fn() }) }));
 vi.mock("../api/contacts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/contacts")>()),
   getContact: (...args: unknown[]) => getContactMock(...args),
+}));
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => capabilities }));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({
+  ContactFormModal: (props: Record<string, unknown>) => React.createElement("MockContactFormModal", props),
 }));
 vi.mock("../ui/components/Avatar", () => ({ Avatar: () => null }));
 vi.mock("../logging/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
@@ -62,7 +67,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
     renderer = create(
       React.createElement(ContactDetailScreen, {
         route: { params: { contactId: "contact-1", contactName: "Jane Doe" } } as never,
-        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn() } as never,
+        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn(), setOptions: vi.fn() } as never,
       }),
     );
   });

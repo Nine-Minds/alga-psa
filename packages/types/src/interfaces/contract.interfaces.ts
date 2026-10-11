@@ -109,6 +109,8 @@ export interface IClientContract extends TenantEntity {
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
+  /** The assigned contract's own currency (the PO amount is denominated in it). */
+  currency_code?: string | null;
   /** true = this contract's charges are excluded from credit draw-down. */
   credit_drawdown_opt_out?: boolean | null;
   created_at?: ISO8601String;

@@ -108,4 +108,48 @@ describe('ticket workflow picker metadata', () => {
     expect(updatePatchProperties.location_id?.['x-workflow-picker-kind']).toBe('client-location');
     expect(updatePatchProperties.location_id?.['x-workflow-picker-dependencies']).toBeUndefined();
   });
+  it('marks tickets.find output ids with entity kinds and exposes display names', () => {
+    const findAction = getActionRegistryV2().get('tickets.find', 1);
+    if (!findAction) throw new Error('Expected tickets.find to be registered');
+
+    const outputSchema = zodToWorkflowJsonSchema(findAction.outputSchema);
+    const ticketProperties = getNestedObjectProperties(
+      (outputSchema.properties as Record<string, Record<string, unknown>>).ticket
+    );
+
+    expect(ticketProperties.priority_id).toMatchObject({
+      'x-workflow-picker-kind': 'ticket-priority',
+      'x-workflow-picker-fixed-value-hint': 'Search priorities',
+      description: 'Priority',
+    });
+    expect(ticketProperties.contact_name_id).toMatchObject({ description: 'Requester contact', 'x-workflow-picker-kind': 'contact' });
+    expect(ticketProperties.assigned_to).toMatchObject({ description: 'Assigned technician' });
+    expect(ticketProperties.entered_at).toMatchObject({ description: 'Created at' });
+    expect(ticketProperties.board_id).toMatchObject({ 'x-workflow-picker-kind': 'board' });
+    expect(ticketProperties.status_id).toMatchObject({ 'x-workflow-picker-kind': 'ticket-status' });
+    expect(ticketProperties.assigned_to).toMatchObject({ 'x-workflow-picker-kind': 'user' });
+    expect(ticketProperties.client_id).toMatchObject({ 'x-workflow-picker-kind': 'client' });
+    for (const nameField of ['priority_name', 'board_name', 'status_name', 'assigned_to_name', 'client_name', 'contact_name', 'category_name', 'subcategory_name']) {
+      expect(ticketProperties[nameField], nameField).toBeDefined();
+      expect(ticketProperties[nameField]['x-workflow-picker-kind'], nameField).toBeUndefined();
+    }
+
+    const inputSchema = zodToWorkflowJsonSchema(findAction.inputSchema);
+    expect((inputSchema.properties as Record<string, Record<string, unknown>>).ticket_id).toMatchObject({
+      'x-workflow-picker-kind': 'ticket',
+    });
+  });
+
+  it('labels find_* "nothing found" options in plain language and marks the failing option', () => {
+    const findAction = getActionRegistryV2().get('tickets.find', 1);
+    if (!findAction) throw new Error('Expected tickets.find to be registered');
+    const inputSchema = zodToWorkflowJsonSchema(findAction.inputSchema);
+    const onNotFound = (inputSchema.properties as Record<string, Record<string, unknown>>).on_not_found;
+    expect(onNotFound).toMatchObject({
+      enum: ['return_null', 'error'],
+      default: 'return_null',
+      'x-workflow-failure-policy': { failValue: 'error' },
+    });
+    expect((onNotFound['x-workflow-option-labels'] as Record<string, string>).error).toMatch(/Try\/Catch/);
+  });
 });

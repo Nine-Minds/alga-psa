@@ -550,7 +550,11 @@
       "notes": "Note:",
       "notesPlaceholder": "Aggiungi eventuali note aggiuntive sul contatto...",
       "tags": "Tag:",
-      "emailAddresses": "Indirizzi email:"
+      "emailAddresses": "Indirizzi email:",
+      "reportsTo": "Riporta a:",
+      "reportsToPlaceholder": "Nessun responsabile",
+      "reportsToClear": "Cancella",
+      "reportsToHelp": "Deve essere una persona dello stesso cliente. Usato per la visibilità del portale («il mio team») di ticket, dispositivi e progetti."
     },
     "loading": {
       "destinations": "Caricamento destinazioni..."
@@ -568,7 +572,8 @@
     },
     "empty": {
       "notSet": "Non impostato",
-      "unknownClient": "Cliente sconosciuto"
+      "unknownClient": "Cliente sconosciuto",
+      "noManager": "Nessun responsabile"
     },
     "phoneTypes": {
       "work": "Lavoro",
@@ -591,7 +596,8 @@
       "notes": "Note:",
       "tags": "Tag:",
       "emailAddresses": "Indirizzi email:",
-      "defaultEmail": "Predefinito"
+      "defaultEmail": "Predefinito",
+      "reportsTo": "Riporta a"
     },
     "status": {
       "active": "Attivo",
@@ -737,8 +743,24 @@
       "scopeClient": "Tutti i ticket di questo cliente",
       "scopeContact": "Solo i propri ticket",
       "scopeClientDescription": "I membri vedono tutti i ticket di questo cliente nelle bacheche selezionate.",
-      "scopeContactDescription": "I membri vedono solo i ticket in cui sono indicati come contatto. Gli amministratori del cliente vedono tutti i ticket nelle bacheche selezionate, inclusi quelli senza contatto.",
-      "assignmentHelp": "Assegna un gruppo per limitare bacheche e ticket, oppure mantieni l’accesso completo al cliente."
+      "scopeContactDescription": "I membri vedono i ticket di cui sono il contatto, i ticket delle persone che riportano a loro e i ticket che seguono. Gli amministratori del cliente vedono sempre tutto sulle bacheche selezionate, inclusi i ticket senza contatto.",
+      "assignmentHelp": "Assegna un gruppo per limitare le bacheche e ciò che questa persona vede di ticket, dispositivi e progetti, oppure mantieni l’accesso completo al cliente.",
+      "assetScopeLabel": "Visibilità dei dispositivi",
+      "assetScopeClient": "Tutti i dispositivi di questo cliente",
+      "assetScopeContact": "Solo i propri dispositivi",
+      "assetScopeClientDescription": "I membri vedono tutti i dispositivi di questo cliente, compresi quelli non assegnati.",
+      "assetScopeContactDescription": "I membri vedono solo i dispositivi assegnati a loro o alle persone che riportano a loro. I dispositivi non assegnati sono nascosti. Gli amministratori del cliente vedono sempre tutto.",
+      "projectScopeLabel": "Visibilità dei progetti",
+      "projectScopeClient": "Tutti i progetti di questo cliente",
+      "projectScopeContact": "Solo i propri progetti",
+      "projectScopeClientDescription": "I membri vedono tutti i progetti di questo cliente.",
+      "projectScopeContactDescription": "I membri vedono solo i progetti il cui contatto sono loro stessi o una persona che riporta a loro. I progetti senza contatto sono nascosti. Gli amministratori del cliente vedono sempre tutto.",
+      "scopeSummary": "Ticket: {{tickets}} · Dispositivi: {{devices}} · Progetti: {{projects}}",
+      "scopeSummaryAll": "Tutti",
+      "scopeSummaryOwn": "Propri",
+      "managerScopeNote_one": "La sua vista include anche i dati di {{count}} persona che riporta a lei.",
+      "managerScopeNote_many": "La sua vista include anche i dati di {{count}} di persone che riportano a lei.",
+      "managerScopeNote_other": "La sua vista include anche i dati di {{count}} persone che riportano a lei."
     }
   }
 }

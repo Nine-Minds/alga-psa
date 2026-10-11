@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../ThemeContext";
 import { Avatar } from "./Avatar";
 
@@ -25,6 +26,8 @@ export function EntityPickerModal({
   onSearch,
   onSelect,
   onClose,
+  onCreate,
+  createLabel,
 }: {
   visible: boolean;
   title: string;
@@ -39,6 +42,9 @@ export function EntityPickerModal({
   onSearch?: (query: string) => void;
   onSelect: (id: string, label: string) => void;
   onClose: () => void;
+  /** Shown as the first row so a missing record can be created without leaving the picker. */
+  onCreate?: () => void;
+  createLabel?: string;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("common");
@@ -127,6 +133,31 @@ export function EntityPickerModal({
           </Text>
         ) : (
           <ScrollView style={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
+            {onCreate ? (
+              <Pressable
+                testID="entity-picker-create"
+                accessibilityRole="button"
+                accessibilityLabel={createLabel ?? t("create")}
+                onPress={onCreate}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderStyle: "dashed",
+                  borderColor: colors.primary,
+                  opacity: pressed ? 0.95 : 1,
+                  marginBottom: spacing.sm,
+                })}
+              >
+                <Feather name="plus-circle" size={18} color={colors.primary} />
+                <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", marginLeft: spacing.sm }}>
+                  {createLabel ?? t("create")}
+                </Text>
+              </Pressable>
+            ) : null}
             {filtered.length === 0 && !loading ? (
               <Text style={{ ...typography.body, color: colors.textSecondary, paddingVertical: spacing.sm }}>
                 {emptyLabel ?? t("noResults")}

@@ -1,7 +1,7 @@
 // server/src/components/billing-dashboard/FixedPlanConfiguration.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle, Package, Clock, Activity } from 'lucide-react';
@@ -102,9 +102,55 @@ export function FixedPlanConfiguration({
 
   const markDirty = () => setIsDirty(true);
 
+  // Seeds an empty base-rate field once from the resolved associated-service
+  // total. A populated/edited/resumed value is never replaced.
+  const baseRateSeededRef = useRef(false);
+  // The persisted fixed config loads asynchronously and may resolve after the
+  // service list has already reported its total. `fixedConfigLoadedRef` gates
+  // that, while `baseRateValueRef`/`baseRateManualRef` carry the authoritative
+  // live value synchronously so a service-total callback can never depend on a
+  // stale React state closure or clobber a manual/persisted rate.
+  const fixedConfigLoadedRef = useRef(false);
+  const pendingServicesTotalRef = useRef<number | null>(null);
+  const baseRateValueRef = useRef<number | undefined>(undefined);
+  const baseRateManualRef = useRef(false);
+
+  const applyServiceTotalSeed = useCallback((totalCents: number) => {
+    if (baseRateSeededRef.current) return;
+    if (!Number.isFinite(totalCents) || totalCents <= 0) return;
+    // Never override a manually edited value or one already loaded from the
+    // persisted config, regardless of what a stale closure believes.
+    if (baseRateManualRef.current) return;
+    const existing = baseRateValueRef.current;
+    if (existing !== undefined && existing !== null && existing !== 0) return;
+    baseRateSeededRef.current = true;
+    baseRateValueRef.current = totalCents;
+    setBaseRate(totalCents);
+    setBaseRateInput((totalCents / 100).toFixed(2));
+    setIsDirty(true);
+  }, []);
+
+  const handleServicesTotalResolved = useCallback(
+    (totalCents: number) => {
+      if (baseRateSeededRef.current) return;
+      if (!Number.isFinite(totalCents) || totalCents <= 0) return;
+      // Hold the total while the persisted config is still loading. A later
+      // populated config wins; a later empty config seeds from this total.
+      if (!fixedConfigLoadedRef.current) {
+        pendingServicesTotalRef.current = totalCents;
+        return;
+      }
+      applyServiceTotalSeed(totalCents);
+    },
+    [applyServiceTotalSeed],
+  );
+
   const fetchPlanData = useCallback(async () => {
     setPlanLoading(true);
     setError(null);
+    baseRateSeededRef.current = false;
+    fixedConfigLoadedRef.current = false;
+    pendingServicesTotalRef.current = null;
     try {
       // Fetch the basic contract line data
       const fetchedPlan = await getContractLineById(contractLineId);
@@ -125,6 +171,7 @@ export function FixedPlanConfiguration({
         setCadenceOwner((fetchedPlan.cadence_owner ?? 'client') as 'client' | 'contract');
 
         // Fetch fixed config
+        let persistedBaseRate: number | null | undefined;
         if (fetchedPlan.contract_line_id) {
           const cfg = await getContractLineFixedConfig(fetchedPlan.contract_line_id);
           if (isReturnedActionError(cfg)) {
@@ -132,9 +179,15 @@ export function FixedPlanConfiguration({
             return;
           }
           if (cfg) {
-            setBaseRate(cfg.base_rate ?? undefined);
-            if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
-              setBaseRateInput((cfg.base_rate / 100).toFixed(2));
+            persistedBaseRate = cfg.base_rate;
+            // A manually edited value survives a service-list refresh/remount;
+            // only a persisted rate (re)hydrates the field automatically.
+            if (!baseRateManualRef.current) {
+              baseRateValueRef.current = cfg.base_rate ?? undefined;
+              setBaseRate(cfg.base_rate ?? undefined);
+              if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
+                setBaseRateInput((cfg.base_rate / 100).toFixed(2));
+              }
             }
             setEnableProration(!!cfg.enable_proration);
             setBillingCycleAlignment(
@@ -145,7 +198,28 @@ export function FixedPlanConfiguration({
             );
           }
         }
-        setIsDirty(false);
+
+        // The persisted config has now resolved. A total reported while it was
+        // loading may seed, but only when the persisted rate is empty and the
+        // author has not entered their own value; a populated persisted rate
+        // always wins and is never replaced.
+        fixedConfigLoadedRef.current = true;
+        const persistedIsPopulated =
+          persistedBaseRate !== undefined &&
+          persistedBaseRate !== null &&
+          persistedBaseRate !== 0;
+        const pendingTotal = pendingServicesTotalRef.current;
+        pendingServicesTotalRef.current = null;
+        if (!baseRateManualRef.current && !persistedIsPopulated && !baseRateSeededRef.current && pendingTotal) {
+          applyServiceTotalSeed(pendingTotal);
+        }
+
+        if (baseRateManualRef.current) {
+          // Preserve dirty manual input across service-list refreshes.
+          setIsDirty(true);
+        } else if (!baseRateSeededRef.current) {
+          setIsDirty(false);
+        }
       } else {
         setError(t('configuration.fixed.errors.invalidContractLineTypeOrNotFound', {
           defaultValue: 'Invalid contract line type or contract line not found.',
@@ -159,7 +233,7 @@ export function FixedPlanConfiguration({
     } finally {
       setPlanLoading(false);
     }
-  }, [contractLineId, t]);
+  }, [contractLineId, t, applyServiceTotalSeed]);
 
   useEffect(() => {
     fetchPlanData();
@@ -236,6 +310,11 @@ export function FixedPlanConfiguration({
         }
       }
 
+      // The entered/derived base rate is now persisted; let the reload
+      // rehydrate it from the saved config instead of treating it as manual.
+      baseRateManualRef.current = false;
+      baseRateValueRef.current = baseRate;
+
       await fetchPlanData();
       setIsDirty(false);
     } catch (error) {
@@ -252,6 +331,8 @@ export function FixedPlanConfiguration({
   };
 
   const handleReset = () => {
+    // Explicit reset: drop the manual override so the persisted config wins.
+    baseRateManualRef.current = false;
     fetchPlanData();
     setValidationErrors([]);
   };
@@ -461,17 +542,26 @@ export function FixedPlanConfiguration({
                       const value = e.target.value.replace(/[^0-9.]/g, '');
                       const decimalCount = (value.match(/\./g) || []).length;
                       if (decimalCount <= 1) {
+                        // Any edit is the author's own value; it must survive
+                        // later service-list refreshes and catalog seeds.
+                        baseRateManualRef.current = true;
                         setBaseRateInput(value);
                         markDirty();
                       }
                     }}
                     onBlur={() => {
                       if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                        // An explicit clear releases the manual override so a
+                        // later service total may seed the empty field again.
+                        baseRateManualRef.current = false;
+                        baseRateValueRef.current = undefined;
                         setBaseRateInput('');
                         setBaseRate(undefined);
                       } else {
                         const dollars = parseFloat(baseRateInput) || 0;
                         const cents = Math.round(dollars * 100);
+                        baseRateManualRef.current = true;
+                        baseRateValueRef.current = cents;
                         setBaseRate(cents);
                         setBaseRateInput((cents / 100).toFixed(2));
                       }
@@ -569,6 +659,7 @@ export function FixedPlanConfiguration({
           <CardContent>
               <FixedPlanServicesList
                   planId={contractLineId}
+                  onServicesTotalResolved={handleServicesTotalResolved}
                   onServiceAdded={() => {
                       // Refresh the plan data when a service is added
                       fetchPlanData();

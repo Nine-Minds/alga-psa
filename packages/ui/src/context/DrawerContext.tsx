@@ -2,7 +2,7 @@
 
 import Drawer from '../components/Drawer';
 import { guardActiveDismiss } from '../components/DismissGuard';
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useReducer } from 'react';
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -64,6 +64,14 @@ interface DrawerContextType {
   ) => void;
   
   goForward: () => void;
+  /**
+   * True while a DrawerOutlet is mounted under this provider. Routes without an outlet would
+   * swallow openDrawer silently; callers that must show UI (e.g. the header stopwatch Stop) check
+   * this and fall back explicitly.
+   */
+  hasOutlet?: () => boolean;
+  /** Called by DrawerOutlet on mount; returns the unregister function. */
+  registerOutlet?: () => () => void;
   canGoBack: boolean;
   canGoForward: boolean;
   currentEntry: DrawerHistoryEntry | null;
@@ -248,6 +256,12 @@ const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 
 export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(drawerReducer, initialState);
+  const outletCountRef = useRef(0);
+  const registerOutlet = useCallback(() => {
+    outletCountRef.current += 1;
+    return () => { outletCountRef.current -= 1; };
+  }, []);
+  const hasOutlet = useCallback(() => outletCountRef.current > 0, []);
   
   // Compute derived state
   const canGoBack = state.currentIndex > 0;
@@ -338,6 +352,8 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       openDetailDrawer,
       openFormDrawer,
       goForward,
+      hasOutlet,
+      registerOutlet,
       canGoBack,
       canGoForward,
       currentEntry,
@@ -353,7 +369,8 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
  * Place this inside all context providers so drawer content inherits the full provider tree.
  */
 export const DrawerOutlet: React.FC = () => {
-  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history } = useDrawer();
+  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet } = useDrawer();
+  useEffect(() => registerOutlet?.(), [registerOutlet]);
   const isOpen = history.length > 0 && currentEntry !== null;
 
   return (

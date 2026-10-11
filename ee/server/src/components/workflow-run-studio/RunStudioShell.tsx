@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -11,14 +11,21 @@ import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import {
   getWorkflowDefinitionVersionAction,
   getWorkflowRunAction,
+  listWorkflowRegistryActionsAction,
   listWorkflowRunsAction,
   listWorkflowRunStepsAction,
 } from '@alga-psa/workflows/actions';
 import { useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
-import { type NodeStep, type Step, type WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
+import { type Step, type WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
 import toast from 'react-hot-toast';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowRunDetailsPanel from './WorkflowRunDetailsPanel';
+import {
+  collectRunStudioSteps,
+  getRunStudioStepLabel,
+  getRunStudioStepSubtitle,
+  needsActionLabels,
+} from './runStudioStepLabels';
 
 const statusBadgeClasses: Record<string, string> = {
   RUNNING: 'bg-cyan-500/15 text-cyan-600 border-cyan-500/30',
@@ -81,39 +88,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       .catch(() => setCanAdmin(false));
   }, []);
 
-  const getStepLabel = useCallback((step: Step): string => {
-    if (step.type === 'action.call') {
-      const config = (step as NodeStep).config as { actionId?: string } | undefined;
-      return config?.actionId
-        ? t('runStudio.stepLabels.action', { defaultValue: 'Action: {{actionId}}', actionId: config.actionId })
-        : step.id;
-    }
-    if (step.type === 'control.if') {
-      return t('runStudio.stepLabels.ifCondition', { defaultValue: 'If Condition' });
-    }
-    if (step.type === 'control.forEach') {
-      return t('runStudio.stepLabels.forEach', { defaultValue: 'For Each' });
-    }
-    if (step.type === 'control.tryCatch') {
-      return t('runStudio.stepLabels.tryCatch', { defaultValue: 'Try/Catch' });
-    }
-    if (step.type === 'event.wait') {
-      return t('runStudio.stepLabels.waitForEvent', { defaultValue: 'Wait for Event' });
-    }
-    if (step.type === 'time.wait') {
-      return t('runStudio.stepLabels.waitForTime', { defaultValue: 'Wait for Time' });
-    }
-    if (step.type === 'human.task') {
-      return t('runStudio.stepLabels.humanTask', { defaultValue: 'Human Task' });
-    }
-    if (step.type === 'state.set') {
-      return t('runStudio.stepLabels.setState', { defaultValue: 'Set State' });
-    }
-    if (step.type === 'transform.assign') {
-      return t('runStudio.stepLabels.assign', { defaultValue: 'Assign' });
-    }
-    return step.id;
-  }, [t]);
+  const [actionLabels, setActionLabels] = useState<ReadonlyMap<string, string>>(() => new Map());
+
+  const getStepLabel = useCallback(
+    (step: Step): string => getRunStudioStepLabel(step, t, actionLabels),
+    [actionLabels, t]
+  );
 
   const fetchStudioContext = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -163,6 +143,28 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     return (definition?.steps ?? []) as Step[];
   }, [definition]);
 
+  // Unnamed action steps fall back to the action's label, which needs the action registry.
+  useEffect(() => {
+    if (actionLabels.size > 0 || !needsActionLabels(orderedSteps)) return;
+    let active = true;
+    listWorkflowRegistryActionsAction()
+      .then((actions) => {
+        if (!active) return;
+        const labels = new Map<string, string>();
+        for (const action of (actions ?? []) as Array<{ id: string; ui?: { label?: string } | null }>) {
+          const label = action.ui?.label?.trim();
+          if (label) labels.set(action.id, t(`designer.actions.${action.id}.label`, { defaultValue: label }));
+        }
+        setActionLabels(labels);
+      })
+      .catch((error) => {
+        console.error('Failed to load workflow action labels for run studio:', error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [actionLabels.size, orderedSteps, t]);
+
   const stepStatusById = useMemo(() => {
     const latestByDefinitionId = new Map<string, WorkflowRunStepRecord>();
     for (const step of steps) {
@@ -181,7 +183,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
 
   const selectedStep = useMemo(() => {
     if (!selectedStepId) return null;
-    return orderedSteps.find((step) => step.id === selectedStepId) ?? null;
+    return collectRunStudioSteps(orderedSteps).find((step) => step.id === selectedStepId) ?? null;
   }, [orderedSteps, selectedStepId]);
 
   const runStatus = run?.status ?? 'UNKNOWN';
@@ -190,9 +192,30 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[rgb(var(--color-background))] p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link className="text-sm text-primary-600 hover:text-primary-700" href="/msp/workflow-control?section=runs">
-            {t('runStudio.navigation.backToRuns', { defaultValue: '← Back to workflow runs' })}
-          </Link>
+          <nav
+            id="workflow-run-studio-breadcrumb"
+            aria-label={t('runStudio.navigation.breadcrumbLabel', { defaultValue: 'Run location' })}
+          >
+            <ol className="flex flex-wrap items-center gap-1 text-sm text-[rgb(var(--color-text-500))]">
+              <li>
+                <Link id="workflow-run-studio-breadcrumb-workflows" className="text-primary-600 hover:text-primary-700" href="/msp/workflow-editor">
+                  {t('runStudio.navigation.workflows', { defaultValue: 'Workflows' })}
+                </Link>
+              </li>
+              <li aria-hidden="true"><ChevronRight className="h-3.5 w-3.5" /></li>
+              <li>
+                <Link id="workflow-run-studio-breadcrumb-runs" className="text-primary-600 hover:text-primary-700" href="/msp/workflow-control?section=runs">
+                  {t('runStudio.navigation.runs', { defaultValue: 'Runs' })}
+                </Link>
+              </li>
+              <li aria-hidden="true"><ChevronRight className="h-3.5 w-3.5" /></li>
+              <li aria-current="page" className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
+                {workflowName
+                  ? t('runStudio.navigation.currentRunOf', { defaultValue: '{{workflow}} run', workflow: workflowName })
+                  : t('runStudio.navigation.currentRun', { defaultValue: 'Run {{id}}', id: runId.slice(0, 8) })}
+              </li>
+            </ol>
+          </nav>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">
               {t('runStudio.title', { defaultValue: 'Workflow Run Studio' })}
@@ -207,6 +230,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {run?.workflow_id ? (
+            <Link
+              id="workflow-run-studio-back-to-workflow"
+              className="inline-flex items-center gap-1 rounded-md border border-[rgb(var(--color-border-200))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background))]"
+              href={`/msp/workflow-editor/${encodeURIComponent(run.workflow_id)}`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t('runStudio.navigation.backToWorkflow', { defaultValue: 'Back to workflow' })}
+            </Link>
+          ) : null}
           {lastRefreshedAt ? (
             <span className="text-xs text-[rgb(var(--color-text-500))]">
               {t('runStudio.lastRefreshed', {
@@ -276,7 +309,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 <WorkflowGraph
                   steps={orderedSteps}
                   getLabel={(step) => getStepLabel(step as Step)}
-                  getSubtitle={(step) => (step as Step).type}
+                  getSubtitle={(step) => getRunStudioStepSubtitle(step as Step)}
                   statusByStepId={stepStatusById}
                   selectedStepId={selectedStepId}
                   onSelectStepId={setSelectedStepId}
@@ -312,7 +345,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                           {stepStatusById.get(step.id) ?? t('runStudio.status.pending', { defaultValue: 'Pending' })}
                         </Badge>
                       </div>
-                      <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{step.type}</div>
+                      <div className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{getRunStudioStepSubtitle(step)}</div>
                     </button>
                   ))}
                 </div>

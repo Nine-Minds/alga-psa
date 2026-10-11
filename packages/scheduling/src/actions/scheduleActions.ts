@@ -569,6 +569,16 @@ export const updateScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+    // Mutating a schedule entry requires read (the floor for any schedule
+    // access); whether the viewer may actually change *this* entry is decided
+    // below by evaluateEntryAccess, which honours per-calendar edit shares.
+    // user_schedule:update is the global escalation (edit on every calendar),
+    // not a prerequisite — otherwise share-based edit delegates could never
+    // move an owner's entry.
+    const canReadSchedule = await hasPermission(user, 'user_schedule', 'read', db);
+    if (!canReadSchedule) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
     const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
 
     const masterEntryId =
@@ -918,6 +928,22 @@ export const deleteScheduleEntry = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
+    // Read is the floor; the share-aware evaluateEntryAccess decision below
+    // (via canUpdateGlobally) decides whether this viewer may delete this
+    // entry. Requiring the global user_schedule:update here would lock out
+    // per-calendar edit delegates. See updateScheduleEntry.
+    if (!await hasPermission(user, 'user_schedule', 'read', db)) {
+      const message = 'Permission denied to delete this schedule entry.';
+      return {
+        success: false,
+        error: message,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: [],
+      };
+    }
 
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;

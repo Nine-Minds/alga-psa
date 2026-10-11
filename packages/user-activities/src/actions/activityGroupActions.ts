@@ -9,6 +9,7 @@ import {
   moveActivityToGroupForApi,
   removeActivityFromGroupsForApi,
   reorderActivitiesInGroupForApi,
+  setDefaultActivityGroupForApi,
 } from './activityGroupCore';
 import type { ActivityGroup, ActivityGroupItem } from './activityGroupCore';
 
@@ -77,6 +78,7 @@ export const createActivityGroup = withAuth(async (
     groupName: group.group_name,
     sortOrder: group.sort_order,
     isCollapsed: group.is_collapsed,
+    isDefault: false,
     items: [],
   };
 });
@@ -115,7 +117,9 @@ export const updateActivityGroup = withAuth(async (
 });
 
 /**
- * Delete a group. Items in the group are deleted (activities become ungrouped).
+ * Delete a group. Items in the group are deleted (activities become ungrouped, or fall back
+ * to the user's default group when another group is the default). Deleting the default group
+ * itself leaves the user with no default, so unfiled activities return to "Ungrouped".
  */
 export const deleteActivityGroup = withAuth(async (
   user,
@@ -208,6 +212,20 @@ export const reorderGroups = withAuth(async (
     }
   });
 
+  revalidatePath('/activities');
+  return true;
+});
+
+/**
+ * Set the caller's default group (unfiled activities show there instead of "Ungrouped"), or
+ * clear it by passing null.
+ */
+export const setDefaultActivityGroup = withAuth(async (
+  user,
+  { tenant },
+  groupId: string | null
+): Promise<boolean> => {
+  await setDefaultActivityGroupForApi(user, tenant, groupId);
   revalidatePath('/activities');
   return true;
 });

@@ -78,8 +78,9 @@ it('renders saved transformed detail and primary tables through preview and PDF'
       const source = table.repeat.sourceBinding.bindingId;
       expect(resolveCanvasCollection(vm, source, ast)).toEqual({ rows: evaluation.bindings[source] });
     }
-    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows).toHaveLength(4);
-    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows.map((row) => row.amount)).toEqual([37500, 15000, 15000, 15000]);
+    // The overtime entry contributes two time entries (regular + overtime segment).
+    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows).toHaveLength(5);
+    expect(resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast).rows.map((row) => row.amount)).toEqual([22500, 15000, 15000, 15000, 15000]);
     fs.writeFileSync(`${evidenceDir}/custom-canvas-rows.json`, JSON.stringify(tables.map((table) => ({
       source: table.repeat.sourceBinding.bindingId,
       ...resolveCanvasCollection(vm, table.repeat.sourceBinding.bindingId, ast),
@@ -92,7 +93,7 @@ it('renders saved transformed detail and primary tables through preview and PDF'
     fs.writeFileSync(`${evidenceDir}/custom.pdf`, await pdf.generatePDF({ invoiceId: invoice.invoice_id, userId: state.user.user_id, templateId: template.template_id }));
     const { execFileSync } = await import('node:child_process');
     const text = execFileSync('pdftotext', ['-layout', `${evidenceDir}/custom.pdf`, '-'], { encoding: 'utf8' });
-    expect(text).toContain('375,00');
+    expect(text).toContain('225,00');
     expect(text).toContain('525,00');
     expect(text).toContain(new Intl.NumberFormat('fr', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(vm.total / 100));
     expect(text).not.toContain('EDITED');
@@ -234,10 +235,15 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
   if (variant === 'cap' || variant === 'recurring-cap') {
     expect(vm.subtotal).toBe(variant === 'cap' ? 20000 : 55000); expect(vm.tax).toBe(variant === 'cap' ? 2000 : 5500);
     const cappedLinks = links.filter((link) => link.work_item_snapshot.workItemType === 'project_task');
-    expect(cappedLinks).toHaveLength(2);
-    for (const link of cappedLinks) {
-      const charge = charges.find((c) => c.item_id === link.item_id)!;
-      expect(Number(charge.net_amount)).not.toBe(link.work_item_snapshot.netAmount);
+    expect(cappedLinks).toHaveLength(variant === 'recurring-cap' ? 3 : 2);
+    // The overtime entry bills as two segment charges in the recurring-cap
+    // variant; the cap leaves the segment that still fits intact and writes
+    // down the rest.
+    const writtenDown = cappedLinks.filter((link) =>
+      Number(charges.find((c) => c.item_id === link.item_id)!.net_amount) !== link.work_item_snapshot.netAmount
+    );
+    expect(writtenDown.length).toBeGreaterThanOrEqual(2);
+    for (const link of writtenDown) {
       expect(vm.ticketPresentationRows!.find((r) => r.id === link.item_id)).toMatchObject({ rateKind: 'unknown', rate: null });
       expect(link.work_item_snapshot.rateKind).not.toBe('uniform');
     }
@@ -278,7 +284,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(await db('invoice_charges').where({ tenant: ids.tenant, invoice_id: result.invoice_id }).orderBy('item_id')).toEqual(before);
   }
   if (variant === 'task-identities') {
-    expect(links).toHaveLength(8);
+    expect(links).toHaveLength(9);
     const tasks = vm.ticketGroups!.filter((group) => group.workItemType === 'project_task');
     expect(tasks).toHaveLength(3);
     expect(new Set(tasks.map((group) => group.workItemId))).toEqual(new Set(taskIds));
@@ -321,7 +327,7 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     fs.writeFileSync(`${dir}/persisted-prepaid.json`, JSON.stringify({ blockId, blockEntryIds, information, details }, null, 2));
   }
   if (variant === 'multi-tax-long') {
-    expect(links).toHaveLength(74);
+    expect(links).toHaveLength(75);
     expect(vm.subtotal).toBe(1137500); expect(vm.tax).toBe(167750);
     expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)).not.toHaveProperty('taxRate');
   }
@@ -421,7 +427,7 @@ it('saves and verifies a named nested alias on the generated long invoice throug
     }
     const scope = resolveCanvasRowScope(vm, ast, 'entry-detail');
     const nested = resolveCanvasCollection(vm, 'nestedEntries', ast, scope);
-    expect(nested.rows).toHaveLength(72);
+    expect(nested.rows).toHaveLength(73);
     expect(nested.rows.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1102500);
     const evaluation = evaluateTemplateAst(ast, vm as any);
     const transformed = resolveCanvasCollection(vm, ast.transforms.outputBindingId, ast);

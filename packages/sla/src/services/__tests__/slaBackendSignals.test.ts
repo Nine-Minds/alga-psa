@@ -69,6 +69,7 @@ describe('SLA backend actions', () => {
 
   beforeEach(() => {
     getBackendSpy = vi.spyOn(SlaBackendFactory, 'getBackend').mockResolvedValue(backendMock as any);
+    getBackendSpy.mockClear();
     backendMock.startSlaTracking.mockClear();
     backendMock.pauseSla.mockClear();
     backendMock.resumeSla.mockClear();

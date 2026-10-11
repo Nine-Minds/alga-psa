@@ -484,7 +484,9 @@ export function UserManagementSettings() {
     },
     {
       title: tProfile('clientSettings.users.actions'),
-      dataIndex: 'user_id',
+      // LEVERAGE: friction datatable-column-id — DataTable derives column id solely from dataIndex; duplicate dataIndex silently aliases renderers
+      dataIndex: 'actions',
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div className="flex justify-center">

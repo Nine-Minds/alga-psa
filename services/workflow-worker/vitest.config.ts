@@ -11,6 +11,14 @@ export default defineConfig({
   ...repoConfig,
   test: {
     ...repoConfig.test,
+    // repoConfig.test.projects is server/'s jsdom/node split, file lists globbed
+    // against server/'s own directory. Spread here, its `extends: true` projects
+    // re-resolve against this config's root instead, so this package's tests —
+    // outside that glob — match neither project's exclude and run under BOTH,
+    // including jsdom (breaks `new URL(..., import.meta.url)` since jsdom's
+    // import.meta.url isn't a file: URL). No React tests live here, so drop the
+    // inherited split; `node` stays the environment via repoConfig.test's default.
+    projects: undefined,
     globalSetup: [
       ...[repoConfig.test?.globalSetup ?? []].flat(),
       path.resolve(__dirname, '../../ee/temporal-workflows/src/test-utils/time-skipping-server.global-setup.ts'),

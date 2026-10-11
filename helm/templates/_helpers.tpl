@@ -170,3 +170,19 @@ Render MICROSOFT_OAUTH_* env vars using the microsoft_integration config.
   value: "{{ .Values.ninjaone_integration.client_secret }}"
 {{- end }}
 {{- end }}
+
+{{/*
+Render an image reference as repository[:tag][@digest] from a dict with
+repository, tag and digest keys. Fails when repository is empty or when digest
+is set but is not sha256:<64 lowercase hex>.
+*/}}
+{{- define "sebastian.imageRef" -}}
+{{- $repository := required "image repository is required" .repository -}}
+{{- if and .digest (not (regexMatch "^sha256:[0-9a-f]{64}$" .digest)) -}}
+{{- fail (printf "image digest %q must match sha256:<64 lowercase hex characters>" .digest) -}}
+{{- end -}}
+{{- $ref := $repository -}}
+{{- if .tag -}}{{- $ref = printf "%s:%s" $ref .tag -}}{{- end -}}
+{{- if .digest -}}{{- $ref = printf "%s@%s" $ref .digest -}}{{- end -}}
+{{- $ref -}}
+{{- end }}

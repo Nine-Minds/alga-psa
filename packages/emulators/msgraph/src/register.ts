@@ -121,6 +121,19 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.seeder({
+    name: 'signed-in-user',
+    description:
+      'Set the identity Graph /me reports for the signed-in account. Seed mail and userPrincipalName apart to emulate the Entra account whose mail is an .onmicrosoft.com address while the app login is a vanity domain',
+    params: z.object({
+      id: z.string().optional(),
+      mail: z.string().optional(),
+      userPrincipalName: z.string().optional(),
+      displayName: z.string().optional(),
+    }),
+    run: (input) => core.setSignedInUser(input),
+  });
+
+  reg.seeder({
     name: 'teams-user',
     description:
       'Add a Teams-addressable directory user (userType "Guest" seeds an external/guest identity) and return the bot identity fields to feed into "bot-activity"',
@@ -502,10 +515,11 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.stateView({
     name: 'config',
-    description: 'Token behavior and inbound bot activity configuration',
+    description: 'Token behavior, signed-in identity and inbound bot activity configuration',
     get: () => ({
       accessTokenTtlSeconds: core.accessTokenTtlSeconds,
       rotateRefreshTokens: core.rotateRefreshTokens,
+      signedInUser: { ...core.signedInUser },
       bot: { ...core.botConfig },
       defaultActor: { ...core.defaultActor },
     }),

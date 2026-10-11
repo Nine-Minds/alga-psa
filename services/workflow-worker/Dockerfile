@@ -88,6 +88,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/types \
   --workspace=@alga-psa/validation \
   --workspace=@alga-psa/email \
+  --workspace=@alga-psa/opportunities \
   --workspace=@alga-psa/ui \
   && npm install --no-save openai@^4.104.0
 
@@ -139,6 +140,13 @@ RUN npm run build
 
 # Build shared workspace first (server is only referenced for type imports)
 WORKDIR /app/shared
+RUN npm run build
+
+# The scheduled renewal/whitespace generators are dynamically imported from
+# @alga-psa/opportunities/lib/generators/runGenerators at runtime, which resolves
+# through the exports map into dist/. Without this build the action fails with
+# "Cannot find module".
+WORKDIR /app/packages/opportunities
 RUN npm run build
 
 # Build workflow package dist so Temporal-authored modules can resolve runtime exports.

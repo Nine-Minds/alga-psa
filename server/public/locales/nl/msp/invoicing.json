@@ -385,9 +385,15 @@
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dit factuurvenster bevat factureerbare regels, maar voor {{services}} is geen verbruik gemeld voor de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer eerst het verbruik, of bevestig uitdrukkelijk het genereren zonder dit verbruik — de niet-gemelde services blijven later factureerbaar.",
       "USAGE_PERIOD_TOTAL_STALE": "De voorvertoning is verouderd: {{details}}. Voer de voorvertoning opnieuw uit om de actuele cijfers te zien en genereer daarna opnieuw.",
       "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Voor dit factureringsvenster zijn nog geen serviceperioden aangemaakt. Gebruik Alles herstellen op de pagina Automatische facturen of maak ze opnieuw aan onder Facturatie > Serviceperioden en bekijk daarna opnieuw het voorbeeld.",
+      "NO_ACTIVE_CONTRACT_LINES": "Er is geen contractregel actief in deze factureringsperiode. Controleer de start- en einddatum van het contract en of het contract actief is.",
+      "NOTHING_TO_BILL": "Er is niets klaar om te factureren voor dit venster. Regels die achteraf worden gefactureerd kunnen pas na afloop van hun serviceperiode worden gefactureerd. Controleer het factureringsmoment en de data.",
+      "FIXED_LINE_RATE_UNRESOLVED": "Voor de vastetariefregel {{lines}} is geen tarief ingesteld. Stel een tarief in op de contractregel (of een prijs voor de bijbehorende services in de contractvaluta) en probeer het opnieuw.",
+      "FIXED_LINE_NO_SERVICES": "Vaste-tariefregel {{lines}} heeft een tarief maar geen dienst om het op te factureren. Voeg een dienst toe aan de contractregel en probeer het opnieuw.",
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
       "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
       "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
     },
     "warnings": {
@@ -790,7 +796,8 @@
       "back": "Terug naar Factuurlay-outs",
       "cancel": "Annuleren",
       "save": "Sjabloon opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "close": "Sluiten"
     },
     "titles": {
       "create": "Maak een nieuwe factuurlay-out",
@@ -800,7 +807,9 @@
       "templateName": "Sjabloonnaam",
       "templateAst": "Sjabloon AST (JSON)",
       "created": "Gemaakt",
-      "lastUpdated": "Laatst bijgewerkt"
+      "lastUpdated": "Laatst bijgewerkt",
+      "savedAt": "Opgeslagen {{time}}",
+      "notSaved": "Nog niet opgeslagen"
     },
     "tabs": {
       "visual": "Visueel",
@@ -816,6 +825,9 @@
       "templateNameRequired": "Sjabloonnaam is vereist",
       "astExportFailed": "Kan sjabloon AST niet exporteren uit de visuele werkruimte: {{message}}",
       "unknownAstExport": "Onbekende AST-exportfout"
+    },
+    "toast": {
+      "saved": "Lay-out \"{{name}}\" opgeslagen."
     }
   },
   "templates": {
@@ -1212,7 +1224,10 @@
         "drags": "Slepen: {{count}}",
         "success": "Gelukt: {{count}}",
         "invalid": "Ongeldig: {{count}}"
-      }
+      },
+      "zoomOut": "Uitzoomen",
+      "zoomIn": "Inzoomen",
+      "zoomFit": "Passend maken"
     },
     "palette": {
       "tabs": {
@@ -1253,6 +1268,15 @@
         "content": "Inhoud",
         "media": "Media",
         "dynamic": "Dynamisch"
+      },
+      "insertTarget": {
+        "page": "Nieuwe blokken komen aan het einde van de pagina.",
+        "inside": "Nieuwe blokken komen in {{name}}.",
+        "after": "Nieuwe blokken komen direct na {{name}}.",
+        "label": "Waar nieuwe blokken komen",
+        "insideOption": "Erin",
+        "afterOption": "Erna",
+        "shiftHint": "Shift+click op + om het in plaats daarvan erna toe te voegen."
       }
     },
     "inspector": {
@@ -1272,7 +1296,70 @@
       "fitSectionToContents": "Sectie op inhoud aanpassen",
       "sectionNoChildContent": "Sectie heeft geen inhoud om op aan te passen.",
       "apply": "Toepassen",
-      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken."
+      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken.",
+      "size": "Grootte",
+      "width": "Breedte",
+      "widthValue": "Breedtewaarde",
+      "minWidth": "Min. breedte",
+      "maxWidth": "Max. breedte",
+      "height": "Hoogte",
+      "heightValue": "Hoogtewaarde",
+      "minHeight": "Min. hoogte",
+      "maxHeight": "Max. hoogte",
+      "mediaSource": "Afbeeldingsbron",
+      "mediaSourceLogo": "Bedrijfslogo",
+      "mediaSourceCustom": "Eigen afbeelding",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceUrl": "Bron-URL",
+      "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Hernoemen",
+      "renameInnerDismiss": "Nee",
+      "tabsLabel": "Inspecteursecties",
+      "insertDataField": "+ Gegevensveld invoegen…",
+      "searchDataFields": "Gegevensvelden zoeken…",
+      "dataFields": "Gegevensvelden",
+      "box": {
+        "top": "Boven",
+        "right": "Rechts",
+        "bottom": "Onder",
+        "left": "Links",
+        "all": "Alle zijden",
+        "sameOnAllSides": "Gelijk aan alle zijden",
+        "unit": "Eenheid",
+        "customValue": "Aangepaste CSS-waarde blijft behouden tot u een zijde bewerkt: {{value}}"
+      },
+      "examplePlaceholder": "bijv. {{value}}",
+      "setCount": "{{count}} ingesteld",
+      "overrides": {
+        "none": "Gebruikt alleen standaardwaarden.",
+        "jump": "Bewerken op het tabblad {{tab}}",
+        "title": "Ingesteld op dit blok ({{count}}):"
+      },
+      "tabs": {
+        "content": "Inhoud",
+        "style": "Stijl",
+        "layout": "Lay-out en grootte"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "De container bepaalt het (rekt uit in een verticale stapel)",
+          "heightTooltip": "Meegroeien met de inhoud"
+        },
+        "fill": {
+          "label": "Vullen",
+          "widthTooltip": "De volledige breedte van de container vullen"
+        },
+        "fit": {
+          "label": "Passend",
+          "widthTooltip": "Verkleinen tot de grootte van de inhoud"
+        },
+        "fixed": {
+          "label": "Vast",
+          "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
+          "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1564,6 +1651,12 @@
             },
             "margin": {
               "label": "Marge"
+            },
+            "padding": {
+              "label": "Opvulling"
+            },
+            "containerPadding": {
+              "label": "Opvulling"
             }
           }
         },
@@ -1651,6 +1744,84 @@
         },
         "totals-rows": {
           "title": "Totaalrijen"
+        },
+        "typography": {
+          "title": "Typografie",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Waardetekst",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
         }
       }
     },
@@ -1750,10 +1921,80 @@
     },
     "canvas": {
       "templateBoundary": "Sjabloongrens",
-      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt."
+      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt.",
+      "noLineItems": "Geen regels",
+      "moreRows": "+{{count}} extra rijen",
+      "subtotal": "Subtotaal",
+      "tax": "Btw",
+      "total": "Totaal",
+      "buttonLabel": "Knop",
+      "signatureLabel": "Handtekening",
+      "attachmentsLabel": "Bijlagen",
+      "spacerLabel": "Tussenruimte",
+      "companyLogo": "Bedrijfslogo",
+      "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
+      "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
+      "localeChip": "Vertaalde labels worden getoond in {{language}} (Voorvertoningstaal)",
+      "badgeDragHint": "Sleep om dit blok te verplaatsen"
     },
     "dragOverlay": {
       "component": "Component"
+    },
+    "arrange": {
+      "up": "Omhoog",
+      "upHint": "Eerder plaatsen in de container (↑)",
+      "down": "Omlaag",
+      "downHint": "Later plaatsen in de container (↓)",
+      "out": "Eruit",
+      "outHint": "Uit de container halen en er direct na plaatsen (Alt+←)",
+      "into": "Erin",
+      "intoHint": "Verplaatsen naar de container direct ervoor (Alt+→)",
+      "copy": "Kopiëren",
+      "copyHint": "Kopiëren (Ctrl/⌘+C). Selecteer waar het moet komen en plak met Ctrl/⌘+V.",
+      "paste": "Plakken",
+      "pasteHint": "Plakken in de geselecteerde container of na het geselecteerde blok (Ctrl/⌘+V)",
+      "duplicate": "Dupliceren",
+      "duplicateHint": "Direct erna dupliceren (Ctrl/⌘+D)",
+      "copyStyle": "Stijl kopiëren",
+      "copyStyleHint": "Kleuren, randen, afstanden en tekststijl kopiëren (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Stijl plakken",
+      "pasteStyleHint": "Gekopieerde stijl op dit blok toepassen (Ctrl/⌘+Alt+V)",
+      "delete": "Verwijderen",
+      "deleteHint": "Verwijderen (Delete-toets)",
+      "title": "Schikken"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kan hier niet worden toegevoegd.",
+      "insertedOnPage": "{{block}} aan de pagina toegevoegd.",
+      "insertedInto": "{{block}} aan {{parent}} toegevoegd.",
+      "fieldRebound": "{{name}} toont nu {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standaardlabel \"{{name}}\", vertaald voor elke ontvanger",
+      "useFixedText": "Vaste tekst gebruiken",
+      "pickStandardLabel": "Vaste tekst. Automatisch vertalen…",
+      "searchStandardLabels": "Standaardlabels zoeken…",
+      "standardLabels": "Standaardlabels",
+      "noMatches": "Geen standaardlabels gevonden.",
+      "cancel": "Annuleren"
+    },
+    "outline": {
+      "collapse": "{{name}} samenvouwen",
+      "expand": "{{name}} uitvouwen",
+      "title": "Overzicht"
+    },
+    "dragPreview": {
+      "noTarget": "Buiten de pagina — laat los om te annuleren",
+      "noChange": "Blijft waar het is",
+      "before": "Vóór {{block}}",
+      "after": "Na {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Zet neer op de pagina om dit blok toe te voegen.",
+      "cancelled": "Niet verplaatst — laat los boven de pagina of het Overzicht om neer te zetten."
+    },
+    "resize": {
+      "handleHint": "Sleep om het formaat te wijzigen · dubbelklik om aan de inhoud aan te passen",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {
@@ -1819,7 +2060,8 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
-    }
+    },
+    "emptyTimeHint": "Goedgekeurde tijd en materialen komen hier nooit in de wachtrij — ze worden gefactureerd via de normale factuurrun of via de knop Projectfactuur genereren."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2008,7 +2250,9 @@
         "addLine": "+ Regel",
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
-        "removeLine": "Regel {{index}} verwijderen"
+        "removeLine": "Regel {{index}} verwijderen",
+        "align": "Uitlijning",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Tekst",
@@ -2043,6 +2287,12 @@
         "groupedRowKey": "Sleutel van gegroepeerde rij",
         "groupedRowItems": "Items van gegroepeerde rij",
         "availableBinding": "Beschikbare binding"
+      },
+      "columnAlign": {
+        "default": "Standaard",
+        "left": "Links",
+        "center": "Midden",
+        "right": "Rechts"
       }
     },
     "imagePicker": {
@@ -2061,7 +2311,14 @@
       "clearRowBackground": "Rij-achtergrondkleur wissen",
       "clearRowTextColor": "Rij-tekstkleur wissen",
       "labelColorOverrideNote": "Dit label behoudt zijn eigen opgeslagen kleur en erft niet de hierboven ingestelde rij-tekstkleur. Het bedrag volgt nog steeds de rij-tekstkleur.",
-      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken."
+      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken.",
+      "addRow": "Rij toevoegen:",
+      "empty": "Nog geen rijen. Voeg hieronder een rij toe.",
+      "moveUp": "{{row}} omhoog verplaatsen",
+      "moveDown": "{{row}} omlaag verplaatsen",
+      "remove": "{{row}} verwijderen",
+      "label": "Label",
+      "emphasize": "Benadrukken (stijl van eindtotaal)"
     }
   },
   "draftInvoiceDetails": {

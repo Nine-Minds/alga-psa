@@ -9,8 +9,10 @@ import { testRevision } from './lib/test-revision.mjs';
 // where allFiles is the complete sorted inventory every shard partitioned.
 // scripts/merge-server-unit-shards.mjs reconciles those partitions back into
 // the single full-selection bundle the aggregate gate consumes.
+// `extraFailures` carries verdicts the caller already reached — today the
+// retry-only-pass policy — so status and evidence.json stay computed here.
 export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError, sourceAfter,
-  reportPath = 'server/test-results.json', shard }) {
+  reportPath = 'server/test-results.json', shard, extraFailures = [] }) {
   const directory = path.join(root, 'test-results/server-coverage');
   let evidence;
   try {
@@ -43,6 +45,7 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   if (sourceError) evidence.failures.push(`Cannot inspect unit checkout: ${sourceError}`);
   if (sourceDirty) evidence.failures.push('Unit checkout changed before execution verification');
   if (!candidateRevision || revision !== candidateRevision) evidence.failures.push('Unit checkout does not match candidate revision');
+  for (const failure of Array.isArray(extraFailures) ? extraFailures : []) evidence.failures.push(failure);
   evidence.status = evidence.failures.length ? 'failed' : 'passed';
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\n');

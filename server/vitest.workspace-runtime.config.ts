@@ -7,6 +7,9 @@ export default defineConfig({
   ...unitConfig,
   test: {
     ...unitConfig.test,
+    // Real MinIO/Temporal suites are node-only; drop the unit lane's inherited
+    // jsdom/node projects so this include list is the one vitest resolves.
+    projects: undefined,
     include: [
       '../services/email-service/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)',
       '../services/workflow-worker/**/*.integration.{test,spec}.?(c|m)[jt]s?(x)',

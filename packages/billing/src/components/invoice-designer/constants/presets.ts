@@ -1,5 +1,6 @@
 import type { DesignerComponentType, DesignerContainerLayout, DesignerNodeStyle, Point, Size } from '../state/designerStore';
 import { BILLED_TIME_PRESETS } from './billedTimePresets';
+import { createLabelTranslationMetadata, createTextTranslationMetadata } from '../utils/translatableText';
 
 // Legacy preset layouts still use the pre-CSS cutover shape. We accept both so presets
 // can be migrated incrementally while the live designer uses CSS-like layout state.
@@ -64,78 +65,96 @@ const QUOTE_ITEM_NAME_CATALOG_LINES = [
 export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
   ...BILLED_TIME_PRESETS,
   {
+    // The header of the shipped Detailed invoice: issuer brand beside an
+    // invoice-details card, with bindings and translated labels already set.
     id: 'header-logo-address',
-    label: 'Header: Logo + Address',
-    description: 'Two-column header with locked logo ratio and address stack.',
+    documentKind: 'invoice',
+    label: 'Header: Logo + Invoice Details',
+    description: 'Company logo, name and address beside a card with the invoice number and dates.',
     category: 'Header',
     nodes: [
-      { 
-        key: 'section', 
-        type: 'section', 
-        offset: { x: 0, y: 0 }, 
-        size: { width: 640, height: 180 }, 
-        name: 'Header Section',
-        layout: {
-          display: 'flex',
-          flexDirection: 'row',
-          gap: '20px',
-          padding: '20px',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-        }
+      {
+        key: 'header',
+        type: 'container',
+        offset: { x: 0, y: 0 },
+        name: 'header-top',
+        layout: { display: 'flex', flexDirection: 'row', gap: '24px', padding: '0px', justifyContent: 'space-between', alignItems: 'flex-start' },
+        style: { margin: '0px 0px 20px' },
       },
       {
-        key: 'column-left',
+        key: 'brand',
         type: 'container',
-        parentKey: 'section',
+        parentKey: 'header',
         offset: { x: 0, y: 0 },
-        size: { width: 260, height: 160 },
-        name: 'Logo Column',
-        layout: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          padding: '0px',
-          justifyContent: 'flex-start',
-          alignItems: 'flex-start',
-        }
-      },
-      {
-        key: 'column-right',
-        type: 'container',
-        parentKey: 'section',
-        offset: { x: 0, y: 0 },
-        size: { width: 320, height: 160 },
-        name: 'Address Column',
-        layout: {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          padding: '0px',
-          justifyContent: 'flex-start',
-          alignItems: 'flex-end',
-        }
+        name: 'issuer-brand',
+        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '0px', justifyContent: 'flex-start', alignItems: 'stretch' },
       },
       {
         key: 'logo',
         type: 'logo',
-        parentKey: 'column-left',
+        parentKey: 'brand',
         offset: { x: 0, y: 0 },
-        size: { width: 200, height: 120 },
-        name: 'Logo',
-        style: {
-          aspectRatio: '3 / 2',
-          objectFit: 'contain',
-        },
+        size: { width: 180, height: 72 },
+        name: 'issuer-logo',
+        style: { margin: '0px 0px 6px' },
       },
       {
-        key: 'address',
+        key: 'company-name',
         type: 'text',
-        parentKey: 'column-right',
+        parentKey: 'brand',
         offset: { x: 0, y: 0 },
-        size: { width: 260, height: 140 },
-        name: 'Billing Address',
+        name: 'issuer-name',
+        style: { fontSize: '18px', fontWeight: '700', lineHeight: '1.2' },
+        metadata: { text: '{{tenant.name}}' },
       },
+      {
+        key: 'company-address',
+        type: 'text',
+        parentKey: 'brand',
+        offset: { x: 0, y: 0 },
+        name: 'issuer-address',
+        style: { color: '#4b5563', lineHeight: '1.4' },
+        metadata: { text: '{{tenant.address}}' },
+      },
+      {
+        key: 'details',
+        type: 'container',
+        parentKey: 'header',
+        offset: { x: 0, y: 0 },
+        name: 'invoice-meta-card',
+        layout: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '14px 16px', justifyContent: 'flex-start', alignItems: 'stretch' },
+        style: { minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '10px', backgroundColor: '#f9fafb' },
+      },
+      {
+        key: 'title',
+        type: 'text',
+        parentKey: 'details',
+        offset: { x: 0, y: 0 },
+        name: 'invoice-title',
+        style: { margin: '0px 0px 4px', fontSize: '22px', fontWeight: '700', lineHeight: '1.1' },
+        metadata: createTextTranslationMetadata({ i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' }),
+      },
+      ...([
+        ['invoice-number', 'invoice.number', 'labels.invoiceNumber', 'Invoice #', 'text', undefined],
+        ['issue-date', 'invoice.issueDate', 'labels.issueDate', 'Issue Date', 'date', undefined],
+        ['due-date', 'invoice.dueDate', 'labels.dueDate', 'Due Date', 'date', undefined],
+        ['po-number', 'invoice.poNumber', 'labels.poNumber', 'PO #', 'text', '-'],
+      ] as const).map(([name, bindingKey, i18nKey, label, format, emptyValue]): LayoutPresetNodeDefinition => ({
+        key: name,
+        type: 'field',
+        parentKey: 'details',
+        offset: { x: 0, y: 0 },
+        name,
+        style: { justifyContent: 'space-between' },
+        metadata: {
+          bindingKey,
+          format,
+          placeholder: label,
+          fieldBorderStyle: 'none',
+          ...createLabelTranslationMetadata({ i18nKey, defaultValue: label }),
+          ...(emptyValue ? { emptyValue } : {}),
+        },
+      })),
     ],
   },
   {

@@ -41,6 +41,23 @@ function makeQueryBuilder(firstResult: unknown) {
   return builder;
 }
 
+/** `comments` rows the per-ticket one-off Cc/Bcc lookup reads. Reset per test. */
+const oneOffRecipientRows: { rows: unknown[] } = { rows: [] };
+
+function makeRowListQueryBuilder(rows: unknown[]) {
+  const builder: any = {
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
+    whereNotNull: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(rows[0]),
+    then: (resolve: any, reject: any) => Promise.resolve(rows).then(resolve, reject),
+  };
+
+  return builder;
+}
+
 function buildEmailData(
   overrides: Partial<EmailMessageDetails> = {}
 ): EmailMessageDetails {
@@ -95,9 +112,13 @@ vi.mock('../processInboundEmailArtifacts', () => ({
 describe('processInboundEmailInApp additional authorship paths', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    oneOffRecipientRows.rows = [];
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
+        if (table === 'comments') {
+          return makeRowListQueryBuilder(oneOffRecipientRows.rows);
+        }
         if (
           table === 'tickets as t' ||
           table === 'comments as c' ||
@@ -484,5 +505,143 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       }),
       'tenant-1'
     );
+  });
+  it('T038: a token-matched reply from a one-off Cc recipient creates a comment without adding a watcher', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-oneoff' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-oneoff-1' });
+    oneOffRecipientRows.rows = [
+      { metadata: { email_recipients: { cc: [{ email: 'Vendor@Example.com' }], bcc: [] } } },
+    ];
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-oneoff-1',
+        from: { email: 'vendor@example.com', name: 'Vendor' },
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'reply_token' });
+    expect(createCommentFromEmailMock).toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+  });
+
+  it('T039/T040: reply-all keeps one-off recipients off the watch list but still adds a brand-new address', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-requester-1',
+      client_id: 'client-1',
+      email: 'requester@example.com',
+      matched_email: 'requester@example.com',
+      user_type: 'client',
+    });
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-replyall' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({ ticketId: 'ticket-oneoff-2' });
+    oneOffRecipientRows.rows = [
+      { metadata: { email_recipients: { cc: [{ email: 'vendor@example.com' }], bcc: [{ email: 'boss@msp.test' }] } } },
+    ];
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-oneoff-2',
+        from: { email: 'requester@example.com', name: 'Requester' },
+        headers: {
+          'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com',
+        },
+        cc: [
+          { email: 'vendor@example.com', name: 'Vendor' },
+          { email: 'boss@msp.test', name: 'Boss' },
+          { email: 'newcomer@example.com', name: 'Newcomer' },
+        ],
+      }),
+    });
+
+    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
+      {
+        ticketId: 'ticket-oneoff-2',
+        recipients: [
+          { email: 'newcomer@example.com', active: true, source: 'inbound_cc', name: 'Newcomer' },
+        ],
+      },
+      'tenant-1'
+    );
+  });
+
+  it('T041: a thread-header-only reply from a one-off Cc recipient is accepted, not quarantined', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+    findTicketByReplyTokenMock.mockResolvedValue(null);
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-oneoff-3' });
+    oneOffRecipientRows.rows = [
+      { metadata: { email_recipients: { cc: [], bcc: [{ email: 'vendor@example.com' }] } } },
+    ];
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-oneoff-3',
+        threadId: 'thread-oneoff-3',
+        inReplyTo: 'message-parent',
+        references: ['message-parent'],
+        from: { email: 'vendor@example.com', name: 'Vendor' },
+      }),
+    });
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'thread_headers' });
+    expect(createCommentFromEmailMock).toHaveBeenCalled();
+  });
+
+  it('T042: a thread-header-only reply from an address never copied on this ticket is still quarantined', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+    findTicketByReplyTokenMock.mockResolvedValue(null);
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-oneoff-4' });
+    // Copied on some other ticket only: the lookup is ticket-scoped, so this
+    // ticket's set is empty.
+    oneOffRecipientRows.rows = [];
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-oneoff-4',
+        threadId: 'thread-oneoff-4',
+        inReplyTo: 'message-parent',
+        references: ['message-parent'],
+        from: { email: 'stranger@example.com', name: 'Stranger' },
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'quarantined',
+      reason: 'unauthorized_thread_header_sender',
+    });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
   });
 });

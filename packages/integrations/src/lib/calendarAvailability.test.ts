@@ -38,4 +38,12 @@ describe('calendarAvailability', () => {
     expect(resolveUserProfileTab(CALENDAR_PROFILE_TAB, true)).toBe(CALENDAR_PROFILE_TAB);
     expect(resolveUserProfileTab('notifications', false)).toBe('notifications');
   });
+
+  it('accepts label-style profile tab deep links', () => {
+    expect(resolveUserProfileTab('Single Sign-On', false)).toBe('single-sign-on');
+    expect(resolveUserProfileTab('API Keys', false)).toBe('api-keys');
+    expect(resolveUserProfileTab('keyboard_shortcuts', false)).toBe('keyboard-shortcuts');
+    expect(resolveUserProfileTab(' Calendar ', true)).toBe(CALENDAR_PROFILE_TAB);
+    expect(resolveUserProfileTab('Not A Tab', false)).toBe('profile');
+  });
 });

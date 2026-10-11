@@ -17,6 +17,8 @@ import { IProjectPhase } from '@alga-psa/types';
 import { IPriority } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
@@ -108,6 +110,17 @@ async function resolveProjectStatusInfo(
  * Parse a date string to Date object
  * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
  */
+/**
+ * Task dates as they will be stored. A start date after the due date cannot
+ * be drawn or scheduled, so it is dropped rather than failing the row.
+ */
+function resolveImportTaskDates(row: ITaskImportRow): { start_date: Date | null; due_date: Date | null } {
+  const due_date = parseImportDate(row.due_date);
+  const parsedStart = parseImportDate(row.start_date);
+  const start_date = parsedStart && due_date && parsedStart > due_date ? null : parsedStart;
+  return { start_date, due_date };
+}
+
 function parseImportDate(dateStr: string | undefined): Date | null {
   if (!dateStr?.trim()) return null;
 
@@ -312,7 +325,7 @@ export async function groupRowsIntoPhases(
       additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
-      due_date: parseImportDate(row.due_date),
+      ...resolveImportTaskDates(row),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
       task_type_key: row.task_type?.trim() || 'task',
@@ -345,6 +358,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
+      start_date: '2024-02-12',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -412,6 +426,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
+    'start_date',
     'due_date',
     'priority',
     'service',
@@ -443,6 +458,12 @@ export const getImportReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    // The phases and statuses below belong to one project, so the caller has to
+    // be allowed to read that project and not merely projects in general.
+    if (projectId && tenant) {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    }
+
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
@@ -617,11 +638,17 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -667,6 +694,12 @@ export const validatePhaseTaskImportData = withAuth(async (
   rows: ITaskImportRow[],
   projectId?: string
 ): Promise<IPhaseTaskValidationResponse> => {
+  // Same gates as its replacement (getImportReferenceData): the tenant user
+  // directory plus, when a project is named, that project's status library.
+  if (!await hasPermission(_user, 'project', 'read')) {
+    throw new Error('Permission denied: Cannot read project import reference data');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   // Fetch lookup data
@@ -703,6 +736,7 @@ export const validatePhaseTaskImportData = withAuth(async (
   const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
 
   if (projectId && tenant) {
+    await assertProjectReadAllowed(db, tenant, _user as IUserWithRoles, projectId);
     const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
     Object.assign(statusLookup, statusReferenceData.statusLookup);
     statusLookupByPhase = statusReferenceData.statusLookupByPhase;
@@ -804,11 +838,17 @@ export const validatePhaseTaskImportData = withAuth(async (
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -869,11 +909,9 @@ export const importPhasesAndTasks = withAuth(async (
         throw new Error('Permission denied: Cannot update projects');
       }
 
-    // Verify project exists
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
+    // Verify the project exists and this caller may reach that specific project —
+    // project:update alone does not grant access to every project in the tenant.
+    const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get existing status mappings
     let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
@@ -1145,6 +1183,7 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
+              start_date: taskData.start_date,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,

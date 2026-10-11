@@ -1,6 +1,6 @@
 import { normalizeEmailAddress } from '../email/addressUtils';
 
-export type TicketWatchListSource = 'manual' | 'inbound_to' | 'inbound_cc' | 'inbound_from';
+export type TicketWatchListSource = 'manual' | 'inbound_to' | 'inbound_cc' | 'inbound_from' | 'board_default';
 export type TicketWatchListEntityType = 'user' | 'contact';
 
 export interface TicketWatchListEntry {

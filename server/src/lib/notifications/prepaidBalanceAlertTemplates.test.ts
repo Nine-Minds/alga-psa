@@ -9,6 +9,7 @@ import {
   buildBucketAlertContext,
   buildCreditAlertContext,
   buildInternalAlertContext,
+  buildPrepaidReplenishmentContext,
   clientAlertLink,
   managerAlertLink,
 } from './prepaidBalanceAlertTemplates';
@@ -98,6 +99,34 @@ describe('prepaid balance alert notification definitions', () => {
       // Every context key is a simple flat identifier the renderer can reach.
       expect(Object.keys(expected).every((key) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(key))).toBe(true);
       expect(Object.keys(expected).some((key) => key.includes('.'))).toBe(false);
+    }
+  });
+
+  it('translates the replenishment sentence fragments for every supported locale', () => {
+    // The fragments are interpolated into per-language templates, so a missing
+    // locale silently falls back to English and renders a mixed-language
+    // sentence ("Faktura INV-1042 för Kund was created as a draft.").
+    const outcomes = ['drafted', 'issued', 'failed'] as const;
+    const fragmentsFor = (locale: string, outcome: (typeof outcomes)[number]) => {
+      const context = buildPrepaidReplenishmentContext(
+        'Acme',
+        { invoiceNumber: 'INV-1042', outcome, link: 'https://app.example/msp/clients/c1?tab=billing' },
+        locale,
+      ) as { replenishment: { statusLabel: string; actionPhrase: string } };
+      return context.replenishment;
+    };
+
+    for (const locale of SUPPORTED_LANGUAGES) {
+      for (const outcome of outcomes) {
+        const { statusLabel, actionPhrase } = fragmentsFor(locale, outcome);
+        expect(statusLabel, `${locale}:${outcome}.statusLabel`).toBeTruthy();
+        expect(actionPhrase, `${locale}:${outcome}.actionPhrase`).toBeTruthy();
+        if (locale !== 'en') {
+          const english = fragmentsFor('en', outcome);
+          expect(statusLabel, `${locale}:${outcome}.statusLabel`).not.toBe(english.statusLabel);
+          expect(actionPhrase, `${locale}:${outcome}.actionPhrase`).not.toBe(english.actionPhrase);
+        }
+      }
     }
   });
 

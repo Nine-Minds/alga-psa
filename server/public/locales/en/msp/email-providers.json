@@ -786,7 +786,8 @@
         "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
         "fromLabel": "From Address",
         "fromPlaceholder": "noreply@example.com",
-        "fromHelp": "Default sender for all outbound email. Ticket email can use its own identity below.",
+        "ticketIdentityRequired": "Choose a ticket email identity below to set the sending domain.",
+        "fromHelp": "Enter the mailbox name. The domain comes from the ticket email identity below.",
         "security": {
           "title": "Connection Security",
           "secure": "Use implicit TLS (SSL on connect, typically port 465)",
@@ -842,16 +843,27 @@
         "description": "Messages are sent as the selected mailbox through Microsoft Graph and saved to Sent Items.",
         "loadFailed": "Could not load Microsoft 365 mailboxes.",
         "saved": "Outbound sending mailbox updated."
-      }
+      },
+      "diagnosticsButton": "Run Outbound Diagnostics",
+      "saveSettings": "Save outbound settings",
+      "discardChanges": "Discard changes",
+      "unsaved": "Unsaved changes",
+      "noPendingChanges": "No unsaved changes",
+      "saving": "Saving outbound settings…",
+      "saved": "Outbound settings saved.",
+      "saveFailed": "Could not save outbound settings. Your changes are still here. Try again.",
+      "diagnosticsSaveHelp": "Save or discard your changes before checking the outbound settings.",
+      "saveBeforeDomainRemoval": "Save or discard your outbound changes before removing a domain.",
+      "senderAddressAfterSave": "Shown after saving."
     },
     "inbound": {
       "intro": "Configure inbound email routing and provider-specific automation."
     },
     "dialogs": {
       "clearTicketingFrom": {
-        "title": "Clear Ticketing From Address",
-        "message": "Clear the saved ticketing From address? Ticket notifications will stop using a custom From address until you save a new one.",
-        "confirm": "Clear From Address"
+        "title": "Clear ticket email identity",
+        "message": "Clear this ticket email identity from the form? This takes effect when you save outbound settings.",
+        "confirm": "Clear identity"
       },
       "removeDomain": {
         "title": "Remove Managed Domain",

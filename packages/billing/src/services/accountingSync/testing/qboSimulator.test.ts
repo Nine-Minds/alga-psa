@@ -18,6 +18,23 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
     expect(invoice.SyncToken).toBe('0');
   });
 
+  it('rejects a sales line whose Qty × UnitPrice does not round to its Amount (6070)', async () => {
+    const sim = new QboSimulator();
+    const line = (qty: number) => ({
+      DetailType: 'SalesItemLineDetail',
+      Amount: 10.42,
+      SalesItemLineDetail: { ItemRef: { value: 'i-1' }, Qty: qty, UnitPrice: 125 }
+    });
+
+    // 5 min at $125/h stored as 0.08 h: 0.08 × 125 = 10.00, not 10.42
+    await expect(
+      sim.client.create('Invoice', { CustomerRef: { value: 'c-1' }, Line: [line(0.08)] })
+    ).rejects.toMatchObject({ code: '6070' } satisfies Partial<QboSimError>);
+
+    const invoice = await sim.client.create('Invoice', { CustomerRef: { value: 'c-1' }, Line: [line(0.083333)] });
+    expect(invoice.TotalAmt).toBe(10.42);
+  });
+
   it('taxAdjustmentCents models AST changing the total at create time', async () => {
     const sim = new QboSimulator({ taxAdjustmentCents: 825 });
     const invoice = await sim.client.create('Invoice', {

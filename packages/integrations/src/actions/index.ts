@@ -14,6 +14,7 @@ export {
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
+  getQboCompanyCountryInfo,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,
@@ -47,8 +48,10 @@ export {
 export {
   getExternalEntityMappings,
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
+  type BulkCreateMappingRowResult,
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData
@@ -84,7 +87,8 @@ export {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail
+  testOutboundEmail,
+  runOutboundEmailDiagnostics
 } from './email-actions/emailSettingsActions';
 export type {
   EmailSettingsView,
@@ -221,6 +225,7 @@ export {
   disconnectEntraIntegration,
   getEntraSyncRunHistory,
   getEntraSyncRunDetail,
+  getEntraSyncWorkerAvailability,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   listEntraMappingGroups,
@@ -232,6 +237,7 @@ export {
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,
+  type EntraSyncWorkerEvidence,
   type EntraStatusResponse,
   type EntraMappingPreviewResponse,
   type EntraMappingGroupOption,

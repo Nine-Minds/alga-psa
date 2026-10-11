@@ -19,13 +19,13 @@ type PoolConfig = KnexType.PoolConfig & {
 let sharedKnexInstance: KnexType | null = null;
 let sharedKnexInitialization: Promise<KnexType> | null = null;
 let sharedKnexDestruction: Promise<void> | null = null;
-const tenantContext: AsyncLocalStorage<string> = (() => {
+const tenantContext: AsyncLocalStorage<string | undefined> = (() => {
   const globalAny = globalThis as unknown as {
-    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string>;
+    __ALGA_PSA_TENANT_CONTEXT__?: AsyncLocalStorage<string | undefined>;
   };
 
   if (!globalAny.__ALGA_PSA_TENANT_CONTEXT__) {
-    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string>();
+    globalAny.__ALGA_PSA_TENANT_CONTEXT__ = new AsyncLocalStorage<string | undefined>();
   }
 
   return globalAny.__ALGA_PSA_TENANT_CONTEXT__;
@@ -37,6 +37,15 @@ export function getTenantContext(): string | undefined {
 
 export async function runWithTenant<T>(tenant: string, fn: () => Promise<T>): Promise<T> {
   return tenantContext.run(tenant, fn);
+}
+
+/**
+ * Runs `fn` with no tenant in context, whatever tenant the caller inherited.
+ * The context is process-global, so a tenant entered elsewhere (e.g. via
+ * createTenantKnex's enterWith) can otherwise reach code that never set one.
+ */
+export async function runWithoutTenant<T>(fn: () => Promise<T>): Promise<T> {
+  return tenantContext.run(undefined, fn);
 }
 
 export async function getConnection(_tenantId?: string | null): Promise<KnexType> {

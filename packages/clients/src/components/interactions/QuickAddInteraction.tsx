@@ -31,7 +31,7 @@ import { getCurrentUserPermissions, getUserAvatarUrlsBatchAction } from '@alga-p
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { clampDuration } from '../../lib/durationHelpers';
+import { clampDuration, durationFromRange } from '../../lib/durationHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -54,6 +54,11 @@ import {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// The duration fields cannot represent more than a day, so the date pickers must not
+// accept a range they would have to misreport. Same rule the server reconciles against.
+const END_BEFORE_START_MESSAGE = 'End time must be on or after the start time.';
+const RANGE_TOO_LONG_MESSAGE = "Interactions can't be longer than 24 hours.";
+
 // Keyed by the capability reason the Teams service returns, so the copy under
 // interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
 const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
@@ -67,8 +72,10 @@ interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
   /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
   entityId?: string;
-  entityType?: 'contact' | 'client';
+  entityType?: 'contact' | 'client' | 'opportunity';
   clientId?: string;
+  /** The deal's contact when entityType is 'opportunity'; optional (deals without a contact still log). */
+  contactId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
   isOpen: boolean;
@@ -81,6 +88,7 @@ export function QuickAddInteraction({
   entityId,
   entityType,
   clientId,
+  contactId,
   ticketId,
   onInteractionAdded,
   isOpen,
@@ -150,7 +158,11 @@ export function QuickAddInteraction({
   const meetingContactId = !isEditMode
     ? (isStandaloneCreate
         ? (selectedContactId || null)
-        : (entityType === 'contact' ? (entityId ?? null) : null))
+        : (entityType === 'contact'
+            ? (entityId ?? null)
+            : entityType === 'opportunity'
+              ? (contactId ?? null)
+              : null))
     : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
@@ -379,19 +391,38 @@ export function QuickAddInteraction({
     if (isEditMode && editingInteraction) {
       setTitle(editingInteraction.title || '');
       // type_id / status_id are set from fetchData, once their options exist.
+      const storedStart = editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined;
+      const storedEnd = editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined;
       // Convert duration from total minutes to hours and minutes
-      if (editingInteraction.duration) {
+      const storedRange = storedStart && storedEnd ? durationFromRange(storedStart, storedEnd) : null;
+      if (storedRange && !storedRange.exceedsCap && storedRange.totalMinutes >= 0) {
+        // The range is what the server will store, so show that rather than a legacy
+        // duration that disagrees with it and would be rewritten on save.
+        setDurationHours(storedRange.hours > 0 ? storedRange.hours.toString() : '');
+        setDurationMinutes(storedRange.minutes > 0 ? storedRange.minutes.toString() : '');
+      } else if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
+        // A legacy row may carry a duration the fields cannot hold; clamp it so the form
+        // never shows a value it would silently change on save.
+        const { hours, minutes } = clampDuration(
+          Math.floor(totalMinutes / 60).toString(),
+          (totalMinutes % 60).toString(),
+        );
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
       } else {
         setDurationHours('');
         setDurationMinutes('');
       }
-      setStartTime(editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined);
-      setEndTime(editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined);
+      setStartTime(storedStart);
+      setEndTime(storedEnd);
+      // Surface a stored range that exceeds the cap so saving the edit forces the user to
+      // reconcile it rather than re-submitting the mismatch.
+      setEndTimeError(
+        storedStart && storedEnd && durationFromRange(storedStart, storedEnd).exceedsCap
+          ? RANGE_TOO_LONG_MESSAGE
+          : '',
+      );
       setSelectedUserId(editingInteraction.user_id || '');
       setSelectedContactId(editingInteraction.contact_name_id || '');
       setSelectedClientId(editingInteraction.client_id || '');
@@ -432,8 +463,12 @@ export function QuickAddInteraction({
       // Mark notes content as ready after processing
       setIsNotesContentReady(true);
     } else if (isOpen && !startTime && !isEditMode) {
-      // Set start time to current time when dialog opens for new interactions
-      setStartTime(new Date());
+      // Set start time to current time when dialog opens for new interactions. The pickers
+      // work in whole minutes, so seed at a whole minute too: an End picked on the very same
+      // minute must not read as "before" a Start that is carrying leftover seconds.
+      const now = new Date();
+      now.setSeconds(0, 0);
+      setStartTime(now);
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
@@ -586,9 +621,20 @@ export function QuickAddInteraction({
     return [];
   }, [meetingContactId, contacts, clientDefaultEmail, clientDefaultName]);
 
-  // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
+  // Helper to get total duration in minutes from hours and minutes state (max 24h = 1440 minutes)
   const getTotalDurationMinutes = (): number => {
     return clampDuration(durationHours, durationMinutes).totalMinutes;
+  };
+
+  // A stored duration is exactly end − start, so the range wins whenever the form holds
+  // both ends of it; the duration fields only speak for themselves when it doesn't.
+  // Submission already rejects an inverted or over-cap range, so this stays within the cap.
+  const getSubmittedDurationMinutes = (): number => {
+    if (startTime && endTime) {
+      const { totalMinutes } = durationFromRange(startTime, endTime);
+      if (totalMinutes >= 0) return totalMinutes;
+    }
+    return getTotalDurationMinutes();
   };
 
   // Handle start time change
@@ -605,17 +651,18 @@ export function QuickAddInteraction({
     }
 
     if (endTime) {
-      const diffMilliseconds = endTime.getTime() - date.getTime();
-      if (diffMilliseconds < 0) {
+      const { hours, minutes, totalMinutes: rangeMinutes, exceedsCap } = durationFromRange(date, endTime);
+      if (rangeMinutes < 0) {
         // Auto-correct: set end time to match start time
         setEndTime(date);
         setEndTimeError(''); // Clear error since we auto-corrected
         setDurationHours('');
         setDurationMinutes('');
+      } else if (exceedsCap) {
+        // The duration fields cannot hold this range, so flag it instead of writing
+        // an out-of-range duration the submit would then clamp away.
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
       } else {
-        const totalMinutesFromEnd = Math.round(diffMilliseconds / 60000);
-        const hours = Math.floor(totalMinutesFromEnd / 60);
-        const minutes = totalMinutesFromEnd % 60;
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
         setEndTimeError('');
@@ -625,28 +672,34 @@ export function QuickAddInteraction({
 
   // Handle end time change
   const handleEndTimeChange = (date: Date) => {
-    // Validate: end time must be after or equal to start time
-    if (startTime && date.getTime() < startTime.getTime()) {
-      // Don't allow setting end time before start time
-      setEndTimeError('End time must be on or after the start time.');
-      return;
+    // What the user picked is what the field shows, so it is always kept. An End that lands
+    // before the Start, or beyond the cap the duration fields can represent, is flagged (and
+    // blocks saving) rather than dropped: dropping it left the picker displaying a time the
+    // dialog did not hold, and made it impossible to set End first and then move Start.
+    setEndTime(date);
+
+    if (startTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, date);
+      if (totalMinutes < 0) {
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+        // A stale duration would otherwise re-derive End from Start on the next Start pick.
+        setDurationHours('');
+        setDurationMinutes('');
+        return;
+      }
+      if (exceedsCap) {
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+        return;
+      }
     }
 
-    setEndTime(date);
     setEndTimeError('');
 
-    // If we have a start time, calculate and update duration (hours and minutes)
+    // If we have a start time, the duration is exactly the range it spans
     if (startTime) {
-      const diffMilliseconds = date.getTime() - startTime.getTime();
-      const totalMinutes = Math.round(diffMilliseconds / 60000);
-
-      // Only update duration if the difference is positive
-      if (totalMinutes >= 0) {
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        setDurationHours(hours > 0 ? hours.toString() : '');
-        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
-      }
+      const { hours, minutes } = durationFromRange(startTime, date);
+      setDurationHours(hours > 0 ? hours.toString() : '');
+      setDurationMinutes(minutes > 0 ? minutes.toString() : '');
     }
   };
 
@@ -728,9 +781,17 @@ export function QuickAddInteraction({
         defaultValue: 'Select a client for this interaction',
       }));
     }
-    if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
-      errors.push('End time must be on or after the start time');
-      setEndTimeError('End time must be on or after the start time.');
+    // No state path may submit a range the duration field cannot represent: the payload
+    // duration below is always exactly end − start.
+    if (startTime && endTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, endTime);
+      if (totalMinutes < 0) {
+        errors.push('End time must be on or after the start time');
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+      } else if (exceedsCap) {
+        errors.push(RANGE_TOO_LONG_MESSAGE);
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+      }
     }
     if (createTeamsMeeting && canCreateTeamsMeeting) {
       if (!startTime) {
@@ -757,7 +818,7 @@ export function QuickAddInteraction({
         title,
         notes: JSON.stringify(notesContent),
         type_id: typeId,
-        duration: getTotalDurationMinutes() > 0 ? getTotalDurationMinutes() : null,
+        duration: getSubmittedDurationMinutes() > 0 ? getSubmittedDurationMinutes() : null,
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,
@@ -775,6 +836,12 @@ export function QuickAddInteraction({
         if (entityType === 'contact') {
           interactionData.contact_name_id = entityId;
           interactionData.client_id = clientId;
+        } else if (entityType === 'opportunity') {
+          // The interaction is the substrate for the deal's history: it carries the
+          // opportunity, the deal's client (required by create), and its contact.
+          interactionData.opportunity_id = entityId;
+          interactionData.client_id = clientId;
+          interactionData.contact_name_id = contactId ?? null;
         } else {
           interactionData.client_id = entityId;
         }
@@ -798,12 +865,19 @@ export function QuickAddInteraction({
         resultInteraction = updateResult;
         console.log('Updated interaction received:', resultInteraction);
       } else if (createTeamsMeeting && canCreateTeamsMeeting && startTime && endTime) {
+        // LEVERAGE: pattern cross-feature-interaction-fields — unlike the plain
+        // addInteraction branch below (which forwards the whole interactionData),
+        // the Teams seam enumerates interaction fields by hand, so every new
+        // interaction field must be added here too (opportunity_id/notes were
+        // silently dropped before this fix).
         const scheduleResult = await clientCrossFeature.scheduleTeamsMeeting!({
           subject: title,
           startDateTime: startTime,
           endDateTime: endTime,
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
+          opportunity_id: interactionData.opportunity_id ?? null,
+          notes: interactionData.notes,
           attendees: meetingAttendees,
           interactionUserId: interactionData.user_id,
           // The scheduled meeting must exist on the AlgaPSA calendar too;

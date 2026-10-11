@@ -253,10 +253,25 @@ describe('UsageTracking add-usage request_id replay key', () => {
     expect(typeof firstId).toBe('string');
     expect(firstId.length).toBeGreaterThan(0);
 
+    // The submit button is disabled for the duration of the in-flight
+    // request (isSaving). Reaching call-count 1 only confirms the request
+    // started, not that its rejection has been handled yet — clicking again
+    // while the button is still disabled is silently swallowed by the DOM
+    // and would never produce a second call, regardless of how long the
+    // next waitFor is given to time out. Wait for the button to be
+    // re-enabled so the second click lands on the real retry path.
+    await waitFor(() =>
+      expect(document.getElementById('submit-usage-button')).not.toBeDisabled(),
+    );
+
     // Second submit with the form untouched: identical retry, SAME id.
     fireEvent.click(document.getElementById('submit-usage-button')!);
     await waitFor(() => expect(actionMocks.createUsageRecord).toHaveBeenCalledTimes(2));
     expect(actionMocks.createUsageRecord.mock.calls[1][0].request_id).toBe(firstId);
+
+    await waitFor(() =>
+      expect(document.getElementById('submit-usage-button')).not.toBeDisabled(),
+    );
 
     // Change the quantity, then submit: a changed submission must be a fresh
     // request, not a replay of the failed one.

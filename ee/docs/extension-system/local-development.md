@@ -330,6 +330,8 @@ RUNNER_DEBUG_REDIS_URL=redis://host.docker.internal:6379
 RUNNER_DEBUG_REDIS_STREAM_PREFIX=ext:debug
 ```
 
+The `host.docker.internal` URL reaches a Redis that listens on all host interfaces. It cannot reach the compose stack's Redis, which binds to `127.0.0.1`. To use the compose Redis, see [Using the compose stack's Redis](#using-the-compose-stacks-redis) in the debugging section.
+
 ### Docker Compose Overrides
 
 If you need to customize the runner container, edit `docker-compose.runner-dev.yml`:
@@ -508,6 +510,31 @@ For detailed execution traces, set up a Redis debug stream:
    ```
 
 Each extension execution emits debug events (context, handler start, host API calls, response).
+
+#### Using the compose stack's Redis
+
+The compose stack publishes Redis on `127.0.0.1` only. A runner container connecting through `host.docker.internal` arrives on the Docker bridge address, not on `127.0.0.1`, so the connection is refused. Use one of these:
+
+- **Attach the runner to `app-network` (preferred).** Add the compose network to the runner in your own override file and use the service name:
+  ```yaml
+  # docker-compose.runner-debug.yaml
+  services:
+    extension-runner:
+      networks:
+        - runner-dev
+        - app-network
+
+  networks:
+    app-network:
+      external: true
+      name: <project>_app-network   # the network of your running alga stack
+  ```
+  ```bash
+  # In .env.runner:
+  RUNNER_DEBUG_REDIS_URL=redis://redis:6379
+  ```
+  Start the runner with `-f docker-compose.runner-dev.yml -f docker-compose.runner-debug.yaml`. Find the network name with `docker network ls | grep app-network`. The compose Redis requires a password, so add it to the URL (`redis://:<password>@redis:6379`) using the value in `secrets/redis_password`.
+- **Bind Redis to the bridge address for one session.** Start the compose stack with `EXPOSE_INFRA_BIND_ADDR` set to the address that `host.docker.internal` resolves to (the Docker bridge, commonly `172.17.0.1`). This also moves Postgres and PgBouncer to that address, so unset it when you finish. Never use `0.0.0.0`.
 
 ## Common Issues
 

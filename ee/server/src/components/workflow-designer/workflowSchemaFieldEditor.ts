@@ -23,6 +23,7 @@ export type ResolvedWorkflowSchemaEditor = {
     resource: string;
   };
   softEnum?: WorkflowEditorJsonSchemaMetadata['softEnum'];
+  custom?: WorkflowEditorJsonSchemaMetadata['custom'];
 };
 
 const WORKFLOW_EDITOR_KINDS = new Set<WorkflowEditorJsonSchemaMetadata['kind']>([
@@ -83,6 +84,9 @@ const normalizeWorkflowEditorMetadata = (
           }
         : undefined,
     softEnum,
+    custom: metadata.kind === 'custom' && typeof metadata.custom?.component === 'string'
+      ? { component: metadata.custom.component }
+      : undefined,
   };
 };
 

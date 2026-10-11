@@ -85,6 +85,52 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
   return cleanedHtml.length === 0 && cleanedText.length === 0;
 }
 
+// Email clients inherit wildly different `p { margin }` defaults, and an empty
+// BlockNote paragraph (`<p><br></p>`) renders as a full blank line *plus* two
+// paragraph margins — roughly four times the gap the author typed. Normalize
+// both: a fixed inline margin on every paragraph, and blank lines rendered as a
+// small spacer. Inline styles only — clients strip <style> blocks — and no
+// `height` on <p>, which Outlook/Word ignores (font-size + line-height on an
+// &nbsp; is the Outlook-safe spacer). Word treats `line-height` as a minimum
+// unless `mso-line-height-rule:exactly` pins it, so the spacer carries that too.
+const EMAIL_PARAGRAPH_MARGIN = 'margin:0 0 10px 0;';
+const EMAIL_BLANK_PARAGRAPH = `<p style="${EMAIL_PARAGRAPH_MARGIN}font-size:10px;line-height:10px;mso-line-height-rule:exactly;">&nbsp;</p>`;
+
+const BLANK_PARAGRAPH_SOURCE = '<p[^>]*>(?:\\s|&nbsp;|<br\\s*/?>)*</p>';
+const LEADING_BLANK_PARAGRAPHS = new RegExp(`^(?:\\s*${BLANK_PARAGRAPH_SOURCE})+`);
+const TRAILING_BLANK_PARAGRAPHS = new RegExp(`(?:${BLANK_PARAGRAPH_SOURCE}\\s*)+$`);
+const CONSECUTIVE_BLANK_PARAGRAPHS = new RegExp(`(?:${BLANK_PARAGRAPH_SOURCE}\\s*){2,}`, 'g');
+const BLANK_PARAGRAPH = new RegExp(BLANK_PARAGRAPH_SOURCE, 'g');
+const PARAGRAPH_OPEN_TAG = /<p(\s[^>]*)?>/g;
+const PARAGRAPH_STYLE_ATTRIBUTE = /(\sstyle\s*=\s*["'])/i;
+
+/**
+ * Rewrites converter HTML for email delivery: drops the empty paragraphs
+ * BlockNote pads a document with, collapses runs of blank lines, and gives
+ * every paragraph deterministic spacing. The margin is *prepended* to an
+ * existing style attribute so block-specific declarations (indent
+ * `margin-left`, alignment, background) still win.
+ */
+export function normalizeBlockHtmlForEmail(html: unknown): string {
+  if (typeof html !== 'string' || !html.trim()) {
+    return '';
+  }
+
+  return html
+    .replace(LEADING_BLANK_PARAGRAPHS, '')
+    .replace(TRAILING_BLANK_PARAGRAPHS, '')
+    .trim()
+    .replace(CONSECUTIVE_BLANK_PARAGRAPHS, '<p><br></p>')
+    .replace(PARAGRAPH_OPEN_TAG, (_match, attributes?: string) => {
+      const attrs = attributes ?? '';
+      if (PARAGRAPH_STYLE_ATTRIBUTE.test(attrs)) {
+        return `<p${attrs.replace(PARAGRAPH_STYLE_ATTRIBUTE, (stylePrefix) => `${stylePrefix}${EMAIL_PARAGRAPH_MARGIN}`)}>`;
+      }
+      return `<p${attrs} style="${EMAIL_PARAGRAPH_MARGIN}">`;
+    })
+    .replace(BLANK_PARAGRAPH, EMAIL_BLANK_PARAGRAPH);
+}
+
 export function formatBlockNoteContent(content: unknown): { html: string; text: string } {
   if (content === null || content === undefined) {
     return { html: '', text: '' };
@@ -96,7 +142,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       const textResult = convertBlockNoteToMarkdown(input);
 
       if (!isEffectivelyEmpty(htmlResult || '', textResult || '')) {
-        return { html: htmlResult, text: textResult };
+        return { html: normalizeBlockHtmlForEmail(htmlResult), text: textResult };
       }
       return { html: '', text: '' };
     } catch (error) {
@@ -107,7 +153,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
 
     const fallback = typeof input === 'string' ? input : JSON.stringify(input);
     return {
-      html: `<p>${escapeHtml(fallback)}</p>`,
+      html: normalizeBlockHtmlForEmail(`<p>${escapeHtml(fallback)}</p>`),
       text: fallback,
     };
   };
@@ -122,7 +168,7 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       return convertSafely(parsed);
     } catch {
       return {
-        html: `<p>${escapeHtml(content)}</p>`,
+        html: normalizeBlockHtmlForEmail(`<p>${escapeHtml(content)}</p>`),
         text: content,
       };
     }

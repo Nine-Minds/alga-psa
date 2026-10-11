@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { resolveCeMaintenanceSchedules } from '@alga-psa/types';
 
 const subscriberSource = readFileSync(
   resolve(__dirname, '../eventBus/subscribers/prepaidBalanceAlertSubscriber.ts'),
@@ -28,12 +29,14 @@ describe('prepaid auto-replenishment wiring contract', () => {
     expect(handlerSource).not.toContain('server/src');
   });
 
-  it('keeps all four maintenance wiring points on the existing singleton rail', () => {
+  it('keeps all four maintenance wiring points on the maintenance fan-out rail', () => {
     expect(registerSource).toContain("name: PREPAID_BALANCE_ALERT_SCAN_JOB");
     expect(registerSource).toContain('PREPAID_BALANCE_ALERT_SCAN_JOB');
-    expect(jobsIndexSource).toContain('schedulePrepaidBalanceAlertScanJob');
-    expect(jobsIndexSource).toContain('isEnterpriseWorkflowEdition()');
-    expect(initializeSource).toContain('schedulePrepaidBalanceAlertScanJob(tenantId, cron)');
+    // CE schedules the scan through the global maintenance fan-out catalog; the
+    // per-tenant wrapper is gone.
+    expect(resolveCeMaintenanceSchedules({})).toContainEqual({ jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' });
+    expect(initializeSource).toContain('convergeCeMaintenanceSchedules(');
+    expect(initializeSource).toContain('isEnterpriseWorkflowEdition()');
     expect(fanoutSource).toContain('[PREPAID_BALANCE_ALERT_SCAN_JOB]');
     expect(temporalSource).toContain("'prepaid-balance-alert-scan'");
     expect(temporalSource).toContain('ScheduleOverlapPolicy.SKIP');

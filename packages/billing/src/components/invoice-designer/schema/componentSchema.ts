@@ -1,6 +1,7 @@
 import { DEFAULT_INVOICE_PRINT_SETTINGS, resolveTemplatePrintSettings } from '@alga-psa/types';
 import {
   AlignCenter,
+  AlignJustify,
   AlignHorizontalDistributeCenter,
   AlignHorizontalSpaceAround,
   AlignHorizontalSpaceBetween,
@@ -45,6 +46,35 @@ export interface DesignerComponentSchema {
   inspector?: DesignerInspectorSchema;
 }
 
+// Column ids only need to be unique within their table; these match the shipped
+// templates. Proportional CSS widths render identically on canvas and document.
+// Headers are standard labels, so they render in each recipient's language like shipped templates.
+const translatedHeader = (i18nKey: string, defaultValue: string) => ({
+  header: defaultValue,
+  __astHeaderI18n: { i18nKey, defaultValue },
+});
+
+const createDefaultLineItemColumns = () => [
+  { id: 'description', ...translatedHeader('labels.description', 'Description'), key: 'item.description', type: 'text', style: { inline: { width: '50%' } } },
+  { id: 'quantity', ...translatedHeader('labels.qty', 'Qty'), key: 'item.quantity', type: 'number', style: { inline: { width: '14%', textAlign: 'right' } } },
+  { id: 'unit-price', ...translatedHeader('labels.rate', 'Rate'), key: 'item.unitPrice', type: 'currency', style: { inline: { width: '18%', textAlign: 'right' } } },
+  { id: 'line-total', ...translatedHeader('labels.amount', 'Amount'), key: 'item.total', type: 'currency', style: { inline: { width: '18%', textAlign: 'right' } } },
+];
+
+/**
+ * The page is a plain vertical stack with the print margin as padding. No gap:
+ * the rendered document puts nothing between top-level blocks, so neither may
+ * the canvas.
+ */
+export const createPageLayout = (padding: string): DesignerContainerLayout => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0px',
+  padding,
+  justifyContent: 'flex-start',
+  alignItems: 'stretch',
+});
+
 const mergeInspectorSchemas = (...schemas: Array<DesignerInspectorSchema | undefined>): DesignerInspectorSchema => ({
   panels: schemas.flatMap((schema) => schema?.panels ?? []),
 });
@@ -68,6 +98,7 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
     {
       id: 'layout',
       title: 'Layout',
+      tab: 'layout',
       visibleWhen: { kind: 'nodeIsContainer' },
       fields: [
         {
@@ -85,14 +116,6 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           id: 'gap',
           label: 'Gap',
           path: 'layout.gap',
-          allowedUnits: ['px', '%', 'rem'],
-          defaultUnit: 'px',
-        },
-        {
-          kind: 'css-length-stepper',
-          id: 'padding',
-          label: 'Padding',
-          path: 'layout.padding',
           allowedUnits: ['px', '%', 'rem'],
           defaultUnit: 'px',
         },
@@ -168,56 +191,9 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
       ],
     },
     {
-      id: 'sizing-css',
-      title: 'Sizing (CSS)',
-      fields: [
-        {
-          kind: 'css-length',
-          id: 'width',
-          label: 'width',
-          path: 'style.width',
-          placeholder: 'auto | 320px | 50% | 10rem',
-        },
-        {
-          kind: 'css-length',
-          id: 'height',
-          label: 'height',
-          path: 'style.height',
-          placeholder: 'auto | 180px | 12rem',
-        },
-        {
-          kind: 'css-length',
-          id: 'minWidth',
-          label: 'min-width',
-          path: 'style.minWidth',
-          placeholder: '0 | 200px',
-        },
-        {
-          kind: 'css-length',
-          id: 'minHeight',
-          label: 'min-height',
-          path: 'style.minHeight',
-          placeholder: '0 | 120px',
-        },
-        {
-          kind: 'css-length',
-          id: 'maxWidth',
-          label: 'max-width',
-          path: 'style.maxWidth',
-          placeholder: 'none | 600px',
-        },
-        {
-          kind: 'css-length',
-          id: 'maxHeight',
-          label: 'max-height',
-          path: 'style.maxHeight',
-          placeholder: 'none | 400px',
-        },
-      ],
-    },
-    {
       id: 'appearance',
       title: 'Appearance',
+      tab: 'style',
       fields: [
         {
           kind: 'css-color',
@@ -232,6 +208,9 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           label: 'Text color',
           path: 'style.color',
           placeholder: '#111827',
+          // Leaf text colors live in the Typography panel; containers set the
+          // color their children inherit.
+          visibleWhen: { kind: 'nodeIsContainer' },
         },
         {
           kind: 'string',
@@ -246,6 +225,25 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
           label: 'Radius',
           path: 'style.borderRadius',
           placeholder: '8px',
+        },
+        // Padding sits here for every block; a container's lives on its layout.
+        {
+          kind: 'css-length-box',
+          id: 'containerPadding',
+          label: 'Padding',
+          path: 'layout.padding',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
+          visibleWhen: { kind: 'nodeIsContainer' },
+        },
+        {
+          kind: 'css-length-box',
+          id: 'padding',
+          label: 'Padding',
+          path: 'style.padding',
+          allowedUnits: ['px', '%', 'rem'],
+          defaultUnit: 'px',
+          visibleWhen: { kind: 'nodeIsLeaf' },
         },
         {
           kind: 'css-length-box',
@@ -262,11 +260,90 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
 
 const CONTAINER_INSPECTOR = toContainerInspectorSchema(COMMON_INSPECTOR);
 
+const createTypographyPanel = (
+  id: string,
+  title: string
+): DesignerInspectorSchema['panels'][number] => ({
+  id,
+  title,
+  tab: 'style',
+  fields: [
+    {
+      kind: 'css-length-stepper',
+      id: 'fontSize',
+      label: 'Size',
+      path: 'style.fontSize',
+      allowedUnits: ['px', 'rem'],
+      defaultUnit: 'px',
+    },
+    {
+      kind: 'enum',
+      id: 'fontWeight',
+      label: 'Weight',
+      path: 'style.fontWeight',
+      options: [
+        { value: '', label: 'Default' },
+        { value: '400', label: 'Normal (400)' },
+        { value: '500', label: 'Medium (500)' },
+        { value: '600', label: 'Semibold (600)' },
+        { value: '700', label: 'Bold (700)' },
+      ],
+    },
+    {
+      kind: 'string',
+      id: 'lineHeight',
+      label: 'Line height',
+      path: 'style.lineHeight',
+      placeholder: '1.4 | 18px',
+    },
+    {
+      kind: 'icon-enum',
+      id: 'textAlign',
+      label: 'Align',
+      path: 'style.textAlign',
+      columns: 4,
+      options: [
+        { value: 'left', label: 'Left', icon: AlignLeft },
+        { value: 'center', label: 'Center', icon: AlignCenter },
+        { value: 'right', label: 'Right', icon: AlignRight },
+        { value: 'justify', label: 'Justify', icon: AlignJustify },
+      ],
+    },
+    {
+      kind: 'enum',
+      id: 'fontStyle',
+      label: 'Style',
+      path: 'style.fontStyle',
+      options: [
+        { value: '', label: 'Default' },
+        { value: 'normal', label: 'Normal' },
+        { value: 'italic', label: 'Italic' },
+      ],
+    },
+    {
+      kind: 'css-color',
+      id: 'color',
+      label: 'Color',
+      path: 'style.color',
+      placeholder: '#111827',
+    },
+  ],
+});
+
+const TYPOGRAPHY_INSPECTOR: DesignerInspectorSchema = {
+  panels: [createTypographyPanel('typography', 'Typography')],
+};
+
+const VALUE_TYPOGRAPHY_INSPECTOR: DesignerInspectorSchema = {
+  panels: [createTypographyPanel('value-typography', 'Value Text')],
+};
+
 const SECTION_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
       id: 'section-border',
       title: 'Section Border',
+      tab: 'style',
       fields: [
         {
           kind: 'enum',
@@ -288,6 +365,7 @@ const SECTION_INSPECTOR: DesignerInspectorSchema = {
 const createLabelStylePanel = (): DesignerInspectorSchema['panels'][number] => ({
   id: 'label-style',
   title: 'Label Style',
+  tab: 'style',
   fields: [
     {
       kind: 'enum',
@@ -297,10 +375,10 @@ const createLabelStylePanel = (): DesignerInspectorSchema['panels'][number] => (
       path: 'metadata.labelStyle.inline.fontWeight',
       options: [
         { value: '', label: 'Default' },
-        { value: '400', label: 'Normal' },
-        { value: '500', label: 'Medium' },
-        { value: '600', label: 'Semibold' },
-        { value: '700', label: 'Bold' },
+        { value: '400', label: 'Normal (400)' },
+        { value: '500', label: 'Medium (500)' },
+        { value: '600', label: 'Semibold (600)' },
+        { value: '700', label: 'Bold (700)' },
       ],
     },
     {
@@ -377,6 +455,7 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           label: 'Label',
           path: 'metadata.label',
           placeholder: 'Invoice #',
+          translation: 'node-label',
         },
         {
           kind: 'widget',
@@ -412,6 +491,7 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-field-placeholder',
           label: 'Designer placeholder',
           path: 'metadata.placeholder',
+          designerOnly: true,
         },
         {
           kind: 'enum',
@@ -431,6 +511,7 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
     {
       id: 'field-layout',
       title: 'Field Layout',
+      tab: 'layout',
       fields: [
         {
           kind: 'icon-enum',
@@ -497,6 +578,7 @@ const TEXT_INSPECTOR: DesignerInspectorSchema = {
           path: 'metadata.text',
           placeholder: 'Enter text or {{binding.path}}',
           enableExpressionInsert: true,
+          translation: 'text-content',
         },
       ],
     },
@@ -517,19 +599,6 @@ const LABEL_INSPECTOR: DesignerInspectorSchema = {
           path: 'metadata.text',
           placeholder: 'Label',
         },
-        {
-          kind: 'enum',
-          id: 'fontWeight',
-          domId: 'designer-label-weight',
-          label: 'Weight',
-          path: 'metadata.fontWeight',
-          options: [
-            { value: 'semibold', label: 'Semibold' },
-            { value: 'bold', label: 'Bold' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'normal', label: 'Normal' },
-          ],
-        },
       ],
     },
   ],
@@ -547,6 +616,7 @@ const TOTALS_ROW_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-total-label',
           label: 'Label',
           path: 'metadata.label',
+          translation: 'node-label',
         },
         {
           kind: 'string',
@@ -574,6 +644,7 @@ const CUSTOM_TOTAL_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-total-label',
           label: 'Label',
           path: 'metadata.label',
+          translation: 'node-label',
         },
         {
           kind: 'string',
@@ -663,13 +734,6 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
       title: 'Table',
       fields: [
         {
-          kind: 'css-length',
-          id: 'tablePadding',
-          label: 'Table padding',
-          path: 'style.padding',
-          placeholder: '0px | 8px | 0 8px',
-        },
-        {
           kind: 'widget',
           id: 'tableEditor',
           widget: 'table-editor',
@@ -679,6 +743,7 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
     {
       id: 'table-header-style',
       title: 'Header Style',
+      tab: 'style',
       fields: [
         {
           kind: 'css-color',
@@ -754,18 +819,35 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         width: DEFAULT_RESOLVED_PRINT_SETTINGS.pageWidthPx,
         height: DEFAULT_RESOLVED_PRINT_SETTINGS.pageHeightPx,
       },
-      layout: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
-        padding: `${DEFAULT_RESOLVED_PRINT_SETTINGS.marginPx}px`,
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
+      layout: createPageLayout(`${DEFAULT_RESOLVED_PRINT_SETTINGS.marginPx}px`),
       metadata: {},
     },
     hierarchy: {
-      allowedChildren: ['section', 'totals', 'table', 'dynamic-table', 'image', 'logo', 'qr', 'signature', 'attachment-list', 'action-button'],
+      // The page is a vertical stack like any container: blocks sit on it
+      // directly, and sections are an optional grouping, not a prerequisite.
+      allowedChildren: [
+        'section',
+        'container',
+        'text',
+        'richText',
+        'field',
+        'label',
+        'subtotal',
+        'tax',
+        'discount',
+        'custom-total',
+        'totals',
+        'table',
+        'dynamic-table',
+        'image',
+        'logo',
+        'qr',
+        'signature',
+        'attachment-list',
+        'action-button',
+        'divider',
+        'spacer',
+      ],
       allowedParents: ['document'],
     },
     inspector: COMMON_INSPECTOR,
@@ -815,7 +897,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['page'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, SECTION_INSPECTOR),
+    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, SECTION_INSPECTOR),
   },
   column: {
     type: 'column',
@@ -859,15 +941,16 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 320, height: 60 },
+      // Empty, so typing starts fresh; the canvas shows a "Text" placeholder meanwhile.
       metadata: {
-        text: 'Text',
+        text: '',
       },
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
+    inspector: mergeInspectorSchemas(TEXT_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   richText: {
     type: 'richText',
@@ -882,9 +965,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
+    inspector: mergeInspectorSchemas(TEXT_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   totals: {
     type: 'totals',
@@ -893,17 +976,26 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Content',
     defaults: {
       size: { width: 360, height: 140 },
+      // A summary box: invoice-width, on the right, under the line items.
       style: {
-        width: '100%',
+        width: '300px',
         height: 'auto',
+        margin: '0px 0px 0px auto',
       },
-      metadata: {},
+      metadata: {
+        // Same rows the exporter falls back to, materialized so they can be edited.
+        totalsRows: [
+          { id: 'subtotal', label: 'Subtotal', __astLabelI18n: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, valuePath: 'subtotal', format: 'currency', type: 'currency', emphasize: false },
+          { id: 'tax', label: 'Tax', __astLabelI18n: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, valuePath: 'tax', format: 'currency', type: 'currency', emphasize: false },
+          { id: 'total', label: 'Total', __astLabelI18n: { i18nKey: 'labels.total', defaultValue: 'Total' }, valuePath: 'total', format: 'currency', type: 'currency', emphasize: true },
+        ],
+      },
     },
     hierarchy: {
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROWS_INSPECTOR),
+    inspector: mergeInspectorSchemas(TOTALS_ROWS_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   table: {
     type: 'table',
@@ -917,12 +1009,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         height: 'auto',
       },
       metadata: {
-        columns: [
-          { id: 'col-desc', header: 'Description', key: 'item.description', type: 'text', width: 220 },
-          { id: 'col-qty', header: 'Qty', key: 'item.quantity', type: 'number', width: 60 },
-          { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency', width: 100 },
-          { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency', width: 120 },
-        ],
+        columns: createDefaultLineItemColumns(),
         tableBorderPreset: 'boxed',
         tableOuterBorder: true,
         tableRowDividers: true,
@@ -934,7 +1021,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
+    inspector: mergeInspectorSchemas(TABLE_INSPECTOR, COMMON_INSPECTOR),
   },
   'dynamic-table': {
     type: 'dynamic-table',
@@ -948,6 +1035,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         height: 'auto',
       },
       metadata: {
+        // The columns the canvas shows for an unconfigured table, made real so
+        // the inspector and canvas agree from the start.
+        columns: createDefaultLineItemColumns(),
         tableBorderPreset: 'boxed',
         tableOuterBorder: true,
         tableRowDividers: true,
@@ -959,7 +1049,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TABLE_INSPECTOR),
+    inspector: mergeInspectorSchemas(TABLE_INSPECTOR, COMMON_INSPECTOR),
   },
   field: {
     type: 'field',
@@ -975,6 +1065,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       },
       metadata: {
         bindingKey: 'invoice.number',
+        // Labelled like its default binding, translated for each recipient.
+        label: 'Invoice #',
+        __astLabelI18n: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' },
         format: 'text',
         placeholder: 'Invoice Number',
         fieldBorderStyle: 'none',
@@ -982,9 +1075,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, FIELD_INSPECTOR),
+    inspector: mergeInspectorSchemas(FIELD_INSPECTOR, VALUE_TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   label: {
     type: 'label',
@@ -1000,9 +1093,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, LABEL_INSPECTOR),
+    inspector: mergeInspectorSchemas(LABEL_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   subtotal: {
     type: 'subtotal',
@@ -1019,9 +1112,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
+    inspector: mergeInspectorSchemas(TOTALS_ROW_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   tax: {
     type: 'tax',
@@ -1038,9 +1131,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
+    inspector: mergeInspectorSchemas(TOTALS_ROW_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   discount: {
     type: 'discount',
@@ -1057,9 +1150,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_ROW_INSPECTOR),
+    inspector: mergeInspectorSchemas(TOTALS_ROW_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   'custom-total': {
     type: 'custom-total',
@@ -1076,9 +1169,9 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, CUSTOM_TOTAL_INSPECTOR),
+    inspector: mergeInspectorSchemas(CUSTOM_TOTAL_INSPECTOR, TYPOGRAPHY_INSPECTOR, COMMON_INSPECTOR),
   },
   image: {
     type: 'image',
@@ -1101,14 +1194,19 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
   logo: {
     type: 'logo',
     label: 'Logo',
-    description: 'Tenant branding asset.',
+    description: 'Your company logo from branding settings.',
     category: 'Media',
     defaults: {
-      size: { width: 200, height: 120 },
+      size: { width: 180, height: 72 },
+      // A letterhead-sized frame (from `size`), left-aligned, never taller than 72px.
       style: {
+        maxHeight: '72px',
         objectFit: 'contain',
+        objectPosition: 'left center',
       },
-      metadata: {},
+      metadata: {
+        srcBinding: 'tenantLogo',
+      },
     },
     hierarchy: {
       allowedChildren: [],
@@ -1151,7 +1249,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section', 'page'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, SIGNATURE_INSPECTOR),
+    inspector: mergeInspectorSchemas(SIGNATURE_INSPECTOR, COMMON_INSPECTOR),
   },
   'action-button': {
     type: 'action-button',
@@ -1170,7 +1268,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section', 'page'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, ACTION_BUTTON_INSPECTOR),
+    inspector: mergeInspectorSchemas(ACTION_BUTTON_INSPECTOR, COMMON_INSPECTOR),
   },
   'attachment-list': {
     type: 'attachment-list',
@@ -1201,7 +1299,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -1216,7 +1314,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -1227,11 +1325,12 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     category: 'Structure',
     defaults: {
       size: { width: 320, height: 120 },
+      // A plain grouping box: no inner padding until it is styled as a card.
       layout: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        padding: '16px',
+        gap: '8px',
+        padding: '0px',
         justifyContent: 'flex-start',
         alignItems: 'stretch',
       },
@@ -1260,7 +1359,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'spacer',
         'container',
       ],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['page', 'column', 'container', 'section'],
     },
     inspector: CONTAINER_INSPECTOR,
   },

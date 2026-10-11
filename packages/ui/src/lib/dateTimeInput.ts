@@ -275,6 +275,35 @@ export function isTypableTimeText(raw: string): boolean {
   return /^(\d{1,2}[:.]\d{0,2}|\d{0,4})$/.test(numericPart);
 }
 
+/**
+ * What a controlled input's edit did to its text, by common prefix and suffix.
+ *
+ * `inserted` is what the user typed or pasted, `removed` is how many characters
+ * of `previous` it replaced. A plain keystroke at a caret has `removed === 0`.
+ */
+export function diffTextEdit(
+  previous: string,
+  next: string
+): { inserted: string; removed: number; start: number } {
+  const shortest = Math.min(previous.length, next.length);
+  let start = 0;
+  while (start < shortest && previous[start] === next[start]) start += 1;
+
+  let tail = 0;
+  while (
+    tail < shortest - start &&
+    previous[previous.length - 1 - tail] === next[next.length - 1 - tail]
+  ) {
+    tail += 1;
+  }
+
+  return {
+    inserted: next.slice(start, next.length - tail),
+    removed: previous.length - start - tail,
+    start,
+  };
+}
+
 export function timeToMinutes(value: string): number {
   const [hour, minute] = value.split(':');
   return parseInt(hour, 10) * 60 + parseInt(minute, 10);

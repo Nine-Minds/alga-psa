@@ -1,6 +1,8 @@
 import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
+import { globSync } from 'tinyglobby';
+import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -8,6 +10,53 @@ fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 // Default local runs to UTC so results match CI; set TZ explicitly to
 // exercise another zone.
 process.env.TZ = process.env.TZ || 'UTC';
+
+// Vitest only forwards a whitelist of CLI options into project configs, and
+// `poolOptions` is not on it — so `--poolOptions.forks.singleFork=false` stops
+// reaching the workers the moment a lane declares projects (the jsdom/node
+// split below). The shard runner's fresh-fork-per-file guarantee therefore
+// travels in the environment instead, where every project can read it.
+const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
+
+const SERVER_UNIT_INCLUDE = [
+  '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
+  'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  // shared/ carries ~120 test files (inbound email, billing schedule,
+  // workflow actions) that gated nothing before this line: the CI job
+  // passed ../shared as a CLI filter, but filters only narrow the include
+  // set, so they silently matched zero files.
+  '../shared/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
+];
+
+// The visual golden suite launches Chromium + Postgres and depends on
+// machine-local fonts; it is a manual template-review tool, never part of
+// an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
+const SERVER_UNIT_EXCLUDE = [
+  '**/node_modules/**',
+  ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
+  // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
+  // live Postgres database and mutate DB_* env for the whole fork — they
+  // are integration tests by naming convention. The CI unit-coverage job
+  // opts out (it runs without a database, same reason src/test/integration
+  // isn't in it); local full runs with a DB still include them.
+  // Both patterns needed: `**` never crosses the literal `..` segment
+  // (dot-directory), so the bare pattern misses ../shared and ../packages.
+  ...(process.env.SKIP_DB_TESTS === '1'
+    ? ['**/*.db.test.?(c|m)[jt]s?(x)', '../**/*.db.test.?(c|m)[jt]s?(x)']
+    : []),
+];
+
+// Two projects that tile a lane's file set. The file list is resolved here,
+// with the same globber and options vitest itself uses (Vitest#globFiles), so
+// their union is the lane exactly; the jsdom/node rule that splits it lives in
+// scripts/lib, which stays importable without node_modules for the CI gate.
+export function makeEnvironmentProjects({ include, exclude }: { include: string[]; exclude: string[] }) {
+  const files = globSync(include, { dot: true, cwd: __dirname, ignore: exclude, expandDirectories: false });
+  return environmentProjects(partitionByEnvironment(files, __dirname));
+}
 
 export default defineConfig({
   // The repo's tsconfig sets `jsx: "preserve"` (Next.js/SWC compiles JSX with
@@ -26,35 +75,32 @@ export default defineConfig({
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
-    include: [
-      '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
-      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      // shared/ carries ~120 test files (inbound email, billing schedule,
-      // workflow actions) that gated nothing before this line: the CI job
-      // passed ../shared as a CLI filter, but filters only narrow the include
-      // set, so they silently matched zero files.
-      '../shared/**/*.{test,spec}.?(c|m)[jt]s?(x)',
-      '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
-    ],
-    // The visual golden suite launches Chromium + Postgres and depends on
-    // machine-local fonts; it is a manual template-review tool, never part of
-    // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
-    exclude: [
-      '**/node_modules/**',
-      ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
-      // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
-      // live Postgres database and mutate DB_* env for the whole fork — they
-      // are integration tests by naming convention. The CI unit-coverage job
-      // opts out (it runs without a database, same reason src/test/integration
-      // isn't in it); local full runs with a DB still include them.
-      // Both patterns needed: `**` never crosses the literal `..` segment
-      // (dot-directory), so the bare pattern misses ../shared and ../packages.
-      ...(process.env.SKIP_DB_TESTS === '1'
-        ? ['**/*.db.test.?(c|m)[jt]s?(x)', '../**/*.db.test.?(c|m)[jt]s?(x)']
-        : []),
-    ],
+    include: SERVER_UNIT_INCLUDE,
+    exclude: SERVER_UNIT_EXCLUDE,
+    projects: makeEnvironmentProjects({ include: SERVER_UNIT_INCLUDE, exclude: SERVER_UNIT_EXCLUDE }),
+    // A stubbed global or env var outlives its test in this shared fork. The
+    // per-test sweep in src/test/setup.ts undoes them; the matching vitest
+    // options are deliberately NOT set here, and neither is `restoreMocks`:
+    //
+    // - `unstubEnvs`/`unstubGlobals` run before EVERY test, so a stub
+    //   established in beforeAll is gone by the time the first test reads it
+    //   (measured: with them, a beforeAll stubEnv reads undefined in tests 1
+    //   and 2; without, both read the stub). Every lane that spreads this
+    //   `test` object inherits them — including the DB-backed integration lane,
+    //   which has no config of its own (server/package.json test:integration*
+    //   and scripts/run-tier1-integration.mjs all run this file). Those suites
+    //   legitimately establish shared state in beforeAll: an emulator's dynamic
+    //   port, a collab API key, a hocuspocus URL. Turning the options on made
+    //   microsoftCalendarEmulator.integration fail 12/12. The setup sweep is
+    //   scoped to the unit lanes for the same reason and keeps the guarantee
+    //   the card asked for; these options cannot be scoped that way.
+    // - `restoreMocks`: measured on shard 1 of 4 it turns 13 suites red on its
+    //   own (~50 extrapolated across the four), because they build their module
+    //   mocks' vi.fn() implementations once at module scope or in beforeAll and
+    //   mockRestore strips the implementation after the first test. Worth
+    //   doing; far past this card's 15-file repair cap, so it needs its own.
+    //
+    // evidence/vitest-env-hygiene-baseline.md records both measurements.
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
@@ -73,10 +119,10 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       threads: {
-        singleThread: true
+        singleThread: singleFork
       },
       forks: {
-        singleFork: true
+        singleFork
       }
     },
     logHeapUsage: true,
@@ -203,6 +249,7 @@ export default defineConfig({
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
+      { find: /^@alga-psa\/auth\/components\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/$1') },
       { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
@@ -211,6 +258,11 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/apiAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/apiAuth.ts') },
       { find: /^@alga-psa\/auth\/types\/next-auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/types/next-auth.ts') },
       { find: /^@alga-psa\/auth\/lib\/sso\/mspSsoResolution$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/sso/mspSsoResolution.ts') },
+      { find: /^@alga-psa\/auth\/lib\/sso\/registry$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/sso/registry.ts') },
+      { find: /^@alga-psa\/auth\/lib\/sso\/enterpriseRegistryEntry$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/sso/enterpriseRegistryEntry.ts') },
+      { find: /^@alga-psa\/auth\/lib\/sso\/clientPortalSsoResolution$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/sso/clientPortalSsoResolution.ts') },
+      { find: /^@alga-psa\/auth\/lib\/PortalDomainModel$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/PortalDomainModel.ts') },
+      { find: /^@alga-psa\/auth\/lib\/PortalDomainSessionToken$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/PortalDomainSessionToken.ts') },
       { find: /^@alga-psa\/auth\/deviceFingerprint$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/deviceFingerprint.ts') },
       { find: /^@alga-psa\/auth\/ipAddress$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/ipAddress.ts') },
       { find: /^@alga-psa\/auth\/geolocation$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/geolocation.ts') },

@@ -237,15 +237,16 @@ function buildBrandDecorator(
 
   // The written row references the logo by content-id, never by URL: the bytes
   // are attached at send time. Only the variant is decided here — the shape the
-  // tenant picked, in the artwork that reads on the header this palette paints —
-  // and only one the tenant has actually uploaded may be written.
+  // tenant picked, in the artwork that reads on the header this palette paints
+  // or the one they pinned — and only one the tenant has actually uploaded may
+  // be written.
   const variant: EmailBrandingLogoVariant | null = palette.logo
     ? pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {
         logoUrl: branding?.logoUrl || undefined,
         logoDarkUrl: branding?.logoDarkUrl || undefined,
         logoWideUrl: branding?.logoWideUrl || undefined,
         logoWideDarkUrl: branding?.logoWideDarkUrl || undefined,
-      })
+      }, palette.logo.artwork)
     : null;
   const logo = variant ? { variant, alt: branding?.clientName ?? '' } : undefined;
   const hideAttribution = palette.hideAttribution === true;

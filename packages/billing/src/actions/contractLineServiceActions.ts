@@ -53,7 +53,7 @@ type ContractLineServiceWithConfiguration = {
 type TemplateLineServiceWithConfiguration = {
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
-  typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   bucketConfig?: IContractLineServiceBucketConfig | null;
 };
 
@@ -524,6 +524,9 @@ async function removeServiceFromTemplateLine(
     .select('config_id');
   if (templateConfigs.length > 0) {
     const configIds = (templateConfigs as Array<{ config_id: string }>).map((config) => config.config_id);
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_fixed_config')
+      .whereIn('config_id', configIds)
+      .delete();
     await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
       .whereIn('config_id', configIds)
       .delete();
@@ -874,7 +877,11 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
         let typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null =
           null;
 
-        if (config.configuration_type === 'Bucket') {
+        if (config.configuration_type === 'Fixed') {
+          typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_fixed_config')
+            .where({ config_id: config.config_id })
+            .first() ?? null;
+        } else if (config.configuration_type === 'Bucket') {
           typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
             .where({ config_id: config.config_id })
             .first();
@@ -1048,12 +1055,19 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
       }
 
       let typeConfig:
+        | IContractLineServiceFixedConfig
         | IContractLineServiceHourlyConfig
         | IContractLineServiceUsageConfig
         | IContractLineServiceBucketConfig
         | null = null;
 
-      if (configToUse.configuration_type === 'Bucket') {
+      if (configToUse.configuration_type === 'Fixed') {
+        typeConfig = (await tenantScopedTable(trx, tenant, 'contract_template_line_service_fixed_config')
+          .where({
+            config_id: configToUse.config_id,
+          })
+          .first()) ?? null;
+      } else if (configToUse.configuration_type === 'Bucket') {
         typeConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
           .where({
             config_id: configToUse.config_id,

@@ -24,6 +24,7 @@ import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
+import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
@@ -226,6 +227,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isBundleMirror = Boolean(conversation.bundle_mirror_source);
   const isSystemAuthor = resolvedAuthor.source === 'system';
 
+  // LEVERAGE: pattern comment-author-label — same author-label rules as resolveLatestActivityActor (lib/latestActivityActor.ts)
   const getAuthorName = () => {
     if (isSystemAuthor) {
       return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
@@ -258,6 +260,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation]
   );
   const authorEmail = getAuthorEmail();
+
+  // One-off Cc/Bcc for this single comment. Bcc is MSP-only: the client-portal
+  // loaders and actions strip it before the comment ever reaches this render.
+  const emailRecipientLines = useMemo(() => {
+    const recipients = readCommentEmailRecipients(conversation.metadata);
+    if (!recipients) return [] as Array<{ label: string; names: string }>;
+    const describe = (entry: { email: string; name?: string }) => entry.name || entry.email;
+    const lines: Array<{ label: string; names: string }> = [];
+    if (recipients.cc.length > 0) {
+      lines.push({ label: t('conversation.cc', 'Cc'), names: recipients.cc.map(describe).join(', ') });
+    }
+    if (recipients.bcc.length > 0) {
+      lines.push({ label: t('conversation.bcc', 'Bcc'), names: recipients.bcc.map(describe).join(', ') });
+    }
+    return lines;
+  }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
 
   // Only allow users to edit their own comments
@@ -674,6 +692,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   </p>
                 </div>
               )}
+              {emailRecipientLines.length > 0 && (
+                <div
+                  {...withDataAutomationId({ id: `${commentId}-email-recipients` })}
+                  className="flex flex-col min-w-0 text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]"
+                >
+                  {emailRecipientLines.map((line) => (
+                    <span key={line.label} className="break-words min-w-0">
+                      {line.label}: {line.names}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {(canCopy || (onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
@@ -755,10 +785,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
                     isCompact
                       ? // Compact: shrink the editor's side-menu horizontal padding to the 4px
-                        // node-selection ring width (offset by -mx-1 so text keeps its x), and
-                        // hide BlockNote's always-appended trailing empty block (identified by
-                        // its ProseMirror trailing break) so a one-line comment reads as one line.
-                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
+                        // node-selection ring width (offset by -mx-1 so text keeps its x).
+                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1'
                       : 'mt-1'
                   }`}
                   style={{ overflowWrap: 'anywhere' }}

@@ -94,6 +94,7 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import {
+    ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     assetActionErrorFrom,
     type AssetActionError,
 } from './assetActionErrors';
@@ -189,6 +190,7 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
     if (
         message === 'Asset not found' ||
         message === 'Selected location is not available for this client' ||
+        message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -248,6 +250,15 @@ function pruneNullishValues(value: unknown): unknown {
     return value === null ? undefined : value;
 }
 
+// Extension number columns that are nullable in the database (see
+// 20241112031335_implement_asset_extension_tables.cjs); "empty" means unknown.
+const NULLABLE_EXTENSION_NUMBER_KEYS = {
+    workstation: ['cpu_cores', 'ram_gb', 'storage_capacity_gb'],
+    network_device: ['port_count', 'power_draw_watts'],
+    server: ['cpu_cores', 'ram_gb'],
+    printer: ['max_paper_size', 'monthly_duty_cycle'],
+} as const;
+
 function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     const sanitized = {
         ...data,
@@ -274,9 +285,27 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
         }))(data.printer) : undefined
     };
 
-    const cleaned = pruneNullishValues(sanitized) as UpdateAssetRequest;
+    // A payload made only of explicit nulls prunes to undefined; restore the object so they can be re-attached.
+    const cleaned = (pruneNullishValues(sanitized) ?? {}) as UpdateAssetRequest;
     if (data.location_id === null) {
         cleaned.location_id = null;
+    }
+    // An explicit null clears the assignee; pruneNullishValues would drop it.
+    if (data.contact_name_id === null) {
+        cleaned.contact_name_id = null;
+    }
+    // pruneNullishValues deletes null, which would turn "clear this field" into
+    // "keep the stored value". An explicit null on a nullable extension number
+    // column means clear it (alga0002283), like location_id above.
+    for (const [type, keys] of Object.entries(NULLABLE_EXTENSION_NUMBER_KEYS) as Array<[keyof typeof NULLABLE_EXTENSION_NUMBER_KEYS, readonly string[]]>) {
+        const source = data[type] as Record<string, unknown> | undefined;
+        if (!source) continue;
+        const explicitNulls = keys.filter((key) => source[key] === null);
+        if (explicitNulls.length === 0) continue;
+        // pruneNullishValues drops a sub-object that ends up empty, so recreate it.
+        const target = ((cleaned as Record<string, unknown>)[type] ?? {}) as Record<string, unknown>;
+        for (const key of explicitNulls) target[key] = null;
+        (cleaned as Record<string, unknown>)[type] = target;
     }
     return cleaned;
 }
@@ -313,6 +342,40 @@ async function resolveValidatedAssetLocation(
         location_id: location.location_id,
         location: formatClientLocation(location),
     };
+}
+
+/**
+ * Validates the contact an asset is assigned to. The contact must exist in the
+ * tenant, belong to the asset's (effective) client and be a real person, not a
+ * shared mailbox. `undefined` means "not provided" and `null` clears.
+ */
+async function resolveValidatedAssetContact(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    contactNameId: string | null | undefined
+): Promise<{ contact_name_id: string | null } | undefined> {
+    if (contactNameId === undefined) {
+        return undefined;
+    }
+
+    if (contactNameId === null) {
+        return { contact_name_id: null };
+    }
+
+    const contact = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({
+            contact_name_id: contactNameId,
+            client_id: clientId,
+        })
+        .whereNot({ contact_kind: 'shared_mailbox' })
+        .first<{ contact_name_id: string }>('contact_name_id');
+
+    if (!contact) {
+        throw new Error(ASSET_CONTACT_UNAVAILABLE_MESSAGE);
+    }
+
+    return { contact_name_id: contact.contact_name_id };
 }
 
 type AssetAuthUser = {
@@ -659,7 +722,11 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
     });
 
-    return asset;
+    // Same normalisation every other read path applies (getAssetDetailBundle,
+    // create, update): pg returns NUMERIC columns as strings and timestamps as
+    // Date, neither of which matches the declared Asset contract or what the
+    // edit form can round-trip back through updateAssetSchema (alga0002283).
+    return formatAssetForOutput(asset);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -735,6 +802,14 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
     }
 });
 
+// pg returns NUMERIC as a string and integers as numbers; NULL stays null
+// ("unknown") instead of being coerced to 0.
+function nullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 function formatAssetForOutput(asset: any): Asset {
     // Format base asset data
     const formattedAsset = {
@@ -756,6 +831,8 @@ function formatAssetForOutput(asset: any): Asset {
         serial_number: asset.serial_number || undefined,
         location: asset.location || undefined,
         location_id: asset.location_id ?? null,
+        contact_name_id: asset.contact_name_id ?? null,
+        contact_name: asset.contact_name ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -769,9 +846,15 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.workstation && {
             workstation: {
                 ...asset.workstation,
-                cpu_cores: Number(asset.workstation.cpu_cores) || 0,
-                ram_gb: Number(asset.workstation.ram_gb) || 0,
-                storage_capacity_gb: Number(asset.workstation.storage_capacity_gb) || 0,
+                // Non-null string columns are `z.string()` in the output schema;
+                // legacy and RMM-created rows can hold NULL.
+                os_type: asset.workstation.os_type ?? '',
+                os_version: asset.workstation.os_version ?? '',
+                cpu_model: asset.workstation.cpu_model ?? '',
+                storage_type: asset.workstation.storage_type ?? '',
+                cpu_cores: nullableNumber(asset.workstation.cpu_cores),
+                ram_gb: nullableNumber(asset.workstation.ram_gb),
+                storage_capacity_gb: nullableNumber(asset.workstation.storage_capacity_gb),
                 gpu_model: asset.workstation.gpu_model || undefined,
                 last_login: asset.workstation.last_login
                     ? new Date(asset.workstation.last_login).toISOString()
@@ -785,8 +868,10 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.network_device && {
             network_device: {
                 ...asset.network_device,
-                port_count: Number(asset.network_device.port_count) || 0,
-                power_draw_watts: Number(asset.network_device.power_draw_watts) || 0,
+                management_ip: asset.network_device.management_ip ?? '',
+                firmware_version: asset.network_device.firmware_version ?? '',
+                port_count: nullableNumber(asset.network_device.port_count),
+                power_draw_watts: nullableNumber(asset.network_device.power_draw_watts),
                 vlan_config: asset.network_device.vlan_config || {},
                 port_config: asset.network_device.port_config || {}
             }
@@ -795,8 +880,11 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.server && {
             server: {
                 ...asset.server,
-                cpu_cores: Number(asset.server.cpu_cores) || 0,
-                ram_gb: Number(asset.server.ram_gb) || 0,
+                os_type: asset.server.os_type ?? '',
+                os_version: asset.server.os_version ?? '',
+                cpu_model: asset.server.cpu_model ?? '',
+                cpu_cores: nullableNumber(asset.server.cpu_cores),
+                ram_gb: nullableNumber(asset.server.ram_gb),
                 storage_config: Array.isArray(asset.server.storage_config)
                     ? asset.server.storage_config
                     : [],
@@ -815,6 +903,9 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.mobile_device && {
             mobile_device: {
                 ...asset.mobile_device,
+                os_type: asset.mobile_device.os_type ?? '',
+                os_version: asset.mobile_device.os_version ?? '',
+                model: asset.mobile_device.model ?? '',
                 imei: asset.mobile_device.imei || undefined,
                 phone_number: asset.mobile_device.phone_number || undefined,
                 carrier: asset.mobile_device.carrier || undefined,
@@ -830,9 +921,10 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.printer && {
             printer: {
                 ...asset.printer,
+                model: asset.printer.model ?? '',
                 ip_address: asset.printer.ip_address || undefined,
-                max_paper_size: asset.printer.max_paper_size != null ? Number(asset.printer.max_paper_size) : undefined,
-                monthly_duty_cycle: asset.printer.monthly_duty_cycle != null ? Number(asset.printer.monthly_duty_cycle) : undefined,
+                max_paper_size: nullableNumber(asset.printer.max_paper_size),
+                monthly_duty_cycle: nullableNumber(asset.printer.monthly_duty_cycle),
                 supported_paper_types: Array.isArray(asset.printer.supported_paper_types)
                     ? asset.printer.supported_paper_types
                     : [],
@@ -842,6 +934,31 @@ function formatAssetForOutput(asset: any): Asset {
     };
 
     return formattedAsset;
+}
+
+/**
+ * Post-commit side effects (workflow events, date-event emission) are
+ * best-effort: the asset write has already committed, so a failure here must
+ * never turn a successful save into a reported failure (alga0002283). Failures
+ * are logged with tenant / asset / event type and never re-thrown.
+ *
+ * Trade-off: ASSET_CREATED / ASSET_UPDATED / ASSET_ASSIGNED have no retry. Only
+ * ASSET_WARRANTY_EXPIRING is recovered, by the daily warranty scan, because
+ * emitDateDomainEventOnce deletes its dedupe row when publishing fails.
+ */
+async function runAssetPostCommitEffects(
+    eventType: string,
+    ctx: { tenant: string; assetId: string },
+    effect: () => Promise<unknown>
+): Promise<void> {
+    try {
+        await effect();
+    } catch (error) {
+        console.error(
+            `Post-commit effect failed (tenant=${ctx.tenant} asset_id=${ctx.assetId} event=${eventType}); the asset write is committed:`,
+            error
+        );
+    }
 }
 
 /**
@@ -878,6 +995,13 @@ export async function createAssetInTransaction(
                 validatedData.location_id
             );
 
+            const selectedContact = await resolveValidatedAssetContact(
+                trx,
+                tenant,
+                validatedData.client_id,
+                validatedData.contact_name_id
+            );
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
@@ -890,6 +1014,7 @@ export async function createAssetInTransaction(
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
                     : (selectedLocation?.location ?? ''),
+                contact_name_id: selectedContact?.contact_name_id ?? null,
                 serial_number: validatedData.serial_number || '',
                 created_at: now,
                 updated_at: now,
@@ -929,8 +1054,11 @@ export async function createAssetInTransaction(
             // Get complete asset data including extension table data
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset.asset_id);
 
-            // Format the asset data properly before returning
-            return formatAssetForOutput(completeAsset) as Asset;
+            // Format the asset data properly before returning. The output-schema
+            // check runs here, inside the transaction: a failure rolls the insert
+            // back and is reported honestly instead of failing a committed create
+            // (alga0002283).
+            return validateData(assetSchema, formatAssetForOutput(completeAsset)) as Asset;
 }
 
 /**
@@ -962,17 +1090,16 @@ export async function createAssetRecord(
             throw new Error('Invalid asset input data. Review required fields and try again.');
         }
 
-        // Start transaction
-        const result = await knex.transaction(async (trx: Knex.Transaction) =>
+        // Start transaction. The output-schema check lives inside it.
+        const created = await knex.transaction(async (trx: Knex.Transaction) =>
             createAssetInTransaction(trx, tenant, actorUserId, data, options)
         );
 
-        // Validate the formatted output
-        try {
-            const created = validateData(assetSchema, result) as Asset;
-            const occurredAt = created.created_at || new Date().toISOString();
+        const occurredAt = created.created_at || new Date().toISOString();
+        const postCommit = { tenant, assetId: created.asset_id };
 
-            await publishWorkflowEvent({
+        await runAssetPostCommitEffects('ASSET_CREATED', postCommit, () =>
+            publishWorkflowEvent({
                 eventType: 'ASSET_CREATED',
                 payload: buildAssetCreatedPayload({
                     assetId: created.asset_id,
@@ -987,16 +1114,18 @@ export async function createAssetRecord(
                     occurredAt,
                     actor: { actorType: 'USER', actorUserId },
                 },
-            });
+            })
+        );
 
-            const warranty = computeAssetWarrantyExpiring({
-                now: occurredAt,
-                previousExpiresAt: undefined,
-                newExpiresAt: created.warranty_end_date ?? null,
-                windowDays: 30,
-            });
+        const warranty = computeAssetWarrantyExpiring({
+            now: occurredAt,
+            previousExpiresAt: undefined,
+            newExpiresAt: created.warranty_end_date ?? null,
+            windowDays: 30,
+        });
 
-            if (warranty) {
+        if (warranty) {
+            await runAssetPostCommitEffects('ASSET_WARRANTY_EXPIRING', postCommit, async () => {
                 const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
                 await emitDateDomainEventOnce(knex, tenant, {
                     eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
@@ -1012,17 +1141,10 @@ export async function createAssetRecord(
                         actor: { actorType: 'USER', actorUserId },
                     },
                 });
-            }
-
-            return created;
-        } catch (error) {
-            console.error('Output validation error:', error);
-            // Extract Zod validation details if available
-            if (error instanceof z.ZodError) {
-                throw serializedAssetValidationError(error);
-            }
-            throw new Error('Server error: Invalid output data format');
+            });
         }
+
+        return created;
 
     } catch (error) {
         console.error('Error creating asset:', error);
@@ -1157,6 +1279,21 @@ export async function updateAssetRecord(
                 }
             }
 
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'contact_name_id')) {
+                const selectedContact = await resolveValidatedAssetContact(
+                    trx,
+                    tenant,
+                    (baseCandidate.client_id as string | undefined) ?? asset.client_id,
+                    baseCandidate.contact_name_id as string | null | undefined
+                );
+                if (selectedContact) {
+                    baseCandidate.contact_name_id = selectedContact.contact_name_id;
+                }
+            } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.contact_name_id) {
+                // The assignee belongs to the previous client; moving the asset clears it.
+                baseCandidate.contact_name_id = null;
+            }
+
             // Update base asset fields (excluding extension payloads)
             const baseUpdateData: Record<string, unknown> = {};
             Object.entries(baseCandidate).forEach(([key, value]) => {
@@ -1210,9 +1347,15 @@ export async function updateAssetRecord(
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
             const afterFormatted = formatAssetForOutput(completeAsset) as unknown as Record<string, unknown>;
 
+            // Output-schema check inside the transaction: a failure rolls the write
+            // back and is reported honestly instead of failing a committed save
+            // (alga0002283).
+            const updated = validateData(assetSchema, afterFormatted) as Asset;
+
             return {
                 before: beforeFormatted,
                 after: afterFormatted,
+                updated,
                 validatedUpdate: validatedData as unknown as Record<string, unknown>,
             };
         });
@@ -1224,8 +1367,9 @@ export async function updateAssetRecord(
             revalidatePath(`/msp/assets/${asset_id}`);
         }
 
-        const updated = validateData(assetSchema, result.after) as Asset;
+        const { updated } = result;
         const occurredAt = new Date().toISOString();
+        const postCommit = { tenant, assetId: asset_id };
 
         const updatedPaths = collectAssetUpdatedPaths(result.validatedUpdate);
         const updatePayload = buildAssetUpdatedPayload({
@@ -1238,36 +1382,40 @@ export async function updateAssetRecord(
         });
 
         if (updatePayload.updatedFields || updatePayload.changes) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_UPDATED',
-                payload: updatePayload,
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
-            });
+            await runAssetPostCommitEffects('ASSET_UPDATED', postCommit, () =>
+                publishWorkflowEvent({
+                    eventType: 'ASSET_UPDATED',
+                    payload: updatePayload,
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                })
+            );
         }
 
         const previousClientId = (result.before as any)?.client_id as string | undefined;
         const newClientId = (result.after as any)?.client_id as string | undefined;
         if (previousClientId && newClientId && previousClientId !== newClientId) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_ASSIGNED',
-                payload: buildAssetAssignedPayload({
-                    assetId: asset_id,
-                    previousOwnerType: 'client',
-                    previousOwnerId: previousClientId,
-                    newOwnerType: 'client',
-                    newOwnerId: newClientId,
-                    assignedAt: occurredAt,
-                }),
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
-            });
+            await runAssetPostCommitEffects('ASSET_ASSIGNED', postCommit, () =>
+                publishWorkflowEvent({
+                    eventType: 'ASSET_ASSIGNED',
+                    payload: buildAssetAssignedPayload({
+                        assetId: asset_id,
+                        previousOwnerType: 'client',
+                        previousOwnerId: previousClientId,
+                        newOwnerType: 'client',
+                        newOwnerId: newClientId,
+                        assignedAt: occurredAt,
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                })
+            );
         }
 
         const warranty = computeAssetWarrantyExpiring({
@@ -1278,20 +1426,22 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
-            await emitDateDomainEventOnce(knex, tenant, {
-                eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
-                cycleKey: warrantyDate, occursOn: warrantyDate,
-                payload: buildAssetWarrantyExpiringPayload({
-                    assetId: asset_id,
-                    clientId: newClientId || previousClientId,
-                    ...warranty,
-                }),
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
+            await runAssetPostCommitEffects('ASSET_WARRANTY_EXPIRING', postCommit, async () => {
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+                await emitDateDomainEventOnce(knex, tenant, {
+                    eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
+                    cycleKey: warrantyDate, occursOn: warrantyDate,
+                    payload: buildAssetWarrantyExpiringPayload({
+                        assetId: asset_id,
+                        clientId: newClientId || previousClientId,
+                        ...warranty,
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                });
             });
         }
 
@@ -1333,15 +1483,17 @@ export const updateAsset = withAuth(async (
         throw new Error('Permission denied: Cannot update assets');
     }
 
-    return updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
+    // `await` so a rejection from the core lands in the catch below and is returned.
+    return await updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
         authorize: async (trx) => {
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
         },
     });
     } catch (error) {
-        if (isTypedAssetWriteError(error)) {
-            throw error;
-        }
+        // Validation and invalid-type failures are RETURNED, not thrown: Next.js
+        // masks thrown server-action messages in production builds, which turned
+        // every validation failure into the generic "Failed to update asset"
+        // (alga0002283). `updateAssetRecord` still throws for sessionless callers.
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
         throw error;
@@ -1513,7 +1665,7 @@ export const bulkUpdateAssets = withAuth(async (
     user,
     _ctx,
     assetIds: string[],
-    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id'>
+    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id' | 'contact_name_id'>
 ): Promise<BulkAssetActionResponse | AssetActionError> => {
     try {
     if (!await hasPermission(user, 'asset', 'update')) {
@@ -1621,9 +1773,11 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     const assetQuery = tenantScopedTable(knex, 'assets', tenant)
         .select(
             'assets.*',
-            'clients.client_name'
+            'clients.client_name',
+            'contacts.full_name as contact_name'
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
@@ -1873,6 +2027,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     agent_status: 'assets.agent_status',
                     location: 'assets.location',
                     client_name: 'clients.client_name',
+                    contact_name: 'contacts.full_name',
                     created_at: 'assets.created_at',
                 };
                 return allowed[sortBy] ?? null;
@@ -1884,6 +2039,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
                 if (validatedParams.location_id) {
                     query.where('assets.location_id', validatedParams.location_id);
+                }
+                if (validatedParams.contact_name_id) {
+                    query.where('assets.contact_name_id', validatedParams.contact_name_id);
                 }
                 if (validatedParams.asset_type) {
                     query.where('assets.asset_type', validatedParams.asset_type);
@@ -1934,6 +2092,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             const buildAssetListQuery = () => {
                 const query = tenantScopedTable(trx, 'assets', tenant);
                 tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+                tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
 
                 applyFilters(query);
                 return query;
@@ -1945,7 +2104,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
                 const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name')
+                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);

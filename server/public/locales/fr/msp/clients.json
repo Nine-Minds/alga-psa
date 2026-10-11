@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Créer des contacts pour les nouveaux expéditeurs",
     "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
     "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
-    "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs."
+    "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs.",
+    "recurringTickets": "Tickets récurrents"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Statut",
     "actions": "Actions",
     "openMenu": "Ouvrir le menu",
+    "viewDetails": "Voir les détails",
     "unassign": "Annuler l'attribution",
     "loading": "Chargement des contrats...",
     "empty": "Aucun contrat n'a encore été attribué à ce client.",
@@ -1912,6 +1914,15 @@
       "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",
       "notThisClient": "L'un des contacts sélectionnés n'appartient pas au client de ce profil de facturation."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Service par défaut pour les saisies de temps",
+    "label": "Service par défaut pour les saisies de temps",
+    "placeholder": "Utiliser le paramètre par défaut de l’organisation",
+    "help": "Utilisé pour les nouvelles saisies de temps sur les tickets de ce client. Effacez la sélection pour utiliser le paramètre par défaut de l’organisation.",
+    "updatedSuccess": "Service par défaut pour les saisies de temps mis à jour.",
+    "saveError": "Impossible d’enregistrer le service par défaut pour les saisies de temps",
+    "loadError": "Impossible de charger le service par défaut pour les saisies de temps"
   },
   "clientAutopay": {
     "setupLinkTitle": "Lien de configuration de la carte",

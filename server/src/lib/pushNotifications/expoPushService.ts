@@ -32,7 +32,22 @@ export const PUSH_PRIORITY_DELIVERY: Record<PushPriority, {
   low: { priority: 'normal', interruptionLevel: 'passive', channelId: 'alga-priority-low', sound: null },
 };
 
-export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessage {
+export interface TaskPushParams {
+  expoPushToken: string;
+  title: string;
+  body: string;
+  taskId: string;
+  tenant: string;
+  priority?: PushPriority;
+}
+
+function buildPushMessage(params: {
+  expoPushToken: string;
+  title: string;
+  body: string;
+  priority?: PushPriority;
+  data: Record<string, unknown>;
+}): ExpoPushMessage {
   const priority = params.priority ?? 'normal';
   const delivery = PUSH_PRIORITY_DELIVERY[priority];
   return {
@@ -40,16 +55,27 @@ export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessag
     sound: delivery.sound,
     title: params.title,
     body: params.body,
-    data: {
-      ticketId: params.ticketId,
-      url: `alga://ticket/${params.ticketId}`,
-      // Payload metadata so the mobile app can render/sort by priority.
-      priority,
-    },
+    // Payload metadata so the mobile app can route the tap and render/sort by priority.
+    data: { ...params.data, priority },
     priority: delivery.priority,
     interruptionLevel: delivery.interruptionLevel,
     channelId: delivery.channelId,
   };
+}
+
+export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessage {
+  return buildPushMessage({
+    ...params,
+    data: { ticketId: params.ticketId, url: `alga://ticket/${params.ticketId}` },
+  });
+}
+
+/** Opens the task screen in the app; the deep-link layer accepts alga://project-task/{uuid}. */
+export function buildTaskPushMessage(params: TaskPushParams): ExpoPushMessage {
+  return buildPushMessage({
+    ...params,
+    data: { taskId: params.taskId, url: `alga://project-task/${params.taskId}` },
+  });
 }
 
 export interface PushSendResult {
