@@ -162,6 +162,17 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
  * per-unit configuration to, and a fractional quantity is not a seat count;
  * those keep the bundle pricing they always had.
  */
+/**
+ * The quoted recurring amount of a bundle-priced Fixed row: quantity x unit price in integer
+ * cents. Product rows keep their unit price (their per-unit rate lives on the member).
+ */
+function bundleLineTotal(item: IQuoteItem, productServiceIds: Set<string>): number {
+  if (isProductQuoteItem(item, productServiceIds)) {
+    return item.unit_price;
+  }
+  return Math.round(Number(item.quantity) * Number(item.unit_price));
+}
+
 function isUnitPricedRecurringItem(
   item: IQuoteItem,
   contractLineType: 'Fixed' | 'Hourly' | 'Usage',
@@ -231,6 +242,15 @@ function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, 
   }
 
   return shares;
+}
+
+/**
+ * A recurring item with no catalog service becomes a Fixed line with a recurring amount and
+ * nothing to bill it on; the billing engine refuses such a line (FIXED_LINE_NO_SERVICES), and
+ * the contract wizard cannot finish it. Conversion therefore refuses it up front.
+ */
+function serviceLessRecurringMessage(item: IQuoteItem): string {
+  return `Recurring item "${item.description}" must reference a catalog service before contract conversion`;
 }
 
 function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
@@ -520,6 +540,8 @@ export async function buildQuoteConversionPreview(
     : null;
 
   const contractItems: QuoteConversionPreviewItem[] = [];
+  let contractBlockedReason: string | null = null;
+  let contractBlockedItemDescription: string | null = null;
   const invoiceItems: QuoteConversionPreviewItem[] = [];
   const salesOrderItems: QuoteConversionPreviewItem[] = salesOrder
     ? salesOrder.lines.map((line) => {
@@ -541,6 +563,15 @@ export async function buildQuoteConversionPreview(
 
   for (const item of quoteItems) {
     if (recurringIds.has(item.quote_item_id)) {
+      if (!item.service_id) {
+        const message = serviceLessRecurringMessage(item);
+        if (!contractBlockedReason) {
+          contractBlockedReason = message;
+          contractBlockedItemDescription = item.description;
+        }
+        excludedItems.push(toPreviewItem(item, 'excluded', message, lookupName(item)));
+        continue;
+      }
       contractItems.push(toPreviewItem(item, 'contract', null, lookupName(item)));
       continue;
     }
@@ -597,13 +628,13 @@ export async function buildQuoteConversionPreview(
   }
 
   const availableActions: Array<'contract' | 'invoice' | 'both'> = [];
-  if (contractItems.length > 0) {
+  if (contractItems.length > 0 && !contractBlockedReason) {
     availableActions.push('contract');
   }
   if (invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('invoice');
   }
-  if (contractItems.length > 0 && invoiceItems.length > 0 && !invoiceError) {
+  if (contractItems.length > 0 && !contractBlockedReason && invoiceItems.length > 0 && !invoiceError) {
     availableActions.push('both');
   }
 
@@ -611,6 +642,8 @@ export async function buildQuoteConversionPreview(
     quote_id: quote.quote_id,
     available_actions: availableActions,
     invoice_error: invoiceError,
+    contract_blocked_reason: contractBlockedReason,
+    contract_blocked_item_description: contractBlockedItemDescription,
     contract_items: contractItems,
     invoice_items: invoiceItems,
     sales_order_items: salesOrderItems,
@@ -654,6 +687,11 @@ export async function convertQuoteToDraftContract(
   const recurringItems = getSelectedRecurringItems(quote.quote_items ?? []);
   if (recurringItems.length === 0) {
     throw new Error('Quote does not contain any recurring items selected for contract conversion');
+  }
+
+  const serviceLessItem = recurringItems.find((item) => !item.service_id);
+  if (serviceLessItem) {
+    throw new Error(serviceLessRecurringMessage(serviceLessItem));
   }
 
   const billingFrequency = recurringItems[0]?.billing_frequency || 'monthly';
@@ -704,7 +742,9 @@ export async function convertQuoteToDraftContract(
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
       // A per-unit line has no bundle total: quantity x unit rate is the charge.
-      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? item.unit_price : null,
+      // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
+      // amount (quantity x unit price), not the unit price alone.
+      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? bundleLineTotal(item, productServiceIds) : null,
       enable_proration: false,
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
@@ -765,7 +805,8 @@ export async function convertQuoteToDraftContract(
         tenant,
         config_id: configId,
         // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-        base_rate: item.unit_price,
+        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,

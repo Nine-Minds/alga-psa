@@ -676,7 +676,8 @@
       "openSalesOrders": "Open sales orders",
       "successBody": "Product lines will bill on fulfillment.",
       "successTitle": "Sales order {{number}} created"
-    }
+    },
+    "contractBlockedServiceless": "Recurring item \"{{description}}\" must reference a catalog service before contract conversion"
   },
   "quoteApproval": {
     "title": "Quote Approvals",

@@ -49,6 +49,10 @@ vi.mock('@alga-psa/billing/actions/bucketOverlayActions', () => ({
   upsertBucketOverlayInTransaction: vi.fn(),
 }));
 
+vi.mock('@alga-psa/shared/billingClients/contractMonthlyValue', () => ({
+  getContractMonthlyFixedValuesByContract: vi.fn(async () => new Map()),
+}));
+
 type KnexRow = Record<string, unknown> | null;
 
 function makeKnex(rows: { contracts?: KnexRow; client_contracts?: KnexRow }) {
@@ -119,7 +123,8 @@ describe('contract wizard resume client-owned drafts', () => {
       billing_frequency: 'monthly',
       currency_code: 'USD',
     });
-    expect(result.fixed_services).toEqual([]);
+    expect(result.fixed_lines).toEqual([]);
+    expect(result.recurring_baseline).toEqual({ monthly_cents: 0 });
     expect(result.product_services).toEqual([]);
     expect(result.hourly_services).toEqual([]);
     expect(result.usage_services).toEqual([]);

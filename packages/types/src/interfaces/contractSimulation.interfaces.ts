@@ -257,6 +257,42 @@ export interface ContractDraftBucketOverlayInput {
   billing_period?: "monthly" | "weekly";
 }
 
+/** One fixed-line service member in the contract wizard (shared by wizard, resume, template snapshot and simulator). */
+export interface ContractWizardFixedService {
+  service_id: string;
+  service_name?: string;
+  /** Allocation quantity for 'bundle'; recurring seats/units (whole number >= 0) for 'unit'. */
+  quantity: number;
+  /** 'bundle' shares the line base rate; 'unit' bills quantity × unit_rate. */
+  pricing_basis: FixedPricingBasis;
+  /** Minor units of the contract currency. Only used when pricing_basis is 'unit'. */
+  unit_rate?: number | null;
+  bucket_overlay?: ContractDraftBucketOverlayInput | null;
+  /** Draft-only resolved catalog rate in minor units. Never submitted. */
+  resolved_rate?: number | null;
+  /** Draft-only provenance for the resolved rate. Never submitted. */
+  resolved_rate_source?: "currency-price" | "catalog-default" | "none";
+}
+
+/** One recurring Fixed contract line as the wizard holds it. */
+export interface ContractWizardFixedLine {
+  /** Stable client key (uuid); the source contract_line_id on resume. */
+  line_key: string;
+  /** Informational; finalize does not reuse ids. */
+  source_contract_line_id?: string;
+  contract_line_name?: string;
+  description?: string | null;
+  location_id?: string | null;
+  /** Falls back to the contract billing_frequency. */
+  billing_frequency?: string;
+  /** Falls back to the contract billing_timing. */
+  billing_timing?: "arrears" | "advance";
+  enable_proration: boolean;
+  /** Bundle total in minor units; null/undefined follows the catalog. */
+  base_rate?: number | null;
+  services: ContractWizardFixedService[];
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -268,18 +304,7 @@ export interface ContractDraftSimulationInput {
   cadence_owner?: CadenceOwner;
   billing_timing?: "arrears" | "advance";
   enable_proration: boolean;
-  fixed_base_rate?: number;
-  fixed_billing_frequency?: string;
-  fixed_services: Array<{
-    service_id: string;
-    service_name?: string;
-    /** Allocation quantity for 'bundle'; recurring units (>= 0) for 'unit'. */
-    quantity: number;
-    pricing_basis?: FixedPricingBasis | null;
-    /** Minor units of the draft currency; null/absent follows the catalog price. Only for 'unit'. */
-    unit_rate?: number | null;
-    bucket_overlay?: ContractDraftBucketOverlayInput | null;
-  }>;
+  fixed_lines: ContractWizardFixedLine[];
   product_services: Array<{
     service_id: string;
     service_name?: string;

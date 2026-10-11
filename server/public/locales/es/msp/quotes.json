@@ -676,7 +676,8 @@
       "openSalesOrders": "Abrir órdenes de venta",
       "successBody": "Las líneas de producto se facturarán al cumplirse.",
       "successTitle": "Orden de venta {{number}} creada"
-    }
+    },
+    "contractBlockedServiceless": "El elemento recurrente \"{{description}}\" debe hacer referencia a un servicio del catálogo antes de la conversión a contrato"
   },
   "quoteApproval": {
     "title": "Aprobaciones de cotizaciones",

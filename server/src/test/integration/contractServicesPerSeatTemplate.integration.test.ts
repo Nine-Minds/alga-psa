@@ -230,7 +230,7 @@ describe('contract templates: per-seat recurring services', () => {
     const template = await createTemplate(templatePackage(catalog));
 
     const snapshot: any = ok(await getContractTemplateSnapshotForClientWizard(template.contract_id));
-    const byService = new Map<string, any>(snapshot.fixed_services.map((s: any) => [s.service_id, s]));
+    const byService = new Map<string, any>(snapshot.fixed_lines.flatMap((l: any) => l.services).map((s: any) => [s.service_id, s]));
     expect(byService.get(catalog.user.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 20, unit_rate: 10000 });
     expect(byService.get(catalog.location.serviceId)).toMatchObject({ pricing_basis: 'unit', quantity: 2, unit_rate: 20000 });
     const endpointSnapshot = byService.get(catalog.endpoint.serviceId);
@@ -241,7 +241,7 @@ describe('contract templates: per-seat recurring services', () => {
     // contract currency, then the author adjusts a quantity: 20 -> 23.
     const client = await createSeatClient(db, tenantId);
     const catalogRates = await getServiceCatalogRatesForCurrency([catalog.endpoint.serviceId], 'USD');
-    const fixedServices = snapshot.fixed_services.map((service: any) => ({
+    const fixedServices = snapshot.fixed_lines.flatMap((l: any) => l.services).map((service: any) => ({
       ...service,
       unit_rate: service.unit_rate ?? catalogRates[service.service_id],
       quantity: service.service_id === catalog.user.serviceId ? 23 : service.quantity,
@@ -293,7 +293,7 @@ describe('contract templates: per-seat recurring services', () => {
     expect((configs.get(catalog.user.serviceId) as any).pricing_basis).toBe('unit');
 
     const snapshot: any = ok(await getContractTemplateSnapshotForClientWizard(template.contract_id));
-    const byService = new Map<string, any>(snapshot.fixed_services.map((s: any) => [s.service_id, s]));
+    const byService = new Map<string, any>(snapshot.fixed_lines.flatMap((l: any) => l.services).map((s: any) => [s.service_id, s]));
     expect(byService.get(catalog.user.serviceId).pricing_basis).toBe('unit');
     expect(byService.get(catalog.endpoint.serviceId).pricing_basis ?? 'bundle').toBe('bundle');
     expect(byService.get(catalog.location.serviceId).pricing_basis ?? 'bundle').toBe('bundle');
@@ -316,7 +316,7 @@ describe('contract templates: per-seat recurring services', () => {
     expect(rows).toHaveLength(0);
 
     const snapshot: any = ok(await getContractTemplateSnapshotForClientWizard(template.contract_id));
-    for (const service of snapshot.fixed_services) {
+    for (const service of snapshot.fixed_lines.flatMap((l: any) => l.services)) {
       expect(service.pricing_basis ?? 'bundle').toBe('bundle');
     }
   }, HOOK_TIMEOUT);

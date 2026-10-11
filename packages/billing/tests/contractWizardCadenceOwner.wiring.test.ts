@@ -12,9 +12,9 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(source).toContain("from '@shared/billingClients/recurringAuthoringPolicy';");
     expect(source).toContain('resolveRecurringAuthoringPolicy');
     expect(source.match(/const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy\(/g)?.length).toBe(2);
-    expect(source.match(/billing_timing: recurringAuthoringPolicy\.billingTiming/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(source.match(/cadence_owner: recurringAuthoringPolicy\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(source.match(/billing_cycle_alignment: recurringAuthoringPolicy\.billingCycleAlignment/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(source.match(/billing_timing: (?:recurringAuthoringPolicy|fixedLinePolicy)\.billingTiming/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(source.match(/cadence_owner: (?:recurringAuthoringPolicy|fixedLinePolicy)\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(source.match(/billing_cycle_alignment: (?:recurringAuthoringPolicy|fixedLinePolicy)\.billingCycleAlignment/g)?.length).toBeGreaterThanOrEqual(4);
     expect(source).toContain("let cadenceOwner: CadenceOwner = 'client';");
     expect(source).toContain('cadenceOwner = line.cadence_owner ?? cadenceOwner;');
     expect(source).toContain('cadence_owner: cadenceOwner,');
@@ -35,7 +35,7 @@ describe('contract wizard cadence_owner wiring', () => {
     const fixedFeeStepSource = readFileSync(
       resolve(
         __dirname,
-        '../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx'
+        '../src/components/billing-dashboard/contracts/wizard-steps/FixedLineEditor.tsx'
       ),
       'utf8'
     );
@@ -58,7 +58,8 @@ describe('contract wizard cadence_owner wiring', () => {
     expect(fixedFeeStepSource).toContain("import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';");
     expect(fixedFeeStepSource).toContain('Recurring Preview Before Save');
     expect(fixedFeeStepSource).toContain('recurringPreview.firstInvoiceSummary');
-    expect(fixedFeeStepSource).toContain('billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency');
+    expect(fixedFeeStepSource).toContain('billingFrequency: effectiveFrequency');
+    expect(fixedFeeStepSource).toContain('const effectiveFrequency = line.billing_frequency ?? contract.billing_frequency');
     expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriodsHeading');
     expect(fixedFeeStepSource).toContain('recurringPreview.materializedPeriods.map');
   });
