@@ -619,10 +619,10 @@ export class QboSimulator {
     }
 
     const invoicePage = selectQuery.match(
-      /^SELECT\s+Id,\s*DocNumber,\s*TotalAmt,\s*SyncToken,\s*CustomerRef\s+FROM\s+Invoice(?:\s+WHERE\s+TxnDate\s*>=\s*'([^']*)')?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
+      /^SELECT\s+Id,\s*DocNumber,\s*TotalAmt,\s*SyncToken,\s*CustomerRef(,\s*CurrencyRef)?\s+FROM\s+Invoice(?:\s+WHERE\s+TxnDate\s*>=\s*'([^']*)')?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)$/i
     );
     if (invoicePage) {
-      const windowStart = invoicePage[1];
+      const [, currencyProjection, windowStart, startPosition, maxResults] = invoicePage;
       const rows = Array.from(this.stores.Invoice.values())
         .filter((invoice) => !invoice.deleted)
         .filter((invoice) => !windowStart || String(invoice.TxnDate ?? '') >= windowStart)
@@ -631,9 +631,12 @@ export class QboSimulator {
           DocNumber: invoice.DocNumber,
           TotalAmt: invoice.TotalAmt,
           SyncToken: invoice.SyncToken,
-          CustomerRef: invoice.CustomerRef ? { ...invoice.CustomerRef } : invoice.CustomerRef
+          CustomerRef: invoice.CustomerRef ? { ...invoice.CustomerRef } : invoice.CustomerRef,
+          ...(currencyProjection ? {
+            CurrencyRef: invoice.CurrencyRef ? { ...invoice.CurrencyRef } : invoice.CurrencyRef
+          } : {})
         }));
-      return this.page(rows, invoicePage[2], invoicePage[3]);
+      return this.page(rows, startPosition, maxResults);
     }
 
     const paymentByCustomer = selectQuery.match(
