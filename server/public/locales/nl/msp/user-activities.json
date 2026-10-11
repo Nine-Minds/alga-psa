@@ -551,15 +551,15 @@
     "newGroupTitle": "Nieuwe groep"
   },
   "deepLink": {
-    "notInView": "Dit item staat niet in je huidige weergave.",
-    "notOnList": "Dit item staat niet meer op je activiteitenlijst.",
+    "notInView": "Dit item staat niet in uw huidige weergave.",
+    "notOnList": "Dit item staat niet meer op uw activiteitenlijst.",
     "clearFilters": "Filters wissen"
   },
   "myGroup": {
     "label": "Mijn groep",
     "chip": "Mijn groep: {{name}}",
     "ungrouped": "Niet gegroepeerd",
-    "privacyHint": "Alleen jij kunt dit zien. Het ordent je activiteitenlijst.",
+    "privacyHint": "Alleen u kunt dit zien. Het ordent uw activiteitenlijst.",
     "selectPlaceholder": "Kies een groep",
     "newGroup": "Nieuwe groep…",
     "newGroupPlaceholder": "Groepsnaam",
@@ -567,8 +567,8 @@
     "cancel": "Annuleren",
     "showOnBoard": "Tonen in mijn activiteiten",
     "errors": {
-      "load": "Je groepen konden niet worden geladen.",
-      "move": "Je groep kon niet worden gewijzigd. Probeer het opnieuw.",
+      "load": "Uw groepen konden niet worden geladen.",
+      "move": "Uw groep kon niet worden gewijzigd. Probeer het opnieuw.",
       "create": "De groep kon niet worden aangemaakt. Probeer het opnieuw."
     }
   }
