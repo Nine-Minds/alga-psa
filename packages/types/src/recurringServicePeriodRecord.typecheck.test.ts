@@ -50,7 +50,6 @@ describe('persisted recurring service-period record typing', () => {
     const sourceObligation: IPersistedRecurringObligationRef = {
       tenant: 'tenant-1',
       obligationId: 'contract-line-1',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     };
 

@@ -130,6 +130,9 @@ export class CalendarSyncService {
       // Check for existing mapping
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
+      // Provider status is written on its own connection, so it must not report
+      // "connected" until this transaction's writes are visible to readers.
+      let wroteSync = false;
       const result = await withTransaction(knex, async (trx) => {
         if (entry.calendar_id) {
           const archivedCalendar = await tenantDb(trx, tenant).table('calendars')
@@ -186,7 +189,7 @@ export class CalendarSyncService {
               externalEventId: updatedEvent.id
             };
 
-            await this.markProviderConnected(provider.id, adapter);
+            wroteSync = true;
             return syncResult;
           }
 
@@ -225,9 +228,12 @@ export class CalendarSyncService {
           externalEventId: createdEvent.id
         };
 
-        await this.markProviderConnected(provider.id, adapter);
+        wroteSync = true;
         return syncResult;
       });
+      if (wroteSync) {
+        await this.markProviderConnected(provider.id, adapter);
+      }
       return result;
     } catch (error: any) {
       console.error(`Failed to sync schedule entry ${entryId} to external calendar:`, error);
@@ -372,6 +378,8 @@ export class CalendarSyncService {
       let rePushEntryId: string | null = null;
       // Assigned inside the transaction callback; the cast keeps TS from narrowing it to null.
       let acceptedEdit = null as { before: IScheduleEntry; after: IScheduleEntry } | null;
+      // Mark the provider connected only after commit (see syncScheduleEntryToExternal).
+      let wroteSync = false;
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
@@ -514,7 +522,7 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id, adapter);
+          wroteSync = true;
           return syncResult;
         } else {
           // Check if this event was originally created by Alga (has alga-entry-id)
@@ -557,7 +565,7 @@ export class CalendarSyncService {
                 externalEventId: externalEvent.id
               };
 
-              await this.markProviderConnected(provider.id, adapter);
+              wroteSync = true;
               return syncResult;
             }
             // Entry doesn't exist (may have been deleted) - fall through to create new entry
@@ -640,10 +648,13 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id, adapter);
+          wroteSync = true;
           return syncResult;
         }
       });
+      if (wroteSync) {
+        await this.markProviderConnected(provider.id, adapter);
+      }
       if (rePushEntryId) {
         const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true);
         if (!pushed.success) return pushed;

@@ -1,7 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
-import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 
 /**
@@ -65,7 +64,6 @@ export async function listCanonicalClientCadenceWindowPeriods(params: {
         'rsp.invoice_window_end': windowEnd,
         'c.client_id': params.clientId,
       })
-      .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
       .orderBy('rsp.service_period_start', 'asc')
       .orderBy('rsp.revision', 'asc')
@@ -179,7 +177,6 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
           invoice_window_start: windowStart,
           invoice_window_end: windowEnd,
         })
-        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereIn('obligation_id', activeRecurringLineIds)
         .whereNotIn('lifecycle_state', ['archived', 'superseded'])
         .select('obligation_id'),
