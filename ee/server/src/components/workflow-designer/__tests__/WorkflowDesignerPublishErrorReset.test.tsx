@@ -330,7 +330,8 @@ describe('WorkflowDesigner publish error reset', () => {
       workflowId: WORKFLOW_ID,
       isPaused: true,
     })));
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    // The switch flips once the metadata save resolves, which can land after the call is observed.
+    await waitFor(() => expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false'));
     expect(screen.getByRole('switch')).toHaveTextContent('Paused');
   });
 
