@@ -33,6 +33,7 @@ import QuickAddCategory from '../QuickAddCategory';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
@@ -329,6 +330,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
+  // Typed description/title text must survive Escape / overlay click on the hosting Drawer or Dialog.
+  useRegisterDismissGuard(hasDescriptionContentChanged || (isEditingTitle && titleValue !== ticket.title));
 
   // Initialize form when ticket loads
   useEffect(() => {
