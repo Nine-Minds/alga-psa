@@ -2547,13 +2547,13 @@
     },
     "contract": {
       "hasInvoices": "Avtalet har kopplade fakturor och kan inte raderas.",
-      "stillReferenced": "Avtalet refereras fortfarande av {{table}} och kan inte raderas.",
       "invalidValue": "Ett av de valda avtalsvärdena är ogiltigt. Ladda om sidan och försök igen.",
       "referenceMissing": "Det valda avtalet, kunden eller den relaterade posten finns inte längre. Ladda om sidan och försök igen.",
       "conflict": "Avtalsändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av avtalsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt avtalsfält saknas.",
-      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt avtalsfält saknas: {{field}}.",
+      "deleteFailed": "Något gick fel när avtalet skulle raderas. Ange referensen {{ref}} när du kontaktar supporten."
     },
     "wizard": {
       "permissions": {

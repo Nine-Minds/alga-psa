@@ -2547,13 +2547,13 @@
     },
     "contract": {
       "hasInvoices": "Dit contract heeft gekoppelde facturen en kan niet worden verwijderd.",
-      "stillReferenced": "Dit contract wordt nog gebruikt door {{table}} en kan niet worden verwijderd.",
       "invalidValue": "Een van de geselecteerde contractwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Het geselecteerde contract, de klant of het gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "conflict": "Deze contractwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
       "notAllowed": "Een van de contractwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht contractveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}.",
+      "deleteFailed": "Er is iets misgegaan bij het verwijderen van dit contract. Vermeld referentie {{ref}} als u contact opneemt met support."
     },
     "wizard": {
       "permissions": {

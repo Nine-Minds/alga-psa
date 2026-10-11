@@ -2547,13 +2547,13 @@
     },
     "contract": {
       "hasInvoices": "Ce contrat comporte des factures associées et ne peut pas être supprimé.",
-      "stillReferenced": "Ce contrat est encore référencé par {{table}} et ne peut pas être supprimé.",
       "invalidValue": "L’une des valeurs de contrat sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
       "referenceMissing": "Le contrat, le client ou l’enregistrement associé sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
       "conflict": "Cette modification du contrat entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs du contrat n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire du contrat est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du contrat est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du contrat est manquant : {{field}}.",
+      "deleteFailed": "Une erreur s'est produite lors de la suppression de ce contrat. Indiquez la référence {{ref}} en contactant le support."
     },
     "wizard": {
       "permissions": {

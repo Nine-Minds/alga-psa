@@ -1,3 +1,5 @@
+// Not a 'use server' module on purpose: these are synchronous helpers shared by the
+// invoice-generation and recurring-run server actions, and unit-testable on their own.
 import {
   actionError,
   permissionError,
@@ -5,30 +7,134 @@ import {
   type ActionPermissionErrorShape,
 } from '@alga-psa/ui/lib/errorHandling';
 import { UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
-import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
-import { messageKeyForInvoiceFailureCode } from '../errors/invoiceFailureMessageKeys';
-import { DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
+import {
+  ManualInvoiceError,
+  type HandledManualInvoiceErrorCode,
+} from '../errors/manualInvoiceErrors';
+import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
+import {
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+  NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
+  RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+  NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
+  NOTHING_TO_BILL_MESSAGE_KEY,
+} from './invoiceGeneration.constants';
 
 export type InvoiceGenerationActionError = ActionMessageErrorShape | ActionPermissionErrorShape;
 
+export { newSupportReference } from '../lib/supportReference';
+
+export function unexpectedInvoiceFailureMessage(ref: string): string {
+  return `Something went wrong generating the invoice. Quote reference ${ref} when contacting support.`;
+}
+
 /**
- * Maps an expected invoice-generation failure to a keyed action error (or null
- * when the failure is not an expected one). Lives outside the `'use server'`
- * action modules so both generation and the recurring billing run can share it.
+ * Expected preview refusals the billing engine raises as bare sentences. Each
+ * gets a stable code (the UI translates by it) and an English message that says
+ * what to do next, used when the UI has no translation for the code.
  */
+export const EXPLAINED_PREVIEW_FAILURES: ReadonlyArray<{
+  matches: (message: string) => boolean;
+  code: Extract<
+    HandledRecurringFailureCode,
+    'RECURRING_PERIODS_NOT_MATERIALIZED' | 'NO_ACTIVE_CONTRACT_LINES' | 'NOTHING_TO_BILL'
+  >;
+  message: string;
+  messageKey: string;
+}> = [
+  {
+    matches: (message) => message.startsWith('Recurring service periods were not materialized'),
+    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+    messageKey: RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+    message:
+      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
+  },
+  {
+    matches: (message) =>
+      message === 'No active contract lines found for this client in the selected billing period.',
+    code: 'NO_ACTIVE_CONTRACT_LINES',
+    messageKey: NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
+    message:
+      'No contract line is active for this billing period. Check the contract start and end dates and that the contract is active.',
+  },
+  {
+    matches: (message) => message === 'Nothing to bill',
+    code: 'NOTHING_TO_BILL',
+    messageKey: NOTHING_TO_BILL_MESSAGE_KEY,
+    message:
+      'Nothing is ready to invoice for this window. Contracts billed in arrears can only be invoiced after their service period ends, so check the billing timing and dates.',
+  },
+];
+
+export function explainedPreviewFailureFromMessage(
+  message: string,
+): { message: string; code: HandledRecurringFailureCode; messageKey: string } | null {
+  // LEVERAGE: friction engine-failure-identity — the engine identifies these refusals only by
+  // their English sentence, so preview must string-match; typed errors from the engine would
+  // remove this table.
+  const explained = EXPLAINED_PREVIEW_FAILURES.find((entry) => entry.matches(message));
+  return explained
+    ? { message: explained.message, code: explained.code, messageKey: explained.messageKey }
+    : null;
+}
+
+/**
+ * Maps a coded billing validation error (`ManualInvoiceError`) to the localized
+ * message key the recurring run uses to recover the structured failure. Codes the
+ * recurring flow does not handle deliberately have no key, so they fall back to the
+ * generic action-error string.
+ */
+export function manualInvoiceErrorMessageKey(
+  code: HandledManualInvoiceErrorCode,
+): string | undefined {
+  switch (code) {
+    case 'NO_BILLING_EMAIL':
+      return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'TIME_APPROVAL_REQUIRED':
+      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
+    case 'USAGE_RECORDS_MISSING':
+      return USAGE_RECORDS_MISSING_MESSAGE_KEY;
+    case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
+      return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
+    case 'USAGE_PERIOD_TOTAL_STALE':
+      return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
+    case 'RECURRING_PRICING_STALE':
+      return RECURRING_PRICING_STALE_MESSAGE_KEY;
+    case 'USAGE_CALCULATION_ERROR':
+      return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
+    case 'FIXED_LINE_RATE_UNRESOLVED':
+      return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
+    case 'FIXED_LINE_NO_SERVICES':
+      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
+    default:
+      return undefined;
+  }
+}
+
 export function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
     }
 
-    // Any coded billing validation error crosses this boundary as a keyed action
-    // error, so the recurring run can recover the code from the key (never from the
-    // English sentence, which the localization boundary rewrites). Checked before the
-    // message matching below, which would otherwise surface a raw, uncoded sentence
-    // for codes whose message happens to match a prefix.
+    // Coded billing validation error. Only the allowlisted code crosses this
+    // boundary as a keyed action error; unsupported codes are re-thrown so the
+    // recurring run's generic catch owns them (full logging, generic UI string).
+    // Checked before the message matching below, which would otherwise surface a
+    // raw, uncoded sentence for codes whose message happens to match a prefix.
     if (error instanceof ManualInvoiceError) {
-      return actionError(error.message, messageKeyForInvoiceFailureCode(error.code), error.params);
+      const messageKey = manualInvoiceErrorMessageKey(error.code);
+      return messageKey
+        ? actionError(error.message, messageKey, error.params)
+        : null;
     }
 
     // An expected, actionable refusal, not a failure: a contract covers these
@@ -36,6 +142,13 @@ export function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerat
     // catalog rate until someone decides (F139). The message names them.
     if (error instanceof UnresolvedCatalogPricingError) {
       return actionError(error.message);
+    }
+
+    // Expected engine refusals: keyed so the recurring run recovers the code
+    // (and the UI translates it) instead of showing a bare sentence or a generic one.
+    const explained = explainedPreviewFailureFromMessage(error.message);
+    if (explained) {
+      return actionError(explained.message, explained.messageKey);
     }
 
     if (error.message === 'Billing cycle not found') {
@@ -47,9 +160,6 @@ export function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerat
     if (error.message === 'Invalid billing cycle dates') {
       return actionError('Billing cycle has invalid dates. Please review the cycle and try again.', 'msp/invoicing:errors.billingCycle.invalidDates');
     }
-    // LEVERAGE: friction engine-failure-identity — the engine identifies these refusals only
-    // by their English sentence, so the boundary must string-match; typed errors from the
-    // engine would remove this list.
     if (
       error.message === 'No recurring execution windows selected' ||
       error.message === 'No billing settings found' ||

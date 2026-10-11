@@ -723,8 +723,6 @@ export async function convertQuoteToDraftContract(
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      // The header carries draft-ness (client_contracts.is_active below), exactly
-      // like a wizard draft; an inactive line is never materialized or billed.
       is_active: true,
       location_id: item.location_id ?? null,
       created_at: nowIso,
@@ -847,8 +845,8 @@ export async function convertQuoteToDraftContract(
     contract_id: contract.contract_id,
     start_date: toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone),
     end_date: null,
-    // Same draft shape as the wizard: the assignment is inactive while the header
-    // is a draft, and "Set to Active" flips it.
+    // Draft contracts keep an inactive assignment until Set to Active; lines are always enabled.
+    // LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice
     is_active: false,
     created_at: nowIso,
     updated_at: nowIso,

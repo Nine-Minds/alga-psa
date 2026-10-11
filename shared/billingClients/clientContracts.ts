@@ -673,7 +673,7 @@ export async function activateClientContractAssignment(
   const db = tenantDb(knexOrTrx, tenant);
   const contract = await db.table('contracts')
     .where({ contract_id: existing.contract_id })
-    .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name', 'template_metadata');
+    .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name');
   if (!contract) {
     throw new Error(`Contract ${existing.contract_id} not found`);
   }
@@ -708,51 +708,5 @@ export async function activateClientContractAssignment(
       });
   }
 
-  await healQuoteConvertedContractLines(knexOrTrx, tenant, contract);
-
   return updateClientContractAssignment(knexOrTrx, tenant, clientContractId, { is_active: true });
-}
-
-/**
- * Quote conversion used to write every contract line inactive and nothing ever
- * re-activated them, so an activated quote contract had no billable lines and no
- * service periods. Repair exactly that signature: the contract came from a quote
- * AND every one of its lines is inactive. A contract where someone removed some
- * lines always keeps at least one active line, so it never matches. Callers resync
- * service periods after activation, which is why the heal happens here first.
- */
-async function healQuoteConvertedContractLines(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  contract: { contract_id: string; template_metadata?: unknown },
-): Promise<void> {
-  const metadata = parseTemplateMetadata(contract.template_metadata);
-  if (metadata?.conversion_kind !== 'quote_to_contract') {
-    return;
-  }
-
-  const db = tenantDb(knexOrTrx, tenant);
-  const lineStates = await db.table('contract_lines')
-    .where({ contract_id: contract.contract_id })
-    .select('is_active');
-  if (lineStates.length === 0 || lineStates.some((line: { is_active: boolean }) => line.is_active)) {
-    return;
-  }
-
-  await db.table('contract_lines')
-    .where({ contract_id: contract.contract_id, is_active: false })
-    .update({ is_active: true, updated_at: new Date().toISOString() });
-}
-
-function parseTemplateMetadata(value: unknown): Record<string, unknown> | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
-    } catch {
-      return null;
-    }
-  }
-  return typeof value === 'object' ? (value as Record<string, unknown>) : null;
 }

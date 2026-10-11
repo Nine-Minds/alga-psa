@@ -1,513 +1,134 @@
-# Plan: first invoice from a quote-converted contract fails (alga0002168)
+# Plan: First invoice from a quote-converted contract fails (alga0002168)
 
-- Card: `51339be4-12ba-46a6-be4b-cdb1c16c4e2d` (AlgaPSA ticket alga0002168, High)
-- Branch: `feature/alga0002168-first-invoice-from-a-quote-converted-2`
-- Base: `origin/main` `b0d0b4dacf`
-- Status: design. No product code has changed yet.
+Card: alga0002168, branch `feature/alga0002168-first-invoice-from-a-quote-converted`, base `origin/main` b0d0b4dacf.
 
-## 1. Summary
+## 1. Reproduction on current main
 
-The first invoice fails because quote conversion writes every contract line with
-`contract_lines.is_active = false`, and nothing ever sets it back to true. "Set to
-Active" promotes the contract header and the assignment, but it never touches the
-lines. Service-period materialization only picks up lines where `cl.is_active = true`,
-so the quote contract never gets any `recurring_service_periods` rows and is never
-invoiceable.
+I reproduced the reported flow with a scratch DB integration test. It drove the real server actions with only auth and tenant mocked, against an isolated database (`test_db_alga0002168`) on the `alga-psa-local-test` Postgres:
 
-Other code paths decide which lines are live by checking only
-`client_contracts.is_active`. Conversion sets that flag to true even while the contract
-is still a draft. So those paths treat the quote contract's lines as live lines that
-should have periods but don't. As a result, every invoice window for that client is
-refused with "Recurring service periods were not materialized…", **including windows
-for the client's other, healthy contracts**. That matches the report: the client shows
-as Ready because its other contract has periods, and then both preview and generate
-fail.
+1. Client with a July 2026 monthly billing cycle and a default billing location.
+2. Accepted quote: 3 recurring fixed lines ($1,500 + $2,000 + $700 = $4,200/mo) plus one one-time item, `accepted_at = 2026-07-23T15:42:10Z`.
+3. `convertQuoteToContract(quoteId)`, which is what QuoteDetail and QuoteForm call.
+4. `activateClientContractForBilling(clientContractId)`, which is what Client Contracts > Set to Active calls since dbaeebaa08.
+5. `getAvailableRecurringDueWork`, then `repairAllRecurringServicePeriodsForTenant` ("Fix all"), then `previewGroupedInvoicesForSelectionInputs` and `generateGroupedInvoicesAsRecurringBillingRun`, then `deleteContract`.
 
-The original "open first period" hypothesis is wrong. When the lines are active, the
-advance-billed first period for the current month previews and generates correctly
-(verified, §2.3).
+### Observed
 
-Three more defects make this worse:
-
-- **Generation hides the cause.** Generation returns the not-materialized,
-  nothing-to-bill and no-active-lines refusals as bare English action errors with no
-  code. It reports every unmapped exception as "Failed to generate invoice for this
-  billing cycle." Preview has had coded messages since PR #3555. Generation never got
-  the same treatment.
-- **Delete is not atomic and is not Citus-safe.** `Contract.delete` runs without a
-  transaction. It relies on `ON DELETE SET NULL (converted_contract_id)` on
-  `quotes` and `opportunities`, but that FK form is only created on plain Postgres 15+.
-  On Citus the FK is NO ACTION. The final `contracts` delete then fails with `23503`
-  after the assignment, lines and periods have already been deleted. The row drops out
-  of the list, and the user sees a misleading "no longer exists" toast.
-- **Conversion's draft state differs from the wizard's.** A wizard draft has
-  `cc.is_active = false` and active lines. A quote draft has `cc.is_active = true` and
-  inactive lines.
-
-## 2. Reproduction (from code, on this worktree)
-
-### 2.1 Harness
-
-The repro was a throwaway DB-backed vitest suite: the infrastructure-test mock header,
-`TestContext` with seeds, `TEST_DB_NAME=test_alga2168`, and `.env.localtest`. It drove
-the **real** code path:
-
-1. `Quote.create` with three recurring fixed lines (Workstations $1,500, Servers
-   $2,000, Backup $700), one one-time catalog item and one one-time custom item. Status
-   is set to accepted.
-2. `convertQuoteToDraftContract` (the service behind `convertQuoteToContract`).
-3. `activateClientContractForBilling(clientContractId)`, which is the action behind both
-   "Set to Active" menu items.
-4. `getAvailableRecurringDueWork`, then `previewGroupedInvoicesForSelectionInputs`
-   (what Preview Selected calls), then `generateGroupedInvoicesAsRecurringBillingRun`
-   (what Generate calls).
-
-The client had a monthly billing cycle for the current month.
-
-The repro file was not committed. A copy is at `/tmp/r2168/repro2168.test.ts`. The
-regression suite in §6 replaces it.
-
-### 2.2 Observed
-
-**After conversion and Set to Active, with the client's only contract being the quote
-contract:**
-
-- All three `contract_lines` rows have `is_active=false`, `cadence_owner=client` and
-  `billing_timing=advance`.
-- The header is `status=active`, `is_active=true`, and `client_contracts.is_active=true`.
-- `recurring_service_periods` for the lines is **empty**.
-- Due work is **empty**. The quote contract can never be invoiced.
-
-**The same flow when the client also has a healthy active contract (the demo case):**
-
-- The healthy contract has client-cadence periods, so the client has due windows.
-- Preview returns `success:false, code:'RECURRING_PERIODS_NOT_MATERIALIZED'`.
-- The run returns `invoicesCreated: 0`. Every failure has
-  `errorMessage: "Recurring service periods were not materialized for this recurring
-  execution window."` and **no `code`**.
-- In the UI, `localizeRecurringFailure` gets no code, so it shows the raw English
-  string, which is untranslated. If the window throws a different, unmapped exception,
-  the user instead sees "Failed to generate invoice for this billing cycle."
-  (`recurringBillingRunActions.ts:407`, `:877`).
-- The healthy contract's invoice is blocked too.
-
-**Control:** the same flow with the converted lines set to `is_active=true` before Set
-to Active. Periods materialize for the current month (advance), the client is offered,
-preview succeeds, and generate creates the invoice with no failures.
-
-The local `server` DB has 18 quote-converted lines across 6 contracts. Every one has
-`is_active=false` and 0 periods, so the same signature applies to existing data.
-
-### 2.3 Root-cause chain (file:line on `b0d0b4dacf`)
-
-1. `packages/billing/src/services/quoteConversionService.ts:712` inserts lines with
-   `is_active: false`. `:833` inserts `client_contracts.is_active: true` for a **draft**
-   header (`:670-671`, `status: 'draft'`, `is_active: false`).
-2. `shared/billingClients/clientContracts.ts:663-712`
-   (`activateClientContractAssignment`) updates `contracts` and `client_contracts`. It
-   never updates `contract_lines`.
-3. `packages/billing/src/actions/billingClientsActions.ts:318` resyncs periods.
-   `shared/billingClients/clientCadenceScheduleRegeneration.ts:305-332`
-   (`loadClientCadenceRecurringObligations`) requires `cc.is_active`, `ct.is_active` and
-   **`cl.is_active`**, so it produces no obligations and no rows. The contract-cadence
-   sweep (`contractCadenceServicePeriodMaterialization.ts:719-740`) applies the same
-   filter.
-4. Three paths decide "live line" by `cc.is_active` alone:
-   - `packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts:114-150`
-     (`listUnmaterializedClientCadenceWindowLineIds`).
-   - The billing engine's line loader `billingEngine.ts:3245-3300`. Its `is_active`
-     column is `cc.is_active`, so the `line.is_active` checks at `:5579/:5591` test the
-     assignment, not the line.
-   - Time-entry and usage eligibility at `billingEngine.ts:2535-2560`.
-
-   None of them filter on `ct.is_active` or `cl.is_active`.
-5. The materialization guard sees inactive or draft lines as live lines with missing
-   periods. `invoiceGeneration.ts:1513-1527` throws the not-materialized error, and
-   `billingAndTax.ts:1536` and `recurringBillingRunActions.ts:638` gate eligibility on
-   the same answer.
-
-The same predicate drift also hits a contract line removed through
-`removeClientContractLine` (`packages/clients/src/actions/clientContractLineActions.ts:545-551`,
-which sets `is_active=false`). It is not specific to quotes.
-
-## 3. Design decisions
-
-### D1. One shared definition of a live recurring line (engine-level fix)
-
-Add `scopeToLiveRecurringContractLines(query, { cc, ct, cl })` in
-`shared/billingClients/` as a new module, `liveRecurringLineScope.ts`. It applies:
-
-- `cc.is_active = true`
-- `ct.is_active = true`
-- `cl.is_active = true`
-- `ct.is_system_managed_default` is false or null, where the caller needs it (see
-  below)
-
-Every reader that answers "is this line billable or expected to have periods" uses it:
-
-| Site | Change |
+| Variant | Result |
 |---|---|
-| `clientCadenceScheduleRegeneration.ts:305` `loadClientCadenceRecurringObligations` | use helper (behavior identical) |
-| `clientCadenceScheduleRegeneration.ts:~619` `loadClientsWithClientCadenceObligations` | use helper (adds ct/cl filters) |
-| `contractCadenceServicePeriodMaterialization.ts:719` | use helper (identical) |
-| `contractCadenceCoverageAudit.ts:~108` raw SQL | add `ct.is_active`, and confirm `cc.is_active`, so it matches the sweep |
-| `clientCadenceWindowMaterialization.ts:114` `listUnmaterializedClientCadenceWindowLineIds` | use helper. **This is the fix that stops one contract from blocking another.** |
-| `billingEngine.ts:3245` client contract line loader | use helper, and select `cl.is_active` explicitly so `:5579/:5591` test the line |
-| `billingEngine.ts:2535` time and usage eligibility | use helper |
+| As shipped | After Set to Active the contract header is `active` and the assignment is active, but **all 3 contract lines are still `is_active = false`**. No `recurring_service_periods` exist. Due work returns **no invoice candidates** and **3 `missing_service_period_materialization` gaps** for July, with the copy "This client's billing schedule changed…". **Fix all is a no-op** (`clientsScanned: 1, clientsRepaired: 0, rowsBackfilled: 0`), so the gaps never clear and the client can never be invoiced. |
+| As shipped, client also has a healthy active contract | That contract's June/Aug/Sep/Oct windows are invoiceable, but **its July window disappears from the candidates**. The quote lines' July gaps block the whole client window (`applyClientCadenceMaterializationGapBlocks`, keyed by client + invoice window). Converting a quote takes the client's other recurring invoice hostage. |
+| Lines forced `is_active = true` before Set to Active | Sync materializes July through October. The **July first period previews and generates correctly** (advance timing), and an invoice is produced. This confirms the inactive lines are the root cause on main. |
+| Lines forced active plus an injected DB failure on `invoice_charges` insert | Run returns `failures: [{ errorMessage: "Failed to generate invoice for this billing cycle." }]` and no code. The real cause appears only in the server log. This is the generic sentence from the card. |
+| Delete after the gap state, or after a failed generation | `deleteContract` succeeds and the contract is gone. Delete after a **successful** invoice correctly refuses with the keyed `msp/contracts:errors.contract.hasInvoices` message. |
 
-Rationale: the materializer, the guard and the engine must agree on what a live line
-is. Today each one re-derives it, and they have drifted apart. This matches the
-"Leverage & layering" rule and the existing `LEVERAGE` marker culture. Add
-`// LEVERAGE: pattern live-recurring-line-scope` at any remaining site that cannot
-adopt the helper.
+The report itself (July) predates dbaeebaa08 and the current gap blocking. The underlying defect is the same: converted lines never become active, so their periods are never materialized. I believe, but have not reconstructed, that in July this surfaced as a "Ready" window. The engine then threw a then-unmapped "not materialized" error inside generation, and the run's catch turned it into the generic sentence. On main the same defect shows up earlier as a permanent, unrepairable gap. Either way, the first invoice never generates.
 
-`is_system_managed_default` handling: the materializer excludes system-managed default
-contracts, but the engine must still bill them (they carry ad-hoc time). So the helper
-takes `{ excludeSystemManagedDefault: boolean }`:
+## 2. Root cause
 
-- Materializer and guard call sites pass `true`.
-- Engine call sites pass `false`.
+Quote conversion is the only creation path that marks a draft contract's **lines** inactive, and nothing ever reactivates them:
 
-The implementer must keep the current per-site behavior for that flag unchanged. Only
-the `ct.is_active` and `cl.is_active` filters are new.
+- `packages/billing/src/services/quoteConversionService.ts` `convertQuoteToDraftContract` writes `contract_lines.is_active: false` (line ~712) and `client_contracts.is_active: true` (line ~833) on a `status: 'draft'`, `is_active: false` contract header.
+- The workflow-runtime copy `shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts` `convertQuoteToDraftContract` (~1268) writes the same shape (`is_active: false` lines at ~1349, `is_active: true` assignment at ~1468).
+- The contract wizard models a draft differently: header `draft`/`is_active=false`, assignment `is_active = !isDraft`, and lines active. Lines are inserted through repositories with `is_active ?? true`. Every other creation path leaves lines active. On the local DB, 107 of 108 non-quote lines are active, and all 18 quote-converted lines are inactive.
+- `shared/billingClients/clientContracts.ts` `activateClientContractAssignment` promotes the header and the assignment only.
+- Client-cadence materialization (`loadClientCadenceRecurringObligations` in `shared/billingClients/clientCadenceScheduleRegeneration.ts`) and contract-cadence sweep (`contractCadenceServicePeriodMaterialization.ts` ~728) require `cl.is_active`, so no periods are produced.
 
-Behavior change to call out in the PR: once a line is removed
-(`removeClientContractLine`), or once a contract header is inactive or a draft, the
-engine no longer bills it, even if a period row exists. Two cases follow:
+There is a second, independent defect that turns this into a client-wide outage. **Gap detection and materialization disagree on what a live recurring line is.** `fetchClientCadenceMaterializationGaps` (`packages/billing/src/actions/billingAndTax.ts` ~541) filters only `cc.is_active`, non-system-default, `cadence_owner = 'client'`, and non-null frequency/timing. It ignores `ct.is_active` and `cl.is_active`. So it reports gaps that materialization by design will never fill. Those gaps block every candidate in the same client window, and Fix all cannot repair them. A just-converted draft quote contract triggers the same thing, because its assignment is written active.
 
-- Unbilled periods of an inactive line are no longer billed. The materializer already
-  stopped creating new ones, so this restores consistency.
-- Billed history is unaffected. History reads go through invoices, not the line loader.
+## 3. Design
 
-The implementer must check `invoiceGeneration.ts` callers of the line loader that serve
-**already-billed** windows (reversal, credit and recalculation) and keep those on the
-unscoped read if they exist.
+### D1. One representation of a draft contract (root-cause fix)
 
-### D2. Conversion writes the wizard's draft shape
+A contract is a draft when its header is `status = 'draft'` and `is_active = false`, and its assignment is inactive. Lines are always written active, because line `is_active` means "the line is enabled", not lifecycle state. This matches the wizard. The fix is to make quote conversion conform to it, not to teach activation to flip lines: activation flipping every line would silently reactivate any line someone deliberately disabled.
 
-In `convertQuoteToDraftContract`:
+- `quoteConversionService.convertQuoteToDraftContract`: write lines `is_active: true` and the assignment `is_active: false`.
+- `crmWorkerDal.convertQuoteToDraftContract`: same change. Add `// LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice` at both sites.
+- `activateClientContractAssignment` needs no change. It already flips the header and assignment, and `activateClientContractForBilling` already resyncs periods inside the same transaction. Once lines are active, that sync materializes the first period. The repro's forced-active variant shows this.
+- Callers that assumed a converted draft's assignment is active: check `deriveClientContractStatus` (draft wins on `contractStatus === 'draft'`, so the display is unchanged), the Client Contracts row-menu gating for Set to Active / Delete / Discard draft, and the quote "converted contract" views. Fix any that branch on the assignment's `is_active` for drafts. Writing the assignment inactive for drafts also stops cc-only readers from treating a draft quote contract as live once its lines are active: the billing engine's time-entry line match at ~2550 and `loadContractCadenceObligations` at ~369 both filter only `cc.is_active`.
 
-- `contract_lines.is_active: true`. The header carries draft-ness, the same as the
-  wizard, where the line default is true (`contractWizardActions.ts`, line insert
-  without `is_active`).
-- `client_contracts.is_active: false` while the header is a draft. This is the wizard
-  rule `is_active = !isDraft` (`contractWizardActions.ts:1612-1640`). "Set to Active"
-  flips it to true through `activateClientContractAssignment`, which already does this.
-- Write `start_date` as a date-only value: the `accepted_at`/`quote_date` date in the
-  tenant's effective time zone, not a timestamp cast by the DB session. Use
-  `resolveEffectiveTimeZone` the way other billing date writes do.
-- Leave `cadence_owner` and `billing_timing` as they are. Advance billing for fixed
-  quote lines is deliberate, per the card.
+### D2. Gap detection uses the materializer's eligibility rule
 
-`convertQuoteToDraftContractAndInvoice` (`:1273`) and the opportunity-win path
-(`packages/opportunities/src/lib/opportunityWin.ts:61`) both call
-`convertQuoteToDraftContract`. They inherit the fix.
+Extract the client-cadence "live recurring obligation" predicate into `shared/billingClients`, for example `whereLiveClientCadenceRecurringLine(query)`. It covers `cc.is_active`, `ct.is_active`, `cl.is_active`, non-system-default, `cadence_owner = 'client'`, and non-null timing. Use it in both `loadClientCadenceRecurringObligations` and `fetchClientCadenceMaterializationGaps`. Gap detection keeps its own extra `billing_frequency IS NOT NULL`. With this, a gap is only reported when Fix all can actually fill it, and a draft or disabled line can no longer block a client's window. Mark the remaining cc-only readers (engine ~2550, `loadContractCadenceObligations` ~369) with `// LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader` rather than widening scope.
 
-Check before changing `cc.is_active`: grep the Client Contracts and Contracts list
-status derivation (`deriveClientContractStatus`) and the "Set to Active" menu-item
-visibility. They must treat `(ct.status='draft', cc.is_active=false)` the same as a
-wizard draft. That should be the case, because wizard drafts already have that shape.
+### D3. Data repair migration for existing quote-converted contracts
 
-### D3. Activation repairs inactive lines left by conversion, without blindly reactivating
+New `server/migrations/<ts>_activate_quote_converted_contract_lines.cjs` (create via `npx knex migrate:make … --env migration`, use the `utils/tenantDb.cjs` shim, Citus-safe, no column-reference functions in UPDATE):
 
-Existing data already has quote contracts with every line inactive, both drafts and
-contracts already "activated". Besides the migration (D4), make
-`activateClientContractAssignment` self-healing for exactly this signature. **Only when
-all** lines of the contract are `is_active=false` and the contract has
-`template_metadata->>'conversion_kind' = 'quote_to_contract'`, set them all to true
-before the resync in `activateClientContractForBilling`.
+- For contracts with `template_metadata->>'conversion_kind' = 'quote_to_contract'`, set `contract_lines.is_active = true` where it is false. Select the ids first, then do parameterized updates per tenant. This is safe because conversion is the only writer of inactive lines for these contracts, and no UI toggles a line's `is_active`. The implementer must confirm that last point with a grep before relying on it.
+- For those contracts whose header is still `status = 'draft'`, set `client_contracts.is_active = false` so existing drafts match D1.
+- Periods for already-activated converted contracts are not materialized in SQL. After D2, Fix all (`repairAllClientCadenceServicePeriodsForTenant`) finds and backfills them, and that is the documented recovery step. A test must prove that Fix all after the migration produces the July row and the first invoice.
 
-A contract where the user deliberately removed some lines always has at least one
-active line, so it never matches. A contract where every line was removed is not a
-billable contract anyway.
+### D4. Generation surfaces the real, coded failure (parity with PR #3555 preview)
 
-### D4. Data migration for existing tenants
+Today preview and generation classify the same engine sentences in two places. `EXPLAINED_PREVIEW_FAILURES` is used by preview only. `invoiceGenerationActionErrorFrom` returns uncoded raw English for `Nothing to bill` and `Recurring service periods were not materialized…`, and it never recognizes `No active contract lines found…`. The run's `catch` then flattens anything else to the generic sentence.
 
-Add a new migration in `server/migrations/`, Citus-safe: plain `UPDATE`s scoped by
-tenant, with no FK or DDL changes.
+- In `packages/billing/src/actions/invoiceGeneration.ts`, have `invoiceGenerationActionErrorFrom` return keyed action errors for the three explained failures. Use new message keys in `invoiceGeneration.constants.ts`, for example `RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY`, `NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY` and `NOTHING_TO_BILL_MESSAGE_KEY`, with the same actionable English as preview. Preview then reads its code from that one table (`explainedPreviewFailureFromMessage` stays the single matcher). Existing `LEVERAGE: friction engine-failure-identity` marker stays.
+- In `recurringBillingRunActions.ts`, add the three keys to `handledRecurringFailureFromActionError`.
+- Both catch blocks (~407 single, ~877 grouped) keep `logRecurringBillingRunInvoiceFailure`, then classify the thrown error:
+  - If `invoiceGenerationActionErrorFrom` maps it, use the mapped message and code. This covers errors thrown outside the `withInvoiceGenerationActionErrors` boundary.
+  - Otherwise generate an 8-character `ref`, log it with the failure, and push `{ code: 'UNEXPECTED', params: { ref }, errorMessage: 'Something went wrong generating the invoice. Quote reference <ref> when contacting support.' }`.
+  - Factor one helper, `recurringRunFailureFromThrown(err, ctx)`, used by both blocks. The two copies are the duplication this card trips over.
+- Add `'UNEXPECTED'` to `RecurringInvoiceFailureCode` (`packages/types/src/interfaces/invoice.interfaces.ts`). The UI already translates it through `translateManualInvoiceFailure` → `manualInvoices.errors.UNEXPECTED` (exists in en and all locales), so `localizeRecurringFailure` renders it without component changes. Raw exception text never reaches the user.
+- Preview's unknown-error branch ("An error occurred while previewing the invoice") gets the same `UNEXPECTED` + ref treatment so both buttons tell the operator something they can act on or hand to support.
 
-1. For quote-converted contracts (`template_metadata->>'conversion_kind' =
-   'quote_to_contract'`) where every line is inactive, set `contract_lines.is_active =
-   true`.
-2. For quote-converted contracts with `status='draft'`, set
-   `client_contracts.is_active = false`.
+### D5. Delete of a quote-converted contract
 
-Periods for contracts that were already activated are not created by the migration.
-They appear in either of two ways:
+Retest: delete works after both a failed generation and the gap state, and refuses with a keyed message once an invoice exists. No code fix is needed for the reproduced paths. Hardening for the "fails silently" report: `deleteContract`'s unmapped-error branch rethrows today. Next masks thrown server-action messages in production, so the toast loses the reason. Return a keyed generic action error with a logged ref instead, matching D4. Cover all three delete outcomes in tests.
 
-- The next "Fix all" on Automatic Invoices (`repairAllRecurringServicePeriodsForTenant`
-  goes through `loadClientCadenceRecurringObligations`, which now sees the lines).
-- Running Set to Active again.
+### D6. Gap copy
 
-The coded RECURRING_PERIODS_NOT_MATERIALIZED message (D5) already tells the operator to
-use Fix all. Put that note in the PR description and the release note.
-
-### D5. Generation surfaces coded, translated failures (parity with PR #3555)
-
-Make the engine identify these refusals by **type**, not by English sentence. This
-retires `// LEVERAGE: friction engine-failure-identity`
-(`invoiceGeneration.ts:~1000`).
-
-1. **Throw coded errors at the source.** Replace each bare `new Error(...)` with
-   `ManualInvoiceError(code, message, params)` from
-   `packages/billing/src/errors/manualInvoiceErrors.ts`. Keep the existing English text
-   as the message.
-   - `'Recurring service periods were not materialized…'` becomes
-     `RECURRING_PERIODS_NOT_MATERIALIZED`. Sites: `invoiceGeneration.ts:1397, 1506, 1524,
-     1580, 1642, 1793`, `invoiceService.ts:222` and `recurringBillingRunActions.ts:591`.
-     Params: `{ periodStart, periodEnd }` plus `contractLineIds` (comma-joined) where
-     `listUnmaterialized…` supplied them.
-   - `'Nothing to bill'` becomes `NOTHING_TO_BILL`. Sites: `invoiceGeneration.ts:2512,
-     3238, 3807`. At `:3238`, keep the engine warning as the message when present.
-   - `'No active contract lines found…'` becomes `NO_ACTIVE_CONTRACT_LINES`. The engine
-     *returns* this as `billingResult.error` (`billingEngine.ts:1795`), and generation
-     re-throws it as a bare `Error` at `invoiceGeneration.ts:1981` and `:3616`. Today
-     that sentence is not on the generation allowlist, so it reaches the user as the
-     generic "Failed to generate…" message. Add `errorCode?: ManualInvoiceErrorCode` to
-     the engine's `BillingResult`, set it at `:1795`, and have the re-throw sites throw
-     `ManualInvoiceError(billingResult.errorCode, billingResult.error)` when it is set.
-   - `billingEngine.ts:1352`, "Recurring service periods **have not been** materialized
-     for client X…" (eligible lines exist but have no period rows). It matches neither
-     mapper today, so preview shows the generic message too. It becomes
-     `RECURRING_PERIODS_NOT_MATERIALIZED`.
-
-   Keep `withRecurringWindowErrorContext` wrapping. It must preserve the error class and
-   its `code` and `params`; check that it mutates and does not re-wrap.
-2. **One code↔key registry.** Every coded key already follows
-   `msp/invoicing:manualInvoices.errors.<CODE>`. Replace the hand-written switch
-   `manualInvoiceErrorMessageKey` (`invoiceGeneration.ts:1112`) and the if-chain
-   `handledRecurringFailureFromActionError` (`recurringBillingRunActions.ts:94-161`) with
-   a single module, `packages/billing/src/errors/invoiceFailureMessageKeys.ts`, that
-   exports:
-   - `messageKeyForInvoiceFailureCode(code)`
-   - `invoiceFailureCodeFromMessageKey(key)`
-
-   It covers the full `HandledManualInvoiceErrorCode` set, plus the two non-standard
-   keys: `TIME_APPROVAL_REQUIRED` and the duplicate-invoice key, which stays a skip
-   signal and never becomes a failure. The `*_MESSAGE_KEY` constants in
-   `invoiceGeneration.constants.ts` stay as re-exports, so existing imports and tests
-   keep working.
-3. **Boundary.** In `invoiceGenerationActionErrorFrom` (`invoiceGeneration.ts:1139`), any
-   `ManualInvoiceError` maps to `actionError(message, messageKeyForInvoiceFailureCode(code),
-   params)`. Delete the bare `actionError(error.message)` branches for `'Nothing to
-   bill'` and `'Recurring service periods were not materialized'`. They are now typed.
-   Leave the other string branches alone; they are not in scope.
-4. **Preview** keeps the same output. Add the three codes to the `ManualInvoiceError`
-   allowlist in `previewInvoiceErrorInfo` (`:1060-1080`) and delete
-   `EXPLAINED_PREVIEW_FAILURES` and `explainedPreviewFailureFromMessage`.
-   - Preview's English fallback copy (the "Use Fix all…" sentences) moves onto the
-     thrown messages, so the defaults stay the same for untranslated locales.
-   - The locale files already contain `manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED`,
-     `…NO_ACTIVE_CONTRACT_LINES` and `…NOTHING_TO_BILL`
-     (`server/public/locales/en/msp/invoicing.json:389-391`). Confirm the other locales
-     are present.
-5. **Run catch-all.** In both run actions (`recurringBillingRunActions.ts:~390-412` and
-   `~860-882`):
-   - First try `invoiceGenerationActionErrorFrom(err)`. Export it, or move it next to the
-     registry. If it maps, push the coded failure via the registry.
-   - Otherwise push `code: 'UNEXPECTED'` with `params: { ref }`, where `ref` is a short
-     id (`runId` plus a target index, or a fresh uuid slice).
-   - Log that same `ref` in `logRecurringBillingRunInvoiceFailure`, so support can find
-     the stack.
-   - `errorMessage` stays an English fallback and never contains the raw exception text.
-   - The UI already translates `UNEXPECTED` with `{{ref}}`
-     (`manualInvoiceErrorTranslation.ts`, `invoicing.json:381`).
-   - Keep `HandledRecurringFailureCode` aligned. It aliases `RecurringInvoiceFailureCode`
-     (`packages/types/src/interfaces/invoice.interfaces.ts:383-395`). Extend that union
-     with `UNEXPECTED`, and with any `HandledManualInvoiceErrorCode` the registry can now
-     carry (for example `CLIENT_NOT_FOUND`, which today has no key and is re-thrown
-     raw).
-   - Raw invariant throws reachable from a quote line all land on `UNEXPECTED` plus
-     `ref`, which is actionable for support. They are not given individual codes in this
-     card. Examples: the rollout guard "multiple persisted due periods matched one
-     runtime obligation" (`billingEngine.ts:4797`), the unit-pricing revision without a
-     price (`:4600`), and the period-claim races (`invoiceService.ts:107/112/239/256`).
-6. **UI.** `AutomaticInvoices.tsx` already routes run failures through
-   `localizeRecurringFailure` and `translateManualInvoiceFailure`. Check that the
-   batch-results rendering for Generate Invoices (not only the preview dialog) uses
-   `localizeRecurringFailure` for every failure row (`~2148-2177`, `~2159`). If a path
-   still prints `failure.errorMessage` raw, route it through the translator. No new
-   copy is needed.
-
-### D6. Delete is atomic, Citus-safe, and never silent
-
-In `packages/billing/src/models/contract.ts` `Contract.delete` (`:115-219`) and
-`packages/billing/src/actions/contractActions.ts` `deleteContract` (`:656-727`):
-
-1. Run the whole delete inside `withTransaction(knex, …)` from `deleteContract`. Nested
-   `withTransaction` reuses the caller's transaction (`packages/db/src/lib/tenant.ts:197-205`).
-   Publish workflow events only **after** commit, and do not let an event failure turn
-   a committed delete into an error toast: log it and return success.
-2. Before the `contracts` delete, explicitly unlink each referencing column instead of
-   relying on FK actions, which Citus lacks. This is the same approach the method
-   already uses for config children ("Citus disallows cascading actions on distributed
-   foreign keys; handle deletes explicitly").
-   - `quotes.converted_contract_id = null`. Also log a `quote_activities` entry
-     `contract_deleted` with the contract id/name, so the quote history explains why it
-     can be converted again.
-   - `opportunities.converted_contract_id = null`.
-   - `project_billing_configs.contract_id = null`.
-3. Extend `hasInvoices` so it also blocks when invoices exist that are tied to the
-   contract by `invoices.client_contract_id`, or by `recurring_service_periods.invoice_id`
-   for this contract's lines. Today it only counts `invoice_charges`. This guards
-   against deleting the period ledger of an invoiced contract.
-4. `contractActionErrorFrom` (`:53-101`): stop mapping a `23503` raised **during
-   delete** to "no longer exists". Map it to a keyed "This contract is still referenced
-   by {{table}} and cannot be deleted" message, using the constraint/table from the
-   error. Add a key to the contracts locale.
-5. UI (`ClientContractsTab.tsx:154-175`, `Contracts.tsx:180-198`): refetch the list on
-   both success and failure, so the UI always reflects the DB.
-
-Retest of item 3 on the card: §2 showed that a failed generation leaves nothing behind.
-`generateInvoiceForNormalizedSelectionInputs` runs inside one transaction
-(`invoiceGeneration.ts:3532-3544`). So the delete failure is the FK/atomicity defect
-above, not leftover state from the failed generation. The regression test must still
-run delete **after** a failed run, to lock that in.
+Gaps for a new or just-activated contract are not "billing schedule changed". After D1/D2 the quote case no longer produces gaps, so this card does not need new copy. Note it as follow-up only.
 
 ## 4. Files to change
 
 | File | Change |
 |---|---|
-| `shared/billingClients/liveRecurringLineScope.ts` (new) | D1 helper |
-| `shared/billingClients/clientCadenceScheduleRegeneration.ts` | D1 adopt helper (two loaders) |
-| `packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts` | D1 adopt helper |
-| `packages/billing/src/actions/contractCadenceCoverageAudit.ts` | D1 align raw SQL |
-| `packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts` | D1 adopt helper |
-| `packages/billing/src/lib/billing/billingEngine.ts` | D1 line loader and eligibility; select `cl.is_active`; D5 `NO_ACTIVE_CONTRACT_LINES` typed |
-| `packages/billing/src/services/quoteConversionService.ts` | D2 line/assignment flags, date-only `start_date` |
-| `shared/billingClients/clientContracts.ts` | D3 self-heal in `activateClientContractAssignment` |
-| `packages/billing/src/actions/billingClientsActions.ts` | D3, only if the heal lives in the action |
-| `server/migrations/2026101000000x_backfill_quote_converted_contract_lines.cjs` (new) | D4 |
-| `packages/billing/src/errors/invoiceFailureMessageKeys.ts` (new) | D5 registry |
-| `packages/billing/src/errors/manualInvoiceErrors.ts` | codes already present; no change expected |
-| `packages/billing/src/actions/invoiceGeneration.constants.ts` | re-export keys from the registry |
-| `packages/billing/src/actions/invoiceGeneration.ts` | D5 typed throws, boundary, preview allowlist, remove string table |
-| `packages/billing/src/services/invoiceService.ts` | D5 typed throw (`:222`) |
-| `packages/billing/src/actions/recurringBillingRunActions.ts` | D5 typed throw (`:591`), registry-based mapping, coded catch-all with `ref` |
-| `packages/billing/src/actions/recurringBillingRunActions.shared.ts` | failure code type, if it needs widening |
-| `packages/types/src/interfaces/invoice.interfaces.ts` | widen `RecurringInvoiceFailureCode` (D5.5) |
-| `packages/billing/src/lib/billing/billingEngine.ts` (D5) | `BillingResult.errorCode`; typed throw at `:1352` |
-| `packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx` | D5.6, only if a raw `errorMessage` path remains |
-| `packages/billing/src/models/contract.ts` | D6 unlink refs, broader invoice guard |
-| `packages/billing/src/actions/contractActions.ts` | D6 transaction, post-commit events, 23503 mapping |
-| `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`, `.../Contracts.tsx` | D6 refetch on failure |
-| `server/public/locales/*/msp/contracts.json` | D6 "still referenced" key (all shipped locales) |
-| `server/public/locales/*/msp/invoicing.json` | verify the three codes exist in every locale; add any missing |
+| `packages/billing/src/services/quoteConversionService.ts` | D1: lines active, assignment inactive for drafts; LEVERAGE marker |
+| `shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts` | D1: same; LEVERAGE marker |
+| `shared/billingClients/clientCadenceScheduleRegeneration.ts` (or a new `liveRecurringLinePredicate.ts` in `shared/billingClients`) | D2: shared predicate; used by `loadClientCadenceRecurringObligations` |
+| `packages/billing/src/actions/billingAndTax.ts` | D2: `fetchClientCadenceMaterializationGaps` uses the shared predicate |
+| `packages/billing/src/lib/billing/billingEngine.ts`, `packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts` | D2: LEVERAGE friction markers only |
+| `server/migrations/<ts>_activate_quote_converted_contract_lines.cjs` (+ shim metadata if needed) | D3 |
+| `packages/billing/src/actions/invoiceGeneration.constants.ts` | D4: three new message keys |
+| `packages/billing/src/actions/invoiceGeneration.ts` | D4: keyed explained failures in `invoiceGenerationActionErrorFrom`; preview `UNEXPECTED` + ref |
+| `packages/billing/src/actions/recurringBillingRunActions.ts` | D4: key→code mapping; `recurringRunFailureFromThrown` used at both catches |
+| `packages/types/src/interfaces/invoice.interfaces.ts` | D4: `'UNEXPECTED'` in `RecurringInvoiceFailureCode` |
+| `packages/billing/src/actions/contractActions.ts` | D5: keyed generic error instead of rethrow |
+| `server/public/locales/*/msp/*.json` | Only if a new user string is added (D5 generic delete key). Every locale incl. xx/yy. |
 
-## 5. Out of scope (noted, not changed)
+## 5. Regression coverage
 
-- Conversion still leaves bundle fixed-config `pricing_basis` and `rate_provenance` NULL
-  (read as bundle), leaves line `rate_provenance` NULL, and uses DB defaults for
-  renewal, PO and billing-profile fields. None of these blocks invoicing.
-- Conversion runs no mixed-currency check. Activation runs one
-  (`clientContracts.ts:688`), so the gap is only cosmetic for drafts.
-- Invoice-number retry inside the outer generation transaction
-  (`invoiceGeneration.ts:4126-4152`). After a `23505`, the transaction is aborted, so the
-  retry fails with `25P02`. That needs a savepoint around the insert. File a follow-up;
-  after D5 it surfaces as `UNEXPECTED` with a ref.
-- Unit-priced fixed services with a null, NaN or negative rate or quantity are skipped
-  silently (`compute/computeFixedCharges.ts:665-700`). Generation can then create a $0
-  invoice that claims the periods, while preview says `NOTHING_TO_BILL` with arrears
-  copy. Quote conversion always writes `base_rate = unit_price`, so this card's path
-  does not hit it. File a follow-up so the skip raises `FIXED_LINE_RATE_UNRESOLVED`.
-- The other bare-string branches in `invoiceGenerationActionErrorFrom` (PO required,
-  `Client …`, `Service "…`, mixed currency) are still string-matched. Leave the
-  `LEVERAGE: friction engine-failure-identity` marker on them.
+New `server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts`. Use the scaffolding from `billingProfileAttribution.integration.test.ts` and a dedicated `databaseName`, and drive the real actions as in §1:
 
-## 6. Regression coverage
+1. **First invoice end-to-end:** convert (3 recurring fixed lines + 1 one-time item), then assert lines active and assignment inactive before activation. Set to Active, then assert July periods exist, no gaps for the client, and a July candidate with `canGenerate`. Preview succeeds with $4,200 subtotal and generate creates exactly one invoice for July; the one-time item is not on it.
+2. **Draft does not block siblings:** a client with a healthy contract plus a converted, not-yet-activated quote contract. The healthy July window stays a candidate and there are no gaps.
+3. **Legacy data repair:** build a converted contract in the old shape (lines inactive, already activated), run the migration's up function, then Fix all. Assert the July candidate and the invoice generate.
+4. **Generation surfaces the cause:** (a) a selection whose periods are missing returns `code: 'RECURRING_PERIODS_NOT_MATERIALIZED'`. (b) An injected DB fault (the trigger pattern from billingProfileAttribution) returns `code: 'UNEXPECTED'` with `params.ref`, the ref appears in the logged failure, and `errorMessage` is not the old generic sentence. Cover both the single and grouped run paths.
+5. **Delete:** after a failed generation the contract is deleted. After a generated invoice, `deleteContract` returns `messageKey: 'msp/contracts:errors.contract.hasInvoices'`.
 
-**A. New DB-backed suite**
-`server/src/test/infrastructure/billing/quotes/quoteConvertedFirstInvoice.test.ts`. Use
-the same harness as the §2 repro and real actions throughout.
+Unit tests:
+- `invoiceGenerationActionErrorFrom` maps the three engine sentences to keyed errors.
+- `handledRecurringFailureFromActionError` maps the keys to codes.
+- `recurringRunFailureFromThrown` covers unmapped → `UNEXPECTED` with ref.
+- `shared/billingClients/__tests__`: the shared predicate excludes an inactive header and an inactive line.
+- Extend `server/src/test/integration/contractServicesPerSeatQuote.integration.test.ts` to stop hand-activating lines and instead activate through `activateClientContractForBilling`. That test currently sets `contract_lines.is_active = true` by hand, which is why this bug stayed green.
 
-1. Quote with 3 recurring fixed lines plus 2 one-time items, then convert:
-   - lines `is_active=true`, header draft, `cc.is_active=false`, no periods
-   - `start_date` is the date-only accepted date
-2. Then `activateClientContractForBilling`:
-   - periods exist for the current month (advance)
-   - due work offers the client
-   - preview succeeds with a $4,200 subtotal
-   - `generateGroupedInvoicesAsRecurringBillingRun` creates one invoice with no failures
-3. Client with an existing healthy contract plus a quote contract still in **draft**:
-   the healthy contract's window previews and generates. Draft lines must not block it.
-4. Legacy shape: insert the old conversion shape (lines inactive, `cc.is_active=true`),
-   then Set to Active. D3 heals it and the first invoice generates.
-5. Removed line (`removeClientContractLine`) on a healthy contract: the client's other
-   lines still generate, with no not-materialized refusal.
-6. Delete after failure:
-   - Force a generation failure on a quote-converted contract (for example, a fixed line
-     with no resolvable rate → `FIXED_LINE_RATE_UNRESOLVED`).
-   - Assert the run failure carries the `code`.
-   - Then `deleteContract` succeeds.
-   - Assert `quotes.converted_contract_id` is null, a `contract_deleted` quote activity
-     exists, and no orphan `contract_lines`, `client_contracts` or
-     `recurring_service_periods` remain.
-7. Delete rollback: make the final contracts delete fail, for example by inserting a
-   referencing row the delete does not unlink, using a test-only FK. Assert nothing was
-   deleted (atomicity).
+Run with `DB_HOST=127.0.0.1 DB_PORT=5472` (direct Postgres; the harness drops and recreates the DB) plus the admin and server passwords from `secrets/`.
 
-**B. Unit tests**
+## 6. Out of scope
 
-- `server/src/test/unit/billing/recurringBillingRunActions.test.ts`:
-  - each typed failure (`RECURRING_PERIODS_NOT_MATERIALIZED`, `NOTHING_TO_BILL`,
-    `NO_ACTIVE_CONTRACT_LINES`) arrives as `failure.code` with params
-  - an arbitrary thrown `Error('boom')` arrives as `code:'UNEXPECTED'` with a `ref` that
-    matches the logged `ref`, and `errorMessage` does not contain "boom"
-  - a thrown keyed DB error (`23503`) maps through `invoiceGenerationActionErrorFrom`,
-    not to UNEXPECTED
-- Registry unit test: `invoiceFailureCodeFromMessageKey(messageKeyForInvoiceFailureCode(c)) === c`
-  for every `HandledManualInvoiceErrorCode`, and the duplicate key is classified as a
-  skip.
-- Preview parity: the existing preview tests for the three codes (PR #3555) still pass
-  unchanged after `EXPLAINED_PREVIEW_FAILURES` is removed.
-- `AutomaticInvoices` UI test (`automaticInvoices.recurringDueWork.ui.test.tsx`
-  pattern): a run result with `code: 'RECURRING_PERIODS_NOT_MATERIALIZED'` renders the
-  translated "Fix all" guidance, and `UNEXPECTED` renders the ref sentence.
+- Proration of the first period: conversion writes `enable_proration: false`. A Jul 23 start bills the full July period, which is existing quote semantics.
+- Collapsing the workflow-runtime conversion copy into one implementation (marked LEVERAGE).
+- Gap panel copy for genuinely new schedules (D6).
 
-**C. Migration test**
+## PR #3667 follow-up deltas (after merging #3673)
 
-`server/src/test/infrastructure/migrations/…`:
+#3673's mechanism is the base: quote conversion writes lines active and the draft assignment inactive, migration `20261010040511` repairs existing rows, and generate failures are coded through `recurringBillingRunFailure` / support references. PR #3667 keeps only what #3673 does not cover:
 
-- the backfill flips the all-inactive quote contract lines
-- it leaves a quote contract that has one active and one inactive line untouched
-- it sets `cc.is_active=false` only for quote drafts
+- **One live-line predicate family.** `whereLiveRecurringContractLine` (in `shared/billingClients/liveClientCadenceRecurringLine.ts`) is the assignment + header + line liveness check; `whereLiveClientCadenceRecurringLine` composes it. It is now also applied by the billing engine (service-match and client contract-line readers), the window-materialization guard and the contract-cadence replenishment loader, so every reader agrees on what is "live".
+- **Date-only `client_contracts.start_date`** on quote conversion, resolved in the tenant's effective time zone.
+- **Contract delete unlinks references** (`quotes.converted_contract_id` with a `contract_deleted` quote activity, `opportunities`, `project_billing_configs`) and treats invoice headers / linked service periods as invoice history.
+- Regression tests for the above.
 
-**D. Existing tests to update**
-
-- `server/src/test/integration/contractServicesPerSeatQuote.integration.test.ts:186-196`:
-  replace the hand-written activation with `activateClientContractForBilling`. It
-  currently hides the bug by setting the lines active itself.
-- `server/src/test/infrastructure/billing/quotes/quoteConversion.test.ts`: update any
-  assertions on `is_active=false` or `cc.is_active=true`.
-- `server/src/test/infrastructure/billing/contracts/contractDeletion.test.ts`: add a
-  quote-converted case next to the opportunity case.
-
-## 7. Verification commands
-
-```bash
-cd server && set -a && . ../.env.localtest && set +a && export TEST_DB_NAME=test_alga2168
-npx vitest run src/test/infrastructure/billing/quotes/ --coverage.enabled=false
-npx vitest run src/test/infrastructure/billing/contracts/contractDeletion.test.ts --coverage.enabled=false
-npx vitest run src/test/integration/contractServicesPerSeatQuote.integration.test.ts --coverage.enabled=false
-npx vitest run src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts --coverage.enabled=false
-npx vitest run src/test/unit/billing/recurringBillingRunActions.test.ts --coverage.enabled=false
-```
-
-Also run the broader billing infrastructure tier, because D1 changes engine line
-eligibility:
-
-```bash
-npm run test:infrastructure:tier1
-```
-
-## 8. Risks
-
-- **D1 engine scope.** Lines and contracts that are inactive stop billing even if
-  unbilled periods exist. This is intended and consistent, but it is a behavior change.
-  Audit every caller of the line loader for already-billed-window use before merging.
-- **D2 `cc.is_active=false` for quote drafts.** Any UI that lists "active assignments"
-  stops showing quote drafts there. Wizard drafts already behave this way, so the
-  Contracts and Client Contracts draft sections must already handle it. Verify in the
-  smoke step.
-- **D4** does not create periods. Already-activated quote contracts need Fix all once,
-  and the coded message says so.
+Dropped as redundant with #3673: the Set-to-Active self-heal (it would re-enable lines #3673's migration deliberately leaves alone), the `20261010100000` backfill migration, and the separate invoice-failure message-key registry / `ManualInvoiceError` plumbing.

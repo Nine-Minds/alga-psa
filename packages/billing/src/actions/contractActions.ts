@@ -38,6 +38,7 @@ import {
   updateContractLineRate as repoUpdateContractLineRate,
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
+import { newSupportReference } from '../lib/supportReference';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
@@ -47,15 +48,6 @@ class ContractActionDomainError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ContractActionDomainError';
-  }
-}
-
-/** A foreign-key violation raised while deleting a contract, naming the referencing table. */
-class ContractDeleteReferenceError extends Error {
-  readonly code = '23503';
-  constructor(readonly table: string) {
-    super(`Contract is still referenced by ${table}`);
-    this.name = 'ContractDeleteReferenceError';
   }
 }
 
@@ -83,7 +75,7 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
     }
   }
 
-  const dbError = error as { code?: string; column?: string; constraint?: string; table?: string };
+  const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
     return actionError('One of the selected contract values is invalid. Please refresh and try again.', 'msp/contracts:errors.contract.invalidValue');
   }
@@ -95,13 +87,6 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
           { field: dbError.column },
         )
       : actionError('Missing required contract field.', 'msp/contracts:errors.contract.missingField');
-  }
-  if (dbError?.code === '23503' && error instanceof ContractDeleteReferenceError) {
-    return actionError(
-      `This contract is still referenced by ${error.table} and cannot be deleted.`,
-      'msp/contracts:errors.contract.stillReferenced',
-      { table: error.table },
-    );
   }
   if (dbError?.code === '23503') {
     return actionError('The selected contract, client, or related record no longer exists. Please refresh and try again.', 'msp/contracts:errors.contract.referenceMissing');
@@ -687,54 +672,32 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       return;
     }
 
-    const currentContract = await Contract.getById(knex, tenant, contractId);
-    if (currentContract?.is_system_managed_default === true) {
-      throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
-    }
-
-    const clientContracts = await tenantScopedTable(knex, tenant, 'client_contracts')
-      .where({ contract_id: contractId })
-      .select('client_contract_id', 'client_id');
-
-    try {
-      await withTransaction(knex, async (trx) => {
-        await Contract.delete(trx, tenant, contractId);
-      });
-    } catch (deleteError) {
-      const fk = deleteError as { code?: string; table?: string };
-      if (fk?.code === '23503' && fk.table) {
-        throw new ContractDeleteReferenceError(fk.table);
+    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
+    // statements but leaves the transaction to its caller, so every caller must remember
+    // to wrap it or a mid-way failure orphans the contract header.
+    // Everything commits together or rolls back; events are published only after commit.
+    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const currentContract = await Contract.getById(trx, tenant, contractId);
+      if (currentContract?.is_system_managed_default === true) {
+        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
       }
-      throw deleteError;
-    }
+
+      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
+        .where({ contract_id: contractId })
+        .select('client_contract_id', 'client_id');
+
+      await Contract.delete(trx, tenant, contractId);
+      return rows;
+    });
     const occurredAt = new Date().toISOString();
 
-    // The delete is committed; event publication failures must not turn a
-    // successful delete into a reported failure.
-    try {
-      for (const clientContract of clientContracts) {
-        await publishWorkflowEvent({
-          eventType: 'CLIENT_CONTRACT_DELETED',
-          payload: {
-            clientContractId: clientContract.client_contract_id,
-            contractId,
-            clientId: clientContract.client_id,
-            userId: user.user_id,
-            timestamp: occurredAt,
-          },
-          ctx: {
-            tenantId: tenant,
-            occurredAt,
-            actor: maybeUserActor(user),
-          },
-          idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
-        });
-      }
-
+    for (const clientContract of clientContracts) {
       await publishWorkflowEvent({
-        eventType: 'CONTRACT_DELETED',
+        eventType: 'CLIENT_CONTRACT_DELETED',
         payload: {
+          clientContractId: clientContract.client_contract_id,
           contractId,
+          clientId: clientContract.client_id,
           userId: user.user_id,
           timestamp: occurredAt,
         },
@@ -743,18 +706,39 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
           occurredAt,
           actor: maybeUserActor(user),
         },
-        idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
+        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
       });
-    } catch (eventError) {
-      console.error('Contract deleted but workflow event publication failed:', eventError);
     }
+
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_DELETED',
+      payload: {
+        contractId,
+        userId: user.user_id,
+        timestamp: occurredAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: maybeUserActor(user),
+      },
+      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
+    });
   } catch (error) {
-    console.error('Error deleting contract:', error);
     const expected = contractActionErrorFrom(error);
     if (expected) {
+      console.error('Error deleting contract:', error);
       return expected;
     }
-    throw error;
+    // Next masks messages thrown from server actions in production, which left the
+    // operator with no reason. Return a keyed generic error; the ref ties it to the log.
+    const ref = newSupportReference();
+    console.error('Error deleting contract:', { ref, contractId }, error);
+    return actionError(
+      `Something went wrong deleting this contract. Quote reference ${ref} when contacting support.`,
+      'msp/contracts:errors.contract.deleteFailed',
+      { ref },
+    );
   }
 });
 

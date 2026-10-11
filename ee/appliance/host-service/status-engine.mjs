@@ -432,6 +432,32 @@ function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, hel
   };
 }
 
+// LEVERAGE: pattern appliance-status-triplicate — the email-service /status
+// interpretation below is duplicated in operator/lib/status.mjs and in the
+// embedded pod script in flux/base/platform/appliance-status.yaml. The three
+// status implementations are deliberately not merged here.
+//
+// Reads the email-service `/status` summary (version 1) obtained through the
+// API-server service proxy. A 404 (older image), an unreachable pod or invalid
+// JSON is "unavailable" and must never degrade the appliance status.
+function interpretEmailServiceStatus(result) {
+  const unavailable = { state: 'unavailable', reasons: [] };
+  if (!result?.ok) return unavailable;
+  let body;
+  try {
+    body = JSON.parse(result.stdout);
+  } catch {
+    return unavailable;
+  }
+  if (!body || body.version !== 1 || !['ok', 'degraded', 'down'].includes(body.status)) return unavailable;
+  const reasons = (Array.isArray(body.reasons) ? body.reasons : [])
+    .filter((reason) => reason && reason.severity !== 'info')
+    .map((reason) => String(reason.message || reason.code || '').slice(0, 200))
+    .filter(Boolean)
+    .slice(0, 5);
+  return { state: body.status, reasons };
+}
+
 function tierStatus(ready, waitingStatus = 'waiting') {
   return ready ? 'ready' : waitingStatus;
 }
@@ -600,6 +626,7 @@ function buildStatusSnapshot({
   jobResult,
   helmResult,
   eventsResult,
+  emailServiceResult,
   diagnostics
 }) {
   const installState = readJsonFile(stateFile);
@@ -687,6 +714,25 @@ function buildStatusSnapshot({
   const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
   const tiers = deriveReadiness(failureState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
   const derivedFailures = deriveFailureSummary(failureState, podLines, blockingHelmIssues, warnings);
+
+  // Inbound email health (email-service /status). Degraded or down makes the
+  // background tier unhealthy with a background-severity blocker; login is
+  // never blocked. An unavailable result leaves everything unchanged.
+  const emailHealth = interpretEmailServiceStatus(emailServiceResult);
+  if (emailHealth.state === 'degraded' || emailHealth.state === 'down') {
+    tiers.backgroundReady = false;
+    tiers.fullyHealthy = false;
+    derivedFailures.push({
+      category: 'background-services',
+      phase: 'background-services',
+      step: 'email-service-health',
+      lastAction: 'Inbound email health is reduced.',
+      suspectedCause: `Inbound email is ${emailHealth.state}${emailHealth.reasons.length ? `: ${emailHealth.reasons.join('; ')}` : '.'}`,
+      suggestedNextStep: 'Review email-service health (`/status`) and its pod logs; login remains available.',
+      retrySafe: true,
+      logs: ['kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml -n msp logs deploy/email-service --tail=200']
+    });
+  }
   const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
 
   // During a retry the engine writes running states whose phase may momentarily
@@ -814,6 +860,7 @@ function buildStatusSnapshot({
       statusUrl: null
     },
     release: releaseSelection,
+    emailService: { health: emailHealth.state, reasons: emailHealth.reasons },
     kubernetes: {
       nodes,
       podCount: podLines.length,
@@ -844,7 +891,8 @@ function statusSnapshotCommandContext(options = {}) {
     podCommand: `${kubectlPrefix} get pods -A --no-headers`,
     jobCommand: `${kubectlPrefix} -n msp get jobs --no-headers`,
     helmCommand: `${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`,
-    eventsCommand: `${kubectlPrefix} get events -A -o json`
+    eventsCommand: `${kubectlPrefix} get events -A -o json`,
+    emailServiceStatusCommand: `${kubectlPrefix} get --raw /api/v1/namespaces/msp/services/http:email-service:http/proxy/status`
   };
 }
 
@@ -881,6 +929,7 @@ export function collectStatusSnapshot(options = {}) {
   const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : runCommand(context.jobCommand, { timeoutMs });
   const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : runCommand(context.helmCommand, { timeoutMs });
   const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : runCommand(context.eventsCommand, { timeoutMs });
+  const emailServiceResult = skipClusterQueries ? skippedKubernetesQuery(context.emailServiceStatusCommand, skipReason) : runCommand(context.emailServiceStatusCommand, { timeoutMs });
   const diagnostics = options.includeDiagnostics === true ? collectDiagnostics(context.kubectlPrefix) : [];
 
   return buildStatusSnapshot({
@@ -894,6 +943,7 @@ export function collectStatusSnapshot(options = {}) {
     jobResult,
     helmResult,
     eventsResult,
+    emailServiceResult,
     diagnostics
   });
 }
@@ -910,6 +960,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
   const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : await runner(context.jobCommand, { timeoutMs });
   const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : await runner(context.helmCommand, { timeoutMs });
   const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : await runner(context.eventsCommand, { timeoutMs });
+  const emailServiceResult = skipClusterQueries ? skippedKubernetesQuery(context.emailServiceStatusCommand, skipReason) : await runner(context.emailServiceStatusCommand, { timeoutMs });
   const diagnostics = options.includeDiagnostics === true ? await collectDiagnosticsAsync(context.kubectlPrefix, runner) : [];
   const networkProbe = options.networkProbe
     ? (typeof options.networkProbe === 'function' ? await options.networkProbe() : options.networkProbe)
@@ -926,6 +977,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
     jobResult,
     helmResult,
     eventsResult,
+    emailServiceResult,
     diagnostics
   });
 }

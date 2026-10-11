@@ -90,15 +90,21 @@ import {
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+  NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
   type HandledManualInvoiceErrorCode,
 } from '../errors/manualInvoiceErrors';
-import {
-  invoiceGenerationActionErrorFrom,
-  type InvoiceGenerationActionError,
-} from './invoiceGenerationActionErrors';
 import { scheduleRecurringUnitRevisionInTransaction } from '../lib/billing/seatRevisions';
 import { resolveRecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
 import type { IContractLineUnitPricingRevisionInput } from '@alga-psa/types';
@@ -113,6 +119,13 @@ import {
   type IExpectedRecurringPricingSource,
 } from '../lib/billing/recurringPricingIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
+import {
+  explainedPreviewFailureFromMessage,
+  invoiceGenerationActionErrorFrom,
+  newSupportReference,
+  unexpectedInvoiceFailureMessage,
+  type InvoiceGenerationActionError,
+} from './invoiceGenerationActionErrors';
 import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
@@ -653,44 +666,6 @@ function buildRecurringWindowErrorContext(
   };
 }
 
-/**
- * Typed refusal for a recurring window whose service periods were not
- * materialized. Typed (not matched by sentence) so generation, preview and the
- * recurring run all surface the same code and translated guidance.
- */
-function recurringPeriodsNotMaterializedError(input: {
-  message?: string;
-  periodStart?: string;
-  periodEnd?: string;
-  contractLineIds?: readonly string[];
-}): ManualInvoiceError {
-  const params: Record<string, string> = {};
-  if (input.periodStart) params.periodStart = String(input.periodStart);
-  if (input.periodEnd) params.periodEnd = String(input.periodEnd);
-  if (input.contractLineIds && input.contractLineIds.length > 0) {
-    params.contractLineIds = input.contractLineIds.join(',');
-  }
-  return new ManualInvoiceError(
-    'RECURRING_PERIODS_NOT_MATERIALIZED',
-    input.message ?? 'Recurring service periods were not materialized for this recurring execution window.',
-    params,
-  );
-}
-
-/**
- * Re-throwable error for a refusal the billing engine returned as
- * `billingResult.error`. Keeps the engine's code when it set one.
- */
-function billingResultError(billingResult: {
-  error?: string;
-  errorCode?: HandledManualInvoiceErrorCode;
-}): Error {
-  const message = billingResult.error ?? 'Billing calculation failed';
-  return billingResult.errorCode
-    ? new ManualInvoiceError(billingResult.errorCode, message)
-    : new Error(message);
-}
-
 function withRecurringWindowErrorContext<T extends Error>(
   error: T,
   selectorInput: IRecurringDueSelectionInput,
@@ -991,20 +966,6 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
 }
 
 /**
- * English fallback guidance shown by preview for these coded refusals when the
- * UI has no translation for the code. The refusals themselves are typed
- * (`ManualInvoiceError`), so they are recognized by code, not by sentence.
- */
-const PREVIEW_REFUSAL_GUIDANCE: Partial<Record<HandledManualInvoiceErrorCode, string>> = {
-  RECURRING_PERIODS_NOT_MATERIALIZED:
-    "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
-  NO_ACTIVE_CONTRACT_LINES:
-    'No contract line is active for this billing period. Check the contract start and end dates and that the contract is active.',
-  NOTHING_TO_BILL:
-    'Nothing is ready to invoice for this window. Contracts billed in arrears can only be invoiced after their service period ends, so check the billing timing and dates.',
-};
-
-/**
  * Maps a preview failure to the user-safe message plus the structured, known
  * failure (code/params) the UI needs to render localized, actionable guidance.
  * Unknown/internal failures carry no code, so the UI keeps the generic string.
@@ -1019,6 +980,14 @@ function previewInvoiceErrorInfo(error: unknown): {
 
   if (message.startsWith('Permission denied:')) {
     return { message };
+  }
+
+  // The engine raises these as plain sentences from several throw sites shared
+  // with generation, so preview recognizes them here and hands the UI a stable
+  // code plus an actionable English fallback. The generation path is untouched.
+  const explainedFailure = explainedPreviewFailureFromMessage(message);
+  if (explainedFailure) {
+    return explainedFailure;
   }
 
   if (/^Billing cycle .+ not found for client .+$/.test(message)) {
@@ -1064,13 +1033,10 @@ function previewInvoiceErrorInfo(error: unknown): {
       error.code === 'USAGE_RECORDS_MISSING' ||
       error.code === 'USAGE_CALCULATION_ERROR' ||
       error.code === 'FIXED_LINE_RATE_UNRESOLVED' ||
-      error.code === 'FIXED_LINE_NO_SERVICES' ||
-      error.code === 'RECURRING_PERIODS_NOT_MATERIALIZED' ||
-      error.code === 'NO_ACTIVE_CONTRACT_LINES' ||
-      error.code === 'NOTHING_TO_BILL')
+      error.code === 'FIXED_LINE_NO_SERVICES')
   ) {
     return {
-      message: PREVIEW_REFUSAL_GUIDANCE[error.code] ?? error.message,
+      message: error.message,
       code: error.code,
       params: error.params,
       ...(error.usageStatuses && error.usageStatuses.length > 0
@@ -1081,17 +1047,16 @@ function previewInvoiceErrorInfo(error: unknown): {
 
   // Same mapping the generation path uses, so preview surfaces database and
   // validation causes with the same actionable text as its sibling flows.
-  // A coded error outside the allowlist above keeps the generic fallback below:
-  // the boundary mapper now maps every ManualInvoiceError, which would otherwise
-  // surface its raw validation detail here.
-  const mapped = error instanceof ManualInvoiceError ? null : invoiceGenerationActionErrorFrom(error);
+  const mapped = invoiceGenerationActionErrorFrom(error);
   if (mapped) {
     return 'permissionError' in mapped ? { message: mapped.permissionError } : { message: mapped.actionError };
   }
 
   // Unknown/internal exceptions never leak their raw message to the user; the
-  // full cause stays server-side in logPreviewInvoiceFailure.
-  return { message: 'An error occurred while previewing the invoice' };
+  // full cause stays server-side, tied to a short reference the operator can quote.
+  const ref = newSupportReference();
+  console.error('[previewInvoiceErrorInfo] Unexpected preview failure', { ref }, error);
+  return { message: unexpectedInvoiceFailureMessage(ref), code: 'UNEXPECTED', params: { ref } };
 }
 
 function logPreviewInvoiceFailure(
@@ -1279,11 +1244,9 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
   );
 
   if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
-    throw recurringPeriodsNotMaterializedError({
-      message: 'Recurring service periods were not materialized for this client billing schedule window.',
-      periodStart: normalizedWindowStart,
-      periodEnd: normalizedWindowEnd,
-    });
+    throw new Error(
+      'Recurring service periods were not materialized for this client billing schedule window.',
+    );
   }
 
   return buildClientCadenceDueSelectionInput({
@@ -1390,11 +1353,9 @@ async function resolveCanonicalSelectorInputsForClientWindow(params: {
   }
 
   if (selectorInputs.length === 0) {
-    throw recurringPeriodsNotMaterializedError({
-      message: 'Recurring service periods were not materialized for this client billing schedule window.',
-      periodStart: normalizedWindowStart,
-      periodEnd: normalizedWindowEnd,
-    });
+    throw new Error(
+      'Recurring service periods were not materialized for this client billing schedule window.',
+    );
   }
 
   return selectorInputs;
@@ -1410,11 +1371,9 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
   const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds(params);
 
   if (missingLineIds.length > 0) {
-    throw recurringPeriodsNotMaterializedError({
-      periodStart: params.windowStart,
-      periodEnd: params.windowEnd,
-      contractLineIds: missingLineIds,
-    });
+    throw new Error(
+      'Recurring service periods were not materialized for this recurring execution window.',
+    );
   }
 }
 
@@ -1468,10 +1427,9 @@ async function normalizeRecurringSelectorInput(params: {
     );
 
     if (!recurringServicePeriod?.schedule_key || !recurringServicePeriod?.period_key) {
-      throw recurringPeriodsNotMaterializedError({
-        periodStart: normalizedWindowStart,
-        periodEnd: normalizedWindowEnd,
-      });
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
     }
 
     await assertClientCadenceWindowFullyMaterialized({
@@ -1531,10 +1489,9 @@ async function normalizeRecurringSelectorInput(params: {
     );
 
     if (!recurringServicePeriod?.obligation_id) {
-      throw recurringPeriodsNotMaterializedError({
-        periodStart: normalizedWindowStart,
-        periodEnd: normalizedWindowEnd,
-      });
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
     }
 
     return buildContractCadenceDueSelectionInput({
@@ -1683,7 +1640,9 @@ function scopeRecurringTimingSelectionsForSelectorInputs(
     ),
   );
   if (Object.keys(scoped).length === 0) {
-    throw recurringPeriodsNotMaterializedError({});
+    throw new Error(
+      'Recurring service periods were not materialized for this recurring execution window.',
+    );
   }
   return scoped;
 }
@@ -1870,7 +1829,7 @@ async function calculateBillingWithReconciledAttribution(params: {
         trx, params.tenant, canonicalSelection.clientId, billingResult.charges, billingResult.usageServicePeriodStatuses,
       );
       if (params.persistReconciliation && billingResult.error) {
-        throw billingResultError(billingResult);
+        throw new Error(billingResult.error);
       }
       if (!params.persistReconciliation) {
         throw new RollbackReconciliation(billingResult);
@@ -1924,7 +1883,7 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
     persistReconciliation: false,
   });
   if (billingResult.error) {
-    throw billingResultError(billingResult);
+    throw new Error(billingResult.error);
   }
 
   const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
@@ -2364,7 +2323,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   });
 
   if (billingResult.error) {
-    throw withRecurringWindowErrorContext(billingResultError(billingResult), canonicalSelection);
+    throw withRecurringWindowErrorContext(new Error(billingResult.error), canonicalSelection);
   }
 
   if (billingResult.fixedLineBlockers && billingResult.fixedLineBlockers.length > 0) {
@@ -2401,7 +2360,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       );
     }
     // Explicit zero, already invoiced, and excluded attribution remain visible evidence.
-    if (usageStatuses.length === 0) throw withRecurringWindowErrorContext(new ManualInvoiceError('NOTHING_TO_BILL', 'Nothing to bill'), canonicalSelection);
+    if (usageStatuses.length === 0) throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
@@ -3127,12 +3086,7 @@ export const generateProjectInvoice = withAuth(async (
     throw new Error(billingResult.error);
   }
   if (billingResult.charges.length === 0) {
-    // A project warning explains why nothing is billable; typing it would let the
-    // generic NOTHING_TO_BILL (arrears) copy replace that more specific text.
-    const nothingToBillWarning = billingResult.warnings?.[0];
-    throw nothingToBillWarning
-      ? new Error(nothingToBillWarning)
-      : new ManualInvoiceError('NOTHING_TO_BILL', 'Nothing to bill');
+    throw new Error(billingResult.warnings?.[0] ?? 'Nothing to bill');
   }
   const hasNonZeroContent = billingResult.charges.some((charge) => charge.total !== 0 || (charge.tax_amount || 0) !== 0);
   if (!hasNonZeroContent) {
@@ -3510,7 +3464,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     persistReconciliation: true,
   });
   if (billingResult.error) {
-    throw withRecurringWindowErrorContext(billingResultError(billingResult), normalizedSelectorInput);
+    throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
   }
 
   const cycleBillingProfileId = billing_cycle_id
@@ -3701,7 +3655,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   }
 
   if (billingResult.charges.length === 0) {
-    throw withRecurringWindowErrorContext(new ManualInvoiceError('NOTHING_TO_BILL', 'Nothing to bill'), normalizedSelectorInput);
+    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), normalizedSelectorInput);
   }
   for (const charge of billingResult.charges) {
     if (charge.rate === undefined || charge.rate === null) {

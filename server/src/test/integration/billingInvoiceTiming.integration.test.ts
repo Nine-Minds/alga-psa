@@ -2797,10 +2797,10 @@ it('T104: generation blocks partially materialized client-cadence windows when e
 
   await expect(
     generateInvoiceForSelectionInput(blockedMember!.selectorInput),
-  ).resolves.toMatchObject({
-    actionError: 'Recurring service periods were not materialized for this recurring execution window.',
+  ).resolves.toEqual({
+    actionError:
+      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
     messageKey: 'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED',
-    messageParams: { periodStart: '2025-01-01', periodEnd: '2025-02-01' },
   });
 }, HOOK_TIMEOUT);
 

@@ -28,6 +28,7 @@ import {
   withTransaction,
   registerAfterCommit,
   createTenantKnex,
+  getConnection,
   tenantDb,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
@@ -3412,6 +3413,357 @@ export async function updateTicketWithCacheForCurrentUser(id: string, data: Part
 }
 
 /**
+ * Input for {@link addTicketCommentInTransaction}.
+ */
+export interface AddTicketCommentInput {
+  ticketId: string;
+  content: string;
+  isInternal: boolean;
+  isResolution: boolean;
+  closesTicket?: boolean;
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >;
+  schedule?: ScheduledCommentPublication | null;
+  emailRecipients?: CommentEmailRecipientsInput | null;
+}
+
+/**
+ * Transaction-scoped comment write. Runs on the caller's transaction so the
+ * comment and every after-commit hook it registers commit (or roll back) with
+ * the caller's work. Throws on failure (never returns a TicketActionError) and
+ * does not check permissions: callers authorize, like updateTicketInTransaction.
+ */
+export async function addTicketCommentInTransaction(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  input: AddTicketCommentInput,
+): Promise<IComment> {
+  const {
+    ticketId,
+    content,
+    isInternal,
+    isResolution,
+    closesTicket = false,
+    notificationSuppression,
+    schedule,
+    emailRecipients,
+  } = input;
+
+  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
+  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+  }
+
+  const authorType: 'internal' | 'client' | 'unknown' =
+    user.user_type === 'client' ? 'client' : 'internal';
+
+  if (isInternal && authorType !== 'internal') {
+    throw new Error('Only MSP users can create internal comments');
+  }
+
+  let scheduledPublishAt: Date | null = null;
+  if (schedule) {
+    scheduledPublishAt = new Date(schedule.publishAt);
+    if (
+      authorType !== 'internal' ||
+      isInternal ||
+      Number.isNaN(scheduledPublishAt.getTime()) ||
+      scheduledPublishAt.getTime() <= Date.now() ||
+      !schedule.timeZone ||
+      schedule.timeZone.length > 64
+    ) {
+      throw new Error('Only internal MSP users may schedule client-visible comments for a valid future time');
+    }
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: schedule.timeZone });
+    } catch {
+      throw new Error('A valid IANA time zone is required for scheduled comments');
+    }
+  }
+  const scheduledPublishAtIso = scheduledPublishAt?.toISOString() ?? null;
+  const isScheduled = scheduledPublishAtIso !== null;
+  // A scheduled resolution must not close (or suppress the normal comment
+  // notification for) a ticket before it is actually published.
+  const effectiveClosesTicket = closesTicket && !isScheduled;
+
+  // Verify ticket exists
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+    .where({
+      ticket_id: ticketId
+    })
+    .first();
+
+  if (!ticket) {
+    throw new Error('Ticket not found');
+  }
+
+  // Use the centralized utility to convert BlockNote JSON to markdown
+  let markdownContent = "";
+  try {
+    markdownContent = await convertBlockNoteToMarkdown(content);
+    console.log("Converted markdown content for optimized comment:", markdownContent);
+  } catch (e) {
+    console.error("Error converting content to markdown:", e);
+    // If conversion fails, use a fallback message
+    markdownContent = "[Error converting content to markdown]";
+  }
+    
+  // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
+  // create the thread row first using IDs generated up-front.
+  const idsResult = await trx.raw(
+    'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+  );
+  const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
+  if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+    throw new Error('Database UUID generation did not return comment/thread identifiers.');
+  }
+  const newCommentId = generatedIds.comment_id;
+  const threadId = generatedIds.thread_id;
+  const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
+  const nowIso = new Date().toISOString();
+
+  // One-off Cc/Bcc for this comment only. Validation rejects internal notes,
+  // so the check runs against the effective visibility, not the raw flag.
+  const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+    cc: emailRecipients?.cc,
+    bcc: emailRecipients?.bcc,
+    isInternal: effectiveIsInternal,
+  });
+
+  await tenantDb(trx, tenant).table('comment_threads').insert({
+    tenant,
+    thread_id: threadId,
+    ticket_id: ticketId,
+    project_task_id: null,
+    root_comment_id: newCommentId,
+    is_internal: effectiveIsInternal,
+    reply_count: 0,
+    last_activity_at: nowIso,
+    created_at: nowIso,
+    created_by: user.user_id || null,
+  });
+
+  const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
+    tenant,
+    comment_id: newCommentId,
+    thread_id: threadId,
+    ticket_id: ticketId,
+    user_id: user.user_id,
+    // Record the author's linked contact when present so the row is a
+    // faithful source for downstream copies (bundle mirrors) and author
+    // resolution can fall back to the contact map.
+    contact_id: user.contact_id ?? null,
+    author_type: authorType,
+    note: content,
+    is_internal: effectiveIsInternal,
+    is_resolution: isResolution,
+    markdown_content: markdownContent,
+    created_at: nowIso,
+    ...(isScheduled ? {
+      publish_state: 'scheduled',
+      scheduled_publish_at: scheduledPublishAtIso,
+      scheduled_publish_tz: schedule!.timeZone,
+    } : {}),
+    // The email subscriber reads metadata.closes_ticket and skips the
+    // comment-added email so the close email is the single source of
+    // truth when the UI is closing the ticket immediately after.
+    ...(effectiveClosesTicket || resolvedEmailRecipients
+      ? {
+          metadata: {
+            ...(effectiveClosesTicket ? { closes_ticket: true } : {}),
+            ...(resolvedEmailRecipients ? { email_recipients: resolvedEmailRecipients } : {}),
+          },
+        }
+      : {}),
+  }).returning('*');
+
+    await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
+
+  // Update ticket response state based on comment visibility and author (F005-F008)
+  if (!isScheduled) {
+    await updateTicketResponseStateFromComment(
+      trx,
+      tenant,
+      ticketId,
+      authorType,
+      authorType === 'internal' ? isInternal : false,
+      user.user_id ?? null
+    );
+  }
+
+  // Bundle child→master reopen: a public reply on a bundled child can
+  // reopen the closed master when reopen_on_child_reply is set. This
+  // mirrors the wiring in commentActions.createComment so the optimized
+  // MSP-side comment path doesn't silently skip the reopen.
+  if (!isInternal && !isScheduled) {
+    await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
+  }
+
+  // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
+  if (!isInternal && !isScheduled) {
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: ticketId })
+      .first();
+
+    if (bundleSettings?.mode === 'sync_updates') {
+      const children = await tenantScopedTable(trx, 'tickets', tenant)
+        .select('ticket_id')
+        .where({ master_ticket_id: ticketId });
+
+      for (const child of children) {
+        // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
+        // the sync_updates shape is defined once. Carry the source author
+        // (user, contact, author_type) so the mirrored child comment resolves
+        // to the real author instead of showing as unknown.
+        await mirrorCommentToChild(trx, tenant, {
+          sourceComment: {
+            comment_id: newCommentId,
+            note: content,
+            markdown_content: markdownContent,
+            user_id: newComment.user_id ?? null,
+            contact_id: newComment.contact_id ?? null,
+            author_type: newComment.author_type,
+          },
+          childTicketId: child.ticket_id,
+          isResolution,
+        });
+      }
+    }
+  }
+
+  // Publish comment added event after the comment transaction commits.
+  if (!isScheduled) await persistCommentPublication(trx, {
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: {
+        tenantId: tenant,
+        occurredAt: newComment.created_at ?? new Date().toISOString(),
+        ticketId: ticketId,
+        commentId: newComment.comment_id,
+        userId: user.user_id,
+        comment: {
+          id: newComment.comment_id,
+          content: content,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal,
+          authorType,
+        },
+        suppressContactNotifications,
+        suppressInternalNotifications,
+      }
+    }, publishEvent);
+
+  // Publish workflow v2 ticket message events (additive).
+  if (!isScheduled) try {
+    const occurredAt = newComment.created_at ?? new Date().toISOString();
+    const workflowCtx = {
+      tenantId: tenant,
+      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      occurredAt,
+      correlationId: newComment.comment_id,
+    };
+
+    const events = buildTicketCommunicationWorkflowEvents({
+      ticketId,
+      messageId: newCommentId,
+      visibility: isInternal ? 'internal' : 'public',
+      author: { authorType: 'user', authorId: user.user_id },
+      channel: 'ui',
+      createdAt: occurredAt,
+    });
+
+    for (const ev of events) {
+      registerAfterCommit(
+        trx,
+        () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+        `${ev.eventType} ticket=${ticketId}`
+      );
+    }
+  } catch (eventError) {
+    console.error('[addTicketCommentInTransaction] Failed to build workflow ticket message events:', eventError);
+  }
+
+  registerAfterCommit(trx, () =>
+    publishTicketUpdate({
+      tenantId: tenant,
+      ticketId,
+      updatedFields: ['comments'],
+      updatedBy: {
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+    }),
+    `ticket-live-update ticket=${ticketId}`
+  );
+
+  // Activity-timeline row for the MSP-side "add comment" flow. This path
+  // is hit by the ticket detail UI, so source is always 'ui'. Internal
+  // notes get a distinct event type for clearer rendering.
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId,
+    eventType: isScheduled
+      ? 'TICKET_COMMENT_SCHEDULED'
+      : isInternal
+      ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
+      : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
+    entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+    entityId: newComment.comment_id,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: user.user_id,
+      displayName: formatLiveUpdateDisplayName(user),
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+    details: {
+      is_internal: !!isInternal,
+      is_resolution: !!isResolution,
+      ...(isScheduled ? {
+        scheduled_publish_at: scheduledPublishAtIso,
+        scheduled_publish_tz: schedule!.timeZone,
+      } : {}),
+    },
+  });
+
+  if (scheduledPublishAt && scheduledPublishAtIso && schedule) {
+    // Arm only after commit: a worker must never observe a schedule before
+    // its comment row is durable. Startup reconciliation repairs an arming
+    // failure after the transaction has committed.
+    registerAfterCommit(trx, async () => {
+      const job = await scheduleBackgroundJobAt(
+        SCHEDULED_COMMENT_JOB,
+        { tenantId: tenant, ticketId, commentId: newComment.comment_id },
+        scheduledPublishAt,
+        { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
+      );
+      await tenantDb(await getConnection(tenant), tenant).table('comments')
+        .where({ comment_id: newComment.comment_id, publish_state: 'scheduled' })
+        .update({ schedule_job_id: job.jobId });
+    }, `schedule comment publication ${newComment.comment_id}`);
+  }
+
+  // Track comment analytics after commit so a rolled-back comment is not counted.
+  registerAfterCommit(trx, () => {
+    captureAnalytics(isScheduled ? 'ticket_comment_scheduled' : 'ticket_comment_added', {
+      is_internal: isInternal,
+      is_resolution: isResolution,
+      content_length: markdownContent.length,
+      has_formatting: content.includes('"type"'), // BlockNote content has type field
+    }, user.user_id);
+  }, `ticket-comment-analytics ticket=${ticketId}`);
+
+  // Revalidate paths to update UI
+  revalidatePath(`/msp/tickets/${ticketId}`);
+
+  return newComment;
+}
+
+/**
  * Add comment to ticket with proper caching
  */
 export const addTicketCommentWithCache = withAuth(async (
@@ -3429,330 +3781,35 @@ export const addTicketCommentWithCache = withAuth(async (
   schedule?: ScheduledCommentPublication | null,
   emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<IComment | TicketActionError> => {
-  const {knex: db} = await createTenantKnex();
+  // The catch sits outside the transaction on purpose: an expected error must
+  // roll back anything already written instead of committing a half-written comment.
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
-  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
-  if (suppressInternalNotifications && !suppressContactNotifications) {
-    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
-  }
-
-  return withTransaction(db, async (trx): Promise<IComment | TicketActionError> => {
-    try {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot add comment');
-    }
-
-    const authorType: 'internal' | 'client' | 'unknown' =
-      user.user_type === 'client' ? 'client' : 'internal';
-
-    if (isInternal && authorType !== 'internal') {
-      throw new Error('Only MSP users can create internal comments');
-    }
-
-    let scheduledPublishAt: Date | null = null;
-    if (schedule) {
-      scheduledPublishAt = new Date(schedule.publishAt);
-      if (
-        authorType !== 'internal' ||
-        isInternal ||
-        Number.isNaN(scheduledPublishAt.getTime()) ||
-        scheduledPublishAt.getTime() <= Date.now() ||
-        !schedule.timeZone ||
-        schedule.timeZone.length > 64
-      ) {
-        throw new Error('Only internal MSP users may schedule client-visible comments for a valid future time');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot add comment');
       }
-      try {
-        Intl.DateTimeFormat(undefined, { timeZone: schedule.timeZone });
-      } catch {
-        throw new Error('A valid IANA time zone is required for scheduled comments');
-      }
-    }
-    const scheduledPublishAtIso = scheduledPublishAt?.toISOString() ?? null;
-    const isScheduled = scheduledPublishAtIso !== null;
-    // A scheduled resolution must not close (or suppress the normal comment
-    // notification for) a ticket before it is actually published.
-    const effectiveClosesTicket = closesTicket && !isScheduled;
 
-    // Verify ticket exists
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-    // Use the centralized utility to convert BlockNote JSON to markdown
-    let markdownContent = "";
-    try {
-      markdownContent = await convertBlockNoteToMarkdown(content);
-      console.log("Converted markdown content for optimized comment:", markdownContent);
-    } catch (e) {
-      console.error("Error converting content to markdown:", e);
-      // If conversion fails, use a fallback message
-      markdownContent = "[Error converting content to markdown]";
-    }
-    
-    // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
-    // create the thread row first using IDs generated up-front.
-    const idsResult = await trx.raw(
-      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-    );
-    const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
-    if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-      throw new Error('Database UUID generation did not return comment/thread identifiers.');
-    }
-    const newCommentId = generatedIds.comment_id;
-    const threadId = generatedIds.thread_id;
-    const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
-    const nowIso = new Date().toISOString();
-
-    // One-off Cc/Bcc for this comment only. Validation rejects internal notes,
-    // so the check runs against the effective visibility, not the raw flag.
-    const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
-      cc: emailRecipients?.cc,
-      bcc: emailRecipients?.bcc,
-      isInternal: effectiveIsInternal,
-    });
-
-    await tenantDb(trx, tenant).table('comment_threads').insert({
-      tenant,
-      thread_id: threadId,
-      ticket_id: ticketId,
-      project_task_id: null,
-      root_comment_id: newCommentId,
-      is_internal: effectiveIsInternal,
-      reply_count: 0,
-      last_activity_at: nowIso,
-      created_at: nowIso,
-      created_by: user.user_id || null,
-    });
-
-    const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
-      tenant,
-      comment_id: newCommentId,
-      thread_id: threadId,
-      ticket_id: ticketId,
-      user_id: user.user_id,
-      // Record the author's linked contact when present so the row is a
-      // faithful source for downstream copies (bundle mirrors) and author
-      // resolution can fall back to the contact map.
-      contact_id: user.contact_id ?? null,
-      author_type: authorType,
-      note: content,
-      is_internal: effectiveIsInternal,
-      is_resolution: isResolution,
-      markdown_content: markdownContent,
-      created_at: nowIso,
-      ...(isScheduled ? {
-        publish_state: 'scheduled',
-        scheduled_publish_at: scheduledPublishAtIso,
-        scheduled_publish_tz: schedule!.timeZone,
-      } : {}),
-      // The email subscriber reads metadata.closes_ticket and skips the
-      // comment-added email so the close email is the single source of
-      // truth when the UI is closing the ticket immediately after.
-      ...(effectiveClosesTicket || resolvedEmailRecipients
-        ? {
-            metadata: {
-              ...(effectiveClosesTicket ? { closes_ticket: true } : {}),
-              ...(resolvedEmailRecipients ? { email_recipients: resolvedEmailRecipients } : {}),
-            },
-          }
-        : {}),
-    }).returning('*');
-
-      await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
-
-    // Update ticket response state based on comment visibility and author (F005-F008)
-    if (!isScheduled) {
-      await updateTicketResponseStateFromComment(
-        trx,
-        tenant,
+      return addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
         ticketId,
-        authorType,
-        authorType === 'internal' ? isInternal : false,
-        user.user_id ?? null
-      );
-    }
-
-    // Bundle child→master reopen: a public reply on a bundled child can
-    // reopen the closed master when reopen_on_child_reply is set. This
-    // mirrors the wiring in commentActions.createComment so the optimized
-    // MSP-side comment path doesn't silently skip the reopen.
-    if (!isInternal && !isScheduled) {
-      await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
-    }
-
-    // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
-    if (!isInternal && !isScheduled) {
-      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-        .where({ master_ticket_id: ticketId })
-        .first();
-
-      if (bundleSettings?.mode === 'sync_updates') {
-        const children = await tenantScopedTable(trx, 'tickets', tenant)
-          .select('ticket_id')
-          .where({ master_ticket_id: ticketId });
-
-        for (const child of children) {
-          // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
-          // the sync_updates shape is defined once. Carry the source author
-          // (user, contact, author_type) so the mirrored child comment resolves
-          // to the real author instead of showing as unknown.
-          await mirrorCommentToChild(trx, tenant, {
-            sourceComment: {
-              comment_id: newCommentId,
-              note: content,
-              markdown_content: markdownContent,
-              user_id: newComment.user_id ?? null,
-              contact_id: newComment.contact_id ?? null,
-              author_type: newComment.author_type,
-            },
-            childTicketId: child.ticket_id,
-            isResolution,
-          });
-        }
-      }
-    }
-
-    // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) await persistCommentPublication(trx, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: newComment.created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId: user.user_id,
-          comment: {
-            id: newComment.comment_id,
-            content: content,
-            author: `${user.first_name} ${user.last_name}`,
-            isInternal,
-            authorType,
-          },
-          suppressContactNotifications,
-          suppressInternalNotifications,
-        }
-      }, publishEvent);
-
-    // Publish workflow v2 ticket message events (additive).
-    if (!isScheduled) try {
-      const occurredAt = newComment.created_at ?? new Date().toISOString();
-      const workflowCtx = {
-        tenantId: tenant,
-        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-        occurredAt,
-        correlationId: newComment.comment_id,
-      };
-
-      const events = buildTicketCommunicationWorkflowEvents({
-        ticketId,
-        messageId: newCommentId,
-        visibility: isInternal ? 'internal' : 'public',
-        author: { authorType: 'user', authorId: user.user_id },
-        channel: 'ui',
-        createdAt: occurredAt,
+        content,
+        isInternal,
+        isResolution,
+        closesTicket,
+        notificationSuppression,
+        schedule,
+        emailRecipients,
       });
-
-      for (const ev of events) {
-        registerAfterCommit(
-          trx,
-          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
-          `${ev.eventType} ticket=${ticketId}`
-        );
-      }
-    } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
-    }
-
-    registerAfterCommit(trx, () =>
-      publishTicketUpdate({
-        tenantId: tenant,
-        ticketId,
-        updatedFields: ['comments'],
-        updatedBy: {
-          userId: user.user_id,
-          displayName: formatLiveUpdateDisplayName(user),
-        },
-        updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-      }),
-      `ticket-live-update ticket=${ticketId}`
-    );
-
-    // Activity-timeline row for the MSP-side "add comment" flow. This path
-    // is hit by the ticket detail UI, so source is always 'ui'. Internal
-    // notes get a distinct event type for clearer rendering.
-    await writeTicketActivity(trx, {
-      tenant,
-      ticketId,
-      eventType: isScheduled
-        ? 'TICKET_COMMENT_SCHEDULED'
-        : isInternal
-        ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
-        : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
-      entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
-      entityId: newComment.comment_id,
-      actor: {
-        actorType: TICKET_ACTIVITY_ACTOR.USER,
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      source: TICKET_ACTIVITY_SOURCE.UI,
-      occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-      details: {
-        is_internal: !!isInternal,
-        is_resolution: !!isResolution,
-        ...(isScheduled ? {
-          scheduled_publish_at: scheduledPublishAtIso,
-          scheduled_publish_tz: schedule!.timeZone,
-        } : {}),
-      },
     });
-
-    if (scheduledPublishAt && scheduledPublishAtIso && schedule) {
-      // Arm only after commit: a worker must never observe a schedule before
-      // its comment row is durable. Startup reconciliation repairs an arming
-      // failure after the transaction has committed.
-      registerAfterCommit(trx, async () => {
-        const job = await scheduleBackgroundJobAt(
-          SCHEDULED_COMMENT_JOB,
-          { tenantId: tenant, ticketId, commentId: newComment.comment_id },
-          scheduledPublishAt,
-          { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
-        );
-        await tenantDb(db, tenant).table('comments')
-          .where({ comment_id: newComment.comment_id, publish_state: 'scheduled' })
-          .update({ schedule_job_id: job.jobId });
-      }, `schedule comment publication ${newComment.comment_id}`);
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    // Track comment analytics
-    captureAnalytics(isScheduled ? 'ticket_comment_scheduled' : 'ticket_comment_added', {
-      is_internal: isInternal,
-      is_resolution: isResolution,
-      content_length: markdownContent.length,
-      has_formatting: content.includes('"type"'), // BlockNote content has type field
-    }, user.user_id);
-
-    // Revalidate paths to update UI
-    revalidatePath(`/msp/tickets/${ticketId}`);
-
-    return newComment;
-    } catch (error) {
-      const expected = ticketActionErrorFrom(error);
-      if (expected) {
-        return expected;
-      }
-      console.error('Failed to add ticket comment:', error);
-      throw error;
-    }
-  });
+    console.error('Failed to add ticket comment:', error);
+    throw error;
+  }
 });
 
 /**

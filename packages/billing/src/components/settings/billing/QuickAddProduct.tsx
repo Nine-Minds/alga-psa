@@ -10,7 +10,7 @@ import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect';
 import {
-  createService,
+  createServiceWithPricing,
   updateService,
   getServiceTypesForSelection,
   setServicePrices,
@@ -503,7 +503,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         await setServicePrices(product.service_id, formPrices);
       } else {
         // Create new product
-        const created = await createService({
+        // One transaction: a failed price write cannot leave a product with no prices.
+        const created = await createServiceWithPricing({
           service_name: formProduct.service_name!.trim(),
           custom_service_type_id: formProduct.custom_service_type_id!,
           billing_method: (formProduct.billing_method || 'usage') as any,
@@ -526,7 +527,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           is_license: formProduct.is_license ?? false,
           license_term: formProduct.license_term ?? null,
           license_billing_cadence: formProduct.license_billing_cadence ?? null
-        } as any);
+        } as any, formPrices);
 
         if (isActionPermissionError(created)) {
           handleError(created.permissionError);
@@ -536,7 +537,6 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           setError(getErrorMessage(created));
           return;
         }
-        await setServicePrices(created.service_id, formPrices);
 
         // Apply inventory settings collected in the panel (create mode).
         if (trackInventory) {

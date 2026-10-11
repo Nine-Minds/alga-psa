@@ -64,21 +64,10 @@ const pricingSchedulesUiSource = readFileSync(
   'utf8',
 );
 
-const liveLineScopeSource = readFileSync(
-  resolve(__dirname, '../../../../../shared/billingClients/liveRecurringLineScope.ts'),
-  'utf8',
-);
-
 describe('system-managed default attribution-shell cutover wiring', () => {
   it('F072/F085: excludes system-managed defaults from recurring materialization and due-work/admin recurring schedule authority paths', () => {
-    // The system-managed-default exclusion now lives in the shared live-line scope
-    // helper (alga0002168); the materializers must adopt it with the exclusion on.
-    expect(liveLineScopeSource).toContain('.whereNull(`${aliases.ct}.is_system_managed_default`)');
-    expect(liveLineScopeSource).toContain('.orWhere(`${aliases.ct}.is_system_managed_default`, false)');
-    expect(contractCadenceSource).toContain('scopeToLiveRecurringContractLines(');
-    expect(contractCadenceSource).toContain('{ excludeSystemManagedDefault: true }');
-    expect(clientCadenceSource).toContain('scopeToLiveRecurringContractLines(');
-    expect(clientCadenceSource).toContain('{ excludeSystemManagedDefault: true }');
+    expect(contractCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
+    expect(clientCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
     expect(billingAndTaxSource).toContain("where('rsp.obligation_type', 'contract_line')");
     expect(billingAndTaxSource).toContain("where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)");
     expect(billingAndTaxSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");

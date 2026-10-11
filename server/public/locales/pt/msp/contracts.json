@@ -2547,13 +2547,13 @@
     },
     "contract": {
       "hasInvoices": "Este contrato possui faturas associadas e não pode ser excluído.",
-      "stillReferenced": "Este contrato ainda é referenciado por {{table}} e não pode ser excluído.",
       "invalidValue": "Um dos valores de contrato selecionados é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "O contrato, cliente ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
       "conflict": "Esta alteração do contrato conflita com um registro existente. Atualize a página e tente novamente.",
       "notAllowed": "Um dos valores do contrato não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório do contrato.",
-      "missingFieldNamed": "Falta um campo obrigatório do contrato: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do contrato: {{field}}.",
+      "deleteFailed": "Algo deu errado ao excluir este contrato. Informe a referência {{ref}} ao contatar o suporte."
     },
     "wizard": {
       "permissions": {

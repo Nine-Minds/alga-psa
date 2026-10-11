@@ -508,6 +508,8 @@ export interface IServicePrice extends TenantEntity {
   rate: number; // Amount in minor units (cents)
   /** Calendar date (`YYYY-MM-DD`) the price takes effect; the epoch when untagged. */
   effective_date?: string | null;
+  /** Explicit primary order within the price's window; 0 is the primary price. */
+  display_order?: number;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

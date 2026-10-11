@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import logger from '@alga-psa/core/logger';
 import { EmailService } from './emailService';
-import http from 'node:http';
 import { UnifiedInboundEmailQueueConsumer } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumer';
 import { processUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor';
 import { UnifiedInboundEmailQueueConsumerV2 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumerV2';
@@ -14,6 +13,16 @@ import {
   assertInboundAuthPauseNotifierRegistered,
 } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { registerInboundAuthPauseEventPublisher } from '@alga-psa/shared/services/email/inboundAuthPauseEventNotifier';
+import { installInboundEmailMetricsSink } from '@alga-psa/shared/services/email/inboundEmailMetrics';
+import { createInboundEmailMetrics } from './observability/registry';
+import { createPromSink } from './observability/promSink';
+import {
+  collectRealSnapshot,
+  createHealthCollector,
+  readRealQueueDepths,
+} from './observability/healthCollector';
+import { createReadiness } from './observability/readiness';
+import { createHealthServer } from './observability/healthServer';
 
 dotenv.config();
 
@@ -25,7 +34,8 @@ registerInboundAuthPauseEventPublisher();
 assertInboundAuthPauseNotifierRegistered('services/email-service');
 
 const service = new EmailService();
-let healthServer: http.Server | undefined;
+let healthServer: ReturnType<typeof createHealthServer> | undefined;
+let healthCollector: ReturnType<typeof createHealthCollector> | undefined;
 let unifiedConsumer: UnifiedInboundEmailQueueConsumer | undefined;
 let unifiedConsumerTask: Promise<void> | undefined;
 let durableConsumer: UnifiedInboundEmailQueueConsumerV2 | undefined;
@@ -33,6 +43,57 @@ let durableConsumerTask: Promise<void> | undefined;
 
 async function start() {
   try {
+    // Metrics: install the sink before anything can record. Only this process
+    // gets a real registry; server/temporal-worker keep the shared no-op.
+    const metrics = createInboundEmailMetrics({ durableMode: getInboundDurableMode() });
+    installInboundEmailMetricsSink(createPromSink(metrics));
+    metrics.setLiveStateProvider(() => ({
+      ...service.getListenerStats(),
+      consumerLastTickMs: {
+        v1: unifiedConsumer?.lastSuccessfulTickAt ?? null,
+        v2: durableConsumer?.lastSuccessfulTickAt ?? null,
+      },
+    }));
+
+    healthCollector = createHealthCollector({
+      metrics,
+      collectSnapshot: collectRealSnapshot,
+      readQueueDepths: readRealQueueDepths,
+    });
+
+    // Serve /health first so liveness is up as early as possible; /ready stays
+    // 503 until the consumer exists and has ticked.
+    const readiness = createReadiness({
+      checkDb: async () => {
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
+        const knex = await getAdminConnection();
+        await knex.raw('select 1');
+      },
+      checkRedis: async () => {
+        const { getInboundEmailRedisClient } = await import('@alga-psa/shared/services/email/unifiedInboundEmailQueue');
+        const client = await getInboundEmailRedisClient();
+        await client.ping();
+      },
+      consumerV1: () => unifiedConsumer,
+      consumerV2: () => durableConsumer,
+    });
+    healthServer = createHealthServer({
+      metrics,
+      readiness,
+      getCollectorCache: () => healthCollector!.getCache(),
+      getImapStats: () => service.getListenerStats(),
+    });
+    healthServer.on('error', (err) => {
+      logger.error('[IMAP] Health server failed', err);
+    });
+    const port = Number(process.env.PORT || 8080);
+    // `HOST` in Alga is a public base URL (e.g. "http://localhost:3000"), not a bind address.
+    // Always bind the health server to all interfaces inside the container.
+    const host = '0.0.0.0';
+    healthServer.listen(port, host, () => {
+      logger.info(`[IMAP] Health server listening on ${host}:${port}`);
+    });
+
     await service.start();
     logger.info('[IMAP] IMAP service started');
 
@@ -77,31 +138,8 @@ async function start() {
       logger.info('[IMAP] Durable inbound queue consumer started');
     }
 
-    const port = Number(process.env.PORT || 8080);
-    // `HOST` in Alga is a public base URL (e.g. "http://localhost:3000"), not a bind address.
-    // Always bind the health server to all interfaces inside the container.
-    const host = '0.0.0.0';
-
-    healthServer = http.createServer((req, res) => {
-      if (req.url === '/health') {
-        res.statusCode = 200;
-        res.setHeader('content-type', 'text/plain; charset=utf-8');
-        res.end('ok');
-        return;
-      }
-
-      res.statusCode = 404;
-      res.setHeader('content-type', 'text/plain; charset=utf-8');
-      res.end('not found');
-    });
-
-    healthServer.on('error', (err) => {
-      logger.error('[IMAP] Health server failed', err);
-    });
-
-    healthServer.listen(port, host, () => {
-      logger.info(`[IMAP] Health server listening on ${host}:${port}`);
-    });
+    // A collector failure must never block startup.
+    healthCollector.start();
   } catch (error) {
     logger.error('[IMAP] Failed to start IMAP service', error);
     process.exit(1);
@@ -110,6 +148,7 @@ async function start() {
 
 const shutdown = async () => {
   logger.info('[IMAP] Shutting down IMAP service');
+  healthCollector?.stop();
   if (durableConsumer) {
     durableConsumer.stop();
   }

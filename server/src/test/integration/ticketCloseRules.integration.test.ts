@@ -1037,4 +1037,62 @@ describe('ticket close rules', () => {
     expect(new Date(persisted.closed_at).toISOString()).toBe(callerClosedAt);
     expect(persisted.closed_by).toBe(callerClosedBy);
   });
+
+  // The resolution comment and the status change share one transaction per
+  // ticket: a rejected close must leave no comment, thread, activity row, or
+  // published comment event behind, and a retry must not duplicate the comment.
+  it('T057: bulk close with a resolution comment is atomic per ticket', async () => {
+    const passingId = await insertTicket(db, fixture);
+    const failingId = await insertTicket(db, fixture);
+    await setBoardCloseRules(db, fixture, { require_resolution_comment: true, require_time_entry: true });
+    await insertTicketTimeEntry(db, fixture, passingId);
+    const failingBefore = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+
+    const commentEventTicketIds = () =>
+      (publishEventMock.mock.calls as unknown as Array<[{ eventType: string; payload: { ticketId?: string } }]>)
+        .filter(([event]) => event.eventType === 'TICKET_COMMENT_ADDED')
+        .map(([event]) => event.payload.ticketId);
+
+    const result = await bulkUpdateTicketStatus([passingId, failingId], fixture.closedStatusId, {
+      resolutionComment: { text: 'Replaced the PSU.' },
+    });
+
+    expect(result.updatedIds).toEqual([passingId]);
+    expect(result.failed.length).toBe(1);
+    expect(result.failed[0].ticketId).toBe(failingId);
+    // The resolution gate is satisfied by the in-transaction comment.
+    expect(result.failed[0].closeRuleFailures?.map((f) => f.rule)).toEqual(['time_entry']);
+
+    const passing = await scopedDb().table('tickets').where({ ticket_id: passingId }).first();
+    expect(passing.is_closed).toBe(true);
+    expect(passing.response_state).toBeNull();
+    const passingComments = await scopedDb().table('comments').where({ ticket_id: passingId });
+    expect(passingComments.filter((c: any) => c.is_resolution === true).length).toBe(1);
+
+    const failing = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+    expect(failing.is_closed).toBe(false);
+    expect(failing.response_state ?? null).toBe(failingBefore.response_state ?? null);
+    expect(await scopedDb().table('comments').where({ ticket_id: failingId })).toHaveLength(0);
+    expect(await scopedDb().table('comment_threads').where({ ticket_id: failingId })).toHaveLength(0);
+    expect(
+      await scopedDb().table('ticket_audit_logs').where({ ticket_id: failingId, entity_type: 'comment' })
+    ).toHaveLength(0);
+
+    expect(commentEventTicketIds()).toContain(passingId);
+    expect(commentEventTicketIds()).not.toContain(failingId);
+
+    // Retry: the first attempt left nothing behind, so this closes with exactly one resolution comment.
+    await insertTicketTimeEntry(db, fixture, failingId);
+    const retry = await bulkUpdateTicketStatus([failingId], fixture.closedStatusId, {
+      resolutionComment: { text: 'Replaced the PSU.' },
+    });
+    expect(retry.updatedIds).toEqual([failingId]);
+    expect(retry.failed).toEqual([]);
+
+    const retried = await scopedDb().table('tickets').where({ ticket_id: failingId }).first();
+    expect(retried.is_closed).toBe(true);
+    const retriedComments = await scopedDb().table('comments').where({ ticket_id: failingId });
+    expect(retriedComments).toHaveLength(1);
+    expect(retriedComments[0].is_resolution).toBe(true);
+  });
 });

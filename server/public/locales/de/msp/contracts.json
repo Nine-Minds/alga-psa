@@ -2547,13 +2547,13 @@
     },
     "contract": {
       "hasInvoices": "Diesem Vertrag sind Rechnungen zugeordnet; er kann nicht gelöscht werden.",
-      "stillReferenced": "Dieser Vertrag wird noch von {{table}} referenziert und kann nicht gelöscht werden.",
       "invalidValue": "Einer der ausgewählten Vertragswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "referenceMissing": "Der ausgewählte Vertrag, Kunde oder ein zugehöriger Datensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "conflict": "Diese Vertragsänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "notAllowed": "Einer der Vertragswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Vertragsfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Vertragsfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Vertragsfeld fehlt: {{field}}.",
+      "deleteFailed": "Beim Löschen dieses Vertrags ist ein Fehler aufgetreten. Nennen Sie dem Support die Referenz {{ref}}."
     },
     "wizard": {
       "permissions": {

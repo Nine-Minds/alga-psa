@@ -139,11 +139,7 @@ import {
   toRecurringUnitRevisionCandidate,
 } from "@alga-psa/shared/billingClients/recurringUnitPricing";
 import { resolveMemberRate } from "@alga-psa/shared/billingClients/resolveFixedLineRate";
-import {
-  ManualInvoiceError,
-  type HandledManualInvoiceErrorCode,
-} from "../../errors/manualInvoiceErrors";
-import { scopeToLiveRecurringContractLines } from "@alga-psa/shared/billingClients/liveRecurringLineScope";
+import { whereLiveRecurringContractLine } from "@alga-psa/shared/billingClients/liveClientCadenceRecurringLine";
 import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
@@ -236,19 +232,8 @@ type ProjectBillingContext = {
 export type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 import type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 
-/**
- * A billing calculation result. A refusal is returned as `error`; when the
- * refusal has a stable code, `errorCode` carries it so generation can re-throw it
- * typed instead of as a bare sentence.
- */
-export type BillingResult = IBillingResult & {
-  error?: string;
-  errorCode?: HandledManualInvoiceErrorCode;
-};
-
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
-  errorCode?: HandledManualInvoiceErrorCode;
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
   warnings?: string[];
 };
@@ -1147,7 +1132,7 @@ export class BillingEngine {
     endDate: ISO8601String,
     billingCycleId: string,
     options: CalculateBillingOptions = {},
-  ): Promise<BillingResult> {
+  ): Promise<IBillingResult & { error?: string }> {
     this.clientDefaultTaxRegionCodeCache.clear();
     this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
@@ -1166,7 +1151,7 @@ export class BillingEngine {
     startDate: ISO8601String,
     endDate: ISO8601String,
     options: CalculateBillingOptions = {},
-  ): Promise<BillingResult> {
+  ): Promise<IBillingResult & { error?: string }> {
     this.clientDefaultTaxRegionCodeCache.clear();
     this.locationTaxRegionCodeCache.clear();
     return this.withPinnedTransaction(async () => {
@@ -1365,13 +1350,8 @@ export class BillingEngine {
         );
 
       if (persistedSelections === null) {
-        throw new ManualInvoiceError(
-          "RECURRING_PERIODS_NOT_MATERIALIZED",
+        throw new Error(
           `Recurring service periods have not been materialized for client ${clientId} in execution window ${billingPeriod.startDate} to ${billingPeriod.endDate}`,
-          {
-            periodStart: billingPeriod.startDate,
-            periodEnd: billingPeriod.endDate,
-          },
         );
       }
 
@@ -1470,7 +1450,7 @@ export class BillingEngine {
     endDate: ISO8601String,
     billingCycleId: string,
     options: CalculateBillingOptions = {},
-  ): Promise<BillingResult> {
+  ): Promise<IBillingResult & { error?: string }> {
     try {
       await this.initKnex();
       if (!this.tenant) {
@@ -1815,7 +1795,6 @@ export class BillingEngine {
           warnings: runWarnings,
           error:
             "No active contract lines found for this client in the selected billing period.",
-          errorCode: "NO_ACTIVE_CONTRACT_LINES",
         };
       }
 
@@ -2566,11 +2545,8 @@ export class BillingEngine {
       "cl.contract_line_id",
     );
 
-    scopeToLiveRecurringContractLines(
-      eligibleLinesQuery,
-      { cc: "cc", ct: "c", cl: "cl" },
-      { excludeSystemManagedDefault: false },
-    );
+    // System-managed default contracts are not excluded: they carry ad-hoc time.
+    whereLiveRecurringContractLine(eligibleLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
 
     const rows = await eligibleLinesQuery
       .where({
@@ -3287,11 +3263,7 @@ export class BillingEngine {
     // Same definition of a live line as the period materializer and the
     // materialization guard (cc + contract + line all active). System-managed
     // default contracts are not excluded: they carry ad-hoc time.
-    scopeToLiveRecurringContractLines(
-      clientContractLinesQuery,
-      { cc: "cc", ct: "c", cl: "cl" },
-      { excludeSystemManagedDefault: false },
-    );
+    whereLiveRecurringContractLine(clientContractLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
 
     const clientContractLines = await clientContractLinesQuery
       .where({

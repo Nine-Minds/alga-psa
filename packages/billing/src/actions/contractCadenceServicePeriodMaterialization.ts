@@ -12,7 +12,7 @@ import {
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
-import { scopeToLiveRecurringContractLines } from '@shared/billingClients/liveRecurringLineScope';
+import { whereLiveRecurringContractLine } from '@shared/billingClients/liveClientCadenceRecurringLine';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
 import {
@@ -366,6 +366,7 @@ async function loadContractCadenceObligations(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
   query
     .where('cc.is_active', true)
     .where((builder) =>
@@ -725,11 +726,7 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-  scopeToLiveRecurringContractLines(
-    query,
-    { cc: 'cc', ct: 'ct', cl: 'cl' },
-    { excludeSystemManagedDefault: true },
-  );
+  whereLiveRecurringContractLine(query, { excludeSystemManagedDefault: true }, { cc: 'cc', ct: 'ct', cl: 'cl' });
   const rows = await query
     .where('cl.cadence_owner', 'contract')
     .whereIn('cl.billing_timing', ['advance', 'arrears'])

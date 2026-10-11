@@ -218,8 +218,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
     );
 
     if (rows.length === 0) {
-      throw new ManualInvoiceError(
-        'RECURRING_PERIODS_NOT_MATERIALIZED',
+      throw new Error(
         'Recurring service periods were not materialized for this recurring execution window.',
       );
     }

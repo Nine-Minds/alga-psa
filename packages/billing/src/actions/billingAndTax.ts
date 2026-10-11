@@ -5,6 +5,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
+import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { resolveInvoiceDueDate } from '../lib/billing/invoiceDueDate';
 import { withTransaction } from '@alga-psa/db';
@@ -559,15 +560,10 @@ async function fetchClientCadenceMaterializationGaps(
     db.tenantJoin(activeRecurringRowsQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
     db.tenantJoin(activeRecurringRowsQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
-    const activeRecurringRows = await activeRecurringRowsQuery
-        .whereIn('cc.client_id', clientIds)
-        .where('cc.is_active', true)
-        .where((builder) =>
-            builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
-        )
-        .where('cl.cadence_owner', 'client')
+    const activeRecurringRows = await whereLiveClientCadenceRecurringLine(
+        activeRecurringRowsQuery.whereIn('cc.client_id', clientIds),
+    )
         .whereNotNull('cl.billing_frequency')
-        .whereNotNull('cl.billing_timing')
         .select(
             'cc.client_id',
             'cl.contract_line_id as client_contract_line_id',

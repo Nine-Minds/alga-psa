@@ -19,9 +19,8 @@ import {
 let db: Knex;
 let tenantId: string;
 let convertQuoteToDraftContract: typeof import('../../../../packages/billing/src/services/quoteConversionService').convertQuoteToDraftContract;
-let activateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').activateClientContractForBilling;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
-let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
+let activateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').activateClientContractForBilling;
 let Quote: any;
 let QuoteItem: any;
 
@@ -69,6 +68,11 @@ vi.mock('@alga-psa/auth', async () => {
   const { withAuth } = await import('@alga-psa/auth/withAuth');
   return { ...createAuthModuleMock(), withAuth };
 });
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async () => {}),
+}));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
@@ -147,7 +151,6 @@ describe('quote conversion: per-seat recurring services', () => {
     QuoteItem = (await import('../../../../packages/billing/src/models/quoteItem')).default;
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ activateClientContractForBilling } = await import('@alga-psa/billing/actions/billingClientsActions'));
-    ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -189,28 +192,15 @@ describe('quote conversion: per-seat recurring services', () => {
       expect(Number(row.base_rate)).toBe(rate);
     }
 
-    // Activate the draft through the real Set to Active action (what accepting the
-    // draft contract does), after pinning the assignment to the billed window.
-    await tenantTable(db, tenantId, 'client_contracts')
+    // The converted contract is a draft: lines enabled, assignment inactive. Set to Active
+    // (the Client Contracts action) must be all it takes to make it billable.
+    expect((lines as any[]).every((line) => line.is_active === true)).toBe(true);
+    const assignment: any = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ start_date: '2024-12-01' });
-    const activation: any = await activateClientContractForBilling(
-      (
-        await tenantTable(db, tenantId, 'client_contracts')
-          .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-          .first()
-      ).client_contract_id,
-    );
-    expect(activation?.actionError).toBeUndefined();
-    for (const line of lines as any[]) {
-      await db.transaction((trx) =>
-        syncRecurringServicePeriodsForContractLine(trx, {
-          tenant: tenantId,
-          contractLineId: line.contract_line_id,
-          sourceRunPrefix: 'per-seat-quote-test',
-        }),
-      );
-    }
+      .first();
+    expect(assignment.is_active).toBe(false);
+    const activated: any = await activateClientContractForBilling(assignment.client_contract_id);
+    expect(activated.actionError).toBeUndefined();
     const invoice: any = await generateInvoice(januaryCycle);
     expect(invoice).toBeTruthy();
     // 20 x $100 + 30 x $50 + 2 x $200

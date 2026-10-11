@@ -684,3 +684,53 @@ test('T012: Temporal UI service-link collision errors are classified with disabl
   assert.match(status.topBlocker.reason, /service-link environment collision/i);
   assert.match(status.topBlocker.nextAction, /Disable service links/i);
 });
+
+const EMAIL_STATUS_KEY =
+  'kubectl --kubeconfig /tmp/kubeconfig get --raw /api/v1/namespaces/msp/services/http:email-service:http/proxy/status';
+
+test('alga0002256: degraded email-service /status marks background issues without touching login', async () => {
+  const responses = healthyResponses();
+  responses[EMAIL_STATUS_KEY] = {
+    ok: true,
+    output: JSON.stringify({
+      version: 1,
+      status: 'degraded',
+      reasons: [{ code: 'providers_auth_paused', severity: 'degraded', message: '2 providers paused after auth failures' }],
+    }),
+  };
+  const status = await collectStatus(buildEnv(), { runner: new MockCaptureRunner(responses) });
+  const email = status.workloads.components.find((c) => c.name === 'email-service');
+  assert.equal(email.status, 'degraded');
+  assert.match(email.message, /paused after auth failures/);
+  assert.equal(status.canonical.tiers.login.ready, true);
+  assert.equal(status.canonical.tiers.background.ready, false);
+  assert.equal(status.canonical.rollup.state, 'ready_with_background_issues');
+});
+
+test('alga0002256: ok email-service /status leaves the appliance healthy', async () => {
+  const responses = healthyResponses();
+  responses[EMAIL_STATUS_KEY] = { ok: true, output: JSON.stringify({ version: 1, status: 'ok', reasons: [] }) };
+  const status = await collectStatus(buildEnv(), { runner: new MockCaptureRunner(responses) });
+  const email = status.workloads.components.find((c) => c.name === 'email-service');
+  assert.equal(email.status, 'healthy');
+  assert.equal(email.emailHealth, 'ok');
+  assert.equal(status.canonical.tiers.background.ready, true);
+});
+
+test('alga0002256: missing, 404, invalid-JSON or wrong-version /status never degrades', async () => {
+  const bodies = [
+    undefined,
+    { ok: false, code: 1, output: 'Error from server (NotFound): the server could not find the requested resource' },
+    { ok: true, output: '<html>nope</html>' },
+    { ok: true, output: JSON.stringify({ version: 2, status: 'down', reasons: [] }) },
+  ];
+  for (const body of bodies) {
+    const responses = healthyResponses();
+    if (body) responses[EMAIL_STATUS_KEY] = body;
+    const status = await collectStatus(buildEnv(), { runner: new MockCaptureRunner(responses) });
+    const email = status.workloads.components.find((c) => c.name === 'email-service');
+    assert.equal(email.status, 'healthy');
+    assert.equal(email.emailHealth, 'unavailable');
+    assert.equal(status.canonical.tiers.background.ready, true);
+  }
+});
