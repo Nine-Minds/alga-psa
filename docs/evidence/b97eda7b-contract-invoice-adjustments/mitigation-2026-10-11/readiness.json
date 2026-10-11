@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-11T22:03:00Z",
+  "pr": 3499,
+  "head": "0826a475429d25fe5a3647ef6a5e7df7c241e7cf",
+  "reviewBuildStamp": "0826a475429d25fe5a3647ef6a5e7df7c241e7cf+da39a3ee5e6b",
+  "reviewAppHealth": 200,
+  "reviewAppEntry": "http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185/msp/billing?tab=contract-templates",
+  "productionUi": {
+    "authenticatedBrowser": true,
+    "billingContractsRouteReached": true,
+    "visibleTemplateInventory": [
+      "REVIEW-3499-DISCOUNTS",
+      "REVIEW-3499-MITIGATION-TEMPLATE"
+    ],
+    "serverActionDiagnostic": "500: relation time_tracking_sessions does not exist",
+    "isolatedTemplateClientCopies": "template authored through supported UI; no clients instantiated because production server actions return 500 on missing time_tracking_sessions",
+    "reviewOwnedTemplate": {
+      "name": "REVIEW-3499-MITIGATION-TEMPLATE",
+      "id": "533a7ca9-a6f1-49f0-a8a6-dd1ed27306b2",
+      "published": true,
+      "lineBlocks": 1,
+      "billableServices": [
+        "Managed Services Plan",
+        "Managed Workstation"
+      ],
+      "quantityEach": 1,
+      "defaultDiscount": {
+        "name": "REVIEW-3499-Default-10-Percent",
+        "type": "percentage",
+        "value": 10,
+        "scope": "This contract",
+        "startDate": "2026-10-11"
+      }
+    }
+  },
+  "openReview": {
+    "paneId": "review-app-b97eda7b-0e3f-4b09-be80-6b57f934d8a5-ts_robert-X670E-Pro-RS",
+    "reproducedFailures": 2,
+    "freshCardBrowser": "usable and authenticated",
+    "cause": "remote review pane handoff: pane creation is acknowledged before renderer attachment; sign-in uses local pane wake before the remote browser backend registers",
+    "separateOwnerCommit": "df8e9c219b38049f60fca8bd332e698181ddc46b",
+    "activation": "not activated in the running Alga Dev release; live Open Review retest remains pending"
+  },
+  "automaticGeneration": "not validated against current production; no client copies; production action diagnostic prevents generation/retry proof",
+  "qboDeliveredHistory": {
+    "fixture": "REVIEW-3499-QBO-NEXT",
+    "invoice": "5a1e0000-0000-4000-8000-202610079004",
+    "batch": "3ac31e06-9479-4f5d-9c73-170a880d80d9",
+    "simulatorInvoice": "invoice-21",
+    "invoiceTotalAndPrincipalMinorUnits": 385000,
+    "simulatorTotalAmtAndBalance": 3850,
+    "state": "delivered; retained unchanged"
+  },
+  "previousScopeEvidence": "../final-rerun-0826/readiness.json"
+}
