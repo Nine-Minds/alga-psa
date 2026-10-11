@@ -36,6 +36,7 @@ import {
   buildWorkflowAuthoringGuide,
   didYouMean,
   inferExpressionResultTypes,
+  type WorkflowEventTrigger,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -1680,7 +1681,7 @@ async function replayStoredEventAgainstDefinition(params: {
   knex: Knex;
   tenant: string;
   definition: Parameters<typeof applyTriggerPayloadMapping>[0]['definition'];
-  eventTrigger: Extract<WorkflowTrigger, { type: 'event' }>;
+  eventTrigger: WorkflowEventTrigger;
   eventId?: string;
 }): Promise<StoredEventReplay> {
   const { knex, tenant, definition, eventTrigger, eventId } = params;
