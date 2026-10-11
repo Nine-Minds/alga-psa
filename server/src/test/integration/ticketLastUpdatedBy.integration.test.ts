@@ -79,6 +79,9 @@ const getTicket = (ticketId: string) => scoped().table('tickets').where({ ticket
 function asUser(user: any) {
   userRef.user = {
     user_id: user.user_id,
+    // A session user carries its tenant; ticket updates refuse an actor whose
+    // tenant differs from the ticket's unless a collaboration context exists.
+    tenant: fixture.tenantId,
     user_type: user.user_type ?? 'internal',
     first_name: user.first_name,
     last_name: user.last_name,
