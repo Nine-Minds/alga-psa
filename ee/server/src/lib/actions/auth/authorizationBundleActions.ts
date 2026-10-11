@@ -14,7 +14,9 @@ import {
   type RelationshipTemplateKey,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
+  isSelfApprovalBlocked,
 } from '@alga-psa/authorization/kernel';
+import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import {
   archiveBundle,
@@ -1043,8 +1045,9 @@ export const runAuthorizationBundleSimulationAction = withAuth(
             input.action === 'approve' && input.resourceType === 'billing'
               ? [
                   (evaluationInput) => {
-                    const ownerUserId = evaluationInput.record?.ownerUserId;
-                    if (typeof ownerUserId === 'string' && ownerUserId === evaluationInput.subject.userId) {
+                    // Shared decision (packages/authorization selfApproval.ts): same answer as
+                    // the quoteActions guard and the bundle not_self_approver rule.
+                    if (isSelfApprovalBlocked(evaluationInput)) {
                       return {
                         allowed: false,
                         reasons: [
@@ -1098,6 +1101,13 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       knex,
     };
 
+    // Sole-approver self-approval (alga-2026-0002597): decided here, at the call site,
+    // because the kernel/providers must not query the database.
+    const allowSelfApproval =
+      input.action === 'approve' && input.resourceType === 'billing'
+        ? await resolveAllowSelfApprovalFlag(knex, tenant, principal.user_id, record.ownerUserId)
+        : false;
+
     const evaluateDecision = async (rules: BundleNarrowingRule[]) => {
       const kernel = createKernelWithRules(rules);
       const decision =
@@ -1107,6 +1117,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
               mutation: {
                 kind: 'approve',
                 record,
+                allowSelfApproval,
               },
             })
           : await kernel.authorizeResource(evaluationInput);

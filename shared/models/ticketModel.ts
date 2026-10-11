@@ -15,6 +15,7 @@ import type { IEventPublisher } from '@alga-psa/types';
 import { resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
@@ -1265,6 +1266,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
@@ -1389,6 +1391,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
@@ -1588,6 +1591,7 @@ export class TicketModel {
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
       if (responseStateEnabled) {
+        // LEVERAGE: pattern response-state-from-comment — inbound-email/model comment path sets awaiting_internal directly and emits no TICKET_RESPONSE_STATE_CHANGED; use applyCommentResponseState (shared/lib/tickets/responseState.ts) once the model can emit after-commit events.
         await db.table('tickets')
           .where({
             ticket_id: validatedData.ticket_id,

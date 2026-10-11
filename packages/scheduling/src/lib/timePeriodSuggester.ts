@@ -4,6 +4,10 @@ import type { ITimePeriod, ITimePeriodSettings, ITimePeriodView } from '@alga-ps
 
 export type TimePeriodSettings = ITimePeriodSettings;
 
+/**
+ * Suggests and computes time periods. All periods are half-open `[start, end)`
+ * intervals: an `end` date is the first day AFTER the period.
+ */
 export class TimePeriodSuggester {
   private static parseDateValue(date: string | Temporal.PlainDate): Temporal.PlainDate {
     if (date instanceof Temporal.PlainDate) {
@@ -77,6 +81,7 @@ export class TimePeriodSuggester {
     const startDate = currentDate;
     let endDate: Temporal.PlainDate;
 
+    // LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
     switch (setting.frequency_unit) {
       case 'day':
         // Time periods are half-open intervals [start, end) — TimePeriod
@@ -141,31 +146,48 @@ export class TimePeriodSuggester {
     };
   }
 
+  /**
+   * Computes the end of a period that starts on `startDate` for the given setting.
+   *
+   * Time periods are half-open intervals `[start, end)`: the returned date is
+   * the EXCLUSIVE end, i.e. the first day AFTER the period. This matches
+   * `suggestNewTimePeriod` and stored `end_date`. Callers that display the last
+   * included day must convert (see `timePeriodDisplay`).
+   *
+   * Month periods with `end_day = d` end on day `min(d, daysInMonth)` of the
+   * `(frequency - 1)`-th following month; if that is before `startDate` (e.g. start
+   * on the 16th, end_day 15) the period rolls to the next month. `end_day = 0`
+   * means end of month.
+   */
+  // LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
   static calculateEndDate(startDate: Temporal.PlainDate, settings: TimePeriodSettings): Temporal.PlainDate {
-    let endDate: Temporal.PlainDate;
+    const f = settings.frequency;
 
     switch (settings.frequency_unit) {
       case 'day':
-        endDate = startDate.add({ days: settings.frequency - 1 });
-        break;
+        return startDate.add({ days: f });
       case 'week':
-        endDate = startDate.add({ weeks: settings.frequency });
-        break;
-      case 'month':
-        endDate = startDate.add({ months: settings.frequency }).subtract({ days: 1 });
-        if (typeof settings.end_day === 'number' && settings.end_day !== 0) {
-          endDate = endDate.with({ day: settings.end_day });
+        return startDate.add({ weeks: f });
+      case 'month': {
+        const endDay = settings.end_day;
+        if (typeof endDay !== 'number') {
+          return startDate.add({ months: f });
         }
-        // end_day = 0 means "end of month", which is already handled by the subtract({ days: 1 }) above
-        break;
+        const lastMonth = startDate.add({ months: f - 1 });
+        if (endDay === 0) {
+          return lastMonth.with({ day: 1 }).add({ months: 1 });
+        }
+        let last = lastMonth.with({ day: Math.min(endDay, lastMonth.daysInMonth) });
+        if (Temporal.PlainDate.compare(last, startDate) < 0) {
+          const nextMonth = startDate.add({ months: f });
+          last = nextMonth.with({ day: Math.min(endDay, nextMonth.daysInMonth) });
+        }
+        return last.add({ days: 1 });
+      }
       case 'year':
-        endDate = startDate.add({ years: settings.frequency }).subtract({ days: 1 });
-        break;
+        return startDate.add({ years: f });
       default:
         throw new Error(`Unsupported frequency unit: ${settings.frequency_unit}`);
     }
-
-    return endDate;
   }
 }
-

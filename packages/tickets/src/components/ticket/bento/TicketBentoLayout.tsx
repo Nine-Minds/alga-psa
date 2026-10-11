@@ -2,11 +2,9 @@
 
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
+import { User, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -34,6 +32,7 @@ import { TicketExternalLinksSection } from './../TicketExternalLinksSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
+import { TicketStopwatchControls } from '../TicketStopwatchControls';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
@@ -52,14 +51,7 @@ import { resolveTicketCallPhone } from './ticketCallPhone';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
 import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
-
-function formatElapsed(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-}
+import { resolveBoardStopwatchEnabled } from '../../../lib/boardLiveTicketTimer';
 
 export interface TicketBentoLayoutProps {
   id: string;
@@ -196,14 +188,10 @@ export interface TicketBentoLayoutProps {
   // Timer / time entries
   hideTimeEntry?: boolean;
   isLiveTicketTimerEnabled?: boolean;
-  elapsedTime: number;
-  isRunning: boolean;
-  isTimerLocked?: boolean;
   timeDescription: string;
   onTimeDescriptionChange: (value: string) => void;
-  onStart: () => void;
-  onPause: () => void;
-  onStop: () => void;
+  /** Called after a stopwatch Stop saved its time entry, so the time list refreshes. */
+  onTimeEntryLogged?: () => void;
   onAddTimeEntry: () => void;
   /** True while the time-entry launch chain is in flight; disables the button. */
   isLaunchingTimeEntry?: boolean;
@@ -212,7 +200,6 @@ export interface TicketBentoLayoutProps {
   timeEntriesRefreshKey?: number;
   onEditTimeEntry?: (entry: any) => void;
   onDeleteTimeEntry?: (entry: any) => void;
-  renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   // Team & watchers
   additionalAgents: ITicketResource[];
   availableAgents: IUserWithRoles[];
@@ -644,44 +631,17 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           initialSummary={props.bentoStreams?.timeEntries}
         />
       </Suspense>
-      {props.isLiveTicketTimerEnabled ? (
-        <div className="mb-3">
-          <div className="flex items-center justify-between rounded-md bg-[rgb(var(--color-border-100))] px-3 py-2 font-mono text-xl text-[rgb(var(--color-text-900))]">
-            <span id={`${id}-timer-clock`}>{formatElapsed(props.elapsedTime)}</span>
-            <div className="flex items-center gap-1">
-              {!props.isRunning ? (
-                <Button
-                  {...withDataAutomationId({ id: `${id}-timer-start` })}
-                  variant="ghost"
-                  size="sm"
-                  onClick={props.onStart}
-                  aria-label={t('bento.tiles.startTimer', 'Start timer')}
-                  title={props.isTimerLocked ? t('bento.tiles.timerLockedHint', 'Another timer is already running') : undefined}
-                  className={props.isTimerLocked ? 'opacity-60' : ''}
-                >
-                  <Play className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button {...withDataAutomationId({ id: `${id}-timer-pause` })} variant="ghost" size="sm" onClick={props.onPause}>
-                  <Pause className="h-4 w-4" />
-                </Button>
-              )}
-              <Button {...withDataAutomationId({ id: `${id}-timer-stop` })} variant="ghost" size="sm" onClick={props.onStop}>
-                <StopCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="mt-2">
-            <Label htmlFor={`${id}-timer-description`}>{t('bento.tiles.workDescription', 'Work description')}</Label>
-            <Input
-              id={`${id}-timer-description`}
-              value={props.timeDescription}
-              onChange={(event) => props.onTimeDescriptionChange(event.target.value)}
-              placeholder={t('bento.tiles.whatAreYouWorkingOn', 'What are you working on?')}
-              containerClassName="mb-0"
-            />
-          </div>
-        </div>
+      {ticketId ? (
+        <TicketStopwatchControls
+          id={`${id}-timer`}
+          ticketId={ticketId}
+          variant="tile"
+          enabled={resolveBoardStopwatchEnabled(props.isLiveTicketTimerEnabled)}
+          timeDescription={props.timeDescription}
+          onTimeDescriptionChange={props.onTimeDescriptionChange}
+          masterTicketId={ticket.master_ticket_id ?? null}
+          onTimeEntryLogged={props.onTimeEntryLogged}
+        />
       ) : null}
 
       <Button
@@ -719,12 +679,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         </Suspense>
       ) : null}
 
-      {props.isLiveTicketTimerEnabled && ticketId && props.userId && props.renderIntervalManagement ? (
-        <div className="mt-2 border-t border-[rgb(var(--color-border-100))] pt-3" {...withDataAutomationId({ id: `${id}-interval-management` })}>
-          <h4 className="text-xs font-semibold text-[rgb(var(--color-text-500))] mb-2">{t('bento.tiles.trackedIntervals', 'Tracked intervals')}</h4>
-          {props.renderIntervalManagement({ ticketId, userId: props.userId })}
-        </div>
-      ) : null}
     </BentoTile>
   ) : null;
 

@@ -135,6 +135,8 @@ export async function assertValidContactManager(
   }
 }
 
+// LEVERAGE: pattern contact-row-input-schema — API (server/src/lib/api/schemas/contact.ts) and model
+// each define the phone/email row input shape
 const phoneRowInputSchema = z.object({
   contact_phone_number_id: z.string().uuid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),

@@ -257,6 +257,11 @@ const servicePeriodPostInventoryRefs = new Set([
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
   'server/test-utils/billingTestHelpers.ts',
+  // The obligation_type collapse migration (alga0002072) rewrites persisted
+  // recurring service-period rows and its suite seeds their boundaries; both
+  // landed after the pass-0 snapshot.
+  'server/migrations/20261010120000_collapse_recurring_service_period_obligation_type.cjs',
+  'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleRecurringServicePeriods.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
@@ -325,6 +330,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
+  // Quote-converted first-invoice regression (alga0002168) asserts the contract
+  // line's first service period was materialized.
+  'server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
