@@ -60,6 +60,49 @@ export function fixedServicesRecurringTotalCents(
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
 }
 
+// LEVERAGE: pattern monthly-cadence-normalization — twin of shared/billingClients/contractMonthlyValue.normalizeToMonthlyCents;
+// that module imports the server DB layer, so client-side wizard code cannot import it. The pure cadence math
+// belongs in a client-safe layer both import.
+function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
+  switch (billingFrequency) {
+    case 'weekly':
+      return Math.round(amountCents * 4.33);
+    case 'quarterly':
+      return Math.round(amountCents / 3);
+    case 'semi-annually':
+    case 'semi_annually':
+      return Math.round(amountCents / 6);
+    case 'annually':
+      return Math.round(amountCents / 12);
+    default:
+      return Math.round(amountCents);
+  }
+}
+
+/**
+ * Monthly-normalized sum of {@link fixedServicesRecurringTotalCents} over every
+ * fixed line. Each line is normalized by its own billing frequency (falling
+ * back to `defaultBillingFrequency`), so lines on different cadences add up in
+ * a common monthly unit. A service-less line contributes only its base rate,
+ * matching the stored-contract valuation.
+ */
+export function fixedLinesRecurringTotalCents(
+  lines: ReadonlyArray<{
+    billing_frequency?: string | null;
+    base_rate?: number | null;
+    services: ReadonlyArray<FixedServiceBasisFields>;
+  }>,
+  defaultBillingFrequency?: string | null,
+): number {
+  return lines.reduce((sum, line) => {
+    const amount =
+      line.services.length === 0
+        ? Number(line.base_rate ?? 0)
+        : fixedServicesRecurringTotalCents(line.services, line.base_rate);
+    return sum + normalizeToMonthlyCents(amount, line.billing_frequency ?? defaultBillingFrequency);
+  }, 0);
+}
+
 /**
  * First authoring problem for one member, or null. Unit members: a whole
  * quantity >= 0 (zero is a legitimate stored zero) and a unit rate. Bundle

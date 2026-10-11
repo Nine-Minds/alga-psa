@@ -5,6 +5,7 @@
  */
 
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { ticketCreationWithActor } from '../../lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -1309,6 +1310,17 @@ export async function createTicketFromEmail(
         }
       }
 
+      // A matched contact with no user account is the actor of the inbound ticket.
+      // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
+      const creationEvents =
+        !userId && ticketData.contact_id
+          ? ticketCreationWithActor(
+              eventPublisher,
+              { actorType: 'CONTACT', actorContactId: ticketData.contact_id },
+              'inbound email ticket: sender matched a contact'
+            )
+          : eventPublisher;
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -1327,7 +1339,7 @@ export async function createTicketFromEmail(
         email_metadata: ticketData.email_metadata,
         attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
-      }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
+      }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
 
       // Publish TICKET_ASSIGNED event if an agent was assigned
       // Note: Event publishing failure should not prevent ticket creation

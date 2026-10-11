@@ -33,7 +33,8 @@ import {
   listWorkflowDefinitionsPagedAction,
   deleteWorkflowDefinitionAction,
   preCheckWorkflowDefinitionDeletion,
-  updateWorkflowDefinitionMetadataAction
+  updateWorkflowDefinitionMetadataAction,
+  listWorkflowLaunchSkipCountsAction
 } from '@alga-psa/workflows/actions';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -207,6 +208,8 @@ export default function WorkflowList({
 
   // Initialize state from URL params
   const [workflows, setWorkflows] = useState<WorkflowDefinitionListItem[]>([]);
+  // Alarming (non-intentional) launch skips in the last 7 days, keyed by workflow_id.
+  const [launchSkipCounts, setLaunchSkipCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
@@ -311,6 +314,20 @@ export default function WorkflowList({
         setWorkflows(nextItems);
         setTotalItems(nextTotalItems);
         setCounts(nextCounts);
+
+        // One grouped query per page load. The badge is advisory, so a failure must not fail the list.
+        try {
+          const skipCounts = nextItems.length > 0
+            ? await listWorkflowLaunchSkipCountsAction({
+                workflowIds: nextItems.map((item) => item.workflow_id),
+                from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+              })
+            : {};
+          if (!didUnmount.current) setLaunchSkipCounts(skipCounts);
+        } catch (skipError) {
+          console.error('Failed to fetch workflow launch skip counts:', skipError);
+          if (!didUnmount.current) setLaunchSkipCounts({});
+        }
       } catch (err) {
         console.error('Failed to fetch workflows:', err);
         if (!didUnmount.current) {
@@ -615,9 +632,24 @@ export default function WorkflowList({
       sortable: true,
       width: '120px',
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
-        <Badge variant={getStatusBadgeVariant(record.status, record.is_paused)}>
-          {getStatusLabel(record.status, record.is_paused, t)}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-1">
+          <Badge variant={getStatusBadgeVariant(record.status, record.is_paused)}>
+            {getStatusLabel(record.status, record.is_paused, t)}
+          </Badge>
+          {(launchSkipCounts[record.workflow_id] ?? 0) > 0 && (
+            <Badge
+              variant="warning"
+              title={t('automation.workflowList.launchSkips.badgeTitle', {
+                defaultValue: 'Events this workflow did not launch for in the last 7 days'
+              })}
+            >
+              {t('automation.workflowList.launchSkips.badge', {
+                count: launchSkipCounts[record.workflow_id],
+                defaultValue: '{{count}} skipped'
+              })}
+            </Badge>
+          )}
+        </div>
       )
     },
     {

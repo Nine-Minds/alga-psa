@@ -366,13 +366,14 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     expect(publish).toHaveBeenCalledTimes(1);
     const [event, options] = publish.mock.calls[0] as [any, any];
     expect(options.eventId).toBe(eventId);
-    expect(event.payload).toMatchObject({userId:ticket,comment:{author:'Unmatched Sender'}});
+    expect(event.payload).toMatchObject({actorType:'SYSTEM',comment:{author:'Unmatched Sender'}});
+    expect(event.payload).not.toHaveProperty('userId');
     expect(() => EventSchemas.TICKET_COMMENT_ADDED.parse({
       id: randomUUID(), timestamp: new Date().toISOString(), ...event,
     })).not.toThrow();
     expect((await table('comments').where({comment_id:stuck}).first()).scheduled_publish_dispatched_at).toBeTruthy();
   });
-  it('publishes a user-less scheduled comment with a sentinel actor and the real sender', async () => {
+  it('publishes a user-less scheduled comment as a SYSTEM actor (no userId) with the real sender', async () => {
     const publishers = await import('@alga-psa/event-bus/publishers');
     const { EventSchemas } = await import('@alga-psa/event-schemas');
     const scheduled = await makeComment({
@@ -387,7 +388,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       const {publishScheduledCommentHandler} = await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
       await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:scheduled});
       const [event] = publish.mock.calls[0] as [any, any];
-      expect(event.payload).toMatchObject({userId:ticket,comment:{author:'unmatched@example.test'}});
+      expect(event.payload).toMatchObject({actorType:'SYSTEM',comment:{author:'unmatched@example.test'}});
+      expect(event.payload).not.toHaveProperty('userId');
       expect(() => EventSchemas.TICKET_COMMENT_ADDED.parse({
         id: randomUUID(), timestamp: new Date().toISOString(), ...event,
       })).not.toThrow();

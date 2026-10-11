@@ -88,13 +88,13 @@
       "types": "./src/editor/index.ts",
       "import": "./dist/editor/index.mjs"
     },
+    "./editor/hasEditorContent": {
+      "types": "./src/editor/hasEditorContent.ts",
+      "import": "./dist/editor/hasEditorContent.mjs"
+    },
     "./editor/*": {
       "types": "./src/editor/*.tsx",
       "import": "./dist/editor/*.mjs"
-    },
-    "./services": {
-      "types": "./src/services/index.ts",
-      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {

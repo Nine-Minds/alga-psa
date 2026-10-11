@@ -277,10 +277,9 @@ describe('catalog create entrypoints honour the tenant default contract', () => 
 
   it('publishes no event and leaves no row when the transaction rolls back after insert', async () => {
     await setConfiguredDefault(configuredRateId);
-    const priceFailure = vi
-      .spyOn(productCatalog as unknown as { setServicePrices: (...args: unknown[]) => unknown }, 'setServicePrices')
-      .mockRejectedValueOnce(new Error('post-insert failure'));
-
+    // The price writer runs after the catalog row is inserted, in the same
+    // transaction. A fractional rate (rejected by the writer, never rounded)
+    // makes it fail at exactly that point.
     await expect(
       productCatalog.create(
         {
@@ -288,13 +287,12 @@ describe('catalog create entrypoints honour the tenant default contract', () => 
           custom_service_type_id: serviceTypeId,
           is_active: true,
           is_license: false,
-          prices: [{ currency_code: 'USD', rate: 100 }],
+          prices: [{ currency_code: 'USD', rate: 100.5 }],
         } as never,
         context,
       ),
-    ).rejects.toThrow('post-insert failure');
+    ).rejects.toThrow();
 
-    priceFailure.mockRestore();
     expect(eventBus.publishEvent).not.toHaveBeenCalled();
     expect(
       await table('service_catalog').where({ service_name: 'Rollback Product' }).select('service_id'),

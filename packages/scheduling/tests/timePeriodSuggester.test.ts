@@ -257,4 +257,66 @@ describe('defaultEffectiveFrom (#3206)', () => {
     const odd = makeSettings({ frequency_unit: 'fortnight' as any });
     expect(defaultEffectiveFrom(odd, Temporal.PlainDate.from('2026-10-10')).toString()).toBe('2026-10-10');
   });
+
+});
+
+describe('TimePeriodSuggester end dates', () => {
+  describe('calculateEndDate (exclusive end)', () => {
+    const d = (v: string) => Temporal.PlainDate.from(v);
+    const end = (start: string, o: Partial<ITimePeriodSettings>) =>
+      TimePeriodSuggester.calculateEndDate(d(start), makeSettings(o)).toString();
+
+    test('day f=1 and f=7', () => {
+      expect(end('2026-01-01', { frequency_unit: 'day', frequency: 1 })).toBe('2026-01-02');
+      expect(end('2026-01-01', { frequency_unit: 'day', frequency: 7 })).toBe('2026-01-08');
+    });
+
+    test('week f=1 and f=2', () => {
+      expect(end('2026-01-01', { frequency_unit: 'week', frequency: 1 })).toBe('2026-01-08');
+      expect(end('2026-01-01', { frequency_unit: 'week', frequency: 2 })).toBe('2026-01-15');
+    });
+
+    test('month without end_day', () => {
+      expect(end('2026-01-01', { frequency_unit: 'month', frequency: 1 })).toBe('2026-02-01');
+    });
+
+    test('month end_day=0 (end of month)', () => {
+      expect(end('2026-01-01', { frequency_unit: 'month', frequency: 1, end_day: 0 })).toBe('2026-02-01');
+      expect(end('2026-01-10', { frequency_unit: 'month', frequency: 2, end_day: 0 })).toBe('2026-03-01');
+    });
+
+    test('month end_day=15 from the 1st ends after the 15th', () => {
+      expect(end('2026-01-01', { frequency_unit: 'month', frequency: 1, end_day: 15 })).toBe('2026-01-16');
+    });
+
+    test('month end_day=15 from the 16th rolls to next month', () => {
+      expect(end('2026-01-16', { frequency_unit: 'month', frequency: 1, end_day: 15 })).toBe('2026-02-16');
+    });
+
+    test('month end_day=31 in a 30-day month clamps to the last day', () => {
+      expect(end('2026-04-01', { frequency_unit: 'month', frequency: 1, end_day: 31 })).toBe('2026-05-01');
+    });
+
+    test('year', () => {
+      expect(end('2026-01-01', { frequency_unit: 'year', frequency: 1 })).toBe('2027-01-01');
+    });
+
+    test.each([
+      ['day', { frequency_unit: 'day', frequency: 7 }, '2026-01-01'],
+      // Start on a grid boundary (week cells are Monday-aligned, phase anchored before effective_from),
+      // so the suggestion is a full cell rather than a partial first one.
+      ['week', { frequency_unit: 'week', frequency: 2 }, '2026-01-12'],
+      ['month', { frequency_unit: 'month', frequency: 1, start_day: 1, end_day: 15 }, '2026-01-01'],
+      ['year', { frequency_unit: 'year', frequency: 1 }, '2026-01-01'],
+    ] as const)('matches suggestNewTimePeriod end (%s)', (_unit, overrides, latestEnd) => {
+      const setting = makeSettings(overrides as Partial<ITimePeriodSettings>);
+      const existing: ITimePeriod[] = [
+        { tenant: 'tenant-1', period_id: 'p0', start_date: '2025-12-01', end_date: latestEnd },
+      ];
+      const suggestion = TimePeriodSuggester.suggestNewTimePeriod([setting], existing);
+      expect(suggestion.success).toBe(true);
+      const start = d(suggestion.data!.start_date as string);
+      expect(TimePeriodSuggester.calculateEndDate(start, setting).toString()).toBe(suggestion.data!.end_date);
+    });
+  });
 });

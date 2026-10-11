@@ -60,7 +60,8 @@ describe('WorkflowEventPublisher', () => {
       payload: {
         tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
         ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
-        userId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+        actorType: 'SYSTEM',
+        occurredAt: expect.any(String),
         source: 'email',
         board_id: 'd7853ff0-f826-43a4-a032-f5056b2c0202',
       },
@@ -88,7 +89,9 @@ describe('WorkflowEventPublisher', () => {
       payload: {
         tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
         ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
-        userId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+        actorType: 'SYSTEM',
+        occurredAt: expect.any(String),
+        commentId: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
         comment: {
           id: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
           content: 'Customer reply body',
@@ -120,7 +123,9 @@ describe('WorkflowEventPublisher', () => {
       payload: {
         tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
         ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
-        userId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+        actorType: 'SYSTEM',
+        occurredAt: expect.any(String),
+        commentId: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
         comment: {
           id: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
           content: 'Original inbound email body',

@@ -673,8 +673,8 @@
           "suppressAiHelp": "Solo complemento Enterprise AI Assistant. Si no está disponible, las respuestas reabren normalmente."
         },
         "liveTimer": {
-          "label": "Activar temporizador de tickets en vivo",
-          "help": "Muestra el temporizador en vivo y los intervalos registrados en los tickets de este tablero. La entrada manual de tiempo sigue disponible."
+          "label": "Mostrar cronómetro en los tickets",
+          "help": "Muestra los controles del cronómetro en los tickets de este tablero. Desactívelo para ocultar el cronómetro aquí; la entrada manual de tiempo sigue disponible. Un cronómetro que ya está en marcha sigue funcionando."
         },
         "clientPortalVisible": {
           "label": "Visible en el portal de clientes",
@@ -851,7 +851,7 @@
           "statuses": "Prioridades y estados",
           "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
           "display": "Visualización y comportamiento",
-          "displayHelp": "Temporizador en vivo y tipo de tablero"
+          "displayHelp": "Cronómetro y tipo de tablero"
         },
         "saveChanges": "Guardar cambios",
         "unsaved": "Sin guardar",
@@ -2057,7 +2057,7 @@
       "openMenu": "Abrir menú",
       "columns": {
         "startDate": "Fecha de inicio",
-        "endDate": "Fecha de fin",
+        "endDate": "Último día",
         "actions": "Acciones"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Fecha de inicio",
         "startDatePlaceholder": "Seleccione la fecha de inicio",
         "noEndDate": "Sin fecha de fin",
-        "endDate": "Fecha de fin",
+        "endDate": "Último día del período",
+        "endDateHelp": "El período incluye este día.",
         "endDatePlaceholder": "Seleccione la fecha de fin",
         "deletePeriod": "Eliminar período",
         "confirmDeleteTitle": "Confirmar eliminación",
@@ -2083,7 +2084,7 @@
         "noSettings": "No hay configuración de períodos de tiempo disponible. No se puede crear un nuevo período.",
         "settingsRequired": "No se puede gestionar el período de tiempo sin configuración.",
         "startDateRequired": "Debe indicar una fecha de inicio.",
-        "startBeforeEnd": "La fecha de inicio debe ser anterior a la fecha de fin.",
+        "startBeforeEnd": "La fecha de fin no puede ser anterior a la fecha de inicio.",
         "overlap": "El período de tiempo se solapa con un período existente.",
         "overlapRetry": "Este período de tiempo se solapa con otro existente. Elija fechas diferentes.",
         "create": "No se pudo crear el período de tiempo.",

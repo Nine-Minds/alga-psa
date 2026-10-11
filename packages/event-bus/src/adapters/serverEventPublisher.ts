@@ -3,9 +3,15 @@
  * This adapter bridges the shared TicketModel with the server's event publishing system
  */
 
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { resolveTicketEventActor, ticketEventActorFields } from '../workflow/workflowEventPublishHelpers';
 import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '../publishers';
+
+/** The explicit actor if given, else derived from `userId` (never a substitute id). */
+function actorOf(data: { userId?: string; actor?: WorkflowActor }): WorkflowActor {
+  return data.actor ?? resolveTicketEventActor({ userId: data.userId });
+}
 
 export class ServerEventPublisher implements IEventPublisher {
   constructor(private readonly trx?: Parameters<typeof registerAfterCommit>[0]) {}
@@ -14,9 +20,10 @@ export class ServerEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, data.userId, {
+    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, actorOf(data), {
       ticketId: data.ticketId,
       createdByUserId: data.userId,
       createdAt: new Date().toISOString(),
@@ -28,10 +35,11 @@ export class ServerEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, data.userId, {
+    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, actorOf(data), {
       ticketId: data.ticketId,
       updatedByUserId: data.userId,
       updatedFields: Object.keys(data.changes ?? {}),
@@ -44,9 +52,10 @@ export class ServerEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, data.userId, {
+    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, actorOf(data), {
       ticketId: data.ticketId,
       closedByUserId: data.userId,
       closedAt: new Date().toISOString(),
@@ -59,13 +68,15 @@ export class ServerEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     // Legacy comment payloads are modeled as TICKET_COMMENT_ADDED in the event bus schema.
-    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, data.userId, {
+    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, actorOf(data), {
       ticketId: data.ticketId,
+      commentId: data.commentId,
       comment: { id: data.commentId },
-      userId: data.userId,
+      ...ticketEventActorFields(actorOf(data)),
       ...data.metadata
     });
   }
@@ -76,7 +87,7 @@ export class ServerEventPublisher implements IEventPublisher {
     userId: string;
     assignedByUserId?: string;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, data.assignedByUserId ?? data.userId, {
+    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, { actorType: 'USER', actorUserId: data.assignedByUserId ?? data.userId }, {
       ticketId: data.ticketId,
       // The recipient must ride in payload.userId — that is the single field the
       // internal-notification subscriber reads for the assignee (handleTicketAssigned
@@ -95,7 +106,7 @@ export class ServerEventPublisher implements IEventPublisher {
   private async safePublishWorkflowEvent(
     eventType: string,
     tenantId: string,
-    actorUserId: string | undefined,
+    actor: WorkflowActor,
     payload: Record<string, unknown>
   ): Promise<void> {
     const publish = async () => {
@@ -105,7 +116,7 @@ export class ServerEventPublisher implements IEventPublisher {
           payload,
           ctx: {
             tenantId,
-            actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
+            actor
           }
         });
       } catch (error) {
