@@ -562,6 +562,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
   userId: z.string().uuid(), // The user being assigned to the ticket
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
+  commentId: z.string().uuid().optional(), // Set on comment events; must survive the consumer-side parse
   changes: z.record(z.unknown()).optional(),
   externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
