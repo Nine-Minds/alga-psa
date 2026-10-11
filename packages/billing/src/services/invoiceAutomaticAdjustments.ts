@@ -176,7 +176,12 @@ export function buildAutomaticDiscountPolicies(
   for (const row of discountRows) {
     const sourceId = String(row.source_identity ?? row.discount_id);
     if (policies.has(sourceId)) continue;
-    const scope = row.assignment_scope === 'contract' ? 'contract' : resolveDiscountScope(row);
+    // The attachment makes this definition applicable to a represented
+    // client-contract assignment and supplies its stable settlement identity.
+    // It does not narrow the configured calculation base: invoice scope must
+    // still include eligible unattributed manual charges, while contract scope
+    // is enforced by the shared evaluator against client_contract_id.
+    const scope = resolveDiscountScope(row);
     policies.set(sourceId, {
       // Assignment identity is distinct from the shared definition identity:
       // one definition can settle once for each represented client contract.
@@ -345,11 +350,7 @@ async function loadApplicableDiscountRows(
       'd.scope', 'd.scope_service_id', 'd.applies_to_item_id', 'd.priority',
       'a.assignment_id as source_identity', 'cc.client_contract_id as assignment_client_contract_id',
     );
-  return [...lineRows, ...assignmentRows.map((row: Record<string, unknown>) => ({
-    ...row,
-    source_identity: row.source_identity,
-    assignment_scope: row.scope === 'service' ? 'service' : 'contract',
-  }))];
+  return [...lineRows, ...assignmentRows];
 }
 
 interface DesiredSettlementRow {

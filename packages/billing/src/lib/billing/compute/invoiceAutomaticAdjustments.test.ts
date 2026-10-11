@@ -21,8 +21,10 @@ describe('contract discount assignment settlement identity', () => {
 
     expect(policies.map((policy) => policy.discount_id)).toEqual(['assignment-a', 'assignment-b']);
     expect(result.discounts.map((discount) => [discount.discount_id, discount.base_amount, discount.amount])).toEqual([
-      ['assignment-a', 15000, 1500],
-      ['assignment-b', 20000, 2000],
+      ['assignment-a', 16000, 1600],
+      ['assignment-b', 21000, 2100],
     ]);
+    expect(result.discounts[0].allocations).toContainEqual({ discount_id: 'assignment-a', item_id: 'manual-unattributed', amount: 100 });
+    expect(result.discounts[0].allocations).not.toContainEqual(expect.objectContaining({ item_id: 'b-1' }));
   });
 });

@@ -226,7 +226,12 @@ function chargesInScope(
   switch (policy.scope) {
     case 'invoice':
       return eligible.filter(
-        (charge) => !policy.client_contract_id || charge.client_contract_id === policy.client_contract_id,
+        (charge) => !policy.client_contract_id
+          || charge.client_contract_id === policy.client_contract_id
+          // An explicitly invoice-scoped discount attached to one contract
+          // assignment also covers eligible unattributed manual additions.
+          // Charges attributed to another assignment remain isolated.
+          || charge.client_contract_id == null,
       );
     case 'contract':
       return eligible.filter(

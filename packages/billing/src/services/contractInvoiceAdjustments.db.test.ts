@@ -1067,6 +1067,111 @@ describe('contract invoice adjustments (DB-backed)', () => {
     }
   });
 
+  it('honors persisted invoice scope on an attached discount across manual saves and keeps contract scope isolated', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const assignmentId = uuidv4();
+    const manualId = uuidv4();
+    let originalLineLinks: Record<string, unknown>[] = [];
+    try {
+      // Use the persisted assignment path exercised by contract-attached terms;
+      // the assignment grants applicability and source identity, while `scope`
+      // selects the eligible calculation base.
+      await db('invoice_charges').where({ tenant, item_id: fixture.automaticDiscountItemId }).delete();
+      originalLineLinks = await db('contract_line_discounts').where({ tenant, discount_id: configuredDiscountId });
+      await db('contract_line_discounts').where({ tenant, discount_id: configuredDiscountId }).delete();
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: 'invoice' });
+      await db('contract_discount_assignments').insert({
+        tenant, assignment_id: assignmentId, client_contract_id: clientContractId,
+        discount_id: configuredDiscountId, created_at: db.fn.now(),
+      });
+
+      // Establish the posted draft's principal at the contract-scope base
+      // before adding the unattributed manual row through the production save.
+      await db.transaction(async (trx) => {
+        await reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId);
+        const client = await db('clients').where({ tenant, client_id: clientId }).first();
+        await updateInvoiceTotalsAndRecordTransaction(trx, fixture.invoiceId, client, tenant, 'SCOPE-BASELINE');
+      });
+
+      const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+      const saveManual = async () => updateInvoiceManualItems(fixture.invoiceId, {
+        newItems: [{
+          item_id: manualId, service_id: serviceId, description: 'Unattributed manual charge',
+          quantity: 1, rate: 15_000, is_taxable: false,
+        }],
+        updatedItems: [], removedItemIds: [],
+      } as any);
+
+      const firstSave = await saveManual();
+      expect(firstSave).not.toHaveProperty('actionError');
+      let rows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId });
+      let settlement = rows.filter((row) => row.adjustment_source_kind === 'discount');
+      expect(settlement).toHaveLength(1);
+      expect(settlement[0].adjustment_source_id).toBe(assignmentId);
+      expect(settlement[0].adjustment_scope).toBe('invoice');
+      expect(Number(settlement[0].adjustment_base_amount)).toBe(405_000);
+      expect(Number(settlement[0].net_amount)).toBe(-40_500);
+      const automaticItemId = settlement[0].item_id;
+      expect(Number(rows.find((row) => row.item_id === fixture.generatedChargeId)?.net_amount)).toBe(390_000);
+      expect(Number(rows.find((row) => row.item_id === manualId)?.net_amount)).toBe(15_000);
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({ gross: 405_000, discounts: -40_500, net: 364_500 });
+      let invoiceTotals = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+      expect(Number(invoiceTotals.subtotal)).toBe(364_500);
+      expect(Number(invoiceTotals.total_amount)).toBe(364_500);
+      expect(Number(invoiceTotals.tax)).toBe(0);
+
+      // Reload from persistence, then repeat the real save path. The same manual
+      // and automatic rows remain and no duplicate settlement is created.
+      const reloaded = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId });
+      expect(reloaded.some((row) => row.item_id === manualId)).toBe(true);
+      const repeatSave = await saveManual();
+      expect(repeatSave).not.toHaveProperty('actionError');
+      rows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId });
+      settlement = rows.filter((row) => row.adjustment_source_kind === 'discount');
+      expect(settlement).toHaveLength(1);
+      expect(settlement[0].item_id).toBe(automaticItemId);
+      expect(Number(settlement[0].net_amount)).toBe(-40_500);
+      expect(Number(rows.find((row) => row.item_id === manualId)?.net_amount)).toBe(15_000);
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({ gross: 405_000, discounts: -40_500, net: 364_500 });
+
+      // The explicit contract-scope control excludes the same unattributed row.
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: 'contract' });
+      const contractSave = await saveManual();
+      expect(contractSave).not.toHaveProperty('actionError');
+      rows = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId });
+      settlement = rows.filter((row) => row.adjustment_source_kind === 'discount');
+      expect(settlement).toHaveLength(1);
+      expect(settlement[0].adjustment_source_id).toBe(assignmentId);
+      expect(settlement[0].adjustment_scope).toBe('contract');
+      expect(Number(settlement[0].adjustment_base_amount)).toBe(390_000);
+      expect(Number(settlement[0].net_amount)).toBe(-39_000);
+      expect(await sumChargeNet(fixture.invoiceId)).toEqual({ gross: 405_000, discounts: -39_000, net: 366_000 });
+      invoiceTotals = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+      expect(Number(invoiceTotals.subtotal)).toBe(366_000);
+      expect(Number(invoiceTotals.total_amount)).toBe(366_000);
+      expect(Number(invoiceTotals.tax)).toBe(0);
+      const principal = await db('transactions').where({
+        tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated',
+      }).first();
+      let postings = await db('transactions').where({
+        tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment',
+      });
+      expect(Number(principal.amount)).toBe(351_000);
+      expect(postings.map((posting) => Number(posting.amount))).toEqual([13_500, 1_500]);
+      expect(Number(principal.amount) + postings.reduce((total, posting) => total + Number(posting.amount), 0)).toBe(366_000);
+
+      await saveManual();
+      postings = await db('transactions').where({
+        tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment',
+      });
+      expect(postings.map((posting) => Number(posting.amount))).toEqual([13_500, 1_500]);
+    } finally {
+      await db('contract_discount_assignments').where({ tenant, assignment_id: assignmentId }).delete();
+      if (originalLineLinks.length) await db('contract_line_discounts').insert(originalLineLinks);
+      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: null });
+    }
+  });
+
   it('keeps a non-USD invoice settlement in the invoice currency minor units', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount('EUR');
     await insertManualPartialPeriodCharge({
