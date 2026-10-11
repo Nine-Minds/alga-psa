@@ -382,7 +382,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     });
     await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
     const connection = vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
-    const publish = vi.spyOn(publishers,'publishEvent').mockResolvedValue(undefined);
+    const publish = vi.spyOn(publishers,'publishBuiltWorkflowPayload').mockResolvedValue(undefined);
     try {
       const {publishScheduledCommentHandler} = await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
       await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:scheduled});
@@ -832,7 +832,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       for (const name of JobHandlerRegistry.getAll().keys()) {
         expect(registrations.mock.calls.filter(([queue]) => queue === name), name).toHaveLength(1);
       }
-      const publish = vi.spyOn(publishers, 'publishEvent')
+      const publish = vi.spyOn(publishers, 'publishStoredWorkflowEvent')
         .mockRejectedValueOnce(new Error('Recoverable publication transport outage'))
         .mockImplementation(async () => sendEventEmail({ mailClass: 'ticket', tenantId: tenant, to: mailbox, subject: 'Worker recovery', template: 'ticket-comment-added', context: { comment: { content: 'Recovery smoke' } }, replyContext: { ticketId: ticket, commentId: comment } }));
       spy(publish);
@@ -880,7 +880,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
     expect(await listPublishedCommentAttachments(trx,tenant,ticket,comment)).toEqual([]);
     const connection=vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
-    const publish=vi.spyOn(publishers,'publishEvent').mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
+    const publish=vi.spyOn(publishers,'publishBuiltWorkflowPayload').mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
     try {
       const {publishScheduledCommentHandler}=await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
       await expect(publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:comment})).rejects.toThrow('Redis unavailable');
