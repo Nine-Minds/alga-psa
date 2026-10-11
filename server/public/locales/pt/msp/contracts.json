@@ -1464,7 +1464,8 @@
       "unsupportedRecurringAuthoringCombination": "Combinação de autoria recorrente não suportada para serviços {{lineType}}: a cadência de aniversário do contrato atualmente suporta frequências de cobrança {{supportedFrequencies}}. {{billingFrequency}} ainda não é compatível. Use uma das frequências ou faturas suportadas na programação de faturamento do cliente.",
       "recurringUnitRateRequired": "Informe uma tarifa unitária para cada serviço recorrente.",
       "recurringQuantityWholeNumber": "A quantidade recorrente deve ser um número inteiro.",
-      "fixedQuantityInvalid": "A quantidade deve ser zero ou maior."
+      "fixedQuantityInvalid": "A quantidade deve ser zero ou maior.",
+      "fixedLineNoService": "A linha fixa \"{{lineName}}\" tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir."
     },
     "nav": {
       "back": "Voltar",
@@ -1478,6 +1479,19 @@
     "simulation": {
       "description": "Teste este rascunho não salvo com atividade prevista. A simulação não salva nem emite nada.",
       "title": "Simular antes de criar"
+    },
+    "fixedLines": {
+      "addLine": "Adicionar linha fixa",
+      "nameLabel": "Nome da linha (opcional)",
+      "namePlaceholder": "Linha fixa {{number}}",
+      "removeLine": "Remover linha fixa",
+      "noServiceWarning": "Esta linha tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir; ainda pode guardá-la como rascunho."
+    },
+    "recurringChange": {
+      "title": "Confirmar a alteração do total recorrente",
+      "message": "Isto altera o valor recorrente mensal estimado do contrato de {{before}} para {{after}}.",
+      "confirm": "Confirmar e continuar",
+      "cancel": "Voltar"
     }
   },
   "wizardBasics": {
@@ -1791,7 +1805,8 @@
       "fixedFeeServices": "Serviços de taxa fixa",
       "products": "Produtos",
       "hourlyServices": "Serviços por hora",
-      "usageBasedServices": "Serviços baseados em uso"
+      "usageBasedServices": "Serviços baseados em uso",
+      "fixedFeeServicesNumbered": "Serviços de taxa fixa ({{number}})"
     },
     "fields": {
       "client": "Cliente",
@@ -1911,7 +1926,8 @@
     "total": {
       "title": "Total Mensal Estimado",
       "description": "Somente cobranças fixas. Faturamento por hora e serviços de uso separadamente com base no uso real.",
-      "perMonth": "por mês"
+      "perMonth": "por mês",
+      "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
     },
     "finalChecklist": {
       "title": "Antes de terminar:",
@@ -2569,7 +2585,9 @@
       "missingClient": "Falta a atribuição de cliente no contrato em rascunho",
       "invalidStartDate": "O contrato em rascunho tem uma data de início inválida",
       "recordInvalid": "Um dos registros selecionados do assistente de contrato não é mais válido. Atualize a página e tente novamente.",
-      "duplicate": "Já existe um registro correspondente do assistente de contrato."
+      "duplicate": "Já existe um registro correspondente do assistente de contrato.",
+      "resumeUnsupportedShape": "Este rascunho não pode ser retomado no assistente sem alterar os seus preços: {{lines}}",
+      "fixedLineNoService": "A linha fixa \"{{lineName}}\" tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir."
     },
     "pricingSchedule": {
       "endAfterEffective": "A data de término deve ser posterior à data de vigência",

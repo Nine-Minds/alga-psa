@@ -1464,7 +1464,8 @@
       "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande faktureringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens faktureringsschema.",
       "recurringUnitRateRequired": "Ange ett enhetspris för varje återkommande tjänst.",
       "recurringQuantityWholeNumber": "Det återkommande antalet måste vara ett heltal.",
-      "fixedQuantityInvalid": "Antalet måste vara noll eller större."
+      "fixedQuantityInvalid": "Antalet måste vara noll eller större.",
+      "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför."
     },
     "nav": {
       "back": "Tillbaka",
@@ -1478,6 +1479,19 @@
     "simulation": {
       "description": "Testa det osparade utkastet med antagen aktivitet. Simuleringen sparar eller utfärdar inget.",
       "title": "Simulera innan du skapar"
+    },
+    "fixedLines": {
+      "addLine": "Lägg till fast rad",
+      "nameLabel": "Radnamn (valfritt)",
+      "namePlaceholder": "Fast rad {{number}}",
+      "removeLine": "Ta bort fast rad",
+      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast."
+    },
+    "recurringChange": {
+      "title": "Bekräfta ändring av återkommande summa",
+      "message": "Detta ändrar avtalets uppskattade månatliga återkommande värde från {{before}} till {{after}}.",
+      "confirm": "Bekräfta och fortsätt",
+      "cancel": "Tillbaka"
     }
   },
   "wizardBasics": {
@@ -1791,7 +1805,8 @@
       "fixedFeeServices": "Tjänster med fast avgift",
       "products": "Produkter",
       "hourlyServices": "Timdebiterade tjänster",
-      "usageBasedServices": "Förbrukningsbaserade tjänster"
+      "usageBasedServices": "Förbrukningsbaserade tjänster",
+      "fixedFeeServicesNumbered": "Tjänster med fast avgift ({{number}})"
     },
     "fields": {
       "client": "Kund",
@@ -1911,7 +1926,8 @@
     "total": {
       "title": "Uppskattat månadsbelopp",
       "description": "Endast fasta avgifter. Timdebiterade och förbrukningsbaserade tjänster debiteras separat efter faktisk förbrukning.",
-      "perMonth": "per månad"
+      "perMonth": "per månad",
+      "savedDraftValue": "Sparat utkastvärde: {{amount}}"
     },
     "finalChecklist": {
       "title": "Innan du slutför:",
@@ -2569,7 +2585,9 @@
       "missingClient": "Avtalsutkastet saknar kundtilldelning",
       "invalidStartDate": "Avtalsutkastet har ett ogiltigt startdatum",
       "recordInvalid": "En av de valda posterna i avtalsguiden är inte längre giltig. Ladda om sidan och försök igen.",
-      "duplicate": "En matchande post finns redan i avtalsguiden."
+      "duplicate": "En matchande post finns redan i avtalsguiden.",
+      "resumeUnsupportedShape": "Det här utkastet kan inte återupptas i guiden utan att dess priser ändras: {{lines}}",
+      "fixedLineNoService": "Den fasta raden \"{{lineName}}\" har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför."
     },
     "pricingSchedule": {
       "endAfterEffective": "Slutdatum måste vara efter datumet då ändringen börjar gälla",

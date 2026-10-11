@@ -676,7 +676,8 @@
       "openSalesOrders": "Apri ordini di vendita",
       "successBody": "Le righe di prodotto verranno fatturate all'evasione.",
       "successTitle": "Ordine di vendita {{number}} creato"
-    }
+    },
+    "contractBlockedServiceless": "L'elemento ricorrente \"{{description}}\" deve fare riferimento a un servizio del catalogo prima della conversione in contratto"
   },
   "quoteApproval": {
     "title": "Approvazioni preventivi",
