@@ -483,6 +483,24 @@ export const billingContracts = {
 
   CONTRACT_CREATED: {
     status: 'covered',
+    knownDriftCases: [
+      {
+        ticket: 'alga-2026-0002676',
+        reason: 'a contract with no owner_client_id has no clientId to send; the worker schema requires it',
+        case: {
+          site: `${BILLING}/contractActions.ts#createContract (ownerless contract)`,
+          ctx: { ...user, occurredAt: EARLIER },
+          build: () =>
+            buildContractRecordCreatedPayload({
+              contractId: IDS.contract,
+              ownerClientId: null,
+              userId: IDS.user,
+              occurredAt: EARLIER,
+              status: 'draft',
+            }),
+        },
+      },
+    ],
     cases: [
       {
         site: `${BILLING}/contractActions.ts#createContract`,
@@ -557,6 +575,27 @@ export const billingContracts = {
   },
   CONTRACT_UPDATED: {
     status: 'covered',
+    knownDriftCases: [
+      {
+        ticket: 'alga-2026-0002676',
+        reason: 'a contract with no owner_client_id has no clientId to send; the worker schema requires it',
+        case: {
+          site: `${BILLING}/contractActions.ts#updateContract (ownerless contract)`,
+          ctx: { ...user, occurredAt: NOW },
+          build: () =>
+            buildContractRecordUpdatedPayload({
+              contractId: IDS.contract,
+              ownerClientId: null,
+              userId: IDS.user,
+              occurredAt: NOW,
+              status: 'active',
+              patch: { status: 'active' },
+              before: contractBefore,
+              after: contractAfter,
+            }),
+        },
+      },
+    ],
     cases: [
       {
         site: `${BILLING}/contractActions.ts#updateContract`,

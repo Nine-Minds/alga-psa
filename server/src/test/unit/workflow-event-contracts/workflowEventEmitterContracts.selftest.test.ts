@@ -41,13 +41,12 @@ describe('harness self-test: drift replay', () => {
 
   it('comment drift: a payload carrying comment.id instead of commentId is flagged at commentId via expectFields', () => {
     const result = runEmitterCase(
-      'TICKET_RESPONSE_STATE_CHANGED' as WorkflowCatalogEventType,
+      'TICKET_COMMENT_ADDED',
       {
         site: 'selftest#comment-id',
         build: () => ({ ticketId: TICKET_ID, comment: { id: COMMENT_ID } }),
         expectFields: ['commentId'],
-      },
-      { schemaRef: 'payload.TicketCommentAdded.v1' }
+      }
     );
     expect(result.ok).toBe(false);
     expect(result.issues.map((i) => i.path)).toContain('commentId');
@@ -55,13 +54,12 @@ describe('harness self-test: drift replay', () => {
 
   it('a correct commentId payload passes', () => {
     const result = runEmitterCase(
-      'TICKET_RESPONSE_STATE_CHANGED' as WorkflowCatalogEventType,
+      'TICKET_COMMENT_ADDED',
       {
         site: 'selftest#comment-ok',
         build: () => ({ ticketId: TICKET_ID, commentId: COMMENT_ID }),
         expectFields: ['commentId'],
-      },
-      { schemaRef: 'payload.TicketCommentAdded.v1' }
+      }
     );
     expect(result.issues).toEqual([]);
   });

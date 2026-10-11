@@ -8,6 +8,12 @@ import {
   buildMediaProcessingFailedPayload,
   buildMediaProcessingSucceededPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  buildDocumentDeletedPayload as buildStorageDocumentDeletedPayload,
+  buildDocumentUploadedPayload as buildStorageDocumentUploadedPayload,
+  buildFileUploadedPayload as buildStorageFileUploadedPayload,
+  buildMediaProcessingSucceededPayload as buildStorageMediaProcessingSucceededPayload,
+} from '@alga-psa/storage/workflowEventPayloads';
 import type { EmitterContracts } from '../registryTypes';
 import { NO_EMITTER_UMBRELLA_TICKET } from '../registryTypes';
 import { IDS, NOW, EARLIER } from '../fixtures';
@@ -62,7 +68,7 @@ export const documentContracts = {
         site: `${STORAGE}#StorageService.uploadFile`,
         ctx: { ...user, occurredAt: fileRecord.created_at },
         build: () =>
-          buildDocumentUploadedPayload({
+          buildStorageDocumentUploadedPayload({
             documentId: fileRecord.file_id,
             uploadedByUserId: IDS.user,
             uploadedAt: fileRecord.created_at,
@@ -77,7 +83,7 @@ export const documentContracts = {
         site: `${STORAGE}#StorageService.uploadFile`,
         ctx: { ...system, occurredAt: fileRecord.created_at },
         build: () =>
-          buildDocumentUploadedPayload({
+          buildStorageDocumentUploadedPayload({
             documentId: fileRecord.file_id,
             uploadedAt: fileRecord.created_at,
             fileName: fileRecord.original_name,
@@ -94,12 +100,12 @@ export const documentContracts = {
       {
         site: `${STORAGE}#StorageService.deleteFile`,
         ctx: { ...user, occurredAt: NOW },
-        build: () => buildDocumentDeletedPayload({ documentId: IDS.document, deletedByUserId: IDS.user, deletedAt: NOW }),
+        build: () => buildStorageDocumentDeletedPayload({ documentId: IDS.document, deletedByUserId: IDS.user, deletedAt: NOW }),
       },
       {
         site: `${DOCUMENT_ACTIONS}#publishDocumentDeletedSearchEvent`,
         ctx: { ...user, occurredAt: NOW },
-        build: () => buildDocumentDeletedPayload({ documentId: IDS.document, deletedByUserId: IDS.user, deletedAt: NOW }),
+        build: () => buildStorageDocumentDeletedPayload({ documentId: IDS.document, deletedByUserId: IDS.user, deletedAt: NOW }),
       },
       {
         // no acting user: the search event is published without actor fields.
@@ -209,7 +215,7 @@ export const documentContracts = {
         site: `${STORAGE}#StorageService.uploadFile`,
         ctx: { ...user, occurredAt: fileRecord.created_at },
         build: () =>
-          buildFileUploadedPayload({
+          buildStorageFileUploadedPayload({
             fileId: fileRecord.file_id,
             uploadedByUserId: IDS.user,
             uploadedAt: fileRecord.created_at,
@@ -223,7 +229,7 @@ export const documentContracts = {
         site: `${STORAGE}#StorageService.uploadFile`,
         ctx: { ...system, occurredAt: fileRecord.created_at },
         build: () =>
-          buildFileUploadedPayload({
+          buildStorageFileUploadedPayload({
             fileId: fileRecord.file_id,
             uploadedAt: fileRecord.created_at,
             fileName: fileRecord.original_name,
@@ -260,7 +266,7 @@ export const documentContracts = {
         site: `${STORAGE}#StorageService.uploadFile`,
         ctx: { occurredAt: NOW },
         build: () =>
-          buildMediaProcessingSucceededPayload({
+          buildStorageMediaProcessingSucceededPayload({
             fileId: IDS.file,
             processedAt: NOW,
             durationMs: 230,

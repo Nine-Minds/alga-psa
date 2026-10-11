@@ -7,6 +7,7 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
   buildContactArchivedPayload,
+  buildContactMergedPayload,
   buildContactCreatedPayload,
   buildContactPrimarySetPayload,
   buildContactUpdatedPayload,
@@ -332,6 +333,18 @@ export const crmContracts = {
     ticket: NO_EMITTER_UMBRELLA_TICKET,
     reason:
       'Catalogued (buildContactMergedPayload exists) but no product code merges contacts or publishes CONTACT_MERGED.',
+    builderProbe: {
+      site: 'shared/workflow/streams/domainEventBuilders/contactEventBuilders.ts#buildContactMergedPayload',
+      ctx: { ...user, occurredAt: NOW },
+      build: () =>
+        buildContactMergedPayload({
+          sourceContactId: IDS.contact,
+          targetContactId: IDS.otherContact,
+          mergedByUserId: IDS.user,
+          mergedAt: NOW,
+          strategy: 'manual',
+        }),
+    },
   },
 
   INTERACTION_LOGGED: {

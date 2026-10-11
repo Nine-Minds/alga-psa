@@ -6,7 +6,7 @@ import {
 import {
   buildWorkflowPayload,
   type WorkflowEventPublishContext,
-} from '@alga-psa/event-bus/workflow/workflowEventPublishHelpers';
+} from '@alga-psa/event-schemas';
 import { initializeWorkflowRuntimeV2 } from '@alga-psa/shared/workflow/runtime/init';
 import { getSchemaRegistry } from '@alga-psa/shared/workflow/runtime/registries/schemaRegistry';
 
@@ -70,8 +70,8 @@ export type HarnessOptions = {
    * have caught alga0002101 had the backstop not hidden it.
    */
   /**
-   * Self-test only: validate against this ref instead of the catalog's. Lets the self-test replay
-   * drift for schema-only events (e.g. TICKET_COMMENT_ADDED) that are not catalogued yet.
+   * Self-test only: validate against this ref instead of the catalog's. Lets the self-test prove
+   * the harness reports (rather than throws on) a ref the worker's schema registry lacks.
    */
   schemaRef?: string;
   convert?: (event: { id: string; eventType: string; timestamp: string; payload: Record<string, unknown> }) => {

@@ -1,8 +1,12 @@
 import {
   buildInventoryCountApprovedPayload,
   buildInventoryCountSubmittedPayload,
+  buildInventoryPoReceivedPayload,
   buildInventoryPurchaseOrderPayload,
+  buildInventoryRmaCreatedPayload,
   buildInventorySalesOrderPayload,
+  buildInventorySoFulfilledPayload,
+  buildInventoryStockLowPayload,
   buildInventoryTransferPayload,
 } from '@alga-psa/workflow-streams';
 import type { EmitterContracts } from '../registryTypes';
@@ -12,8 +16,8 @@ import { IDS, NOW } from '../fixtures';
  * Inventory lifecycle events. Emitters publish through publishInventoryEvent (raw publishEvent,
  * snake_case payloads that the registered inventory schemas expect), so every case uses
  * publishPath 'rawPublishEvent'. The sites previously hand-built `timestampPayload({...})` literals.
- * INVENTORY_STOCK_LOW / PO_RECEIVED / SO_FULFILLED / RMA_CREATED stay schemaNotRegistered in
- * emitterContracts.ts (their catalog refs have no worker schema).
+ * STOCK_LOW / PO_RECEIVED / SO_FULFILLED / RMA_CREATED are built after commit by
+ * collect-style and core-extraction helpers and published through the same path.
  */
 
 const SO = 'packages/inventory/src/actions/salesOrderActions.ts';
@@ -25,6 +29,10 @@ const TRANSFER = 'packages/inventory/src/actions/transferActions.ts';
 const COUNT = 'packages/inventory/src/actions/cycleCountActions.ts';
 
 type InventoryEventType =
+  | 'INVENTORY_STOCK_LOW'
+  | 'INVENTORY_PO_RECEIVED'
+  | 'INVENTORY_SO_FULFILLED'
+  | 'INVENTORY_RMA_CREATED'
   | 'INVENTORY_SALES_ORDER_CREATED'
   | 'INVENTORY_SALES_ORDER_UPDATED'
   | 'INVENTORY_SALES_ORDER_DELETED'
@@ -41,7 +49,113 @@ const tenant = IDS.tenant;
 const userId = IDS.user;
 const counted = { line_count: 12, counted_line_count: 11, variance_line_count: 2, variance_quantity: -3 };
 
+const stockLow = (onHand: number) =>
+  buildInventoryStockLowPayload({
+    tenant,
+    serviceId: IDS.service,
+    serviceName: 'Managed firewall appliance',
+    sku: 'FW-100',
+    locationId: IDS.locationMain,
+    locationName: 'Main warehouse',
+    onHand,
+    reorderPoint: 5,
+  });
+const soFulfilled = (dropShip: boolean) =>
+  buildInventorySoFulfilledPayload({
+    tenant,
+    soId: IDS.salesOrder,
+    soNumber: 'SO-0042',
+    clientId: IDS.client,
+    fulfilledLineCount: 2,
+    dropShip,
+  });
+const rma = (overrides: Partial<Parameters<typeof buildInventoryRmaCreatedPayload>[0]> = {}) =>
+  buildInventoryRmaCreatedPayload({
+    tenant,
+    rmaId: IDS.rma,
+    rmaReference: 'RMA-0007',
+    clientId: IDS.client,
+    serviceId: IDS.service,
+    serialNumber: 'SN-12345',
+    ...overrides,
+  });
+
 export const inventoryContracts = {
+  INVENTORY_STOCK_LOW: {
+    status: 'covered',
+    cases: [
+      { site: `${FULFIL}#fulfillSalesOrderLine`, ...raw, build: () => stockLow(4) },
+      { site: `${COUNT}#approveCountSession`, ...raw, build: () => stockLow(0) },
+      { site: 'packages/inventory/src/actions/stockLedgerActions.ts#adjustStock', ...raw, build: () => stockLow(5) },
+      { site: 'packages/inventory/src/lib/materials.ts#addMaterial', ...raw, build: () => stockLow(2) },
+      {
+        // item with no SKU
+        site: 'packages/inventory/src/lib/stockLowSignal.ts#collectStockLowSignalAfterConsume',
+        ...raw,
+        build: () =>
+          buildInventoryStockLowPayload({
+            tenant,
+            serviceId: IDS.service,
+            serviceName: 'Patch cable',
+            sku: null,
+            locationId: IDS.locationVan,
+            locationName: 'Service van',
+            onHand: 1,
+            reorderPoint: 3,
+          }),
+      },
+    ],
+  },
+  INVENTORY_PO_RECEIVED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${PO}#receivePoLine`,
+        ...raw,
+        build: () =>
+          buildInventoryPoReceivedPayload({
+            tenant,
+            poId: IDS.purchaseOrder,
+            poNumber: 'PO-0100',
+            vendorId: IDS.vendor,
+            vendorName: 'Contoso Distribution',
+            receivedLineCount: 3,
+          }),
+      },
+      {
+        // vendor was deleted / not recorded
+        site: `${SERVICE}#InventoryService.receivePurchaseOrderLine`,
+        ...raw,
+        build: () =>
+          buildInventoryPoReceivedPayload({
+            tenant,
+            poId: IDS.purchaseOrder,
+            poNumber: 'PO-0100',
+            vendorId: null,
+            vendorName: null,
+            receivedLineCount: 1,
+          }),
+      },
+    ],
+  },
+  INVENTORY_SO_FULFILLED: {
+    status: 'covered',
+    cases: [
+      { site: `${FULFIL}#fulfillSalesOrderLine`, ...raw, build: () => soFulfilled(false) },
+      { site: `${DROP}#confirmDropShipShipment`, ...raw, build: () => soFulfilled(true) },
+    ],
+  },
+  INVENTORY_RMA_CREATED: {
+    status: 'covered',
+    cases: [
+      { site: 'packages/inventory/src/actions/rmaActions.ts#openRma', ...raw, build: () => rma() },
+      {
+        site: 'packages/inventory/src/actions/rmaActions.ts#openAdvanceRma',
+        ...raw,
+        build: () => rma({ rmaReference: null, serialNumber: null, serviceId: null }),
+      },
+    ],
+  },
   INVENTORY_SALES_ORDER_CREATED: {
     status: 'covered',
     cases: [
