@@ -121,3 +121,14 @@ Run with `DB_HOST=127.0.0.1 DB_PORT=5472` (direct Postgres; the harness drops an
 - Proration of the first period: conversion writes `enable_proration: false`. A Jul 23 start bills the full July period, which is existing quote semantics.
 - Collapsing the workflow-runtime conversion copy into one implementation (marked LEVERAGE).
 - Gap panel copy for genuinely new schedules (D6).
+
+## PR #3667 follow-up deltas (after merging #3673)
+
+#3673's mechanism is the base: quote conversion writes lines active and the draft assignment inactive, migration `20261010040511` repairs existing rows, and generate failures are coded through `recurringBillingRunFailure` / support references. PR #3667 keeps only what #3673 does not cover:
+
+- **One live-line predicate family.** `whereLiveRecurringContractLine` (in `shared/billingClients/liveClientCadenceRecurringLine.ts`) is the assignment + header + line liveness check; `whereLiveClientCadenceRecurringLine` composes it. It is now also applied by the billing engine (service-match and client contract-line readers), the window-materialization guard and the contract-cadence replenishment loader, so every reader agrees on what is "live".
+- **Date-only `client_contracts.start_date`** on quote conversion, resolved in the tenant's effective time zone.
+- **Contract delete unlinks references** (`quotes.converted_contract_id` with a `contract_deleted` quote activity, `opportunities`, `project_billing_configs`) and treats invoice headers / linked service periods as invoice history.
+- Regression tests for the above.
+
+Dropped as redundant with #3673: the Set-to-Active self-heal (it would re-enable lines #3673's migration deliberately leaves alone), the `20261010100000` backfill migration, and the separate invoice-failure message-key registry / `ManualInvoiceError` plumbing.

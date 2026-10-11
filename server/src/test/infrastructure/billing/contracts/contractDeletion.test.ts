@@ -293,6 +293,48 @@ describe('Contract deletion infrastructure', () => {
     expect(stillPresent).toBeDefined();
   });
 
+  it('quote-converted contract deletes; quote is unlinked and records a contract_deleted activity', async () => {
+    const contractId = await createContract('Quote-converted delete', {
+      template_metadata: { conversion_kind: 'quote_to_contract' },
+    });
+    await createClientContract(contractId);
+    const quoteId = randomUUID();
+    await db().table('quotes').insert({
+      quote_id: quoteId,
+      tenant: context.tenantId,
+      quote_number: `Q-${randomUUID().slice(0, 8)}`,
+      client_id: context.clientId,
+      title: 'Converted quote',
+      status: 'converted',
+      converted_contract_id: contractId,
+      currency_code: 'USD',
+    } as any);
+
+    const result = await deleteContract(contractId);
+    expect(isActionMessageError(result)).toBe(false);
+
+    expect(await db().table('contracts').where({ contract_id: contractId }).first()).toBeUndefined();
+    const quote = await db().table('quotes').where({ quote_id: quoteId }).first();
+    expect(quote).toBeDefined();
+    expect(quote.converted_contract_id).toBeNull();
+    const activity = await db().table('quote_activities').where({ quote_id: quoteId, activity_type: 'contract_deleted' }).first();
+    expect(activity).toBeDefined();
+    expect(activity.metadata).toMatchObject({ contract_id: contractId });
+  });
+
+  it('a header-only invoice (no charge rows) on the assignment still blocks deletion', async () => {
+    const contractId = await createContract('Header-only invoice delete');
+    const clientContractId = await createClientContract(contractId);
+    const invoiceId = await seedInvoiceForClientContract(clientContractId);
+    await db().table('invoice_charges').where({ invoice_id: invoiceId }).delete();
+    await db().table('invoices').where({ invoice_id: invoiceId }).update({ client_contract_id: clientContractId });
+
+    expect(await Contract.hasInvoices(context.db, context.tenantId, contractId)).toBe(true);
+    const result = await deleteContract(contractId);
+    expect(isActionMessageError(result)).toBe(true);
+    expect(await db().table('contracts').where({ contract_id: contractId }).first()).toBeDefined();
+  });
+
   it('migration down() restores the original NO ACTION constraint and up() re-applies column-targeted SET NULL', async () => {
     const migrationsDir = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
