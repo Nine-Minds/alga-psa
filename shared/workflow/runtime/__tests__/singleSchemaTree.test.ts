@@ -1,12 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import * as packageExports from '../../index';
-import { workflowEventPayloadSchemas } from './workflowEventPayloadSchemas';
-import { getSchemaRegistry } from '../../../../../shared/workflow/runtime/registries/schemaRegistry';
-import { initializeWorkflowRuntimeV2 } from '../../../../../shared/workflow/runtime/init';
+import * as packageExports from '@alga-psa/event-schemas';
+import { workflowEventPayloadSchemas } from '@alga-psa/event-schemas/schemas/domain/workflowEventPayloadSchemas';
+import { getSchemaRegistry } from '../registries/schemaRegistry';
+import { initializeWorkflowRuntimeV2 } from '../init';
 
-const repoRoot = path.resolve(__dirname, '../../../../..');
+const repoRoot = path.resolve(__dirname, '../../../..');
 const legacySchemaDirs = [
   'shared/workflow/runtime/schemas',
   'ee/packages/workflows/src/runtime/schemas',

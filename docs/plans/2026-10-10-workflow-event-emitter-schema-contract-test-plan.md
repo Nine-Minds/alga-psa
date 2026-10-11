@@ -86,7 +86,7 @@ Decision: **collapse; do not just assert equivalence.** The typed helper (C) liv
 - **Reconciling semantic differences.** For every schema where the two copies differ, keep the worker's definition. The exception is a case where the package copy is *stricter in a way the emitters already satisfy*: there, adopt the stricter rule (for example, the structured `externalLinks` item shape) **only if** the contract test (D) shows every emitter passes it. Record each such case in the PR description. Never loosen a schema to make an emitter pass.
 - **Effect on the transport schemas:** `EventPayloadSchemas` entries that import domain schemas will resolve to the canonical (worker) definitions. `EventBus.publish` uses `.parse`, so a stricter transport schema could throw at publish time and fail a user action. Sequencing therefore matters: the collapse lands **after** D is green, so every catalogued emitter is proven to satisfy the canonical schema before the transport parse tightens. Transport entries that use legacy loose schemas (for example `TICKET_COMMENT_ADDED: TicketEventPayloadSchema`) stay as they are in this card, with `// LEVERAGE: friction transport-vs-workflow-schema` added. A later card can decide whether transport validation of catalogued types should be the workflow schema plus the legacy notification fields.
 - Delete the duplicate `packages/event-schemas/src/schemas/workflowEventPublishHelpers.ts`. Keep the event-bus copy, re-exported from event-schemas if a type is needed there.
-- Add a guard test (`packages/event-schemas/src/schemas/domain/singleSchemaTree.test.ts`) that fails if `shared/workflow/runtime/schemas/` contains a `z.object(` definition for a `payload.*.v1` schema, so a second tree cannot reappear.
+- Add a guard test (`shared/workflow/runtime/__tests__/singleSchemaTree.test.ts`) that fails if `shared/workflow/runtime/schemas/` contains a `z.object(` definition for a `payload.*.v1` schema, so a second tree cannot reappear.
 
 ### C. Typed emit helper (compile-time contract)
 
@@ -226,7 +226,7 @@ Before handoff, one dev-stack check: on `http://feature-alga0002106-ci-contract-
 **New**
 - `packages/event-schemas/src/workflowEventCatalog.ts` and `.test.ts`
 - `packages/event-schemas/src/schemas/workflowSchemaMetadata.ts` (annotation helpers moved down from shared)
-- `packages/event-schemas/src/schemas/domain/singleSchemaTree.test.ts`
+- `shared/workflow/runtime/__tests__/singleSchemaTree.test.ts`
 - `server/src/test/infrastructure/workflowEventCatalogParity.test.ts`
 - `server/src/test/unit/workflow-event-contracts/{emitterContracts.ts, harness.ts, workflowEventEmitterContracts.test.ts, workflowEventEmitterContracts.selftest.test.ts, publishTypes.test-d.ts}`
 - `scripts/check-workflow-event-emit-sites.mjs`, `scripts/tests/check-workflow-event-emit-sites.test.mjs` and fixtures
