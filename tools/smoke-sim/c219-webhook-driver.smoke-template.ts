@@ -6,7 +6,9 @@
  * are replayed from a JSONL file instead of a consumer group) and the Redis
  * delivery-queue hop (enqueue is captured and processWebhookDeliveryJob runs inline).
  *
- * Copy into server/src/test/ and run with SMOKE_EVENTS=<jsonl> SMOKE_OUT=<json>.
+ * Copy into server/src/test/ as a *.test.ts file (kept under a non-test name here
+ * so the repository test inventory does not expect a runner to collect it) and
+ * run with SMOKE_EVENTS=<jsonl> SMOKE_OUT=<json>.
  */
 import fs from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
