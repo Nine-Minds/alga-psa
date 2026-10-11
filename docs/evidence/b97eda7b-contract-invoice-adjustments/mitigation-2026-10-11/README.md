@@ -3,7 +3,7 @@
 ## Revisions and live entry
 
 The current PR branch/upstream head is evidence-only commit
-`e0216c2a62be4d54c98db9cc429682c1bcb5a300`. The application build remains
+`bc5e803e9b74afafe508c3029fd4bfb2484409f0`. The application build remains
 `0826a475429d25fe5a3647ef6a5e7df7c241e7cf+da39a3ee5e6b`; it predates the
 later evidence commits and does not contain a production application-code
 change from this mitigation. The production review app health endpoint returns
