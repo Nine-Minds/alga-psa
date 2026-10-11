@@ -88,9 +88,12 @@ describe('NextAuth MSP SSO contract', () => {
    * provider it happened to build.
    */
   it('CF007: both Microsoft providers verify pkce, state AND nonce', () => {
-    // Scoped to the AzureAD registrations: a third `checks` belongs to the
-    // Playwright fake-Google provider and is not a Microsoft posture.
-    const azureBlocks = source.split('AzureADProvider({').slice(1);
+    // Both registrations go through buildAzureADProvider (which also wraps the
+    // Microsoft emulator); the builder must forward their `checks` to Auth.js.
+    // A `checks` belonging to the Playwright fake-Google provider is not a
+    // Microsoft posture.
+    expect(source).toContain('...(config.checks ? { checks: config.checks } : {}),');
+    const azureBlocks = source.split('buildAzureADProvider({').slice(1);
     expect(azureBlocks.length).toBe(2);
     for (const block of azureBlocks) {
       const declaration = block.slice(0, block.indexOf('profile:'));

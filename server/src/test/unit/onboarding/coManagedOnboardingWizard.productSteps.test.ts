@@ -54,7 +54,9 @@ describe('Co-managed onboarding wizard product steps', () => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
 
-    expect(locales.length).toBe(10);
+    // Nine shipped languages plus the generated xx/yy pseudo-locales, which must
+    // carry the co-managed keys too.
+    expect(locales.length).toBe(11);
 
     for (const locale of locales) {
       const source = readFileSync(join(localesRoot, locale, 'msp/onboarding.json'), 'utf8');
