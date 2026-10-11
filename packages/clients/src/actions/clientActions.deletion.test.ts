@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
@@ -164,6 +164,11 @@ function primeClientLookup(input: {
 }
 
 describe('client deletion actions', () => {
+  // Warm the heavy dynamic import so the first test does not hit the 5s default timeout under parallel CI load.
+  beforeAll(async () => {
+    await import('./clientActions');
+  }, 60_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     authUserRef.value = {
