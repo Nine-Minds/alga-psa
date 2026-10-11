@@ -23,7 +23,6 @@ export * from './contractMonthlyValue';
 export * from './recurringTiming';
 export * from './recurringRunExecutionIdentity';
 export * from './clientCadenceServicePeriods';
-export * from './postDropRecurringObligationIdentity';
 export * from './bucketUsageService';
 export * from './hourBlockService';
 export * from './clientCadenceScheduleRegeneration';

@@ -44,7 +44,6 @@ type RecurringServicePeriodDbRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: string;
   charge_family: RecurringChargeFamily;
   cadence_owner: 'client' | 'contract';
   due_position: DuePosition;
@@ -169,7 +168,6 @@ function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurr
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type as IRecurringServicePeriodRecord['sourceObligation']['obligationType'],
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -223,7 +221,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -262,7 +259,6 @@ async function loadExistingRecurringServicePeriodRecords(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .orderBy('service_period_start', 'asc')
@@ -274,7 +270,6 @@ async function loadExistingRecurringServicePeriodRecords(
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -347,7 +342,6 @@ async function retireFutureContractCadenceRowsForLine(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
@@ -547,7 +541,6 @@ async function syncContractCadenceObligation(
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
-      obligationType: 'contract_line' as const,
       chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
     },
     duePosition,

@@ -17,6 +17,7 @@ describe('recurring invoice linkage source guards', () => {
     expect(invoiceServiceSource).toContain('record_id: servicePeriodRecordId,');
     expect(invoiceServiceSource).not.toContain('billing_cycle_id');
     expect(invoiceServiceSource).not.toContain('obligationTypeFilter');
+    expect(invoiceServiceSource).not.toContain('obligation_type');
     expect(invoiceServiceSource).not.toContain('buildPostDropRecurringObligationCandidates({');
     expect(invoiceServiceSource).not.toContain('where(function recurringObligationMatch()');
     // Date-shaped re-derivation of the service period / invoice window was the

@@ -208,11 +208,10 @@ describe('recurring service period actions', () => {
       {
         record_id: 'rsp-client-1',
         tenant: 'tenant-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+        schedule_key: 'schedule:tenant-1:line-1:client:arrears',
         period_key: 'period:2025-01-01:2025-02-01',
         revision: 1,
         obligation_id: 'line-1',
-        obligation_type: 'client_contract_line',
         charge_family: 'fixed',
         cadence_owner: 'client',
         due_position: 'arrears',
@@ -271,7 +270,7 @@ describe('recurring service period actions', () => {
     mocks.hasPermission.mockResolvedValue(false);
 
     await expect(
-      getRecurringServicePeriodManagementView('schedule:tenant-1:contract_line:line-1:contract:arrears'),
+      getRecurringServicePeriodManagementView('schedule:tenant-1:line-1:contract:arrears'),
     ).resolves.toEqual({
       permissionError: 'Permission denied: Cannot view recurring service periods',
     });
@@ -337,7 +336,7 @@ describe('recurring service period actions', () => {
   it('T079: service-period regeneration action surfaces conflict payloads when preserved edited or billed rows no longer match regenerated candidates', async () => {
     const editedOverride = buildRecurringServicePeriodRecord({
       recordId: 'rsp_override',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:arrears',
       periodKey: 'period:2026-06-10:2026-07-10',
       lifecycleState: 'edited',
       servicePeriod: {
@@ -419,13 +418,12 @@ describe('recurring service period actions', () => {
     mocks.missingTables.add('client_contract_lines');
 
     const result = await getRecurringServicePeriodManagementView(
-      'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      'schedule:tenant-1:line-1:client:arrears',
     );
 
     expect(result).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       obligationId: 'line-1',
-      obligationType: 'client_contract_line',
       clientId: 'client-1',
       clientName: 'Acme Corp',
       contractId: 'contract-1',
@@ -443,13 +441,12 @@ describe('recurring service period actions', () => {
     mocks.rowsByTable.recurring_service_periods = [];
 
     const result = await getRecurringServicePeriodManagementView(
-      'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      'schedule:tenant-1:line-1:client:arrears',
     );
 
     expect(result).toEqual({
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       obligationId: 'line-1',
-      obligationType: 'client_contract_line',
       cadenceOwner: 'client',
       duePosition: 'arrears',
       chargeFamily: 'fixed',
@@ -497,11 +494,11 @@ describe('recurring service period actions', () => {
     ];
 
     const result = await repairMissingRecurringServicePeriods(
-      'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      'schedule:tenant-1:line-1:client:advance',
     );
 
     expect(result).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:client:advance',
       backfilledRows: expect.any(Number),
       realignedRows: 0,
       supersededRows: 0,
@@ -509,7 +506,7 @@ describe('recurring service period actions', () => {
     expect((result as any).backfilledRows).toBeGreaterThan(0);
     expect(mocks.rowsByTable.recurring_service_periods).not.toEqual([]);
     expect(mocks.rowsByTable.recurring_service_periods[0]).toMatchObject({
-      schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      schedule_key: 'schedule:tenant-1:line-1:client:advance',
       service_period_start: expect.stringMatching(/^2026-\d{2}-\d{2}$/),
       provenance_kind: 'generated',
       reason_code: 'backfill_materialization',
@@ -528,7 +525,7 @@ describe('recurring service period actions', () => {
       {
         ...mocks.rowsByTable.recurring_service_periods[0],
         record_id: 'rsp-orphan-1',
-        schedule_key: 'schedule:tenant-1:contract_line:orphan-line:contract:arrears',
+        schedule_key: 'schedule:tenant-1:orphan-line:contract:arrears',
         obligation_id: 'orphan-line',
         lifecycle_state: 'generated',
         client_name: null,
@@ -538,7 +535,7 @@ describe('recurring service period actions', () => {
       {
         ...mocks.rowsByTable.recurring_service_periods[0],
         record_id: 'rsp-superseded-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+        schedule_key: 'schedule:tenant-1:line-1:client:advance',
         lifecycle_state: 'superseded',
         client_name: 'Acme Corp',
         contract_name: 'Acme Managed Services',
@@ -548,7 +545,7 @@ describe('recurring service period actions', () => {
 
     await expect(listRecurringServicePeriodScheduleSummaries()).resolves.toEqual([
       expect.objectContaining({
-        scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+        scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
         clientName: 'Acme Corp',
         contractName: 'Acme Managed Services',
         contractLineName: 'Managed Router',
