@@ -124,6 +124,15 @@
           "paymentTerms": "Zahlungsbedingungen",
           "discounts": "Rabatte"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-Dienstkonten",
+        "desktopDiscounts": "Desktop-Rabatte",
+        "desktopAccount": "Name des Desktop-Ertragskontos",
+        "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
+        "add": "Zuordnung hinzufügen",
+        "remove": "Zuordnung entfernen",
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?"
       }
     },
     "calendar": {

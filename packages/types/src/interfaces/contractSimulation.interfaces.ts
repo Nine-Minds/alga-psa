@@ -280,6 +280,8 @@ export interface ContractWizardFixedLine {
   line_key: string;
   /** Informational; finalize does not reuse ids. */
   source_contract_line_id?: string;
+  /** Template line this fixed line was opened from; maps template line-scoped discounts. */
+  source_template_line_id?: string;
   contract_line_name?: string;
   description?: string | null;
   location_id?: string | null;

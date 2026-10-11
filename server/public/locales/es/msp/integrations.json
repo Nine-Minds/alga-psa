@@ -124,6 +124,15 @@
           "paymentTerms": "Condiciones de pago",
           "discounts": "Descuentos"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Cuentas de servicios de Desktop",
+        "desktopDiscounts": "Descuentos de Desktop",
+        "desktopAccount": "Nombre de cuenta de ingresos de Desktop",
+        "description": "Asigne descuentos y créditos de facturas antes de exportar. La asignación pertenece a esta empresa contable.",
+        "add": "Añadir asignación",
+        "remove": "Eliminar asignación",
+        "removeConfirm": "¿Eliminar esta asignación contable?"
       }
     },
     "calendar": {

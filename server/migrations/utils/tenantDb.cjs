@@ -16,6 +16,7 @@
 const TENANT_TABLE_METADATA = {
   assets: { scope: 'tenant' },
   accounting_export_batches: { scope: 'tenant' },
+  accounting_export_artifacts: { scope: 'tenant' },
   accounting_export_errors: { scope: 'tenant' },
   accounting_export_lines: { scope: 'tenant' },
   accounting_sync_cycles: { scope: 'tenant' },
@@ -122,6 +123,7 @@ const TENANT_TABLE_METADATA = {
   contract_line_preset_fixed_config: { scope: 'tenant' },
   contract_line_preset_services: { scope: 'tenant' },
   contract_line_discounts: { scope: 'tenant' },
+  contract_discount_assignments: { scope: 'tenant' },
   contract_line_service_usage_config: { scope: 'tenant' },
   contract_line_services: { scope: 'tenant' },
   contract_template_line_defaults: { scope: 'tenant' },

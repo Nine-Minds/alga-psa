@@ -7,3 +7,4 @@ export * from "./computeBucketCharges";
 export * from "./computeHourBlockCharges";
 export * from "./computeRecurringQuantityCharges";
 export * from "./computeDiscountsAndAdjustments";
+export * from "./contractInvoiceAdjustments";

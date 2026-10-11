@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
 import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
@@ -126,6 +127,8 @@ interface InvoiceDocumentPayload {
   clientId: string;
   /** Charge IDs in same order as invoice.Line[] for mapping after delivery */
   chargeIds: string[];
+  /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
+  chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
   mapping?: {
     customerId: string;
     source?: string;
@@ -328,7 +331,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     };
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
     const resolver = await AccountingMappingResolver.create({ companySyncService });
 
@@ -451,6 +457,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       const qboLines: QboInvoiceLine[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as qboLines
+      const chargeLineage: InvoiceDocumentPayload['chargeLineage'] = [];
       let invoiceNetCents = 0;
       let invoiceTaxCents = 0;
       // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
@@ -610,6 +617,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           SalesItemLineDetail: salesDetail
         });
         chargeIds.push(line.document_line_id);
+        chargeLineage.push({
+          parentChargeId: line.payload?.metadata?.allocation_parent_charge_id ?? line.document_line_id,
+          allocationDetailId: line.payload?.metadata?.allocation_detail_id,
+        });
       }
 
       if (qboLines.length === 0) {
@@ -684,6 +695,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         invoice: qboInvoice,
         clientId,
         chargeIds, // Alga charge IDs in same order as invoice.Line[]
+        chargeLineage,
         mapping: {
           customerId: clientMapping.external_entity_id,
           source: mappingSource ?? 'mapping_table'
@@ -696,7 +708,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -900,7 +912,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: billId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -1260,12 +1272,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
     const qboSalesLines = (response.Line ?? [])
       .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
-    const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
+    const chargeLineMappings: Array<{ chargeId: string; parentChargeId: string; allocationDetailId?: string; qboLineId: string }> = [];
     for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
       const qboLineId = qboSalesLines[i].Id;
       if (qboLineId) {
         chargeLineMappings.push({
           chargeId: payload.chargeIds[i],
+          parentChargeId: payload.chargeLineage[i]?.parentChargeId ?? payload.chargeIds[i],
+          allocationDetailId: payload.chargeLineage[i]?.allocationDetailId,
           qboLineId
         });
       }
@@ -1346,6 +1360,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
@@ -1472,13 +1487,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         })
         .first();
 
-      const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> =
+      const chargeLineMappings: Array<{ chargeId: string; parentChargeId?: string; allocationDetailId?: string; qboLineId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: QBO line ID -> Alga charge ID
-      const qboLineToChargeId = new Map<string, string>();
+      // Keep provider split identity and original invoice parent identity together.
+      const qboLineToCharge = new Map<string, { chargeId: string; parentChargeId?: string; allocationDetailId?: string }>();
       for (const mapping of chargeLineMappings) {
-        qboLineToChargeId.set(mapping.qboLineId, mapping.chargeId);
+        qboLineToCharge.set(mapping.qboLineId, mapping);
       }
 
       // Calculate total tax from QBO invoice
@@ -1489,6 +1504,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       // Extract line items with their amounts for proportional tax distribution
       const lineItems: Array<{
         lineId: string;
+        parentChargeId?: string;
+        allocationDetailId?: string;
         externalLineId?: string;
         amount: number;
         taxCode?: string;
@@ -1503,11 +1520,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           const qboLineId = line.Id ?? undefined;
 
           // Use stored charge ID if available, otherwise fall back to positional index
-          const chargeId = qboLineId ? qboLineToChargeId.get(qboLineId) : undefined;
-          const lineId = chargeId ?? `line-${lineIndex}`;
+          const chargeMapping = qboLineId ? qboLineToCharge.get(qboLineId) : undefined;
+          const lineId = chargeMapping?.chargeId ?? `line-${lineIndex}`;
 
           lineItems.push({
             lineId,
+            parentChargeId: chargeMapping?.parentChargeId,
+            allocationDetailId: chargeMapping?.allocationDetailId,
             externalLineId: qboLineId,
             amount: lineAmount,
             taxCode: detail.TaxCodeRef?.value
@@ -1537,6 +1556,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
         return {
           lineId: item.lineId,
+          parentChargeId: item.parentChargeId,
+          allocationDetailId: item.allocationDetailId,
           externalLineId: item.externalLineId,
           taxAmount,
           taxCode: item.taxCode,

@@ -124,6 +124,15 @@
           "paymentTerms": "Termini di pagamento",
           "discounts": "Sconti"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Conti servizi Desktop",
+        "desktopDiscounts": "Sconti Desktop",
+        "desktopAccount": "Nome conto ricavi Desktop",
+        "description": "Associa sconti e crediti prima di esportare. L’associazione appartiene a questa azienda contabile.",
+        "add": "Aggiungi associazione",
+        "remove": "Rimuovi associazione",
+        "removeConfirm": "Rimuovere questa associazione contabile?"
       }
     },
     "calendar": {

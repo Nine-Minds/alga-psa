@@ -1,0 +1,338 @@
+# Contract invoice adjustments
+
+## Ledger and live verification repair (2026-09-27)
+
+Generation already posts invoice principal before finalization. Draft recalculation must reconcile the sum of completed invoice generation/adjustment postings with the new total using only a signed delta; payment and credit transactions are not part of that base. Repeated saves are no-ops in the ledger, and imported/unposted drafts remain unposted. Lock the invoice inside recalculation and serialize adjustment balance reads on the client. Behavioral verification includes posted USD/EUR drafts and concurrent recalculation. Live evidence for posted-invoice edits and independent template copies is in `docs/evidence/contract-invoice-adjustments-repair-2026-09-27/takeover/README.md`. Portal, export artifacts and combined-companion acceptance retain their documented integration limits.
+
+## Implement desk audit (2026-09-27)
+
+Audit baseline: `4ff933a279`. The consolidated A–F instructions remain the
+acceptance authority. This pass verifies existing behavior and repairs concrete
+gaps before rerunning the focused checks.
+
+- A/B: contract assignments, contract-wide bases, independent template copies,
+  and editable client-owned terms exist. The template panel only adds/removes
+  defaults: add in-place editing that preserves the template term identity,
+  other terms, and unrelated metadata. Existing client copies stay untouched.
+- B3: retain the documented catalog-backed positive standing charge and fixed
+  recurring discount/credit decision for tax and accounting classification.
+- C: source-derived dates, real quantity, service/tax attribution, empty units,
+  permanent-change navigation, and overlap confirmation exist. Close the server
+  gap where omitted partial-period line identity skips overlap checks: resolve
+  it from the billed source, reject ambiguous source lines, and persist it.
+- D: preserve `contract_change`, revision provenance, half-open adjustment
+  periods, inclusive detail ends, and existing source-per-invoice uniqueness.
+  Confirm the available companion plan/handoff without modifying its writer.
+- E/F: rerun evaluator, database, migration, wizard, build, lint and typecheck
+  checks. Add behavioral coverage for template edit/cancel and omitted-line
+  overlap rejection. Keep the customer walkthrough in the handoff; live smoke
+  and fixture reseeding remain for the separate smoke step and are not claimed
+  by these automated checks.
+
+The invoice read projection also omitted line IDs and adjustment provenance,
+making the permanent-change link and early overlap warning unreachable after
+the editor fetched charges. Return those fields and resolve line identity from
+canonical detail configuration. The companion writer at `558c78e26a` emits
+true-ups without detail rows; resolve those lines through its tenant-scoped
+`contract_recurring_unit_adjustments.revision_id` ledger instead. Share this
+read-only resolver between invoice reads, discount bases, and overlap checks.
+Do not create fake recurring details or copy the companion writer.
+
+## Takeover repair (2026-09-27)
+
+Template-origin services must retain their source line boundaries when the client
+wizard creates fixed, product, hourly, or usage lines. A line discount must not
+expand to other source lines merely because they use the same billing method.
+Services added without a template source retain the existing grouping. The fixed
+fee remains the wizard's authored total, allocated across the resulting lines
+using the existing quantity-weighted allocation and remainder rule. Bucket pools
+must resolve to one line containing their members; ambiguous cross-line pools
+are rejected rather than assigned to an arbitrary line.
+
+The template discount copy ledger must be tenant-distributed and colocated with
+client contracts on Citus, including upgrades where the table already exists.
+Foreign keys are added after distribution. The initial contract-discount attachment
+migration follows the same ordering and uses sequential Citus modification mode
+when adding its reference-table foreign key. Tenant deletion removes the ledger
+before its client-contract and discount parents. Verification covers same-method
+source lines, repeated services, scoped settlements, and migration retries.
+
+Resaving a draft through the wizard rebuilds assignments and lines. Drafts with
+standing terms or copied-term history must instead use the Lines and Discounts
+tabs; the wizard returns that instruction before deleting any rows. This keeps
+independent contract terms intact after template edits. Legacy invoices without
+detail periods use the full invoice-date day as their half-open eligibility
+window, rather than an empty interval.
+
+## Round 3 repair record (2026-09-27)
+
+Original customer request: provide a contract-level discount/adjustment authored
+on the contract or template and settled on each applicable invoice, with a
+source-derived one-time partial-period calculator for exceptions. The mounted
+template flow creates independent client-contract discount copies; manual
+invoice-side edits remain available.
+
+Decisions reaffirmed in this repair: discount/service windows and companion
+true-up periods use half-open `[start, end)` dates; invoice detail dates are
+inclusive and normalized by adding one day. Calculator amounts use the rounded
+minor-unit per-unit rate multiplied by the decimal quantity, rounded once with
+JavaScript `Math.round` on the signed product. Negative half cents therefore
+round toward positive infinity (for example, `1.5 × -3333 = -4999`). The same
+calculated value is written to the manual row and recalculated totals.
+
+Round 3 findings: added per-template-term copy identity so line-only templates
+and client contracts with unrelated terms can safely retry; serialized copy
+attempts on the target client-contract row. Line-scoped copied definitions now
+carry client-contract ownership. Legacy line terms are split to independent
+definitions per existing client-contract in migration
+`20260927060000_scope_line_discounts_to_client_contracts.cjs`. Both line and
+assignment discount eligibility queries now enforce half-open overlap.
+
+Companion implementation inspection was read-only. The supplied contract remains
+`contract_change` + canonical revision ID/version, service scope, half-open
+adjustment fields, inclusive detail period ends normalized at the boundary, and
+already-prorated signed amounts. No companion quantity/history writer is
+implemented here. This checkout has no companion implementation files to inspect;
+the available branch contains only the durable supplied handoff, so code-level
+assumptions remain for PR #3492 owner confirmation.
+
+Live smoke and reseeding `SMOKE-ADJ-1` remain outstanding for the authorized
+smoke step. The app server must remain stopped during this implementation step.
+
+### Draft Implementation live verification handoff
+
+Run this walkthrough on the current repair head after the app server is started
+for the separate smoke step. Capture screenshots and record the invoice IDs,
+discount source IDs, expected/actual totals, and reload results.
+
+1. Open the contract template used for Mountain Dental and author a 10%
+   contract-wide default discount. Create Mountain Dental's client contract and
+   a second client's contract from that template. On both Discounts tabs,
+   confirm each has one independently editable copied definition.
+2. Generate or refresh an eligible draft invoice for each client contract.
+   Confirm exactly one linked discount row per assignment and invoice, applied
+   to that contract's eligible charges only. Refresh again and confirm no
+   duplicate. Edit the template discount and refresh; confirm existing copies
+   remain unchanged. Edit one client copy and confirm only that client's next
+   refresh changes.
+3. In the invoice adjustment editor, edit and remove a manual one-time row,
+   then confirm generated rows remain read-only. Select a billed service for a
+   partial-period increase and decrease. Verify its service period, derived
+   units × prorated per-unit rate × covered/full days, tax and attribution.
+   Save and reload, follow “Is this a permanent change? Record it on the
+   contract instead”, and confirm it opens the selected contract Lines surface.
+   Confirm an overlapping fabricated/companion true-up requires confirmation.
+4. Verify the customer-facing preview and PDF, then portal and accounting
+   export where the environment permits. Record portal/export outcomes
+   separately; neither is established by automated tests. Reseed
+   `SMOKE-ADJ-1` through the calculator UI and retain the UI evidence.
+
+The app server remained stopped during implementation. This walkthrough,
+fixture reseeding, combined-branch companion verification, and any unavailable
+portal/export checks remain release evidence, not completed validation.
+
+Date: 2026-09-22
+Card: b97eda7b-0e3f-4b09-be80-6b57f934d8a5
+Companion: f6e7254b-0c74-468d-9dd6-822bdf659e15 (scheduled product quantity and price changes)
+Audited base: `ebd63a3a3c`
+
+## Outcome
+
+Operators can add, edit and remove one-time charges, discounts and credits on an editable contract invoice while keeping generated recurring charges intact. Configured automatic discounts and explicit contract-change true-ups become source-linked financial lines on that same invoice, or on the next eligible invoice when the original is locked. Every customer and accounting representation uses the persisted amounts.
+
+This is an implementation design. The audit below follows production component call sites and backend code; it is not evidence of a completed browser smoke test. No application changes or behavioral tests have been executed for this design session.
+
+## Verified current behavior
+
+References use repository-relative `file:line` locations at the audited base.
+
+| Area | Evidence and implication |
+| --- | --- |
+| Reachable invoice editor | `packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.tsx:132` is the only production render of `ManualInvoices`; it supplies no existing invoice. `invoicing/InvoicePreviewPanel.tsx:404` renders `DraftInvoiceDetailsCard` when not read-only/finalized. `invoicing/DraftInvoiceDetailsCard.tsx:66` initializes only invoice number, invoice date and due date. These component paths share the prefix `packages/billing/src/components/billing-dashboard/`. The existing-draft line-edit entry point is missing. |
+| Reusable line UI | `packages/billing/src/components/billing-dashboard/ManualInvoices.tsx:54` accepts an invoice; lines 207 and 356 load/filter manual items; line 630 submits `updateInvoiceManualItems`; lines 1180–1186 offer Add Charge/Add Discount. `LineItem.tsx:375` offers service selection, line 389 quantity, line 561 description, and line 521 item-targeted discounts. Tax editing was removed from this line component (line 238); location/profile controls are not present. Existing currency-specific catalog defaults are handled in `ManualInvoices.tsx:819`. |
+| Manual writes and generated protection | `packages/billing/src/actions/invoiceModification.ts:1698` checks invoice-update permission; line 1830 rejects edits/removals of non-manual charges, with a specific canonical-detail explanation. `addManualItemsToInvoice` starts at line 2013. Both support existing invoices without requiring a manual invoice origin. Reuse these actions rather than adding a separate contract-invoice writer. |
+| Lifecycle and ownership gaps | Manual mutation checks at `invoiceModification.ts:1742`, `1810`, `2044` and `2092` reject paid/cancelled states, but do not establish draft-only, finalized or accounting-export protection. Updates/deletes at lines 1860 and 1888 constrain tenant/manual flag but omit the current invoice ID. Non-manual target detection only checks the selected invoice. Fix cross-invoice targeting and lock/recheck lifecycle before exposing controls. |
+| Existing persistence | `packages/billing/src/services/invoiceService.ts:748` supports optional catalog references, freeform descriptions, quantities/rates, discounts and billing-profile fallback. Line 859 stores location. Negative manual rates become fixed discount-like credit rows at lines 836–855. Discount targets resolve in a second pass at line 885. `invoiceModification.ts:317` has a narrower edit DTO; its new-item mapping at line 1950 passes profile but not location. Persistence support alone does not prove end-to-end field support. |
+| Recalculation | `invoiceModification.ts:2006` recalculates within the write transaction. `invoiceService.ts:539` recomputes percentage discounts against all non-discount items or an explicit item, using whole percentages divided by 100 and `Math.round`. Tax invokes this helper at line 1633. Totals/transaction persistence starts at line 1952. This is the existing pipeline to extend. |
+| Automatic discounts already exist | `packages/billing/src/lib/billing/billingEngine.ts:6831` loads active contract-line discount associations and evaluates dates. `compute/computeDiscountsAndAdjustments.ts:97` deduplicates by discount ID and returns only the basic discount fields, losing line scope. Its calculation at line 137 uses `totalAmount * value` for percentages: stored automatic values are fractions, unlike manual percentages. It sums fixed/percentage discounts against the same base without the quote allocator's caps. `packages/billing/src/actions/invoiceGeneration.ts:3750` persists non-manual discount rows, but omits source discount ID, target, discount type and percentage. They consequently cannot reliably re-evaluate after a manual addition. |
+| Automatic adjustments are incomplete | `billingEngine.ts:2026` passes `adjustments: []` to the canonical document calculation. The legacy `fetchAdjustments` at line 6980 has no caller in that file and explicitly describes its table as not schema-backed. `IAdjustment` at `packages/types/src/interfaces/billing.interfaces.ts:240` contains only description and amount. Do not activate that legacy query as the solution. |
+| Proration is not change settlement | `packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts:139` uses `enable_proration` and coverage ratio, with nested ceiling and per-unit rounding. It emits existing service-period attribution at line 164. It does not by itself calculate effective-history deltas against previously billed quantities/rates. `billingEngine.ts:326` and `packages/billing/src/actions/contractPricingScheduleActions.ts:141` already use effective schedule intervals. Extend their shared timing/pricing inputs through the companion interface. |
+| Related discount allocation | `packages/billing/src/services/quoteDiscountAllocation.ts:15` documents selected positive bases, item/service/document scope, original-base percentages, display-order capping and deterministic largest-remainder allocation. Line 110 implements the allocator. Review its tests and `ee/docs/plans/2026-09-08-quote-discount-group-allocation/PRD.md` (ticket 2353); extract shared allocation arithmetic without importing quote-specific selection/cadence policy into invoicing. Invoice legacy stacking differs, so adoption needs an explicit compatibility boundary. |
+| Tax semantics | `invoiceService.ts:1755` groups discounts but line 1771 deliberately calculates tax from positive taxable charges before discounts. Manual negative rates become non-taxable discount rows. A reduction does not currently imply a tax reversal. Do not describe this as discount-reduced tax or silently change all existing invoices. |
+| Lifecycle precedent | `invoiceModification.ts:947` reads the invoice in the metadata-edit transaction and line 954 requires draft/unfinalized; this read does not itself take a row lock. `unfinalizeInvoice` checks accounting export at line 1593. `hardDeleteInvoice` rejects canonical recurring detail periods at line 2211. `packages/billing/src/actions/voidInvoiceActions.ts:156` rechecks state under lock, and line 290 cancels the invoice with accounting/history work. Reuse these transitions. |
+| Retry and output foundations | `invoiceGeneration.ts:3097` checks existing recurring selections and line 3685 claims service periods. Add adjustment identity within that transaction; invoice-level duplicate prevention alone is insufficient. `packages/billing/src/lib/adapters/invoiceAdapters.ts:587` maps stored charges and service periods to the document model. `packages/client-portal/src/components/billing/ClientInvoicePreview.tsx:96` uses that adapter. `packages/billing/src/services/invoicePdfDeliveryService.ts:53` delegates PDF generation to the shared service. |
+| Accounting limitation | `packages/billing/src/services/accountingSync/exportReadiness.ts:113` reads charges and line 139 blocks serviceless lines without canonical details for configured QBO export. Freeform editing may be valid while finalization/export requires accounting classification. Never fabricate recurring details to bypass this check. |
+
+## Operator workflow
+
+1. In Billing → Invoicing → Drafts, select a generated contract invoice. Place an **Invoice adjustments** section beside the existing metadata editor and above the preview. Show generated charges as read-only, including period and contract. Show **Add Charge** and **Add Discount / Adjustment** when the server reports that this invoice is editable.
+2. Reuse/refactor the existing `ManualInvoices` edit mode and `LineItem` controls into an existing-invoice editor. Keep client, currency and original generated charges fixed. Retain the new manual-invoice route. Use unique element IDs and existing translated UI components.
+3. Add Charge accepts optional service/product catalog selection, required description, positive decimal quantity, signed unit price, tax treatment, client location and billing profile. Clearing the catalog selection preserves editable freeform values; selecting a catalog item seeds the rate in the invoice currency and its tax defaults. Do not fall back to USD for a missing currency rate. Validate all selected IDs against tenant and invoice client.
+4. Offer an optional partial-period calculation: units × period unit price × covered days / full-period days. Persist units, rate, fraction, dates and reason separately from the resolved monetary line, so “3 × $100 × 15/30” remains intelligible. It creates a manual one-time adjustment and never changes standing quantity or claims canonical recurring coverage. A simple freeform $150 line remains available.
+5. Add Discount / Adjustment offers fixed amount, percentage or signed one-time adjustment. Show the eligible scope and calculated base. An item selector includes generated charges without making them editable. Support explicitly configured invoice, contract/line, service and item scope in the evaluator; expose only scopes that resolve unambiguously. Credit/true-up is distinct from a capped commercial discount.
+6. Each manual row supports edit/remove. Automatic discounts and true-ups show source, affected period and calculation reason, with links to the source configuration. Their values are read-only; correct the source and refresh the draft. Save performs one transaction and returns the full authoritative invoice; refresh preview, list totals and balance from that result. Do not use the current editor's manual-only subtotal as the invoice total.
+7. Show blocked-state reasons: finalized/sent requires the existing permitted unfinalize transition or a separate adjustment; paid/exported requires the supported credit/adjustment workflow; cancelled remains historical. Generated-row explanation: “Generated contract charges cannot be edited here. Add a one-time adjustment or correct the source contract.” Freeform lines lacking accounting mapping show a classification requirement before finalization/export, not a blanket prohibition on draft editing.
+
+## Financial rules and compatibility
+
+### One calculation path
+
+Introduce a normalized adjustment input/output in the existing canonical billing compute layer. Generation, draft recalculation and calculation preview consume the same evaluator. Persist its results through `invoice_charges` and the current tax/totals/transaction services. The companion produces effective source facts, not invoice rows or a second proration calculator.
+
+Normalize stored automatic discount fractions to explicit percentage units at the adapter boundary (0.10 → 10). Fixed values remain invoice minor units. Never infer a percentage convention from magnitude. Retain decimal percentages rather than copying the quote helper's integer-percent normalization. Reject non-finite amounts, invalid percentages, incompatible currencies, unknown scope and missing targets.
+
+New explicit discount policies use these rules:
+
+- Resolve positive eligible charges after source-driven true-ups and manual charges. Exclude discount rows, payment/credit applications and unrelated contracts. All-invoice scope includes eligible manual additions; a contract-only scope includes manual additions only when explicitly attributed and configured to participate. A service scope includes every matching eligible row, not the first match.
+- Normalize quantity/rate changes to a net service-period entitlement before determining its discount base. Negative true-ups reverse the discount allocation associated with the reduced entitlement; they are not standalone positive discount bases. This avoids granting the original discount twice or crediting more than the discounted amount billed.
+- Evaluate each percentage against its original eligible base (no implicit compounding). Process automatic policies by persisted priority then stable source ID, followed by manual discounts in persisted display order. Cap commercial discounts against remaining eligible positive value. Allocate integer minor units with largest remainder and stable charge-key tie breaking. Fixed discounts are one amount per configured application scope/period, not one per join row.
+- Credit adjustments may make a document negative; commercial discounts may not. Negative documents use the existing credit issuance/finalization path, not a second balance writer (`invoiceModification.ts:1308` onward; `creditActions.ts:635` and `887`).
+- Round resolved discount and adjustment amounts once to integer stored monetary units. Preserve fractional quantities/rates during calculation. For true-ups calculate rounded new entitlement minus rounded prior entitlement with the shared recurring calculator, so a fully reversed change cancels exactly. Do not independently round each delta unit using a different rule from recurring generation.
+
+Existing invoice discounts are additive/uncapped, and automatic associations currently act as eligibility triggers for an invoice-wide base. Keep historical documents immutable. Preserve legacy behavior for existing unversioned policies until they receive an explicit scope/stacking version; do not silently reinterpret existing contract associations as narrow scope. Backfill only provable source links. New/versioned policies use the explicit rules above. The $405 acceptance discount is an explicitly all-eligible-charges 10% policy, not an assumed property of every contract discount.
+
+### Tax, totals and currency
+
+Continue using `calculateAndDistributeTax` and the existing balance/transaction pipeline. Characterize and preserve current pre-discount tax for legacy discount policies. Tax-reducing credits require an explicit supported source tax treatment and a linked allocation to original taxable charges/regions; add that support inside the shared tax pipeline. If that treatment is not supported, reject the policy with a useful message rather than issuing a misleading automatic tax credit. Tax calculation failures must roll back the mutation rather than save inconsistent amounts.
+
+Define displayed gross charges, discounts, net subtotal, tax, total, applied credit and outstanding balance from the same persisted row set. Existing `subtotal` is net of discount rows; do not subtract the discount again in a renderer. Use invoice currency, existing monetary storage conventions and currency formatting. Include a non-USD regression and verify zero/three-decimal currency support before promising it: several current controls divide by 100. A system-wide currency representation migration is outside this card.
+
+## Companion interface and true-up timing
+
+Agree this interface with the companion before automatic true-up implementation; it is a proposed contract, not an API already delivered by that card:
+
+- Tenant/client, client-contract assignment, contract line/config/service identity, invoice currency and billing attribution.
+- Stable change ID and immutable revision, effective half-open date interval, prior/new quantity and rate segments, explicit policy (`next_period` or `mid_period_true_up`), billing timing and proration/day-count convention.
+- Canonical obligation/service-period identity, prior billed snapshot and net already-settled adjustments. Include source tax profile and policy version.
+
+The companion owns validated effective history and exposes it to the existing recurring pricing/timing resolver. This card owns deriving and settling invoice adjustments. No policy means no automatic true-up. Existing `enable_proration` for partial coverage does not authorize retroactive settlement.
+
+For `next_period`, update the next applicable recurring obligation; emit no current-period true-up. For `mid_period_true_up`, segment the affected service period at effective dates and compute new entitlement minus already billed entitlement and previously settled deltas. If an unbilled canonical charge already reflects the segment history, do not add a second delta. Preserve existing generated draft charges when correcting an already-generated obligation by adding the source-linked delta.
+
+Attach to the current draft only when it is editable, belongs to the same client/currency/billing grouping, contains the affected obligation and passes locked revision validation. Otherwise keep the adjustment pending for the next eligible invoice, retaining the original service period and reason. Do not reopen a finalized/paid/exported invoice or force a standalone invoice on a change event. A separately authorized credit workflow handles cases needing immediate settlement with no future invoice.
+
+Use actual configured day-count boundaries, not a universal 30-day assumption. For the stated 30-day example, 3 additional users × $100 × 15/30 resolves to $150. The corresponding decrease resolves to a signed reduction, with original discount/tax allocations reversed according to the supported policy. Test advance and arrears billing, leap/month boundaries, multiple changes and change reversal.
+
+## Persistence, provenance and retries
+
+Extend charge metadata or a tenant-scoped charge-source relation after surveying existing source-link schema. Use one source/provenance mechanism for automatic discounts and true-ups. It must retain source kind/ID/revision, contract/line/service, policy snapshot, affected period, eligible base/allocation, effective segments, calculation reason and supersession/cancellation state. Keep `is_manual=true` for operator-created lines and false for automatic lines; optional manual contract attribution must not create canonical recurring detail coverage.
+
+Create a stable logical settlement key from tenant, client-contract assignment, obligation/period, source kind and source ID. Record revisions on the settlement, not as an excuse to bill the full source again. Use tenant-inclusive unique constraints suitable for Citus and transactional invoice/source locks. A revised source updates its draft settlement, or creates only the outstanding delta if its previous settlement is locked. A discount configured once per invoice has a distinct application scope from one configured per obligation.
+
+- Preview computes candidates with no claims or writes and carries a source revision/fingerprint. Saving revalidates that fingerprint and reports stale input.
+- Initial generation claims recurring periods and adjustment settlements atomically with invoice charges. Concurrent retries return the existing result or a clear conflict; they cannot add another adjustment UUID.
+- Draft refresh reconciles automatic rows by stable key in place. It leaves manual rows, IDs, ordering and attribution intact, then recomputes affected percentage discounts and totals. A source removal removes only its still-editable automatic settlement.
+- Manual save carries an operation ID and invoice revision; repeat submission returns the same result. Existing `persistManualInvoiceCharges` generates new UUIDs, so UI button disabling alone is insufficient. Validate every target belongs to this invoice, including discount targets, and require an explicit supported behavior when removing a targeted line (remove its dependent manual discount in the same confirmed edit, or reject).
+- Cancellation uses existing void/reversal behavior, preserving historical charges. Release/requeue only eligible source settlements transactionally after cancellation is valid. Never hard-delete canonical period history to regenerate.
+- Cancel-and-replace shows the manual lines to carry forward, obtains an explicit selection, copies each selected line once with a replacement link and revalidates scope/mappings. It never silently discards manual additions or automatically duplicates them. Until replacement is implemented, block any destructive regeneration path that cannot preserve them and offer in-place adjustment.
+
+## Implementation sequence
+
+1. **Draft editing and guards, independent of companion.** Add a shared server capability/guard for invoice-update permission, tenant/client ownership, draft status, no finalized timestamp and no accounting export/lock. Lock and recheck inside every manual mutation, including add-only actions; coordinate with finalization/export writers. Validate target ownership and revisions. Extend DTO/mapping for tax, location/profile and partial-period metadata. Wire the reusable editor to draft selection, return authoritative totals and explain blocked states.
+2. **Shared discount evaluation.** Characterize legacy automatic/manual/quote differences with behavioral tests. Extract reusable allocation arithmetic, preserve explicit policy versions, retain scope/date/source identity through canonical computation, and persist recalculable discount metadata. Apply configured automatic discounts again after manual edits. Add only the minimal existing-contract discount configuration fields needed to specify scope/order/version; no new promotion subsystem. (Superseded 2026-09-24: operator authoring of configured discounts is now in scope. See "Scope addition: recurring contract terms".)
+3. **Source settlement contract.** Agree the companion interface, add provenance/unique constraints and pending/claimed/cancelled settlement lifecycle. Implement pure true-up computation through the existing recurring calculator and persistence through the same invoice transaction. This stage depends on effective-history integration; stages 1–2 do not.
+4. **Regeneration and output parity.** Implement safe automatic reconciliation and explicit cancellation/replacement handling. Extend the shared invoice view model with adjustment reason/period/source label and allocation summaries. Ensure grouped recurring/one-time totals allocate discounts to affected bases rather than to a discount row's cadence. Render the same amounts in MSP preview, PDF and client portal.
+5. **Accounting and acceptance.** Map charge/discount/credit rows through existing adapters with appropriate service/account classification. Keep QBO readiness protections. Expose required classification for freeform and automatic adjustments; never drop unsupported lines. Run the tests and actual UI smoke below before declaring the workflow complete.
+
+## Behavioral validation
+
+Use migrated-schema integration tests with real transactions for the writes, claims and rollback assertions. Existing `server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_discounts.test.ts` imports manual generation and mocks transaction wrappers; it is useful regression coverage but does not prove automatic generation or concurrent atomicity. Extend the percentage recalculation, pricing-timing and quote allocation suites with monetary assertions; do not substitute source-string/import tests.
+
+| Scenario | Required evidence |
+| --- | --- |
+| Mixed draft | Generate $3,900 recurring charges; add a freeform partial-period 3 × $100 × 15/30 line; persist $4,050 before discount/tax. Reload, edit and remove manual catalog/freeform rows; verify generated rows/detail periods and standing quantity remain unchanged. |
+| Discounts | Explicit all-eligible 10% yields $405 discount and $3,645 net subtotal. Assert fixed, item, service with duplicate service rows, contract-only and manual-excluded scope; fixed/percentage stacking, caps, decimal percentages, stable remainder distribution and legacy compatibility. Inactive/out-of-window/unconfigured discounts do not apply. |
+| Automatic source changes | Generate addition and reduction from effective history with explicit policy; verify source linkage, original period, advance/arrears destination, no-policy and next-period no-op, multiple revisions, reversal, and no duplicate full charge when recurring history already includes a change. |
+| Atomicity/idempotency | Repeat and concurrently invoke generation and manual save; refresh with preserved manual IDs; change source revisions; cancel/replace; assert one settlement, correct pending state and no duplicate ledger balance. Force tax/persistence failure and verify total rollback. |
+| Boundaries | Reject forged non-manual, cross-invoice, cross-tenant, unrelated-client and stale-revision targets. Race against finalize/export. Paid, cancelled, finalized/sent and exported invoices reject every manual mutation path with no row/history changes. |
+| Tax/currency/credit | Mixed taxable/exempt regions, legacy pre-discount tax, supported tax-reversing credit allocation, fractional rates/quantities, non-USD and rounding boundaries. Verify stored subtotal/tax/total, applied credit and balance; verify negative invoice credit issuance only once. |
+| Output/accounting | Compare line IDs/descriptions/periods/reasons and monetary totals across preview, downloaded PDF, client portal and adapter payloads. Include grouped recurring/one-time totals. Assert actionable mapping failure for a serviceless freeform line and successful export after valid classification; no dropped adjustments. |
+
+Actual UI smoke runs on the worktree dev server at port 3185 with isolated synthetic data. Navigate through Billing → Invoicing → Drafts, select a real generated invoice, capture the reachable adjustment controls, add/save/reload/edit/remove catalog and freeform lines, and capture the $4,050 and $3,645 states. Capture the same invoice in preview, downloaded PDF and client portal. Capture a blocked finalized/exported case and its supported next action. Record evidence paths, fixture IDs, expected/actual totals and test commands in the implementation evidence. Exercise light/dark theme and keyboard flow. This evidence remains required; the code audit does not substitute for it.
+
+## Open questions and risks
+
+1. **Companion handshake:** confirm the exact effective-history API, stable change identity and ownership of the shared pricing/proration resolver. No companion changes were inspected or coordination messages sent in this session. The interface above is the integration proposal; manual editing is not blocked on it.
+2. **Legacy discount policy:** confirm the migration/default for existing invoice-wide, uncapped automatic discounts. Proposed safe default is preserving unversioned behavior and requiring explicit adoption of scoped/capped policies. Decide whether existing draft discounts should refresh from current configuration or their saved snapshot; proposed default is saved snapshot with an explicit refresh action.
+3. **Tax-reversing decreases:** confirm the supported product policy for tax treatment and credit issuance before enabling those automatic policies. Current invoice code explicitly taxes positive charges before discounts and is not a general tax-reversal implementation. Unsupported policies must stay unavailable, not silently produce incomplete credits.
+4. **Accounting classification:** confirm which existing service/account mapping represents automatic discounts and freeform adjustments for each enabled adapter. QBO currently blocks serviceless rows; successful export may require explicit classification even though catalog selection remains optional during draft authoring.
+5. **Currency and historic provenance:** confirm supported currency precision and how much old source identity can be proven. Never infer a discount source from its description or mutate locked historical invoices to invent provenance.
+
+## Scope addition (2026-09-24): recurring contract terms
+
+Added by the captain after human review of PR #3499. Recurring client-specific charges and credits belong in contract terms, not in manual invoice lines copied forward to each invoice. A copy-forward mechanism would be a third writer of invoice rows and would reintroduce the duplication class this card already had to fix. The items below finish that capability on existing layers. They supersede stage 2's "minimal existing-contract discount configuration fields" limit. They remain inside the "no general promotion engine" exclusion because they author the existing `discounts` model with no new rule types.
+
+Audited at head `447429e2c0`.
+
+| Area | Current behavior |
+| --- | --- |
+| Client-specific lines | Contracts are client-owned (`20260316121000_client_owned_contracts_simplification.cjs`). Adding a line in `ContractDetail.tsx` → `ContractLines.tsx` (`AddContractLinesDialog` / `CreateCustomContractLineDialog`) changes one client's contract. A catalog service is required (`CreateCustomContractLineDialog.tsx:129`, `contractLinePresetActions.ts:701`, `computeFixedCharges.ts:583`, `invoiceService.ts:1472`). |
+| Invoice text | The fixed parent charge prints `invoice_line_description`, else `contract_line_name` (`invoiceService.ts:1445`). The only editor is `contract-lines/FixedContractLineConfiguration.tsx:343`, and its only mount is `ContractLineTypeRouter`, which nothing imports. Operators cannot set it. |
+| Per-line dates | None. A line bills for the whole life of its client contract (`billingEngine.ts:3069-3082`). Pricing schedules (`billingEngine.ts:322-357`, `4160-4210`) override rate only and cannot stop a line from billing. The engine's line selection does not filter `contract_lines.is_active` (to be verified). |
+| Negative fixed lines | The UI strips "-" (`FixedContractLineConfiguration.tsx:462`, `CreateCustomContractLineDialog.tsx:611`, `ContractLineEditDialog.tsx:132`). `updateContractLineFixedConfig` (`contractLineAction.ts:561-603`) and the schema do not check the sign. A negative line would get zero tax (`taxContext.ts:102`), be left out of discount bases (`contractInvoiceAdjustments.ts:133`) and has no writer guard. Pricing schedules already enforce `custom_rate >= 0`. |
+| Configured discounts | `discounts` (type, value, start/end, is_active, scope, scope_service_id, applies_to_item_id, priority) plus `contract_line_discounts` can express a date-bounded fixed or percentage discount for one client contract. This card's evaluator applies them. No UI, server action or API write path creates them. `discounts.value` is `decimal(10,2)`, but `AutomaticDiscountPolicy` reads fixed values as minor units (`contractInvoiceAdjustments.ts:36-41`). Percentages are stored as fractions (`0.10`). |
+
+### Items
+
+1. **Create and edit configured discounts on a client contract.** Add a Discounts section to the client contract detail with an add/edit/deactivate dialog: name, fixed or percentage type, value, start/end date, line association (`contract_line_discounts`), scope (invoice-wide / service / item, only where it resolves unambiguously), priority and active flag. Back it with tenant-scoped server actions and permission checks. Validate that the line belongs to this client's contract and that the service is in scope. Reject non-finite values, negative values and percentages outside (0, 100]. Resolve the fixed-value unit before anything writes one: either migrate the fixed value to an integer minor-unit column, or convert at one adapter boundary. Add a regression test showing a $50 fixed discount bills −$50.00 in USD and in a non-USD currency. Keep percentage storage and legacy unversioned rows readable exactly as today. A new, edited or deactivated discount appears on the next draft refresh through the existing reconciliation, as one linked row.
+2. **Block negative fixed contract-line rates on the server.** Enforce `custom_rate >= 0` in `updateContractLineFixedConfig`, in the line create/preset actions, and with a tenant-safe database check. First check existing data and describe any legacy negatives rather than failing the migration silently. Recurring credits are authored only through item 1.
+3. **Editable invoice text for contract lines.** Add `invoice_line_description` to the live line create/edit dialogs (`CreateCustomContractLineDialog`, `ContractLineEditDialog`) with i18n in every locale. Show that it prints on the invoice. Remove the unused `ContractLineTypeRouter` path or mount it properly; don't keep both. The catalog-service requirement stays, because tax and accounting mapping come from the service.
+4. **Start and end dates on contract lines.** Add nullable `start_date` / `end_date` (half-open, same convention as contract dates) on `contract_lines`. They must fall inside the client contract's dates. Author them in the line dialogs and show them in the lines list. The billing engine and recurring service-period/timing code skip a line outside its window and prorate a partial first or last period through the existing `enable_proration`. An ended line must not produce an in-advance period after its end date. Verify whether `contract_lines.is_active` is honored in line selection, and fix it in the same change if not. Test in-advance and in-arrears timing, a mid-period start and end, a line ending at the contract end, and a line with no dates (unchanged behavior).
+
+### Review defect fixed in the same round
+
+5. **Opening a manual row must not strip its tax.** `ManualInvoices.tsx` `resolveInitialTaxRateId` resolves `null` (Non-taxable) for a taxable row with no stored `tax_region` and no service (for example the fixture partial-period line, which was taxed at US-FL through fallback). `LineItem` then commits `tax_rate_id: null` on collapse, and the save makes the row non-taxable without the operator choosing that. Opening, editing quantity or description, and committing must keep the existing tax treatment. Only an explicit tax-treatment change may alter it. Add a component or action regression test.
+
+### Acceptance
+
+Automated tests for each item above. Live UI smoke on the dev server: create a date-bounded fixed discount on the Mountain Dental contract and refresh a draft (one linked row, correct amount); verify a negative rate is rejected in the UI and by a direct action call; set invoice text and a line end date and generate the next period to confirm the text prints and the ended line does not bill; open and re-save the taxable partial-period line and confirm its tax is unchanged. Update the review guide's baseline to name the tax rate (Florida Sales Tax, US-FL 6%). Make step 2's "reopen the manual row" refer to the row by its description.
+
+## Deliberate exclusions
+
+No arbitrary rewriting of generated recurring charges, retrospective mutation of paid/exported history, general promotion engine, inferred discounts, implicit contract quantity updates from manual lines, legacy unscoped adjustment-table activation, duplicate companion scheduling implementation, system-wide currency migration, or broad tax-policy rewrite. Immediate standalone settlement is available only through an explicitly selected supported adjustment/credit workflow. Board advancement, approval and release are outside this implementation plan.
+
+## Repair brief (2026-09-27): reusable recurring contract discounts and source-derived partial-period adjustments
+
+### Original customer ask
+
+An operator can author default discounts on a contract template. Creating a client contract copies each definition into an independent editable client-contract discount, visible on that contract's Discounts tab, and applies it to each eligible invoice. Template or peer-contract edits do not mutate existing copies. This is the lead customer journey; manual invoice adjustments remain supported as a secondary workflow.
+
+### Decisions
+
+1. **Independent contract copies and eligibility.** Template discounts are copied into client-owned definitions on creation. A contract-wide discount applies to eligible charges attributed to that client contract across all represented lines; it does not require `contract_line_id`. Optional line scope requires that line to be represented; service scope matches that service on the same contract. Contract attribution isolates consolidated invoices. Attributed manual charges participate; unattributed manual charges do not. Credits, discounts and negative true-ups are excluded from percentage/fixed bases. Dates are half-open and intersect the invoice service window. Discounts run by ascending priority then stable source ID, percentage uses original positive eligible base, prior allocations reduce remaining caps, and largest-remainder allocation settles integer minor units.
+2. **Independent definitions and lifecycle.** A client contract owns its copied definitions and may edit/deactivate them without changing the template or another contract. Refresh reconciles one source-linked settlement per copied discount and client contract. Protected invoices are never rewritten.
+3. **Standing positive charges.** Do not add a parallel recurring-adjustment engine. Use existing catalog-backed contract lines for a standing positive charge because `contract_lines.service_id` is required by recurring charge computation and supplies tax/accounting classification and export mapping. Existing authoring path: client contract → Lines → Add line / custom contract line, selecting a catalog service. Keep the catalog service requirement rather than weakening accounting readiness.
+4. **Standing fixed credits.** Represent a recurring fixed credit as a contract-level fixed discount in the existing discount evaluator and settlement/provenance pipeline. Preserve the evaluator's fixed-value conversion boundary and credit/tax policies; do not encode it as a negative contract-line rate.
+5. **Partial-period workflow.** For a one-time partial-period change, choose a generated charge, contract line, or service represented on the invoice. Derive its unit rate and classification from that source; use its effective date and service-period date conventions to prorate a real quantity/rate row. Preserve manual one-time identity and do not modify standing coverage quantities. Freeform Add Charge remains for genuinely serviceless one-offs.
+6. **Timing boundary and companion interface.** Companion card `f6e7254b-0c74-468d-9dd6-822bdf659e15` owns permanent quantity/rate revisions and automatic mid-period true-ups. It writes `adjustment_source_kind='contract_change'`, canonical unit-pricing revision ID, source revision version, service scope, base amount and reason. Adjustment periods are half-open. Companion detail-row period ends are inclusive and must be normalized at the boundary. Its amount is `sign(delta) × ceil(ceil(abs(delta) × rate) × covered/full)` and is not prorated again. It writes the row on the next eligible editable draft before this card's shared discount/tax pipeline. Existing invoice unique source-per-invoice identity means retries update or reuse the intended row; the version is provenance, not a second settlement identity. This card consumes the row and adds no scheduling or history writer. The requested durable handoff file `docs/evidence/f6e7254b-contract-product-schedule/companion-handoff.md` was absent from this checkout at implementation start; this plan records the interface available in the captain brief.
+
+### Repair acceptance focus
+
+First demonstrate one reusable tenant discount attached to two client contracts, one correctly attributed source-linked settlement on each next editable invoice, correct contract-wide eligible bases, idempotent repeated refresh, and shared-definition edit propagation on refresh. Then demonstrate source-derived partial-period increases and decreases with service classification, date boundaries, tax treatment and persisted quantity/rate semantics. Keep billed/locked line date/text history protections from `000632a422` and `b57e335267` intact, including periods protected after cancellation.
+
+### Review repair decisions (2026-09-27)
+
+- A standing attachment is keyed by `client_contract_id`, not the reusable contract definition id. A contract definition can have multiple client assignments, and each assignment has its own settlement source identity even when the same shared discount is attached to each.
+- Recurring service periods are read from `invoice_charge_details`; manual calculator lines persist their affected window in `invoice_charges.adjustment_period_start/end`. Manual freeform charges leave both periods empty. The UI maps those adjustment dates back into its display period fields after reload.
+- The calculator persists the real unit delta as quantity and a prorated unit rate in minor units. Since that rate is rounded per unit, the server also records and validates the exact resolved cents in calculation metadata; manual-row recalculation and export use the persisted net amount without losing a cent.
+- Editing a contract-level attachment does not silently move it to a line attachment. That transition is explicit: detach the client-contract assignment and create the line-scoped attachment. Contract-level service scope lists services from every line in the selected contract.
+
+### Consolidated customer request and latest implementation decisions (2026-09-27)
+
+The customer needs a standing discount or adjustment authored on a contract/template and billed on each applicable invoice. Contract scope is the default and includes eligible charges from every represented line of that client contract; explicit line and service scopes remain available. Template definitions are copied into each client contract and thereafter edited independently. No live tenant-level shared-definition workflow is allowed. Invoice-side manual adjustments remain available for one-off cases.
+
+Manual partial-period adjustments are one-time only. Their source must be a service billed on this invoice; service, rate, tax, location, attribution, and accounting classification derive from that charge. The operator supplies direction, units, effective date, and optional reason. Dates and math are server-validated, quantity remains the actual unit change, and the prorated per-unit minor-unit rate is rounded first; settled amount is quantity times that stored rate. Freeform serviceless charges remain available separately.
+
+The companion card owns permanent unit revisions and automatic true-up generation; this card consumes `contract_change` rows by canonical revision ID and version. Companion detail periods are inclusive; adjustment periods are half-open, so the detail end must be advanced one day at the boundary. Companion amount is already prorated: `sign(delta) × ceil(ceil(abs(delta) × rate) × covered/full)` and must never be prorated again. Settlement must reuse/update the intended source/version settlement on retries under the existing unique source-per-invoice rule. Manual rows survive regeneration. Cancellation does not permit changing billed or locked historical dates/text; lifecycle guards continue to apply.
+
+A positive recurring standing charge remains a catalog-backed contract line so it retains a service, tax, and accounting classification; a recurring fixed credit is authored as a fixed contract discount. The companion handoff was absent in this checkout, so the above interface is sourced from the captain instructions and must be confirmed against the companion branch during integration review.
+
+Live smoke and `SMOKE-ADJ-1` reseeding are deliberately outstanding for the authorized smoke step because the app server must remain stopped during this repair.
+
+## Accounting export mitigation (2026-09-29)
+
+Manual positive charges require a tenant-valid catalog service at creation and on every edit. New lines select the ordinary editable Miscellaneous / One-time charge service, provisioned idempotently for existing and new tenants. Historical serviceless charges are left unchanged and require explicit assignment when next edited or exported. Freeform descriptions and amounts remain available.
+
+Discounts and quantity-derived credits use an explicit tenant/integration/realm mapping (`discount`, `invoice_discount`) in the existing external mapping table. Configuration uses the existing permissioned mapping screens and actions. QBO emits native fixed discount lines; Xero uses a negative line on the mapped account; CSV/IIF preserve the settled amount using the configured item/account. CSV signed numeric fields must not be escaped into text.
+
+Serviceless consolidated fixed-plan parents expand into their canonical persisted service allocations for export and validation. Allocation totals must equal the parent net/tax totals. The original batch line remains the export/retry identity, so expansion neither adds revenue nor loses retry ownership. Save-time editor warnings complement existing batch and finalize gates. Current-head UI acceptance is pending the separately authorized smoke step; Draft Implementation does not start the app server.

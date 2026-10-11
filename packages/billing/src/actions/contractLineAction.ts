@@ -22,10 +22,76 @@ import {
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type ContractLineActionError = ActionMessageError | ActionPermissionError;
+
+async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, tenant: string, contractLineId: string, lockRows = false) {
+    const db = tenantDb(trx, tenant);
+    const periods: Array<{ start: string; end: string }> = [];
+    const normalizedPeriod = (startValue: unknown, endValue: unknown) => {
+        const start = normalizeContractLineDate(startValue);
+        const end = normalizeContractLineDate(endValue);
+        return start && end ? { start, end } : null;
+    };
+    let claimsQuery = db.table('recurring_service_periods')
+        .whereIn('obligation_type', ['contract_line', 'client_contract_line'])
+        .where('obligation_id', contractLineId)
+        .select('lifecycle_state', 'service_period_start as start', 'service_period_end as end');
+    if (lockRows && 'forUpdate' in claimsQuery) claimsQuery = claimsQuery.forUpdate();
+    const allClaims = await claimsQuery;
+    const claimed = allClaims.filter((p: any) => p.lifecycle_state === 'billed' || p.lifecycle_state === 'locked');
+    periods.push(...claimed.flatMap((p: any) => {
+        const period = normalizedPeriod(p.start, p.end);
+        return period ? [period] : [];
+    }));
+
+    // Detail rows are the canonical line-level invoice relationship. Joining
+    // through configuration keeps draft invoices in scope without treating an
+    // unrelated line on the same contract as history for this line.
+    const detailQuery = db.table('invoice_charge_details as iid');
+    db.tenantJoin(detailQuery, 'contract_line_service_configuration as clsc', 'iid.config_id', 'clsc.config_id');
+    db.tenantJoin(detailQuery, 'invoice_charges as ic', 'iid.item_id', 'ic.item_id');
+    const details = await detailQuery.where('clsc.contract_line_id', contractLineId)
+        .whereNotNull('iid.service_period_start').whereNotNull('iid.service_period_end')
+        .select('iid.service_period_start as start', 'iid.service_period_end as end');
+    periods.push(...details.flatMap((p: any) => {
+        const period = normalizedPeriod(p.start, p.end);
+        return period ? [period] : [];
+    }));
+    return {
+        earliestStart: periods.length ? periods.map(p => p.start).sort()[0] : null,
+        latestEnd: periods.length ? periods.map(p => p.end).sort().at(-1)! : null,
+    };
+}
+
+async function getActiveContractLineAssignmentWindow(
+    trx: Knex | Knex.Transaction,
+    tenant: string,
+    contractId: string,
+): Promise<{ start: string | null; end: string | null }> {
+    const db = tenantDb(trx, tenant);
+    const query = db.table('client_contracts as cc');
+    db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+    const assignment = await query.where({ 'cc.contract_id': contractId, 'cc.is_active': true })
+        .first('cc.start_date', 'cc.end_date');
+    return {
+        start: normalizeContractLineDate(assignment?.start_date),
+        end: normalizeContractLineDate(assignment?.end_date),
+    };
+}
+
+export const hasContractLineProtectedHistory = withAuth(async (
+    user, { tenant }, contractLineId: string,
+): Promise<boolean | ContractLineActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!tenant) throw new Error('tenant context not found');
+    if (!await hasPermission(user, 'billing', 'update', knex)) throw new Error('Permission denied: Cannot update contract lines');
+    const bounds = await getProtectedContractLinePeriods(knex, tenant, contractLineId);
+    return Boolean(bounds.earliestStart || bounds.latestEnd);
+});
 
 function contractLineActionErrorFrom(error: unknown): ContractLineActionError | null {
     if (error instanceof Error && error.message.startsWith('Permission denied:')) {
@@ -45,6 +111,17 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
         if (error.message.startsWith('Cannot update fixed')) {
             return actionError(error.message);
         }
+        if (error.message.includes('must be zero or greater')) {
+            return actionError(error.message);
+        }
+        if (error.message.startsWith('Protected line start date') || error.message.startsWith('Protected line end date')) {
+            const start = error.message.startsWith('Protected line start date');
+            return actionError(error.message, start
+                ? 'msp/contracts:contractLines.errors.protectedStartDate'
+                : 'msp/contracts:contractLines.errors.protectedEndDate',
+                { boundary: error.message.match(/on or (?:before|after) ([0-9-]+)/)?.[1] ?? '' });
+        }
+        if (error.message.startsWith('Line start date') || error.message.startsWith('Line end date')) return actionError(error.message);
     }
 
     const dbError = error as { code?: string; column?: string };
@@ -71,6 +148,19 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
     }
 
     return null;
+}
+
+/**
+ * A stored contract-line rate is a recurring charge, never a credit. Negative
+ * values are rejected at every write path and by a database check; recurring
+ * credits are authored only through configured discounts.
+ */
+function assertNonNegativeContractLineRate(value: unknown, label = 'Rate'): void {
+    if (value === null || value === undefined) return;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+        throw new Error(`${label} must be zero or greater.`);
+    }
 }
 
 async function assertContractLineIsAuthorable(
@@ -207,6 +297,7 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
+            assertNonNegativeContractLineRate(safePlanData.custom_rate);
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -263,6 +354,8 @@ export const updateContractLine = withAuth(async (
             }
 
             // Fetch the existing plan to check its type
+            await tenantDb(trx, tenant).table('contract_lines')
+                .where('contract_line_id', planId).forUpdate().first('contract_line_id');
             const existingPlan = await ContractLine.findById(trx, planId);
             if (!existingPlan) {
                 // Handle case where plan is not found before update attempt
@@ -272,6 +365,55 @@ export const updateContractLine = withAuth(async (
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
+            assertNonNegativeContractLineRate(safeUpdateData.custom_rate);
+            if (existingPlan.contract_id) {
+                const windowError = await validateContractLineWindow(
+                    trx,
+                    tenant,
+                    existingPlan.contract_id,
+                    {
+                        start_date: safeUpdateData.start_date,
+                        end_date: safeUpdateData.end_date,
+                    },
+                    {
+                        start_date: existingPlan.start_date,
+                        end_date: existingPlan.end_date,
+                    },
+                );
+                if (windowError) {
+                    throw new Error(windowError);
+                }
+            }
+            if ('start_date' in safeUpdateData) {
+                safeUpdateData.start_date = normalizeContractLineDate(safeUpdateData.start_date);
+            }
+            if ('end_date' in safeUpdateData) {
+                safeUpdateData.end_date = normalizeContractLineDate(safeUpdateData.end_date);
+            }
+            const protectedPeriods = await getProtectedContractLinePeriods(trx, tenant, planId, true);
+            const persistedStart = normalizeContractLineDate(existingPlan.start_date);
+            const persistedEnd = normalizeContractLineDate(existingPlan.end_date);
+            const proposedStart = 'start_date' in safeUpdateData
+                ? normalizeContractLineDate(safeUpdateData.start_date)
+                : persistedStart;
+            const proposedEnd = 'end_date' in safeUpdateData
+                ? normalizeContractLineDate(safeUpdateData.end_date)
+                : persistedEnd;
+            const updatesWindow = 'start_date' in safeUpdateData || 'end_date' in safeUpdateData;
+            if (updatesWindow && existingPlan.contract_id && (protectedPeriods.earliestStart || protectedPeriods.latestEnd)) {
+                const assignmentWindow = await getActiveContractLineAssignmentWindow(trx, tenant, existingPlan.contract_id);
+                const effectiveStart = proposedStart ?? assignmentWindow.start;
+                const effectiveEnd = proposedEnd ?? assignmentWindow.end;
+                if (protectedPeriods.earliestStart && effectiveStart && effectiveStart > protectedPeriods.earliestStart) {
+                    throw new Error(`Protected line start date must be on or before ${protectedPeriods.earliestStart} because that is the earliest protected service-period start.`);
+                }
+                if (protectedPeriods.latestEnd && effectiveEnd && effectiveEnd < protectedPeriods.latestEnd) {
+                    throw new Error(`Protected line end date must be on or after ${protectedPeriods.latestEnd} because that is the latest protected service-period end.`);
+                }
+            }
+            if (typeof safeUpdateData.invoice_line_description === 'string') {
+                safeUpdateData.invoice_line_description = safeUpdateData.invoice_line_description.trim() || null;
+            }
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
                 cadenceOwner: safeUpdateData.cadence_owner,
                 fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -585,6 +727,8 @@ export const updateContractLineFixedConfig = withAuth(async (
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
 
+            assertNonNegativeContractLineRate(configData.base_rate, 'Base rate');
+
             const model = new ContractLineFixedConfig(trx, tenant);
             const existingConfig = await model.getByPlanId(planId);
 
@@ -648,6 +792,8 @@ export const updatePlanServiceFixedConfigRate = withAuth(async (
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
+
+            assertNonNegativeContractLineRate(baseRate, 'Base rate');
 
             // Create configuration service
             const configService = new ContractLineServiceConfigurationService(trx, tenant);

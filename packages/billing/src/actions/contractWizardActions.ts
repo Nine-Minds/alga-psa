@@ -23,6 +23,7 @@ import {
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
 import { createClientContractAssignment } from '@alga-psa/shared/billingClients';
+import { cloneTemplateDefaultDiscounts } from '../lib/billing/utils/templateClone';
 
 
 import ContractLine from '../models/contractLine';
@@ -306,6 +307,7 @@ type LegacyFixedServiceInput = Omit<ContractWizardFixedService, 'pricing_basis'>
 type ClientProductServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   quantity: number;
   /** Optional per-unit override in cents (contract currency). */
   custom_rate?: number;
@@ -314,6 +316,7 @@ type ClientProductServiceInput = {
 type ClientHourlyServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   hourly_rate?: number;
   bucket_overlay?: BucketOverlayInput | null;
 };
@@ -321,6 +324,7 @@ type ClientHourlyServiceInput = {
 type ClientUsageServiceInput = {
   service_id: string;
   service_name?: string;
+  source_template_line_id?: string;
   unit_rate?: number;
   unit_of_measure?: string;
   bucket_overlay?: BucketOverlayInput | null;
@@ -1214,6 +1218,23 @@ export const createClientContractFromWizard = withAuth(async (
         throw new Error('Only draft contracts can be updated via the wizard');
       }
 
+      // The wizard rebuilds assignments and lines. Once standing terms exist,
+      // that would discard their independent definitions and source identities.
+      const owners = await tenantDb(trx, tenant).table('client_contracts')
+        .where({ contract_id: existingContractId }).pluck('client_contract_id');
+      const terms = await tenantDb(trx, tenant).table('contract_discount_assignments')
+        .whereIn('client_contract_id', owners).first('assignment_id');
+      const lineTerms = await tenantDb(trx, tenant).table('contract_line_discounts')
+        .whereIn('client_contract_id', owners).first('discount_id');
+      const copiedTerms = await tenantDb(trx, tenant).table('contract_template_discount_copies')
+        .whereIn('client_contract_id', owners).first('discount_id');
+      if (terms || lineTerms || copiedTerms) {
+        return actionError(
+          'This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms.',
+          'msp/contracts:errors.wizard.standingTerms',
+        );
+      }
+
       // Server-side monthly fixed value as saved, read before the rebuild so the guard below can
       // tell whether the rebuild changed what this draft bills.
       baselineMonthlyCents =
@@ -1457,9 +1478,55 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     const createdContractLineIds: string[] = [];
+    // Template line -> the one client line it became. A template Fixed line that
+    // holds products becomes two client lines (fixed + products); such a line has
+    // no single target, so it is left unmapped and only a line-scoped template
+    // discount on it is refused (by cloneTemplateDefaultDiscounts).
+    const sourceTemplateLineMap: Record<string, string> = {};
+    const splitTemplateLines = new Set<string>();
+    const mapSourceTemplateLine = (sourceLineId: string | undefined, targetLineId: string) => {
+      if (!sourceLineId || splitTemplateLines.has(sourceLineId)) return;
+      const existing = sourceTemplateLineMap[sourceLineId];
+      if (existing && existing !== targetLineId) {
+        splitTemplateLines.add(sourceLineId);
+        delete sourceTemplateLineMap[sourceLineId];
+        return;
+      }
+      sourceTemplateLineMap[sourceLineId] = targetLineId;
+    };
     let primaryContractLineId: string | undefined;
-    let hourlyPlanId: string | undefined;
-    let usagePlanId: string | undefined;
+    const poolLines: Record<string, Array<{ lineId: string; serviceIds: Set<string> }>> = { hourly: [], usage: [] };
+    // Preserve template line scope, including two lines using the same service.
+    // Unattributed additions continue to share the wizard's ordinary type line.
+    const groupBySourceLine = <T extends { source_template_line_id?: string }>(services: T[]): T[][] => {
+      const groups = new Map<string, T[]>();
+      for (const service of services) {
+        const key = service.source_template_line_id ?? '';
+        const group = groups.get(key) ?? [];
+        group.push(service);
+        groups.set(key, group);
+      }
+      return [...groups.values()];
+    };
+    const sourceLineNames = new Map<string, string>();
+    if (submission.template_id) {
+      const sourceLines = await tenantDb(trx, tenant).table('contract_template_lines')
+        .where({ template_id: submission.template_id }).select('template_line_id', 'template_line_name');
+      for (const line of sourceLines) sourceLineNames.set(line.template_line_id, line.template_line_name);
+    }
+    const assertTemplateSourceLine = (sourceId: string | undefined) => {
+      if (sourceId && !sourceLineNames.has(sourceId)) {
+        throw new Error('A selected source line does not belong to this contract template. Reload the template before creating the contract.');
+      }
+    };
+    const lineName = (services: Array<{ source_template_line_id?: string }>, fallback: string) => {
+      const sourceId = services[0]?.source_template_line_id;
+      assertTemplateSourceLine(sourceId);
+      return sourceId ? `${submission.contract_name} - ${sourceLineNames.get(sourceId)}` : `${submission.contract_name} - ${fallback}`;
+    };
+    const productGroups = groupBySourceLine(filteredProductServices);
+    const hourlyGroups = groupBySourceLine(filteredHourlyServices);
+    const usageGroups = groupBySourceLine(filteredUsageServices);
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
@@ -1470,6 +1537,7 @@ export const createClientContractFromWizard = withAuth(async (
   });
 
     for (const [lineIndex, fixedLine] of writableFixedLines.entries()) {
+      assertTemplateSourceLine(fixedLine.source_template_line_id);
       // Per-line timing and proration; cadence owner stays contract-level.
       const fixedLinePolicy = resolveRecurringAuthoringPolicy({
         cadenceOwner: submission.cadence_owner,
@@ -1507,6 +1575,7 @@ export const createClientContractFromWizard = withAuth(async (
         is_template: false,
       } as any);
       const planId = createdFixedLine.contract_line_id!;
+      mapSourceTemplateLine(fixedLine.source_template_line_id, planId);
       createdContractLineIds.push(planId);
       if (!primaryContractLineId) {
         primaryContractLineId = planId;
@@ -1538,9 +1607,9 @@ export const createClientContractFromWizard = withAuth(async (
       nextDisplayOrder += 1;
     }
 
-    if (filteredProductServices.length > 0) {
+    for (const productServices of productGroups) {
       const createdProductsLine = await ContractLine.create(trx, {
-        contract_line_name: `${submission.contract_name} - Products`,
+        contract_line_name: lineName(productServices, 'Products'),
         billing_frequency: submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
@@ -1558,7 +1627,8 @@ export const createClientContractFromWizard = withAuth(async (
         primaryContractLineId = productsLineId;
       }
 
-      for (const product of filteredProductServices as any[]) {
+      for (const product of productServices) {
+        mapSourceTemplateLine(product.source_template_line_id, productsLineId);
         const quantity = product.quantity ?? 1;
         const customRate = product.custom_rate !== undefined ? Math.round(Number(product.custom_rate) || 0) : undefined;
 
@@ -1593,9 +1663,9 @@ export const createClientContractFromWizard = withAuth(async (
       nextDisplayOrder += 1;
     }
 
-    if (filteredHourlyServices.length > 0) {
+    for (const hourlyServices of hourlyGroups) {
       const createdHourlyLine = await ContractLine.create(trx, {
-        contract_line_name: `${submission.contract_name} - Hourly`,
+        contract_line_name: lineName(hourlyServices, 'Hourly'),
         billing_frequency: submission.hourly_billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
@@ -1609,13 +1679,15 @@ export const createClientContractFromWizard = withAuth(async (
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
-      hourlyPlanId = createdHourlyLine.contract_line_id!;
+      const hourlyPlanId = createdHourlyLine.contract_line_id!;
+      poolLines.hourly.push({ lineId: hourlyPlanId, serviceIds: new Set(hourlyServices.map((service) => service.service_id)) });
       createdContractLineIds.push(hourlyPlanId);
       if (!primaryContractLineId) {
         primaryContractLineId = hourlyPlanId;
       }
 
-      for (const service of filteredHourlyServices) {
+      for (const service of hourlyServices) {
+        mapSourceTemplateLine(service.source_template_line_id, hourlyPlanId);
         const normalizedHourlyRate =
           firstPositiveRateInCents(
             service.hourly_rate,
@@ -1650,9 +1722,9 @@ export const createClientContractFromWizard = withAuth(async (
       nextDisplayOrder += 1;
     }
 
-    if (filteredUsageServices.length > 0) {
+    for (const usageServices of usageGroups) {
       const createdUsageLine = await ContractLine.create(trx, {
-        contract_line_name: `${submission.contract_name} - Usage`,
+        contract_line_name: lineName(usageServices, 'Usage'),
         billing_frequency: submission.usage_billing_frequency ?? submission.billing_frequency ?? 'monthly',
         is_custom: true,
         service_category: null as any,
@@ -1664,13 +1736,15 @@ export const createClientContractFromWizard = withAuth(async (
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
       } as any);
-      usagePlanId = createdUsageLine.contract_line_id!;
+      const usagePlanId = createdUsageLine.contract_line_id!;
+      poolLines.usage.push({ lineId: usagePlanId, serviceIds: new Set(usageServices.map((service) => service.service_id)) });
       createdContractLineIds.push(usagePlanId);
       if (!primaryContractLineId) {
         primaryContractLineId = usagePlanId;
       }
 
-      for (const service of filteredUsageServices) {
+      for (const service of usageServices) {
+        mapSourceTemplateLine(service.source_template_line_id, usagePlanId);
         const normalizedUnitRate =
           firstPositiveRateInCents(
             service.unit_rate,
@@ -1711,13 +1785,15 @@ export const createClientContractFromWizard = withAuth(async (
     // skipped — a pool without its member line cannot carry members.
     const poolDrafts = Array.isArray(submission.bucket_pools) ? submission.bucket_pools : [];
     if (poolDrafts.length > 0) {
-      const lineByKey: Record<string, string | undefined> = {
-        hourly: hourlyPlanId,
-        usage: usagePlanId,
-      };
       for (const draft of poolDrafts) {
-        const targetLineId = lineByKey[draft.line_key ?? 'hourly'];
-        if (!targetLineId) continue;
+        const typeLines = poolLines[draft.line_key ?? 'hourly'] ?? [];
+        if (typeLines.length === 0) continue;
+        const candidates = typeLines.filter((line) =>
+          (draft.members ?? []).every((member) => line.serviceIds.has(member.service_id)));
+        if (candidates.length !== 1 || (draft.covers_all_services && typeLines.length > 1)) {
+          throw new Error('This bucket pool spans multiple template lines. Create the contract without this pool, then configure a separate pool on each contract line.');
+        }
+        const targetLineId = candidates[0].lineId;
         await createBucketPoolInTransaction(
           trx,
           tenant,
@@ -1781,6 +1857,15 @@ export const createClientContractFromWizard = withAuth(async (
       po_amount: submission.po_amount ?? null,
       billing_profile_id: submission.billing_profile_id ?? null,
     });
+    if (submission.template_id) {
+      await cloneTemplateDefaultDiscounts(trx, {
+        tenant,
+        templateId: submission.template_id,
+        clientContractId: clientContractAssignment.client_contract_id,
+        clientId: submission.client_id,
+        lineIdMap: sourceTemplateLineMap,
+      });
+    }
 
     if (!isDraft) {
       await syncRecurringServicePeriodsForContract(trx, {
@@ -2117,9 +2202,11 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         missingUnitRate: null,
         includeLocation: false,
       });
-      productServices?.push(...mapped.products);
+      productServices?.push(
+        ...mapped.products.map((product) => ({ ...product, source_template_line_id: line.contract_line_id })),
+      );
       if (mapped.fixedLine) {
-        fixedLines.push(mapped.fixedLine);
+        fixedLines.push({ ...mapped.fixedLine, source_template_line_id: line.contract_line_id });
         enableProration = enableProration ?? mapped.fixedLine.enable_proration;
       }
     } else if (line.contract_line_type === 'Hourly') {
@@ -2146,6 +2233,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         hourlyServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
+          source_template_line_id: line.contract_line_id,
           hourly_rate: hourlyRateCents,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
@@ -2172,6 +2260,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
         usageServices?.push({
           service_id: service.service_id,
           service_name: service.service_name,
+          source_template_line_id: line.contract_line_id,
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||

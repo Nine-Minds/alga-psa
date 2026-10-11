@@ -434,6 +434,182 @@ describe("BillingEngine billing timing", () => {
     expect(selections["contract-boundary-line"]).toBeUndefined();
   });
 
+  it("T260: mid-period line start prorates the advance period through the coverage window", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "advance",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-02-10",
+        coverage_end_date: null,
+        end_date: null,
+      },
+      "monthly",
+    );
+
+    expect(selection).toMatchObject({
+      duePosition: "advance",
+      servicePeriodStart: "2025-02-10",
+      servicePeriodEnd: "2025-02-28",
+      servicePeriodStartExclusive: "2025-02-10",
+      servicePeriodEndExclusive: "2025-03-01",
+    });
+    expect(selection.coverageRatio).toBeCloseTo(19 / 28, 8);
+  });
+
+  it("T261: mid-period line end prorates the arrears prior period and never extends past the half-open end", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "arrears",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-01-01",
+        coverage_end_date: "2025-01-20",
+        end_date: "2025-01-19",
+      },
+      "monthly",
+    );
+
+    expect(selection).toMatchObject({
+      duePosition: "arrears",
+      servicePeriodStart: "2025-01-01",
+      servicePeriodEnd: "2025-01-19",
+      servicePeriodEndExclusive: "2025-01-20",
+    });
+    expect(selection.coverageRatio).toBeCloseTo(19 / 31, 8);
+  });
+
+  it("T262: an advance period starting after the line end produces no settlement", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "advance",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-01-01",
+        coverage_end_date: "2025-01-31",
+        end_date: "2025-01-30",
+      },
+      "monthly",
+    );
+
+    expect(selection).toBeNull();
+  });
+
+  it("T263: an arrears prior period wholly after the line end produces no settlement", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "arrears",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-01-01",
+        coverage_end_date: "2025-01-01",
+        end_date: "2024-12-31",
+      },
+      "monthly",
+    );
+
+    expect(selection).toBeNull();
+  });
+
+  it("T264: contract-cadence anchoring uses the assignment start, not the authored line start", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "advance",
+        billing_frequency: "monthly",
+        cadence_owner: "contract",
+        // A mid-period authored start must not move the contract-cadence anchor.
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-02-05",
+        coverage_end_date: null,
+        end_date: null,
+      },
+      "monthly",
+    );
+
+    // Selected for the Feb 1 inventory window proves the Jan 1 anchor; a Feb 5
+    // anchor would generate a Feb 5–Mar 5 period that maps to no such window.
+    expect(selection).not.toBeNull();
+    expect(selection).toMatchObject({
+      duePosition: "advance",
+      servicePeriodStart: "2025-02-05",
+      servicePeriodEnd: "2025-02-28",
+      servicePeriodEndExclusive: "2025-03-01",
+    });
+    expect(selection.coverageRatio).toBeCloseTo(24 / 28, 8);
+  });
+
+  it("T265: mid-period line end prorates the current advance period without billing past the end", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "advance",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-02-01",
+        coverage_end_date: "2025-02-15",
+        end_date: "2025-02-14",
+      },
+      "monthly",
+    );
+
+    expect(selection).toMatchObject({
+      duePosition: "advance",
+      servicePeriodStart: "2025-02-01",
+      servicePeriodEnd: "2025-02-14",
+      servicePeriodEndExclusive: "2025-02-15",
+    });
+    expect(selection.coverageRatio).toBeCloseTo(14 / 28, 8);
+  });
+
+  it("T266: mid-period line start prorates the arrears prior period", () => {
+    const engine = new BillingEngine();
+    const selection = (engine as any).buildRecurringChargeTimingSelection(
+      { startDate: "2025-02-01", endDate: "2025-03-01" },
+      {
+        client_contract_line_id: "line-1",
+        billing_timing: "arrears",
+        billing_frequency: "monthly",
+        cadence_owner: "client",
+        start_date: "2025-01-01",
+        coverage_start_date: "2025-01-10",
+        coverage_end_date: null,
+        end_date: null,
+      },
+      "monthly",
+    );
+
+    expect(selection).toMatchObject({
+      duePosition: "arrears",
+      servicePeriodStart: "2025-01-10",
+      servicePeriodEnd: "2025-01-31",
+      servicePeriodStartExclusive: "2025-01-10",
+      servicePeriodEndExclusive: "2025-02-01",
+    });
+    expect(selection.coverageRatio).toBeCloseTo(22 / 31, 8);
+  });
+
   it("T158: partial rollout protection rejects a billing run when provided recurring timing selections cover only some due recurring lines", async () => {
     const engine = new BillingEngine();
     const billingPeriod = {

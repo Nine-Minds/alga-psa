@@ -124,6 +124,15 @@
           "paymentTerms": "Payment Terms",
           "discounts": "Discounts"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop service accounts",
+        "desktopDiscounts": "Desktop discounts",
+        "desktopAccount": "Desktop income account name",
+        "description": "Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.",
+        "add": "Add mapping",
+        "remove": "Remove mapping",
+        "removeConfirm": "Remove this accounting mapping?"
       }
     },
     "calendar": {

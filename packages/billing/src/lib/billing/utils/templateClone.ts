@@ -79,16 +79,114 @@ export async function cloneTemplateContractLine(
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
   // Update the contract_line's custom_rate directly (no separate pricing table needed)
-  if (appliedCustomRate !== null) {
+  const templateInvoiceText = (templateLine as { invoice_line_description?: string | null })
+    .invoice_line_description ?? null;
+  if (appliedCustomRate !== null || templateInvoiceText !== null) {
     await tenantDb(trx, tenant).table('contract_lines')
       .where({ contract_line_id: targetContractLineId })
       .update({
-        custom_rate: appliedCustomRate,
+        ...(appliedCustomRate !== null ? { custom_rate: appliedCustomRate } : {}),
+        invoice_line_description: templateInvoiceText,
         updated_at: trx.fn.now()
       });
   }
 
   return { appliedCustomRate };
+}
+
+/** Copy template default discounts into one client-contract-owned definition set. */
+export async function cloneTemplateDefaultDiscounts(
+  trx: Knex.Transaction,
+  options: { tenant: string; templateId: string; clientContractId: string; clientId: string; lineIdMap?: Record<string, string> },
+): Promise<void> {
+  const { tenant, templateId, clientContractId, clientId, lineIdMap = {} } = options;
+  const db = tenantDb(trx, tenant);
+  const template = await db.table('contract_templates')
+    .where({ template_id: templateId }).forUpdate().first('template_metadata');
+  const metadata = typeof template?.template_metadata === 'string'
+    ? JSON.parse(template.template_metadata)
+    : template?.template_metadata;
+  type TemplateDefaultDiscount = {
+    template_discount_key?: string; discount_name?: string; discount_type?: string; value?: number | string;
+    scope?: string | null; start_date?: string; end_date?: string | null; is_active?: boolean;
+    scope_service_id?: string; contract_line_id?: string; priority?: number | null;
+  };
+  let definitions: TemplateDefaultDiscount[] = Array.isArray(metadata?.default_discounts) ? metadata.default_discounts : [];
+  if (!definitions.length) return;
+  if (definitions.some((definition) => !definition?.template_discount_key)) {
+    definitions = definitions.map((definition) => ({
+      ...definition, template_discount_key: definition.template_discount_key || uuidv4(),
+    }));
+    await db.table('contract_templates').where({ template_id: templateId }).update({
+      template_metadata: { ...metadata, default_discounts: definitions }, updated_at: trx.fn.now(),
+    });
+  }
+
+  // Serialize retries for this assignment, then track every source term
+  // independently. An unrelated discount or a line-only copy is not evidence
+  // that the template copy completed.
+  const owner = await db.table('client_contracts').where({ client_contract_id: clientContractId }).forUpdate().first('client_contract_id');
+  if (!owner) throw new Error('The client contract for template discount copying no longer exists.');
+
+  for (const definition of definitions) {
+    if (!definition || typeof definition.discount_name !== 'string'
+      || typeof definition.discount_type !== 'string'
+      || !['fixed', 'percentage'].includes(definition.discount_type)
+      || (definition.scope != null && !['contract', 'line', 'service'].includes(definition.scope))
+      || !Number.isFinite(Number(definition.value))
+      || Number(definition.value) <= 0
+      || (definition.discount_type === 'percentage' && Number(definition.value) > 100)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(String(definition.start_date ?? ''))
+      || (definition.end_date && !/^\d{4}-\d{2}-\d{2}$/.test(String(definition.end_date)))) {
+      throw new Error('Template default discount has invalid required fields.');
+    }
+    const discountType = definition.discount_type as 'fixed' | 'percentage';
+    const startDate = String(definition.start_date);
+    const templateDiscountKey = String(definition.template_discount_key);
+    const copied = await db.table('contract_template_discount_copies')
+      .where({ client_contract_id: clientContractId, template_discount_key: templateDiscountKey })
+      .first('discount_id');
+    if (copied) continue;
+    const discountId = uuidv4();
+    const scope = definition.scope === 'service' || definition.scope === 'line' ? definition.scope : 'contract';
+    if (scope === 'service' && typeof definition.scope_service_id !== 'string') throw new Error('Template service-scoped discount is missing its service.');
+    if (scope === 'line' && typeof definition.contract_line_id !== 'string') throw new Error('Template line-scoped discount is missing its template line.');
+    await tenantDb(trx, tenant).table('discounts').insert({
+      tenant,
+      discount_id: discountId,
+      discount_name: definition.discount_name.trim(),
+      discount_type: discountType,
+      value: discountType === 'percentage'
+        ? Math.round((Number(definition.value) / 100) * 1e4) / 1e4
+        : Math.round(Number(definition.value) * 100) / 100,
+      start_date: `${startDate}T00:00:00.000Z`,
+      end_date: definition.end_date ? `${definition.end_date}T00:00:00.000Z` : null,
+      is_active: definition.is_active !== false,
+      scope,
+      scope_service_id: scope === 'service' ? definition.scope_service_id as string : null,
+      applies_to_item_id: null,
+      priority: definition.priority ?? null,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+    if (scope === 'line') {
+      const templateLineId = definition.contract_line_id as string;
+      const targetLineId = lineIdMap[templateLineId] ?? templateLineId;
+      if (!targetLineId || !lineIdMap[templateLineId]) throw new Error('Template line-scoped discount could not be mapped to a client contract line.');
+      await tenantDb(trx, tenant).table('contract_line_discounts').insert({
+        tenant, discount_id: discountId, contract_line_id: targetLineId, client_id: clientId,
+        client_contract_id: clientContractId,
+      });
+    } else {
+      await tenantDb(trx, tenant).table('contract_discount_assignments').insert({
+        tenant, assignment_id: uuidv4(), client_contract_id: clientContractId,
+        discount_id: discountId, created_at: trx.fn.now(),
+      });
+    }
+    await db.table('contract_template_discount_copies').insert({
+      tenant, client_contract_id: clientContractId, template_discount_key: templateDiscountKey, discount_id: discountId,
+    });
+  }
 }
 
 async function cloneServices(

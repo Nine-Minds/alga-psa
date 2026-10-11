@@ -124,6 +124,15 @@
           "paymentTerms": "Warunki płatności",
           "discounts": "Rabaty"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Konta usług Desktop",
+        "desktopDiscounts": "Rabaty Desktop",
+        "desktopAccount": "Nazwa konta przychodów Desktop",
+        "description": "Przed eksportem przypisz rabaty i uznania faktur. Przypisanie dotyczy tej firmy księgowej.",
+        "add": "Dodaj przypisanie",
+        "remove": "Usuń przypisanie",
+        "removeConfirm": "Usunąć to przypisanie księgowe?"
       }
     },
     "calendar": {
