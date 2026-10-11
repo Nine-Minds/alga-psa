@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -18,18 +17,22 @@ import { createWorkspaceTestDbConnection } from '../../../../packages/db/test-ut
 
 // Worker-level acceptance test for alga0002106 (surface per-workflow event launch skips).
 //
-// Needs a migrated test database. Provision one by running any server DB integration suite with a
-// private name (it drops/recreates that DB and leaves it migrated), then run this file against it:
+// Needs a migrated test database; CI runs it in the workspace-db lane (scripts/run-workspace-db-tests.mjs).
+// Locally, provision one by running any server DB integration suite with a private name (it
+// drops/recreates that DB and leaves it migrated), then run this file against it:
 //   cd server && TEST_DB_NAME=<name>_test npx vitest run src/test/integration/workflowRuntimeV2TriggerLaunch.integration.test.ts --coverage.enabled=false
 //   cd services/workflow-worker && TEST_DB_NAME=<name>_test DB_PASSWORD_SERVER=<app_user pw> \
-//     npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.launchSkips.integration.test.ts
+//     npx vitest run src/v2/WorkflowRuntimeV2EventStreamWorker.launchSkips.db.test.ts
 // Without TEST_DB_NAME the suite is skipped, unless REQUIRE_DB=1, in which case it fails.
 
 const TEST_SCHEMA_REF = 'payload.TestPayload.v1';
 const TEST_SOURCE_SCHEMA_REF = 'payload.TestSourcePayload.v1';
 
-const { startWorkflowRuntimeV2TemporalRunMock } = vi.hoisted(() => ({
-  startWorkflowRuntimeV2TemporalRunMock: vi.fn()
+// Worker code may not import the auth package root (eslint no-restricted-imports), so the
+// mocked getCurrentUser is reached through a hoisted handle instead of an import.
+const { startWorkflowRuntimeV2TemporalRunMock, getCurrentUserMock } = vi.hoisted(() => ({
+  startWorkflowRuntimeV2TemporalRunMock: vi.fn(),
+  getCurrentUserMock: vi.fn()
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -57,7 +60,7 @@ vi.mock('@alga-psa/auth', () => {
     AuthenticationError: class AuthenticationError extends Error {},
     hasPermission: vi.fn().mockResolvedValue(true),
     checkMultiplePermissions: vi.fn().mockResolvedValue(true),
-    getCurrentUser: vi.fn(),
+    getCurrentUser: getCurrentUserMock,
     preCheckDeletion: vi.fn()
   };
 });
@@ -73,7 +76,6 @@ vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
-const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
 let db: Knex;
 let tenantId: string;
@@ -81,7 +83,7 @@ let userId: string;
 
 const dbConfigured = Boolean(process.env.TEST_DB_NAME);
 if (!dbConfigured && process.env.REQUIRE_DB === '1') {
-  throw new Error('WorkflowRuntimeV2EventStreamWorker.launchSkips.integration requires TEST_DB_NAME and DB_PASSWORD_SERVER');
+  throw new Error('WorkflowRuntimeV2EventStreamWorker.launchSkips.db requires TEST_DB_NAME and DB_PASSWORD_SERVER');
 }
 
 function registerTestSchemas(): void {
@@ -120,7 +122,7 @@ describe.skipIf(!dbConfigured)('WorkflowRuntimeV2EventStreamWorker launch skips 
     userId = uuidv4();
     mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
     mockedGetCurrentTenantId.mockReturnValue(tenantId);
-    mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
+    getCurrentUserMock.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
     startWorkflowRuntimeV2TemporalRunMock.mockReset();
     startWorkflowRuntimeV2TemporalRunMock.mockResolvedValue({
       workflowId: 'workflow-runtime-v2:run:run-e2e',
