@@ -19087,7 +19087,8 @@
           "ticket.status_changed",
           "ticket.assigned",
           "ticket.closed",
-          "ticket.comment.added"
+          "ticket.comment.added",
+          "ticket.response_state_changed"
         ],
         "description": "Ticket-domain webhook events emitted by the eventBus subscriber."
       },
@@ -19100,6 +19101,7 @@
           "ticket.assigned",
           "ticket.closed",
           "ticket.comment.added",
+          "ticket.response_state_changed",
           "project.created",
           "project.updated",
           "project.status_changed",
@@ -19213,8 +19215,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19284,7 +19289,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": "object",
@@ -19568,8 +19573,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19639,7 +19647,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": [
@@ -20536,6 +20544,24 @@
           },
           "is_internal": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ],
+            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           }
         },
         "required": [
@@ -20566,6 +20592,23 @@
           },
           "is_resolution": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           },
           "created_at": {
             "type": "string",
@@ -20629,6 +20672,17 @@
           "is_closed": {
             "type": "boolean"
           },
+          "response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
+          },
           "previous_status_id": {
             "type": [
               "string",
@@ -20643,6 +20697,28 @@
               "null"
             ],
             "description": "Only populated on ticket.status_changed."
+          },
+          "previous_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
+          },
+          "new_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
           "priority_id": {
             "type": [
@@ -21010,6 +21086,39 @@
             "type": "string",
             "enum": [
               "ticket.comment.added"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketResponseStateChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.response_state_changed"
             ]
           },
           "occurred_at": {
@@ -22974,7 +23083,10 @@
             "format": "uuid"
           },
           "user_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "author_type": {
@@ -23849,6 +23961,7 @@
             "enum": [
               "ticket",
               "project_task",
+              "co_managed",
               "non_billable_category",
               "ad_hoc",
               "interaction"
@@ -23870,10 +23983,17 @@
           "service_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Required (it drives billing)."
+            "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
           },
           "tax_region": {
             "type": "string"
+          },
+          "contract_line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "is_billable": {
             "type": "boolean",
@@ -23883,8 +24003,7 @@
         "required": [
           "work_item_type",
           "start_time",
-          "end_time",
-          "service_id"
+          "end_time"
         ]
       },
       "WorkV1UpdateTimeEntryBody": {
@@ -23900,6 +24019,7 @@
             "enum": [
               "ticket",
               "project_task",
+              "co_managed",
               "non_billable_category",
               "ad_hoc",
               "interaction"
@@ -23921,10 +24041,17 @@
           "service_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Required on create (it drives billing); cannot be cleared on update."
+            "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
           },
           "tax_region": {
             "type": "string"
+          },
+          "contract_line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "is_billable": {
             "type": "boolean",
@@ -23950,6 +24077,7 @@
                   "enum": [
                     "ticket",
                     "project_task",
+                    "co_managed",
                     "non_billable_category",
                     "ad_hoc",
                     "interaction"
@@ -23971,10 +24099,17 @@
                 "service_id": {
                   "type": "string",
                   "format": "uuid",
-                  "description": "Required (it drives billing)."
+                  "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
                 },
                 "tax_region": {
                   "type": "string"
+                },
+                "contract_line_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 },
                 "is_billable": {
                   "type": "boolean",
@@ -23984,8 +24119,7 @@
               "required": [
                 "work_item_type",
                 "start_time",
-                "end_time",
-                "service_id"
+                "end_time"
               ]
             },
             "minItems": 1,
@@ -24021,6 +24155,7 @@
                       "enum": [
                         "ticket",
                         "project_task",
+                        "co_managed",
                         "non_billable_category",
                         "ad_hoc",
                         "interaction"
@@ -24042,10 +24177,17 @@
                     "service_id": {
                       "type": "string",
                       "format": "uuid",
-                      "description": "Required on create (it drives billing); cannot be cleared on update."
+                      "description": "Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update."
                     },
                     "tax_region": {
                       "type": "string"
+                    },
+                    "contract_line_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
                     },
                     "is_billable": {
                       "type": "boolean",
@@ -31950,7 +32092,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -32089,7 +32232,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -32177,7 +32321,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -32263,7 +32408,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -32345,7 +32491,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -32423,7 +32570,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -32568,7 +32716,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -32646,7 +32795,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -32745,7 +32895,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -32844,7 +32995,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -32928,7 +33080,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33058,7 +33211,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33157,7 +33311,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33241,7 +33396,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33342,7 +33498,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33431,7 +33588,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33532,7 +33690,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33633,7 +33792,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33728,7 +33888,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33817,7 +33978,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -33918,7 +34080,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -34013,7 +34176,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -34239,7 +34403,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -34461,7 +34626,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -34549,7 +34715,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -34680,7 +34847,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -34769,7 +34937,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -34857,7 +35026,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35007,7 +35177,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -35085,7 +35256,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35184,7 +35356,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35283,7 +35456,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35374,7 +35548,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35465,7 +35640,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35566,7 +35742,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35707,7 +35884,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35815,7 +35993,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -35906,7 +36085,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36017,7 +36197,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36118,7 +36299,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36207,7 +36389,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36308,7 +36491,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36397,7 +36581,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36496,7 +36681,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36595,7 +36781,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36696,7 +36883,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36786,7 +36974,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -36888,7 +37077,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -37000,7 +37190,8 @@
           ]
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -37357,7 +37548,8 @@
           "x-publishes-event": "ASSET_CREATED"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Asset fields plus optional asset-type-specific extension_data.",
@@ -37447,7 +37639,8 @@
           "x-publishes-event": "ASSET_UPDATED"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Asset IDs and the new status to apply to all assets.",
@@ -37537,7 +37730,8 @@
           "x-publishes-event": "ASSET_UPDATED"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Array of asset_id plus partial update data objects.",
@@ -37626,7 +37820,8 @@
           "x-current-204-json-response-bug": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -37699,7 +37894,8 @@
           "x-csv-content-disposition": "attachment; filename=assets.csv"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -37849,7 +38045,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -37921,7 +38118,8 @@
           "x-no-not-found-on-missing-id": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38026,7 +38224,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38100,7 +38299,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38276,7 +38476,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -38349,7 +38550,8 @@
           ]
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38441,7 +38643,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38564,7 +38767,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38648,7 +38852,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38729,7 +38934,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38843,7 +39049,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -38924,7 +39131,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39005,7 +39213,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39121,7 +39330,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39235,7 +39445,8 @@
           "x-response-links-path-version": "v2"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39317,7 +39528,8 @@
           "x-no-event-published": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39432,7 +39644,8 @@
           "x-not-paginated": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39511,7 +39724,8 @@
           "x-rbac-additional-required": "ticket:read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39635,7 +39849,8 @@
           "x-not-paginated": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39724,7 +39939,8 @@
           "x-per-record-authorization": "assertTicketReadAllowed"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39848,7 +40064,8 @@
           "x-idempotent": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -39944,7 +40161,8 @@
           "x-idempotent": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40035,7 +40253,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40120,7 +40339,8 @@
           "x-rbac-action": "update"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40224,7 +40444,8 @@
           "x-rbac-action": "update"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40318,7 +40539,8 @@
           "x-ce-behavior": "returns null or success:false EE-required message"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40407,7 +40629,8 @@
           "x-ce-behavior": "returns null or success:false EE-required message"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40496,7 +40719,8 @@
           "x-ce-behavior": "returns null or success:false EE-required message"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40585,7 +40809,8 @@
           "x-ce-behavior": "returns null or success:false EE-required message"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40691,7 +40916,8 @@
           "x-ce-behavior": "returns null or success:false EE-required message"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40788,7 +41014,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -40930,7 +41157,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -41253,7 +41481,8 @@
           "x-service-data-wrapping-bug": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -41549,7 +41778,8 @@
           "x-generic-resource-links-may-include-unimplemented-methods": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -41651,7 +41881,8 @@
           "x-not-failed-error-is-500-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -41752,7 +41983,8 @@
           }
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42069,7 +42301,8 @@
           "x-audit-log-action": "automation_rule_created"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -42157,7 +42390,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42255,7 +42489,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42364,7 +42599,8 @@
           "x-delete-blocked-when-running-executions": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42463,7 +42699,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42571,7 +42808,8 @@
           "x-partial-failures-return-200": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -42657,7 +42895,8 @@
           "x-sequential-execution-supported": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -42742,7 +42981,8 @@
           "x-service-data-wrapping-bug": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -42987,7 +43227,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -43085,7 +43326,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -43188,7 +43430,8 @@
           "x-no-clean-not-found-currently": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -43299,7 +43542,8 @@
           ]
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -43364,7 +43608,8 @@
           "x-query-array-parsing-gap": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -43499,7 +43744,8 @@
           "x-static-reference-data": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -43956,7 +44202,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44240,7 +44487,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -44325,7 +44573,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44419,7 +44668,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44636,7 +44886,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44725,7 +44976,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -44790,7 +45042,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44887,7 +45140,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -44982,7 +45236,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45088,7 +45343,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45195,7 +45451,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45301,7 +45558,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45404,7 +45662,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45519,7 +45778,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45613,7 +45873,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45734,7 +45995,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -45850,7 +46112,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46043,7 +46306,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46151,7 +46415,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46379,7 +46644,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -46464,7 +46730,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46558,7 +46825,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46662,7 +46930,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46751,7 +47020,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46864,7 +47134,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -46950,7 +47221,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -47076,7 +47348,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -47186,7 +47459,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -50259,7 +50533,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Email OAuth initiation payload.",
@@ -59575,7 +59850,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -59727,7 +60003,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -59812,7 +60089,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -59887,7 +60165,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -59978,7 +60257,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60076,7 +60356,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60172,7 +60453,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60278,7 +60560,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60369,7 +60652,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60467,7 +60751,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60563,7 +60848,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60671,7 +60957,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -60809,7 +61096,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -60851,7 +61139,8 @@
           "x-namespace-root": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -60894,7 +61183,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -61171,7 +61461,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -61226,7 +61517,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -61342,7 +61634,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -77809,7 +78102,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -77865,7 +78159,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Board creation payload.",
@@ -77945,7 +78240,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -78014,7 +78310,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -78105,7 +78402,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -78169,7 +78467,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -78225,7 +78524,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Status creation payload.",
@@ -78305,7 +78605,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -78374,7 +78675,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -78465,7 +78767,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -84869,7 +85172,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -84911,7 +85215,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -84955,7 +85260,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -84999,7 +85305,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85041,7 +85348,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85085,7 +85393,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85129,7 +85438,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85171,7 +85481,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85215,7 +85526,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85259,7 +85571,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85303,7 +85616,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85345,7 +85659,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85389,7 +85704,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85433,7 +85749,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85477,7 +85794,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85521,7 +85839,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85565,7 +85884,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85609,7 +85929,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85653,7 +85974,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85697,7 +86019,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85739,7 +86062,8 @@
           "x-edition-behavior": "EE-only feature; CE returns an empty page (list) or 404 (detail/actions)."
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -85838,7 +86162,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85882,7 +86207,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -85924,7 +86250,8 @@
           "x-edition-behavior": "EE-only feature; CE returns an empty page (list) or 404 (detail/actions)."
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -86000,7 +86327,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86042,7 +86370,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86086,7 +86415,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86128,7 +86458,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86170,7 +86501,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86214,7 +86546,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86256,7 +86589,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86298,7 +86632,8 @@
           "x-family-status": "missing-handler"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -86342,7 +86677,8 @@
           "x-edition-behavior": "EE-only feature; CE returns an empty page (list) or 404 (detail/actions)."
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -86428,7 +86764,8 @@
           "x-edition-behavior": "EE-only feature; CE returns an empty page (list) or 404 (detail/actions)."
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -86514,7 +86851,8 @@
           "x-edition-behavior": "EE-only feature; CE returns an empty page (list) or 404 (detail/actions)."
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -87592,7 +87930,8 @@
           "x-chat-approval-required": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -87672,7 +88011,8 @@
           "x-chat-approval-required": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -87752,7 +88092,8 @@
           "x-chat-approval-required": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -87863,7 +88204,8 @@
           "x-chat-approval-required": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -87954,7 +88296,8 @@
           "x-chat-approval-required": false
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88032,7 +88375,8 @@
           "x-chat-approval-required": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88132,7 +88476,8 @@
           "x-chat-approval-required": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88202,7 +88547,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88287,7 +88633,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88384,7 +88731,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88490,7 +88838,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88581,7 +88930,8 @@
           "x-rbac-action": "read"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88690,7 +89040,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -88825,7 +89176,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -88920,7 +89272,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -89005,7 +89358,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -89090,7 +89444,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -89175,7 +89530,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -89312,7 +89668,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -89449,7 +89806,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -89586,7 +89944,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -89742,7 +90101,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -89920,7 +90280,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90037,7 +90398,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90149,7 +90511,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90248,7 +90611,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90344,7 +90708,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90452,7 +90817,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90608,7 +90974,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90786,7 +91153,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -90896,7 +91264,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -91015,7 +91384,8 @@
           "x-rbac-resource": "project"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -92015,7 +92385,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -92151,7 +92522,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92247,7 +92619,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -92385,7 +92758,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92472,7 +92846,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92568,7 +92943,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92664,7 +93040,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92760,7 +93137,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92849,7 +93227,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -92938,7 +93317,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93076,7 +93456,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93195,7 +93576,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93301,7 +93683,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93429,7 +93812,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93567,7 +93951,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93677,7 +94062,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93774,7 +94160,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93883,7 +94270,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -93992,7 +94380,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94101,7 +94490,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94254,7 +94644,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94411,7 +94802,8 @@
           "x-rbac-resource": "ticket"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -94504,7 +94896,8 @@
           "x-method-not-allowed": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "responses": {
           "401": {
@@ -94550,7 +94943,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94688,7 +95082,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94826,7 +95221,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -94936,7 +95332,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95033,7 +95430,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95152,7 +95550,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95261,7 +95660,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95418,7 +95818,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95597,7 +95998,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95715,7 +96117,8 @@
           "x-rbac-resource": "ticket"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95814,7 +96217,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -95911,7 +96315,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96028,7 +96433,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96130,7 +96536,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96249,7 +96656,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96351,7 +96759,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96470,7 +96879,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96578,7 +96988,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96713,7 +97124,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -96810,7 +97222,8 @@
           "x-replaced-by": "/api/v1/stopwatch"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -96947,7 +97360,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97042,7 +97456,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97128,7 +97543,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97221,7 +97637,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97306,7 +97723,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -97443,7 +97861,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97538,7 +97957,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -97677,7 +98097,8 @@
           "x-replaced-by": "/api/v1/stopwatch"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -97772,7 +98193,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -97911,7 +98333,8 @@
           "x-replaced-by": "/api/v1/stopwatch"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -98028,7 +98451,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -98165,7 +98589,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -98274,7 +98699,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -98370,7 +98796,8 @@
           "x-rbac-resource": "time_entry"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -98462,7 +98889,7 @@
     "/api/v1/time-periods": {
       "get": {
         "summary": "List time periods",
-        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98597,7 +99024,7 @@
       },
       "post": {
         "summary": "Create time period",
-        "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+        "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98939,7 +99366,7 @@
       },
       "get": {
         "summary": "Get time period",
-        "description": "Gets time period UUID via getTimePeriod().",
+        "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99035,7 +99462,7 @@
       },
       "put": {
         "summary": "Update time period",
-        "description": "Updates time period UUID via updateTimePeriod().",
+        "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -102170,7 +102597,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -102245,7 +102673,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102333,7 +102762,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102452,7 +102882,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102571,7 +103002,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102680,7 +103112,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102777,7 +103210,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102875,7 +103309,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -102971,7 +103406,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103079,7 +103515,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103198,7 +103635,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103294,7 +103732,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103402,7 +103841,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103519,7 +103959,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103628,7 +104069,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103747,7 +104189,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103844,7 +104287,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -103953,7 +104397,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104062,7 +104507,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104171,7 +104617,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104267,7 +104714,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104385,7 +104833,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104487,7 +104936,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -104593,7 +105043,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -115096,7 +115547,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -115303,7 +115755,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "required": true,
@@ -115397,7 +115850,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -115491,7 +115945,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -115597,7 +116052,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -115682,7 +116138,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -117996,7 +118453,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -118345,7 +118803,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -118474,7 +118933,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -118600,7 +119060,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -118726,7 +119187,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -118852,7 +119314,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -118978,7 +119441,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -119104,7 +119568,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -119230,7 +119695,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "parameters": [
           {
@@ -123952,7 +124418,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Placeholder request body",
@@ -124013,7 +124480,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Placeholder request body",
@@ -124074,7 +124542,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -124123,7 +124592,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "requestBody": {
           "description": "Placeholder request body",
@@ -130734,7 +131204,8 @@
         },
         "x-alga-products": [
           "psa",
-          "algadesk"
+          "algadesk",
+          "co_managed"
         ],
         "responses": {
           "200": {
@@ -137303,7 +137774,7 @@
     "ticket.comment.added": {
       "post": {
         "summary": "Outbound delivery: ticket.comment.added",
-        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
         "tags": [
           "Webhooks"
         ],
@@ -137378,6 +137849,99 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TicketCommentAddedDeliveryV1"
+              },
+              "description": "Signed JSON envelope."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoint accepted the delivery (any 2xx is treated as success)."
+          },
+          "410": {
+            "description": "Endpoint indicates the resource is permanently gone; webhook will be auto-disabled."
+          }
+        }
+      }
+    },
+    "ticket.response_state_changed": {
+      "post": {
+        "summary": "Outbound delivery: ticket.response_state_changed",
+        "description": "Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "tags": [
+          "Webhooks"
+        ],
+        "extensions": {
+          "x-alga-event-type": "ticket.response_state_changed",
+          "x-rbac-resource": "webhook"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`."
+            },
+            "required": true,
+            "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.",
+            "name": "x-alga-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-webhook-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-event-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/WebhookEventTypeV1"
+            },
+            "required": true,
+            "name": "x-alga-event-type",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-delivery-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stringified attempt count, starts at 1."
+            },
+            "required": true,
+            "description": "Stringified attempt count, starts at 1.",
+            "name": "x-alga-delivery-attempt",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Signed JSON envelope.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketResponseStateChangedDeliveryV1"
               },
               "description": "Signed JSON envelope."
             }

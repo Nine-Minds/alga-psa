@@ -13725,6 +13725,7 @@ components:
         - ticket.assigned
         - ticket.closed
         - ticket.comment.added
+        - ticket.response_state_changed
       description: Ticket-domain webhook events emitted by the eventBus subscriber.
     WebhookEventTypeV1:
       type: string
@@ -13735,6 +13736,7 @@ components:
         - ticket.assigned
         - ticket.closed
         - ticket.comment.added
+        - ticket.response_state_changed
         - project.created
         - project.updated
         - project.status_changed
@@ -13830,8 +13832,11 @@ components:
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
+                  - previous_response_state
+                  - new_response_state
                   - priority_id
                   - priority_name
                   - client_id
@@ -13899,7 +13904,8 @@ components:
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
             priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
@@ -14118,8 +14124,11 @@ components:
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
+                  - previous_response_state
+                  - new_response_state
                   - priority_id
                   - priority_name
                   - client_id
@@ -14187,7 +14196,8 @@ components:
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
             priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
@@ -14835,6 +14845,21 @@ components:
           format: date-time
         is_internal:
           type: boolean
+        author_type:
+          type: string
+          enum:
+            - internal
+            - client
+            - unknown
+          description: "Who wrote the comment: MSP staff (`internal`), a client/contact
+            (`client`), or unknown."
+        contact_id:
+          type: string
+          format: uuid
+          description: Present when a contact wrote the comment.
+        contact_name:
+          type: string
+          description: Present when a contact wrote the comment.
       required:
         - text
         - author
@@ -14856,6 +14881,19 @@ components:
           type: boolean
         is_resolution:
           type: boolean
+        author_type:
+          type: string
+          enum:
+            - internal
+            - client
+            - unknown
+        contact_id:
+          type: string
+          format: uuid
+          description: Present when a contact wrote the comment.
+        contact_name:
+          type: string
+          description: Present when a contact wrote the comment.
         created_at:
           type: string
           format: date-time
@@ -14901,6 +14939,15 @@ components:
             - "null"
         is_closed:
           type: boolean
+        response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Current response state of the ticket. On
+            ticket.response_state_changed it equals new_response_state.
         previous_status_id:
           type:
             - string
@@ -14912,6 +14959,24 @@ components:
             - string
             - "null"
           description: Only populated on ticket.status_changed.
+        previous_response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Only populated on ticket.response_state_changed. null when there
+            was no prior state.
+        new_response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Only populated on ticket.response_state_changed. null when the
+            state was cleared (e.g. ticket closed).
         priority_id:
           type:
             - string
@@ -15175,6 +15240,30 @@ components:
           type: string
           enum:
             - ticket.comment.added
+        occurred_at:
+          type: string
+          format: date-time
+        tenant_id:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/schemas/TicketWebhookDataV1"
+      required:
+        - event_id
+        - event_type
+        - occurred_at
+        - tenant_id
+        - data
+    TicketResponseStateChangedDeliveryV1:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - ticket.response_state_changed
         occurred_at:
           type: string
           format: date-time
@@ -16597,7 +16686,9 @@ components:
             - "null"
           format: uuid
         user_id:
-          type: string
+          type:
+            - string
+            - "null"
           format: uuid
         author_type:
           type: string
@@ -17270,6 +17361,7 @@ components:
           enum:
             - ticket
             - project_task
+            - co_managed
             - non_billable_category
             - ad_hoc
             - interaction
@@ -17288,9 +17380,16 @@ components:
         service_id:
           type: string
           format: uuid
-          description: Required (it drives billing).
+          description: Required on create for commercial (PSA) time entries, where it
+            drives billing; operational co-managed entries carry no service.
+            Cannot be cleared on update.
         tax_region:
           type: string
+        contract_line_id:
+          type:
+            - string
+            - "null"
+          format: uuid
         is_billable:
           type: boolean
           default: true
@@ -17298,7 +17397,6 @@ components:
         - work_item_type
         - start_time
         - end_time
-        - service_id
     WorkV1UpdateTimeEntryBody:
       type: object
       properties:
@@ -17312,6 +17410,7 @@ components:
           enum:
             - ticket
             - project_task
+            - co_managed
             - non_billable_category
             - ad_hoc
             - interaction
@@ -17330,9 +17429,16 @@ components:
         service_id:
           type: string
           format: uuid
-          description: Required on create (it drives billing); cannot be cleared on update.
+          description: Required on create for commercial (PSA) time entries, where it
+            drives billing; operational co-managed entries carry no service.
+            Cannot be cleared on update.
         tax_region:
           type: string
+        contract_line_id:
+          type:
+            - string
+            - "null"
+          format: uuid
         is_billable:
           type: boolean
           default: true
@@ -17354,6 +17460,7 @@ components:
                 enum:
                   - ticket
                   - project_task
+                  - co_managed
                   - non_billable_category
                   - ad_hoc
                   - interaction
@@ -17372,9 +17479,16 @@ components:
               service_id:
                 type: string
                 format: uuid
-                description: Required (it drives billing).
+                description: Required on create for commercial (PSA) time entries, where it
+                  drives billing; operational co-managed entries carry no
+                  service. Cannot be cleared on update.
               tax_region:
                 type: string
+              contract_line_id:
+                type:
+                  - string
+                  - "null"
+                format: uuid
               is_billable:
                 type: boolean
                 default: true
@@ -17382,7 +17496,6 @@ components:
               - work_item_type
               - start_time
               - end_time
-              - service_id
           minItems: 1
           maxItems: 50
       required:
@@ -17411,6 +17524,7 @@ components:
                     enum:
                       - ticket
                       - project_task
+                      - co_managed
                       - non_billable_category
                       - ad_hoc
                       - interaction
@@ -17429,10 +17543,16 @@ components:
                   service_id:
                     type: string
                     format: uuid
-                    description: Required on create (it drives billing); cannot be cleared on
-                      update.
+                    description: Required on create for commercial (PSA) time entries, where it
+                      drives billing; operational co-managed entries carry no
+                      service. Cannot be cleared on update.
                   tax_region:
                     type: string
+                  contract_line_id:
+                    type:
+                      - string
+                      - "null"
+                    format: uuid
                   is_billable:
                     type: boolean
                     default: true
@@ -22993,6 +23113,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23082,6 +23203,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -23138,6 +23260,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -23193,6 +23316,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -23247,6 +23371,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Operation succeeded.
@@ -23297,6 +23422,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23390,6 +23516,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Operation succeeded.
@@ -23440,6 +23567,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23504,6 +23632,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23568,6 +23697,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23623,6 +23753,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23710,6 +23841,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23774,6 +23906,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23829,6 +23962,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23894,6 +24028,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -23952,6 +24087,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24017,6 +24153,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24082,6 +24219,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24145,6 +24283,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24203,6 +24342,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24269,6 +24409,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24332,6 +24473,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24477,6 +24619,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24621,6 +24764,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -24677,6 +24821,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24764,6 +24909,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -24822,6 +24968,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -24880,6 +25027,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -24980,6 +25128,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Operation succeeded.
@@ -25030,6 +25179,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25094,6 +25244,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25158,6 +25309,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25217,6 +25369,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25276,6 +25429,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25341,6 +25495,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25434,6 +25589,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25504,6 +25660,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25563,6 +25720,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25634,6 +25792,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25699,6 +25858,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25757,6 +25917,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25822,6 +25983,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25880,6 +26042,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -25944,6 +26107,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26008,6 +26172,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26073,6 +26238,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26133,6 +26299,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26200,6 +26367,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26280,6 +26448,7 @@ paths:
           - updated_to
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26557,6 +26726,7 @@ paths:
         x-publishes-event: ASSET_CREATED
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         description: Asset fields plus optional asset-type-specific extension_data.
         required: true
@@ -26621,6 +26791,7 @@ paths:
         x-publishes-event: ASSET_UPDATED
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         description: Asset IDs and the new status to apply to all assets.
         required: true
@@ -26683,6 +26854,7 @@ paths:
         x-publishes-event: ASSET_UPDATED
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         description: Array of asset_id plus partial update data objects.
         required: true
@@ -26747,6 +26919,7 @@ paths:
         x-current-204-json-response-bug: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26803,6 +26976,7 @@ paths:
         x-csv-content-disposition: attachment; filename=assets.csv
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26921,6 +27095,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -26979,6 +27154,7 @@ paths:
         x-no-not-found-on-missing-id: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27057,6 +27233,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27113,6 +27290,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27243,6 +27421,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "200":
           description: Asset statistics returned successfully.
@@ -27296,6 +27475,7 @@ paths:
           - maintenance_schedules
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27362,6 +27542,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27457,6 +27638,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27520,6 +27702,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27583,6 +27766,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27664,6 +27848,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27722,6 +27907,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27783,6 +27969,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27867,6 +28054,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -27947,6 +28135,7 @@ paths:
         x-response-links-path-version: v2
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28008,6 +28197,7 @@ paths:
         x-no-event-published: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28096,6 +28286,7 @@ paths:
         x-not-paginated: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28156,6 +28347,7 @@ paths:
         x-rbac-additional-required: ticket:read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28246,6 +28438,7 @@ paths:
         x-not-paginated: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28314,6 +28507,7 @@ paths:
         x-per-record-authorization: assertTicketReadAllowed
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28397,6 +28591,7 @@ paths:
         x-idempotent: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28464,6 +28659,7 @@ paths:
         x-idempotent: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28524,6 +28720,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28578,6 +28775,7 @@ paths:
         x-rbac-action: update
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28645,6 +28843,7 @@ paths:
         x-rbac-action: update
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28706,6 +28905,7 @@ paths:
         x-ce-behavior: returns null or success:false EE-required message
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28764,6 +28964,7 @@ paths:
         x-ce-behavior: returns null or success:false EE-required message
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28821,6 +29022,7 @@ paths:
         x-ce-behavior: returns null or success:false EE-required message
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28879,6 +29081,7 @@ paths:
         x-ce-behavior: returns null or success:false EE-required message
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -28950,6 +29153,7 @@ paths:
         x-ce-behavior: returns null or success:false EE-required message
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29012,6 +29216,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29104,6 +29309,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29336,6 +29542,7 @@ paths:
         x-service-data-wrapping-bug: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29557,6 +29764,7 @@ paths:
         x-generic-resource-links-may-include-unimplemented-methods: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29632,6 +29840,7 @@ paths:
         x-not-failed-error-is-500-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29704,6 +29913,7 @@ paths:
           tenant: automation_rules.tenant
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -29936,6 +30146,7 @@ paths:
         x-audit-log-action: automation_rule_created
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -29995,6 +30206,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30065,6 +30277,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30142,6 +30355,7 @@ paths:
         x-delete-blocked-when-running-executions: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30215,6 +30429,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30290,6 +30505,7 @@ paths:
         x-partial-failures-return-200: true
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -30349,6 +30565,7 @@ paths:
         x-sequential-execution-supported: true
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -30409,6 +30626,7 @@ paths:
         x-service-data-wrapping-bug: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30587,6 +30805,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -30654,6 +30873,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30727,6 +30947,7 @@ paths:
         x-no-clean-not-found-currently: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30803,6 +31024,7 @@ paths:
           - automation_executions
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "200":
           description: Automation statistics returned successfully.
@@ -30850,6 +31072,7 @@ paths:
         x-query-array-parsing-gap: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -30958,6 +31181,7 @@ paths:
         x-static-reference-data: true
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "200":
           description: Automation metadata returned successfully.
@@ -31282,6 +31506,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31466,6 +31691,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -31518,6 +31744,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31578,6 +31805,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31726,6 +31954,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31782,6 +32011,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Client stats returned.
@@ -31823,6 +32053,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31883,6 +32114,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -31943,6 +32175,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32012,6 +32245,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32084,6 +32318,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32152,6 +32387,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32218,6 +32454,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32291,6 +32528,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32351,6 +32589,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32428,6 +32667,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32503,6 +32743,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32625,6 +32866,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32692,6 +32934,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32837,6 +33080,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -32889,6 +33133,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -32947,6 +33192,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33011,6 +33257,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33067,6 +33314,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33137,6 +33385,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33191,6 +33440,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33273,6 +33523,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -33345,6 +33596,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Contact stats returned.
@@ -35361,6 +35613,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Email OAuth initiation payload.
         required: true
@@ -41597,6 +41850,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: integer
@@ -41698,6 +41952,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -41751,6 +42006,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Available categories.
@@ -41798,6 +42054,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -41857,6 +42114,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -41919,6 +42177,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -41982,6 +42241,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42049,6 +42309,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42107,6 +42368,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42170,6 +42432,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42232,6 +42495,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42301,6 +42565,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -42389,6 +42654,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "401":
           description: API key missing/invalid.
@@ -42416,6 +42682,7 @@ paths:
         x-namespace-root: true
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: API key missing/invalid.
@@ -42443,6 +42710,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "401":
           description: API key missing/invalid.
@@ -42625,6 +42893,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Active countries sorted by name.
@@ -42659,6 +42928,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: integer
@@ -42732,6 +43002,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -53668,6 +53939,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Boards returned successfully.
@@ -53706,6 +53978,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Board creation payload.
         required: true
@@ -53757,6 +54030,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -53803,6 +54077,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -53863,6 +54138,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -53908,6 +54184,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Statuses returned successfully.
@@ -53946,6 +54223,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Status creation payload.
         required: true
@@ -53997,6 +54275,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -54043,6 +54322,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -54103,6 +54383,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -58300,6 +58581,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58335,6 +58617,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58371,6 +58654,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58407,6 +58691,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58442,6 +58727,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58478,6 +58764,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58514,6 +58801,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58549,6 +58837,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58585,6 +58874,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58621,6 +58911,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58657,6 +58948,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58692,6 +58984,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58728,6 +59021,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58764,6 +59058,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58800,6 +59095,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58836,6 +59132,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58872,6 +59169,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58908,6 +59206,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58944,6 +59243,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -58980,6 +59280,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59012,6 +59313,7 @@ paths:
           (detail/actions).
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -59088,6 +59390,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59124,6 +59427,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59156,6 +59460,7 @@ paths:
           (detail/actions).
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -59211,6 +59516,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59246,6 +59552,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59282,6 +59589,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59317,6 +59625,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59352,6 +59661,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59388,6 +59698,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59423,6 +59734,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59458,6 +59770,7 @@ paths:
         x-family-status: missing-handler
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: x-api-key missing/invalid at middleware.
@@ -59489,6 +59802,7 @@ paths:
           (detail/actions).
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -59546,6 +59860,7 @@ paths:
           (detail/actions).
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -59604,6 +59919,7 @@ paths:
           (detail/actions).
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60356,6 +60672,7 @@ paths:
         x-chat-approval-required: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60408,6 +60725,7 @@ paths:
         x-chat-approval-required: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60461,6 +60779,7 @@ paths:
         x-chat-approval-required: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60534,6 +60853,7 @@ paths:
         x-chat-approval-required: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60593,6 +60913,7 @@ paths:
         x-chat-approval-required: false
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60645,6 +60966,7 @@ paths:
         x-chat-approval-required: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60713,6 +61035,7 @@ paths:
         x-chat-approval-required: true
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60761,6 +61084,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60819,6 +61143,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60882,6 +61207,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -60952,6 +61278,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61012,6 +61339,7 @@ paths:
         x-rbac-action: read
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61084,6 +61412,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61169,6 +61498,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -61228,6 +61558,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -61281,6 +61612,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -61334,6 +61666,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -61387,6 +61720,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61473,6 +61807,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61559,6 +61894,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61646,6 +61982,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61748,6 +62085,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61861,6 +62199,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -61937,6 +62276,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62010,6 +62350,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62074,6 +62415,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62135,6 +62477,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62203,6 +62546,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62302,6 +62646,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62414,6 +62759,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62486,6 +62832,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -62562,6 +62909,7 @@ paths:
         x-rbac-resource: project
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -63198,6 +63546,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -63284,6 +63633,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63344,6 +63694,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -63431,6 +63782,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63487,6 +63839,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63547,6 +63900,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63607,6 +63961,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63667,6 +64022,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63724,6 +64080,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -63781,6 +64138,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -63868,6 +64226,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -63945,6 +64304,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64013,6 +64373,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64094,6 +64455,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64181,6 +64543,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64252,6 +64615,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64314,6 +64678,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64383,6 +64748,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64452,6 +64818,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64524,6 +64891,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64646,6 +65014,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64745,6 +65114,7 @@ paths:
         x-rbac-resource: ticket
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -64803,6 +65173,7 @@ paths:
         x-method-not-allowed: true
       x-alga-products:
         - psa
+        - co_managed
       responses:
         "401":
           description: API key missing/invalid.
@@ -64833,6 +65204,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -64920,6 +65292,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65007,6 +65380,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65080,6 +65454,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65144,6 +65519,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65223,6 +65599,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65292,6 +65669,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65393,6 +65771,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65507,6 +65886,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65586,6 +65966,7 @@ paths:
         x-rbac-resource: ticket
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65650,6 +66031,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65718,6 +66100,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65793,6 +66176,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65864,6 +66248,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -65940,6 +66325,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66007,6 +66393,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66083,6 +66470,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66151,6 +66539,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66236,6 +66625,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66300,6 +66690,7 @@ paths:
         x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66386,6 +66777,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66445,6 +66837,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66500,6 +66893,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66558,6 +66952,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66611,6 +67006,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66697,6 +67093,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66756,6 +67153,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66846,6 +67244,7 @@ paths:
         x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
+        - co_managed
       requestBody:
         required: true
         content:
@@ -66905,6 +67304,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -66994,6 +67394,7 @@ paths:
         x-replaced-by: /api/v1/stopwatch
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -67067,6 +67468,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -67153,6 +67555,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -67223,6 +67626,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -67284,6 +67688,7 @@ paths:
         x-rbac-resource: time_entry
       x-alga-products:
         - psa
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -67339,7 +67744,9 @@ paths:
   /api/v1/time-periods:
     get:
       summary: List time periods
-      description: Lists time periods via ApiTimeSheetController.listTimePeriods().
+      description: "Lists time periods via ApiTimeSheetController.listTimePeriods().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67424,7 +67831,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time period
-      description: Creates time period via ApiTimeSheetController.createTimePeriod().
+      description: "Creates time period via ApiTimeSheetController.createTimePeriod().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67641,7 +68050,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     get:
       summary: Get time period
-      description: Gets time period UUID via getTimePeriod().
+      description: "Gets time period UUID via getTimePeriod(). end_date is exclusive:
+        the first day after the period (a period covering Aug 16–22 has end_date
+        2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67702,7 +68113,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update time period
-      description: Updates time period UUID via updateTimePeriod().
+      description: "Updates time period UUID via updateTimePeriod(). end_date is
+        exclusive: the first day after the period (a period covering Aug 16–22
+        has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -69713,6 +70126,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Ticket priorities.
@@ -69760,6 +70174,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -69816,6 +70231,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -69893,6 +70309,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -69971,6 +70388,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70040,6 +70458,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70102,6 +70521,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70164,6 +70584,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70224,6 +70645,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70293,6 +70715,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70369,6 +70792,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70430,6 +70854,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70498,6 +70923,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70573,6 +70999,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70644,6 +71071,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70721,6 +71149,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70783,6 +71212,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70856,6 +71286,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70929,6 +71360,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -70999,6 +71431,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -71063,6 +71496,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -71138,6 +71572,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -71207,6 +71642,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -71275,6 +71711,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -78024,6 +78461,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -78164,6 +78602,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         required: true
         content:
@@ -78221,6 +78660,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -78281,6 +78721,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -78346,6 +78787,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Interaction statuses.
@@ -78398,6 +78840,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Available interaction types.
@@ -79831,6 +80274,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Current mobile feature capabilities.
@@ -80053,6 +80497,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80134,6 +80579,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80212,6 +80658,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80290,6 +80737,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80368,6 +80816,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80446,6 +80895,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80525,6 +80975,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -80603,6 +81054,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       parameters:
         - schema:
             type: string
@@ -83750,6 +84202,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Placeholder request body
         required: true
@@ -83790,6 +84243,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Placeholder request body
         required: true
@@ -83830,6 +84284,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Placeholder success response
@@ -83862,6 +84317,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       requestBody:
         description: Placeholder request body
         required: true
@@ -88162,6 +88618,7 @@ paths:
       x-alga-products:
         - psa
         - algadesk
+        - co_managed
       responses:
         "200":
           description: Placeholder success response
@@ -92480,10 +92937,11 @@ webhooks:
     post:
       summary: "Outbound delivery: ticket.comment.added"
       description: Emitted when a comment is added to a ticket. `data.comment` carries
-        the new comment block; attachments are never included. Delivered with
-        HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata
-        headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being
-        abandoned.
+        the new comment block (including `author_type` and, for contact authors,
+        `contact_id`/`contact_name`); attachments are never included. Delivered
+        with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-*
+        metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before
+        being abandoned.
       tags:
         - Webhooks
       extensions:
@@ -92538,6 +92996,76 @@ webhooks:
           application/json:
             schema:
               $ref: "#/components/schemas/TicketCommentAddedDeliveryV1"
+            description: Signed JSON envelope.
+      responses:
+        "200":
+          description: Endpoint accepted the delivery (any 2xx is treated as success).
+        "410":
+          description: Endpoint indicates the resource is permanently gone; webhook will
+            be auto-disabled.
+  ticket.response_state_changed:
+    post:
+      summary: "Outbound delivery: ticket.response_state_changed"
+      description: Emitted when whose turn it is on a ticket changes.
+        `data.previous_response_state` and `data.new_response_state` are
+        `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g.
+        on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature,
+        and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m,
+        2h, 12h) before being abandoned.
+      tags:
+        - Webhooks
+      extensions:
+        x-alga-event-type: ticket.response_state_changed
+        x-rbac-resource: webhook
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over
+              `${timestamp}.${raw_body}`."
+          required: true
+          description: "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over
+            `${timestamp}.${raw_body}`."
+          name: x-alga-signature
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-webhook-id
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-event-id
+          in: header
+        - schema:
+            $ref: "#/components/schemas/WebhookEventTypeV1"
+          required: true
+          name: x-alga-event-type
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-delivery-id
+          in: header
+        - schema:
+            type: string
+            description: Stringified attempt count, starts at 1.
+          required: true
+          description: Stringified attempt count, starts at 1.
+          name: x-alga-delivery-attempt
+          in: header
+      requestBody:
+        description: Signed JSON envelope.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketResponseStateChangedDeliveryV1"
             description: Signed JSON envelope.
       responses:
         "200":

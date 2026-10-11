@@ -32,7 +32,7 @@ const baseTimeEntrySchema = z.object({
     'ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted.'
   ),
   notes: z.string().optional(),
-  service_id: uuidSchema.optional().describe('Required on create (it drives billing); cannot be cleared on update.'),
+  service_id: uuidSchema.optional().describe('Required on create for commercial (PSA) time entries, where it drives billing; operational co-managed entries carry no service. Cannot be cleared on update.'),
   tax_region: z.string().optional(),
   contract_line_id: uuidSchema.nullable().optional(),
   is_billable: z.boolean().optional().default(true)
