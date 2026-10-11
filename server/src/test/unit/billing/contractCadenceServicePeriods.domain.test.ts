@@ -21,7 +21,6 @@ import {
 
 const sourceObligation: IRecurringObligationRef = {
   obligationId: 'line-1',
-  obligationType: 'contract_line',
   chargeFamily: 'fixed',
 };
 

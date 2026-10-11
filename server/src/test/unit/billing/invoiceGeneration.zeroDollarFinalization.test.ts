@@ -25,12 +25,11 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
     obligation_id: 'contract-line-1',
     // This query stub supplies joined rows, including the contract owner.
     owner_client_id: 'client-1',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:contract-line-1:client:advance',
+    schedule_key: 'schedule:tenant-1:contract-line-1:client:advance',
     period_key: 'period:2025-02-01:2025-03-01',
     service_period_start: '2025-02-01',
     service_period_end: '2025-03-01',

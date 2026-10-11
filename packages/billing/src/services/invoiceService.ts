@@ -11,7 +11,7 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
-import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
@@ -186,10 +186,11 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       query
         .where({
           cadence_owner: 'client',
-          schedule_key: executionWindow.scheduleKey ?? null,
+          schedule_key: executionWindow.scheduleKey
+            ? canonicalizeRecurringServicePeriodScheduleKey(executionWindow.scheduleKey)
+            : null,
           period_key: executionWindow.periodKey ?? null,
-        })
-        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+        });
     } else if (executionWindow.kind === 'contract_cadence_window') {
       if (!executionWindow.contractLineId) {
         // Without a line identity the window cannot be resolved to period
@@ -198,7 +199,6 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       }
       query.where({
         cadence_owner: 'contract',
-        obligation_type: 'contract_line',
         obligation_id: executionWindow.contractLineId,
       });
     } else {

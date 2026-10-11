@@ -135,8 +135,7 @@ active as (
          max(service_period_end) as furthest_end,
          count(*) as active_periods
   from recurring_service_periods
-  where obligation_type = 'contract_line'
-    and cadence_owner = 'contract'
+  where cadence_owner = 'contract'
     and lifecycle_state not in ('superseded', 'archived')
   group by tenant, obligation_id
 ),
@@ -145,8 +144,7 @@ billed_floor as (
          obligation_id,
          max(service_period_end) as billed_floor_end
   from recurring_service_periods
-  where obligation_type = 'contract_line'
-    and cadence_owner = 'contract'
+  where cadence_owner = 'contract'
     and (lifecycle_state = 'billed' or invoice_charge_detail_id is not null)
   group by tenant, obligation_id
 )
@@ -199,8 +197,7 @@ active as (
            order by service_period_start
          ) as previous_end
   from recurring_service_periods
-  where obligation_type = 'contract_line'
-    and cadence_owner = 'contract'
+  where cadence_owner = 'contract'
     and lifecycle_state not in ('superseded', 'archived')
 ),
 floor as (
@@ -208,8 +205,7 @@ floor as (
          obligation_id,
          max(service_period_end) as billed_floor_end
   from recurring_service_periods
-  where obligation_type = 'contract_line'
-    and cadence_owner = 'contract'
+  where cadence_owner = 'contract'
     and (lifecycle_state = 'billed' or invoice_charge_detail_id is not null)
   group by tenant, obligation_id
 )
@@ -292,7 +288,7 @@ function toUtcMidnightIso(value: unknown): ISO8601String {
 type ProtectionRecordShape = {
   scheduleKey: string;
   periodKey: string;
-  sourceObligation: { tenant: string; obligationType: string; obligationId: string };
+  sourceObligation: { tenant: string; obligationId: string };
   servicePeriod: { start: ISO8601String; end: ISO8601String };
 };
 
@@ -319,7 +315,7 @@ async function loadProtectedRecordsByObligation(
   }
 
   const protectedQuery = trx('recurring_service_periods')
-    .where({ obligation_type: 'contract_line', cadence_owner: 'contract' })
+    .where({ cadence_owner: 'contract' })
     .whereIn('obligation_id', obligationIds)
     .whereNotIn('lifecycle_state', ['superseded', 'archived'])
     .andWhere((builder) =>
@@ -351,7 +347,6 @@ async function loadProtectedRecordsByObligation(
         periodKey: row.period_key,
         sourceObligation: {
           tenant: String(row.tenant),
-          obligationType: 'contract_line',
           obligationId: String(row.obligation_id),
         },
         servicePeriod: {
@@ -397,12 +392,10 @@ function areAllGapCandidatesProtected(params: {
   const sourceObligation: IRecurringObligationRef = {
     tenant: params.tenant,
     obligationId: params.obligationId,
-    obligationType: 'contract_line',
     chargeFamily: 'fixed',
   };
   const scheduleKey = buildRecurringServicePeriodScheduleKey({
     tenant: params.tenant,
-    obligationType: 'contract_line',
     obligationId: params.obligationId,
     cadenceOwner: 'contract',
     duePosition,
@@ -430,8 +423,7 @@ function areAllGapCandidatesProtected(params: {
           periodKey: buildRecurringServicePeriodPeriodKey(period),
           sourceObligation: {
             tenant: params.tenant,
-            obligationType: 'contract_line',
-            obligationId: params.obligationId,
+              obligationId: params.obligationId,
           },
           servicePeriod: {
             start: toDateOnly(period.start),

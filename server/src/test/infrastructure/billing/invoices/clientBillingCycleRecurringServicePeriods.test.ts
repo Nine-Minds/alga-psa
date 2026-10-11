@@ -88,11 +88,10 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
     await context.db('recurring_service_periods').insert({
       record_id: input.recordId,
       tenant: context.tenantId,
-      schedule_key: `schedule:${context.tenantId}:client_contract_line:${input.obligationId}:client:arrears`,
+      schedule_key: `schedule:${context.tenantId}:${input.obligationId}:client:arrears`,
       period_key: 'period:2026-06-01:2026-07-01',
       revision: input.revision,
       obligation_id: input.obligationId,
-      obligation_type: 'client_contract_line',
       charge_family: 'fixed',
       cadence_owner: 'client',
       due_position: 'arrears',

@@ -11,12 +11,11 @@ describe('recurring due-work row builder', () => {
       record: buildRecurringServicePeriodRecord({
         cadenceOwner: 'client',
         duePosition: 'advance',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
         periodKey: 'period:2025-02-01:2025-03-01',
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'assignment-1',
-          obligationType: 'client_contract_line',
           chargeFamily: 'fixed',
         },
         invoiceWindow: {
@@ -34,18 +33,18 @@ describe('recurring due-work row builder', () => {
 
     expect(row).toMatchObject({
       rowKey:
-        'recurring-due-row:client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+        'recurring-due-row:client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
       executionIdentityKey:
-        'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+        'client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
       selectionKey:
-        'recurring-run-selection:client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+        'recurring-run-selection:client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
       retryKey:
-        'recurring-run-retry:client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+        'recurring-run-retry:client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
       cadenceOwner: 'client',
       cadenceSource: 'client_schedule',
       executionWindowKind: 'client_cadence_window',
       billingCycleId: null,
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-02-01:2025-03-01',
     });
     expect(row.selectorInput.executionWindow.identityKey).toBe(row.executionIdentityKey);
@@ -64,7 +63,6 @@ describe('recurring due-work row builder', () => {
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'line-1',
-          obligationType: 'contract_line',
           chargeFamily: 'fixed',
         },
         invoiceWindow: {
@@ -100,12 +98,11 @@ describe('recurring due-work row builder', () => {
       clientName: 'Acme Co',
       record: buildRecurringServicePeriodRecord({
         cadenceOwner: 'client',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
         periodKey: 'period:2025-02-01:2025-03-01',
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'assignment-1',
-          obligationType: 'client_contract_line',
           chargeFamily: 'fixed',
         },
         invoiceWindow: {
@@ -138,7 +135,6 @@ describe('recurring due-work row builder', () => {
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'line-1',
-          obligationType: 'contract_line',
           chargeFamily: 'fixed',
         },
         invoiceWindow: {
@@ -172,7 +168,6 @@ describe('recurring due-work row builder', () => {
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'line-1',
-          obligationType: 'contract_line',
           chargeFamily: 'fixed',
         },
       }),
@@ -191,12 +186,11 @@ describe('recurring due-work row builder', () => {
       billingCycleId: 'cycle-2025-02',
       record: buildRecurringServicePeriodRecord({
         cadenceOwner: 'client',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
         periodKey: 'period:2025-02-01:2025-03-01',
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'assignment-1',
-          obligationType: 'client_contract_line',
           chargeFamily: 'fixed',
         },
         invoiceWindow: {
@@ -230,7 +224,6 @@ describe('recurring due-work row builder', () => {
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'line-hourly',
-          obligationType: 'contract_line',
           chargeFamily: 'hourly',
         },
         invoiceWindow: {
@@ -264,7 +257,6 @@ describe('recurring due-work row builder', () => {
         sourceObligation: {
           tenant: 'tenant-1',
           obligationId: 'line-usage',
-          obligationType: 'contract_line',
           chargeFamily: 'usage',
         },
         invoiceWindow: {

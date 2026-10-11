@@ -367,11 +367,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-contract-1',
-        schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+        schedule_key: 'schedule:tenant-1:line-1:contract:arrears',
         period_key: 'period:2025-03-08:2025-04-08',
         lifecycle_state: 'generated',
         cadence_owner: 'contract',
-        obligation_type: 'contract_line',
         service_period_start: '2025-03-08',
         service_period_end: '2025-04-08',
         invoice_window_start: '2025-04-08',
@@ -388,11 +387,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-client-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-1:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -409,11 +407,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-client-arrears-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        schedule_key: 'schedule:tenant-1:assignment-3:client:arrears',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-04-01',
@@ -430,11 +427,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-archived',
-        schedule_key: 'schedule:tenant-1:contract_line:line-archived:contract:arrears',
+        schedule_key: 'schedule:tenant-1:line-archived:contract:arrears',
         period_key: 'period:2025-01-01:2025-02-01',
         lifecycle_state: 'archived',
         cadence_owner: 'contract',
-        obligation_type: 'contract_line',
         service_period_start: '2025-01-01',
         service_period_end: '2025-02-01',
         invoice_window_start: '2025-02-01',
@@ -482,14 +478,14 @@ describe('recurring due-work reader', () => {
         cadenceSource: 'client_schedule',
         invoiceWindowEnd: '2025-05-01',
         executionIdentityKey:
-          'client_cadence_window:client:client-3:schedule:tenant-1:client_contract_line:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
+          'client_cadence_window:client:client-3:schedule:tenant-1:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
       },
       {
         clientName: 'Acme Co',
         cadenceSource: 'client_schedule',
         invoiceWindowEnd: '2025-04-01',
         executionIdentityKey:
-          'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+          'client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
       },
     ]);
   });
@@ -510,14 +506,14 @@ describe('recurring due-work reader', () => {
       'contract_cadence_window:contract:client-9:contract-1:line-1:2025-04-08:2025-05-08',
     ]);
     expect(secondPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
-      'client_cadence_window:client:client-3:schedule:tenant-1:client_contract_line:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
+      'client_cadence_window:client:client-3:schedule:tenant-1:assignment-3:client:arrears:period:2025-03-01:2025-04-01:2025-04-01:2025-05-01',
     ]);
     const thirdPage = await getAvailableRecurringDueWork({
       page: 3,
       pageSize: 1,
     });
     expect(thirdPage.invoiceCandidates.map((candidate) => candidate.members[0]?.executionIdentityKey)).toEqual([
-      'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+      'client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
     ]);
   });
 
@@ -674,11 +670,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-client-arrears-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        schedule_key: 'schedule:tenant-1:assignment-3:client:arrears',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         due_position: 'arrears',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
@@ -901,7 +896,7 @@ describe('recurring due-work reader', () => {
     expect(result.materializationGaps).toEqual([
       expect.objectContaining({
         clientId: 'client-3',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        scheduleKey: 'schedule:tenant-1:assignment-3:client:arrears',
         periodKey: 'period:2025-03-01:2025-04-01',
         servicePeriodStart: '2025-03-01',
         servicePeriodEnd: '2025-04-01',
@@ -922,12 +917,12 @@ describe('recurring due-work reader', () => {
     expect(result.materializationGaps).toEqual([
       {
         executionIdentityKey:
-          'client_cadence_window:client:client-2:schedule:tenant-1:client_contract_line:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+          'client_cadence_window:client:client-2:schedule:tenant-1:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
         selectionKey:
-          'recurring-run-selection:client_cadence_window:client:client-2:schedule:tenant-1:client_contract_line:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
+          'recurring-run-selection:client_cadence_window:client:client-2:schedule:tenant-1:assignment-2:client:advance:period:2025-02-01:2025-03-01:2025-02-01:2025-03-01',
         clientId: 'client-2',
         clientName: 'Bravo Co',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-2:client:advance',
         periodKey: 'period:2025-02-01:2025-03-01',
         billingCycleId: 'cycle-2025-02',
         invoiceWindowStart: '2025-02-01',
@@ -986,12 +981,11 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-backfill-compatibility',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-compatibility:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-compatibility:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         reason_code: 'backfill_materialization',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1017,7 +1011,7 @@ describe('recurring due-work reader', () => {
     expect(result.materializationGaps).toEqual([
       expect.objectContaining({
         clientId: 'client-1',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-canonical:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-canonical:client:advance',
         periodKey: 'period:2025-03-01:2025-04-01',
         reason: 'missing_service_period_materialization',
       }),
@@ -1068,12 +1062,11 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-ai-med-hourly',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-hourly:client:arrears',
+        schedule_key: 'schedule:tenant-1:assignment-hourly:client:arrears',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         reason_code: 'backfill_materialization',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-04-01',
@@ -1113,11 +1106,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-split-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-1:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1138,11 +1130,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-split-2',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-2:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1178,11 +1169,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-contract-scope-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-1:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1204,11 +1194,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-contract-scope-2',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-2:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1246,11 +1235,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-po-scope-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-1:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1272,11 +1260,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-po-scope-2',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-2:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-2:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1353,11 +1340,10 @@ describe('recurring due-work reader', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-ready',
-        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-line-ready:client:advance',
+        schedule_key: 'schedule:tenant-1:assignment-line-ready:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -1386,7 +1372,7 @@ describe('recurring due-work reader', () => {
     expect(result.materializationGaps).toEqual([
       expect.objectContaining({
         clientId: 'client-1',
-        scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-line-gap:client:advance',
+        scheduleKey: 'schedule:tenant-1:assignment-line-gap:client:advance',
         periodKey: 'period:2025-03-01:2025-04-01',
       }),
     ]);
@@ -1400,7 +1386,7 @@ describe('recurring due-work reader', () => {
       memberCount: 1,
     });
     expect(result.invoiceCandidates[0]?.members[0]?.scheduleKey).toBe(
-      'schedule:tenant-1:client_contract_line:assignment-line-ready:client:advance',
+      'schedule:tenant-1:assignment-line-ready:client:advance',
     );
   });
 
@@ -1478,11 +1464,10 @@ describe('recurring due-work reader', () => {
     const fixedRow = (suffix: string, windowStart: string, windowEnd: string) => ({
       tenant: 'tenant-1',
       record_id: `rsp-fixed-${suffix}`,
-      schedule_key: `schedule:tenant-1:client_contract_line:line-${suffix}:client:arrears`,
+      schedule_key: `schedule:tenant-1:line-${suffix}:client:arrears`,
       period_key: `period:${windowStart}:${windowEnd}`,
       lifecycle_state: 'generated',
       cadence_owner: 'client',
-      obligation_type: 'client_contract_line',
       service_period_start: windowStart,
       service_period_end: windowEnd,
       invoice_window_start: windowStart,

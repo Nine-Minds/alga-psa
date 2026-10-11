@@ -316,9 +316,9 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // A draft consumes the obligation: its ledger lifecycle is already billed.
       await context.db('recurring_service_periods').insert({
         tenant: context.tenantId, record_id: uuidv4(),
-        schedule_key: `schedule:${context.tenantId}:client_contract_line:${setup.contractLineId}:client:arrears`,
+        schedule_key: `schedule:${context.tenantId}:${setup.contractLineId}:client:arrears`,
         period_key: 'period:2026-09-01:2026-10-01', revision: 1,
-        obligation_id: setup.contractLineId, obligation_type: 'client_contract_line', charge_family: 'usage',
+        obligation_id: setup.contractLineId, charge_family: 'usage',
         cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'billed',
         service_period_start: '2026-09-01', service_period_end: '2026-10-01',
         invoice_window_start: '2026-10-01', invoice_window_end: '2026-11-01',
@@ -378,7 +378,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         for (const line of lines) {
           // A stale September warning submits this same schedule key; the action
           // must resolve its current eligibility rather than trusting that warning.
-          await repairMissingRecurringServicePeriods(`schedule:${context.tenantId}:client_contract_line:${line}:client:arrears`);
+          await repairMissingRecurringServicePeriods(`schedule:${context.tenantId}:${line}:client:arrears`);
         }
       };
       await repair();
@@ -1583,7 +1583,6 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         period_key: uuidv4(),
         revision: 1,
         obligation_id: setup.contractLineId,
-        obligation_type: 'client_contract_line',
         charge_family: 'fixed',
         cadence_owner: 'client',
         due_position: 'arrears',

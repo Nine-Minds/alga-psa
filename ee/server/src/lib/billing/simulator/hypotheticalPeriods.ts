@@ -186,7 +186,6 @@ export function generateLineServicePeriods(
   const sourceObligation: IPersistedRecurringObligationRef = {
     tenant: 'contract-simulator',
     obligationId: line.key,
-    obligationType: 'contract_line',
     chargeFamily: 'fixed',
   };
 

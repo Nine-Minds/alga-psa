@@ -138,7 +138,6 @@ export function findRecurringServicePeriodCandidateProtection(
 ): IRecurringServicePeriodRecord | undefined {
   return protectedRecords.find((record) =>
     record.sourceObligation.tenant === candidate.sourceObligation.tenant
-    && record.sourceObligation.obligationType === candidate.sourceObligation.obligationType
     && record.sourceObligation.obligationId === candidate.sourceObligation.obligationId
     && (
       buildSchedulePeriodKey(record) === buildSchedulePeriodKey(candidate)

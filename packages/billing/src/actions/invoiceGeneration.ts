@@ -85,9 +85,9 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-  POST_DROP_RECURRING_OBLIGATION_TYPES,
-} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+  canonicalizeRecurringServicePeriodScheduleKey,
+  parseRecurringServicePeriodScheduleKey,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
@@ -1114,14 +1114,13 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
       db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
       return query.where({
         'rsp.cadence_owner': 'client',
-        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(executionWindow.scheduleKey ?? ''),
         'rsp.period_key': executionWindow.periodKey,
         'rsp.invoice_window_start': params.selectorInput.windowStart,
         'rsp.invoice_window_end': params.selectorInput.windowEnd,
         'ct.owner_client_id': params.selectorInput.clientId,
         'cc.client_id': params.selectorInput.clientId,
-      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+      }).whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .select('rsp.obligation_id', 'rsp.invoice_id', 'rsp.invoice_charge_id', 'cl.billing_profile_id as line_profile_id', 'ct.contract_id', 'cc.billing_profile_id as contract_profile_id');
     })
     : [];
@@ -1192,7 +1191,7 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
       return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          obligation_type: 'contract_line',
+          cadence_owner: 'contract',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
@@ -1235,7 +1234,6 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
           'rsp.invoice_window_start': normalizedWindowStart,
           'rsp.invoice_window_end': normalizedWindowEnd,
         })
-        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .orderBy('rsp.service_period_start', 'asc')
         .orderBy('rsp.revision', 'asc')
@@ -1306,11 +1304,9 @@ async function resolveCanonicalSelectorInputsForClientWindow(params: {
     params.knex,
     async (trx: Knex.Transaction) => {
       const clientCadenceRows = await buildWindowRowsQuery(trx)
-        .where('rsp.cadence_owner', 'client')
-        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+        .where('rsp.cadence_owner', 'client');
       const contractCadenceRows = await buildWindowRowsQuery(trx)
-        .where('rsp.cadence_owner', 'contract')
-        .where('rsp.obligation_type', 'contract_line');
+        .where('rsp.cadence_owner', 'contract');
       return [...clientCadenceRows, ...contractCadenceRows];
     },
   );
@@ -1412,14 +1408,13 @@ async function normalizeRecurringSelectorInput(params: {
         return query
           .where({
             'rsp.cadence_owner': 'client',
-            'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
+            'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(params.selectorInput.executionWindow.scheduleKey ?? ''),
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
             'c.client_id': params.selectorInput.clientId,
           })
-          .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+            .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')
           .orderBy('rsp.revision', 'asc')
           .first('rsp.schedule_key', 'rsp.period_key');
@@ -1462,7 +1457,6 @@ async function normalizeRecurringSelectorInput(params: {
         query
           .where({
             'rsp.cadence_owner': 'contract',
-            'rsp.obligation_type': 'contract_line',
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
             'c.client_id': params.selectorInput.clientId,
@@ -1531,12 +1525,8 @@ async function calculatePreviewTax(
 }
 
 function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
-  if (!scheduleKey) {
-    return null;
-  }
-
-  const match = scheduleKey.match(/:client_contract_line:([^:]+):/);
-  return match?.[1] ?? null;
+  const parsed = parseRecurringServicePeriodScheduleKey(scheduleKey);
+  return parsed?.cadenceOwner === 'client' ? parsed.obligationId : null;
 }
 
 function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
@@ -1700,7 +1690,6 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
       .where('ct.owner_client_id', canonicalSelection.clientId)
       .where('rsp.invoice_window_start', canonicalSelection.windowStart)
       .where('rsp.invoice_window_end', canonicalSelection.windowEnd)
-      .whereIn('rsp.obligation_type', ['contract_line', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE])
       .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
       .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key');
   });
@@ -2644,14 +2633,13 @@ async function resolveRecurringSelectionBillingProfileId(
       db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
       const obligations = await query.where({
         'rsp.cadence_owner': 'client',
-        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(executionWindow.scheduleKey ?? ''),
         'rsp.period_key': executionWindow.periodKey,
         'rsp.invoice_window_start': selector.windowStart,
         'rsp.invoice_window_end': selector.windowEnd,
         'ct.owner_client_id': clientId,
         'cc.client_id': clientId,
-      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+      }).whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .select('rsp.obligation_id', 'cl.billing_profile_id as line_profile_id', 'cc.billing_profile_id as contract_profile_id');
       if (obligations.length === 0) {
         throw new Error('The selected client-cadence period does not resolve to an eligible persisted contract-line obligation for this client and tenant.');

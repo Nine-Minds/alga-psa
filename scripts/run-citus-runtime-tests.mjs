@@ -14,6 +14,7 @@ const files = [
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
   'server/src/test/integration/remainingBucketUnits.integration.test.ts',
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
+  'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
 ];
 const output = path.join(root, 'test-results/citus-runtime');
 mkdirSync(output, { recursive: true });
