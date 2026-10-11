@@ -1,5 +1,7 @@
 # PR #3499 mitigation round 3 — 2026-10-11
 
+> Historical round 3 checkpoint. The [takeover report](../takeover-2026-10-11/README.md) supersedes the generation, PDF and ledger gaps below and records two additional source repairs.
+
 ## Revision and production endpoint
 
 Production build stamp: `0826a475429d25fe5a3647ef6a5e7df7c241e7cf+da39a3ee5e6b`. The PR evidence checkpoint recorded by the preceding round was `161a3a896ce14f1d79be2a0d82a7f63466169b1d`; that is a checkpoint revision, not this report's current HEAD. This round changes evidence only, not the application source. The production app at <http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185> returned 200 and remained authenticated in the review browser.

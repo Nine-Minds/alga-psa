@@ -57,7 +57,7 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
+import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
@@ -2569,14 +2569,30 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const previewTax = await calculatePreviewTax(
-    billingResult.charges,
+    previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
   );
 
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
   const viewModel = await adaptToWasmViewModel(
-    billingResult,
+    {
+      ...billingResult,
+      charges: previewCharges,
+      totalAmount: previewCharges.reduce((sum, charge) => sum + charge.total, 0),
+      discounts: adjustments.discounts.map((discount) => ({
+        tenant,
+        discount_id: discount.discount_id,
+        discount_name: discount.discount_name,
+        discount_type: discount.discount_type,
+        value: discount.value,
+        amount: discount.amount,
+      })),
+    },
     client,
     invoiceItems,
     due_date,

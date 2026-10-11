@@ -1,6 +1,7 @@
 import { loadInvoiceChargeLineIds } from './invoiceChargeLineage';
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
+import type { IBillingCharge, IFixedPriceCharge } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
@@ -295,15 +296,12 @@ async function loadRepresentedContractLineIds(
 async function loadApplicableDiscountRows(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  invoiceId: string,
   clientId: string,
   window: AdjustmentWindow,
   representedContractLineIds: string[],
+  representedClientContractIds: string[],
 ): Promise<Array<Record<string, any>>> {
   const db = tenantDb(conn, tenant);
-  const invoiceClientContractIds: Array<{ client_contract_id: string | null }> = await tenantScopedTable<{ client_contract_id: string | null }>(conn, tenant, 'invoice_charges')
-    .where({ tenant, invoice_id: invoiceId }).whereNotNull('client_contract_id').select('client_contract_id');
-  const representedClientContractIds: string[] = [...new Set(invoiceClientContractIds.map((row: { client_contract_id: string | null }) => row.client_contract_id).filter((id: string | null): id is string => Boolean(id)))];
   const lineRows = representedContractLineIds.length === 0 ? [] : await db.table('discounts')
     .join('contract_line_discounts as cld', function () {
       this.on('discounts.discount_id', '=', 'cld.discount_id').andOn('discounts.tenant', '=', 'cld.tenant');
@@ -351,6 +349,78 @@ async function loadApplicableDiscountRows(
       'a.assignment_id as source_identity', 'cc.client_contract_id as assignment_client_contract_id',
     );
   return [...lineRows, ...assignmentRows];
+}
+
+/** Read-only preview using the same configured policies and evaluator as settlement. */
+export async function previewAutomaticInvoiceDiscounts(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  charges: IBillingCharge[],
+  invoiceDate: string,
+) {
+  const configIds = [...new Set(charges.map((charge) => charge.config_id).filter((id): id is string => Boolean(id)))];
+  const configs = configIds.length === 0 ? [] : await tenantDb(conn, tenant)
+    .table('contract_line_service_configuration')
+    .whereIn('config_id', configIds)
+    .select('config_id', 'contract_line_id');
+  const configLineIds = new Map<string, string>(configs.map((row) => [row.config_id, row.contract_line_id]));
+  const fixedParents = new Map<string, InvoiceAdjustmentCharge>();
+  const inputs: InvoiceAdjustmentCharge[] = [];
+  charges.forEach((charge, index) => {
+    const lineId = (charge.config_id && configLineIds.get(charge.config_id)) || charge.client_contract_line_id;
+    const input: InvoiceAdjustmentCharge = {
+      item_id: `preview-charge-${index}`,
+      service_id: charge.serviceId,
+      client_contract_id: charge.client_contract_id,
+      contract_line_ids: lineId ? [lineId] : [],
+      description: charge.serviceName,
+      quantity: charge.quantity ?? 1,
+      unit_price: charge.rate,
+      net_amount: charge.total,
+      is_manual: false,
+      is_taxable: charge.is_taxable,
+      adjustment_source_kind: charge.contractChangeAdjustment ? 'contract_change' : null,
+    };
+    // persistFixedInvoiceCharges consolidates recurring fixed allocations into
+    // one serviceless parent per assignment + line. Match that discount base,
+    // including rounding/stacking and service scopes, before evaluating it.
+    if (charge.type === 'fixed' && !charge.contractChangeAdjustment && lineId
+      && (charge.config_id || charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming)) {
+      const key = `${charge.client_contract_id ?? '__no_assignment__'}:${lineId}`;
+      const amount = Number((charge as IFixedPriceCharge).allocated_amount ?? charge.total);
+      const parent = fixedParents.get(key);
+      if (parent) {
+        parent.net_amount += amount;
+        parent.unit_price = parent.net_amount;
+        parent.is_taxable ||= input.is_taxable;
+        return;
+      }
+      Object.assign(input, { service_id: null, quantity: 1, unit_price: amount, net_amount: amount });
+      fixedParents.set(key, input);
+    }
+    inputs.push(input);
+  });
+  // Match persisted detail windows (inclusive ends). True-ups have their own
+  // provenance period and do not create canonical recurring detail coverage.
+  const periods = charges.filter((charge) => !charge.contractChangeAdjustment).flatMap((charge) =>
+    charge.recurringDetailPeriods?.length ? charge.recurringDetailPeriods : [charge],
+  ).flatMap((period) => {
+    const start = toDateOnly(period.servicePeriodStart);
+    const end = toDateOnly(period.servicePeriodEnd);
+    return start && end ? [{ start, end }] : [];
+  });
+  const starts = periods.map((period) => period.start).sort();
+  const ends = periods.map((period) => period.end).sort();
+  const window = starts.length && ends.length
+    ? { start: starts[0], end: Temporal.PlainDate.from(ends[ends.length - 1]).add({ days: 1 }).toString() }
+    : { start: invoiceDate, end: Temporal.PlainDate.from(invoiceDate).add({ days: 1 }).toString() };
+  const rows = await loadApplicableDiscountRows(
+    conn, tenant, clientId, window,
+    [...new Set(inputs.flatMap((charge) => charge.contract_line_ids ?? []))],
+    [...new Set(charges.map((charge) => charge.client_contract_id).filter((id): id is string => Boolean(id)))],
+  );
+  return evaluateContractInvoiceAdjustments({ charges: inputs, automaticDiscounts: buildAutomaticDiscountPolicies(rows) });
 }
 
 interface DesiredSettlementRow {
@@ -554,10 +624,10 @@ export async function reconcileAutomaticInvoiceDiscounts(
   const discountRows = await loadApplicableDiscountRows(
     tx,
     tenant,
-    invoiceId,
     invoice.client_id,
     window,
     representedContractLineIds,
+    [...new Set(charges.map((charge) => charge.client_contract_id).filter((id): id is string => Boolean(id)))],
   );
   const policies = buildAutomaticDiscountPolicies(discountRows);
   const result = evaluateContractInvoiceAdjustments({

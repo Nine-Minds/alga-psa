@@ -10,6 +10,8 @@ import { inspectInvoiceEditable } from './invoiceAdjustmentEditability';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import Invoice from '../models/invoice';
 import { buildPartialPeriodInvoiceDescription } from '../lib/billing/partialPeriodInvoiceDescription';
+import { projectFixedLinesForSubmission } from '../lib/contractWizardFixedLines';
+import { previewAutomaticInvoiceDiscounts } from './invoiceAutomaticAdjustments';
 
 const actionContext = vi.hoisted(() => ({ db: null as Knex | null, tenant: null as string | null, userId: null as string | null }));
 
@@ -2426,6 +2428,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       template_metadata: { default_discounts: [
         { template_discount_key: uuidv4(), discount_name: 'Fixed source line', discount_type: 'percentage', value: 10, start_date: '2026-01-01', scope: 'line', contract_line_id: fixedTemplateLineId },
         { template_discount_key: uuidv4(), discount_name: 'Hourly source line', discount_type: 'percentage', value: 20, start_date: '2026-01-01', scope: 'line', contract_line_id: hourlyTemplateLineId },
+        { template_discount_key: uuidv4(), discount_name: 'Contract fixed discount', discount_type: 'fixed', value: 25, start_date: '2026-01-01', end_date: '2026-10-01', scope: 'contract' },
       ] },
     });
     await db('contract_template_lines').insert([
@@ -2439,12 +2442,12 @@ describe('contract invoice adjustments (DB-backed)', () => {
         contract_name: 'Repeated service contract', client_id: clientId, start_date: '2026-09-01', currency_code: 'USD',
         enable_proration: false, template_id: templateId,
         // One wizard fixed line per template Fixed line; the 10,000 total is split across them.
-        fixed_lines: [
+        fixed_lines: projectFixedLinesForSubmission([
           { line_key: 'fixed-source', source_template_line_id: fixedTemplateLineId, enable_proration: false,
             base_rate: secondType === 'Fixed' ? 5_000 : 10_000, services: [{ service_id: serviceId, quantity: 1, pricing_basis: 'bundle' }] },
           ...(secondType === 'Fixed' ? [{ line_key: 'second-source', source_template_line_id: hourlyTemplateLineId, enable_proration: false,
             base_rate: 5_000, services: [{ service_id: serviceId, quantity: 1, pricing_basis: 'bundle' as const }] }] : []),
-        ],
+        ]),
         hourly_services: secondType === 'Hourly' ? [{ service_id: serviceId, hourly_rate: 2_000, source_template_line_id: hourlyTemplateLineId }] : [],
       }, { isDraft: true }));
       expect(created).toHaveProperty('contract_id');
@@ -2480,13 +2483,20 @@ describe('contract invoice adjustments (DB-backed)', () => {
         due_date: '2026-09-30', status: 'draft', subtotal: 30_000, tax: 0,
         total_amount: 30_000, currency_code: 'USD', is_manual: false,
       });
+      const previewCharges: import('@alga-psa/types').IBillingCharge[] = [];
       for (const [index, target] of [fixedTarget, hourlyTarget].entries()) {
         const config = await db('contract_line_service_configuration')
           .where({ tenant, contract_line_id: target, service_id: serviceId }).first('config_id');
         const itemId = uuidv4();
         const amount = (index + 1) * 10_000;
+        previewCharges.push({
+          tenant, type: index === 0 || secondType === 'Fixed' ? 'fixed' : 'time', serviceId, serviceName: `Source ${index}`, config_id: config.config_id,
+          client_contract_id: clientAssignment.client_contract_id,
+          quantity: 1, rate: amount, total: amount, tax_amount: 0, tax_rate: 0,
+          servicePeriodStart: '2026-09-01', servicePeriodEnd: '2026-09-30',
+        });
         await db('invoice_charges').insert({
-          tenant, item_id: itemId, invoice_id: scopedInvoiceId, service_id: serviceId,
+          tenant, item_id: itemId, invoice_id: scopedInvoiceId, service_id: index === 0 || secondType === 'Fixed' ? null : serviceId,
           client_contract_id: clientAssignment.client_contract_id, description: `Source ${index}`,
           quantity: 1, unit_price: amount, net_amount: amount, total_price: amount,
           tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false,
@@ -2497,11 +2507,27 @@ describe('contract invoice adjustments (DB-backed)', () => {
           service_period_start: '2026-09-01', service_period_end: '2026-09-30',
         });
       }
+      // Two allocations on the first fixed line settle as one serviceless parent.
+      previewCharges[0].total = 4000;
+      previewCharges.push({ ...previewCharges[0], total: 6000 });
+      const preview = await previewAutomaticInvoiceDiscounts(db, tenant, clientId, previewCharges, '2026-10-11');
+      expect(preview.eligibleCharges).toHaveLength(2);
+      expect(preview.eligibleCharges[0]).toMatchObject({ service_id: null, net_amount: 10000 });
+      expect(preview.discounts.map((row) => row.amount).sort((a, b) => a - b)).toEqual([1000, 2500, 4000]);
+      expect(preview.discounts.find((row) => row.discount_name === 'Fixed source line')?.base_amount).toBe(10000);
+      expect(preview.discounts.find((row) => row.discount_name === 'Hourly source line')?.base_amount).toBe(20000);
+      expect(preview.netAmount).toBe(22500);
+      // Preview must not claim sources or create any persisted discount rows.
+      expect(await db('invoice_charges').where({ tenant, invoice_id: scopedInvoiceId, is_discount: true })).toHaveLength(0);
+      let settlementIds: string[] | undefined;
       for (let attempt = 0; attempt < 2; attempt += 1) {
         await db.transaction((trx) => reconcileAutomaticInvoiceAdjustments(trx, tenant, scopedInvoiceId));
         const settlements = await db('invoice_charges')
           .where({ tenant, invoice_id: scopedInvoiceId, is_discount: true }).orderBy('description');
-        expect(settlements.map((row) => Number(row.net_amount))).toEqual([-1_000, -4_000]);
+        expect(settlements.map((row) => Number(row.net_amount)).sort((a, b) => a - b)).toEqual([-4000, -2500, -1000]);
+        expect(settlements.map((row) => row.adjustment_source_id).sort()).toEqual(preview.discounts.map((row) => row.discount_id).sort());
+        if (settlementIds) expect(settlements.map((row) => row.item_id)).toEqual(settlementIds);
+        settlementIds = settlements.map((row) => row.item_id);
       }
     } finally {
       const chargeIds = await db('invoice_charges').where({ tenant, invoice_id: scopedInvoiceId }).pluck('item_id');
@@ -2512,6 +2538,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         const owner = await db('client_contracts').where({ tenant, contract_id: createdContractId }).first('client_contract_id');
         if (owner) {
           const copiedIds = await db('contract_line_discounts').where({ tenant, client_contract_id: owner.client_contract_id }).pluck('discount_id');
+          copiedIds.push(...await db('contract_discount_assignments').where({ tenant, client_contract_id: owner.client_contract_id }).pluck('discount_id'));
           await db('contract_line_discounts').where({ tenant, client_contract_id: owner.client_contract_id }).delete();
           await db('contract_discount_assignments').where({ tenant, client_contract_id: owner.client_contract_id }).delete();
           await db('discounts').where({ tenant }).whereIn('discount_id', copiedIds).delete();
