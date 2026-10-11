@@ -15,6 +15,7 @@ import {
   assertInboundAuthPauseNotifierRegistered,
 } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { registerInboundAuthPauseEventPublisher } from '@alga-psa/shared/services/email/inboundAuthPauseEventNotifier';
+import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
 import { installInboundEmailMetricsSink } from '@alga-psa/shared/services/email/inboundEmailMetrics';
 import { createInboundEmailMetrics } from './observability/registry';
 import { createPromSink } from './observability/promSink';
