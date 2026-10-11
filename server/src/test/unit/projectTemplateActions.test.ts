@@ -76,6 +76,7 @@ vi.mock('@alga-psa/validation', async () => {
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('@shared/services/numberingService', () => ({

@@ -152,6 +152,8 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Workflow event emitter contract fixtures (alga0002106) carry billing event payloads with period fields.
+  'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
