@@ -533,6 +533,14 @@ export function ContractDialog({
     setExpandedContractLinePresets({});
     setPresetRateOverrides({});
     setPresetRateInputs({});
+    setPresetServiceOverrides({});
+    setPresetServiceInputs({});
+    setHourlyPresetOverrides({});
+    setHourlyPresetInputs({});
+    // Dropping the cached preset services re-opens the lazy load on the next
+    // expand, so inputs re-initialize from the preset's own defaults.
+    setContractLinePresetServices({});
+    setContractLinePresetFixedConfigs({});
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
   };
