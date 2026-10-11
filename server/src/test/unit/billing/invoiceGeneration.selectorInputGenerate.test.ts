@@ -46,12 +46,11 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-client-1',
     tenant: 'tenant-1',
     cadence_owner: 'client',
-    obligation_type: 'client_contract_line',
     obligation_id: 'line-1',
     // The query stub consumes joined rows; include the contract owner.
     owner_client_id: 'client-1',
     client_id: 'client-1',
-    schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -69,11 +68,10 @@ function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
     record_id: 'rsp-contract-1',
     tenant: 'tenant-1',
     cadence_owner: 'contract',
-    obligation_type: 'contract_line',
     obligation_id: 'line-1',
     client_id: 'client-1',
     contract_id: 'contract-1',
-    schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+    schedule_key: 'schedule:tenant-1:line-1:contract:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
     service_period_start: '2025-01-01',
     service_period_end: '2025-02-01',
@@ -537,7 +535,7 @@ describe('selector-input recurring generation', () => {
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -604,7 +602,7 @@ describe('selector-input recurring generation', () => {
 
     const selectorInput = buildClientCadenceDueSelectionInput({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',
@@ -654,7 +652,8 @@ describe('selector-input recurring generation', () => {
 
     await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
       actionError:
-        'Recurring service periods were not materialized for this recurring execution window.',
+        "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
+      messageKey: 'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED',
     });
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
@@ -692,8 +691,8 @@ describe('selector-input recurring generation', () => {
     mocks.rowsByTable.recurring_service_periods.push({
       record_id: 'record-1',
       tenant: 'tenant-1',
-      obligation_type: 'contract_line',
       obligation_id: 'line-1',
+      cadence_owner: 'contract',
       invoice_window_start: '2025-02-08',
       invoice_window_end: '2025-03-08',
       invoice_id: 'invoice-existing',
@@ -772,3 +771,15 @@ describe('selector-input recurring generation', () => {
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

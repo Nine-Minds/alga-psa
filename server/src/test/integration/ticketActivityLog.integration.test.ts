@@ -15,6 +15,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { workedMinutes } from '@alga-psa/core';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
@@ -50,6 +51,8 @@ async function hasColumn(table: string, column: string): Promise<boolean> {
 async function cleanupTenant(tenantId: string): Promise<void> {
   await db('ticket_audit_logs').where({ tenant: tenantId }).del();
   await db('comments').where({ tenant: tenantId }).del();
+  await db('comment_threads').where({ tenant: tenantId }).del();
+  await db('time_entries').where({ tenant: tenantId }).del();
   await db('tickets').where({ tenant: tenantId }).del();
   await db('next_number').where({ tenant: tenantId }).del();
   await db('statuses').where({ tenant: tenantId }).del();
@@ -153,6 +156,29 @@ async function createFixture(): Promise<Fixture> {
   });
 
   return { tenantId, userId, ticketId, clientId, boardId, statusId, priorityId };
+}
+
+async function insertTicketTimeEntry(
+  fx: Fixture,
+  options: { entryId?: string; startTime: string; endTime: string; billableDuration: number },
+): Promise<string> {
+  const entryId = options.entryId ?? uuidv4();
+  await db('time_entries').insert({
+    tenant: fx.tenantId,
+    entry_id: entryId,
+    user_id: fx.userId,
+    start_time: options.startTime,
+    end_time: options.endTime,
+    work_timezone: 'UTC',
+    work_date: options.startTime.slice(0, 10),
+    work_item_id: fx.ticketId,
+    work_item_type: 'ticket',
+    approval_status: 'DRAFT',
+    billable_duration: options.billableDuration,
+    invoiced: false,
+    notes: 'Non-billable ad-hoc work',
+  });
+  return entryId;
 }
 
 beforeAll(async () => {
@@ -370,5 +396,41 @@ describe('buildUnifiedTicketTimeline', () => {
     expect(timeline).toHaveLength(2);
     expect(timeline[0].type).toBe('comment');
     expect(timeline[1].type).toBe('activity');
+  });
+
+  it('returns a five-minute non-billable ticket entry that yields five worked minutes', async () => {
+    const fx = await createFixture();
+    const startTime = '2026-09-20T23:54:00.000Z';
+    const endTime = '2026-09-20T23:59:00.000Z';
+    const entryId = await insertTicketTimeEntry(fx, {
+      startTime,
+      endTime,
+      billableDuration: 0,
+    });
+
+    const other = await createFixture();
+    const otherEntryId = await insertTicketTimeEntry(other, {
+      startTime,
+      endTime,
+      billableDuration: 5,
+    });
+
+    const timeline = await buildUnifiedTicketTimeline(db, fx.tenantId, fx.ticketId, {
+      includeTimeEntries: true,
+      order: 'asc',
+    });
+
+    const timeEntries = timeline.filter((entry) => entry.type === 'time_entry');
+    expect(timeEntries).toHaveLength(1);
+    const timeEntry = timeEntries[0].timeEntry!;
+    expect(timeEntry.entry_id).toBe(entryId);
+    expect(timeEntry.start_time).toBe(startTime);
+    expect(timeEntry.end_time).toBe(endTime);
+    expect(timeEntry.billable_duration).toBe(0);
+    // The returned raw fields are enough to derive the worked duration.
+    expect(workedMinutes(timeEntry)).toBe(5);
+
+    // The foreign tenant's identically-shaped entry is not returned.
+    expect(timeEntries.some((entry) => entry.timeEntry?.entry_id === otherEntryId)).toBe(false);
   });
 });

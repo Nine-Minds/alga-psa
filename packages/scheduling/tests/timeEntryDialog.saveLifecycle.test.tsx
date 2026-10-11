@@ -310,6 +310,54 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     );
   });
 
+  it('prefills a default service the picker offers', async () => {
+    primeProvider();
+    renderDialog({ onSave: vi.fn().mockResolvedValue(undefined) });
+    await waitForForm();
+
+    expect(screen.getByTestId('dialog-service-select')).toHaveValue('service-1');
+  });
+
+  it('prefills the default even when the surface supplies no start and end time', async () => {
+    // Surfaces that open an entry without default times (the 08:00 fallback)
+    // used to hardcode an empty service, losing the task/phase/project default.
+    primeProvider();
+    renderDialog({
+      onSave: vi.fn().mockResolvedValue(undefined),
+      defaultStartTime: undefined,
+      defaultEndTime: undefined,
+      workItem: { ...projectTask, service_source: 'project' },
+    });
+    await waitForForm();
+
+    expect(screen.getByTestId('dialog-service-select')).toHaveValue('service-1');
+  });
+
+  it('drops a default service the hourly-only picker cannot hold', async () => {
+    // A phase (or task, or project) default set to a fixed/usage service used to
+    // prefill an id the picker had no option for: the field looked blank and the
+    // save then failed on "invalid service". Now no default is applied at all.
+    primeProvider();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    renderDialog({
+      onSave,
+      workItem: {
+        ...projectTask,
+        service_id: 'service-fixed',
+        service_name: 'Emerald City Security',
+        service_source: 'phase',
+      },
+    });
+    await waitForForm();
+
+    expect(screen.getByTestId('dialog-service-select')).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith('messages.serviceRequired'));
+    expect(mocks.toast.error).not.toHaveBeenCalledWith('messages.invalidService');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('a ticket entry retains ticket context and reaches save after a service is chosen', async () => {
     mocks.fetchServicesForTimeEntry.mockResolvedValue([
       { id: 'service-1', name: 'Implementation', billing_method: 'hourly' },

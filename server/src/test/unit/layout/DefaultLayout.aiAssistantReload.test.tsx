@@ -39,6 +39,10 @@ vi.mock('@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks', () => 
   SchedulingProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/scheduling/providers/StopwatchProvider', () => ({
+  StopwatchProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@alga-psa/msp-composition/projects', () => ({
   MspTicketIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MspClientIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,

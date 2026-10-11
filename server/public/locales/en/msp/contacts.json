@@ -550,7 +550,11 @@
       "notes": "Notes:",
       "notesPlaceholder": "Add any additional notes about the contact...",
       "tags": "Tags:",
-      "emailAddresses": "Email addresses:"
+      "emailAddresses": "Email addresses:",
+      "reportsTo": "Reports to:",
+      "reportsToPlaceholder": "No manager",
+      "reportsToClear": "Clear",
+      "reportsToHelp": "Must be someone at the same client. Used for portal \"my staff\" visibility of tickets, devices and projects."
     },
     "loading": {
       "destinations": "Loading destinations..."
@@ -568,7 +572,8 @@
     },
     "empty": {
       "notSet": "Not set",
-      "unknownClient": "Unknown Client"
+      "unknownClient": "Unknown Client",
+      "noManager": "No manager"
     },
     "phoneTypes": {
       "work": "Work",
@@ -591,7 +596,8 @@
       "notes": "Notes:",
       "tags": "Tags:",
       "emailAddresses": "Email addresses:",
-      "defaultEmail": "Default"
+      "defaultEmail": "Default",
+      "reportsTo": "Reports to"
     },
     "status": {
       "active": "Active",
@@ -737,8 +743,23 @@
       "scopeClient": "All of this client’s tickets",
       "scopeContact": "Only their own tickets",
       "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
-      "scopeContactDescription": "Members see only tickets they are listed as the contact on. Client admins see all tickets on the selected boards, including tickets with no contact.",
-      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access."
+      "scopeContactDescription": "Members see tickets they are the contact on, tickets of people who report to them, and tickets they watch. Client admins always see everything on the selected boards, including tickets with no contact.",
+      "assignmentHelp": "Assign a group to limit boards and what this person sees of tickets, devices and projects, or keep full client access.",
+      "assetScopeLabel": "Device visibility",
+      "assetScopeClient": "All of this client’s devices",
+      "assetScopeContact": "Only their own devices",
+      "assetScopeClientDescription": "Members see every device for this client, including unassigned ones.",
+      "assetScopeContactDescription": "Members see only devices assigned to them or to people who report to them. Unassigned devices are hidden. Client admins always see everything.",
+      "projectScopeLabel": "Project visibility",
+      "projectScopeClient": "All of this client’s projects",
+      "projectScopeContact": "Only their own projects",
+      "projectScopeClientDescription": "Members see every project for this client.",
+      "projectScopeContactDescription": "Members see only projects whose contact is them or someone who reports to them. Projects with no contact are hidden. Client admins always see everything.",
+      "scopeSummary": "Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}",
+      "scopeSummaryAll": "All",
+      "scopeSummaryOwn": "Own",
+      "managerScopeNote_one": "Their view also includes records of {{count}} person who reports to them.",
+      "managerScopeNote_other": "Their view also includes records of {{count}} people who report to them."
     }
   }
 }

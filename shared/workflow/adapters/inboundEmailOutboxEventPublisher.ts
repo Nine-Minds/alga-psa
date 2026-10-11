@@ -63,7 +63,10 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       outbox_id: outboxId,
       event_key: params.eventKey,
       event_type: params.eventType,
-      payload: params.payload,
+      // Workflow triggers validate payloads against schemas that require
+      // `occurredAt`. Stamp it when the event is recorded (not when the
+      // dispatcher publishes) so a retried publish keeps the original time.
+      payload: { occurredAt: new Date().toISOString(), ...params.payload },
       publish_options: params.publishOptions ?? null,
     });
   }
@@ -107,6 +110,30 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
         userId: data.userId || data.ticketId,
         changes: data.changes,
         ...(data.metadata ?? {}),
+      },
+    });
+  }
+
+  async publishTicketStatusChanged(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    previousStatusId: string;
+    newStatusId: string;
+    changedAt: string;
+  }): Promise<void> {
+    await this.enqueue({
+      eventKey: 'ticket-status-changed',
+      eventType: 'TICKET_STATUS_CHANGED',
+      payload: {
+        tenantId: data.tenantId,
+        ticketId: data.ticketId,
+        // Required by the TICKET_STATUS_CHANGED domain schema the subscribers validate against.
+        occurredAt: data.changedAt,
+        ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' } : {}),
+        previousStatusId: data.previousStatusId,
+        newStatusId: data.newStatusId,
+        changedAt: data.changedAt,
       },
     });
   }

@@ -11,10 +11,12 @@ import { useInvoiceDesignerStore } from '../state/designerStore';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
 import { buildDocumentExpressionPathOptions, describeBindingOption } from '../fields/documentBindingCatalog';
+import { getNodeName } from '../utils/nodeProps';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
-  onInsertComponent?: (componentType: ComponentDefinition['type']) => void;
+  /** `after` asks to place the block after the selection even when a container is selected. */
+  onInsertComponent?: (componentType: ComponentDefinition['type'], options?: { after?: boolean }) => void;
   onInsertPreset?: (presetId: string) => void;
   onInsertTemplateVariable?: (bindingPath: string) => void;
 }
@@ -72,7 +74,7 @@ interface CompactPaletteRowProps {
   dataComponentType?: string;
   addAutomationId?: string;
   addAriaLabel?: string;
-  onAdd?: () => void;
+  onAdd?: (options: { after: boolean }) => void;
 }
 
 const CompactPaletteRow: React.FC<CompactPaletteRowProps> = ({
@@ -124,7 +126,7 @@ const CompactPaletteRow: React.FC<CompactPaletteRowProps> = ({
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              onAdd();
+              onAdd({ after: event.shiftKey });
             }}
           >
             +
@@ -179,7 +181,24 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
-  const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields' | 'outline'>('blocks');
+  const [activeTab, setActiveTab] = useState<'blocks' | 'presets' | 'fields'>('blocks');
+  const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
+  const insertPlacement = useInvoiceDesignerStore((state) => state.insertPlacement);
+  const setInsertPlacement = useInvoiceDesignerStore((state) => state.setInsertPlacement);
+  const [outlineOpen, setOutlineOpen] = useState(true);
+  const selectedNode = useMemo(
+    () => (selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) ?? null : null),
+    [nodes, selectedNodeId]
+  );
+  const selectedIsContainer = Boolean(
+    selectedNode && selectedNode.type !== 'page' && selectedNode.type !== 'document' && selectedNode.allowedChildren.length > 0
+  );
+  const selectedName = selectedNode ? getNodeName(selectedNode) || selectedNode.type : '';
+  const insertTargetDescription = !selectedNode || selectedNode.type === 'page' || selectedNode.type === 'document'
+    ? t('designer.palette.insertTarget.page', { defaultValue: 'New blocks go at the end of the page.' })
+    : selectedIsContainer && insertPlacement === 'inside'
+      ? t('designer.palette.insertTarget.inside', { defaultValue: 'New blocks go inside {{name}}.', name: selectedName })
+      : t('designer.palette.insertTarget.after', { defaultValue: 'New blocks go right after {{name}}.', name: selectedName });
   const [searchQuery, setSearchQuery] = useState('');
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -241,7 +260,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   }, [normalizedQuery, templateVariableGroups]);
 
   return (
-    <div className="flex flex-col h-full border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))]">
+    <div className="flex flex-col h-full min-h-0 border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))]">
       <div className="border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2">
         <div className="flex gap-3">
           <button
@@ -271,38 +290,61 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
           >
             {t('designer.palette.tabs.fields', { defaultValue: 'FIELDS' })}
           </button>
-          <button
-            className={clsx(
-              'pb-1 text-[11px] font-semibold tracking-wide border-b-2 transition-colors',
-              activeTab === 'outline' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-            )}
-            onClick={() => setActiveTab('outline')}
-          >
-            {t('designer.palette.tabs.outline', { defaultValue: 'OUTLINE' })}
-          </button>
         </div>
-        {activeTab !== 'outline' && (
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="mt-2 h-7 w-full rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-blue-400"
-            placeholder={
-              activeTab === 'blocks'
-                ? t('designer.palette.search.blocks', { defaultValue: 'Search blocks...' })
-                : activeTab === 'presets'
-                  ? t('designer.palette.search.presets', { defaultValue: 'Search presets...' })
-                  : t('designer.palette.search.fields', { defaultValue: 'Search fields...' })
-            }
-            data-automation-id="designer-palette-search"
-          />
-        )}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          className="mt-2 h-7 w-full rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-blue-400"
+          placeholder={
+            activeTab === 'blocks'
+              ? t('designer.palette.search.blocks', { defaultValue: 'Search blocks...' })
+              : activeTab === 'presets'
+                ? t('designer.palette.search.presets', { defaultValue: 'Search presets...' })
+                : t('designer.palette.search.fields', { defaultValue: 'Search fields...' })
+          }
+          data-automation-id="designer-palette-search"
+        />
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {activeTab === 'blocks' ? (
           <div className="px-2 py-2 space-y-2">
-            <p className="px-1 text-[11px] text-slate-500 dark:text-slate-400">{t('designer.palette.dragHint', { defaultValue: 'Drag or tap `+` to insert.' })}</p>
+            <div
+              className="rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1.5 space-y-1.5"
+              data-automation-id="designer-palette-insert-target"
+            >
+              <p className="text-[11px] text-slate-600 dark:text-slate-300" aria-live="polite">{insertTargetDescription}</p>
+              {selectedIsContainer && (
+                <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label={t('designer.palette.insertTarget.label', { defaultValue: 'Where new blocks go' })}>
+                  {(['inside', 'after'] as const).map((placement) => (
+                    <button
+                      key={placement}
+                      type="button"
+                      role="radio"
+                      aria-checked={insertPlacement === placement}
+                      id={`designer-insert-placement-${placement}`}
+                      className={clsx(
+                        'h-7 rounded border text-[11px] transition-colors',
+                        insertPlacement === placement
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                          : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      onClick={() => setInsertPlacement(placement)}
+                    >
+                      {placement === 'inside'
+                        ? t('designer.palette.insertTarget.insideOption', { defaultValue: 'Inside it' })
+                        : t('designer.palette.insertTarget.afterOption', { defaultValue: 'After it' })}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedIsContainer && insertPlacement === 'inside' && (
+                <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                  {t('designer.palette.insertTarget.shiftHint', { defaultValue: 'Shift+click + to add after it instead.' })}
+                </p>
+              )}
+            </div>
             {Object.entries(filteredPaletteGroups).map(([category, components]) => (
               <section key={category}>
                 <h4 className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -321,7 +363,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
                       dataComponentType={component.type}
                       addAutomationId={`designer-palette-add-${component.type}`}
                       addAriaLabel={t('designer.palette.addAriaLabel', { defaultValue: 'Add {{label}}', label: translatedLabel })}
-                      onAdd={onInsertComponent ? () => onInsertComponent(component.type) : undefined}
+                      onAdd={onInsertComponent ? ({ after }) => onInsertComponent(component.type, { after }) : undefined}
                     />
                   );
                 })}
@@ -386,8 +428,30 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
               <p className="px-1 text-xs text-slate-500">{t('designer.palette.noFieldsMatch', { defaultValue: 'No fields match this search.' })}</p>
             )}
           </div>
-        ) : (
-          <OutlineView />
+        ) : null}
+      </div>
+      {/* The outline stays visible while adding blocks: select a target here, then press +. */}
+      <div
+        className={clsx(
+          'flex flex-col border-t border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))]',
+          outlineOpen ? 'h-[42%] min-h-[180px]' : ''
+        )}
+        data-automation-id="designer-palette-outline-pane"
+      >
+        <button
+          type="button"
+          id="designer-outline-toggle"
+          aria-expanded={outlineOpen}
+          className="flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold tracking-wide text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+          onClick={() => setOutlineOpen((open) => !open)}
+        >
+          <span>{t('designer.palette.tabs.outline', { defaultValue: 'OUTLINE' })}</span>
+          <span aria-hidden>{outlineOpen ? '▾' : '▸'}</span>
+        </button>
+        {outlineOpen && (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <OutlineView />
+          </div>
         )}
       </div>
     </div>

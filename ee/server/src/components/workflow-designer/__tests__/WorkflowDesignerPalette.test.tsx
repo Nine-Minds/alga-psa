@@ -107,4 +107,13 @@ describe('WorkflowDesignerPalette', () => {
     expect(screen.getAllByRole('button', { name: 'Call Workflow' })[0]).toBeDisabled();
     expect(screen.getByPlaceholderText('Search')).toBeEnabled();
   });
+
+  it('shows tips and a way back when a search matches nothing', () => {
+    render(<PaletteHarness />);
+    fireEvent.change(document.getElementById('workflow-designer-search') as HTMLInputElement, { target: { value: 'zzqx' } });
+    expect(document.getElementById('workflow-designer-palette-no-matches')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('workflow-designer-palette-clear-search') as HTMLButtonElement);
+    expect(document.getElementById('workflow-designer-palette-no-matches')).toBeNull();
+    expect((document.getElementById('workflow-designer-search') as HTMLInputElement).value).toBe('');
+  });
 });

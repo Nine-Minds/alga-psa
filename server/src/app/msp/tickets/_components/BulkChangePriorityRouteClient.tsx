@@ -45,13 +45,12 @@ export default function BulkChangePriorityRouteClient({ closeMode }: BulkChangeP
         ? await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)
         : await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
 
-      if (result.updatedIds.length > 0) {
-        refreshList();
-      }
-
       if (result.failed.length > 0) {
         setFailed(result.failed);
         keepFailedSelection(result.failed);
+        if (result.updatedIds.length > 0) {
+          refreshList();
+        }
         toastBulkResult(result, {
           partialFailure: t('bulk.priority.partialFailure', 'Priority could not be updated on some tickets'),
           success: (count) => t('bulk.priority.success', {

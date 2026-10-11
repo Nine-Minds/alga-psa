@@ -164,7 +164,6 @@ function billedPeriodRow(overrides: Row): Row {
     schedule_key: `schedule:${TENANT}:client_contract_line:${overrides.obligation_id}:client:${overrides.due_position}`,
     period_key: 'period:2026-03-01:2026-04-01',
     revision: 1,
-    obligation_type: 'client_contract_line',
     charge_family: 'fixed',
     cadence_owner: 'client',
     due_position: 'advance',

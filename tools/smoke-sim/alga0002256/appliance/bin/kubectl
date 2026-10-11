@@ -1,0 +1,22 @@
+#!/bin/bash
+# Smoke-only kubectl stand-in for the appliance host-service: canned healthy
+# k3s answers for everything EXCEPT the email-service /status proxy read, which
+# is forwarded to the live, locally running email-service (EMAIL_SERVICE_URL).
+args="$*"
+case "$args" in
+  *"/api/v1/namespaces/msp/services/http:email-service:http/proxy/status"*)
+    exec curl -sf -m 15 "${EMAIL_SERVICE_URL:-http://127.0.0.1:8091}/status" ;;
+  *"/api/v1/namespaces/msp/services/http:email-service:http/proxy/metrics"*)
+    exec curl -sf -m 15 "${EMAIL_SERVICE_URL:-http://127.0.0.1:8091}/metrics" ;;
+  *"get nodes -o json"*)
+    echo '{"items":[{"metadata":{"name":"appliance-node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}' ;;
+  *"get pods -A --no-headers"*)
+    printf 'msp alga-core-7d9f Running\nmsp email-service-5c8b Running\nmsp workflow-worker-6f7a Running\nmsp temporal-worker-8e2c Running\n' ;;
+  *"-n msp get jobs --no-headers"*)
+    echo 'alga-core-bootstrap 1/1 1 1m' ;;
+  *"get helmreleases"*)
+    for n in alga-core pgbouncer temporal workflow-worker email-service temporal-worker; do echo "$n 1h True Release reconciliation succeeded"; done ;;
+  *"get events -A -o json"*)
+    echo '{"items":[]}' ;;
+  *) echo "smoke kubectl: unsupported: $args" >&2; exit 1 ;;
+esac

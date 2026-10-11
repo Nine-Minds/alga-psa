@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { listWorkflowExpressionFunctions, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import {
   validateExpression,
   DiagnosticSeverity,
@@ -206,6 +207,19 @@ describe('Diagnostics Provider', () => {
 
         expect(unknownFuncErrors).toHaveLength(0);
       }
+    });
+
+    it('agrees with the runtime validator on every catalog function, with or without $', () => {
+      for (const fn of listWorkflowExpressionFunctions()) {
+        for (const source of [`$${fn.name}(payload.a, 1)`, `${fn.name}(payload.a, 1)`]) {
+          expect(() => validateExpressionSource(source), source).not.toThrow();
+          const unknown = validateExpression(source, {}).filter((d) => d.message.includes('Unknown function'));
+          expect(unknown, source).toHaveLength(0);
+        }
+      }
+      // JSONata built-ins the runtime rejects are flagged in the designer too.
+      expect(() => validateExpressionSource('$length(payload.a)')).toThrow();
+      expect(validateExpression('$length(payload.a)', {}).some((d) => d.message.includes("Unknown function '$length'"))).toBe(true);
     });
 
     it('should warn about disallowed JSONata functions', () => {

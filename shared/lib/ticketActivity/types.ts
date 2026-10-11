@@ -48,6 +48,10 @@ export const TICKET_ACTIVITY_EVENT = {
   EXTERNAL_LINK_ADDED: 'TICKET_EXTERNAL_LINK_ADDED',
   EXTERNAL_LINK_UPDATED: 'TICKET_EXTERNAL_LINK_UPDATED',
   EXTERNAL_LINK_REMOVED: 'TICKET_EXTERNAL_LINK_REMOVED',
+  /** Written on the new ticket created via Duplicate. */
+  DUPLICATED_FROM: 'TICKET_DUPLICATED_FROM',
+  /** Written on the source ticket when a duplicate of it is created. */
+  DUPLICATED_TO: 'TICKET_DUPLICATED_TO',
 } as const;
 
 export type TicketActivityEvent =

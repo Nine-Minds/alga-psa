@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { normalizeTestFile, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
@@ -16,11 +17,17 @@ const index = Number(process.env.INFRA_SHARD_INDEX || '1');
 const total = Number(process.env.INFRA_SHARD_TOTAL || '1');
 const output = path.join(root, 'test-results/infrastructure');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['all-files', 'collected', 'collected-tests', 'results', 'discovery', 'evidence'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['all-files', 'collected', 'collected-tests', 'results', 'discovery', 'evidence', 'flaky-tests'].map(name => [name, path.join(output, `${name}.json`)]));
 const save = (name, data) => writeFileSync(files[name], JSON.stringify(data, null, 2) + '\n');
 const read = name => JSON.parse(readFileSync(files[name], 'utf8'));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
-const env = { ...process.env, REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1' };
+// The flaky journal rides along in this shard's evidence artifact; the copy the
+// weekly report downloads is published only when something retried.
+const flakyUpload = path.join(root, 'test-results/infrastructure-flaky');
+resetFlakyPublication(flakyUpload);
+const env = { ...process.env, REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
+  FLAKY_TESTS_PATH: files['flaky-tests'], FLAKY_SUITE: 'infrastructure',
+  FLAKY_JOB: `infrastructure shard ${index}/${total}`, FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total) };
 const run = args => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let before;
 let evidence;
@@ -47,7 +54,11 @@ try {
   if (JSON.stringify(actual) !== JSON.stringify(selected)) throw new Error('Runner file filters did not collect the exact assigned partition');
   const testCollection = run(['list', ...filters, `--json=${files['collected-tests']}`]);
   if (testCollection.status !== 0) throw new Error('Infrastructure test collection failed');
-  const result = run(['run', ...filters, '--coverage.enabled=false', '--reporter=default', '--reporter=json', `--outputFile.json=${files.results}`]);
+  // --retry=1 and the flaky reporter belong to this runner, never to a shared
+  // vitest config: a fail-then-pass becomes a recorded flake judged by the same
+  // policy every other lane uses.
+  const result = run(['run', ...filters, '--coverage.enabled=false', '--retry=1', '--reporter=default', '--reporter=json',
+    `--outputFile.json=${files.results}`, `--reporter=${path.join(root, 'scripts/lib/vitest-flaky-reporter.mjs')}`]);
   let report;
   try { report = read('results'); } catch { report = null; }
   evidence = reconcileExecution({ root, suite: 'infrastructure', revision: before.revision, exitCode: result.status,
@@ -66,6 +77,12 @@ try {
   }
 } catch (error) {
   evidence.status = 'failed'; evidence.failures.push(error.message);
+}
+const flaky = applyFlakyPolicy({ documentPath: files['flaky-tests'], directory: flakyUpload,
+  eventName: process.env.GITHUB_EVENT_NAME });
+if (flaky.failures.length) {
+  evidence.status = 'failed';
+  evidence.failures.push(...flaky.failures);
 }
 save('evidence', evidence);
 for (const failure of evidence.failures) console.error(failure);

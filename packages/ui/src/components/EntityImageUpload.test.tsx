@@ -92,6 +92,10 @@ const resolveProbe = async (width: number, height: number) => {
 
 const widePreview = () => document.querySelector('[data-automation-id="client-image-wide-preview"]');
 
+// The crop dialog previews the image it is cutting, so its src is the source in use.
+const cropSourceInDialog = () =>
+  document.querySelector('[data-automation-id="client-image-crop-dialog-preview-32"] img')?.getAttribute('src');
+
 describe('EntityImageUpload auto preview', () => {
   it('renders a wide logo contained at the avatar height instead of cover-cropping it', async () => {
     renderUpload('auto');
@@ -203,9 +207,86 @@ describe('EntityImageUpload adjust mark', () => {
     ));
   });
 
-  it('offers the button only when there is a wide logo to cut from', () => {
+  it('cuts from the given crop source instead of the wide logo', async () => {
+    const recropAction = vi.fn(async () => ({ success: true, imageUrl: '/api/documents/view/mark-3' }));
+    renderUpload('circle', {
+      wideImageUrl: '/api/documents/view/wide',
+      cropSourceUrl: '/api/documents/view/square-upload',
+      recropAction,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /edit client image/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust mark' }));
+
+    expect(cropSourceInDialog()).toBe('/api/documents/view/square-upload');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this crop' }));
+    });
+    await waitFor(() => expect(recropAction).toHaveBeenCalledTimes(1));
+  });
+
+  it('falls back to the wide logo when no crop source is given', () => {
+    renderUpload('circle', { wideImageUrl: '/api/documents/view/wide', recropAction: vi.fn() });
+
+    fireEvent.click(screen.getByRole('button', { name: /edit client image/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust mark' }));
+
+    expect(cropSourceInDialog()).toBe('/api/documents/view/wide');
+  });
+
+  it('offers the button only when there is an image to cut from', () => {
     renderUpload('circle', { recropAction: vi.fn() });
     fireEvent.click(screen.getByRole('button', { name: /edit client image/i }));
     expect(screen.queryByRole('button', { name: 'Adjust mark' })).toBeNull();
+  });
+});
+
+describe('EntityImageUpload stored file name', () => {
+  it('shows the stored file name under the preview, with the full name on hover', () => {
+    renderUpload('circle', { imageFileName: 'Lotrasoft wordmark (mark).png' });
+    const fileName = document.querySelector('[data-automation-id="client-image-file-name"]') as HTMLElement;
+    expect(fileName.textContent).toBe('Lotrasoft wordmark (mark).png');
+    expect(fileName.className).toContain('truncate');
+    expect(fileName.getAttribute('title')).toContain('Lotrasoft wordmark (mark).png');
+  });
+
+  it('renders nothing when the slot has no file name', () => {
+    renderUpload('circle');
+    expect(document.querySelector('[data-automation-id="client-image-file-name"]')).toBeNull();
+  });
+});
+
+describe('EntityImageUpload link an uploaded document', () => {
+  it('links the document the selector reports', async () => {
+    const linkDocumentAsAvatar = vi.fn(async () => ({ success: true, imageUrl: '/api/documents/view/linked' }));
+    const onImageChange = vi.fn();
+    renderUpload('circle', {
+      linkDocumentAsAvatar,
+      onImageChange,
+      renderDocumentSelector: ({ isOpen, onSelectDocumentId }) => (
+        isOpen ? (
+          <button type="button" onClick={() => onSelectDocumentId('document-9')}>
+            Pick document
+          </button>
+        ) : null
+      ),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /edit client image/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Link Document' }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Pick document' }));
+    });
+
+    await waitFor(() => expect(linkDocumentAsAvatar).toHaveBeenCalledWith({
+      entityType: 'client',
+      entityId: 'client-1',
+      documentId: 'document-9',
+    }));
+    await waitFor(() => expect(onImageChange).toHaveBeenCalledWith(
+      expect.stringContaining('/api/documents/view/linked?t='),
+    ));
   });
 });

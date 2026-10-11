@@ -47,6 +47,7 @@ import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useActionPolling } from '@alga-psa/ui/hooks';
+import StopwatchHeaderIndicator from './StopwatchHeaderIndicator';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -172,7 +173,8 @@ export const getMenuItemNameByPath = (
 
   const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
     const matchesPath = item.href === path
-      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)))
+      || (item.relatedPaths?.some((relatedPath) => path.startsWith(relatedPath)) ?? false);
     return [
       ...(matchesPath ? [item] : []),
       ...(item.subItems ? matchingItems(item.subItems) : []),
@@ -586,6 +588,7 @@ export default function Header({
             selected: t('header.themeToggle.selected', { defaultValue: 'Selected' }),
           }}
         />
+        <StopwatchHeaderIndicator />
         <NotificationBell />
         <JobActivityIndicator t={t} />
         <DropdownMenu>

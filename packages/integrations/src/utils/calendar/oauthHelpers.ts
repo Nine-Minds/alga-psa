@@ -39,6 +39,7 @@ export async function generateMicrosoftCalendarAuthUrl(params: {
 }): Promise<string> {
   const scopes = [
     'https://graph.microsoft.com/Calendars.ReadWrite',
+    'https://graph.microsoft.com/MailboxSettings.ReadWrite',
     'https://graph.microsoft.com/Mail.Read',
     'offline_access'
   ].join(' ');

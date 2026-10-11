@@ -21,6 +21,8 @@ export interface ActivityGroup {
   groupName: string;
   sortOrder: number;
   isCollapsed: boolean;
+  /** Unfiled activities show in this group instead of "Ungrouped" (at most one per user) */
+  isDefault: boolean;
   items: ActivityGroupItem[];
 }
 
@@ -68,7 +70,7 @@ export async function getUserActivityGroupsForApi(
     const groups = await scopedDb.table("user_activity_groups")
       .where({ user_id: ownerUserId })
       .orderBy("sort_order")
-      .select("group_id", "group_name", "sort_order", "is_collapsed");
+      .select("group_id", "group_name", "sort_order", "is_collapsed", "is_default");
 
     if (groups.length === 0) return [];
 
@@ -96,6 +98,7 @@ export async function getUserActivityGroupsForApi(
       groupName: g.group_name,
       sortOrder: g.sort_order,
       isCollapsed: g.is_collapsed,
+      isDefault: g.is_default,
       items: itemsByGroup.get(g.group_id) || [],
     }));
   });
@@ -249,6 +252,10 @@ export async function removeActivityFromGroupsForApi(
  * Persist the full ordered membership of a single group after a drag-to-reorder. Pass every
  * item as it should appear; each row's `sort_order` is set to its position. Identity-explicit
  * core scoped to the caller's own groups.
+ *
+ * Upsert: a listed activity with no row in this group gets one (this is how reordering inside
+ * the user's default group pins its unpinned items). Before upserting, those activities are
+ * removed from the caller's other groups so an activity is never in two groups.
  */
 export async function reorderActivitiesInGroupForApi(
   user: IUserWithRoles,
@@ -272,14 +279,67 @@ export async function reorderActivitiesInGroupForApi(
       throw new Error("Group not found");
     }
 
+    const otherGroupIds: string[] = await scopedDb.table("user_activity_groups")
+      .where({ user_id: user.user_id })
+      .whereNot({ group_id: groupId })
+      .pluck("group_id");
+
     for (const item of orderedItems) {
+      if (otherGroupIds.length > 0) {
+        await scopedDb.table("user_activity_group_items")
+          .where({ activity_id: item.activityId, activity_type: item.activityType })
+          .whereIn("group_id", otherGroupIds)
+          .del();
+      }
+
       await scopedDb.table("user_activity_group_items")
-        .where({
+        .insert({
+          tenant,
           group_id: groupId,
           activity_id: item.activityId,
           activity_type: item.activityType,
+          sort_order: item.sortOrder,
         })
-        .update({ sort_order: item.sortOrder });
+        .onConflict(["tenant", "group_id", "activity_id", "activity_type"])
+        .merge(["sort_order"]);
+    }
+  });
+}
+
+/**
+ * Set (or clear, with `groupId = null`) the caller's default activity group. Unfiled
+ * activities render in the default group instead of "Ungrouped" (applied at view time; no
+ * membership rows are written). Clears the current default first, then sets the new one, in
+ * one transaction; the partial unique index `idx_user_activity_groups_one_default` rejects a
+ * racing second default. Scoped to the caller's own groups only.
+ */
+export async function setDefaultActivityGroupForApi(
+  user: IUserWithRoles,
+  tenant: string,
+  groupId: string | null,
+): Promise<void> {
+  const { knex: db } = await createTenantKnex(tenant);
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+    await assertCanOrganizeGroups(trx, user);
+
+    if (groupId) {
+      const group = await scopedDb.table("user_activity_groups")
+        .where({ group_id: groupId, user_id: user.user_id })
+        .first();
+      if (!group) {
+        throw new Error("Group not found");
+      }
+    }
+
+    await scopedDb.table("user_activity_groups")
+      .where({ user_id: user.user_id, is_default: true })
+      .update({ is_default: false, updated_at: new Date() });
+
+    if (groupId) {
+      await scopedDb.table("user_activity_groups")
+        .where({ group_id: groupId, user_id: user.user_id })
+        .update({ is_default: true, updated_at: new Date() });
     }
   });
 }

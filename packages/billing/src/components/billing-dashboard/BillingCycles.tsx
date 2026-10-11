@@ -345,7 +345,9 @@ const BillingCycles: React.FC = () => {
       title: t('billingCycles.columns.currentBillingCycle', {
         defaultValue: 'Current Billing Cycle',
       }),
+      id: 'current_billing_cycle',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => {
         const cycle = billingSchedules[value]?.billingCycle ?? billingCycles[value];
         if (!cycle) {
@@ -357,12 +359,16 @@ const BillingCycles: React.FC = () => {
     },
     {
       title: t('billingCycles.columns.anchor', { defaultValue: 'Anchor' }),
+      id: 'billing_anchor',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => formatAnchorSummary(value),
     },
     {
       title: t('billingCycles.columns.actions', { defaultValue: 'Actions' }),
+      id: 'client_billing_link',
       dataIndex: 'client_id',
+      sortable: false,
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <Button id="billing-cycles-view-client" asChild variant="outline" size="sm">

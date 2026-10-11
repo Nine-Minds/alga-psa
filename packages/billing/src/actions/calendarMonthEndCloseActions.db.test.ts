@@ -54,7 +54,7 @@ const TENANT = uuidv4();
 const CLIENT_ID = uuidv4();
 const CONTRACT_ID = uuidv4();
 const CONTRACT_LINE_ID = uuidv4();
-const SCHEDULE_KEY = `schedule:${TENANT}:client_contract_line:${CONTRACT_LINE_ID}:client:arrears`;
+const SCHEDULE_KEY = `schedule:${TENANT}:${CONTRACT_LINE_ID}:client:arrears`;
 const PERIOD_KEY = 'period:2026-09-01:2026-10-01';
 // A calendar-month arrears period [2026-09-01, 2026-10-01) closes at month end
 // on 2026-09-30; its invoice window opens 2026-10-01 (service_period_end).
@@ -99,7 +99,6 @@ async function insertServicePeriodFixture(overrides: {
     period_key: overrides.periodKey ?? PERIOD_KEY,
     revision: 1,
     obligation_id: overrides.obligationId ?? CONTRACT_LINE_ID,
-    obligation_type: 'client_contract_line',
     charge_family: 'fixed',
     cadence_owner: 'client',
     due_position: overrides.duePosition ?? 'arrears',
@@ -369,7 +368,7 @@ describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
       name: 'Month End Close Advance Line',
     });
     await insertServicePeriodFixture({
-      scheduleKey: `schedule:${TENANT}:client_contract_line:${advanceLineId}:client:advance`,
+      scheduleKey: `schedule:${TENANT}:${advanceLineId}:client:advance`,
       periodKey: 'period:2026-10-01:2026-11-01',
       obligationId: advanceLineId,
       duePosition: 'advance',
@@ -396,7 +395,7 @@ describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
     // NOT select. Generating only part of the canonical window would claim
     // the window's invoice identity and strand the unselected period.
     const secondArrearsLineId = uuidv4();
-    const secondScheduleKey = `schedule:${TENANT}:client_contract_line:${secondArrearsLineId}:client:arrears`;
+    const secondScheduleKey = `schedule:${TENANT}:${secondArrearsLineId}:client:arrears`;
     await insertContractLineFixture({
       contractLineId: secondArrearsLineId,
       billingTiming: 'arrears',

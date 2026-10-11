@@ -80,6 +80,7 @@ const REPLENISHMENT_STATUS_LABELS: Record<string, Record<PrepaidReplenishmentOut
   it: { drafted: 'in bozza', issued: 'emessa', failed: 'da verificare' },
   pl: { drafted: 'wersja robocza', issued: 'wystawiona', failed: 'wymaga uwagi' },
   pt: { drafted: 'em rascunho', issued: 'emitida', failed: 'requer atenção' },
+  sv: { drafted: 'skapad som utkast', issued: 'utfärdad', failed: 'kräver åtgärd' },
 };
 
 const REPLENISHMENT_ACTION_PHRASES: Record<string, Record<PrepaidReplenishmentOutcome, string>> = {
@@ -122,6 +123,11 @@ const REPLENISHMENT_ACTION_PHRASES: Record<string, Record<PrepaidReplenishmentOu
     drafted: 'foi criada como rascunho',
     issued: 'foi emitida automaticamente',
     failed: 'foi criada como rascunho, mas a emissão automática falhou',
+  },
+  sv: {
+    drafted: 'har skapats som utkast',
+    issued: 'har utfärdats automatiskt',
+    failed: 'har skapats som utkast, men det automatiska utfärdandet misslyckades',
   },
 };
 

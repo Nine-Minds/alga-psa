@@ -640,7 +640,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     },
     {
       title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
+      id: 'actions',
       dataIndex: 'user_id' as any,
+      sortable: false,
       render: (_, user: Omit<IUser, 'tenant'>) => (
         <div className="flex items-center gap-1">
           {/* Every row's action reads "Edit" on its own, so the accessible name
@@ -682,17 +684,23 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     },
     {
       title: t('availabilitySettings.serviceRules.configuredServices.columns.withoutContract', { defaultValue: 'Without Contract' }),
+      id: 'without_contract',
       dataIndex: 'service_id' as any,
+      sortable: false,
       render: (_, service: IService) => serviceSettings[service.service_id]?.allow_without_contract ? t('availabilitySettings.common.yes', { defaultValue: 'Yes' }) : t('availabilitySettings.common.no', { defaultValue: 'No' })
     },
     {
       title: t('availabilitySettings.serviceRules.configuredServices.columns.maxPerDay', { defaultValue: 'Max Per Day' }),
+      id: 'max_per_day',
       dataIndex: 'service_id' as any,
+      sortable: false,
       render: (_, service: IService) => serviceSettings[service.service_id]?.max_appointments_per_day || t('availabilitySettings.serviceRules.common.noLimit', { defaultValue: 'No limit' })
     },
     {
       title: t('availabilitySettings.common.columns.action', { defaultValue: 'Action' }),
+      id: 'actions',
       dataIndex: 'service_id' as any,
+      sortable: false,
       render: (_, service: IService) => canManageSystemSettings ? (
         <div className="flex items-center gap-1">
           <Button

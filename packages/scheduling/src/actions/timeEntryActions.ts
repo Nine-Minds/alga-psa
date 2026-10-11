@@ -31,6 +31,7 @@ import {
   fetchScheduleEntryForWorkItem,
   fetchDefaultClientTaxRateInfoForWorkItem // Added export
 } from './timeEntryServices';
+import { resolveDefaultTicketTimeEntryService } from './timeEntryServiceDefaults';
 
 export {
   getClientIdForWorkItem,
@@ -53,7 +54,8 @@ export {
   fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,
   fetchScheduleEntryForWorkItem,
-  fetchDefaultClientTaxRateInfoForWorkItem // Added export
+  fetchDefaultClientTaxRateInfoForWorkItem, // Added export
+  resolveDefaultTicketTimeEntryService
 };
 
 // Note: Types and schemas previously re-exported from here must now be imported

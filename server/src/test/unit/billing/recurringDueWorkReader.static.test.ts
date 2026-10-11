@@ -17,7 +17,7 @@ describe('recurring due-work reader source', () => {
     expect(billingAndTaxSource).not.toContain('mergeRecurringDueWorkRows');
     expect(billingAndTaxSource).not.toContain('buildClientScheduleDueWorkRow');
     expect(billingAndTaxSource).toContain(
-      'const visibleInvoiceCandidates = warnedInvoiceCandidates.slice(offset, offset + pageSize)',
+      'const visibleInvoiceCandidates = filteredInvoiceCandidates.slice(offset, offset + pageSize)',
     );
     expect(billingAndTaxSource).toContain('invoiceCandidates: canonicalizedInvoiceCandidates,');
     expect(billingAndTaxSource).toMatch(

@@ -305,6 +305,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     },
     {
       title: t('integrations.rmm.ninjaone.columns.status', { defaultValue: 'Status' }),
+      id: 'mapping_status',
       dataIndex: 'client_id',
       sortable: false,
       width: '4rem',

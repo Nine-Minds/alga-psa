@@ -13,7 +13,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   uuidSchema,
@@ -27,39 +27,17 @@ import {
   type TenantTxContext,
 } from './shared';
 
-const WORKFLOW_PICKER_HINTS = {
-  project: 'Search projects',
-  'project-phase': 'Search project phases',
-  'project-task': 'Search project tasks',
-  'project-task-status': 'Search project task statuses',
-  ticket: 'Search tickets',
-  user: 'Search users',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 
 const projectSummarySchema = z.object({
-  project_id: uuidSchema,
-  project_name: z.string(),
-  description: z.string().nullable(),
-  client_id: nullableUuidSchema,
-  status: z.string().nullable(),
-  assigned_to: nullableUuidSchema,
-  wbs_code: z.string().nullable(),
-  updated_at: isoDateTimeSchema.optional(),
+  project_id: withWorkflowPicker(uuidSchema, 'Project', 'project'),
+  project_name: z.string().describe('Project name'),
+  description: z.string().nullable().describe('Description'),
+  client_id: withWorkflowPicker(nullableUuidSchema, 'Client', 'client'),
+  status: z.string().nullable().describe('Status'),
+  assigned_to: withWorkflowPicker(nullableUuidSchema, 'Project manager', 'user'),
+  wbs_code: z.string().nullable().describe('WBS code'),
+  updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
 const phaseSummarySchema = z.object({
@@ -75,12 +53,12 @@ const phaseSummarySchema = z.object({
 });
 
 const taskSummarySchema = z.object({
-  task_id: uuidSchema,
-  project_id: uuidSchema,
-  phase_id: uuidSchema,
-  task_name: z.string(),
-  description: z.string().nullable(),
-  assigned_to: nullableUuidSchema,
+  task_id: withWorkflowPicker(uuidSchema, 'Task', 'project-task'),
+  project_id: withWorkflowPicker(uuidSchema, 'Project', 'project'),
+  phase_id: withWorkflowPicker(uuidSchema, 'Phase', 'project-phase'),
+  task_name: z.string().describe('Task name'),
+  description: z.string().nullable().describe('Description'),
+  assigned_to: withWorkflowPicker(nullableUuidSchema, 'Assigned technician', 'user'),
   status_id: nullableUuidSchema,
   project_status_mapping_id: nullableUuidSchema,
   wbs_code: z.string().nullable(),
@@ -1240,7 +1218,8 @@ export function registerProjectActions(): void {
         type: z.enum(['user', 'team']).describe('Assignee type'),
         id: uuidSchema.describe('User id or team id')
       }).optional().describe('Optional assignee'),
-      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'ticket')
+      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'ticket'),
+      bill_under_project: z.boolean().optional().describe("Bill the linked ticket's time as project time (default true)")
     }),
     outputSchema: z.object({
       task_id: uuidSchema,
@@ -1348,6 +1327,9 @@ export function registerProjectActions(): void {
           phase_id: phaseId,
           task_id: taskId,
           ticket_id: input.link_ticket_id,
+          // Consistent with every other link path: project work unless the
+          // automation says otherwise.
+          bill_under_project: input.bill_under_project ?? true,
           created_at: nowIso
         }).catch(() => undefined);
 
@@ -1386,7 +1368,7 @@ export function registerProjectActions(): void {
       project_id: withWorkflowPicker(uuidSchema.optional(), 'Project id', 'project'),
       name: z.string().optional().describe('Exact project name (case-insensitive)'),
       external_ref: z.string().optional().describe('Optional external reference when supported by project properties'),
-      on_not_found: z.enum(['return_null', 'error']).default('return_null'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
     }).refine((value) => Boolean(value.project_id || value.name || value.external_ref), {
       message: 'project_id, name, or external_ref required',
     }),
@@ -1566,7 +1548,7 @@ export function registerProjectActions(): void {
       phase_id: withWorkflowPicker(uuidSchema.optional(), 'Project phase id', 'project-phase', ['project_id']),
       project_id: withWorkflowPicker(uuidSchema.optional(), 'Project id for phase lookup', 'project'),
       name: z.string().optional().describe('Exact phase name (case-insensitive; requires project_id)'),
-      on_not_found: z.enum(['return_null', 'error']).default('return_null'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
     }).superRefine((value, refinementCtx) => {
       if (!value.phase_id && !value.name) {
         refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'phase_id or name required' });
@@ -1740,7 +1722,7 @@ export function registerProjectActions(): void {
       project_id: withWorkflowPicker(uuidSchema.optional(), 'Project id', 'project'),
       phase_id: withWorkflowPicker(uuidSchema.optional(), 'Project phase id', 'project-phase', ['project_id']),
       name: z.string().optional().describe('Exact task name (case-insensitive)'),
-      on_not_found: z.enum(['return_null', 'error']).default('return_null'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
     }).superRefine((value, refinementCtx) => {
       if (!value.task_id && !value.name) {
         refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'task_id or name required' });

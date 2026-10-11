@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Mappatura in blocco",
+        "columns": {
+          "ignore": "Ignora",
+          "select": "Salva",
+          "status": "Stato"
+        },
+        "exit": "Torna alle mappature",
+        "filter": {
+          "all": "Tutti",
+          "mapped": "Mappato",
+          "unmapped": "Non mappato"
+        },
+        "ignoreAll": "Ignora tutto",
+        "noRows": "Nessuna riga corrisponde al filtro corrente.",
+        "possibleMatch": "Possibile corrispondenza",
+        "rowIgnoreAria": "Ignora {{name}}",
+        "rowSelectAria": "Includi {{name}} nel salvataggio",
+        "saveAll": "Salva tutto",
+        "searchPlaceholder": "Cerca servizi e destinazioni...",
+        "selectAll": "Seleziona tutto",
+        "status": {
+          "ignored": "Ignorato",
+          "mapped": "Mappato",
+          "noResult": "Nessun risultato restituito per questa riga.",
+          "pending": "In sospeso",
+          "saved": "Salvato"
+        },
+        "suggested": "Suggerito",
+        "toSave": "{{total}} da salvare"
+      },
       "dialog": {
         "cancel": "Annulla",
         "enterPlaceholder": "Inserisci {{field}}...",
@@ -90,7 +121,8 @@
           "clients": "Clienti",
           "itemsServices": "Articoli / Servizi",
           "taxCodes": "Codici fiscali",
-          "paymentTerms": "Termini di pagamento"
+          "paymentTerms": "Termini di pagamento",
+          "discounts": "Sconti"
         }
       }
     },
@@ -111,6 +143,7 @@
           "failed": "Esportazione non riuscita",
           "missingItemMapping": "Mappatura articolo mancante",
           "missingItemMappingId": "Mappatura articolo mancante ({{serviceId}})",
+          "missingDiscountMapping": "Mappatura degli sconti mancante (scheda Sconti)",
           "missingItemMappingNamed": "Mappatura articolo mancante: {{serviceName}}"
         },
         "fields": {
@@ -469,7 +502,8 @@
           "previousCount": "Precedente",
           "syncFinished": "Sincronizzazione completata per {{client}}.",
           "syncing": "Sincronizzazione…",
-          "syncTrackingFailed": "La sincronizzazione è stata avviata, ma questa pagina non ha potuto seguirla fino al completamento. Aggiorna per vedere il risultato più recente."
+          "syncTrackingFailed": "La sincronizzazione è stata avviata, ma questa pagina non ha potuto seguirla fino al completamento. Aggiorna per vedere il risultato più recente.",
+          "syncWorkerUnavailable": "La sincronizzazione è in coda, ma al momento nulla sta elaborando la coda in background. Verrà eseguita quando il worker tornerà attivo; se resta bloccata, riavvia il servizio temporal-worker."
         },
         "connection": {
           "changeAction": "Modifica connessione",

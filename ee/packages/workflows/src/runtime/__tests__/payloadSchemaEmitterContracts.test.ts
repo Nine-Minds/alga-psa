@@ -235,7 +235,7 @@ describe('workflow event payload schemas: product emitter contracts', () => {
       name: 'TicketModelEventPublisher TICKET_CREATED',
       payloadSchemaRef: 'payload.TicketCreated.v1',
       payload: {
-        // packages/tickets/src/lib/adapters/TicketModelEventPublisher.ts:80
+        // shared/services/tickets/ticketModelEventPublisher.ts:80
         tenantId,
         occurredAt,
         actorType: 'USER',
@@ -248,7 +248,7 @@ describe('workflow event payload schemas: product emitter contracts', () => {
       name: 'TicketModelEventPublisher TICKET_CLOSED',
       payloadSchemaRef: 'payload.TicketClosed.v1',
       payload: {
-        // packages/tickets/src/lib/adapters/TicketModelEventPublisher.ts:80
+        // shared/services/tickets/ticketModelEventPublisher.ts:80
         tenantId,
         occurredAt,
         actorType: 'USER',

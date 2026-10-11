@@ -93,6 +93,30 @@ export function registerPublicResourcesV1Routes(
     edition: 'both',
   });
 
+  // Countries — global ISO reference data behind the client/location country pickers.
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/countries',
+    summary: 'List countries',
+    description: 'Lists the active ISO 3166-1 countries (code, name, dialing code) available for client locations. Global reference data, identical for every tenant; any authenticated caller may read it.',
+    tags: ['Countries'], security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: {
+        description: 'Active countries sorted by name.',
+        schema: registry.registerSchema('CountriesEnvelope', zOpenApi.object({
+          data: zOpenApi.array(zOpenApi.object({
+            code: zOpenApi.string().length(2).describe('ISO 3166-1 alpha-2'),
+            name: zOpenApi.string(),
+            phone_code: zOpenApi.string().nullable().optional().describe('International dialing prefix, e.g. +1'),
+          })),
+        })),
+      },
+      401: { description: 'API key missing/invalid.', schema: err },
+      500: { description: 'Unexpected error.', schema: err },
+    },
+    extensions: { 'x-tenant-scoped': false },
+    edition: 'both',
+  });
+
   // Priorities.
   registry.registerRoute({
     method: 'get', path: '/api/v1/priorities',

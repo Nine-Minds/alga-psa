@@ -213,4 +213,15 @@ describe("timeEntries api", () => {
       is_billable: undefined,
     });
   });
+
+  it("filters the time entry list by work item", async () => {
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, data: { data: [], pagination: {} } }) } as unknown as ApiClient;
+
+    await listTimeEntries(client, { apiKey: "k", page: 1, limit: 50, work_item_id: "task-1", work_item_type: "project_task" });
+
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      path: "/api/v1/time-entries",
+      query: expect.objectContaining({ work_item_id: "task-1", work_item_type: "project_task" }),
+    }));
+  });
 });

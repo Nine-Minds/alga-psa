@@ -922,12 +922,19 @@ merge job (`server-unit` and `server-unit-complete` in
 the complete inventory, takes the shard's modulo partition with
 `scripts/lib/test-sharding.mjs`, proves `server/vitest.server-unit-shard.config.ts`
 selects exactly that partition, collects its test registrations, and runs it with
-`poolOptions.forks.singleFork=false` and `fileParallelism=true`. Each file still
-gets a fresh process, so worker state never carries across files; the processes
-run in parallel because recycling them serially spent about forty minutes on
-spawn gaps for ten minutes of assertions. The real-Vitest check in
-`scripts/tests/vitest-worker-isolation.test.mjs` verifies the override with worker
-PIDs. Inspect `module-queued` without `module-started` in a shard's progress
+`fileParallelism=true` and a fresh fork per file. Each file gets its own process,
+so worker state never carries across files; the processes run in parallel because
+recycling them serially spent about forty minutes on spawn gaps for ten minutes
+of assertions.
+
+Ask for that recycling with **`VITEST_RECYCLE_FORKS=1`, not
+`--poolOptions.forks.singleFork=false`**. Vitest forwards only a whitelist of CLI
+options into project configs and `poolOptions` is not on it, so ever since
+`server/vitest.config.ts` grew its jsdom/node projects the CLI form is accepted
+and ignored — the run silently serializes into one fork. The config reads the
+environment variable instead, which every project inherits. The real-Vitest check
+in `scripts/tests/vitest-worker-isolation.test.mjs` pins both halves with worker
+PIDs: the CLI form reuses one process under projects, the env switch recycles. Inspect `module-queued` without `module-started` in a shard's progress
 journal as an import/setup stall, not a completed test or an assertion timeout.
 
 Each shard uploads `server-unit-shard-<n>` with its collection manifests, JSON

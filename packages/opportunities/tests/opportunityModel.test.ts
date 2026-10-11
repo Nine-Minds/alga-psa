@@ -132,6 +132,65 @@ describe('OpportunityModel.list', () => {
     });
   });
 
+  // The pg driver returns a Date for a `date` column. Reading it as an instant
+  // shifted the day across a timezone and handed callers a value their own PUT
+  // would reject, so both read paths emit the calendar date.
+  it('emits expected_close_date as a calendar date for a driver Date', async () => {
+    const { query } = makeQuery([{
+      opportunity_id: 'opportunity-1',
+      opportunity_number: 'OPP-0002',
+      title: 'Renewal',
+      client_id: 'client-1',
+      owner_id: 'user-1',
+      status: 'open',
+      stage: 'identified',
+      confidence: 'medium',
+      opportunity_type: 'renewal',
+      currency_code: 'USD',
+      // Local midnight, the shape the driver hands back for a `date` column.
+      expected_close_date: new Date(2026, 7, 31),
+      next_action_due: '2026-07-15T14:00:00.000Z',
+      _total_count: '1',
+    }]);
+    dbMocks.tenantDb.mockReturnValue({ table: vi.fn(() => query), tenantJoin: vi.fn() });
+    const conn = { raw: vi.fn((sql: string, bindings?: unknown[]) => ({ sql, bindings })) } as any;
+
+    const result = await OpportunityModel.list(conn, 'tenant-1', {}, 14);
+
+    expect(result.data[0].expected_close_date).toBe('2026-08-31');
+    // next_action_due is a real instant and stays one.
+    expect(result.data[0].next_action_due).toBe('2026-07-15T14:00:00.000Z');
+  });
+
+  it('truncates a timestamp-shaped expected_close_date on getById', async () => {
+    const detailQuery: any = {
+      where: vi.fn(),
+      first: vi.fn().mockResolvedValue({
+        opportunity_id: 'opportunity-1',
+        expected_close_date: '2026-08-31T00:00:00.000Z',
+        next_action_due: '2026-07-15T14:00:00.000Z',
+      }),
+    };
+    detailQuery.where.mockReturnValue(detailQuery);
+    dbMocks.tenantDb.mockReturnValue({ table: vi.fn(() => detailQuery) });
+
+    const result = await OpportunityModel.getById({} as any, 'tenant-1', 'opportunity-1');
+
+    expect(result?.expected_close_date).toBe('2026-08-31');
+    expect(result?.next_action_due).toBe('2026-07-15T14:00:00.000Z');
+  });
+
+  it('preserves an explicitly null expected_close_date', async () => {
+    const detailQuery: any = {
+      where: vi.fn(),
+      first: vi.fn().mockResolvedValue({ opportunity_id: 'opportunity-1', expected_close_date: null }),
+    };
+    detailQuery.where.mockReturnValue(detailQuery);
+    dbMocks.tenantDb.mockReturnValue({ table: vi.fn(() => detailQuery) });
+
+    expect((await OpportunityModel.getById({} as any, 'tenant-1', 'opportunity-1'))?.expected_close_date).toBeNull();
+  });
+
   it('falls back to the whitelisted default sort for an untrusted runtime value', async () => {
     const { query } = makeQuery([]);
     dbMocks.tenantDb.mockReturnValue({ table: vi.fn(() => query), tenantJoin: vi.fn() });

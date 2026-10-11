@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +13,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
+import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
 import { SiKeycloak } from "react-icons/si";
@@ -100,6 +101,22 @@ interface ConnectSsoClientProps {
   linkedAccounts: LinkedAccount[];
   providerOptions: ProviderOption[];
   linkStatus?: "linked" | "error";
+  linkErrorCode?: string;
+  linkErrorProviderEmail?: string;
+}
+
+// Codes mirror OAuthMappingFailureCode in the SSO mapper; anything else falls
+// back to the generic message.
+const LINK_ERROR_CODES = [
+  "no_matching_user",
+  "missing_email",
+  "inactive_user",
+  "user_type_mismatch",
+  "tenant_mismatch",
+] as const;
+
+function isKnownLinkErrorCode(code: string | undefined): code is (typeof LINK_ERROR_CODES)[number] {
+  return typeof code === "string" && (LINK_ERROR_CODES as readonly string[]).includes(code);
 }
 
 export default function ConnectSsoClient({
@@ -108,6 +125,8 @@ export default function ConnectSsoClient({
   linkedAccounts,
   providerOptions,
   linkStatus,
+  linkErrorCode,
+  linkErrorProviderEmail,
 }: ConnectSsoClientProps) {
   const { t } = useTranslation("msp/profile");
   const { t: tCommon } = useTranslation("common");
@@ -124,6 +143,12 @@ export default function ConnectSsoClient({
     linkStatus === "linked" ? t("connectSso.verify.linkedSuccess") : null
   );
   const [isPending, startTransition] = useTransition();
+  // Each signIn() call mints its own Auth.js state/PKCE cookies and then
+  // navigates, so a second one started from the same click overwrites the first
+  // flow's cookies and the failure it was supposed to report is lost. A ref,
+  // not state: both calls run in one event dispatch and would read a stale
+  // value.
+  const ssoStartedRef = useRef(false);
 
   useEffect(() => {
     if (linkStatus === "linked") {
@@ -140,6 +165,20 @@ export default function ConnectSsoClient({
     () => providerOptions.some((provider) => provider.configured),
     [providerOptions]
   );
+
+  // The provider never matched an AlgaPSA user, so the message has to name both
+  // emails: the one the provider presented and the one this account signs in with.
+  const linkErrorMessage = useMemo(() => {
+    if (linkStatus !== "error") {
+      return null;
+    }
+
+    const providerEmail =
+      linkErrorProviderEmail ?? t("connectSso.linkError.unknownProviderEmail");
+    const code = isKnownLinkErrorCode(linkErrorCode) ? linkErrorCode : "generic";
+
+    return t(`connectSso.linkError.${code}`, { providerEmail, accountEmail: email });
+  }, [linkStatus, linkErrorCode, linkErrorProviderEmail, email, t]);
 
   const handleAuthorize = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -172,10 +211,16 @@ export default function ConnectSsoClient({
   };
 
   const handleProviderClick = async (providerId: string) => {
+    if (ssoStartedRef.current) {
+      return;
+    }
+
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(t("connectSso.verify.verifyBeforeProvider"));
       return;
     }
+
+    ssoStartedRef.current = true;
 
     const genericStartFailureMessage = tCommon("auth.sso.startFailed", {
       defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
@@ -192,6 +237,7 @@ export default function ConnectSsoClient({
 
     if (!resolution.success) {
       setFormError(resolution.error ?? genericStartFailureMessage);
+      ssoStartedRef.current = false;
       return;
     }
 
@@ -212,19 +258,25 @@ export default function ConnectSsoClient({
     const base64 = btoa(ascii);
     const encodedState = base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 
-    await signIn(
-      providerId,
-      {
-        callbackUrl: "/msp/profile?tab=Single%20Sign-On&linked=1",
-      },
-      {
-        state: encodedState,
-        prompt: "login",
-      }
-    );
+    try {
+      await signIn(
+        providerId,
+        {
+          callbackUrl: `${SSO_PROFILE_TAB_URL}&linked=1`,
+        },
+        {
+          state: encodedState,
+          prompt: "login",
+        }
+      );
+    } catch {
+      setFormError(genericStartFailureMessage);
+      ssoStartedRef.current = false;
+    }
   };
 
   const handleReset = () => {
+    ssoStartedRef.current = false;
     setPassword("");
     setTwoFactorCode("");
     setReauthNonce(null);
@@ -238,6 +290,15 @@ export default function ConnectSsoClient({
 
   return (
     <div className="space-y-6">
+      {linkErrorMessage && (
+        <Alert variant="destructive" id="sso-link-error">
+          <AlertDescription>
+            <span className="font-medium">{t("connectSso.linkError.title")}</span>{" "}
+            {linkErrorMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -394,7 +455,10 @@ export default function ConnectSsoClient({
                       )}
                       variant={branding.buttonVariant ?? "secondary"}
                       disabled={disabled}
-                      onClick={() => {
+                      onClick={(event) => {
+                        // The whole card is a button too; without this the click
+                        // bubbles and starts a second OAuth flow.
+                        event.stopPropagation();
                         void handleProviderClick(provider.id);
                       }}
                     >

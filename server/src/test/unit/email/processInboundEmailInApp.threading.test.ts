@@ -173,8 +173,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue(firstResult),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
           };
           return builder;
         }
@@ -215,7 +218,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    expect(commentsQueryCount).toBe(2);
+    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup.
+    expect(commentsQueryCount).toBe(3);
   });
 
   it('T034: In-Reply-To resolves outbound message id to comment thread', async () => {
@@ -268,8 +272,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-789' }),
+            // The one-off Cc/Bcc lookup awaits the builder for a row list.
+            then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
           };
           return builder;
         }
@@ -314,7 +321,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    expect(commentsQueryCount).toBe(1);
+    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup.
+    expect(commentsQueryCount).toBe(2);
   });
 
   it('quarantines a forged In-Reply-To from an unrelated sender before comment, artifacts, or watcher effects', async () => {

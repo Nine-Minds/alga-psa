@@ -5,7 +5,8 @@ import { expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   facade: null as any,
   tenant: '', user: '', provider: '',
-  sync: vi.fn(async () => ({ success: true })),
+  sync: vi.fn(async (_entryId: string, _providerId: string) => ({ success: true, externalEventId: '' })),
+  mappings: [] as Array<{ tenant: string; entryId: string; providerId: string; externalEventId: string }>,
   upsert: vi.fn(async () => undefined),
   load: vi.fn(async (_db: unknown, tenant: string, id: string) => ({ tenant, objectId: id })),
 }));
@@ -37,6 +38,12 @@ vi.mock('@alga-psa/search/upsert', () => ({ upsertSearchDoc: state.upsert, delet
 
 it('delivers one schedule event to actual calendar and search registrations even when bundled handler names collide', async () => {
   state.tenant = randomUUID(); state.user = randomUUID(); state.provider = randomUUID();
+  state.mappings.length = 0;
+  state.sync.mockImplementation(async (entryId, providerId) => {
+    const externalEventId = `external-${entryId}`;
+    state.mappings.push({ tenant: state.tenant, entryId, providerId, externalEventId });
+    return { success: true, externalEventId };
+  });
   const entryId = randomUUID();
   const prefix = `subscriber-identity:${state.tenant}:`;
   const channel = `subscriber-${state.tenant}`;
@@ -70,12 +77,16 @@ it('delivers one schedule event to actual calendar and search registrations even
     } }, { channel, strict: true });
     await expect.poll(() => [state.sync.mock.calls.length, state.upsert.mock.calls.length], { timeout: 5000 }).toEqual([1, 1]);
     expect(state.sync).toHaveBeenCalledWith(entryId, state.provider);
+    // The automatic EventBus -> calendar subscriber path must reach the sync
+    // operation that creates the provider mapping; a direct service call would
+    // not catch a publisher/subscriber route mismatch.
+    expect(state.mappings).toEqual([{ tenant: state.tenant, entryId, providerId: state.provider, externalEventId: `external-${entryId}` }]);
     expect(state.upsert).toHaveBeenCalledWith({}, { tenant: state.tenant, objectId: entryId });
   } finally {
     await bus.close();
     if (control.isOpen) {
       const keys = await control.keys(`${prefix}*`);
-      keys.push(`processed_events:${state.tenant}:${channel}`, `processed_event_handlers:${state.tenant}:${channel}`);
+      keys.push(`${prefix}processed_events:${state.tenant}:${channel}`, `${prefix}processed_event_handlers:${state.tenant}:${channel}`);
       await control.del(keys);
       await control.quit();
     }

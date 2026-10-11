@@ -278,6 +278,9 @@
       "detail": {
         "title": "Ticket n. {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Dettagli del ticket"
+      },
+      "recurring": {
+        "title": "Ticket ricorrenti"
       }
     },
     "timeEntry": {

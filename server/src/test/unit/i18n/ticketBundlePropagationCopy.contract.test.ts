@@ -19,7 +19,7 @@ function readLocale(locale: string): Record<string, any> {
 
 describe('ticket bundle status propagation copy contract', () => {
   it('covers every locale the registry ships, not a hand-listed subset', () => {
-    expect(translatedLocales).toEqual(['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt']);
+    expect(translatedLocales).toEqual(['de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv']);
   });
 
   it('states the propagation behaviour in the bundle help and master panel for every locale', () => {

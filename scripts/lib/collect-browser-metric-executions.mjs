@@ -1,4 +1,5 @@
 import { resolveBrowserArtifactRevisions } from './browser-artifact-revision.mjs';
+import { parseRunUrl } from './reconcile-browser-metric-executions.mjs';
 import { BROWSER_HEADER } from '../record-browser-metrics.mjs';
 
 // Only locally authored codes and numeric measurements may reach CI logs.
@@ -16,7 +17,7 @@ export class BrowserMetricCollectionError extends Error {
 // Read-only remote evidence collection. Test identities come from GitHub, never
 // from the scorecard that is being reconciled against those identities.
 export async function collectBrowserMetricExecutions({ repository, runId, revision, sheetId,
-  githubToken, sheetsToken, revisionMode = 'operator', request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 10_000,
+  githubToken, sheetsToken, revisionMode = 'operator', request = fetch, timeoutMs = 60_000, maxJobPages = 10, maxSheetRows = 200_000,
 } = {}) {
   let phase = 'configuration';
   const require = (condition, code, details) => {
@@ -32,7 +33,7 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     require(typeof sheetsToken === 'string' && sheetsToken.length > 0, 'sheets-token-missing');
     require(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 120_000, 'invalid-timeout');
     require(Number.isSafeInteger(maxJobPages) && maxJobPages > 0 && maxJobPages <= 20, 'invalid-job-page-limit');
-    require(Number.isSafeInteger(maxSheetRows) && maxSheetRows > 0 && maxSheetRows <= 50_000, 'invalid-sheet-row-limit');
+    require(Number.isSafeInteger(maxSheetRows) && maxSheetRows > 0 && maxSheetRows <= 1_000_000, 'invalid-sheet-row-limit');
     repository = repository.toLowerCase();
     const deadline = Date.now() + timeoutMs;
     const get = async (url, token) => {
@@ -60,6 +61,7 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
       require(String(run?.id) === String(runId) && typeof run.repository?.full_name === 'string' && run.repository.full_name.toLowerCase() === repository, 'run-identity-mismatch');
       require(run.path === '.github/workflows/production-regression.yml', 'unexpected-workflow');
       require(Number.isSafeInteger(run.run_attempt) && run.run_attempt > 0 && /^[a-f0-9]{40}$/.test(run.head_sha ?? ''), 'invalid-run-attempt-or-head');
+      require(run.created_at === undefined || (typeof run.created_at === 'string' && !Number.isNaN(Date.parse(run.created_at))), 'invalid-run-created-at');
       require(['queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'].includes(run.status), 'invalid-run-status');
       require(typeof run.event === 'string' && run.event.length > 0, 'invalid-run-event');
     };
@@ -137,40 +139,76 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
     require(tabs.length <= 1, 'duplicate-browser-tab');
     const missingTab = tabs.length === 0;
     const grid = missingTab ? { rowCount: 0, columnCount: 25 } : tabs[0].properties.gridProperties;
-    // Refuse a larger grid instead of silently overlooking rows beyond a cap.
+    // The cap now bounds only the index scan below, and sits far above any tab
+    // the retention job leaves behind. Hitting it means retention stopped
+    // running; refuse loudly rather than overlook rows beyond a cap.
     const gridDetails = { rowCount: grid?.rowCount, columnCount: grid?.columnCount, maxSheetRows };
     require(Number.isSafeInteger(grid?.rowCount) && (missingTab || grid.rowCount > 0), 'invalid-sheet-row-count', gridDetails);
     require(grid.rowCount <= maxSheetRows, 'sheet-row-limit-exceeded', gridDetails);
     require(Number.isSafeInteger(grid.columnCount) && grid.columnCount >= 18, 'invalid-sheet-column-count', gridDetails);
-    phase = 'sheet-values';
-    const allRows = missingTab ? [[...BROWSER_HEADER]] : [];
-    const lastColumn = String.fromCharCode(64 + Math.min(25, grid.columnCount));
-    // Each request is at most 2,000 rows x 25 columns (50,000 cells).
-    // Sheets trims trailing empty rows per range; restore their absolute offsets
-    // before joining chunks so internal blank rows cannot shift later evidence.
-    for (let start = 1; start <= grid.rowCount; start += 2000) {
-      const end = Math.min(start + 1999, grid.rowCount);
-      const range = encodeURIComponent(`'browser_readiness'!A${start}:${lastColumn}${end}`);
+    phase = 'sheet-index';
+    // Reconciliation only ever reads rows whose run_url names this run, so scan
+    // that one column (G) for the whole grid and fetch nothing else. One column
+    // stays cheap far past any retained history, and the scan is exact: unlike a
+    // trailing window it cannot miss a days-old run reconciled by hand. Row 1
+    // holds the header, whose run_url heading cannot parse as a run URL.
+    const matched = [];
+    for (let start = 1; !missingTab && start <= grid.rowCount; start += 20_000) {
+      const end = Math.min(start + 19_999, grid.rowCount);
+      const range = encodeURIComponent(`'browser_readiness'!G${start}:G${end}`);
       const values = await get(`${sheetUrl}/values/${range}?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE`, sheetsToken);
-      const rows = values.values ?? [];
-      require(values.majorDimension === 'ROWS' && Array.isArray(rows) && rows.length <= end - start + 1, 'invalid-sheet-range');
-      require(rows.every(row => Array.isArray(row) && row.length <= 25 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell))), 'invalid-sheet-cells');
-      allRows.push(...rows);
-      for (let missing = rows.length; missing < end - start + 1; missing++) allRows.push([]);
+      const column = values.values ?? [];
+      require(values.majorDimension === 'ROWS' && Array.isArray(column) && column.length <= end - start + 1, 'invalid-sheet-range');
+      require(column.every(cell => Array.isArray(cell) && cell.length <= 1
+        && cell.every(value => ['string', 'number', 'boolean'].includes(typeof value))), 'invalid-sheet-cells');
+      column.forEach((cell, offset) => {
+        const url = parseRunUrl(cell[0]);
+        if (url?.repository === repository && url.runId === String(runId)) matched.push(start + offset);
+      });
     }
-    while (allRows.length && allRows.at(-1).length === 0) allRows.pop();
-    const [header, ...rows] = allRows;
+    phase = 'sheet-values';
+    const lastColumn = String.fromCharCode(64 + Math.min(25, grid.columnCount));
+    // Row 1 carries the header; adjacent matched rows collapse into one range so
+    // a run's own block costs a single range rather than one per row.
+    const blocks = [];
+    for (const number of missingTab ? [] : [1, ...matched]) {
+      const last = blocks.at(-1);
+      if (last && number <= last[1] + 1) last[1] = Math.max(last[1], number);
+      else blocks.push([number, number]);
+    }
+    // Sheets trims trailing empty rows per range; restore their absolute offsets
+    // so blank cells cannot shift one row's evidence onto another.
+    const byNumber = new Map();
+    for (let index = 0; index < blocks.length; index += 50) {
+      const batch = blocks.slice(index, index + 50);
+      const ranges = batch.map(([first, final]) => `ranges=${encodeURIComponent(`'browser_readiness'!A${first}:${lastColumn}${final}`)}`).join('&');
+      const values = await get(`${sheetUrl}/values:batchGet?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE&${ranges}`, sheetsToken);
+      require(Array.isArray(values.valueRanges) && values.valueRanges.length === batch.length, 'invalid-sheet-range');
+      batch.forEach(([first, final], position) => {
+        const block = values.valueRanges[position], rows = block?.values ?? [];
+        require(block?.majorDimension === 'ROWS' && Array.isArray(rows) && rows.length <= final - first + 1, 'invalid-sheet-range');
+        require(rows.every(row => Array.isArray(row) && row.length <= 25 && row.every(cell => ['string', 'number', 'boolean'].includes(typeof cell))), 'invalid-sheet-cells');
+        rows.forEach((row, offset) => byNumber.set(first + offset, row));
+        for (let number = first + rows.length; number <= final; number++) byNumber.set(number, []);
+      });
+    }
+    const header = missingTab ? [...BROWSER_HEADER] : byNumber.get(1) ?? [];
+    const rows = matched.map(number => byNumber.get(number) ?? []);
     require(Array.isArray(header) && [18, 20, 25].includes(header.length) && header.every(cell => typeof cell === 'string'), 'invalid-sheet-header');
     phase = 'run-stability';
     const after = await get(runUrl, githubToken);
     validateRun(after);
-    for (const key of ['id', 'run_attempt', 'status', 'conclusion', 'head_sha', 'event', 'path']) require(after[key] === run[key], 'run-changed-during-collection');
+    for (const key of ['id', 'run_attempt', 'status', 'conclusion', 'head_sha', 'event', 'path', 'created_at']) require(after[key] === run[key], 'run-changed-during-collection');
     return { schemaVersion: 1, expectedExecutions, exportedRows: { header, rows },
+      // Reconciliation compares this against the retention window, so a run
+      // whose rows are past retention is not reported as a missing export.
+      ...(typeof run.created_at === 'string' ? { runCreatedAt: run.created_at } : {}),
       collectionMetadata: { testedRevisionSource: revisionMode === 'artifact' ? 'candidate-artifact-or-unavailable' : 'operator-supplied',
         revisionValidation: revisionMode === 'artifact' ? 'per-edition-artifact-evidence'
           : run.event === 'pull_request' ? 'merge-run-head-parent-verified' : 'run-head-verified',
         checkoutIndependentlyVerified: false,
-        sheetObservation: missingTab ? 'missing-tab' : header.length < 25 ? 'legacy-header' : 'current-header' } };
+        sheetObservation: missingTab ? 'missing-tab' : header.length < 25 ? 'legacy-header' : 'current-header',
+        sheetReadStrategy: 'index-filtered', indexRowCount: missingTab ? 0 : grid.rowCount, matchedRowCount: matched.length } };
   } catch (error) {
     if (error instanceof BrowserMetricCollectionError) throw error;
     throw new BrowserMetricCollectionError(phase, 'unexpected-error');

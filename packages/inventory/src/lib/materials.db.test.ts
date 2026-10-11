@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
-import { addMaterial, deleteMaterial, isProjectMaterialEligible, MaterialValidationError } from './materials';
+import { addMaterial, deleteMaterial, isProjectMaterialEligible, MaterialValidationError, queryCatalogPickerItems } from './materials';
 import { queryProductAvailability } from './availability';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -174,6 +174,38 @@ describe('F048 canonical materials service (T005)', () => {
       await expect(
         deleteMaterial(trx as unknown as Knex, TENANT, 'ticket', row.ticket_material_id, null),
       ).rejects.toThrow(/billed material/);
+    });
+  });
+});
+
+describe('catalog picker Label search', () => {
+  it('matches a product by its Label (product_category) and returns the field', async () => {
+    await inTx(async (trx) => {
+      const label = `GRP2614-${randomUUID().slice(0, 8)}`;
+      const typeRow = await trx('service_catalog').where({ tenant: TENANT }).whereNotNull('custom_service_type_id').first('custom_service_type_id');
+      const [svc] = await trx('service_catalog')
+        .insert({
+          tenant: TENANT,
+          service_name: `ZZ Label ${randomUUID().slice(0, 8)}`,
+          sku: `zz-label-${randomUUID().slice(0, 8)}`,
+          product_category: `Grandstream ${label}`,
+          item_kind: 'product',
+          billing_method: 'per_unit',
+          default_rate: 1000,
+          is_active: true,
+          custom_service_type_id: typeRow.custom_service_type_id,
+        })
+        .returning('service_id');
+
+      const result = await queryCatalogPickerItems(trx, TENANT, {
+        search: label,
+        item_kinds: ['product'],
+        is_active: true,
+      });
+
+      const found = result.items.find((item) => item.service_id === svc.service_id);
+      expect(found).toBeTruthy();
+      expect(found?.product_category).toBe(`Grandstream ${label}`);
     });
   });
 });

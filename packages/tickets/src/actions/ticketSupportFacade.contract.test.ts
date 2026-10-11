@@ -12,9 +12,9 @@ function readRepoFile(relativePath: string): string {
 
 const sources = {
   resourceActions: readRepoFile('packages/tickets/src/actions/ticketResourceActions.ts'),
-  resourceCore: readRepoFile('packages/tickets/src/lib/ticketResourceCore.ts'),
+  resourceCore: readRepoFile('shared/services/tickets/ticketResourceCore.ts'),
   reassignTicketResources: readRepoFile('packages/db/src/lib/reassignTicketResources.ts'),
-  teamAssignmentCore: readRepoFile('packages/tickets/src/lib/teamAssignmentCore.ts'),
+  teamAssignmentCore: readRepoFile('shared/services/tickets/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
   ticketActivityActions: readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts'),
   ticketNumberActions: readRepoFile('packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts'),

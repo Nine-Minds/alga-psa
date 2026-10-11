@@ -5,8 +5,8 @@ import type { DateTriggerSource } from '../types';
 import { buildAssetWarrantyExpiringPayload } from '@alga-psa/workflow-streams';
 
 export const assetWarrantyEndSource: DateTriggerSource = {
-  id: 'asset.warranty_end', payloadSchemaRef: 'payload.AssetWarrantyEnd.v1',
-  domainEvent: { eventType: 'ASSET_WARRANTY_EXPIRING', windowDays: 30, buildPayload: (occurrence, daysUntil) => buildAssetWarrantyExpiringPayload({ assetId: occurrence.entityId, clientId: occurrence.clientId || undefined, expiresAt: `${occurrence.occursOn}T00:00:00.000Z`, daysUntilExpiry: daysUntil }) },
+  id: 'asset.warranty_end',
+  buildDomainEventPayload: (occurrence, daysUntil) => buildAssetWarrantyExpiringPayload({ assetId: occurrence.entityId, clientId: occurrence.clientId || undefined, expiresAt: `${occurrence.occursOn}T00:00:00.000Z`, daysUntilExpiry: daysUntil }),
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string) {
     const rows = await tenantDb(knex, tenant).table('assets as a')
       .leftJoin('clients as c', function joinClient() { this.on('c.client_id', '=', 'a.client_id').andOn('c.tenant', '=', 'a.tenant'); })

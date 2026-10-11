@@ -211,7 +211,7 @@ describe('Xero OAuth routes', () => {
 
     const { GET } = await import('@/app/api/integrations/xero/connect/route');
 
-    const response = await GET();
+    const response = await GET(new NextRequest('https://example.com/api/integrations/xero/connect'));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
@@ -225,12 +225,32 @@ describe('Xero OAuth routes', () => {
 
     const { GET } = await import('@/app/api/integrations/xero/connect/route');
 
-    const response = await GET();
+    const response = await GET(new NextRequest('https://example.com/api/integrations/xero/connect'));
 
     expect(response.status).toBe(501);
     await expect(response.json()).resolves.toEqual({
       error: 'Xero integration is only available in Enterprise Edition.'
     });
+  });
+
+  it('T025: connect route sends a non-enterprise browser navigation back to settings with an error code', async () => {
+    process.env.EDITION = 'ce';
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+
+    const { GET } = await import('@/app/api/integrations/xero/connect/route');
+
+    const response = await GET(
+      new NextRequest('https://example.com/api/integrations/xero/connect', {
+        headers: { accept: 'text/html,application/xhtml+xml' }
+      })
+    );
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get('location')!);
+    expect(location.pathname).toBe('/msp/settings');
+    expect(location.searchParams.get('xero_status')).toBe('failure');
+    expect(location.searchParams.get('xero_error')).toBe('oauth_failed');
+    expect(getSecretProviderInstanceMock).not.toHaveBeenCalled();
   });
 
   it('connect route requires the accounting connection-admin permission', async () => {

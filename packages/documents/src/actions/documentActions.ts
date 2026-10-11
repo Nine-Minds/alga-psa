@@ -14,6 +14,7 @@ import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
 import { INLINE_IMAGE_FOLDER_PATH } from '../lib/editorImageUpload';
 import { ensureInlineImageFolder } from '../lib/inlineImageFiling';
+import { createDocumentDownloadResponse } from '../lib/documentDownloadResponse';
 
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
@@ -1531,32 +1532,7 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
 
         const { buffer, metadata } = result;
 
-        // Set appropriate headers for file download
-        const headers = new Headers();
-        headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-
-        // Properly encode filename to handle special characters
-        const encodedFilename = encodeURIComponent(authorizedDocument.document_name || 'download');
-        const asciiFilename = authorizedDocument.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
-        headers.set('Content-Disposition', `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`);
-        headers.set('Content-Length', buffer.length.toString());
-
-        // Add cache control headers for images to enable browser caching
-        const isImage = metadata.mime_type?.startsWith('image/');
-        if (isImage) {
-            // Cache images for 7 days, but revalidate after 1 day
-            headers.set('Cache-Control', 'private, no-store');
-            // Add ETag for conditional requests
-            headers.set('ETag', `"${authorizedDocument.file_id}"`);
-        } else {
-            // For non-images, use no-cache to ensure fresh content
-            headers.set('Cache-Control', 'no-cache');
-        }
-
-        return new Response(buffer as any, {
-            status: 200,
-            headers
-        });
+        return createDocumentDownloadResponse(buffer, metadata, authorizedDocument);
     } catch (error) {
         console.error('Error downloading document:', error);
         const expectedError = documentActionErrorFrom(error);

@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const documentIdSchema = uuidSchema('Document ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
 
 export const documentUploadedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,

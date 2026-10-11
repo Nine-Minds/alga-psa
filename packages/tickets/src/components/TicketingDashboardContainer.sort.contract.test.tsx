@@ -159,7 +159,7 @@ describe('ticket list sort contract', () => {
     expect(lastFetchFilters().sortDirection).toBe('asc');
   });
 
-  for (const sortBy of ['assigned_to_name', 'assigned_team_name', 'updated_at'] as const) {
+  for (const sortBy of ['assigned_to_name', 'assigned_team_name', 'updated_at', 'latest_activity_at'] as const) {
     it(`restores ${sortBy} from the address bar`, async () => {
       renderContainer();
 

@@ -7,7 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useSearchParams } from 'next/navigation';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, isActionMessageError, isActionPermissionError, UserFacingError, userFacingErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getPortalBillingProfiles } from '../../actions/client-portal-actions/client-billing-segments';
 import { disableClientPortalAutopay, enrollClientPortalAutopay, getClientPortalAutopayProfile, getPaymentMethods, removePaymentMethod, setDefaultPaymentMethod, startClientPortalCardSetup } from '../../actions';
 
@@ -35,8 +35,9 @@ export default function PaymentMethodsTab() {
     setLoading(true);
     try {
       const [profileResult, methodResult] = await Promise.all([getPortalBillingProfiles(), getPaymentMethods()]);
-      if (actionError(profileResult)) throw new Error(getErrorMessage(profileResult));
-      if (actionError(methodResult)) throw new Error(getErrorMessage(methodResult));
+      // LEVERAGE: pattern throw-action-error — bail out of a try block with the returned action error's user-safe text.
+      if (actionError(profileResult)) throw new UserFacingError(getErrorMessage(profileResult));
+      if (actionError(methodResult)) throw new UserFacingError(getErrorMessage(methodResult));
       const list = profileResult as Profile[];
       setProfiles(list); setMethods(methodResult as any[]);
       const values = await Promise.all(list.map(async p => [p.billingProfileId, await getClientPortalAutopayProfile(p.billingProfileId)] as const));
@@ -48,27 +49,27 @@ export default function PaymentMethodsTab() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { void load().catch(e => setMessage(getErrorMessage(e))); }, [load]);
+  useEffect(() => { void load().catch(e => setMessage(userFacingErrorMessage(e, text('loadError', 'Failed to load billing data')))); }, [load]);
   useEffect(() => {
     const result = search.get('cardSetup');
     if (!result) return;
     setMessage(result === 'success' ? t('account.billing.cardSetup.success', { defaultValue: 'Card saved securely.' }) : t('account.billing.cardSetup.error', { defaultValue: 'We could not save the card. Please try again.' }));
-    void load().catch(e => setMessage(getErrorMessage(e)));
+    void load().catch(e => setMessage(userFacingErrorMessage(e, text('loadError', 'Failed to load billing data'))));
   }, [search, load, t]);
   const addCard = async (profileId: string) => {
     setMessage('');
-    setBusy(true); try { const result = await startClientPortalCardSetup(profileId); if (actionError(result)) throw new Error(getErrorMessage(result)); window.location.assign(result.url); } catch (e) { setMessage(getErrorMessage(e)); } finally { setBusy(false); }
+    setBusy(true); try { const result = await startClientPortalCardSetup(profileId); if (actionError(result)) throw new UserFacingError(getErrorMessage(result)); window.location.assign(result.url); } catch (e) { setMessage(userFacingErrorMessage(e, text('addPaymentError', 'Failed to add payment method'))); } finally { setBusy(false); }
   };
   const updateMethod = async (methodId: string, action: () => Promise<unknown>) => {
     setBusy(true);
     setMessage('');
     try {
       const result = await action();
-      if (actionError(result)) throw new Error(getErrorMessage(result));
-      if (result && typeof result === 'object' && 'success' in result && result.success === false) throw new Error(text('methodUpdateError', 'Could not update this payment method. Please try again.'));
+      if (actionError(result)) throw new UserFacingError(getErrorMessage(result));
+      if (result && typeof result === 'object' && 'success' in result && result.success === false) throw new UserFacingError(text('methodUpdateError', 'Could not update this payment method. Please try again.'));
       await load();
     } catch (error) {
-      setMessage(getErrorMessage(error));
+      setMessage(userFacingErrorMessage(error, text('methodUpdateError', 'Could not update this payment method. Please try again.')));
     } finally {
       setBusy(false);
     }
@@ -78,10 +79,10 @@ export default function PaymentMethodsTab() {
     setMessage('');
     try {
       const result = enabled ? await enrollClientPortalAutopay(profileId, selected[profileId] ?? '', info.consentTextVersion) : await disableClientPortalAutopay(profileId);
-      if (actionError(result)) throw new Error(getErrorMessage(result));
+      if (actionError(result)) throw new UserFacingError(getErrorMessage(result));
       setConsented(s => ({ ...s, [profileId]: false }));
       await load();
-    } catch (e) { setMessage(getErrorMessage(e)); } finally { setBusy(false); }
+    } catch (e) { setMessage(userFacingErrorMessage(e, text('autopay.updateError', 'Could not update auto-pay. Please try again.'))); } finally { setBusy(false); }
   };
   const text = (key: string, fallback: string) => t(`account.billing.${key}`, { defaultValue: fallback });
   if (loading) return <p className="text-sm text-muted-foreground">{text('autopay.loading', 'Loading payment methods…')}</p>;

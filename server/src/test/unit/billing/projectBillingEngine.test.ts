@@ -1,8 +1,19 @@
 import { applyProjectCapAdjustments } from '@alga-psa/billing/lib/billing/domain/projectCapAdjustments';
+import { resolveInvoiceCurrency } from '@alga-psa/billing/lib/billing/compute/projectCapMath';
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
 import { TaxService } from "@alga-psa/billing/services/taxService";
+import {
+  computeTimeBasedCharges,
+  type TimeBasedChargeComputeInputs,
+} from "@alga-psa/billing/lib/billing/compute/computeTimeBasedCharges";
+import {
+  ambiguousTicketProjectLinksQuery,
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from "@alga-psa/shared/billingClients/ticketProjectAttribution";
+import type { IClientContractLine } from "@alga-psa/types";
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -26,6 +37,14 @@ vi.mock(
 const billingEngineSource = readFileSync(
   new URL(
     "../../../../../packages/billing/src/lib/billing/billingEngine.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
+// The authoritative cap write-down lives on the persistence side.
+const invoiceGenerationSource = readFileSync(
+  new URL(
+    "../../../../../packages/billing/src/actions/invoiceGeneration.ts",
     import.meta.url,
   ),
   "utf8",
@@ -605,6 +624,178 @@ describe("project T&M cap and override integration", () => {
       overage.thresholdCrossings.map((crossing: any) => crossing.threshold),
     ).toEqual([100]);
   });
+
+  it("T031: a cap counted in another currency is left out of the invoice entirely", () => {
+    // The client moved to ARS; the project's cap is still the USD figure the
+    // biller typed. There is no exchange rate anywhere in the engine, so
+    // comparing 1,000.00 USD with ARS charges would write almost everything
+    // down. The cap is dormant instead, and the run says so.
+    const projectConfig = config({
+      billing_model: "time_and_materials",
+      total_price: null,
+      currency: "USD",
+      cap_amount: 100_000,
+      cap_behavior: "hard_cap",
+    });
+    const billingContext: any = context([projectConfig], []);
+    billingContext.invoiceCurrency = "ARS";
+    const charges = [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 1_000,
+        project_billing_config_id: "config-1",
+      },
+    ];
+
+    const mismatched = applyProjectCapAdjustments(charges, billingContext);
+    expect(charges[0]).toMatchObject({ total: 400_000, tax_amount: 1_000 });
+    expect(charges[0]).not.toHaveProperty("write_down_reason");
+    expect(mismatched.thresholdCrossings).toEqual([]);
+    expect(mismatched.currencyMismatchedConfigIds).toEqual(["config-1"]);
+
+    // Same cap, same charges, matching currency: the cap bites as before.
+    const matching = [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 1_000,
+        project_billing_config_id: "config-1",
+      },
+    ];
+    const applied = applyProjectCapAdjustments(matching, {
+      ...billingContext,
+      invoiceCurrency: "usd",
+    });
+    expect(matching[0]).toMatchObject({
+      total: 100_000,
+      write_down_amount: 300_000,
+      write_down_reason: "project_cap",
+    });
+    expect(applied.currencyMismatchedConfigIds).toEqual([]);
+  });
+
+  it("T032: the biller is warned once per run, and persistence skips the same cap", () => {
+    const engine = new BillingEngine();
+    const warnings = (engine as any).getProjectCapCurrencyWarnings(
+      context(
+        [
+          config({
+            billing_model: "time_and_materials",
+            total_price: null,
+            currency: "USD",
+            cap_amount: 100_000,
+          }),
+          // No cap and a matching currency: nothing to warn about.
+          config({
+            config_id: "config-2",
+            project_id: "project-2",
+            currency: "ARS",
+            project_name: "Aligned project",
+          }),
+        ],
+        [],
+      ),
+      "ARS",
+    );
+    expect(warnings).toEqual([
+      "Implementation's budget cap is set in USD but this invoice bills in ARS, " +
+        "so the cap was not applied. Set the project's billing currency to ARS and re-enter the cap.",
+    ]);
+
+    // The engine's write-down is advisory; invoice persistence recomputes it,
+    // so the same currency guard has to stand there or the money still moves.
+    expect(invoiceGenerationSource).toContain(
+      "billingResult.currency_code ?? null",
+    );
+    expect(invoiceGenerationSource).toContain(
+      "if (!capAppliesToInvoiceCurrency(config.currency, invoiceCurrency)) {",
+    );
+  });
+
+  // The guard above only ever helps if everybody answers "which currency does
+  // this invoice bill in?" the same way. One rule, one place.
+  it("T033: one rule decides the invoice currency a cap is measured against", () => {
+    // A contract line's rates are denominated in its contract's currency, so a
+    // single contract currency decides the invoice — even for a client whose
+    // own currency has since moved to CHF.
+    expect(resolveInvoiceCurrency(["USD"], "CHF")).toBe("USD");
+    expect(resolveInvoiceCurrency(["USD", "USD", null], "CHF")).toBe("USD");
+    // Nothing to take it from: the client's own currency, which is every
+    // standalone project invoice.
+    expect(resolveInvoiceCurrency([], "CHF")).toBe("CHF");
+    expect(resolveInvoiceCurrency([null, undefined], null)).toBe("USD");
+    // Mixed currencies are rejected upstream; the fallback keeps this pure.
+    expect(resolveInvoiceCurrency(["USD", "EUR"], "CHF")).toBe("CHF");
+  });
+
+  it("T033: the due-work listing measures caps against the currency generation bills", async () => {
+    // The listing used to be handed the client's own currency as the answer,
+    // so for a CHF client invoiced through a legacy USD contract it skipped a
+    // USD cap that generation then applied — a preview that disagreed with the
+    // invoice. It resolves the currency itself now, from the same contract
+    // lines generation reads.
+    const engine = new BillingEngine();
+    (engine as any).tenant = "tenant-1";
+    vi.spyOn(engine as any, "initKnex").mockResolvedValue(undefined);
+    vi.spyOn(engine as any, "withPinnedTransaction").mockImplementation(
+      (work: any) => work(),
+    );
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockImplementation(
+      async () =>
+        context(
+          [
+            config({
+              billing_model: "time_and_materials",
+              total_price: null,
+              currency: "USD",
+              cap_amount: 100_000,
+              cap_behavior: "hard_cap",
+            }),
+          ],
+          [],
+        ),
+    );
+    const contractLines = vi
+      .spyOn(engine as any, "getClientContractLinesForBillingPeriod")
+      .mockResolvedValue([{ currency_code: "USD" }] as any);
+    vi.spyOn(
+      engine as any,
+      "calculateUnresolvedNonContractCharges",
+    ).mockImplementation(async () => [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 0,
+        project_billing_config_id: "config-1",
+      },
+    ]);
+
+    const window = {
+      clientId: "client-1",
+      windowStart: PERIOD.startDate,
+      windowEnd: PERIOD.endDate,
+      clientDefaultCurrency: "CHF",
+    };
+    const throughContract = await (
+      engine as any
+    ).calculateUnresolvedNonContractChargesForExecutionWindow(window);
+    expect(throughContract[0]).toMatchObject({
+      total: 100_000,
+      write_down_amount: 300_000,
+      write_down_reason: "project_cap",
+    });
+
+    // No contract line to fix the currency: the client's own CHF decides, the
+    // USD cap is genuinely dormant, and the listing leaves the work at full
+    // value exactly as generation will.
+    contractLines.mockResolvedValue([] as any);
+    const throughClientDefault = await (
+      engine as any
+    ).calculateUnresolvedNonContractChargesForExecutionWindow(window);
+    expect(throughClientDefault[0]).toMatchObject({ total: 400_000 });
+    expect(throughClientDefault[0]).not.toHaveProperty("write_down_reason");
+  });
 });
 
 describe("project billing engine orchestration", () => {
@@ -641,6 +832,12 @@ describe("project billing engine orchestration", () => {
     vi.spyOn(
       engine as any,
       "getProjectMaterialCurrencyWarnings",
+    ).mockResolvedValue([]);
+    // Ambiguous ticket→project links are read from the database; the suites
+    // that assert the warning channel stub this per test.
+    vi.spyOn(
+      engine as any,
+      "getAmbiguousTicketProjectWarnings",
     ).mockResolvedValue([]);
   });
 
@@ -805,6 +1002,47 @@ describe("project billing engine orchestration", () => {
     ]);
   });
 
+  it("T023: a ticket linked into two projects warns once per run and is attributed to neither", async () => {
+    const projectConfig = config({
+      billing_model: "time_and_materials",
+      total_price: null,
+      invoice_mode: "standalone",
+    });
+    const billingContext = context([projectConfig], []);
+    vi.spyOn(
+      engine as any,
+      "getClientContractLinesForBillingPeriod",
+    ).mockResolvedValue([]);
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockResolvedValue(
+      billingContext,
+    );
+    vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+    vi.spyOn(
+      engine as any,
+      "calculateUnresolvedNonContractCharges",
+    ).mockResolvedValue([]);
+    vi.mocked(
+      (engine as any).getAmbiguousTicketProjectWarnings,
+    ).mockResolvedValue([
+      'Time on ticket(s) T-42 was not attributed to a project: the ticket is linked to more than one project. Untick "Bill this ticket\'s time as project time" on the links that should not carry its time.',
+    ]);
+
+    const result = await (engine as any).calculateBillingForPreparedPeriod(
+      "client-1",
+      PERIOD,
+      CLIENT,
+      { projectTarget: { projectId: "project-1" } },
+    );
+
+    expect(result.warnings).toEqual([
+      'Time on ticket(s) T-42 was not attributed to a project: the ticket is linked to more than one project. Untick "Bill this ticket\'s time as project time" on the links that should not carry its time.',
+    ]);
+    expect(
+      (engine as any).getAmbiguousTicketProjectWarnings,
+    ).toHaveBeenCalledTimes(1);
+    expect(result.charges).toEqual([]);
+  });
+
   it("T021: no-config golden scenario preserves legacy contract/time/material/bucket output byte-for-byte", async () => {
     const fixed = {
       type: "fixed",
@@ -915,5 +1153,208 @@ describe("project billing engine orchestration", () => {
       ),
     ).toBe(true);
     expect(actual).not.toHaveProperty("projectCapThresholdCrossings");
+  });
+});
+
+describe("ticket time project attribution", () => {
+  const PERIOD_START = "2026-07-01T00:00:00Z";
+  const PERIOD_END = "2026-08-01T00:00:00Z";
+  const NO_TAX = {
+    getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
+    getLocationTaxRegionCode: () => null,
+    getClientDefaultTaxRegionCode: () => null,
+    isTaxExemptForProfile: () => false,
+    calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
+  };
+
+  // One approved hour on a ticket. `project_id` is what the resolver yields:
+  // the single billable project of the ticket's links, or null when the flag is
+  // off or the links are ambiguous. `project_phase_id` is always null for
+  // ticket time.
+  function ticketTimeInputs(
+    projectId: string | null,
+    billingModel = "time_and_materials",
+  ): TimeBasedChargeComputeInputs {
+    return {
+      billingPeriod: { startDate: PERIOD_START, endDate: PERIOD_END },
+      clientContractLine: {
+        client_contract_line_id: "line-1",
+      } as IClientContractLine,
+      timing: {
+        duePosition: "arrears",
+        servicePeriodStart: PERIOD_START,
+        servicePeriodEnd: PERIOD_END,
+        servicePeriodStartExclusive: PERIOD_START,
+        servicePeriodEndExclusive: PERIOD_END,
+        coverageRatio: 1,
+      },
+      client: { client_id: "client-1" },
+      plan: {},
+      serviceConfigMap: new Map([
+        [
+          "service-1",
+          {
+            config: {
+              config_id: "hourly-1",
+              hourly_rate: 12_000,
+              minimum_billable_time: 0,
+              round_up_to_nearest: 0,
+            },
+            userTypeRates: new Map<string, number>(),
+          },
+        ],
+      ]),
+      timeEntries: [
+        {
+          entry_id: "ticket-entry",
+          user_id: "user-1",
+          start_time: new Date(PERIOD_START),
+          end_time: new Date(PERIOD_END),
+          service_id: "service-1",
+          service_name: "Ticket support",
+          billable_duration: 60,
+          work_item_type: "ticket",
+          work_item_id: "ticket-1",
+          ticket_number: "T-1",
+          ticket_title: "Printer down",
+          currency_rate: 12_000,
+          project_id: projectId,
+          project_phase_id: null,
+        },
+      ],
+      contractCurrency: "USD",
+      getProjectChargeConfig: (candidate) =>
+        candidate === "project-1"
+          ? {
+              project_id: "project-1",
+              project_name: "Implementation",
+              project_number: "PRJ-100",
+              config_id: "config-1",
+              billing_model: billingModel,
+            }
+          : undefined,
+    };
+  }
+
+  it("T024: attributed ticket time bills as project time and carries the T&M project tag", () => {
+    const { charges } = computeTimeBasedCharges(
+      ticketTimeInputs("project-1"),
+      NO_TAX,
+    );
+
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({
+      type: "time",
+      entryId: "ticket-entry",
+      total: 12_000,
+      project_id: "project-1",
+      project_billing_config_id: "config-1",
+      project_name: "Implementation",
+    });
+    // The ticket stays the customer-visible work item; only the money moves.
+    expect(charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "ticket",
+      ticketNumber: "T-1",
+    });
+  });
+
+  it("T025: unattributed ticket time (flag off or ambiguous links) bills the same hour untagged", () => {
+    const { charges } = computeTimeBasedCharges(ticketTimeInputs(null), NO_TAX);
+
+    expect(charges).toHaveLength(1);
+    expect(charges[0].total).toBe(12_000);
+    expect(charges[0]).not.toHaveProperty("project_id");
+    expect(charges[0]).not.toHaveProperty("project_billing_config_id");
+  });
+
+  it("T026: a fixed-price project never tags ticket time, and the loaders exclude it from hourly billing", () => {
+    const { charges } = computeTimeBasedCharges(
+      ticketTimeInputs("project-1", "fixed_price"),
+      NO_TAX,
+    );
+    expect(charges[0]).not.toHaveProperty("project_billing_config_id");
+
+    // The exclusion itself is a loader predicate, and it keys off the project
+    // the COALESCE join now resolves for ticket time.
+    expect(billingEngineSource).toContain(
+      'this.whereNull("projects.project_id").orWhereNotIn(\n          "projects.project_id",\n          fixedPriceProjectIds,',
+    );
+  });
+
+  it("T027: both time-entry loaders resolve the project through the shared resolver", () => {
+    const resolverCalls = billingEngineSource.match(
+      /joinRaw\(ticketProjectAttributionJoin\("time_entries"\)\)/g,
+    );
+    expect(resolverCalls).toHaveLength(2);
+
+    const coalesceJoins = billingEngineSource.match(
+      /ticketProjectIdExpression\("project_phases"\)/g,
+    );
+    expect(coalesceJoins).toHaveLength(2);
+    // project_phases is null for ticket time, so the projects join cannot infer
+    // its tenant predicate from the phase.
+    expect(billingEngineSource).toContain(
+      '{ type: "left", rootTenantColumn: "time_entries.tenant" }',
+    );
+    // The dead join this replaces must not come back: the engine reads the link
+    // table only through the shared fragments (the ambiguity warning's
+    // project-target probe is the one direct reference left).
+    expect(
+      billingEngineSource.match(/project_ticket_links/g),
+    ).toHaveLength(1);
+    expect(billingEngineSource).toContain(
+      "JOIN (${ambiguousTicketProjectLinksQuery()}) ambiguous",
+    );
+    // Decision e: invoiced time is out of reach of both loaders, whatever the
+    // link says.
+    expect(billingEngineSource).toContain('.where("time_entries.invoiced", false)');
+  });
+
+  it("T028: the resolver yields one row per ticket and attributes nothing when links disagree", () => {
+    const join = ticketProjectAttributionJoin("time_entries");
+
+    // Grouped by the Citus distribution column, so one ticket can never fan a
+    // time entry out into several rows however many links it carries.
+    expect(join).toContain("GROUP BY link.tenant, link.ticket_id");
+    expect(join).toContain("WHERE link.bill_under_project");
+    expect(join).toContain("COUNT(DISTINCT link.project_id) AS project_count");
+    expect(join).toContain("ticket_project.project_count = 1");
+    expect(join).toContain("time_entries.work_item_type = 'ticket'");
+    expect(join).toContain("ticket_project.tenant = time_entries.tenant");
+    expect(ticketProjectIdExpression("project_phases")).toBe(
+      "COALESCE(project_phases.project_id, ticket_project.project_id)",
+    );
+  });
+
+  it("T029: a link to another client's project is never a billing candidate", () => {
+    const join = ticketProjectAttributionJoin("time_entries");
+
+    // Nothing validates the client when a link is made, and the loaders' client
+    // gate is satisfied through the linked project — so without this predicate a
+    // cross-client link would bill one client's hour onto another's project.
+    expect(join).toContain("link_project.client_id = link_ticket.client_id");
+    expect(join).toContain("JOIN tickets link_ticket");
+    expect(join).toContain("JOIN projects link_project");
+
+    // The warning counts the same candidates, so a ticket whose only competing
+    // link is foreign is reported as attributed, not as ambiguous.
+    const ambiguous = ambiguousTicketProjectLinksQuery();
+    expect(ambiguous).toContain("link_project.client_id = link_ticket.client_id");
+    expect(ambiguous).toContain("HAVING COUNT(DISTINCT link.project_id) > 1");
+  });
+
+  it("T030: the ambiguity warning only reports tickets the run would have billed", () => {
+    // A stale ambiguous link with no billable time left must not warn on every
+    // run forever; a project run also only hears about links touching it.
+    expect(billingEngineSource).toContain(
+      "AND target_link.project_id = ?",
+    );
+    expect(billingEngineSource).toContain(
+      "AND te.approval_status = 'APPROVED'",
+    );
+    expect(billingEngineSource).toContain("AND te.start_time >= ?");
+    expect(billingEngineSource).toContain(
+      "await this.getAmbiguousTicketProjectWarnings(\n            clientId,\n            billingPeriod,\n            options.projectTarget,\n          )",
+    );
   });
 });

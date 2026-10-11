@@ -366,7 +366,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     },
     {
       title: t('list.planServices.columns.unitOfMeasure', { defaultValue: 'Unit of Measure' }),
+      id: 'unit_of_measure',
       dataIndex: 'service_id',
+      sortable: false,
       render: (value) => {
         const service = initialServices.find(s => s.service_id === value);
         return (
@@ -399,7 +401,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     },
     {
       title: t('list.planServices.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: 'service_id',
+      sortable: false,
       render: (value, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

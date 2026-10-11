@@ -27,6 +27,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { toast } from 'react-hot-toast';
+import {
   Plus,
   Trash2,
   ChevronDown,
@@ -37,6 +44,7 @@ import {
   Ticket,
   GitBranch,
   Pencil,
+  MoreHorizontal,
   Check,
   X,
 } from 'lucide-react';
@@ -48,6 +56,7 @@ import {
   removeActivityFromGroups,
   reorderActivitiesInGroup,
   reorderGroups,
+  setDefaultActivityGroup,
   type ActivityGroup,
 } from '@alga-psa/user-activities/actions';
 import { InlineStatusPicker } from './InlineStatusPicker';
@@ -57,6 +66,7 @@ import { useActivityDrawer } from './ActivityDrawerProvider';
 import { getActivityTypeColor } from './constants';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { partitionActivitiesByGroup } from '../lib/groupPartition';
 
 const UNGROUPED_ID = '__ungrouped__';
 
@@ -159,46 +169,36 @@ interface LocalGroup {
   groupName: string;
   sortOrder: number;
   isCollapsed: boolean;
+  /** Unfiled activities show in this group instead of "Ungrouped" */
+  isDefault: boolean;
+  /** Trailing activities that are explicitly pinned (the rest, at the front, are unfiled) */
+  pinnedCount: number;
   /** Ordered list of activities currently assigned to this group */
   activities: Activity[];
 }
 
 /**
  * Build the initial in-memory state by matching server groups to current activities.
- * Activities not in any group become "ungrouped".
+ * Activities not in any group land in the user's default group when one is set (listed
+ * before pinned items), otherwise they become "ungrouped".
  */
 function buildLocalGroups(
   activities: Activity[],
   serverGroups: ActivityGroup[]
 ): { groups: LocalGroup[]; ungrouped: Activity[] } {
-  const activityByKey = new Map<string, Activity>();
-  for (const a of activities) {
-    activityByKey.set(`${a.type}:${a.id}`, a);
-  }
-
-  const assignedKeys = new Set<string>();
-  const groups: LocalGroup[] = serverGroups.map((sg) => {
-    const groupActs: Activity[] = [];
-    for (const item of sg.items) {
-      const key = `${item.activityType}:${item.activityId}`;
-      const act = activityByKey.get(key);
-      if (act) {
-        groupActs.push(act);
-        assignedKeys.add(key);
-      }
-    }
-    return {
+  const { groups, ungrouped } = partitionActivitiesByGroup(activities, serverGroups);
+  return {
+    groups: groups.map(({ group: sg, activities: groupActs, pinnedCount }) => ({
       groupId: sg.groupId,
       groupName: sg.groupName,
       sortOrder: sg.sortOrder,
       isCollapsed: sg.isCollapsed,
+      isDefault: sg.isDefault === true,
+      pinnedCount,
       activities: groupActs,
-    };
-  });
-
-  const ungrouped = activities.filter((a) => !assignedKeys.has(`${a.type}:${a.id}`));
-
-  return { groups, ungrouped };
+    })),
+    ungrouped,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -444,6 +444,8 @@ export function GroupedActivitiesView({
     setUngrouped(ung);
   }, [activities, serverGroups]);
 
+  const hasDefaultGroup = localGroups.some((g) => g.isDefault);
+
   const handleOpenDrawer = useCallback((activity: Activity) => {
     openActivityDrawer(activity);
   }, [openActivityDrawer]);
@@ -471,6 +473,24 @@ export function GroupedActivitiesView({
       console.error('Error deleting group:', err);
     }
   }, [onGroupsChange]);
+
+  const handleSetDefault = useCallback(async (groupId: string | null) => {
+    // Optimistic update: the section badge moves immediately; the reload reconciles
+    const optimistic = buildLocalGroups(
+      activities,
+      serverGroups.map((g) => ({ ...g, isDefault: g.groupId === groupId }))
+    );
+    setLocalGroups(optimistic.groups);
+    setUngrouped(optimistic.ungrouped);
+    try {
+      await setDefaultActivityGroup(groupId);
+      await onGroupsChange();
+    } catch (err) {
+      console.error('Error setting default group:', err);
+      toast.error(t('groupedView.errors.setDefaultFailed', { defaultValue: "Couldn't update the default group" }));
+      await onGroupsChange();
+    }
+  }, [activities, serverGroups, onGroupsChange, t]);
 
   const handleToggleCollapse = useCallback(async (group: LocalGroup) => {
     // Optimistic update
@@ -616,7 +636,9 @@ export function GroupedActivitiesView({
 
       setLocalGroups((prev) =>
         prev.map((g) =>
-          g.groupId === sourceContainer ? { ...g, activities: reordered } : g
+          g.groupId === sourceContainer
+            ? { ...g, activities: reordered, pinnedCount: reordered.length } // reordering pins every listed item
+            : g
         )
       );
       try {
@@ -646,7 +668,12 @@ export function GroupedActivitiesView({
       }
     } else {
       // Moving to a group (from ungrouped or another group)
-      const insertAt = overIndex === -1 ? targetActivities.length : overIndex;
+      // In the default group the displayed list starts with unpinned (unfiled) items, which
+      // have no sort_order row; convert the display index to a position among pinned rows.
+      const targetGroup = localGroups.find((g) => g.groupId === targetContainer);
+      const unpinnedCount = targetGroup ? targetGroup.activities.length - targetGroup.pinnedCount : 0;
+      const displayIndex = overIndex === -1 ? targetActivities.length : overIndex;
+      const insertAt = Math.max(0, displayIndex - unpinnedCount);
       try {
         await moveActivityToGroup(
           activeParsed.id,
@@ -788,6 +815,7 @@ export function GroupedActivitiesView({
                 onCancelRename={() => setEditingGroupId(null)}
                 onToggleCollapse={handleToggleCollapse}
                 onDeleteGroup={handleDeleteGroup}
+                onSetDefault={handleSetDefault}
                 onOpenDrawer={handleOpenDrawer}
                 onActionComplete={onActionComplete}
                 readOnly={readOnly}
@@ -796,13 +824,15 @@ export function GroupedActivitiesView({
           })}
         </SortableContext>
 
-        {/* Ungrouped section */}
-        <UngroupedSection
-          activities={groupSortBy ? sortGroupActivities(ungrouped, groupSortBy, groupSortDirection) : ungrouped}
-          onOpenDrawer={handleOpenDrawer}
-          onActionComplete={onActionComplete}
-          readOnly={readOnly}
-        />
+        {/* Ungrouped section — replaced by the default group when one is set */}
+        {!hasDefaultGroup && (
+          <UngroupedSection
+            activities={groupSortBy ? sortGroupActivities(ungrouped, groupSortBy, groupSortDirection) : ungrouped}
+            onOpenDrawer={handleOpenDrawer}
+            onActionComplete={onActionComplete}
+            readOnly={readOnly}
+          />
+        )}
       </div>
 
       <DragOverlay>
@@ -840,6 +870,7 @@ interface GroupSectionProps {
   onCancelRename: () => void;
   onToggleCollapse: (group: LocalGroup) => void;
   onDeleteGroup: (groupId: string) => void;
+  onSetDefault: (groupId: string | null) => void;
   onOpenDrawer: (activity: Activity) => void;
   onActionComplete?: () => void;
   readOnly?: boolean;
@@ -855,6 +886,7 @@ function GroupSection({
   onCancelRename,
   onToggleCollapse,
   onDeleteGroup,
+  onSetDefault,
   onOpenDrawer,
   onActionComplete,
   readOnly = false,
@@ -888,6 +920,9 @@ function GroupSection({
   };
 
   const isEditing = editingGroupId === group.groupId;
+  const defaultHint = t('groupedView.defaultBadgeHint', {
+    defaultValue: "Activities you haven't placed in a group appear here, including newly assigned work.",
+  });
 
   return (
     <div
@@ -952,11 +987,50 @@ function GroupSection({
         ) : (
           <>
             <h3 className="flex-1 text-sm font-semibold truncate">{group.groupName}</h3>
+            {group.isDefault && (
+              <Badge
+                variant="secondary"
+                className="text-xs"
+                title={defaultHint}
+              >
+                {t('groupedView.defaultBadge', { defaultValue: 'Default' })}
+              </Badge>
+            )}
             <Badge variant="default" className="text-xs">
               {group.activities.length}
             </Badge>
             {!readOnly && (
               <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id={`group-menu-${group.groupId}`}
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      aria-label={t('groupedView.ariaLabels.groupMenu', { defaultValue: 'Group actions' })}
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {group.isDefault ? (
+                      <DropdownMenuItem
+                        id={`unset-default-group-${group.groupId}`}
+                        onSelect={() => onSetDefault(null)}
+                      >
+                        {t('groupedView.menu.unsetDefault', { defaultValue: 'Stop using as default' })}
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        id={`set-default-group-${group.groupId}`}
+                        onSelect={() => onSetDefault(group.groupId)}
+                      >
+                        {t('groupedView.menu.setDefault', { defaultValue: 'Make default for new work' })}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   id={`rename-group-${group.groupId}`}
                   size="sm"
@@ -989,7 +1063,9 @@ function GroupSection({
           <DroppableContainer id={group.groupId} className="min-h-[48px]">
             {group.activities.length === 0 ? (
               <div className="py-6 px-3 text-center text-xs text-muted-foreground">
-                {t('groupedView.dropActivitiesHere', { defaultValue: 'Drop activities here' })}
+                {group.isDefault
+                  ? t('groupedView.defaultGroupEmpty', { defaultValue: 'New work assigned to you will appear here' })
+                  : t('groupedView.dropActivitiesHere', { defaultValue: 'Drop activities here' })}
               </div>
             ) : (
               group.activities.map((activity) => (

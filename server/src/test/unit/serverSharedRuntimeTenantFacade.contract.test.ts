@@ -118,7 +118,7 @@ describe('server/shared runtime tenant facade roots', () => {
     );
 
     const processor = read('shared/rmm/alerts/processRmmAlertEvent.ts');
-    expect(processor).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(processor).toContain("import { tenantDb, withTransaction } from '@alga-psa/db'");
     expect(processor).toContain("db.table('tenant_external_entity_mappings')");
     expect(processor).toContain("db.table('rmm_maintenance_windows')");
     expect(processor).toContain("db.table('rmm_alert_rules')");

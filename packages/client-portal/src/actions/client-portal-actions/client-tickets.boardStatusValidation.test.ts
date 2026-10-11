@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
@@ -11,6 +13,11 @@ const writeTicketActivityMock = vi.fn();
 const enforceTicketCloseRulesMock = vi.fn();
 const ticketModelGetDefaultStatusIdMock = vi.fn();
 const ticketModelCreateTicketWithRetryMock = vi.fn();
+
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -34,7 +41,8 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/validation', () => ({
+vi.mock('@alga-psa/validation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/validation')>()),
   validateData: (_schema: unknown, payload: Record<string, unknown>) => payload,
 }));
 
@@ -266,7 +274,7 @@ describe('client portal board-scoped ticket status validation', () => {
     getConnectionMock.mockResolvedValue(dbConnection);
     hasPermissionMock.mockResolvedValue(true);
     ticketModelGetDefaultStatusIdMock.mockResolvedValue('board-1-default-status');
-    ticketModelCreateTicketWithRetryMock.mockResolvedValue({ ticket_id: 'ticket-1' });
+    ticketModelCreateTicketWithRetryMock.mockResolvedValue({ ticket_id: TICKET_1 });
     publishEventMock.mockResolvedValue(undefined);
     publishWorkflowEventMock.mockResolvedValue(undefined);
     writeTicketActivityMock.mockResolvedValue(undefined);
@@ -276,7 +284,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T041: createClientTicket resolves the default status from the default board before ticket creation', async () => {
     const { trx } = createClientPortalTrx({
       defaultBoard: { board_id: 'board-1', default_assigned_to: null },
-      ticket: { ticket_id: 'ticket-1', tenant: 'tenant-1' },
+      ticket: { ticket_id: TICKET_1, tenant: 'tenant-1' },
     });
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
@@ -308,7 +316,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T042: updateTicketStatus rejects a status that does not belong to the ticket board', async () => {
     const { trx, ticketUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -320,7 +328,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).resolves.toEqual({
+    await expect(updateTicketStatus(TICKET_1, 'board-2-closed')).resolves.toEqual({
       actionError: 'Selected status is not valid for the ticket board',
     });
     expect(ticketUpdates).toHaveLength(0);
@@ -330,7 +338,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T001: updateTicketStatus accepts a default-selectable board status and updates the ticket', async () => {
     const { trx, ticketUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -349,7 +357,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-1-in-progress')).resolves.toBeUndefined();
+    await expect(updateTicketStatus(TICKET_1, 'board-1-in-progress')).resolves.toBeUndefined();
     expect(ticketUpdates).toHaveLength(1);
     expect(ticketUpdates[0].updateData).toMatchObject({
       status_id: 'board-1-in-progress',
@@ -363,7 +371,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T002/T003: updateTicketStatus rejects a non-selectable status with no mutation or closure event', async () => {
     const { trx, ticketUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -382,7 +390,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-1-vendor')).resolves.toEqual(
+    await expect(updateTicketStatus(TICKET_1, 'board-1-vendor')).resolves.toEqual(
       expect.objectContaining({
         actionError: 'This status cannot be selected from the client portal',
         messageKey: 'client-portal:errors.tickets.statusNotPortalSelectable',
@@ -434,7 +442,7 @@ describe('client portal board-scoped ticket status validation', () => {
   it('T006: a non-selectable closed status cannot close, a selectable one still closes with the bypass', async () => {
     const { trx: restrictedTrx, ticketUpdates: restrictedUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -453,7 +461,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-1-resolved')).resolves.toEqual(
+    await expect(updateTicketStatus(TICKET_1, 'board-1-resolved')).resolves.toEqual(
       expect.objectContaining({ messageKey: 'client-portal:errors.tickets.statusNotPortalSelectable' })
     );
     expect(restrictedUpdates).toHaveLength(0);
@@ -462,7 +470,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { trx: allowedTrx, ticketUpdates: allowedUpdates } = createClientPortalTrx({
       ticket: {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         tenant: 'tenant-1',
         board_id: 'board-1',
         status_id: 'board-1-open',
@@ -479,7 +487,7 @@ describe('client portal board-scoped ticket status validation', () => {
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(allowedTrx));
 
-    await expect(updateTicketStatus('ticket-1', 'board-1-closed')).resolves.toBeUndefined();
+    await expect(updateTicketStatus(TICKET_1, 'board-1-closed')).resolves.toBeUndefined();
     expect(enforceTicketCloseRulesMock).toHaveBeenCalledWith(
       allowedTrx,
       'tenant-1',

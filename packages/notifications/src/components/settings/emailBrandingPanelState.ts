@@ -3,7 +3,12 @@
  * can be reasoned about (and tested) without a DOM or a server action.
  */
 
-import { resolveEmailPalette, type EmailPaletteOverrides, type EmailPaletteTokens } from '@alga-psa/email/branding';
+import {
+  resolveEmailPalette,
+  type EmailBrandingLogoArtwork,
+  type EmailPaletteOverrides,
+  type EmailPaletteTokens,
+} from '@alga-psa/email/branding';
 import type { EmailBrandingStatus } from '../../lib/emailBranding';
 
 /** Derived tokens the tenant may pin by hand, in the order the panel shows them. */
@@ -43,6 +48,7 @@ export interface EmailBrandingDraft {
   singleColor: boolean;
   overrides: EmailPaletteOverrides;
   logoVariant: 'wide' | 'default' | null;
+  logoArtwork: EmailBrandingLogoArtwork;
   hideAttribution: boolean;
 }
 
@@ -55,6 +61,7 @@ export function draftFromStatus(status: EmailBrandingStatus): EmailBrandingDraft
     singleColor: palette ? palette.secondary === null : false,
     overrides: palette?.overrides ?? {},
     logoVariant: palette?.logo?.variant ?? null,
+    logoArtwork: palette?.logo?.artwork ?? 'auto',
     hideAttribution: palette?.hideAttribution ?? false,
   };
 }

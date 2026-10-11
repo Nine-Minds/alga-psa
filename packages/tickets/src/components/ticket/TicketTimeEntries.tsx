@@ -7,7 +7,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { formatMinutesAsHoursAndMinutes, getUserTimeZone } from '@alga-psa/core';
+import { formatMinutesAsHoursAndMinutes, getUserTimeZone, workedMinutes } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import type {
   TicketTimeEntriesSummary,
@@ -346,6 +346,8 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   );
   const canEdit = entry.is_own && Boolean(onEdit) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
   const canDelete = entry.is_own && Boolean(onDelete) && (statusKey === 'DRAFT' || statusKey === 'CHANGES_REQUESTED');
+  // Billability is the persisted billing value, independent of worked duration.
+  const isBillable = entry.billable_duration > 0;
 
   return (
     <li
@@ -389,8 +391,13 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
+          <Badge variant={isBillable ? 'success' : 'default-muted'} size="sm">
+            {isBillable
+              ? t('timeEntries.billable', 'Billable')
+              : t('timeEntries.nonBillable', 'Non-billable')}
+          </Badge>
           <span className="font-semibold text-[rgb(var(--color-text-800))]">
-            {formatMinutesAsHoursAndMinutes(entry.billable_duration, durationLabels)}
+            {formatMinutesAsHoursAndMinutes(workedMinutes(entry), durationLabels)}
           </span>
         </div>
       </div>

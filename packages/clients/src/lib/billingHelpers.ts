@@ -81,6 +81,7 @@ import {
   applyClientCadenceChange,
   previewClientCadenceScheduleChange,
   type ClientCadenceChangePreview,
+  InvalidDefaultTimeEntryServiceError,
 } from '@alga-psa/shared/billingClients';
 
 export const createDefaultTaxSettingsAsync = withAuth(async (
@@ -132,7 +133,7 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
   { tenant },
   clientId: string,
   settings: ClientBillingSettings | null
-): Promise<{ success: true } | ActionPermissionError> => {
+): Promise<{ success: true } | ActionPermissionError | ActionMessageError> => {
   // Client billing settings are billing configuration: mirror the tenant-level
   // gate in billingSettingsActions so authentication alone cannot mutate them.
   if (!await hasPermission(user, 'billing_settings', 'update')) {
@@ -141,9 +142,19 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await updateClientBillingSettings(trx, tenant, clientId, settings);
-  });
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await updateClientBillingSettings(trx, tenant, clientId, settings);
+    });
+  } catch (error) {
+    // The shared writer validates a non-null default service (active hourly and
+    // applicable to the client) and throws this typed error; surface it as an
+    // actionable action error so the UI does not report a successful save.
+    if (error instanceof InvalidDefaultTimeEntryServiceError) {
+      return actionError(error.message);
+    }
+    throw error;
+  }
 
   return { success: true };
 });

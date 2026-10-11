@@ -44,8 +44,8 @@
     "@alga-psa/storage": "*",
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
-    "axios": "^1.18.0",
-    "nodemailer": "^9.1.1",
+    "axios": "^1.20.0",
+    "nodemailer": "^10.0.13",
     "@alga-psa/auth": "*"
   },
   "devDependencies": {

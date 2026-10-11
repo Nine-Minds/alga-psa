@@ -15,6 +15,8 @@ import {
   WorkflowDefinitionVersionModelV2,
 } from '@alga-psa/workflows/persistence';
 import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from './workflow-runtime-v2-actions';
+import { getDateTriggerSourceByCatalogEvent } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import { buildDateTriggerForSource } from '../../../../../shared/workflow/runtime/dateTriggerBuilder';
 import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
 
 type PermissionLevel = 'read' | 'manage' | 'publish' | 'admin';
@@ -537,17 +539,23 @@ export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, i
   await requireWorkflowPermission(user, 'manage', knex);
 
   const workflowName = parsed.name ?? `New workflow for ${parsed.eventType}`;
+  // A catalog row that documents a date source is not a real event: attach a date trigger for that
+  // source (publish rejects an event trigger naming it), pinned to the source's own payload schema.
+  const dateSource = getDateTriggerSourceByCatalogEvent(parsed.eventType);
+  const payloadSchemaRef = dateSource ? dateSource.payloadSchemaRef : (parsed.payloadSchemaRef ?? '');
   const definition = {
     id: uuidv4(),
     version: 1,
     name: workflowName,
     description: '',
-    payloadSchemaRef: parsed.payloadSchemaRef ?? '',
-    trigger: {
-      type: 'event',
-      eventName: parsed.eventType,
-      ...(parsed.sourcePayloadSchemaRef ? { sourcePayloadSchemaRef: parsed.sourcePayloadSchemaRef } : {})
-    },
+    payloadSchemaRef,
+    trigger: dateSource
+      ? buildDateTriggerForSource(dateSource)
+      : {
+          type: 'event',
+          eventName: parsed.eventType,
+          ...(parsed.sourcePayloadSchemaRef ? { sourcePayloadSchemaRef: parsed.sourcePayloadSchemaRef } : {})
+        },
     steps: []
   };
 
@@ -557,8 +565,10 @@ export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, i
     operation: 'workflow_event_attach_new_workflow',
     tableName: 'workflow_definitions',
     recordId: created.workflowId,
-    changedData: { triggerEventName: parsed.eventType },
-    details: { payloadSchemaRef: parsed.payloadSchemaRef ?? null },
+    changedData: dateSource
+      ? { triggerDateSource: dateSource.id, catalogEventType: parsed.eventType }
+      : { triggerEventName: parsed.eventType },
+    details: { payloadSchemaRef: payloadSchemaRef || null },
     source: 'ui'
   });
 

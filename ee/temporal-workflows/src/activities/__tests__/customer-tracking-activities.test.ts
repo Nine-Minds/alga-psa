@@ -12,8 +12,18 @@ const h = vi.hoisted(() => {
   const MANAGEMENT_TENANT_NAME = 'Nine Minds LLC';
 
   const state = {
-    clients: [] as Array<{ client_id: string; client_name: string; properties?: unknown }>,
-    contacts: [] as Array<{ contact_name_id: string; client_id: string; email: string }>,
+    clients: [] as Array<{
+      client_id: string;
+      client_name: string;
+      properties?: unknown;
+      is_inactive?: boolean;
+    }>,
+    contacts: [] as Array<{
+      contact_name_id: string;
+      client_id: string;
+      email: string;
+      is_inactive?: boolean;
+    }>,
     users: [] as Array<{
       user_id: string;
       contact_id: string | null;
@@ -45,6 +55,10 @@ const h = vi.hoisted(() => {
         return query;
       },
       select: () => query,
+      update: async (values: Record<string, unknown>) => {
+        filtered.forEach((row) => Object.assign(row, values));
+        return filtered.length;
+      },
       first: async () => filtered[0],
       then: (resolve: (value: any[]) => unknown, reject?: (reason: unknown) => unknown) =>
         Promise.resolve(filtered).then(resolve, reject),
@@ -68,6 +82,7 @@ const h = vi.hoisted(() => {
 
   const fakeKnex = {
     transaction: async (callback: (trx: unknown) => unknown) => callback({}),
+    fn: { now: () => 'now' },
   };
 
   return { state, tenantDb, fakeKnex, MANAGEMENT_TENANT_ID };
@@ -244,6 +259,65 @@ describe('customer tracking activity idempotency', () => {
       expect(createClientMock).not.toHaveBeenCalled();
     });
 
+    it('reactivates a trusted exact-name client that tenant deletion deactivated', async () => {
+      h.state.clients = [
+        { client_id: 'client-returning', client_name: 'Comeback MSP', is_inactive: true },
+      ];
+      h.state.contacts = [
+        { contact_name_id: 'contact-returning', client_id: 'client-returning', email: 'admin@comeback.test' },
+      ];
+
+      const result = await createCustomerClientActivity({
+        tenantName: 'Comeback MSP',
+        adminUserEmail: 'admin@comeback.test',
+        tenantId: 'new-tenant-uuid',
+      });
+
+      expect(result).toEqual({ customerId: 'client-returning', reused: true });
+      expect(createClientMock).not.toHaveBeenCalled();
+      expect(h.state.clients[0].is_inactive).toBe(false);
+      expect(JSON.parse(h.state.clients[0].properties as string).onboarding_association).toEqual({
+        admin_email: 'admin@comeback.test',
+        tenant_uuid: 'new-tenant-uuid',
+      });
+    });
+
+    it('reuses and renames a deactivated client when the admin returns under a new name', async () => {
+      h.state.clients = [
+        { client_id: 'client-returning', client_name: 'Old Name MSP', is_inactive: true },
+      ];
+      h.state.contacts = [
+        { contact_name_id: 'contact-returning', client_id: 'client-returning', email: 'admin@comeback.test' },
+      ];
+
+      const result = await createCustomerClientActivity({
+        tenantName: 'New Name MSP',
+        adminUserEmail: 'Admin@Comeback.test',
+      });
+
+      expect(result).toEqual({ customerId: 'client-returning', reused: true });
+      expect(createClientMock).not.toHaveBeenCalled();
+      expect(h.state.clients[0]).toMatchObject({ client_name: 'New Name MSP', is_inactive: false });
+    });
+
+    it('does not take over an active client just because the admin is its contact', async () => {
+      h.state.clients = [
+        { client_id: 'client-active', client_name: 'Still Here MSP', is_inactive: false },
+      ];
+      h.state.contacts = [
+        { contact_name_id: 'contact-active', client_id: 'client-active', email: 'admin@stillhere.test' },
+      ];
+      createClientMock.mockResolvedValueOnce({ client_id: 'client-new' } as any);
+
+      const result = await createCustomerClientActivity({
+        tenantName: 'Another Name MSP',
+        adminUserEmail: 'admin@stillhere.test',
+      });
+
+      expect(result).toEqual({ customerId: 'client-new', reused: false });
+      expect(h.state.clients[0]).toMatchObject({ client_name: 'Still Here MSP', is_inactive: false });
+    });
+
     it('creates a client when no exact-name match exists', async () => {
       createClientMock.mockResolvedValueOnce({ client_id: 'client-new' } as any);
 
@@ -403,6 +477,27 @@ describe('customer tracking activity idempotency', () => {
 
       expect(result).toEqual({ contactId: 'contact-existing', reused: true });
       expect(createContactMock).not.toHaveBeenCalled();
+    });
+
+    it('reactivates a reused contact that tenant deletion deactivated', async () => {
+      h.state.contacts = [
+        {
+          contact_name_id: 'contact-returning',
+          client_id: 'client-1',
+          email: 'admin@comeback.test',
+          is_inactive: true,
+        },
+      ];
+
+      const result = await createCustomerContactActivity({
+        clientId: 'client-1',
+        firstName: 'Ada',
+        lastName: 'Admin',
+        email: 'admin@comeback.test',
+      });
+
+      expect(result).toEqual({ contactId: 'contact-returning', reused: true });
+      expect(h.state.contacts[0].is_inactive).toBe(false);
     });
 
     it('creates a contact when none exists for the client', async () => {

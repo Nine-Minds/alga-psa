@@ -653,3 +653,60 @@ export async function updateClientContractAssignment(
 
   return normalizeClientContract(updated);
 }
+
+/**
+ * Promote a draft assignment to active. "Set to Active" used to flip only
+ * client_contracts.is_active, which left contracts.status = 'draft' behind, so the derived
+ * status stayed Draft and the action looked like a no-op. Activation belongs to the contract
+ * header and the assignment together, so both move here.
+ */
+export async function activateClientContractAssignment(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientContractId: string
+): Promise<IClientContract> {
+  const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
+  if (!existing) {
+    throw new Error(`Client contract ${clientContractId} not found`);
+  }
+
+  const db = tenantDb(knexOrTrx, tenant);
+  const contract = await db.table('contracts')
+    .where({ contract_id: existing.contract_id })
+    .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name');
+  if (!contract) {
+    throw new Error(`Contract ${existing.contract_id} not found`);
+  }
+
+  const needsHeaderActivation = contract.status === 'draft' || contract.is_active === false;
+
+  if (needsHeaderActivation) {
+    // Same rule createClientContractAssignment enforces: a client cannot hold active
+    // contracts in two currencies.
+    const targetCurrencyCode =
+      typeof contract.currency_code === 'string' ? contract.currency_code : null;
+    const mixedCurrencyConflict = await findMixedCurrencyActiveAssignment(knexOrTrx, tenant, {
+      clientId: existing.client_id,
+      targetCurrencyCode,
+    });
+    if (mixedCurrencyConflict) {
+      const contractLabel = mixedCurrencyConflict.contract_name
+        ? ` ("${mixedCurrencyConflict.contract_name}")`
+        : '';
+      throw new Error(
+        `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
+        `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
+      );
+    }
+
+    await db.table('contracts')
+      .where({ contract_id: existing.contract_id })
+      .update({
+        status: 'active',
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      });
+  }
+
+  return updateClientContractAssignment(knexOrTrx, tenant, clientContractId, { is_active: true });
+}

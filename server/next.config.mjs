@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import fs from 'fs';
 import os from 'os';
+import { getAllowedDevOrigins } from './src/lib/http/devAllowedOrigins.mjs';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -180,22 +181,16 @@ const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, h
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
-  // Permit isolated dev/test servers to coexist with the normal worktree server.
-  // Production and ordinary development retain Next's default `.next` directory.
+  // Keep development output out of the production `.next` directory. A build
+  // can clear `.next` while the board-managed dev server is running; separating
+  // the outputs prevents its route manifests and compiled pages from diverging.
+  // Isolated dev/test servers may override this with their own directory.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  // Keep loopback IP access working for isolated browser sessions; Next blocks
-  // its HMR endpoint for this origin unless it is explicitly allowed.
-  allowedDevOrigins: [
-    '127.0.0.1',
-    ...(process.env.DEV_ALLOWED_ORIGINS ?? '')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-  ],
+  allowedDevOrigins: getAllowedDevOrigins(),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code

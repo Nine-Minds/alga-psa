@@ -98,34 +98,31 @@ afterEach(() => {
 describe('DesignerShell shared sizing controls', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
+    // Layout, size and flex controls live on the inspector's "Layout & size" tab.
+    useInvoiceDesignerStore.getState().setInspectorTab('layout');
   });
 
-  it('preserves fill-width and hug-height sizing across raw property commits', () => {
+  it('sets width and height through one Size control: modes plus a typed value', () => {
     seedSelectedDynamicTableNode();
 
     render(<DesignerShell />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Width: Fill' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Height: Hug' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Height: Auto' }));
 
     const stateAfterModeChange = useInvoiceDesignerStore.getState().nodesById['table-1'];
     expect((stateAfterModeChange.props as any)?.style?.width).toBe('100%');
     expect((stateAfterModeChange.props as any)?.style?.height).toBe('auto');
 
-    const spinbuttons = screen.getAllByRole('spinbutton') as HTMLInputElement[];
-    const xInput = spinbuttons[0];
-    const widthInput = spinbuttons[2];
-    const heightInput = spinbuttons[3];
+    // Coordinates are meaningless in flow layout, so there are no X/Y inputs to confuse sizing.
+    expect(document.querySelector('[data-automation-id="designer-prop-x"]')).toBeNull();
 
-    expect(widthInput.disabled).toBe(true);
-    expect(heightInput.disabled).toBe(true);
-
-    fireEvent.change(xInput, { target: { value: '64' } });
-    fireEvent.blur(xInput);
-
+    // Typing a value is the Fixed mode: a bare number means pixels.
+    const widthValue = screen.getByLabelText('Width value') as HTMLInputElement;
+    fireEvent.blur(widthValue, { target: { value: '320' } });
     const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
-    expect(updated.position.x).toBe(64);
-    expect((updated.props as any)?.style?.width).toBe('100%');
+    expect((updated.props as any)?.style?.width).toBe('320px');
     expect((updated.props as any)?.style?.height).toBe('auto');
+    expect(screen.getByRole('button', { name: 'Width: Fixed' }).getAttribute('aria-pressed')).toBe('true');
   });
 });

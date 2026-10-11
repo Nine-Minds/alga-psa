@@ -737,6 +737,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <CreditApplicationUI
                   clientId={clientId}
                   invoiceId={invoiceId ?? undefined}
+                  currencyCode={detailedInvoiceData?.currencyCode}
                   invoiceAmount={Math.max((invoiceTotal ?? 0) - creditApplied, 0)}
                   onApplyCredit={async () => {
                     setApplyCreditOpen(false);
@@ -855,6 +856,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 <CreditExpirationInfo
                   creditApplied={creditApplied}
                   invoiceId={invoiceId}
+                  currencyCode={detailedInvoiceData?.currencyCode}
                 />
               </div>
             )}

@@ -1,5 +1,6 @@
 export * from './DrawerContext';
 export * from './SchedulingContext';
+export * from './StopwatchContext';
 export * from './UnsavedChangesContext';
 export * from './ClientDrawerContext';
 export * from './QuickAddClientContext';

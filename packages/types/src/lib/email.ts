@@ -233,7 +233,7 @@ export interface InboundTicketDefaults {
  */
 export interface TicketFieldOptions {
   boards: Array<{ id: string; name: string; is_default: boolean }>;
-  statuses: Array<{ id: string; name: string; is_default?: boolean }>;
+  statuses: Array<{ id: string; name: string; is_default?: boolean; board_id?: string; board_name?: string; is_closed?: boolean }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
   clients: Array<{ id: string; name: string }>;

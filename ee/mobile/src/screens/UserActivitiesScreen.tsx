@@ -608,7 +608,7 @@ export function UserActivitiesScreen({ navigation }: Props) {
           navigation.navigate("TicketDetail", { ticketId: activity.id });
           return;
         case "projectTask":
-          navigation.navigate("ProjectTaskDetail", { activity });
+          navigation.navigate("ProjectTaskDetail", { taskId: activity.id, activity });
           return;
         case "workflowTask":
           navigation.navigate("WorkflowTaskDetail", { taskId: activity.id });

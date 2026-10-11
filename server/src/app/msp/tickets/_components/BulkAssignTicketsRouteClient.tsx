@@ -52,13 +52,12 @@ export default function BulkAssignTicketsRouteClient({
         ? await bulkAssignTickets(selectedTicketIdsArray, selection, options)
         : await bulkAssignTickets(selectedTicketIdsArray, selection);
 
-      if (result.updatedIds.length > 0) {
-        refreshList();
-      }
-
       if (result.failed.length > 0) {
         setFailed(result.failed);
         keepFailedSelection(result.failed);
+        if (result.updatedIds.length > 0) {
+          refreshList();
+        }
         toastBulkResult(result, {
           partialFailure: t('bulk.assign.partialFailure', 'Some tickets could not be reassigned'),
           success: (count) => t('bulk.assign.success', {

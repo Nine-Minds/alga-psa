@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "De standaardvaluta is bijgewerkt."
+        "updated": "De standaardvaluta is bijgewerkt.",
+        "propagated": "Standaardvaluta gewijzigd naar {{currency}}. {{updated}} klantstandaarden bijgewerkt; {{preserved}} klantoverschrijvingen behouden."
       },
       "errors": {
         "load": "Kan instellingen niet laden",
         "save": "Kan instellingen niet opslaan"
-      }
+      },
+      "propagationNote": "Het wijzigen hiervan werkt klanten bij die nog de vorige standaardvaluta gebruiken. Klanten met een andere valuta blijven ongewijzigd en bestaande documenten en sjablonen veranderen niet."
     },
     "invoiceNumbering": {
       "title": "Factuurnummering",
@@ -164,6 +166,20 @@
         "load": "Kan de automatiseringsinstellingen voor verlenging niet laden",
         "loadStatuses": "Kan de status van het verlengingsticket niet laden",
         "save": "Kan de automatiseringsinstellingen voor verlenging niet opslaan"
+      }
+    },
+    "timeEntryService": {
+      "title": "Standaarddienst voor tijdregistraties",
+      "description": "Terugvaldienst voor nieuwe tijdregistraties op tickets. Klantspecifieke standaardinstellingen hebben voorrang.",
+      "label": "Standaarddienst voor tijdregistraties",
+      "placeholder": "Geen standaarddienst",
+      "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets als de klant geen eigen standaard heeft. De dienst moet actief zijn en onder het klantcontract vallen.",
+      "toast": {
+        "updated": "Standaarddienst voor tijdregistraties bijgewerkt."
+      },
+      "errors": {
+        "load": "Standaarddienst voor tijdregistraties kan niet worden geladen",
+        "save": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen"
       }
     },
     "quotes": {
@@ -1048,7 +1064,8 @@
       },
       "label": {
         "label": "Categorielabel",
-        "placeholder": "Optioneel vrij label"
+        "placeholder": "Optioneel vrij label",
+        "help": "Interne identificatie zoals fabrikant/model; doorzoekbaar, nooit aan klanten getoond."
       },
       "vendor": {
         "label": "Leverancier"

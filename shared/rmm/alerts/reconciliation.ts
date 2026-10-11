@@ -66,9 +66,14 @@ export async function runRmmAlertReconciliation(
       ...event,
       raw: { ...event.raw, [RECONCILIATION_INGEST_MARKER]: 'reconciliation' },
     };
-    const result = await processRmmAlertEvent(ctx, stamped, { reprocessSuppressed: true });
-    warnings.push(...result.warnings);
-    if (result.outcome !== 'skipped') ingested += 1;
+    // One bad alert must not abort the cycle for every alert behind it.
+    try {
+      const result = await processRmmAlertEvent(ctx, stamped, { reprocessSuppressed: true });
+      warnings.push(...result.warnings);
+      if (result.outcome !== 'skipped') ingested += 1;
+    } catch (error) {
+      warnings.push(`Failed to ingest alert ${event.externalAlertId}: ${errorMessage(error)}`);
+    }
   }
 
   const remoteIds = new Set(remote.map((event) => event.externalAlertId));
@@ -87,21 +92,29 @@ export async function runRmmAlertReconciliation(
       metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>)[RECONCILIATION_INGEST_MARKER];
     if (!pollerIngested) continue;
 
-    const result = await processRmmAlertEvent(ctx, {
-      tenantId: args.tenantId,
-      integrationId: args.integrationId,
-      provider: args.provider as NormalizedRmmAlertEvent['provider'],
-      kind: 'reset',
-      externalAlertId: row.external_alert_id,
-      severity: 'none',
-      occurredAt: now,
-      raw: { [RECONCILIATION_INGEST_MARKER]: 'reconciliation', reason: 'no_longer_active_in_rmm' },
-    });
-    warnings.push(...result.warnings);
-    if (result.outcome === 'resolved') resetsSynthesized += 1;
+    try {
+      const result = await processRmmAlertEvent(ctx, {
+        tenantId: args.tenantId,
+        integrationId: args.integrationId,
+        provider: args.provider as NormalizedRmmAlertEvent['provider'],
+        kind: 'reset',
+        externalAlertId: row.external_alert_id,
+        severity: 'none',
+        occurredAt: now,
+        raw: { [RECONCILIATION_INGEST_MARKER]: 'reconciliation', reason: 'no_longer_active_in_rmm' },
+      });
+      warnings.push(...result.warnings);
+      if (result.outcome === 'resolved') resetsSynthesized += 1;
+    } catch (error) {
+      warnings.push(`Failed to reset alert ${row.external_alert_id}: ${errorMessage(error)}`);
+    }
   }
 
   return { skipped: false, remoteActive: remote.length, ingested, resetsSynthesized, warnings };
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function safeParse(value: string): unknown {

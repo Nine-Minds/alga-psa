@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Crear contactos para nuevos remitentes",
     "inboundDomainAutoCreateHelp": "Los dominios asignados pueden crear un contacto para un nuevo remitente de confianza.",
     "inboundDomainAutoCreateUpdated": "Se actualizó la configuración de contactos.",
-    "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos."
+    "inboundDomainAutoCreateUpdateFailed": "No se pudo actualizar la configuración de contactos.",
+    "recurringTickets": "Tickets recurrentes"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Estado",
     "actions": "Acciones",
     "openMenu": "Abrir menú",
+    "viewDetails": "Ver detalles",
     "unassign": "Desasignar",
     "loading": "Cargando contratos...",
     "empty": "Aún no se han asignado contratos a este cliente.",
@@ -1912,6 +1914,15 @@
       "duplicateManager": "Un perfil de facturación solo puede tener un responsable.",
       "notThisClient": "Uno de los contactos seleccionados no pertenece al cliente de este perfil de facturación."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Servicio predeterminado para registros de tiempo",
+    "label": "Servicio predeterminado para registros de tiempo",
+    "placeholder": "Usar el valor predeterminado de la organización",
+    "help": "Se usa para nuevos registros de tiempo en tickets de este cliente. Borra la selección para usar el valor predeterminado de la organización.",
+    "updatedSuccess": "Servicio predeterminado para registros de tiempo actualizado.",
+    "saveError": "No se pudo guardar el servicio predeterminado para registros de tiempo",
+    "loadError": "No se pudo cargar el servicio predeterminado para registros de tiempo"
   },
   "clientAutopay": {
     "setupLinkTitle": "Enlace de configuración de tarjeta",

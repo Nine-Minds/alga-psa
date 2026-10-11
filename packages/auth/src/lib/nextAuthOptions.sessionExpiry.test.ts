@@ -64,7 +64,11 @@ vi.mock('./sso/registry', () => ({
   registerSSOProvider: vi.fn(),
 }));
 vi.mock('./sso/enterpriseRegistryEntry', () => ({ loadEnterpriseSsoProviderRegistryImpl: async () => null }));
-vi.mock('./sso/types', () => ({ OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {} }));
+vi.mock('./sso/types', () => ({
+  OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {},
+  isOAuthMappingFailure: (user: { authFailure?: { code?: string } } | null | undefined) =>
+    Boolean(user?.authFailure?.code),
+}));
 vi.mock('./sso/ceOAuthProfileMapper', () => ({ mapCeOAuthProfileToExtendedUser: vi.fn() }));
 vi.mock('./sso/teamsMicrosoftProviderResolution', () => ({
   resolveTeamsMicrosoftProviderConfig: vi.fn(async () => ({

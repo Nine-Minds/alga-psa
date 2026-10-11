@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { BROWSER_HEADER } from '../record-browser-metrics.mjs';
+import { BROWSER_RETENTION_WINDOW_MS } from './browser-metrics-retention.mjs';
 
 const revisionDiagnosticCodes = new Set(['artifact-missing', 'artifact-expired', 'artifact-stale-attempt', 'artifact-invalid',
   'artifact-inventory-unavailable', 'artifact-duplicate', 'revision-conflicting', 'revision-unverified']);
@@ -14,7 +15,9 @@ function journeyIdentity(row) {
   catch { return false; }
 }
 const bool = value => value === true || value === 'TRUE' || value === 'true';
-function runUrl(value) {
+// Exported so the collector's index scan selects exactly the rows this filter
+// accepts; two copies of the predicate could drift and silently overlook a row.
+export function parseRunUrl(value) {
   try { const url = new URL(value); const match = /^\/([^/]+\/[^/]+)\/actions\/runs\/([1-9][0-9]*)$/.exec(url.pathname);
     return url.origin === 'https://github.com' && !url.search && !url.hash && match ? { repository: match[1].toLowerCase(), runId: match[2] } : null;
   } catch { return null; }
@@ -26,6 +29,12 @@ export function reconcileBrowserMetricExecutions(input) {
   assert.ok(Array.isArray(header) && [18, 20, 25].includes(header.length), 'Expected recognized browser metrics header');
   assert.deepEqual(header, BROWSER_HEADER.slice(0, header.length), 'Expected versioned browser metrics header');
   assert.ok(Array.isArray(input.exportedRows.rows), 'Exported rows are required');
+  // A run older than the raw-row retention window has no rows left to find, so
+  // its absent export is a retention fact rather than a reporting gap. Without a
+  // collected run timestamp the stricter missing-export verdict stands.
+  const runCreatedAt = input.runCreatedAt === undefined ? null : Date.parse(input.runCreatedAt);
+  assert.ok(runCreatedAt === null || (typeof input.runCreatedAt === 'string' && !Number.isNaN(runCreatedAt)), 'Invalid run creation timestamp');
+  const outsideRetention = runCreatedAt !== null && runCreatedAt < Date.now() - BROWSER_RETENTION_WINDOW_MS;
   const seen = new Set();
   const expected = input.expectedExecutions.map(entry => {
     const unknownRevision = entry?.revision === null;
@@ -64,7 +73,7 @@ export function reconcileBrowserMetricExecutions(input) {
   });
   const records = expected.map(entry => {
     const related = rows.filter(row => {
-      const url = runUrl(row.run_url);
+      const url = parseRunUrl(row.run_url);
       return url?.repository === entry.repository && url.runId === entry.runId && row.edition === entry.edition;
     });
     const legacyRunExportCount = related.filter(row => row.row_kind === 'run'
@@ -102,7 +111,7 @@ export function reconcileBrowserMetricExecutions(input) {
     let exportStatus;
     if (entry.revision === null) exportStatus = 'tested-revision-unknown';
     else if (issues.some(issue => issue !== 'legacy-export-unverified')) exportStatus = 'conflicting-export';
-    else if (!run) exportStatus = 'missing-export';
+    else if (!run) exportStatus = outsideRetention ? 'outside-retention' : 'missing-export';
     else if (run.lane_status === 'failed') exportStatus = 'failed';
     else if (run.lane_status !== 'passed' || collected === null || collected < 1 || executed !== collected || !completeJourneys) exportStatus = 'incomplete';
     else exportStatus = 'observed-pass';

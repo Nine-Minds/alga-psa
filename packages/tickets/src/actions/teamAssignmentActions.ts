@@ -9,7 +9,7 @@ import {
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '../lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 export type TeamAssignmentNotificationOptions = {

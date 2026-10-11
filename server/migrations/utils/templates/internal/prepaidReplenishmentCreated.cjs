@@ -41,6 +41,10 @@ const TEMPLATES = {
       title: 'Reabastecimento pré-pago {{statusLabel}}: {{clientName}}',
       message: 'A fatura {{invoiceNumber}} para {{clientName}} {{actionPhrase}}.',
     },
+    sv: {
+      title: 'Påfyllning av förbetalt saldo {{statusLabel}}: {{clientName}}',
+      message: 'Faktura {{invoiceNumber}} för {{clientName}} {{actionPhrase}}.',
+    },
   },
 };
 

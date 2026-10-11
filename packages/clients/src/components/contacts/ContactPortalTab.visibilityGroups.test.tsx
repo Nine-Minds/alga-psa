@@ -143,6 +143,7 @@ vi.mock('@alga-psa/ui/components/skeletons/SettingsTabSkeleton', () => ({
 vi.mock('../../actions/contact-actions/contactActions', () => ({
   updateContactPortalAdminStatus: vi.fn(),
   getUserByContactId: (...args: any[]) => getUserByContactIdMock(...args),
+  getContactReportCount: async () => 0,
   getClientPortalVisibilityBoardsByClient: (...args: any[]) =>
     getClientPortalVisibilityBoardsByClientMock(...args),
   getClientPortalVisibilityGroupById: (...args: any[]) =>
@@ -244,6 +245,8 @@ describe('ContactPortalTab visibility groups', () => {
       description: 'HR-only boards',
       board_ids: ['board-2'],
       ticket_scope: 'contact',
+      asset_scope: 'contact',
+      project_scope: 'client',
     });
     updateClientPortalVisibilityGroupForContactMock.mockResolvedValue(undefined);
 
@@ -270,6 +273,8 @@ describe('ContactPortalTab visibility groups', () => {
         description: null,
         boardIds: ['board-2'],
         ticketScope: 'client',
+        assetScope: 'client',
+        projectScope: 'client',
       });
     });
 
@@ -300,6 +305,8 @@ describe('ContactPortalTab visibility groups', () => {
           description: 'HR-only boards',
           boardIds: ['board-2'],
           ticketScope: 'contact',
+          assetScope: 'contact',
+          projectScope: 'client',
         }
       );
     });

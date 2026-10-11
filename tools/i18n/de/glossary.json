@@ -2511,7 +2511,7 @@
       "Phase:",
       "Phase: {{name}}",
       "Phase: {{phase}}",
-      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
       "Phishing/Spam",
       "Pipeline",
       "Plan",
@@ -2622,7 +2622,13 @@
       "Gigabyte",
       "Terabyte",
       "Liter",
-      "Meter"
+      "Meter",
+      "Auto",
+      "Normal (400)",
+      "auto | 50% | 120px",
+      "Cc",
+      "Bcc",
+      "Cc/Bcc"
     ],
     "caseInsensitive": [
       "api",
@@ -2665,7 +2671,7 @@
       "^[A-Z]{2,8}$",
       "^#[0-9A-Fa-f]{3,8}$",
       "^\\{\\{[^{}]+\\}\\}$",
-      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*$",
       "^v\\{\\{[^{}]+\\}\\}$",
       "^Item \\{\\{[^{}]+\\}\\}$",
       "^Tickets?:?$",

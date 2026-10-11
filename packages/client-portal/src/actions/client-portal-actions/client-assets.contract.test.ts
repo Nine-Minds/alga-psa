@@ -40,9 +40,21 @@ describe('client-assets server action contract', () => {
 
   it('still scopes queries by tenant + the resolved client_id', () => {
     expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
-    expect(source).toContain("tenantScopedTable(trx, 'contacts', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'assets', tenant)");
-    expect(source).toContain('{ client_id: clientId }');
+    expect(source).toContain("clientColumn: 'assets.client_id'");
     expect(source).not.toContain('{ tenant, client_id: clientId }');
+  });
+
+  it('routes every asset read through the visibility resolver and the asset filter', () => {
+    // The client restriction now lives in one choke point (scopedAssets ->
+    // applyAssetVisibilityFilter) fed by the visibility resolver, instead of a
+    // hand-rolled contacts -> client_id lookup.
+    expect(source).toContain('applyAssetVisibilityFilter');
+    expect(source).toContain('getClientContactVisibilityContext');
+    expect(source).toContain("contactColumn: 'assets.contact_name_id'");
+    expect(source).not.toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(source).not.toContain('resolveClientId');
+    // No read of `assets` bypasses scopedAssets (the only call is inside it).
+    expect(source.match(/tenantScopedTable\(trx, 'assets', tenant\)/g)).toHaveLength(1);
   });
 });

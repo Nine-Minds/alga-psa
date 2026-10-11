@@ -20,12 +20,14 @@ export const TICKET_LIST_SORT_KEYS = [
   'board_name',
   'category_name',
   'client_name',
+  'contact_name',
   'entered_at',
   'entered_by_name',
   'due_date',
   'assigned_to_name',
   'assigned_team_name',
   'updated_at',
+  'latest_activity_at',
 ] as const;
 
 export type TicketListSortKey = (typeof TICKET_LIST_SORT_KEYS)[number];

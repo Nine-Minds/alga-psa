@@ -42,6 +42,13 @@ export interface MobileFeatureCapabilities {
     inventory: boolean;
     opportunities: boolean;
     opportunitiesCreate: boolean;
+    /** Project tasks on mobile; PSA only, like the Projects module itself. */
+    projects: boolean;
+    /** Client/contact writes follow RBAC alone: both products have clients and contacts. */
+    clientsCreate: boolean;
+    clientsUpdate: boolean;
+    contactsCreate: boolean;
+    contactsUpdate: boolean;
   };
   /**
    * How this user's dates are written, resolved from their country exactly as
@@ -111,23 +118,35 @@ export class MobileCapabilitiesService extends BaseService<never> {
     const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);
     const productCode = await getTenantProduct(context.tenant);
+    const knex = await this.getDbForContext(context);
+
+    const [clientsCreate, clientsUpdate, contactsCreate, contactsUpdate] = await Promise.all([
+      hasPermission(context.user, 'client', 'create', knex),
+      hasPermission(context.user, 'client', 'update', knex),
+      hasPermission(context.user, 'contact', 'create', knex),
+      hasPermission(context.user, 'contact', 'update', knex),
+    ]);
+    const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate };
+
     if (productCode !== 'psa') {
       return {
         features: {
           inventory: false,
           opportunities: false,
           opportunitiesCreate: false,
+          projects: false,
+          ...crm,
         },
         formatting,
         theme,
       };
     }
 
-    const knex = await this.getDbForContext(context);
-    const [inventory, opportunities, opportunitiesCreate] = await Promise.all([
+    const [inventory, opportunities, opportunitiesCreate, projects] = await Promise.all([
       hasPermission(context.user, 'inventory', 'read', knex),
       hasPermission(context.user, 'opportunities', 'read', knex),
       hasPermission(context.user, 'opportunities', 'create', knex),
+      hasPermission(context.user, 'project', 'read', knex),
     ]);
 
     return {
@@ -135,6 +154,8 @@ export class MobileCapabilitiesService extends BaseService<never> {
         inventory,
         opportunities,
         opportunitiesCreate,
+        projects,
+        ...crm,
       },
       formatting,
       theme,

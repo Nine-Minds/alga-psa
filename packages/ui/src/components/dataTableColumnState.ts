@@ -19,7 +19,7 @@ export function applyColumnVisibilityAndOrder<T>(
   }
 
   const shown = visibility
-    ? columns.filter((column) => visibility[getColumnId(column.dataIndex)] !== false)
+    ? columns.filter((column) => visibility[getColumnId(column)] !== false)
     : columns;
 
   if (!order || order.length === 0) {
@@ -30,8 +30,8 @@ export function applyColumnVisibilityAndOrder<T>(
   return shown
     .map((column, index) => ({ column, index }))
     .sort((a, b) => {
-      const rankA = rank.get(getColumnId(a.column.dataIndex));
-      const rankB = rank.get(getColumnId(b.column.dataIndex));
+      const rankA = rank.get(getColumnId(a.column));
+      const rankB = rank.get(getColumnId(b.column));
       if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
       if (rankA !== undefined) return -1;
       if (rankB !== undefined) return 1;

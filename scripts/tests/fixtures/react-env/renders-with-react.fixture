@@ -1,0 +1,10 @@
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { TicketPanel } from './TicketPanel';
+
+describe('TicketPanel', () => {
+  it('renders the ticket title', () => {
+    render(<TicketPanel title="Painting the roses red" />);
+    expect(screen.getByText('Painting the roses red')).toBeTruthy();
+  });
+});

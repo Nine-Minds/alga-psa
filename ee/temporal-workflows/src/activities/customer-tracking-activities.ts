@@ -131,6 +131,7 @@ type DbConstraintError = {
 type ClientLookupRow = {
   client_id: string;
   properties?: unknown;
+  is_inactive?: boolean | null;
 };
 
 /**
@@ -197,7 +198,7 @@ async function findClientsByName(
 ): Promise<ClientLookupRow[]> {
   return tenantDb(knex, tenant).table('clients')
     .where({ client_name: tenantName })
-    .select('client_id', 'properties');
+    .select('client_id', 'properties', 'is_inactive');
 }
 
 /**
@@ -282,6 +283,57 @@ async function findContactOwnerByEmail(
 }
 
 /**
+ * A returning customer's client: tenant deletion left it deactivated, and the
+ * admin's contact email still points at it. Lets a signup under a different
+ * company name find the old record instead of colliding on the contact email.
+ */
+async function findInactiveClientByContactEmail(
+  knex: Knex,
+  tenant: string,
+  normalizedEmail: string
+): Promise<ClientLookupRow | null> {
+  const contact = await findContactOwnerByEmail(knex, tenant, normalizedEmail);
+  if (!contact?.client_id) return null;
+
+  const client: ClientLookupRow | undefined = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id: contact.client_id })
+    .select('client_id', 'properties', 'is_inactive')
+    .first();
+  return client?.is_inactive ? client : null;
+}
+
+/**
+ * Reactivate a client that tenant deletion deactivated and re-stamp its
+ * onboarding marker for the new tenant. `renameTo` covers a return under a
+ * different company name.
+ */
+async function reactivateCustomerClient(
+  knex: Knex,
+  tenant: string,
+  client: ClientLookupRow,
+  association: { adminEmail: string; tenantUuid: string | undefined },
+  renameTo?: string
+): Promise<void> {
+  const properties = {
+    ...parseClientProperties(client.properties),
+    ...(renameTo ? { tenant_id: renameTo } : {}),
+    onboarding_association: {
+      admin_email: association.adminEmail,
+      tenant_uuid: association.tenantUuid ?? null,
+    },
+  };
+
+  await tenantDb(knex, tenant).table('clients')
+    .where({ client_id: client.client_id })
+    .update({
+      is_inactive: false,
+      ...(renameTo ? { client_name: renameTo } : {}),
+      properties: JSON.stringify(properties),
+      updated_at: knex.fn.now(),
+    });
+}
+
+/**
  * Resolve or create a customer client in the nineminds (management) tenant.
  *
  * Resolution is exact-name and tenant-scoped, but a name match alone is not
@@ -291,8 +343,10 @@ async function findContactOwnerByEmail(
  * created). Otherwise an unrelated signup that happens to share a company name
  * could be linked to — and granted portal access to — a stranger's record.
  *
- * A trusted single match is reused untouched (createClient is bypassed entirely
- * so its tax/email/notes side effects never run). Multiple matches are refused.
+ * A trusted single match is reused (createClient is bypassed entirely so its
+ * tax/email/notes side effects never run); if tenant deletion had deactivated
+ * it, it is reactivated. With no name match, a deactivated client the admin is
+ * already a contact of is reused and renamed. Multiple matches are refused.
  * A concurrent insert that trips the unique `(tenant, client_name)` constraint
  * is re-read rather than treated as a failure; the association marker is what
  * makes that race self-identifying before any contact exists.
@@ -349,9 +403,17 @@ export async function createCustomerClientActivity(input: {
         throw new UnverifiedCustomerMatchError(input.tenantName, client.client_id, normalizedEmail);
       }
 
+      if (client.is_inactive) {
+        await reactivateCustomerClient(adminKnex, ninemindsTenant, client, {
+          adminEmail: normalizedEmail,
+          tenantUuid,
+        });
+      }
+
       log.info('Reusing verified existing customer client', {
         customerId: client.client_id,
-        tenantName: input.tenantName
+        tenantName: input.tenantName,
+        reactivated: !!client.is_inactive
       });
       return { customerId: client.client_id, reused: true };
     }
@@ -360,6 +422,27 @@ export async function createCustomerClientActivity(input: {
         input.tenantName,
         existingClients.map((client) => client.client_id)
       );
+    }
+
+    const returningClient = await findInactiveClientByContactEmail(
+      adminKnex,
+      ninemindsTenant,
+      normalizedEmail
+    );
+    if (returningClient) {
+      await reactivateCustomerClient(
+        adminKnex,
+        ninemindsTenant,
+        returningClient,
+        { adminEmail: normalizedEmail, tenantUuid },
+        input.tenantName
+      );
+
+      log.info('Reactivated returning customer client under a new name', {
+        customerId: returningClient.client_id,
+        tenantName: input.tenantName
+      });
+      return { customerId: returningClient.client_id, reused: true };
     }
 
     try {
@@ -480,6 +563,11 @@ export async function createCustomerContactActivity(input: {
       normalizedEmail
     );
     if (existingContactId) {
+      // Tenant deletion deactivates the contact; a returning customer gets it back.
+      await tenantDb(adminKnex, ninemindsTenant).table('contacts')
+        .where({ contact_name_id: existingContactId, is_inactive: true })
+        .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
+
       log.info('Reusing existing customer contact', {
         contactId: existingContactId,
         email: normalizedEmail

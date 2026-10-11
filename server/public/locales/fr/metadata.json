@@ -260,6 +260,9 @@
       "detail": {
         "title": "Ticket n° {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Détails du ticket"
+      },
+      "recurring": {
+        "title": "Tickets récurrents"
       }
     },
     "workflowEditor": {

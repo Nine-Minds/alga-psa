@@ -180,7 +180,7 @@ describe('Client-cadence generation guard follows the contract-scoped billed bou
       tenant: context.tenantId, record_id: uuidv4(),
       schedule_key: `schedule:${context.tenantId}:client_contract_line:${lineId}:client:${timing}`,
       period_key: `period:${period[0]}:${period[1]}`, revision: 1,
-      obligation_id: lineId, obligation_type: 'client_contract_line', charge_family: 'fixed',
+      obligation_id: lineId, charge_family: 'fixed',
       cadence_owner: 'client', due_position: timing, lifecycle_state: 'billed',
       service_period_start: period[0], service_period_end: period[1],
       invoice_window_start: window[0], invoice_window_end: window[1],

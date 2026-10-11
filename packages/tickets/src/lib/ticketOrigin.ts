@@ -21,6 +21,7 @@ const SOURCE_HINT_TO_ORIGIN: Readonly<Record<string, Exclude<ResolvedTicketOrigi
   email: TICKET_ORIGINS.INBOUND_EMAIL,
   inbound_email: TICKET_ORIGINS.INBOUND_EMAIL,
   manual: TICKET_ORIGINS.INTERNAL,
+  recurring_ticket: TICKET_ORIGINS.RECURRING,
   web_app: TICKET_ORIGINS.INTERNAL,
   worker: TICKET_ORIGINS.INTERNAL,
   workflow: TICKET_ORIGINS.INTERNAL,
@@ -76,6 +77,10 @@ function normalizeStoredOrigin(origin: unknown): ResolvedTicketOrigin | null {
 
   if (normalized === TICKET_ORIGINS.API) {
     return TICKET_ORIGINS.API;
+  }
+
+  if (normalized === TICKET_ORIGINS.RECURRING) {
+    return TICKET_ORIGINS.RECURRING;
   }
 
   return TICKET_ORIGIN_OTHER;

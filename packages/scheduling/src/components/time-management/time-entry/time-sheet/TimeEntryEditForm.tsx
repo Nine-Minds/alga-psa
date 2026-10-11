@@ -17,6 +17,7 @@ import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
+import { resolvePrefilledServiceSource } from './serviceSourceBadge';
 import { calculateDuration, clampDurationToSameDay, clampDurationToZonedSameDay, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import {
   dateOnlyToLocalDate,
@@ -49,7 +50,7 @@ interface EligiblePlanUI {
 
 // Parse a 'YYYY-MM-DD' (or ISO) date string into a local midnight Date, avoiding the UTC shift
 // that `new Date(str)`/`parseISO` introduce for date-only values.
-// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx, IntervalSection.tsx,
+// LEVERAGE: pattern date-only-local-parse — 4th site (also TimeSheet.tsx,
 // timeSheetOperations.ts). Candidate for a shared scheduling date util.
 const SHEET_STATUS_FALLBACKS: Record<string, string> = {
   DRAFT: 'Draft',
@@ -158,6 +159,17 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     services.find(s => s.id === entry?.service_id),
     [services, entry?.service_id] // Added services dependency
   );
+
+  const serviceSourceLabel = useMemo(() => {
+    const source = resolvePrefilledServiceSource(entry);
+    if (!source) return null;
+    const defaults: Record<typeof source, string> = {
+      task: 'Default from task',
+      phase: 'Default from phase',
+      project: 'Default from project',
+    };
+    return t(`timeEntryForm.serviceSource.${source}`, { defaultValue: defaults[source] });
+  }, [entry, t]);
 
   const [validationErrors, setValidationErrors] = useState<{
     startTime?: string;
@@ -608,8 +620,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       )}
 
       <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-gray-700">
-          {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <span>
+            {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
+          </span>
+          {/* Where the prefilled service came from (task → phase → project).
+              Disappears as soon as the value no longer matches the prefill. */}
+          {serviceSourceLabel && (
+            <span className="chip-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium">
+              {serviceSourceLabel}
+            </span>
+          )}
         </label>
         <CustomSelect
           value={entry?.service_id || ''}

@@ -29,7 +29,7 @@ export const STEP_DEFINITIONS: Record<OnboardingStepId, StepDefinition> = {
     description: 'Connect Google Workspace or Microsoft 365 so admins sign in with managed identities.',
     descriptionKey: 'onboarding.steps.identity.description',
     icon: ShieldCheck,
-    ctaHref: '/msp/profile?tab=Single+Sign-On',
+    ctaHref: '/msp/profile?tab=single-sign-on',
     ctaLabel: 'Connect SSO',
     ctaLabelKey: 'onboarding.steps.identity.cta',
     analyticsTarget: 'identity_sso',

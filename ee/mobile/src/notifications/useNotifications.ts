@@ -26,6 +26,7 @@ import { getPushPriorityThreshold } from "../settings/notificationPreferences";
 
 type NotificationData = {
   ticketId?: string;
+  taskId?: string;
   kind?: string;
   url?: string;
   priority?: string;
@@ -40,6 +41,10 @@ async function navigateFromNotification(
 ): Promise<void> {
   if (data?.ticketId) {
     navigation.navigate("TicketDetail", { ticketId: data.ticketId });
+    return;
+  }
+  if (data?.taskId) {
+    navigation.navigate("ProjectTaskDetail", { taskId: data.taskId });
     return;
   }
   if (data?.kind === SCHEDULE_REMINDER_KIND) {
@@ -190,6 +195,8 @@ export function useNotifications(): void {
       // pulling the user away from what they're doing would be disruptive.
       if (data?.ticketId) {
         navigation.navigate("TicketDetail", { ticketId: data.ticketId });
+      } else if (data?.taskId) {
+        navigation.navigate("ProjectTaskDetail", { taskId: data.taskId });
       }
     });
     return () => sub.remove();

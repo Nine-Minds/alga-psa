@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info, Coins } from 'lucide-react';
 import { BucketOverlayInput } from './ContractWizard';
+import { SellHourBlockNote } from './SellHourBlockNote';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
@@ -210,6 +211,10 @@ export function BucketOverlayFields({
           </p>
         </div>
       </div>
+
+      {mode === 'hours' && (
+        <SellHourBlockNote id={automationId ? `${automationId}-sell-hour-block-note` : 'bucket-overlay-sell-hour-block-note'} />
+      )}
     </div>
   );
 }

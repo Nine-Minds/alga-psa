@@ -18,6 +18,7 @@ export const WorkflowActionInputSection: React.FC<{
   mappedInputFieldCount: number;
   requiredActionInputFields: ActionInputField[];
   unmappedRequiredInputFieldCount: number;
+  requireOneOf?: { fields: ActionInputField[]; satisfied: boolean };
   disabled?: boolean;
 }> = ({
   stepId,
@@ -27,6 +28,7 @@ export const WorkflowActionInputSection: React.FC<{
   targetFields,
   dataContext,
   fieldOptions,
+  requireOneOf,
   disabled = false,
 }) => {
   const { t } = useTranslation('msp/workflows');
@@ -39,6 +41,17 @@ export const WorkflowActionInputSection: React.FC<{
       <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
         {t('actionInputSection.heading', { defaultValue: 'Action inputs' })}
       </div>
+      {requireOneOf && !requireOneOf.satisfied && (
+        <div
+          id={`workflow-step-action-inputs-one-of-${stepId}`}
+          className="mt-1 text-xs text-red-700 dark:text-red-400"
+        >
+          {t('actionInputSection.requireOneOf', {
+            defaultValue: 'Fill at least one of: {{fields}}',
+            fields: requireOneOf.fields.map((field) => field.name).join(', '),
+          })}
+        </div>
+      )}
     </div>
 
     <MappingPanel

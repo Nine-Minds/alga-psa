@@ -89,6 +89,7 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Cannot reply to a deleted comment',
   'Reply visibility must match the thread root visibility',
   'Select at least one child ticket different from the master',
+  'Source ticket not found',
   'Status not valid for this board',
   'Tenant required',
   'Tenant is required to delete comment',
