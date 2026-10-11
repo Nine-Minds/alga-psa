@@ -112,6 +112,8 @@ export interface ProviderCreditApplicationRequest {
   externalInvoiceId: string;
   externalCustomerId?: string | null;
   amountCents: number;
+  /** ISO currency of the invoice/credit note; drives minor-unit scaling. */
+  currency?: string;
 }
 
 export interface ProviderCreditApplicationResult {

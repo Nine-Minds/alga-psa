@@ -1,5 +1,5 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting provider-operations bridge lives with the adapter that owns the provider client */
-import { AppError } from '@alga-psa/core';
+import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 import {
   AccountingProviderOperations,
   ProviderCreditApplicationRequest,
@@ -18,9 +18,15 @@ function truncateRef(ref: string): string {
   return ref.length > QBO_PAYMENT_REF_MAX ? ref.slice(0, QBO_PAYMENT_REF_MAX) : ref;
 }
 
-function toCents(value: unknown): number | undefined {
+function toCents(value: unknown, currency: string): number | undefined {
   const amount = Number(value);
-  return Number.isFinite(amount) ? Math.round(amount * 100) : undefined;
+  return Number.isFinite(amount) ? toMinorUnits(amount, 'en-US', currency) : undefined;
+}
+
+function entityCurrency(entity: Record<string, unknown> | undefined, fallback: string): string {
+  const ref = entity?.CurrencyRef;
+  const value = ref && typeof ref === 'object' ? (ref as Record<string, unknown>).value : undefined;
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
 }
 
 /**
@@ -59,13 +65,17 @@ export async function createQboProviderOperations(
         return null;
       }
       const remainingDollars = Number(creditMemo.Balance);
-      return Number.isFinite(remainingDollars) ? Math.round(remainingDollars * 100) : null;
+      return Number.isFinite(remainingDollars)
+        ? toMinorUnits(remainingDollars, 'en-US', entityCurrency(creditMemo, 'USD'))
+        : null;
     },
 
     async recordPayment(request: ProviderPaymentRequest): Promise<ProviderPaymentResult> {
-      const amountDollars = Math.round(request.amountCents) / 100;
+      const currency = request.currency ?? 'USD';
+      const amountDollars = fromMinorUnits(Math.round(request.amountCents), 'en-US', currency);
       const payload: Record<string, unknown> = {
         CustomerRef: request.externalCustomerId ? { value: request.externalCustomerId } : undefined,
+        CurrencyRef: request.currency ? { value: request.currency } : undefined,
         TotalAmt: amountDollars,
         PaymentRefNum: truncateRef(request.reference),
         PrivateNote: `Alga payment ${request.reference}`,
@@ -90,14 +100,15 @@ export async function createQboProviderOperations(
       return {
         externalPaymentId,
         syncToken: entity?.SyncToken !== undefined ? String(entity.SyncToken) : undefined,
-        unappliedCents: toCents(unapplied)
+        unappliedCents: toCents(unapplied, entityCurrency(entity, currency))
       };
     },
 
     async applyCredit(request: ProviderCreditApplicationRequest): Promise<ProviderCreditApplicationResult> {
-      const amountDollars = Math.round(request.amountCents) / 100;
+      const amountDollars = fromMinorUnits(Math.round(request.amountCents), 'en-US', request.currency ?? 'USD');
       const paymentPayload = {
         CustomerRef: request.externalCustomerId ? { value: request.externalCustomerId } : undefined,
+        CurrencyRef: request.currency ? { value: request.currency } : undefined,
         TotalAmt: 0,
         Line: [
           {

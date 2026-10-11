@@ -12,7 +12,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { AppError, unparseCSV } from '@alga-psa/core';
+import { AppError, minorUnitsToPlainDecimalText, unparseCSV } from '@alga-psa/core';
 import { reconcileExportLineQuantity } from './exportLineQuantity';
 
 const XERO_CSV_MAX_QUANTITY_DECIMALS = 4;
@@ -265,7 +265,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
           maxQuantityDecimals: XERO_CSV_MAX_QUANTITY_DECIMALS
         });
         const quantity = lineQuantity.quantity;
-        const unitAmount = (lineQuantity.unitPriceCents / 100).toFixed(2);
+        const unitAmount = minorUnitsToPlainDecimalText(lineQuantity.unitPriceCents, 'en-US', invoice.currency_code ?? 'USD');
 
         // Build CSV row
         const row: XeroCsvRow = {

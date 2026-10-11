@@ -38,6 +38,7 @@ export function buildQuoteSentEmailTemplate({
   locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up) (also 2 more identical site(s) in this file)
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const validUntil = formatQuoteDate(quote.valid_until ?? null, locale);
   const trimmedMessage = customMessage?.trim();

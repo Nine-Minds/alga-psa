@@ -346,7 +346,7 @@ describe('enqueueCreditApplication', () => {
   it('enqueues apply_credit op with correct payload when the decision allows', async () => {
     vi.stubEnv('EDITION', 'ee');
 
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-1',
       creditNoteInvoiceId: 'inv-cn-99',
       targetInvoiceId: 'inv-target-99',
@@ -377,7 +377,7 @@ describe('enqueueCreditApplication', () => {
     vi.stubEnv('EDITION', 'ee');
     // The decision is authoritative: even with EE on and the settings mocks
     // reporting auto-sync enabled, a decision of "no" must not enqueue.
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-2',
       creditNoteInvoiceId: 'inv-cn-1',
       targetInvoiceId: 'inv-target-1',
@@ -398,7 +398,7 @@ describe('enqueueCreditApplication', () => {
   it('does nothing when the decision allowed but pinned no realm', async () => {
     vi.stubEnv('EDITION', 'ee');
 
-    await enqueueCreditApplication({} as any, 't1', {
+    await enqueueCreditApplication(makeVoidKnex() as any, 't1', {
       allocationId: 'alloc-3',
       creditNoteInvoiceId: 'inv-cn-2',
       targetInvoiceId: 'inv-target-2',
@@ -418,7 +418,7 @@ describe('enqueueCreditApplication', () => {
     vi.stubEnv('EDITION', 'ee');
 
     await expect(
-      enqueueCreditApplication({} as any, 't1', {
+      enqueueCreditApplication(makeVoidKnex() as any, 't1', {
         allocationId: 'alloc-4',
         creditNoteInvoiceId: 'inv-cn-3',
         targetInvoiceId: 'inv-target-3',

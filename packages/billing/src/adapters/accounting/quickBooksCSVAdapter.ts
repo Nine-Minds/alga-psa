@@ -7,6 +7,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { minorUnitsToPlainDecimalText } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   AccountingExportAdapter,
@@ -199,6 +200,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       // Determine if tax should be excluded based on invoice's tax_source setting
       // 'external' or 'pending_external' means tax will be calculated by QuickBooks
       const shouldExcludeTax = invoice.tax_source === 'external' || invoice.tax_source === 'pending_external';
+      const currency = invoice.currency_code ?? 'USD';
       if (shouldExcludeTax) {
         invoicesWithExternalTax++;
       }
@@ -299,12 +301,12 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         '*Item': itemName,
         ItemDescription: charge.description ?? '',
         '*ItemQuantity': quantity.toString(),
-          '*ItemRate': this.centsToAmount(unitPrice).toFixed(2),
-          '*ItemAmount': this.centsToAmount(lineAmount).toFixed(2),
+          '*ItemRate': minorUnitsToPlainDecimalText(unitPrice, 'en-US', currency),
+          '*ItemAmount': minorUnitsToPlainDecimalText(lineAmount, 'en-US', currency),
           Terms: terms,
           Memo: buildQuickBooksCsvMemo(invoiceId, invoice.po_number),
           TaxCode: taxCode,
-          TaxAmount: shouldExcludeTax ? '' : this.centsToAmount(taxAmount).toFixed(2)
+          TaxAmount: shouldExcludeTax ? '' : minorUnitsToPlainDecimalText(taxAmount, 'en-US', currency)
         };
 
         csvRows.push(csvRow);
@@ -657,10 +659,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const day = date.getDate().toString().padStart(2, '0');
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
-  }
-
-  private centsToAmount(cents: number): number {
-    return Math.round(cents) / 100;
   }
 
   private groupBy<T>(items: T[], iteratee: (item: T) => string): Map<string, T[]> {
