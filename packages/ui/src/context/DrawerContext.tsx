@@ -1,6 +1,7 @@
 'use client';
 
 import Drawer from '../components/Drawer';
+import { guardActiveDismiss } from '../components/DismissGuard';
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useReducer } from 'react';
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -332,9 +333,14 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   useShortcutScope('panel', state.isOpen);
-  useCatalogShortcut('panel.close', closeDrawer, { enabled: state.isOpen });
-  useCatalogShortcut('drawer.historyBack', goBack, { enabled: state.isOpen && canGoBack });
-  useCatalogShortcut('drawer.historyForward', goForward, { enabled: state.isOpen && canGoForward });
+  // Keyboard and header-button dismissals go through the drawer's unsaved-changes
+  // guard; programmatic `closeDrawer()` callers (e.g. after a successful save) do not.
+  const guardedClose = useCallback(() => guardActiveDismiss(closeDrawer), [closeDrawer]);
+  const guardedBack = useCallback(() => guardActiveDismiss(goBack), [goBack]);
+  const guardedForward = useCallback(() => guardActiveDismiss(goForward), [goForward]);
+  useCatalogShortcut('panel.close', guardedClose, { enabled: state.isOpen });
+  useCatalogShortcut('drawer.historyBack', guardedBack, { enabled: state.isOpen && canGoBack });
+  useCatalogShortcut('drawer.historyForward', guardedForward, { enabled: state.isOpen && canGoForward });
 
   return (
     <DrawerContext value={{
@@ -386,7 +392,7 @@ export const DrawerOutlet: React.FC = () => {
                     id="drawer-back-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goBack}
+                    onClick={() => guardActiveDismiss(goBack)}
                     className="mr-2"
                     aria-label="Go back"
                   >
@@ -401,7 +407,7 @@ export const DrawerOutlet: React.FC = () => {
                     id="drawer-forward-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goForward}
+                    onClick={() => guardActiveDismiss(goForward)}
                     className="mr-2"
                     aria-label="Go forward"
                   >
@@ -412,7 +418,7 @@ export const DrawerOutlet: React.FC = () => {
                   id="drawer-close-button"
                   variant="ghost"
                   size="sm"
-                  onClick={closeDrawer}
+                  onClick={() => guardActiveDismiss(closeDrawer)}
                   aria-label="Close drawer"
                 >
                   <X className="h-4 w-4" />
@@ -425,7 +431,7 @@ export const DrawerOutlet: React.FC = () => {
                 id="drawer-close-button"
                 variant="ghost"
                 size="sm"
-                onClick={closeDrawer}
+                onClick={() => guardActiveDismiss(closeDrawer)}
                 aria-label="Close drawer"
                 className="hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))]"
               >

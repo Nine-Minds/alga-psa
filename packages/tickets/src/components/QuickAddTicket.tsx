@@ -62,7 +62,11 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
+import {
+  extractTicketRichTextPlainText,
+  parseTicketRichTextContent,
+  serializeTicketRichTextContent,
+} from '../lib/ticketRichText';
 import { resolveDocumentViewUrl } from '../lib/documentViewUrl';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
@@ -229,6 +233,12 @@ export function QuickAddTicket({
   // navigation is a slow RSC fetch during which this modal is still mounted; keep the actions
   // disabled so the operator can't fire a second create before the page swaps.
   const [isNavigatingToTicket, setIsNavigatingToTicket] = useState(false);
+  // Latched once addTicket has returned a ticket, until the form is reset or the dialog closes
+  // or reopens. The ref is the synchronous re-entry guard for handleCreateTicket (state would
+  // lag a second trigger in the same tick); the state mirrors it for rendering.
+  const [ticketCreated, setTicketCreated] = useState(false);
+  const ticketCreatedRef = useRef(false);
+  const createInFlightRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [title, setTitle] = useState(prefilledTitle || '');
@@ -815,12 +825,39 @@ export function QuickAddTicket({
     }
     setError(null);
     setHasAttemptedSubmit(false);
+    ticketCreatedRef.current = false;
+    setTicketCreated(false);
     descriptionUploadSession.resetDraftTracking();
   }
 
   const handleClose = () => {
     descriptionUploadSession.requestDiscard();
   };
+
+  // Typed-but-unsent text: a title or description that differs from what the dialog
+  // opened with. Staged clipboard images already have their own discard confirmation
+  // in requestDiscard, so they are not counted here (that would ask twice).
+  // In duplicate mode the dialog opens with the source ticket's title and description
+  // (applyDuplicateSource), so those are the baseline rather than the prefilled props.
+  //
+  // Never dirty while a create is in flight or done: the ticket is saved (or being saved), and a
+  // reload from addTicket's revalidatePath would otherwise raise a "Leave site?" prompt, whose
+  // Cancel leaves a filled form that can be submitted again. Derived from state rather than a
+  // ref: setIsSubmitting(true) runs in the submit event and commits before addTicket's network
+  // round trip can finish, and isSubmitting stays true until the same batch that has
+  // ticketCreated/isNavigatingToTicket set, so there is no window where all three are false
+  // for a saved ticket. A failed create clears isSubmitting without latching, so the guard returns.
+  const draftBaselineTitle = duplicateSource ? duplicateSource.title : prefilledTitle;
+  const draftBaselineDescription = duplicateSource ? duplicateSource.description : prefilledDescription;
+  const hasUnsavedDraftText =
+    open &&
+    !isSubmitting &&
+    !isNavigatingToTicket &&
+    !ticketCreated &&
+    descriptionUploadSession.stagedClipboardImages.length === 0 &&
+    (title.trim() !== (draftBaselineTitle || '').trim() ||
+      extractTicketRichTextPlainText(descriptionContent).trim() !==
+        extractTicketRichTextPlainText(draftBaselineDescription || '').trim());
 
 
   const validateForm = () => {
@@ -908,6 +945,10 @@ export function QuickAddTicket({
   };
 
   const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
+    // Refs, not button state: two quick triggers (click + Cmd+Enter) must not both reach addTicket.
+    if (createInFlightRef.current || ticketCreatedRef.current) {
+      return;
+    }
     setHasAttemptedSubmit(true);
 
     const validationErrors = validateForm();
@@ -916,6 +957,7 @@ export function QuickAddTicket({
       return;
     }
 
+    createInFlightRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -996,6 +1038,8 @@ export function QuickAddTicket({
       if (!newTicket) {
         throw new Error(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
       }
+      ticketCreatedRef.current = true;
+      setTicketCreated(true);
 
       let finalizedDescription = serializeTicketRichTextContent(descriptionForCreate);
       try {
@@ -1088,6 +1132,7 @@ export function QuickAddTicket({
       console.error('Error creating ticket:', error);
       setError(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
     } finally {
+      createInFlightRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -1100,7 +1145,7 @@ export function QuickAddTicket({
 
   useDialogSubmitShortcut(
     () => { void handleCreateTicket(); },
-    { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading },
+    { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading && !ticketCreated && !isNavigatingToTicket },
   );
 
   const filteredClients = clients.filter(client => {
@@ -1168,7 +1213,7 @@ export function QuickAddTicket({
         id={`${id}-create-open-btn`}
         type="button"
         variant="secondary"
-        disabled={isSubmitting || isNavigatingToTicket}
+        disabled={isSubmitting || isNavigatingToTicket || ticketCreated}
         onClick={() => {
           void handleCreateTicket({ openAfterCreate: true });
         }}
@@ -1184,7 +1229,7 @@ export function QuickAddTicket({
         id={`${id}-submit-btn`}
         type="button"
         variant="default"
-        disabled={isSubmitting || isNavigatingToTicket}
+        disabled={isSubmitting || isNavigatingToTicket || ticketCreated}
         onClick={() => { void handleCreateTicket(); }}
         className={hasRequiredFieldErrors ? 'opacity-50' : ''}
       >
@@ -1201,6 +1246,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
+        hasUnsavedChanges={hasUnsavedDraftText}
         className="w-full max-w-2xl max-h-[90vh]"
         title={duplicateSource
           ? t('quickAdd.duplicateDialogTitle', {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Flex, Heading, Text } from '@radix-ui/themes';
+import { useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import type { SchedulingProjectTaskDetailsRecord } from '../../actions/projectTaskLookupActions';
 
 interface SchedulingProjectTaskDetailsProps {
@@ -17,10 +18,21 @@ function formatDateTime(value: Date | string | null | undefined): string {
 export function SchedulingProjectTaskDetails({
   task,
 }: SchedulingProjectTaskDetailsProps): React.JSX.Element {
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   return (
     <div className="h-full bg-white p-6 rounded-lg shadow-sm">
       <Flex direction="column" gap="4">
         <Heading size="6">{task.task_name || 'Project Task'}</Heading>
+
+        {activityCrossFeature?.renderActivityGroupControl
+          ? activityCrossFeature.renderActivityGroupControl({
+              id: 'scheduling-project-task-activity-group',
+              activityType: 'projectTask',
+              activityId: task.task_id,
+              // Only the primary assignee is loaded here; the control re-checks eligibility on mount.
+              assignmentKey: task.assigned_to ?? '',
+            })
+          : null}
 
         <div>
           <Text size="2" weight="bold">Description</Text>

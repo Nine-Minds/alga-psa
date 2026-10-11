@@ -4,7 +4,8 @@
  * events to both the workflow stream and notification channels.
  */
 
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
@@ -46,6 +47,15 @@ async function publishNotificationEvent(
     console.error(`[WorkflowEventPublisher] Failed to publish ${eventType} through event bus:`, error);
     // Don't throw - notification failure shouldn't break ticket operations
   }
+}
+
+/**
+ * Stamps occurredAt (via buildWorkflowPayload) so the payload also validates on the domain
+ * schema branch. The payload builders already carry an honest actor: `userId` is only ever
+ * a real user id, and actorType states who acted (never the ticket id).
+ */
+function stampOccurredAt<P extends Record<string, unknown>>(payload: P, tenantId: string) {
+  return buildWorkflowPayload(payload, { tenantId });
 }
 
 export class WorkflowEventPublisher implements IEventPublisher {
@@ -107,28 +117,31 @@ export class WorkflowEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.publish('TICKET_CREATED', buildInboundPublisherTicketCreatedPayload(data));
+    await this.publish('TICKET_CREATED', stampOccurredAt(buildInboundPublisherTicketCreatedPayload(data), data.tenantId));
   }
 
   async publishTicketUpdated(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.publish('TICKET_UPDATED', buildInboundPublisherTicketUpdatedPayload(data));
+    await this.publish('TICKET_UPDATED', stampOccurredAt(buildInboundPublisherTicketUpdatedPayload(data), data.tenantId));
   }
 
   async publishTicketClosed(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.publish('TICKET_CLOSED', buildInboundPublisherTicketClosedPayload(data));
+    await this.publish('TICKET_CLOSED', stampOccurredAt(buildInboundPublisherTicketClosedPayload(data), data.tenantId));
   }
 
   async publishCommentCreated(data: {
@@ -136,6 +149,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     // Inbound replies fan out to internal + email channels (like the other publish*
@@ -146,7 +160,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const options = this.suppressCommentEmail
       ? { channel: 'internal-notifications' }
       : undefined;
-    await this.publish('TICKET_COMMENT_ADDED', buildInboundPublisherTicketCommentAddedPayload(data), options);
+    await this.publish('TICKET_COMMENT_ADDED', stampOccurredAt(buildInboundPublisherTicketCommentAddedPayload(data), data.tenantId), options);
   }
 
   /**

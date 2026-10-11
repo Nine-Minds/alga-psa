@@ -13,7 +13,7 @@
 
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
 import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import {
   buildInboundPublisherTicketAssignedPayload,
@@ -37,6 +37,7 @@ export interface InboundEmailOutboxEventPublisherContext {
    */
   suppressCommentEmail?: boolean;
 }
+
 export class InboundEmailOutboxEventPublisher implements IEventPublisher {
   /** Marker so helpers know outbox insert failures must propagate, not swallow. */
   public readonly __inboundOutboxPublisher = true as const;
@@ -100,6 +101,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.enqueue({
@@ -119,6 +121,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
@@ -148,6 +151,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.enqueue({
@@ -162,6 +166,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     const isInitial = this.suppressCommentEmailValue === true;

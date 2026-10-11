@@ -3,7 +3,8 @@
  * This adapter bridges the shared TicketModel with the server's event publishing system
  */
 
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { publishWorkflowEvent } from '../publishers';
@@ -15,6 +16,11 @@ import {
   buildServerPublisherTicketUpdatedPayload,
 } from './serverEventPublisherPayloads';
 
+/** The explicit actor if given, else derived from `userId` (never a substitute id). */
+function actorOf(data: { userId?: string; actor?: WorkflowActor }): WorkflowActor {
+  return data.actor ?? resolveTicketEventActor({ userId: data.userId });
+}
+
 export class ServerEventPublisher implements IEventPublisher {
   constructor(private readonly trx?: Parameters<typeof registerAfterCommit>[0]) {}
 
@@ -22,28 +28,31 @@ export class ServerEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, data.userId, buildServerPublisherTicketCreatedPayload(data, new Date().toISOString()));
+    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, actorOf(data), buildServerPublisherTicketCreatedPayload(data, new Date().toISOString()));
   }
 
   async publishTicketUpdated(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, data.userId, buildServerPublisherTicketUpdatedPayload(data));
+    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, actorOf(data), buildServerPublisherTicketUpdatedPayload(data));
   }
 
   async publishTicketClosed(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, data.userId, buildServerPublisherTicketClosedPayload(data, new Date().toISOString()));
+    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, actorOf(data), buildServerPublisherTicketClosedPayload(data, new Date().toISOString()));
   }
 
   async publishCommentCreated(data: {
@@ -51,9 +60,10 @@ export class ServerEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, data.userId, buildServerPublisherTicketCommentAddedPayload(data));
+    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, actorOf(data), buildServerPublisherTicketCommentAddedPayload({ ...data, actor: actorOf(data) }));
   }
 
   async publishTicketAssigned(data: {
@@ -62,26 +72,17 @@ export class ServerEventPublisher implements IEventPublisher {
     userId: string;
     assignedByUserId?: string;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, data.assignedByUserId ?? data.userId, buildServerPublisherTicketAssignedPayload(data, new Date().toISOString()));
-  }
-
-  private ctxFor(tenantId: string, actorUserId: string | undefined) {
-    return {
-      tenantId,
-      actor: actorUserId
-        ? ({ actorType: 'USER', actorUserId } as const)
-        : ({ actorType: 'SYSTEM' } as const),
-    };
+    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, { actorType: 'USER', actorUserId: data.assignedByUserId ?? data.userId }, buildServerPublisherTicketAssignedPayload(data, new Date().toISOString()));
   }
 
   private async safePublishWorkflowEvent<T extends WorkflowCatalogEventType>(
     eventType: T,
     tenantId: string,
-    actorUserId: string | undefined,
+    actor: WorkflowActor,
     payload: BuiltWorkflowPayload<T> & { ticketId?: unknown }
   ): Promise<void> {
     await this.runAfterCommit(eventType, payload.ticketId, async () => {
-      await publishWorkflowEvent({ eventType, payload, ctx: this.ctxFor(tenantId, actorUserId) });
+      await publishWorkflowEvent({ eventType, payload, ctx: { tenantId, actor } });
     });
   }
 

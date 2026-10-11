@@ -1,8 +1,14 @@
 /** @vitest-environment jsdom */
 
+import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { registerLeaveGuard } from './leaveGuard';
+import { UnsavedChangesProvider, useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
 
 afterEach(() => {
   cleanup();
@@ -15,7 +21,17 @@ function chord(target: EventTarget, init: KeyboardEventInit) {
   return event;
 }
 
-describe('leave guard shared by DismissGuard', () => {
+function Dirty({ dirty }: { dirty: boolean }) {
+  useRegisterUnsavedChanges('draft', dirty);
+  return (
+    <>
+      <button type="button">outside</button>
+      <div contentEditable suppressContentEditableWarning tabIndex={0} aria-label="editor" />
+    </>
+  );
+}
+
+describe('leave guard shared by DismissGuard and UnsavedChangesProvider', () => {
   it('installs a single beforeunload and keydown listener however many sources register', () => {
     const add = vi.spyOn(window, 'addEventListener');
     const remove = vi.spyOn(window, 'removeEventListener');
@@ -44,5 +60,49 @@ describe('leave guard shared by DismissGuard', () => {
 
     off();
     button.remove();
+  });
+
+  it('a page-level UnsavedChangesProvider with a dirty component blocks history chords outside an editable only', () => {
+    render(
+      <UnsavedChangesProvider>
+        <Dirty dirty />
+      </UnsavedChangesProvider>,
+    );
+
+    const outside = screen.getByRole('button', { name: 'outside' });
+    const editor = screen.getByLabelText('editor');
+
+    for (const init of [
+      { key: 'ArrowLeft', metaKey: true },
+      { key: 'ArrowRight', ctrlKey: true },
+      { key: 'ArrowLeft', altKey: true },
+      { key: '[', metaKey: true },
+      { key: ']', metaKey: true },
+    ]) {
+      expect(chord(outside, init).defaultPrevented).toBe(true);
+      expect(chord(editor, init).defaultPrevented).toBe(false);
+    }
+
+    // Plain arrows and other modified keys are never touched.
+    expect(chord(outside, { key: 'ArrowLeft' }).defaultPrevented).toBe(false);
+    expect(chord(outside, { key: 'a', metaKey: true }).defaultPrevented).toBe(false);
+
+    const beforeUnload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+  });
+
+  it('a clean provider blocks nothing', () => {
+    render(
+      <UnsavedChangesProvider>
+        <Dirty dirty={false} />
+      </UnsavedChangesProvider>,
+    );
+
+    const outside = screen.getByRole('button', { name: 'outside' });
+    expect(chord(outside, { key: 'ArrowLeft', metaKey: true }).defaultPrevented).toBe(false);
+    const beforeUnload = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(false);
   });
 });

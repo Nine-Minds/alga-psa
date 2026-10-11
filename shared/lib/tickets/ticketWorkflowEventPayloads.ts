@@ -14,8 +14,8 @@
  * explicit `undefined` key that a consumer could mistake for a value.
  */
 
-import type { IEventPublisher } from '@alga-psa/types';
-import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { builtWorkflowPayload, resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 
 export type TicketNotificationSuppression = {
   suppressContactNotifications?: boolean;
@@ -36,6 +36,15 @@ function withDefined<T extends Record<string, unknown>>(fields: T): Partial<T> {
     if (fields[key] !== undefined) out[key] = fields[key];
   }
   return out;
+}
+
+/**
+ * actorType/actorUserId/actorContactId plus the legacy `userId` alias for a publisher call: the
+ * explicit actor if given, else derived from `userId`. `userId` is only ever a real user id;
+ * with no actor the payload says SYSTEM (never the ticket id).
+ */
+function publisherActorFields(data: { userId?: string; actor?: WorkflowActor }) {
+  return ticketEventActorFields(data.actor ?? resolveTicketEventActor({ userId: data.userId }));
 }
 
 function suppressionFields(input: TicketNotificationSuppression): TicketNotificationSuppression {
@@ -340,15 +349,15 @@ export function buildModelPublisherTicketCreatedPayload(
   data: PublishTicketCreatedInput,
   extras?: Record<string, unknown>
 ) {
-  return builtWorkflowPayload('TICKET_CREATED', withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata, ...extras }));
+  return builtWorkflowPayload('TICKET_CREATED', withDefined({ ticketId: data.ticketId, ...publisherActorFields(data), ...data.metadata, ...extras }));
 }
 
 export function buildModelPublisherTicketUpdatedPayload(data: PublishTicketUpdatedInput) {
-  return builtWorkflowPayload('TICKET_UPDATED', withDefined({ ticketId: data.ticketId, userId: data.userId, changes: data.changes, ...data.metadata }));
+  return builtWorkflowPayload('TICKET_UPDATED', withDefined({ ticketId: data.ticketId, ...publisherActorFields(data), changes: data.changes, ...data.metadata }));
 }
 
 export function buildModelPublisherTicketClosedPayload(data: PublishTicketClosedInput) {
-  return builtWorkflowPayload('TICKET_CLOSED', withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata }));
+  return builtWorkflowPayload('TICKET_CLOSED', withDefined({ ticketId: data.ticketId, ...publisherActorFields(data), ...data.metadata }));
 }
 
 export function buildModelPublisherTicketAssignedPayload(data: PublishTicketAssignedInput) {
@@ -358,21 +367,21 @@ export function buildModelPublisherTicketAssignedPayload(data: PublishTicketAssi
 export function buildModelPublisherTicketCommentAddedPayload(data: PublishTicketCommentCreatedInput) {
   return builtWorkflowPayload(
     'TICKET_COMMENT_ADDED',
-    withDefined({ ticketId: data.ticketId, commentId: data.commentId, userId: data.userId, ...data.metadata })
+    withDefined({ ticketId: data.ticketId, commentId: data.commentId, ...publisherActorFields(data), ...data.metadata })
   );
 }
 
 /**
  * WorkflowEventPublisher and InboundEmailOutboxEventPublisher publish the same
  * shapes. Both carry `tenantId` in the payload because they publish through the
- * raw event bus (no envelope builder). `userId` falls back to the ticket id when
- * there is no actor, a sentinel older subscribers rely on.
+ * raw event bus (no envelope builder). `userId` is only set for a real user;
+ * with no actor the payload carries actorType SYSTEM (never the ticket id).
  */
 export function buildInboundPublisherTicketCreatedPayload(data: PublishTicketCreatedInput) {
   return builtWorkflowPayload('TICKET_CREATED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
-    userId: data.userId || data.ticketId,
+    ...publisherActorFields(data),
     ...data.metadata,
   });
 }
@@ -381,7 +390,7 @@ export function buildInboundPublisherTicketUpdatedPayload(data: PublishTicketUpd
   return builtWorkflowPayload('TICKET_UPDATED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
-    userId: data.userId || data.ticketId,
+    ...publisherActorFields(data),
     changes: data.changes,
     ...data.metadata,
   });
@@ -391,7 +400,7 @@ export function buildInboundPublisherTicketClosedPayload(data: PublishTicketClos
   return builtWorkflowPayload('TICKET_CLOSED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
-    userId: data.userId || data.ticketId,
+    ...publisherActorFields(data),
     ...data.metadata,
   });
 }
@@ -411,7 +420,7 @@ export function buildInboundPublisherTicketCommentAddedPayload(data: PublishTick
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     commentId: data.commentId,
-    userId: data.userId || data.ticketId,
+    ...publisherActorFields(data),
     comment: {
       id: data.commentId,
       content: data.metadata?.content || '',
@@ -423,13 +432,13 @@ export function buildInboundPublisherTicketCommentAddedPayload(data: PublishTick
 
 /**
  * TICKET_STATUS_CHANGED as recorded by the inbound-email outbox. `occurredAt`
- * is required by the domain schema subscribers validate against. The actor
- * fields only ride along when there is a user.
+ * is required by the domain schema subscribers validate against.
  */
 export function buildTicketStatusChangedOutboxPayload(data: {
   tenantId: string;
   ticketId: string;
   userId?: string;
+  actor?: WorkflowActor;
   previousStatusId: string;
   newStatusId: string;
   changedAt: string;
@@ -438,7 +447,7 @@ export function buildTicketStatusChangedOutboxPayload(data: {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     occurredAt: data.changedAt,
-    ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' as const } : {}),
+    ...publisherActorFields(data),
     previousStatusId: data.previousStatusId,
     newStatusId: data.newStatusId,
     changedAt: data.changedAt,
@@ -477,7 +486,10 @@ export type TicketCommentAddedInput = {
   occurredAt: string;
   ticketId: string;
   commentId: string;
-  userId: string;
+  /** A real user id only; omit for contact/system comments and pass `actor` instead. */
+  userId?: string;
+  /** Explicit actor; when absent it is derived from `userId` (SYSTEM if none). */
+  actor?: WorkflowActor;
   comment: {
     content: string;
     author: string;
@@ -506,7 +518,7 @@ export function buildTicketCommentAddedPayload(input: TicketCommentAddedInput) {
     occurredAt: input.occurredAt,
     ticketId: input.ticketId,
     commentId: input.commentId,
-    userId: input.userId,
+    ...publisherActorFields(input),
     ...withDefined({
       thread_id: input.thread_id,
       parent_comment_id: input.parent_comment_id,

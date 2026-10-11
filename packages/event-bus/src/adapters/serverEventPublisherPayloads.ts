@@ -6,7 +6,8 @@
  * `now` is injected so the builders stay deterministic.
  */
 
-import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+import type { WorkflowActor } from '@alga-psa/types';
+import { builtWorkflowPayload, resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 
 export function buildServerPublisherTicketCreatedPayload(
   data: { ticketId: string; userId?: string; metadata?: Record<string, any> },
@@ -75,13 +76,14 @@ export function buildServerPublisherTicketCommentAddedPayload(data: {
   ticketId: string;
   commentId: string;
   userId?: string;
+  actor?: WorkflowActor;
   metadata?: Record<string, any>;
 }) {
   return builtWorkflowPayload('TICKET_COMMENT_ADDED', {
     ticketId: data.ticketId,
     commentId: data.commentId,
     comment: { id: data.commentId },
-    userId: data.userId,
+    ...ticketEventActorFields(data.actor ?? resolveTicketEventActor({ userId: data.userId })),
     ...data.metadata,
   });
 }

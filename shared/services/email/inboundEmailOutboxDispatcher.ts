@@ -14,6 +14,7 @@
  */
 
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
+import { scrubLegacyTicketIdActor } from '@alga-psa/event-schemas';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
 import {
@@ -104,7 +105,14 @@ export async function processInboundOutboxJob(
       strict: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await replayOutboxEvent(publishers, String(row.event_type), outboxPayload(row.payload), options);
+    await replayOutboxEvent(
+      publishers,
+      String(row.event_type),
+      // Rows written before ticket events stopped using the ticket id as the actor
+      // carry userId === ticketId; heal that on replay.
+      scrubLegacyTicketIdActor(outboxPayload(row.payload)),
+      options
+    );
     published = true;
   } catch (error: any) {
     publishError = error?.message || String(error);
@@ -188,7 +196,7 @@ export async function processInboundOutboxRepublishJob(
       force: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await replayOutboxEvent(publishers, String(row.event_type), outboxPayload(row.payload), options);
+    await replayOutboxEvent(publishers, String(row.event_type), scrubLegacyTicketIdActor(outboxPayload(row.payload)), options);
     console.log('[InboundEmailOutboxDispatcher] recovery republished outbox event', {
       event: 'inbound_email_outbox_republished',
       tenantId: row.tenant,

@@ -263,6 +263,12 @@ export function MentionSuggestionPopup({
     if (!suggestionState?.active || items.length === 0) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl/Alt+Arrow is caret movement (line/word/document start and end), not popup navigation.
+      const hasModifier = e.metaKey || e.ctrlKey || e.altKey;
+      if (hasModifier && e.key.startsWith('Arrow')) {
+        return;
+      }
+
       if (e.key === 'Escape') {
         editor.commands.focus();
         return;
@@ -315,6 +321,7 @@ export function MentionSuggestionPopup({
   return createPortal(
     <div
       ref={popupRef}
+      data-editor-popup="true"
       style={{
         position: 'fixed',
         zIndex: 9999,

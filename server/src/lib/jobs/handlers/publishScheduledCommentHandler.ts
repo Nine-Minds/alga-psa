@@ -1,6 +1,7 @@
 import { cleanupCommentAttachmentDrafts } from './cleanupCommentAttachmentDrafts';
 import { dispatchCommentPublication, resolveCommentAuthorDisplay } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { publishBuiltWorkflowPayload, publishStoredWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -27,13 +28,13 @@ async function dispatchScheduledCommentNotification(knex: any, tenantId: string,
   }
   const eventId = comment.scheduled_publish_event_id;
   if (!eventId) throw new Error(`Scheduled comment ${commentId} is missing its durable event id`);
-  // The schema requires a uuid actor and an author string; user-less comments
-  // reuse the ticket id as the sentinel actor and name the real sender.
+  // The schema requires an author string: name the real sender. User-less comments
+  // publish a CONTACT/SYSTEM actor with no userId (never the ticket id).
   const author = await resolveCommentAuthorDisplay(knex, tenantId, comment);
   await publishBuiltWorkflowPayload({
     eventType: 'TICKET_COMMENT_ADDED',
     payload: buildTicketCommentAddedPayload({
-      tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id ?? comment.ticket_id,
+      tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, actor: resolveTicketEventActor({ userId: comment.user_id, contactId: comment.contact_id }),
       thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id),
       comment: { content: comment.note, author, isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
     }),
@@ -98,7 +99,7 @@ export async function publishScheduledCommentHandler(data: PublishScheduledComme
         scheduled_previous_response_state: responseChanges ? ticket?.response_state ?? null : null,
         updated_at: trx.fn.now(),
       })
-      .returning(['comment_id', 'ticket_id', 'user_id', 'note', 'is_internal', 'author_type', 'thread_id', 'parent_comment_id']);
+      .returning(['comment_id', 'ticket_id', 'user_id', 'contact_id', 'note', 'is_internal', 'author_type', 'thread_id', 'parent_comment_id']);
     const transitioned = rows[0];
     if (!transitioned) return rows;
     if (responseChanges) await trxDb.table('tickets').where({ ticket_id: data.ticketId }).update({ response_state: 'awaiting_client' });
@@ -116,7 +117,7 @@ export async function publishScheduledCommentHandler(data: PublishScheduledComme
   const comment = updated[0] ?? await db.table('comments')
     .where({ comment_id: data.commentId, ticket_id: data.ticketId, publish_state: 'published' })
     .whereNotNull('scheduled_publish_event_id')
-    .first(['comment_id', 'ticket_id', 'user_id', 'note', 'is_internal', 'author_type', 'thread_id', 'parent_comment_id']);
+    .first(['comment_id', 'ticket_id', 'user_id', 'contact_id', 'note', 'is_internal', 'author_type', 'thread_id', 'parent_comment_id']);
   if (!comment) return;
 
   await dispatchScheduledResponseStateEvent(knex, data.tenantId, comment.comment_id);

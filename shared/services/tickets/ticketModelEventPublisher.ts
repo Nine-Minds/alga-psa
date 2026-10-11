@@ -1,4 +1,4 @@
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -30,7 +30,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
     } = {},
   ) {}
 
-  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
+  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent(
       'TICKET_CREATED',
       data.tenantId,
@@ -42,13 +42,14 @@ export class TicketModelEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.safePublishEvent('TICKET_UPDATED', data.tenantId, buildModelPublisherTicketUpdatedPayload(data));
   }
 
-  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
+  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent('TICKET_CLOSED', data.tenantId, buildModelPublisherTicketClosedPayload(data));
   }
 
@@ -57,6 +58,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.safePublishEvent('TICKET_COMMENT_ADDED', data.tenantId, buildModelPublisherTicketCommentAddedPayload(data));
@@ -79,16 +81,27 @@ export class TicketModelEventPublisher implements IEventPublisher {
   private async deliver(
     eventType: string,
     payload: unknown,
-    publishWith: (ctx: { actor: { actorType: 'USER'; actorUserId: string } | { actorType: 'SYSTEM' } }) => Promise<void>
+    publishWith: (ctx: { actor: WorkflowActor }) => Promise<void>
   ): Promise<void> {
-    const fields = payload as { assignedByUserId?: unknown; userId?: unknown; ticketId?: unknown } | undefined;
+    // The payload was built from an explicit/derived actor (ticketEventActorFields), so a
+    // CONTACT actor is carried by actorType + actorContactId. TICKET_ASSIGNED attributes
+    // the action to the assigner (falling back to the assignee), as before.
+    const fields = payload as
+      | { assignedByUserId?: unknown; userId?: unknown; ticketId?: unknown; actorType?: unknown; actorContactId?: unknown }
+      | undefined;
     const actorUserId =
       typeof fields?.assignedByUserId === 'string' && fields.assignedByUserId
         ? fields.assignedByUserId
         : (typeof fields?.userId === 'string' ? fields.userId : undefined);
+    const actor: WorkflowActor =
+      fields?.actorType === 'CONTACT' && typeof fields.actorContactId === 'string'
+        ? { actorType: 'CONTACT', actorContactId: fields.actorContactId }
+        : actorUserId
+          ? { actorType: 'USER', actorUserId }
+          : { actorType: 'SYSTEM' };
 
     const publish = () =>
-      publishWith({ actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' } });
+      publishWith({ actor });
 
     if (this.trx) {
       registerAfterCommit(this.trx, publish, `${eventType} ticket=${fields?.ticketId ?? 'unknown'}`);

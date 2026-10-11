@@ -43,6 +43,7 @@ describe('TicketModelEventPublisher', () => {
       // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
         ticketId: 'ticket-1',
+        actorType: 'SYSTEM',
         source: 'ninjaone',
       },
       ctx: {
@@ -78,6 +79,7 @@ describe('TicketModelEventPublisher', () => {
       // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
         ticketId: 'ticket-1',
+        actorType: 'SYSTEM',
         source: 'huntress',
       },
       ctx: {

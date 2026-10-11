@@ -47,6 +47,7 @@ vi.mock('@alga-psa/teams/actions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
+  useOptionalActivityCrossFeature: () => null,
   useQuickAddClient: () => ({
     renderQuickAddContact: () => null,
     renderQuickAddInteraction: () => null,
