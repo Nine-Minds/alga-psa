@@ -9,7 +9,7 @@ import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone } from '@alga-psa/db';
-import { alignedPeriodStart } from '../../lib/timePeriodSuggester';
+import { defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
 import { withAuth } from '@alga-psa/auth';
 import {
   actionError,
@@ -195,14 +195,7 @@ export const createTimePeriodSettings = withAuth(async (
         console.warn(`Unknown timezone "${timeZone}" for effective_from default; using UTC`);
         localToday = Temporal.Now.plainDateISO('UTC');
       }
-      const candidate = { ...settings, effective_from: localToday.toString() } as ITimePeriodSettings;
-      const aligned = alignedPeriodStart(candidate, localToday);
-      if (!aligned) {
-        console.warn('alignedPeriodStart returned null for new time period setting; defaulting effective_from to local today', {
-          frequency_unit: settings.frequency_unit,
-        });
-      }
-      effectiveFrom = (aligned ?? localToday).toString();
+      effectiveFrom = defaultEffectiveFrom(settings as ITimePeriodSettings, localToday).toString();
     }
 
     const now = formatISO(new Date());
