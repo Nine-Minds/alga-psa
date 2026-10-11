@@ -13,7 +13,8 @@
 
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
+import { resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { insertOutboxRow } from '../../services/email/inboundEmailDurableStore';
 
 export interface InboundEmailOutboxEventPublisherContext {
@@ -27,6 +28,11 @@ export interface InboundEmailOutboxEventPublisherContext {
    */
   suppressCommentEmail?: boolean;
 }
+/** Honest actor fields: `userId` only for a real user, never the ticket id. */
+function actorPayloadFields(data: { userId?: string; actor?: WorkflowActor }) {
+  return ticketEventActorFields(data.actor ?? resolveTicketEventActor({ userId: data.userId }));
+}
+
 export class InboundEmailOutboxEventPublisher implements IEventPublisher {
   /** Marker so helpers know outbox insert failures must propagate, not swallow. */
   public readonly __inboundOutboxPublisher = true as const;
@@ -75,6 +81,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.enqueue({
@@ -83,7 +90,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
+        ...actorPayloadFields(data),
         ...(data.metadata ?? {}),
       },
     });
@@ -98,6 +105,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
@@ -107,7 +115,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
+        ...actorPayloadFields(data),
         changes: data.changes,
         ...(data.metadata ?? {}),
       },
@@ -130,7 +138,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
         ticketId: data.ticketId,
         // Required by the TICKET_STATUS_CHANGED domain schema the subscribers validate against.
         occurredAt: data.changedAt,
-        ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' } : {}),
+        ...actorPayloadFields(data),
         previousStatusId: data.previousStatusId,
         newStatusId: data.newStatusId,
         changedAt: data.changedAt,
@@ -142,6 +150,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     await this.enqueue({
@@ -150,7 +159,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
+        ...actorPayloadFields(data),
         ...(data.metadata ?? {}),
       },
     });
@@ -161,6 +170,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
     const isInitial = this.suppressCommentEmailValue === true;
@@ -170,7 +180,8 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
+        ...actorPayloadFields(data),
+        commentId: data.commentId,
         comment: {
           id: data.commentId,
           content: data.metadata?.content ?? '',

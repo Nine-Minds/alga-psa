@@ -37,7 +37,7 @@ describe('TicketModelEventPublisher', () => {
       payload: {
         tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
+        actorType: 'SYSTEM',
         source: 'ninjaone',
       },
       ctx: {
@@ -73,7 +73,7 @@ describe('TicketModelEventPublisher', () => {
       payload: {
         tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
+        actorType: 'SYSTEM',
         source: 'huntress',
       },
       ctx: {
