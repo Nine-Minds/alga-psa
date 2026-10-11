@@ -603,7 +603,12 @@
       "waitStepLine": "Passaggio: {{value}}",
       "matchedRunLabel": "Esecuzione corrispondente",
       "runStatusLine": "Stato: {{status}}",
-      "payloadLabel": "Payload"
+      "payloadLabel": "Payload",
+      "launchSkips": {
+        "title": "Workflow non avviati",
+        "unknownWorkflow": "Workflow eliminato",
+        "intentional": "Intenzionale"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Impossibile caricare gli eventi del workflow",
@@ -1506,6 +1511,39 @@
       "unsaved": "Modifiche non salvate",
       "savedAgo": "Salvato · {{ago}}",
       "saved": "Salvato"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} evento saltato negli ultimi {{days}} giorni — {{reasons}}",
+        "summary_other": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
+        "lastSkipped": "Ultimo saltato {{when}}",
+        "view": "Visualizza eventi saltati"
+      },
+      "drawer": {
+        "title": "Eventi saltati",
+        "windowLabel": "Periodo",
+        "window": {
+          "24h": "Ultime 24 ore",
+          "7d": "Ultimi 7 giorni",
+          "30d": "Ultimi 30 giorni"
+        },
+        "allReasons": "Tutti i motivi",
+        "reasonLabel": "Motivo",
+        "groupAttention": "Richiede attenzione",
+        "groupGuarded": "Protetto / in pausa (intenzionale)",
+        "lastSeen": "Ultima occorrenza {{when}}",
+        "columns": {
+          "received": "Ricevuto",
+          "event": "Evento",
+          "reason": "Motivo",
+          "message": "Messaggio"
+        },
+        "issuesTitle": "Problemi di convalida",
+        "issueRoot": "(contenuto)",
+        "openEvent": "Apri evento",
+        "loadError": "Impossibile caricare gli eventi saltati.",
+        "empty": "Nessun evento saltato in questo periodo."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2801,6 +2839,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "questo workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} saltati",
+        "badgeTitle": "Eventi per cui questo workflow non è stato avviato negli ultimi 7 giorni"
       }
     },
     "eventsCatalog": {
@@ -3196,5 +3238,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Cerca campi",
     "noMatches": "Nessun campo corrispondente"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Riferimento allo schema del payload mancante",
+      "hint": "Il workflow non ha un riferimento allo schema del payload, quindi il payload dell'evento non può essere convalidato."
+    },
+    "unknown_schema_ref": {
+      "label": "Riferimento allo schema del payload sconosciuto",
+      "hint": "Il riferimento allo schema del payload del workflow non esiste nel registro degli schemi."
+    },
+    "missing_source_schema": {
+      "label": "Schema di origine mancante",
+      "hint": "L'evento non ha uno schema di origine da confrontare con lo schema del workflow."
+    },
+    "schema_mismatch": {
+      "label": "Il payload dell'evento non corrisponde allo schema",
+      "hint": "Il payload dell'evento non corrisponde allo schema del workflow e non è configurata alcuna mappatura."
+    },
+    "payload_mapping_failed": {
+      "label": "Mappatura del payload non riuscita",
+      "hint": "La mappatura del payload del trigger non ha potuto essere applicata all'evento."
+    },
+    "payload_validation_failed": {
+      "label": "Convalida del payload non riuscita",
+      "hint": "Il payload mappato non ha superato lo schema del payload del workflow."
+    },
+    "launch_failed": {
+      "label": "Avvio non riuscito",
+      "hint": "Il worker ha accettato l'evento, ma l'avvio dell'esecuzione del workflow non è riuscito."
+    },
+    "paused": {
+      "label": "Workflow in pausa",
+      "hint": "Il workflow è in pausa, quindi gli eventi non vengono avviati intenzionalmente."
+    },
+    "lineage_loop_guard": {
+      "label": "Protezione anti-ciclo (lignaggio)",
+      "hint": "L'evento proviene dal lignaggio di questo stesso workflow; saltato per evitare un ciclo."
+    },
+    "self_trigger_guard": {
+      "label": "Protezione anti-autoattivazione",
+      "hint": "L'evento è stato emesso da questo stesso workflow; saltato per evitare l'autoattivazione."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profondità di causalità superata",
+      "hint": "La catena di eventi causati ha superato la profondità massima; saltato per evitare cicli incontrollati."
+    }
   }
 }

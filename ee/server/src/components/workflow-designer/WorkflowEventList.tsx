@@ -13,12 +13,18 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import {
+  WORKFLOW_LAUNCH_SKIP_REASON_LABEL_KEYS,
+  isWorkflowLaunchSkipReason
+} from '@alga-psa/workflows/lib/workflowLaunchSkipReasons';
 import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
-  listWorkflowEventsPagedAction
+  listWorkflowEventsPagedAction,
+  listEventLaunchSkipsAction,
+  type EventLaunchSkipItem
 } from '@alga-psa/workflows/actions';
 import {
   useFormatWorkflowEventStatus,
@@ -160,7 +166,11 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [summary, setSummary] = useState<WorkflowEventSummary | null>(null);
   const [totalItems, setTotalItems] = useState(0);
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  // Deep link from the launch-skips drawer: ?eventId=<uuid> preselects the event.
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('eventId')
+  );
+  const [launchSkips, setLaunchSkips] = useState<EventLaunchSkipItem[]>([]);
   const [eventDetail, setEventDetail] = useState<WorkflowEventDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -290,6 +300,27 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
     }
     fetchEventDetail(selectedEventId);
   }, [fetchEventDetail, selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedEventId) {
+      setLaunchSkips([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await listEventLaunchSkipsAction({ eventId: selectedEventId });
+        if (!cancelled) setLaunchSkips(items);
+      } catch (error) {
+        // Advisory section; the rest of the detail panel stays usable.
+        console.error('Failed to load workflow launch skips for event', error);
+        if (!cancelled) setLaunchSkips([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEventId]);
 
   const handleStatusChange = (value: string) =>
     setQuery((prev) => ({ ...prev, status: value, page: 1 }));
@@ -592,6 +623,38 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                     defaultValue: 'Error: {{message}}',
                     message: eventDetail.event.error_message,
                   })}</div>
+                )}
+                {launchSkips.length > 0 && (
+                  <div id="workflow-event-detail-launch-skips" className="space-y-2">
+                    <div className="text-xs text-gray-500">
+                      {t('eventList.detail.launchSkips.title', { defaultValue: 'Workflows not launched' })}
+                    </div>
+                    <ul className="space-y-2">
+                      {launchSkips.map((skip, index) => (
+                        <li
+                          key={`${skip.workflowKey ?? skip.workflowName ?? 'workflow'}-${skip.reason}-${index}`}
+                          className="rounded border border-[rgb(var(--color-border-200))] p-2 space-y-1"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {skip.workflowName ?? t('eventList.detail.launchSkips.unknownWorkflow', { defaultValue: 'Deleted workflow' })}
+                            </span>
+                            <Badge variant={skip.intentional ? 'default-muted' : 'warning'}>
+                              {isWorkflowLaunchSkipReason(skip.reason)
+                                ? t(WORKFLOW_LAUNCH_SKIP_REASON_LABEL_KEYS[skip.reason], { defaultValue: skip.reason })
+                                : skip.reason}
+                            </Badge>
+                            {skip.intentional && (
+                              <span className="text-xs text-gray-500">
+                                {t('eventList.detail.launchSkips.intentional', { defaultValue: 'Intentional' })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 break-words">{skip.message}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 {eventDetail.wait && (
                   <div className="space-y-1">

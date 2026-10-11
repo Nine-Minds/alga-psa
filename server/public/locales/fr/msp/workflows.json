@@ -603,7 +603,12 @@
       "waitStepLine": "Étape : {{value}}",
       "matchedRunLabel": "Exécution associée",
       "runStatusLine": "Statut : {{status}}",
-      "payloadLabel": "Charge utile"
+      "payloadLabel": "Charge utile",
+      "launchSkips": {
+        "title": "Workflows non lancés",
+        "unknownWorkflow": "Workflow supprimé",
+        "intentional": "Intentionnel"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Échec du chargement des événements",
@@ -1506,6 +1511,39 @@
       "unsaved": "Modifications non enregistrées",
       "savedAgo": "Enregistré · {{ago}}",
       "saved": "Enregistré"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} événement ignoré au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_other": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "lastSkipped": "Dernier ignoré {{when}}",
+        "view": "Voir les événements ignorés"
+      },
+      "drawer": {
+        "title": "Événements ignorés",
+        "windowLabel": "Période",
+        "window": {
+          "24h": "Dernières 24 heures",
+          "7d": "7 derniers jours",
+          "30d": "30 derniers jours"
+        },
+        "allReasons": "Tous les motifs",
+        "reasonLabel": "Motif",
+        "groupAttention": "Nécessite une attention",
+        "groupGuarded": "Protégé / en pause (intentionnel)",
+        "lastSeen": "Dernière occurrence {{when}}",
+        "columns": {
+          "received": "Reçu",
+          "event": "Événement",
+          "reason": "Motif",
+          "message": "Message"
+        },
+        "issuesTitle": "Problèmes de validation",
+        "issueRoot": "(charge utile)",
+        "openEvent": "Ouvrir l'événement",
+        "loadError": "Impossible de charger les événements ignorés.",
+        "empty": "Aucun événement ignoré sur cette période."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2801,6 +2839,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "ce workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} ignorés",
+        "badgeTitle": "Événements pour lesquels ce workflow n'a pas été lancé au cours des 7 derniers jours"
       }
     },
     "eventsCatalog": {
@@ -3196,5 +3238,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Rechercher des champs",
     "noMatches": "Aucun champ correspondant"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Référence du schéma de charge utile manquante",
+      "hint": "Le workflow n'a pas de référence de schéma de charge utile, la charge utile de l'événement ne peut donc pas être validée."
+    },
+    "unknown_schema_ref": {
+      "label": "Référence du schéma de charge utile inconnue",
+      "hint": "La référence de schéma de charge utile du workflow n'existe pas dans le registre des schémas."
+    },
+    "missing_source_schema": {
+      "label": "Schéma source manquant",
+      "hint": "L'événement n'a pas de schéma source à comparer au schéma du workflow."
+    },
+    "schema_mismatch": {
+      "label": "La charge utile de l'événement ne correspond pas au schéma",
+      "hint": "La charge utile de l'événement ne correspond pas au schéma du workflow et aucun mappage n'est configuré."
+    },
+    "payload_mapping_failed": {
+      "label": "Échec du mappage de la charge utile",
+      "hint": "Le mappage de charge utile du déclencheur n'a pas pu être appliqué à l'événement."
+    },
+    "payload_validation_failed": {
+      "label": "Échec de la validation de la charge utile",
+      "hint": "La charge utile mappée n'a pas passé le schéma de charge utile du workflow."
+    },
+    "launch_failed": {
+      "label": "Échec du lancement",
+      "hint": "Le worker a accepté l'événement, mais le démarrage de l'exécution du workflow a échoué."
+    },
+    "paused": {
+      "label": "Workflow en pause",
+      "hint": "Le workflow est en pause : les événements ne sont volontairement pas lancés."
+    },
+    "lineage_loop_guard": {
+      "label": "Garde anti-boucle (lignée)",
+      "hint": "L'événement provient de la propre lignée de ce workflow ; ignoré pour éviter une boucle."
+    },
+    "self_trigger_guard": {
+      "label": "Garde anti-auto-déclenchement",
+      "hint": "L'événement a été émis par ce workflow lui-même ; ignoré pour éviter l'auto-déclenchement."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profondeur de causalité dépassée",
+      "hint": "La chaîne d'événements provoqués a dépassé la profondeur maximale ; ignoré pour éviter les boucles incontrôlées."
+    }
   }
 }

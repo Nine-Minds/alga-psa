@@ -603,7 +603,12 @@
       "waitStepLine": "Stap: {{value}}",
       "matchedRunLabel": "Gekoppelde uitvoering",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Payload"
+      "payloadLabel": "Payload",
+      "launchSkips": {
+        "title": "Niet gestarte workflows",
+        "unknownWorkflow": "Verwijderde workflow",
+        "intentional": "Opzettelijk"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Kan workflow-gebeurtenissen niet laden",
@@ -1506,6 +1511,39 @@
       "unsaved": "Niet-opgeslagen wijzigingen",
       "savedAgo": "Opgeslagen · {{ago}}",
       "saved": "Opgeslagen"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} gebeurtenis overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
+        "summary_other": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
+        "lastSkipped": "Laatst overgeslagen {{when}}",
+        "view": "Overgeslagen gebeurtenissen bekijken"
+      },
+      "drawer": {
+        "title": "Overgeslagen gebeurtenissen",
+        "windowLabel": "Periode",
+        "window": {
+          "24h": "Laatste 24 uur",
+          "7d": "Laatste 7 dagen",
+          "30d": "Laatste 30 dagen"
+        },
+        "allReasons": "Alle redenen",
+        "reasonLabel": "Reden",
+        "groupAttention": "Vereist aandacht",
+        "groupGuarded": "Beveiligd / gepauzeerd (opzettelijk)",
+        "lastSeen": "Laatst gezien {{when}}",
+        "columns": {
+          "received": "Ontvangen",
+          "event": "Gebeurtenis",
+          "reason": "Reden",
+          "message": "Bericht"
+        },
+        "issuesTitle": "Validatieproblemen",
+        "issueRoot": "(inhoud)",
+        "openEvent": "Gebeurtenis openen",
+        "loadError": "Overgeslagen gebeurtenissen laden mislukt.",
+        "empty": "Geen overgeslagen gebeurtenissen in deze periode."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2801,6 +2839,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "deze workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} overgeslagen",
+        "badgeTitle": "Gebeurtenissen waarvoor deze workflow in de afgelopen 7 dagen niet is gestart"
       }
     },
     "eventsCatalog": {
@@ -3196,5 +3238,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Velden zoeken",
     "noMatches": "Geen overeenkomende velden"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Verwijzing naar payloadschema ontbreekt",
+      "hint": "De workflow heeft geen verwijzing naar een payloadschema, dus de payload van de gebeurtenis kan niet worden gevalideerd."
+    },
+    "unknown_schema_ref": {
+      "label": "Onbekende verwijzing naar payloadschema",
+      "hint": "De verwijzing naar het payloadschema van de workflow bestaat niet in het schemaregister."
+    },
+    "missing_source_schema": {
+      "label": "Bronschema ontbreekt",
+      "hint": "De gebeurtenis heeft geen bronschema om te vergelijken met het schema van de workflow."
+    },
+    "schema_mismatch": {
+      "label": "Payload van gebeurtenis komt niet overeen met schema",
+      "hint": "De payload van de gebeurtenis komt niet overeen met het schema van de workflow en er is geen mapping geconfigureerd."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload-mapping mislukt",
+      "hint": "De payload-mapping van de trigger kon niet op de gebeurtenis worden toegepast."
+    },
+    "payload_validation_failed": {
+      "label": "Payloadvalidatie mislukt",
+      "hint": "De gemapte payload voldeed niet aan het payloadschema van de workflow."
+    },
+    "launch_failed": {
+      "label": "Starten mislukt",
+      "hint": "De worker accepteerde de gebeurtenis, maar het starten van de workflowrun mislukte."
+    },
+    "paused": {
+      "label": "Workflow gepauzeerd",
+      "hint": "De workflow is gepauzeerd, dus gebeurtenissen worden opzettelijk niet gestart."
+    },
+    "lineage_loop_guard": {
+      "label": "Lusbeveiliging (herkomst)",
+      "hint": "De gebeurtenis komt uit de eigen herkomst van deze workflow; overgeslagen om een lus te voorkomen."
+    },
+    "self_trigger_guard": {
+      "label": "Zelfactiveringsbeveiliging",
+      "hint": "De gebeurtenis is door deze workflow zelf uitgezonden; overgeslagen om zelfactivering te voorkomen."
+    },
+    "causation_depth_exceeded": {
+      "label": "Causaliteitsdiepte overschreden",
+      "hint": "De keten van veroorzaakte gebeurtenissen overschreed de maximale diepte; overgeslagen om op hol geslagen lussen te voorkomen."
+    }
   }
 }
