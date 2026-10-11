@@ -109,6 +109,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/msp/add-ons/layout.tsx', 'Add-ons'],
       ['server/src/app/msp/profile/layout.tsx', 'Profile'],
       ['server/src/app/msp/tickets/page.tsx', 'Tickets'],
+      ['server/src/app/msp/tickets/recurring/layout.tsx', 'Recurring tickets'],
       ['server/src/app/msp/clients/page.tsx', 'Clients'],
       ['server/src/app/msp/contacts/page.tsx', 'Contacts'],
       ['server/src/app/msp/interactions/page.tsx', 'Interactions'],

@@ -29,6 +29,12 @@ const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  // Comment publication outbox replays through publishStoredWorkflowEvent; keep the assertions on the comment event.
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({

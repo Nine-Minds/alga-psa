@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   documentAssociatedEventPayloadSchema,
   documentDetachedEventPayloadSchema,
-} from '../../../runtime/schemas/documentEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildDocumentAssociatedPayload, buildDocumentDetachedPayload } from '../documentAssociationEventBuilders';
 
 describe('documentAssociationEventBuilders', () => {

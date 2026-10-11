@@ -803,7 +803,8 @@
           "recipientPlaceholder": "jij@voorbeeld.com",
           "testingButton": "Bezig met testen...",
           "runButton": "Verbinding testen"
-        }
+        },
+        "ticketIdentityRequired": "Kies hieronder een e-mailidentiteit voor tickets om het verzenddomein in te stellen."
       },
       "ticketingFrom": {
         "title": "Afzenderadres voor ticketing",
@@ -842,7 +843,18 @@
         "description": "Berichten worden via Microsoft Graph als de geselecteerde mailbox verzonden en opgeslagen in Verzonden items.",
         "loadFailed": "Microsoft 365-mailboxen konden niet worden geladen.",
         "saved": "Verzendmailbox bijgewerkt."
-      }
+      },
+      "diagnosticsButton": "Diagnose voor uitgaande e-mail uitvoeren",
+      "saveSettings": "Uitgaande instellingen opslaan",
+      "discardChanges": "Wijzigingen verwerpen",
+      "unsaved": "Niet-opgeslagen wijzigingen",
+      "noPendingChanges": "Geen niet-opgeslagen wijzigingen",
+      "saving": "Uitgaande instellingen opslaan…",
+      "saved": "Uitgaande instellingen opgeslagen.",
+      "saveFailed": "De uitgaande instellingen konden niet worden opgeslagen. Uw wijzigingen zijn nog aanwezig. Probeer het opnieuw.",
+      "diagnosticsSaveHelp": "Sla uw wijzigingen op of verwerp ze voordat u de uitgaande instellingen controleert.",
+      "saveBeforeDomainRemoval": "Sla uw uitgaande wijzigingen op of verwerp ze voordat u een domein verwijdert.",
+      "senderAddressAfterSave": "Wordt weergegeven na het opslaan."
     },
     "inbound": {
       "intro": "Configureer inkomende e-mailroutering en provider-specifieke automatisering."

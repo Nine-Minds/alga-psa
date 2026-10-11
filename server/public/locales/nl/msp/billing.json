@@ -335,7 +335,8 @@
       "billingMethod": "Factureringsmethode",
       "quantity": "Hoeveelheid",
       "defaultRate": "Standaardtarief",
-      "actions": "Acties"
+      "actions": "Acties",
+      "pricing": "Prijsstelling"
     },
     "tooltip": {
       "defaultRate": "Het standaardtarief van de service, gebruikt voor interne waardetoewijzing en rapportage binnen het vaste plantotaal."
@@ -370,7 +371,17 @@
       "saveSuccess": "Vooraf ingestelde services voor contractregels zijn succesvol opgeslagen",
       "saveError": "Kan services niet opslaan"
     },
-    "unknownService": "Onbekende dienst"
+    "unknownService": "Onbekende dienst",
+    "pricing": {
+      "product": "Gefactureerd op basis van aantal eenheden",
+      "bundle": "Onderdeel van het regeltotaal",
+      "unit": "Per gebruiker / eenheid",
+      "unitRate": "Eenheidstarief",
+      "unitRatePlaceholder": "Catalogusprijs"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: de terugkerende hoeveelheid moet een geheel getal van nul of meer zijn."
+    }
   },
   "accountingExports": {
     "title": "Boekhoudkundige exporten",

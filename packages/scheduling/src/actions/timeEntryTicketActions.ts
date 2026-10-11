@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
+import { workedMinutes } from '@alga-psa/core';
 import type {
   IUser,
   TimeSheetStatus,
@@ -137,13 +138,15 @@ export async function fetchTimeEntriesForTicketCore(
 
   for (const row of rows) {
     const isOwn = row.user_id === user.user_id;
+    // Billing value stays on the entry; totals below are worked time.
     const minutes = Number(row.billable_duration) || 0;
+    const worked = workedMinutes(row);
 
     if (isOwn) {
-      ownTotal += minutes;
+      ownTotal += worked;
       ownCount += 1;
     } else {
-      othersTotal += minutes;
+      othersTotal += worked;
       othersCount += 1;
     }
 
@@ -183,7 +186,7 @@ export async function fetchTimeEntriesForTicketCore(
     visible.push(redactEntry(entry, decision.redactedFields));
 
     if (!isOwn) {
-      othersVisibleTotal += minutes;
+      othersVisibleTotal += worked;
       othersVisibleCount += 1;
     }
   }

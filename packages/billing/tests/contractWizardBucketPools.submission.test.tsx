@@ -176,7 +176,7 @@ describe('ContractWizard bucket-authoring submission', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [LEGACY_HOURLY_SERVICE],
           usage_services: [],

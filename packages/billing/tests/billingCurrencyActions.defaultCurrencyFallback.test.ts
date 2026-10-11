@@ -79,7 +79,10 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
     mockState.billingSettings = null;
   });
 
-  it('returns contract currency when active contracts exist', async () => {
+  // The client's own currency wins over an unrelated active contract's: a
+  // legacy contract used to pin every new project under the client to its
+  // currency, with nothing marking the result as stale.
+  it('prefers the client currency over an active contract currency', async () => {
     mockState.client = { default_currency_code: 'AUD' };
     mockState.contracts = [{ currency_code: 'GBP' }];
     mockState.billingSettings = { default_currency_code: 'EUR' };
@@ -94,7 +97,7 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
       'client-1'
     );
 
-    expect(result).toBe('GBP');
+    expect(result).toBe('AUD');
   });
 
   it('returns client default when no active contracts', async () => {
@@ -169,8 +172,8 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
     expect(result).toBe('EUR');
   });
 
-  it('returns contract currency even when it matches client default', async () => {
-    mockState.client = { default_currency_code: 'GBP' };
+  it('infers the contract currency when the client has none', async () => {
+    mockState.client = { default_currency_code: null };
     mockState.contracts = [{ currency_code: 'GBP' }];
     mockState.billingSettings = { default_currency_code: 'EUR' };
 
@@ -187,8 +190,8 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
     expect(result).toBe('GBP');
   });
 
-  it('throws when client has contracts in multiple currencies', async () => {
-    mockState.client = { default_currency_code: 'AUD' };
+  it('reports mixed contract currencies only when the client has none', async () => {
+    mockState.client = { default_currency_code: null };
     mockState.contracts = [{ currency_code: 'GBP' }, { currency_code: 'EUR' }];
 
     const { resolveClientBillingCurrency } = await import(
@@ -206,5 +209,22 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
       messageKey: 'msp/billing:errors.currency.multipleActive',
       messageParams: { currencies: 'GBP, EUR' },
     });
+  });
+
+  it('answers for a client with its own currency despite mixed contracts', async () => {
+    mockState.client = { default_currency_code: 'CHF' };
+    mockState.contracts = [{ currency_code: 'GBP' }, { currency_code: 'EUR' }];
+
+    const { resolveClientBillingCurrency } = await import(
+      '../src/actions/billingCurrencyActions'
+    );
+
+    await expect(
+      resolveClientBillingCurrency(
+        { user_id: 'user-1' },
+        { tenant: 'tenant-1' },
+        'client-1'
+      )
+    ).resolves.toBe('CHF');
   });
 });

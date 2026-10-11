@@ -7,6 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
+import { unitFixedServiceAmountCents } from '../../../lib/fixedServiceBasis';
 import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
@@ -60,7 +61,8 @@ const ContractLineCard: React.FC<{
   noServicesConfiguredLabel: string;
   billedOnRecordedUsageLabel: string;
   billedOnPeriodCountLabel: string;
-  recurringSeatsLabel: (quantity: number, rate: string) => string;
+  recurringSeatsLabel: (quantity: number, rate: string, amount: string) => string;
+  recurringSeatsCatalogRateLabel: (quantity: number) => string;
   bundleAllocationLabel: string;
   previouslyConfiguredQuantityLabel: (quantity: number) => string;
   setUpRecurringSeatsLabel: string;
@@ -85,6 +87,7 @@ const ContractLineCard: React.FC<{
   billedOnRecordedUsageLabel,
   billedOnPeriodCountLabel,
   recurringSeatsLabel,
+  recurringSeatsCatalogRateLabel,
   bundleAllocationLabel,
   previouslyConfiguredQuantityLabel,
   setUpRecurringSeatsLabel,
@@ -150,10 +153,19 @@ const ContractLineCard: React.FC<{
                     service.pricing_basis === 'unit' &&
                     service.quantity != null && (
                       <span data-testid={`fixed-recurring-seats-${service.service_id}`}>
-                        {recurringSeatsLabel(
-                          service.quantity,
-                          formatCurrencyCents(service.unit_rate ?? service.custom_rate, currencyCode),
-                        )}
+                        {(() => {
+                          const unitRate = service.unit_rate ?? service.custom_rate;
+                          return unitRate == null
+                            ? recurringSeatsCatalogRateLabel(service.quantity)
+                            : recurringSeatsLabel(
+                                service.quantity,
+                                formatCurrencyCents(unitRate, currencyCode),
+                                formatCurrencyCents(
+                                  unitFixedServiceAmountCents(service.quantity, unitRate),
+                                  currencyCode,
+                                ),
+                              );
+                        })()}
                       </span>
                     )}
                   {line.contract_line_type !== 'Usage' &&
@@ -353,11 +365,18 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
       defaultValue: 'Previously configured quantity: {{count}} — not used for billing',
     })
   ), [t]);
-  const recurringSeatsLabel = useCallback((quantity: number, rate: string): string => (
+  const recurringSeatsLabel = useCallback((quantity: number, rate: string, amount: string): string => (
     t('contractOverview.lines.recurringSeats', {
       count: quantity,
       rate,
-      defaultValue: '{{count}} × {{rate}} (recurring seats)',
+      amount,
+      defaultValue: '{{count}} × {{rate}} = {{amount}} (recurring seats)',
+    })
+  ), [t]);
+  const recurringSeatsCatalogRateLabel = useCallback((quantity: number): string => (
+    t('contractOverview.lines.recurringSeatsCatalogRate', {
+      count: quantity,
+      defaultValue: '{{count}} × catalog price (recurring seats)',
     })
   ), [t]);
   const bundleAllocationLabel = t('contractOverview.lines.bundleAllocation', {
@@ -540,6 +559,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}
                   billedOnPeriodCountLabel={billedOnPeriodCountLabel}
                   recurringSeatsLabel={recurringSeatsLabel}
+                  recurringSeatsCatalogRateLabel={recurringSeatsCatalogRateLabel}
                   bundleAllocationLabel={bundleAllocationLabel}
                   previouslyConfiguredQuantityLabel={previouslyConfiguredQuantityLabel}
                   setUpRecurringSeatsLabel={setUpRecurringSeatsLabel}

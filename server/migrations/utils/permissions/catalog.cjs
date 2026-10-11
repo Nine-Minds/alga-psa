@@ -209,6 +209,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'purchase_order', action: 'update', msp: true, client: false, description: 'Update purchase orders', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
   { resource: 'quotes', action: 'approve', msp: true, client: false, description: 'Approve or request changes to quotes pending internal approval', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'recurring_ticket', action: 'create', msp: true, client: false, description: 'Create recurring ticket definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+  { resource: 'recurring_ticket', action: 'delete', msp: true, client: false, description: 'Archive recurring ticket definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+  { resource: 'recurring_ticket', action: 'read', msp: true, client: false, description: 'View recurring ticket definitions and run history', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'recurring_ticket', action: 'update', msp: true, client: false, description: 'Modify recurring ticket definitions, clients and schedules', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
 
   { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },

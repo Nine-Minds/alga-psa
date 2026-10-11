@@ -54,7 +54,7 @@ export function useActivitiesCache() {
       .map((key) => {
         const value = filters[key as keyof ActivityFilters];
         if (Array.isArray(value)) {
-          return `${key}:${value.sort().join(',')}`;
+          return `${key}:${[...value].sort().join(',')}`;
         }
         return `${key}:${value}`;
       })

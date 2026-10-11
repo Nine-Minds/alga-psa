@@ -29,6 +29,11 @@ const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
@@ -360,18 +365,21 @@ describe('project task comment threading model', () => {
       threadId = root.thread_id;
 
       publishEventMock.mockClear();
+      publishWorkflowEventMock.mockClear();
       replyCommentId = await createTaskComment({
         taskId: context.task_id,
         note: blockNote('Task reply for event payload test'),
         parent_comment_id: rootCommentId,
       });
 
-      const addedEvent = publishEventMock.mock.calls
+      // TASK_COMMENT_ADDED is now a catalogued event published through publishWorkflowEvent; the tenant
+      // travels in ctx and is stamped into the payload by the publisher.
+      const addedEvent = publishWorkflowEventMock.mock.calls
         .map(([event]) => event)
         .find((event) => event.eventType === 'TASK_COMMENT_ADDED');
       expect(addedEvent).toBeTruthy();
+      expect(addedEvent.ctx.tenantId).toBe(context.tenant);
       expect(addedEvent.payload).toMatchObject({
-        tenantId: context.tenant,
         taskId: context.task_id,
         userId: userRef.user?.user_id,
         taskCommentId: replyCommentId,

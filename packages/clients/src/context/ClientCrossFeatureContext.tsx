@@ -63,6 +63,10 @@ export interface ClientTicketsRenderProps {
   initialUsers?: IUser[];
 }
 
+export interface ClientRecurringTicketsRenderProps {
+  clientId: string;
+}
+
 export interface ContactTicketsRenderProps {
   contactId: string;
   contactName?: string;
@@ -155,6 +159,8 @@ export interface ClientCrossFeatureCallbacks {
    */
   renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
+  /** Optional: the Recurring tickets tab on client detail (the tickets package owns the component; clients must not import it). */
+  renderClientRecurringTickets?: (props: ClientRecurringTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;

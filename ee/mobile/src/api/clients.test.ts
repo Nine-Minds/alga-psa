@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getClient, getClientContacts, getClientLocations, listClients, updateClient } from "./clients";
+import { createClient, createClientLocation, getClient, getClientContacts, getClientLocations, listClients, updateClient, updateClientLocation } from "./clients";
 import type { ApiClient } from "./client";
 
 function mockClient(response: unknown): ApiClient {
@@ -164,5 +164,43 @@ describe("getClientLocations", () => {
       headers: { "x-api-key": "key-123" },
     });
     expect(result).toEqual(okResponse);
+  });
+});
+
+describe("client writes", () => {
+  it("creates a client with the monthly billing cycle the API requires", async () => {
+    const client = mockClient({ ok: true, data: { data: { client_id: "client-9" } } });
+
+    await createClient(client, { apiKey: "key-123", data: { client_name: "Acme", client_type: "company" }, auditHeaders: { "x-device": "ios" } });
+
+    expect(client.request).toHaveBeenCalledWith({
+      method: "POST",
+      path: "/api/v1/clients",
+      signal: undefined,
+      headers: { "x-api-key": "key-123", "x-device": "ios" },
+      body: { billing_cycle: "monthly", client_name: "Acme", client_type: "company" },
+    });
+  });
+
+  it("creates and updates the client's location through the locations routes", async () => {
+    const client = mockClient({ ok: true, data: { data: { location_id: "loc-1" } } });
+
+    await createClientLocation(client, {
+      apiKey: "key-123",
+      clientId: "client-1",
+      data: { address_line1: "1 Main St", city: "Springfield", country_code: "US", country_name: "United States", phone: "+13202521658" },
+    });
+    await updateClientLocation(client, { apiKey: "key-123", clientId: "client-1", locationId: "loc-1", data: { email: "ops@acme.test" } });
+
+    expect(client.request).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      method: "POST",
+      path: "/api/v1/clients/client-1/locations",
+      body: expect.objectContaining({ country_code: "US", phone: "+13202521658" }),
+    }));
+    expect(client.request).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      method: "PUT",
+      path: "/api/v1/clients/client-1/locations/loc-1",
+      body: { email: "ops@acme.test" },
+    }));
   });
 });

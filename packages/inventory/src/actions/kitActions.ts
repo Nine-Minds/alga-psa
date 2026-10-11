@@ -632,6 +632,7 @@ export const createKitProduct = withAuth(
           })
           .returning('*');
 
+        // LEVERAGE: friction catalog-price-writer — single-row epoch seed bypasses writeServiceCatalogPricing (display_order relies on the column default 0); kit projection price, single currency. Route through the writer once it is reachable from this package.
         await trx('service_prices')
           .insert({
             tenant,
@@ -731,6 +732,7 @@ export const updateKitProduct = withAuth(
           .where({ tenant, service_id: kitServiceId })
           .update(serviceUpdate);
 
+        // LEVERAGE: friction catalog-price-writer — single-row epoch seed bypasses writeServiceCatalogPricing (display_order relies on the column default 0); kit projection price, single currency. Route through the writer once it is reachable from this package.
         await trx('service_prices')
           .insert({
             tenant,

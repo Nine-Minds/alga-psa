@@ -13,7 +13,7 @@ const { publishToStream, checkEscalationNeeded, escalateTicket, withTransaction 
   publishToStream: vi.fn(), checkEscalationNeeded: vi.fn(), escalateTicket: vi.fn(), withTransaction: vi.fn(),
 }));
 vi.mock('@temporalio/activity', () => ({ Context: { current: () => ({ log: { info: vi.fn() } }) } }));
-vi.mock('@alga-psa/workflow-streams', () => ({ getRedisStreamClient: () => ({ publishToStream }) }));
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({ ...((await importOriginal()) as any), getRedisStreamClient: () => ({ publishToStream }) }));
 vi.mock('@alga-psa/sla/services/escalationService', () => ({ checkEscalationNeeded, escalateTicket }));
 vi.mock('@alga-psa/db', () => ({
   withTenantTransactionRetryReadOnly: withTransaction,

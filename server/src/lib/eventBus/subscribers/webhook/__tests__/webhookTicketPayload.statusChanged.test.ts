@@ -128,7 +128,8 @@ describe('buildTicketWebhookPayload status_changed (T021)', () => {
     expect(payload.previous_status_id).toBe(PREVIOUS_STATUS_ID);
     expect(payload.previous_status_name).toBe(PREVIOUS_STATUS_NAME);
     expect(payload.status_id).toBe(NEW_STATUS_ID);
-    expect(calls.tickets).toBe(1);
+    // Snapshot join + fresh response_state read.
+    expect(calls.tickets).toBe(2);
     expect(calls.statuses).toBe(1);
   });
 

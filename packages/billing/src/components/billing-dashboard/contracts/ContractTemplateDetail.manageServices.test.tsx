@@ -36,7 +36,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       return base.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fallback[name] ?? ''));
     },
   }),
-  useFormatters: () => ({ locale: 'en-US' }),
+  useFormatters: () => ({
+    locale: 'en-US',
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en-US', options).format(value),
+  }),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -81,7 +85,7 @@ describe('ContractTemplateDetail Manage Services', () => {
 
   afterEach(() => cleanup());
 
-  it('opens the services manager and formats the line rate in the template currency', async () => {
+  it('opens the services manager and formats the line rate currency-neutrally', async () => {
     render(
       <CurrencyFormatProvider currencyCode="USD" locale="en-US">
         <ContractTemplateDetail />
@@ -93,6 +97,10 @@ describe('ContractTemplateDetail Manage Services', () => {
 
     await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
     expect(actions.getDetailedContractLines).toHaveBeenCalled();
-    expect(screen.getByText(/123\.45/)).toHaveTextContent('€');
+    // Templates are currency-neutral: the rate carries no symbol or code, even
+    // when the stored template row has a currency_code and the provider has another.
+    const rate = screen.getByText(/123\.45/);
+    expect(rate).toHaveTextContent("123.45 in the client's currency");
+    expect(rate.textContent).not.toMatch(/[$€£¥]|USD|EUR/);
   });
 });

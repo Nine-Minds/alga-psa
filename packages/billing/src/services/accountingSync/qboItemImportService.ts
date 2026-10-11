@@ -167,7 +167,7 @@ async function resolveAll(params: {
     buildTaxRateMap(knex, tenant, realm)
   ]);
 
-  const resolutions = resolveQboItems(qboItems, existingServices, existingMappings, taxRateMap);
+  const resolutions = resolveQboItems(qboItems, existingServices, existingMappings, taxRateMap, currencyCode);
   return { resolutions, currencyCode, qboItems };
 }
 

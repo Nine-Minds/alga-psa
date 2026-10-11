@@ -36,11 +36,13 @@ function capturedGroupedPredicate(query: any) {
 
 function buildTrx(params: {
   contact?: { contact_name_id: string; client_id: string | null; portal_visibility_group_id: string | null; is_client_admin?: boolean };
-  group?: { group_id: string; client_id: string; ticket_scope?: 'client' | 'contact' };
+  group?: { group_id: string; client_id: string; ticket_scope?: string; asset_scope?: string; project_scope?: string };
   boardIds?: string[];
   boards?: Array<{ board_id: string; client_portal_visible: boolean }>;
   profiles?: Array<{ billing_profile_id: string; is_default: boolean }>;
   grants?: Array<{ billing_profile_id: string }>;
+  /** (contact, manager) edges the hierarchy query returns for the client. */
+  reports?: Array<{ contact_name_id: string; manager_contact_id: string | null }>;
 }) {
   return ((table: string) => {
     if (table === 'boards') {
@@ -69,6 +71,9 @@ function buildTrx(params: {
       return {
         where: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue(params.contact),
+          whereNotNull: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue(params.reports ?? []),
+          }),
         }),
       };
     }
@@ -113,6 +118,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -142,6 +151,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -189,6 +202,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -277,6 +294,101 @@ describe('contact scope', () => {
       grantedTicketProfileIds: ['profile-north'],
       defaultBillingProfileId: 'profile-default',
     });
+  });
+
+  it('resolves me plus every direct and indirect report, and grants watcher visibility', async () => {
+    const result = await getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' },
+      boardIds: ['board-1'],
+      reports: [
+        { contact_name_id: 'contact-2', manager_contact_id: 'contact-1' },
+        { contact_name_id: 'contact-3', manager_contact_id: 'contact-2' },
+        // Reports to someone outside my subtree.
+        { contact_name_id: 'contact-9', manager_contact_id: 'contact-8' },
+        // My own manager is above me, not below.
+        { contact_name_id: 'contact-1', manager_contact_id: 'contact-0' },
+      ],
+    }), 'tenant-1', 'contact-1');
+
+    expect(result.visibleContactIds).toEqual(['contact-1', 'contact-2', 'contact-3']);
+    expect(result.watchGrant).toBe(true);
+  });
+
+  it('terminates on a reporting cycle and never lists the contact twice', async () => {
+    const result = await getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' },
+      boardIds: ['board-1'],
+      reports: [
+        { contact_name_id: 'contact-2', manager_contact_id: 'contact-1' },
+        { contact_name_id: 'contact-3', manager_contact_id: 'contact-2' },
+        { contact_name_id: 'contact-1', manager_contact_id: 'contact-3' },
+      ],
+    }), 'tenant-1', 'contact-1');
+
+    expect(result.visibleContactIds).toEqual(['contact-1', 'contact-2', 'contact-3']);
+  });
+
+  it('a contact with no group, a client-scoped group, or the admin override gets no hierarchy or watcher grant', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const reports = [{ contact_name_id: 'contact-2', manager_contact_id: 'contact-1' }];
+    const results = await Promise.all([
+      getClientContactVisibilityContext(buildTrx({ contact: { ...contact, portal_visibility_group_id: null }, reports }), 'tenant-1', 'contact-1'),
+      getClientContactVisibilityContext(buildTrx({ contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client' }, boardIds: ['b'], reports }), 'tenant-1', 'contact-1'),
+      getClientContactVisibilityContext(buildTrx({ contact: { ...contact, is_client_admin: true }, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' }, boardIds: ['b'], reports }), 'tenant-1', 'contact-1'),
+    ]);
+    for (const result of results) {
+      expect(result.visibleContactIds).toBeUndefined();
+      expect(result.watchGrant).toBeUndefined();
+    }
+  });
+
+  it('resolves asset and project scope independently of ticket scope, and the reports-to subtree for either', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const reports = [{ contact_name_id: 'contact-2', manager_contact_id: 'contact-1' }];
+    const group = { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'contact', project_scope: 'client' };
+
+    const devicesOnly = await getClientContactVisibilityContext(buildTrx({ contact, group, boardIds: ['b'], reports }), 'tenant-1', 'contact-1');
+    expect(devicesOnly).toMatchObject({
+      effectiveTicketScope: 'client',
+      assetScope: 'contact',
+      effectiveAssetScope: 'contact',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
+      visibleContactIds: ['contact-1', 'contact-2'],
+    });
+    // Ticket grants stay off while tickets are client-scoped.
+    expect(devicesOnly.watchGrant).toBeUndefined();
+
+    const projectsOnly = await getClientContactVisibilityContext(
+      buildTrx({ contact, group: { ...group, asset_scope: 'client', project_scope: 'contact' }, boardIds: ['b'], reports }),
+      'tenant-1',
+      'contact-1'
+    );
+    expect(projectsOnly).toMatchObject({ effectiveAssetScope: 'client', effectiveProjectScope: 'contact', visibleContactIds: ['contact-1', 'contact-2'] });
+  });
+
+  it('the client-admin override forces asset and project scope to client, and no group means client', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const group = { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact', asset_scope: 'contact', project_scope: 'contact' };
+    const admin = await getClientContactVisibilityContext(buildTrx({ contact: { ...contact, is_client_admin: true }, group, boardIds: ['b'] }), 'tenant-1', 'contact-1');
+    expect(admin).toMatchObject({ assetScope: 'contact', effectiveAssetScope: 'client', projectScope: 'contact', effectiveProjectScope: 'client', effectiveTicketScope: 'client' });
+    expect(admin.visibleContactIds).toBeUndefined();
+
+    const ungrouped = await getClientContactVisibilityContext(buildTrx({ contact: { ...contact, portal_visibility_group_id: null } }), 'tenant-1', 'contact-1');
+    expect(ungrouped).toMatchObject({ effectiveAssetScope: 'client', effectiveProjectScope: 'client' });
+  });
+
+  it('rejects a group with an invalid asset or project scope', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    await expect(
+      getClientContactVisibilityContext(
+        buildTrx({ contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'everything' }, boardIds: ['b'] }),
+        'tenant-1',
+        'contact-1'
+      )
+    ).rejects.toThrow('invalid asset or project scope');
   });
 
   it('does not query grants for a client-scoped contact', async () => {

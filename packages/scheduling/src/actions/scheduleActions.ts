@@ -5,7 +5,6 @@ import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
@@ -24,6 +23,9 @@ import {
   shouldEmitAppointmentEvents,
 } from '@alga-psa/workflow-streams';
 import {
+  buildScheduleEntryCreatedPayload,
+  buildScheduleEntryDeletedPayload,
+  buildScheduleEntryUpdatedPayload,
   buildScheduleBlockCreatedPayload,
   buildScheduleBlockDeletedPayload,
   isScheduleBlockEntry,
@@ -296,18 +298,10 @@ export const addScheduleEntry = withAuth(async (
     });
 
     try {
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: {
-          tenantId: tenant,
-          userId: user.user_id,
-          entryId: createdEntry.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: createdEntry.entry_id, changes: {
             after: sanitizeScheduleEntryForEvent(createdEntry),
             assignedUserIds,
-          },
-        },
-      });
+          } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
     } catch (eventError) {
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
     }
@@ -569,6 +563,16 @@ export const updateScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+    // Mutating a schedule entry requires read (the floor for any schedule
+    // access); whether the viewer may actually change *this* entry is decided
+    // below by evaluateEntryAccess, which honours per-calendar edit shares.
+    // user_schedule:update is the global escalation (edit on every calendar),
+    // not a prerequisite — otherwise share-based edit delegates could never
+    // move an owner's entry.
+    const canReadSchedule = await hasPermission(user, 'user_schedule', 'read', db);
+    if (!canReadSchedule) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
     const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
 
     const masterEntryId =
@@ -653,19 +657,11 @@ export const updateScheduleEntry = withAuth(async (
 
     if (updatedEntry) {
       try {
-        await publishEvent({
-          eventType: 'SCHEDULE_ENTRY_UPDATED',
-          payload: {
-            tenantId: tenant,
-            userId: user.user_id,
-            entryId: entry_id,
-            changes: {
+        await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: entry_id, changes: {
               before: sanitizeScheduleEntryForEvent(existingEntry),
               after: sanitizeScheduleEntryForEvent(updatedEntry),
               updateType: entry.updateType || IEditScope.SINGLE,
-            },
-          },
-        });
+            } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
       } catch (eventError) {
         console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
       }
@@ -918,6 +914,22 @@ export const deleteScheduleEntry = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
+    // Read is the floor; the share-aware evaluateEntryAccess decision below
+    // (via canUpdateGlobally) decides whether this viewer may delete this
+    // entry. Requiring the global user_schedule:update here would lock out
+    // per-calendar edit delegates. See updateScheduleEntry.
+    if (!await hasPermission(user, 'user_schedule', 'read', db)) {
+      const message = 'Permission denied to delete this schedule entry.';
+      return {
+        success: false,
+        error: message,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: [],
+      };
+    }
 
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;
@@ -1124,18 +1136,10 @@ export const deleteScheduleEntry = withAuth(async (
     }
 
     try {
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_DELETED',
-        payload: {
-          tenantId: tenant,
-          userId: user.user_id,
-          entryId: entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: buildScheduleEntryDeletedPayload({ userId: user.user_id, entryId: entry_id, changes: {
             before: sanitizeScheduleEntryForEvent(existingEntry),
             deleteType,
-          },
-        },
-      });
+          } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
     } catch (eventError) {
       console.error('[ScheduleActions] Failed to publish SCHEDULE_ENTRY_DELETED event', eventError);
     }

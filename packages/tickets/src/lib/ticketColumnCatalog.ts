@@ -49,6 +49,7 @@ export const TICKET_COLUMNS = [
   { key: 'board',         dataIndex: 'board_name',       kind: 'optional', defaultVisible: true,  titleKey: 'fields.board',        titleFallback: 'Board' },
   { key: 'category',      dataIndex: 'category_name',    kind: 'folded',   defaultVisible: false, titleKey: 'fields.category',     titleFallback: 'Category' },
   { key: 'client',        dataIndex: 'client_name',      kind: 'optional', defaultVisible: true,  titleKey: 'fields.client',       titleFallback: 'Client' },
+  { key: 'contact',       dataIndex: 'contact_name',     kind: 'optional', defaultVisible: false, titleKey: 'fields.contact',      titleFallback: 'Contact' },
   { key: 'assigned_to',   dataIndex: 'assigned_to_name', kind: 'optional', defaultVisible: true,  titleKey: 'fields.assignedTo',   titleFallback: 'Assigned To' },
   { key: 'due_date',      dataIndex: 'due_date',         kind: 'optional', defaultVisible: true,  titleKey: 'fields.dueDate',      titleFallback: 'Due Date' },
   { key: 'created',       dataIndex: 'entered_at',       kind: 'optional', defaultVisible: false, titleKey: 'fields.created',      titleFallback: 'Created' },

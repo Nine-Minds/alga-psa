@@ -59,6 +59,8 @@ vi.mock('./sso/enterpriseRegistryEntry', () => ({
 
 vi.mock('./sso/types', () => ({
   OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {},
+  isOAuthMappingFailure: (user: { authFailure?: { code?: string } } | null | undefined) =>
+    Boolean(user?.authFailure?.code),
 }));
 
 vi.mock('./sso/ceOAuthProfileMapper', () => ({

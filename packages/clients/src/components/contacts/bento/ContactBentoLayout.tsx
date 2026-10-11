@@ -362,6 +362,7 @@ export function ContactBentoLayout({
           setRoleDraft(updated.role ?? '');
           setNotesDraft(updated.notes ?? '');
           closeDrawer();
+          onChangesSaved?.();
           void onContactUpdated?.();
         }}
         onCancel={closeDrawer}

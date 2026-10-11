@@ -8,17 +8,24 @@ import React, {
   useTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  ContractDraftSimulationInput,
+  ContractWizardFixedLine,
+  FixedPricingBasis,
+} from "@alga-psa/types";
 import { Dialog } from "@alga-psa/ui/components/Dialog";
 import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { Button } from "@alga-psa/ui/components/Button";
 import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
+import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
 import {
   TemplateLinesStep,
   TemplateLinesReview,
@@ -31,6 +38,7 @@ import {
   ClientTemplateLineEditInput,
   ClientTemplateLinesView,
 } from "@alga-psa/billing/actions/contractWizardActions";
+import { isRecurringChangeConfirmation } from "@alga-psa/billing/actions/contractWizardActionErrors";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { getClientByIdForBilling } from "@alga-psa/billing/actions/billingClientsActions";
 import {
@@ -43,7 +51,18 @@ import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from "@shared/billingClients/recurringAuthoringValidation";
-import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import type { ContractAuthoringRateSource } from "../../../lib/contractAuthoringRate";
+import {
+  createEmptyFixedLine,
+  isServicelessFixedLine,
+  meaningfulFixedLines,
+  projectFixedLinesForSubmission,
+} from "../../../lib/contractWizardFixedLines";
+import {
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+} from "../../../lib/fixedServiceBasis";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
@@ -165,12 +184,10 @@ export interface ContractWizardData {
   po_number?: string;
   po_amount?: number;
   po_required?: boolean;
-  fixed_services: Array<{
-    service_id: string;
-    service_name?: string;
-    quantity: number;
-    bucket_overlay?: BucketOverlayInput | null;
-  }>;
+  /** One entry per recurring Fixed contract line; a new wizard starts with one empty placeholder. */
+  fixed_lines: ContractWizardFixedLine[];
+  /** Server monthly fixed value of the saved draft being resumed; acknowledged on finalize if it changes. */
+  recurring_baseline?: { monthly_cents: number };
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -178,8 +195,6 @@ export interface ContractWizardData {
     /** Optional per-unit override in cents (contract currency). */
     custom_rate?: number;
   }>;
-  fixed_base_rate?: number;
-  fixed_billing_frequency?: string;
   enable_proration: boolean;
   hourly_services: Array<{
     service_id: string;
@@ -226,9 +241,8 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   billing_timing: "arrears",
   billing_frequency: "monthly",
   currency_code: "USD",
-  fixed_services: [],
+  fixed_lines: [createEmptyFixedLine(true)],
   product_services: [],
-  fixed_base_rate: undefined,
   enable_proration: true,
   hourly_services: [],
   minimum_billable_time: undefined,
@@ -290,6 +304,10 @@ export const buildInitialContractWizardData = (
       editingContract.use_tenant_renewal_defaults;
   }
 
+  if (!initial.fixed_lines || initial.fixed_lines.length === 0) {
+    initial.fixed_lines = [createEmptyFixedLine(initial.enable_proration)];
+  }
+
   return initial;
 };
 
@@ -316,6 +334,12 @@ export function ContractWizard({
   initialClientId,
 }: ContractWizardProps) {
   const { t } = useTranslation("msp/contracts");
+  const { formatCurrency } = useFormatters();
+  const money = (minorUnits: number, currencyCode: string) =>
+    formatCurrency(minorUnits / 100, currencyCode || "USD", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -323,6 +347,18 @@ export function ContractWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
     useState(false);
+  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // when it first invoices and only reports completion when that is dismissed.
+  const [createdContract, setCreatedContract] =
+    useState<ContractWizardData | null>(null);
+
+  // Set when the server reports that finishing/saving would change the draft's
+  // monthly recurring value; the operator must confirm before it is resubmitted.
+  const [pendingRecurringChange, setPendingRecurringChange] = useState<{
+    mode: "finish" | "draft";
+    baselineMonthlyCents: number;
+    resultingMonthlyCents: number;
+  } | null>(null);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -391,6 +427,7 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
 
     const initialWizardData = buildInitialContractWizardData(editingContract);
     if (!editingContract && initialClientId) {
@@ -457,10 +494,15 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
   };
 
-  const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => ({ ...prev, ...data }));
+  // A function update is resolved against the latest state inside the setter, so
+  // async callers (e.g. catalog-price prefill) never write back a stale snapshot.
+  const updateData = (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => {
+    setWizardData((prev) => ({ ...prev, ...(typeof data === 'function' ? data(prev) : data) }));
   };
 
   const hasUnsavedChanges = useMemo(() => {
@@ -469,7 +511,20 @@ export function ContractWizard({
     return !isEqual(wizardData, initialWizardDataRef.current);
   }, [open, wizardData]);
 
+  const handleConfirmationDone = () => {
+    const created = createdContract;
+    setCreatedContract(null);
+    if (created) {
+      onComplete?.(created);
+    }
+    onOpenChange(false);
+  };
+
   const handleCloseRequest = () => {
+    if (createdContract) {
+      handleConfirmationDone();
+      return;
+    }
     if (hasUnsavedChanges) {
       setShowUnsavedChangesDialog(true);
       return;
@@ -494,12 +549,11 @@ export function ContractWizard({
     updateData({
       template_id: templateId,
       template_lines: [],
-      fixed_services: [],
+      fixed_lines: [createEmptyFixedLine(wizardData.enable_proration)],
       product_services: [],
       hourly_services: [],
       usage_services: [],
       bucket_pools: [],
-      fixed_base_rate: undefined,
     });
   };
 
@@ -557,7 +611,9 @@ export function ContractWizard({
   }, [open, wizardData.template_id, wizardData.client_id, t]);
 
   const buildSubmissionData =
-    async (): Promise<ClientContractWizardSubmission> => {
+    async (
+      recurringChangeAck?: { baseline_monthly_cents: number },
+    ): Promise<ClientContractWizardSubmission> => {
       const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
 
       let tenantDefaultRenewalMode:
@@ -607,12 +663,13 @@ export function ContractWizard({
         po_required: wizardData.po_required,
         po_number: wizardData.po_number,
         po_amount: wizardData.po_amount,
-        fixed_base_rate: wizardData.fixed_base_rate,
-        fixed_billing_frequency: wizardData.fixed_billing_frequency,
         enable_proration: wizardData.enable_proration,
         hourly_services: (wizardData.hourly_services ?? []).map(withoutLegacyBucketOverlay),
         hourly_billing_frequency: wizardData.hourly_billing_frequency,
-        fixed_services: wizardData.fixed_services ?? [],
+        // Explicitly project the public fixed-line fields so draft-only
+        // rate/source metadata never reaches the persisted submission.
+        // In template mode the template's lines are cloned server-side.
+        fixed_lines: wizardData.template_id ? [] : projectFixedLinesForSubmission(wizardData.fixed_lines ?? []),
         product_services: wizardData.product_services ?? [],
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
@@ -629,21 +686,22 @@ export function ContractWizard({
       // Bucket authoring is line-level pools; conflicting legacy
       // bucket_overlay fields are stripped from every service above.
       submission.bucket_pools = wizardData.bucket_pools ?? [];
+      if (recurringChangeAck) {
+        submission.recurring_change_ack = recurringChangeAck;
+      }
       return submission;
     };
 
   const getRecurringAuthoringValidationError = (): string | null => {
     const unsupportedCombination = [
-      wizardData.fixed_services.length > 0
-        ? getUnsupportedRecurringAuthoringCombination({
-            lineType: "Fixed",
-            cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
-            billingFrequency:
-              wizardData.fixed_billing_frequency ??
-              wizardData.billing_frequency,
-          })
-        : null,
+      ...meaningfulFixedLines(wizardData.fixed_lines).map((line) =>
+        getUnsupportedRecurringAuthoringCombination({
+          lineType: "Fixed",
+          cadenceOwner: wizardData.cadence_owner,
+          billingTiming: line.billing_timing ?? wizardData.billing_timing,
+          billingFrequency: line.billing_frequency ?? wizardData.billing_frequency,
+        }),
+      ),
       wizardData.product_services.length > 0
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Product",
@@ -808,21 +866,51 @@ export function ContractWizard({
         }
         return true;
       case 1:
-        if (
-          wizardData.fixed_services.length > 0 &&
-          !wizardData.fixed_base_rate
-        ) {
-          setErrors((prev) => ({
-            ...prev,
-            [stepIndex]: t(
-              "wizard.validation.baseRateRequiredWhenFixedServices",
-              {
-                defaultValue:
-                  "Base rate is required when fixed services are included",
-              },
-            ),
-          }));
-          return false;
+        {
+          const lines = meaningfulFixedLines(wizardData.fixed_lines);
+          const basisIssue = lines
+            .flatMap((line) => line.services)
+            .filter((service) => service.service_id)
+            .map((service) => getFixedServiceBasisIssue(service))
+            .find((issue) => issue !== null);
+          if (basisIssue) {
+            const message =
+              basisIssue === "unit_rate_required"
+                ? t("wizard.validation.recurringUnitRateRequired", {
+                    defaultValue: "Enter a unit rate for each recurring service.",
+                  })
+                : basisIssue === "unit_quantity_not_whole"
+                  ? t("wizard.validation.recurringQuantityWholeNumber", {
+                      defaultValue: "Recurring quantity must be a whole number.",
+                    })
+                  : t("wizard.validation.fixedQuantityInvalid", {
+                      defaultValue: "Quantity must be zero or greater.",
+                    });
+            setErrors((prev) => ({ ...prev, [stepIndex]: message }));
+            return false;
+          }
+          // Each line's base rate is its bundle total: required only when that
+          // line has an allocation (bundle) member. Per-unit services bill
+          // quantity × unit rate and carry no share of it.
+          const lineMissingBaseRate = lines.find(
+            (line) =>
+              line.services.some((service) => service.service_id) &&
+              hasBundleFixedService(line.services.filter((service) => service.service_id)) &&
+              !line.base_rate,
+          );
+          if (lineMissingBaseRate) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: t(
+                "wizard.validation.baseRateRequiredWhenFixedServices",
+                {
+                  defaultValue:
+                    "Base rate is required when fixed services are included",
+                },
+              ),
+            }));
+            return false;
+          }
         }
         return true;
       case 2: {
@@ -861,7 +949,7 @@ export function ContractWizard({
           return true;
         }
         const hasServices =
-          wizardData.fixed_services.length > 0 ||
+          meaningfulFixedLines(wizardData.fixed_lines).length > 0 ||
           wizardData.product_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
@@ -871,6 +959,20 @@ export function ContractWizard({
             [stepIndex]: t("wizard.validation.addAtLeastOneService", {
               defaultValue:
                 "Add at least one service before creating the contract",
+            }),
+          }));
+          return false;
+        }
+        // A line with a recurring amount but no service cannot be billed, so it
+        // blocks Finish. Save Draft keeps such a line as-is.
+        const servicelessLine = wizardData.fixed_lines.find(isServicelessFixedLine);
+        if (servicelessLine) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t("wizard.validation.fixedLineNoService", {
+              defaultValue:
+                'Fixed line "{{lineName}}" has a recurring amount but no service to bill it on. Add a service before finishing.',
+              lineName: servicelessLine.contract_line_name?.trim() || wizardData.contract_name,
             }),
           }));
           return false;
@@ -926,7 +1028,9 @@ export function ContractWizard({
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinish = async (
+    recurringChangeAck?: { baseline_monthly_cents: number },
+  ) => {
     if (!validateStep(activeStep)) {
       return;
     }
@@ -942,9 +1046,17 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = await buildSubmissionData();
+      const submission = await buildSubmissionData(recurringChangeAck);
       const result = await createClientContractFromWizard(submission);
 
+      if (isRecurringChangeConfirmation(result)) {
+        setPendingRecurringChange({
+          mode: "finish",
+          baselineMonthlyCents: result.baseline_monthly_cents,
+          resultingMonthlyCents: result.resulting_monthly_cents,
+        });
+        return;
+      }
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -963,6 +1075,10 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
+      if (meaningfulFixedLines(completedData.fixed_lines).length > 0) {
+        setCreatedContract(completedData);
+        return;
+      }
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
@@ -978,7 +1094,9 @@ export function ContractWizard({
     }
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (
+    recurringChangeAck?: { baseline_monthly_cents: number },
+  ) => {
     if (!validateStep(0)) {
       setCurrentStep(0);
       return;
@@ -1006,11 +1124,19 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = await buildSubmissionData();
+      const submission = await buildSubmissionData(recurringChangeAck);
       const result = await createClientContractFromWizard(submission, {
         isDraft: true,
       });
 
+      if (isRecurringChangeConfirmation(result)) {
+        setPendingRecurringChange({
+          mode: "draft",
+          baselineMonthlyCents: result.baseline_monthly_cents,
+          resultingMonthlyCents: result.resulting_monthly_cents,
+        });
+        return;
+      }
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -1129,7 +1255,12 @@ export function ContractWizard({
                 })}
               </p>
               <ContractDraftSimulator
-                draft={wizardData as ContractDraftSimulationInput}
+                draft={
+                  {
+                    ...wizardData,
+                    fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
+                  } as ContractDraftSimulationInput
+                }
               />
             </section>
           </div>
@@ -1139,15 +1270,25 @@ export function ContractWizard({
     }
   };
 
-  const wizardFooter = (
+  const wizardFooter = createdContract ? (
+    <div className="flex justify-end">
+      <Button
+        id="contract-wizard-created-done"
+        variant="default"
+        onClick={handleConfirmationDone}
+      >
+        {t("wizardCreated.done", { defaultValue: "Done" })}
+      </Button>
+    </div>
+  ) : (
     <WizardNavigation
       currentStep={currentStep}
       totalSteps={stepLabels.length}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={handleSkip}
-      onFinish={handleFinish}
-      onSaveDraft={handleSaveDraft}
+      onFinish={() => handleFinish()}
+      onSaveDraft={() => handleSaveDraft()}
       isNextDisabled={isLoading}
       isSkipDisabled={REQUIRED_STEPS.includes(activeStep)}
       isLoading={isLoading}
@@ -1172,28 +1313,40 @@ export function ContractWizard({
         isOpen={open}
         onClose={handleCloseRequest}
         title={
-          editingContract
-            ? t("wizard.title.editContract", { defaultValue: "Edit Contract" })
-            : t("wizard.title.createNewContract", {
-                defaultValue: "Create New Contract",
-              })
+          createdContract
+            ? t("wizardCreated.title", { defaultValue: "Contract Created" })
+            : editingContract
+              ? t("wizard.title.editContract", {
+                  defaultValue: "Edit Contract",
+                })
+              : t("wizard.title.createNewContract", {
+                  defaultValue: "Create New Contract",
+                })
         }
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <WizardProgress
-              steps={stepLabels as unknown as string[]}
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
-          </div>
+          {!createdContract && (
+            <div className="flex-shrink-0 px-6 pt-6">
+              <WizardProgress
+                steps={stepLabels as unknown as string[]}
+                currentStep={currentStep}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+              />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="mb-4">{renderStep()}</div>
+            <div className="mb-4">
+              {createdContract ? (
+                <ContractCreatedConfirmation data={createdContract} />
+              ) : (
+                renderStep()
+              )}
+            </div>
 
             {errors[currentStep] && (
               <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">
@@ -1205,6 +1358,44 @@ export function ContractWizard({
           </div>
         </div>
       </Dialog>
+
+      <ConfirmationDialog
+        id="recurring-total-change-confirm"
+        isOpen={pendingRecurringChange !== null}
+        onClose={() => setPendingRecurringChange(null)}
+        onConfirm={() => {
+          const pending = pendingRecurringChange;
+          setPendingRecurringChange(null);
+          if (!pending) return;
+          const ack = { baseline_monthly_cents: pending.baselineMonthlyCents };
+          if (pending.mode === "draft") {
+            void handleSaveDraft(ack);
+          } else {
+            void handleFinish(ack);
+          }
+        }}
+        title={t("wizard.recurringChange.title", {
+          defaultValue: "Confirm recurring total change",
+        })}
+        message={t("wizard.recurringChange.message", {
+          defaultValue:
+            "This changes the contract's estimated monthly recurring value from {{before}} to {{after}}.",
+          before: money(
+            pendingRecurringChange?.baselineMonthlyCents ?? 0,
+            wizardData.currency_code,
+          ),
+          after: money(
+            pendingRecurringChange?.resultingMonthlyCents ?? 0,
+            wizardData.currency_code,
+          ),
+        })}
+        confirmLabel={t("wizard.recurringChange.confirm", {
+          defaultValue: "Confirm and continue",
+        })}
+        cancelLabel={t("wizard.recurringChange.cancel", {
+          defaultValue: "Go back",
+        })}
+      />
 
       <ConfirmationDialog
         id="contract-wizard-unsaved-changes"

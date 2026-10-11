@@ -31,7 +31,7 @@ describe('buildWorkflowAuthoringGuide', () => {
     }
 
     const fnNames = guide.expressionLanguage.functions.map((fn) => fn.name);
-    expect(fnNames).toEqual(['nowIso', 'coalesce', 'len', 'toString', 'append']);
+    expect(fnNames).toEqual(['nowIso', 'coalesce', 'len', 'toString', 'append', 'contains', 'startsWith', 'endsWith', 'lower', 'upper', 'truncate', 'substring']);
     for (const fn of guide.expressionLanguage.functions) {
       expect(fn.description.length).toBeGreaterThan(0);
       expect(fn.signature.length).toBeGreaterThan(0);
@@ -42,12 +42,31 @@ describe('buildWorkflowAuthoringGuide', () => {
     const guide = buildWorkflowAuthoringGuide();
     const grammar = guide.expressionLanguage.grammar.join(' ');
 
-    expect(grammar).toContain('Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append');
+    expect(grammar).toContain('Only these functions are allowed, exhaustively: nowIso, coalesce, len, toString, append, contains, startsWith, endsWith, lower, upper, truncate, substring.');
     // $not is not allowlisted; the guide must offer a working negation idiom
     // instead of recommending a function that fails validation.
     expect(grammar).toContain('`$not(...)` is NOT allowlisted');
     expect(grammar).toContain('expr ? false : true');
     expect(grammar).not.toContain('plus JSONata built-ins that they wrap');
+  });
+
+  it('tells authors to verify event-triggered workflows by replaying a stored event', () => {
+    const guide = buildWorkflowAuthoringGuide();
+    const verify = guide.overview.authoringLoop.find((step) => step.startsWith('Verify:')) ?? '';
+
+    expect(verify).toContain('useLatestEvent: true');
+    expect(verify).toContain('eventId');
+    expect(verify).toContain('replayed-event');
+    expect(verify).toContain('Production would skip this event');
+    expect(verify).toContain('payloadMapping');
+    expect(verify).toContain('payloadSchemaRef');
+    expect(verify).toContain('payload synthesized from schema');
+    expect(verify).toContain('NOT checked');
+
+    const pitfalls = guide.commonPitfalls.join('\n');
+    expect(pitfalls).toContain('useLatestEvent');
+    expect(verify).not.toContain('realistic payload');
+    expect(pitfalls).not.toContain('realistic payload');
   });
 
   it('documents workflow behavior pitfalls that silently change author intent', () => {

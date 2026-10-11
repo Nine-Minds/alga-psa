@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "A moeda padrão foi atualizada."
+        "updated": "A moeda padrão foi atualizada.",
+        "propagated": "Moeda padrão alterada para {{currency}}. {{updated}} padrões de clientes atualizados; {{preserved}} substituições de clientes preservadas."
       },
       "errors": {
         "load": "Falha ao carregar as configurações",
         "save": "Falha ao salvar as configurações"
-      }
+      },
+      "propagationNote": "Alterar isso atualiza os clientes que ainda usam a moeda padrão anterior. Clientes com uma moeda diferente são preservados, e documentos e modelos existentes não mudam."
     },
     "invoiceNumbering": {
       "title": "Numeração da fatura",
@@ -164,6 +166,20 @@
         "load": "Falha ao carregar as configurações de automação de renovação",
         "loadStatuses": "Falha ao carregar status de tickets de renovação",
         "save": "Falha ao salvar as configurações de automação de renovação"
+      }
+    },
+    "timeEntryService": {
+      "title": "Serviço padrão para registros de tempo",
+      "description": "Serviço alternativo usado em novos registros de tempo em tickets. O padrão do cliente tem prioridade.",
+      "label": "Serviço padrão para registros de tempo",
+      "placeholder": "Nenhum serviço padrão",
+      "help": "Usado em novos registros de tempo em tickets quando o cliente não tem um padrão próprio. O serviço ainda deve estar ativo e coberto pelo contrato do cliente.",
+      "toast": {
+        "updated": "Serviço padrão para registros de tempo atualizado."
+      },
+      "errors": {
+        "load": "Falha ao carregar o serviço padrão para registros de tempo",
+        "save": "Falha ao salvar o serviço padrão para registros de tempo"
       }
     },
     "quotes": {

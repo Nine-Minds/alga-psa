@@ -1,5 +1,6 @@
 // globalSetup.js
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import process from 'process';
 import console from 'console';
@@ -17,4 +18,16 @@ export default function () {
   const envPath = path.resolve(here, '..', '.env.localtest');
   console.log('Environment file path:', envPath);
   dotenv.config({ path: envPath });
+
+  // devServerStartup.integration.test.ts boots Next against throwaway fixture
+  // apps at the repo root. Next's dev watcher outlives close(), so the test
+  // cannot remove them itself without an unhandled ENOENT; sweep them here,
+  // after every worker has exited.
+  return () => {
+    const repoRoot = path.resolve(here, '..');
+    for (const entry of fs.readdirSync(repoRoot)) {
+      if (!entry.startsWith('.tmp-dev-server-fixture-')) continue;
+      fs.rmSync(path.join(repoRoot, entry), { recursive: true, force: true });
+    }
+  };
 }

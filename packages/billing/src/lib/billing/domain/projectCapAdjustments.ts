@@ -1,9 +1,14 @@
 import type { IBillingCharge, ITimeBasedCharge, IProjectBillingConfig, IProjectBillingCapUsage } from '@alga-psa/types';
-import { computeCapWriteDown, detectThresholdCrossings } from '../compute/projectCapMath';
+import { capAppliesToInvoiceCurrency, computeCapWriteDown, detectThresholdCrossings } from '../compute/projectCapMath';
 
 export interface ProjectCapContext {
   configsById: Map<string, IProjectBillingConfig>;
   capUsageByConfigId: Map<string, IProjectBillingCapUsage>;
+  /**
+   * Currency the charges are priced in. Omitted where the caller has not
+   * resolved one yet, which keeps the cap applying exactly as before.
+   */
+  invoiceCurrency?: string | null;
 }
 
 export type ProjectCapThresholdCrossing = {
@@ -29,6 +34,8 @@ type ProjectAnnotatedCharge = IBillingCharge & {
 export function applyProjectCapAdjustments(charges: IBillingCharge[], context: ProjectCapContext): {
   charges: IBillingCharge[];
   thresholdCrossings: ProjectCapThresholdCrossing[];
+  /** Configs whose cap currency is not this invoice's currency; cap not applied. */
+  currencyMismatchedConfigIds: string[];
 } {
   const projectCharges = new Map<string, ProjectAnnotatedCharge[]>();
   for (const charge of charges) {
@@ -46,9 +53,14 @@ export function applyProjectCapAdjustments(charges: IBillingCharge[], context: P
   }
 
   const thresholdCrossings: ProjectCapThresholdCrossing[] = [];
+  const currencyMismatchedConfigIds: string[] = [];
   for (const [configId, configCharges] of projectCharges) {
     const config = context.configsById.get(configId);
     if (!config || config.cap_amount === null) {
+      continue;
+    }
+    if (!capAppliesToInvoiceCurrency(config.currency, context.invoiceCurrency)) {
+      currencyMismatchedConfigIds.push(configId);
       continue;
     }
 
@@ -104,5 +116,5 @@ export function applyProjectCapAdjustments(charges: IBillingCharge[], context: P
     );
   }
 
-  return { charges, thresholdCrossings };
+  return { charges, thresholdCrossings, currencyMismatchedConfigIds };
 }

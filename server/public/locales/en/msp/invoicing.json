@@ -384,7 +384,13 @@
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "This invoice window has billable charges, but {{services}} have no usage reported for the service period {{periodStart}} to {{periodEnd}}. Record the usage first, or explicitly acknowledge generating without it — the unreported services stay billable later.",
       "USAGE_PERIOD_TOTAL_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
+      "RECURRING_PRICING_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
       "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or regenerate them under Billing > Service Periods, then preview again.",
+      "NO_ACTIVE_CONTRACT_LINES": "No contract line is active for this billing period. Check the contract's start and end dates and make sure the contract is active.",
+      "NOTHING_TO_BILL": "Nothing is ready to invoice for this window. Arrears lines can only be invoiced after their service period ends, so check the billing timing and the dates.",
+      "FIXED_LINE_RATE_UNRESOLVED": "Fixed fee line {{lines}} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.",
+      "FIXED_LINE_NO_SERVICES": "Fixed fee line {{lines}} has a rate but no service to bill it on. Add a service to the contract line, then try again.",
       "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.",
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
       "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
@@ -1218,7 +1224,10 @@
         "drags": "Drags: {{count}}",
         "success": "Success: {{count}}",
         "invalid": "Invalid: {{count}}"
-      }
+      },
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "zoomFit": "Fit"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1934,8 @@
       "companyLogo": "Company logo",
       "insertionMarker": "The next block you add goes here",
       "emptyContainer": "Empty — select it and add blocks from the left panel",
-      "localeChip": "Translated labels shown in {{language}} (Preview language)"
+      "localeChip": "Translated labels shown in {{language}} (Preview language)",
+      "badgeDragHint": "Drag to move this block"
     },
     "dragOverlay": {
       "component": "Component"
@@ -1972,6 +1982,19 @@
       "collapse": "Collapse {{name}}",
       "expand": "Expand {{name}}",
       "title": "Outline"
+    },
+    "dragPreview": {
+      "noTarget": "Outside the page — release to cancel",
+      "noChange": "Stays where it is",
+      "before": "Before {{block}}",
+      "after": "After {{block}}",
+      "inside": "Into {{container}}",
+      "dropOnPage": "Drop on the page to add this block.",
+      "cancelled": "Not moved — release over the page or the Outline to drop."
+    },
+    "resize": {
+      "handleHint": "Drag to resize · double-click to size to content",
+      "autoValue": "Auto ({{value}})"
     }
   },
   "projectBilling": {
@@ -2037,7 +2060,8 @@
         "selectedCount": "{{count}} selected",
         "clear": "Clear"
       }
-    }
+    },
+    "emptyTimeHint": "Approved time and materials are never queued here — they bill through the normal invoice run or the project's Generate project invoice button."
   },
   "invoiceDesigner": {
     "transforms": {

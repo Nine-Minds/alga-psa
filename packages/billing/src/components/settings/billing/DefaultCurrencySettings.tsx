@@ -29,18 +29,29 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
 
   const handleCurrencyChange = async (value: string) => {
     try {
-      const newSettings = {
-        ...settings,
-        defaultCurrencyCode: value,
-      };
       const result = await updateDefaultBillingSettings({ defaultCurrencyCode: value });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
       }
       if (result.success) {
-        setSettings(newSettings);
-        toast.success(t('general.currency.toast.updated', { defaultValue: 'Default currency has been updated.' }));
+        setSettings((current) => ({ ...current, defaultCurrencyCode: value }));
+        if (
+          typeof result.propagatedClientCount === 'number' &&
+          typeof result.preservedClientCount === 'number'
+        ) {
+          toast.success(
+            t('general.currency.toast.propagated', {
+              defaultValue:
+                'Default currency changed to {{currency}}. {{updated}} client defaults updated; {{preserved}} client overrides preserved.',
+              currency: result.currencyCode ?? value,
+              updated: result.propagatedClientCount,
+              preserved: result.preservedClientCount,
+            }),
+          );
+        } else {
+          toast.success(t('general.currency.toast.updated', { defaultValue: 'Default currency has been updated.' }));
+        }
       }
     } catch (error) {
       handleError(error, t('general.currency.errors.save', { defaultValue: 'Failed to save settings' }));
@@ -48,14 +59,22 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
   };
 
   return (
-    <CurrencyPicker
-      id="default-currency-code"
-      value={settings.defaultCurrencyCode || 'USD'}
-      onValueChange={handleCurrencyChange}
-      placeholder={t('general.currency.fields.currency.placeholder', { defaultValue: 'Select currency' })}
-      label={t('general.currency.fields.currency.label', { defaultValue: 'Currency' })}
-      className="!w-fit"
-    />
+    <div className="space-y-2">
+      <CurrencyPicker
+        id="default-currency-code"
+        value={settings.defaultCurrencyCode || 'USD'}
+        onValueChange={handleCurrencyChange}
+        placeholder={t('general.currency.fields.currency.placeholder', { defaultValue: 'Select currency' })}
+        label={t('general.currency.fields.currency.label', { defaultValue: 'Currency' })}
+        className="!w-fit"
+      />
+      <p className="max-w-prose text-xs text-muted-foreground" id="default-currency-propagation-note">
+        {t('general.currency.propagationNote', {
+          defaultValue:
+            'Changing this updates clients currently using the previous default currency. Clients with a different currency are preserved, and existing documents and templates do not change.',
+        })}
+      </p>
+    </div>
   );
 };
 

@@ -16,7 +16,12 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingConfigCreatedPayload,
+  buildProjectBillingConfigDeletedPayload,
+  buildProjectBillingConfigUpdatedPayload,
+} from '@alga-psa/workflow-streams';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -27,10 +32,15 @@ import {
 } from '../schemas/projectBillingSchemas';
 import {
   computeEntryAmounts,
+  resolveInvoiceCurrency,
   validateAllocation,
 } from '../services/projectBillingService';
 import { persistProjectBillingConfigUpdate } from '../services/projectBillingConfigUpdateService';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 // View DTOs live in @alga-psa/types — import them from there. A type re-export
 // here breaks at runtime: the 'use server' transform registers every export as
@@ -122,20 +132,27 @@ async function requireProject(
   return project;
 }
 
-async function resolveClientBillingCurrencyInternal(
+async function readClientDefaultCurrency(
   connection: DbConnection,
   tenant: string,
   clientId: string,
-): Promise<string> {
-  const db = tenantDb(connection, tenant);
-  const client = await db.table('clients')
+): Promise<string | null> {
+  const client = await tenantDb(connection, tenant).table('clients')
     .where({ client_id: clientId })
     .select('default_currency_code')
     .first<{ default_currency_code: string | null }>();
   if (!client) {
     throw new Error('Client not found for project');
   }
+  return client.default_currency_code?.toUpperCase() || null;
+}
 
+async function listActiveContractCurrencies(
+  connection: DbConnection,
+  tenant: string,
+  clientId: string,
+): Promise<string[]> {
+  const db = tenantDb(connection, tenant);
   const effectiveDate = new Date().toISOString().slice(0, 10);
   const currenciesQuery = db.table('client_contracts as client_contract');
   db.tenantJoin(
@@ -156,17 +173,106 @@ async function resolveClientBillingCurrencyInternal(
     })
     .whereNotNull('contract.currency_code')
     .distinct<{ currency_code: string }[]>('contract.currency_code');
-  const currencies = Array.from(new Set(currencyRows.map((row) => row.currency_code.toUpperCase())));
+  return Array.from(new Set(currencyRows.map((row) => row.currency_code.toUpperCase())));
+}
+
+async function resolveTenantDefaultCurrency(
+  connection: DbConnection,
+  tenant: string,
+): Promise<string> {
+  const settings = await tenantDb(connection, tenant).table('default_billing_settings')
+    .select('default_currency_code')
+    .first<{ default_currency_code: string | null }>();
+  return (settings?.default_currency_code || 'USD').toUpperCase();
+}
+
+async function resolveClientBillingCurrencyInternal(
+  connection: DbConnection,
+  tenant: string,
+  clientId: string,
+): Promise<string> {
+  // The client's own currency outranks its contracts. A project is billed to
+  // the client, not through some unrelated active contract, and the client
+  // default is what the invoice run itself bills in when no single contract
+  // currency is due in the period. Letting a legacy contract
+  // win pinned new projects to its currency forever, with no stale-currency
+  // notice, because the stored and the freshly resolved currency always agreed.
+  // Quotes resolve in this order too.
+  const clientCurrency = await readClientDefaultCurrency(connection, tenant, clientId);
+  if (clientCurrency) return clientCurrency;
+
+  // No client currency: the active contracts are the only remaining record of
+  // what this client is billed in, so infer from them and only complain about
+  // disagreement here, where there is nothing better to fall back on.
+  const currencies = await listActiveContractCurrencies(connection, tenant, clientId);
   if (currencies.length > 1) {
     throw new Error(`Client has active contracts in multiple currencies (${currencies.join(', ')}).`);
   }
   if (currencies[0]) return currencies[0];
-  if (client.default_currency_code) return client.default_currency_code.toUpperCase();
 
-  const settings = await db.table('default_billing_settings')
-    .select('default_currency_code')
-    .first<{ default_currency_code: string | null }>();
-  return (settings?.default_currency_code || 'USD').toUpperCase();
+  return resolveTenantDefaultCurrency(connection, tenant);
+}
+
+/**
+ * The currency this project's invoices will bill in, resolved by the engine's
+ * own rule (`resolveInvoiceCurrency`): a contract line's rates are denominated
+ * in its contract's currency, so a single active contract currency decides it,
+ * and otherwise the client's own currency does.
+ *
+ * This is not the same question as the one above. The config's currency is
+ * pinned to the client's own currency, and a client that signed a contract in
+ * another currency is invoiced in *that* currency — which is the currency a cap
+ * has to be counted in to be applied at all. Approximate where the engine is
+ * exact: the engine reads the contract lines due in one billing period, while a
+ * card has no period, so any active contract counts here.
+ */
+async function resolveProjectInvoiceCurrencyInternal(
+  connection: DbConnection,
+  tenant: string,
+  clientId: string,
+): Promise<string> {
+  const [clientCurrency, contractCurrencies] = await Promise.all([
+    readClientDefaultCurrency(connection, tenant, clientId),
+    listActiveContractCurrencies(connection, tenant, clientId),
+  ]);
+  return resolveInvoiceCurrency(
+    contractCurrencies,
+    clientCurrency ?? (await resolveTenantDefaultCurrency(connection, tenant)),
+  );
+}
+
+/**
+ * Currencies a project under this client may be denominated in: the client's
+ * own currency, plus any currency the client is actually invoiced in through an
+ * active contract. The second half is what makes the invoice run's advice
+ * ("set the project's billing currency to X and re-enter the cap") an
+ * instruction the save accepts — without it a cap stranded by a contract in
+ * another currency could never be re-pinned, and would sleep forever.
+ */
+async function resolveAllowedProjectCurrencies(
+  connection: DbConnection,
+  tenant: string,
+  clientId: string,
+): Promise<{ pinned: string; allowed: string[] }> {
+  const pinned = await resolveClientBillingCurrencyInternal(connection, tenant, clientId);
+  const contractCurrencies = await listActiveContractCurrencies(connection, tenant, clientId);
+  return {
+    pinned,
+    allowed: Array.from(new Set([pinned, ...contractCurrencies])),
+  };
+}
+
+function assertProjectCurrencyAllowed(
+  candidate: string | null | undefined,
+  { pinned, allowed }: { pinned: string; allowed: string[] },
+): void {
+  if (candidate && allowed.includes(candidate.toUpperCase())) return;
+  if (allowed.length > 1) {
+    throw new Error(
+      `Project billing currency must be one of the currencies this client is billed in (${allowed.join(', ')})`,
+    );
+  }
+  throw new Error(`Project billing currency must match the client's billing currency (${pinned})`);
 }
 
 // Fields are optional here (not required): the ee/server typecheck compiles
@@ -273,13 +379,14 @@ async function getProjectEconomics(
         * COALESCE(resolved_rate.cost_rate, 0)
       )), 0) AS labor_cost
     FROM time_entries te
-    JOIN project_tasks task
+    LEFT JOIN project_tasks task
       ON task.tenant = te.tenant
      AND te.work_item_type = 'project_task'
      AND task.task_id = te.work_item_id
-    JOIN project_phases phase
+    LEFT JOIN project_phases phase
       ON phase.tenant = task.tenant
      AND phase.phase_id = task.phase_id
+    ${ticketProjectAttributionJoin('te')}
     LEFT JOIN LATERAL (
       SELECT rate.cost_rate
       FROM user_cost_rates rate
@@ -291,7 +398,7 @@ async function getProjectEconomics(
       LIMIT 1
     ) resolved_rate ON true
     WHERE te.tenant = ?
-      AND phase.project_id = ?
+      AND ${ticketProjectIdExpression('phase')} = ?
   `, [tenant, projectId]);
 
   // Prefer actual inventory COGS, as profitability does, and fall back to the
@@ -403,9 +510,17 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
 ): Promise<ProjectBillingOverview> => {
   await assertBillingReadPermission(user);
   const { knex } = await createTenantKnex();
-  await requireProject(knex, tenant, projectId);
+  const project = await requireProject(knex, tenant, projectId);
   const config = await ProjectBillingConfig.getByProject(projectId, knex);
   const economicsPromise = getProjectEconomics(knex, tenant, projectId, config);
+  // Reading the overview must survive a client whose currency cannot be
+  // resolved (no client record at all); the mismatch notice is simply not
+  // shown in that case.
+  const invoiceCurrencyPromise = resolveProjectInvoiceCurrencyInternal(
+    knex,
+    tenant,
+    project.client_id,
+  ).catch(() => null);
 
   if (!config) {
     return {
@@ -415,15 +530,17 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
       cap_usage: null,
       economics: await economicsPromise,
       overrides: [],
+      invoice_billing_currency: await invoiceCurrencyPromise,
     };
   }
 
-  const [entries, rollup, capUsage, economics, overrides] = await Promise.all([
+  const [entries, rollup, capUsage, economics, overrides, invoiceCurrency] = await Promise.all([
     listScheduleEntryViews(config, knex),
     ProjectBillingConfig.getRollupByProject(projectId, knex),
     ProjectBillingCapUsage.getByConfig(config.config_id, knex),
     economicsPromise,
     listOverrideViews(projectId, knex, tenant),
+    invoiceCurrencyPromise,
   ]);
   return {
     config,
@@ -432,6 +549,7 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
     cap_usage: capUsage,
     economics,
     overrides,
+    invoice_billing_currency: invoiceCurrency,
   };
 }));
 
@@ -450,13 +568,9 @@ export const createProjectBillingConfig = withAuth(withProjectBillingActionError
 
   const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const project = await requireProject(trx, tenant, parsed.project_id);
-    const clientCurrency = await resolveClientBillingCurrencyInternal(
-      trx,
-      tenant,
-      project.client_id,
-    );
-    if (parsed.currency && parsed.currency.toUpperCase() !== clientCurrency) {
-      throw new Error(`Project billing currency must match the client's billing currency (${clientCurrency})`);
+    const currencies = await resolveAllowedProjectCurrencies(trx, tenant, project.client_id);
+    if (parsed.currency) {
+      assertProjectCurrencyAllowed(parsed.currency, currencies);
     }
 
     // The required fields are restated explicitly (identical values): under
@@ -467,21 +581,21 @@ export const createProjectBillingConfig = withAuth(withProjectBillingActionError
       project_id: parsed.project_id,
       billing_model: parsed.billing_model,
       invoice_mode: parsed.invoice_mode,
-      currency: clientCurrency,
+      currency: parsed.currency?.toUpperCase() || currencies.pinned,
       cap_behavior: parsed.cap_amount != null ? 'hard_cap' : parsed.cap_behavior,
     }, trx);
   });
   revalidateProjectBilling(created.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_CREATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigCreatedPayload({
       projectId: created.project_id,
       configId: created.config_id,
       billingModel: created.billing_model,
       invoiceMode: created.invoice_mode,
       userId: user.user_id,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return created;
 }));
@@ -518,20 +632,27 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     }
 
     const project = await requireProject(trx, tenant, existing.project_id);
-    const clientCurrency = await resolveClientBillingCurrencyInternal(
-      trx,
-      tenant,
-      project.client_id,
-    );
     if (Object.prototype.hasOwnProperty.call(parsed, 'currency')) {
-      if (!parsed.currency || parsed.currency.toUpperCase() !== clientCurrency) {
-        throw new Error(`Project billing currency must match the client's billing currency (${clientCurrency})`);
-      }
+      assertProjectCurrencyAllowed(
+        parsed.currency,
+        await resolveAllowedProjectCurrencies(trx, tenant, project.client_id),
+      );
     }
 
     const candidate = { ...existing, ...parsed };
     validateConfigModelFields(candidate);
     const updated = await persistProjectBillingConfigUpdate(configId, parsed, entries, trx);
+
+    // Cap usage is minor units of the old currency, and nothing billed while
+    // the cap slept was ever counted, so neither figure means anything against
+    // a cap in the new one. The re-pinned cap counts from zero.
+    if (
+      parsed.currency
+      && existing.currency
+      && parsed.currency.toUpperCase() !== existing.currency.toUpperCase()
+    ) {
+      await ProjectBillingCapUsage.reset(configId, trx);
+    }
 
     let allocationWarning: string | null = null;
     if (Object.prototype.hasOwnProperty.call(parsed, 'total_price')) {
@@ -546,17 +667,17 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     return Object.assign(updated, { allocation_warning: allocationWarning });
   });
   revalidateProjectBilling(result.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigUpdatedPayload({
       projectId: result.project_id,
       configId: result.config_id,
       billingModel: result.billing_model,
       invoiceMode: result.invoice_mode,
       userId: user.user_id,
       changes: updates,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return result;
 }));
@@ -650,17 +771,17 @@ export const recalculateProjectTotalFromSchedule = withAuth(withProjectBillingAc
   });
 
   revalidateProjectBilling(result.projectId);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigUpdatedPayload({
       projectId: result.projectId,
       configId,
       billingModel: result.config.billing_model,
       invoiceMode: result.config.invoice_mode,
       userId: user.user_id,
       changes: { total_price: result.config.total_price, source: 'schedule_recalculation' },
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return { config: result.config, entries: result.entries, rollup: result.rollup };
 }));
@@ -685,16 +806,16 @@ export const deleteProjectBillingConfig = withAuth(withProjectBillingActionError
     return config;
   });
   revalidateProjectBilling(deletedConfig.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_DELETED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigDeletedPayload({
       projectId: deletedConfig.project_id,
       configId: deletedConfig.config_id,
       billingModel: deletedConfig.billing_model,
       invoiceMode: deletedConfig.invoice_mode,
       userId: user.user_id,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
 }));
 

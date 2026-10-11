@@ -3,7 +3,10 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- The client portal billing summary composes the billing feature's authoritative schedule math. */
 
 import { withAuth, type AuthContext } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import { getPortalVisibilityForUser } from '../../lib/clientAuth';
 import { computeEntryAmounts } from '@alga-psa/billing/services';
 import type {
   IProjectBillingScheduleEntry,
@@ -11,10 +14,7 @@ import type {
 } from '@alga-psa/types';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ClientBillingActionError } from './client-billing';
-import {
-  getClientIdFromPortalUser,
-  hasClientBillingReadPermission,
-} from './clientBillingPermissions';
+import { hasClientBillingReadPermission } from './clientBillingPermissions';
 
 export interface ClientProjectBillingSummary {
   enabled: boolean;
@@ -71,16 +71,19 @@ export const getClientProjectBillingSummary = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
-  const clientId = await getClientIdFromPortalUser(knex, user, tenant);
-  if (!clientId) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  const visibility = await withTransaction(knex, (trx: Knex.Transaction) => getPortalVisibilityForUser(trx, user, tenant));
+  if (!visibility) return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
   if (!await hasClientBillingReadPermission(knex, user, tenant)) {
     return permissionError('Unauthorized to access project billing data', 'client-portal:errors.access.projectBillingData');
   }
 
   // Client ownership is part of the project lookup so another client's UUID
   // never reveals whether a billing configuration exists.
-  const project = await db.table('projects')
-    .where({ project_id: projectId, client_id: clientId })
+  const project = await applyProjectVisibilityFilter(
+    db.table('projects').where({ project_id: projectId }),
+    visibility,
+    { clientColumn: 'projects.client_id', contactColumn: 'projects.contact_name_id' }
+  )
     .select('project_id', 'client_portal_config')
     .first<{ project_id: string; client_portal_config: unknown }>();
   if (!project) return null;

@@ -4,6 +4,7 @@ import { createApiClient } from "../api";
 import {
   EMPTY_FEATURE_CAPABILITIES,
   getMyCapabilities,
+  parseFeatureCapabilities,
   type DateFormatCapability,
   type FeatureCapabilities,
 } from "../api/capabilities";
@@ -23,6 +24,8 @@ export type CapabilitiesContextValue = {
   features: FeatureCapabilities;
   /** Tenant theme pair from the server; null on older servers and after sign-out. */
   theme: MobileTheme | null;
+  /** ISO country the tenant's dates and addresses default to; null when unknown. */
+  defaultCountry: string | null;
   loaded: boolean;
   refresh: () => Promise<void>;
 };
@@ -59,6 +62,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const { session, refreshSession, baseUrl } = useAuth();
   const [features, setFeatures] = useState<FeatureCapabilities>(EMPTY_FEATURE_CAPABILITIES);
   const [theme, setTheme] = useState<MobileTheme | null>(null);
+  const [defaultCountry, setDefaultCountry] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const inFlight = useRef(false);
   const signedIn = Boolean(session?.accessToken);
@@ -78,12 +82,10 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
       });
       const result = await getMyCapabilities(client, { apiKey: accessToken });
       if (result.ok) {
-        setFeatures({
-          inventory: result.data.data?.features?.inventory === true,
-          opportunities: result.data.data?.features?.opportunities === true,
-          opportunitiesCreate: result.data.data?.features?.opportunitiesCreate === true,
-        });
+        setFeatures(parseFeatureCapabilities(result.data.data?.features));
         applyServerDateFormat(result.data.data?.formatting);
+        const country = result.data.data?.formatting?.country;
+        setDefaultCountry(typeof country === "string" && country.trim() ? country.trim().toUpperCase() : null);
         // Older servers send no theme block; the app keeps the Alga pair.
         const themeBlock = result.data.data?.theme;
         const parsedTheme = parseMobileTheme(themeBlock);
@@ -113,6 +115,7 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
       setFeatures(EMPTY_FEATURE_CAPABILITIES);
       applyServerDateFormat(null);
       setTheme(null);
+      setDefaultCountry(null);
       setLoaded(false);
       return;
     }
@@ -126,8 +129,8 @@ export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ features, theme, loaded, refresh }),
-    [features, theme, loaded, refresh],
+    () => ({ features, theme, defaultCountry, loaded, refresh }),
+    [features, theme, defaultCountry, loaded, refresh],
   );
 
   return (

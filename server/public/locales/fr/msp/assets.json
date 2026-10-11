@@ -126,7 +126,8 @@
       "location": "Emplacement",
       "actions": "Actes",
       "patching": "Correctifs",
-      "coverage": "Couverture"
+      "coverage": "Couverture",
+      "assignedTo": "Attribué à"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Emplacement"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documents indisponibles",
+      "loadFailed": "Impossible de charger les documents liés. Rechargez la page ou réessayez plus tard."
+    }
+  },
   "assetDetails": {
     "title": "Détails de l'actif",
     "description": "Page complète de détails sur les actifs avec fiches récapitulatives, associations, documents et actions opérationnelles",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Impossible de charger les clients",
       "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
       "updateFailed": "Échec de la mise à jour de l'élément",
-      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer."
+      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer.",
+      "contactsLoadFailed": "Impossible de charger les contacts de ce client"
     },
     "actions": {
       "viewClient": "Afficher le client",
@@ -618,7 +626,8 @@
       "status": "Statut",
       "purchaseDate": "Date d'achat",
       "warrantyEndDate": "Date de fin de garantie",
-      "assetType": "Type"
+      "assetType": "Type",
+      "assignedTo": "Attribué à"
     },
     "placeholders": {
       "loadingClients": "Chargement des clients…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Sélectionnez d'abord un client",
       "customLocation": "Entrez un emplacement ou une zone personnalisée",
       "selectPurchaseDate": "Sélectionnez la date d'achat",
-      "selectWarrantyEndDate": "Sélectionnez la date de fin de garantie"
+      "selectWarrantyEndDate": "Sélectionnez la date de fin de garantie",
+      "loadingContacts": "Chargement des contacts…",
+      "selectContact": "Sélectionnez un contact"
     },
     "statusOptions": {
       "active": "Actif",
@@ -664,7 +675,10 @@
       "printer": "Détails de l'imprimante",
       "custom": "Détails de {{typeName}}"
     },
-    "additionalFields": "Champs supplémentaires"
+    "additionalFields": "Champs supplémentaires",
+    "help": {
+      "assignedTo": "Dans le portail client, les personnes à visibilité limitée ne voient cet appareil que s’il leur est attribué ou attribué à une personne qui leur est rattachée."
+    }
   },
   "assetFormClient": {
     "title": "Client de formulaire d'actif",
@@ -978,7 +992,8 @@
       "status": "Statut",
       "serialNumber": "Numéro de série",
       "customLocationOption": "Emplacement personnalisé",
-      "location": "Emplacement"
+      "location": "Emplacement",
+      "assignedTo": "Attribué à"
     },
     "placeholders": {
       "workstationOsType": "par exemple, Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Entrez un emplacement ou une zone personnalisée",
       "loadingLocations": "Chargement des emplacements...",
       "selectClientFirst": "Sélectionnez d'abord un client",
-      "selectLocation": "Sélectionnez un emplacement"
+      "selectLocation": "Sélectionnez un emplacement",
+      "loadingContacts": "Chargement des contacts...",
+      "selectContact": "Sélectionner un contact"
     },
     "sections": {
       "typeSpecificDetails": "Détails spécifiques au type"
@@ -1060,7 +1077,8 @@
       "model": "Modèle",
       "serialNumber": "Numéro de série",
       "purchaseDate": "Date d'achat",
-      "warrantyEnd": "Fin de garantie"
+      "warrantyEnd": "Fin de garantie",
+      "assignedTo": "Attribué à"
     },
     "values": {
       "unknownClient": "Client inconnu",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Autorisation refusée : impossible de gérer les types d’actif",
       "readDocuments": "Autorisation refusée : impossible de lire les documents de l’actif",
       "associateDocuments": "Autorisation refusée : impossible d’associer des documents aux actifs",
-      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs",
-      "updateDocumentNotes": "Autorisation refusée : impossible de mettre à jour les notes des documents de l’actif"
+      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs"
     },
     "asset": {
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
@@ -1601,7 +1618,18 @@
       "conflict": "Cette modification de l’actif entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs de l’actif n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire de l’actif est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}.",
+      "contactUnavailable": "Le contact sélectionné n’est pas disponible pour ce client."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Échec du chargement des actifs"
+    },
+    "placeholder": "Ajouter un actif...",
+    "searchPlaceholder": "Rechercher des actifs",
+    "empty": "Aucun actif correspondant pour ce client",
+    "loading": "Chargement...",
+    "remove": "Retirer l'actif"
   }
 }

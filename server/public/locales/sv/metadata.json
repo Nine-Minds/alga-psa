@@ -546,6 +546,9 @@
       "detail": {
         "title": "Ärende #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ärendedetaljer"
+      },
+      "recurring": {
+        "title": "Återkommande ärenden"
       }
     },
     "timeEntry": {

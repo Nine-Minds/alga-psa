@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
     "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen.",
+    "tenantRequiredMessage": "Ihre E-Mail-Adresse ist mit mehreren Organisationen verknüpft – wählen Sie Ihre Organisation aus, um fortzufahren.",
+    "tenantRequiredLink": "Organisation auswählen",
     "tenantDiscovery": {
       "title": "Finden Sie Ihre Organisation",
       "description": "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
@@ -320,7 +322,17 @@
         "verifiedContact": "Bestätigte Kontakt-E-Mail-Adresse",
         "validPassword": "Gültiges Passwort"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-Anmeldung fehlgeschlagen",
+    "ssoNoMatch": {
+      "no_matching_user": "Kein Kundenportal-Konto stimmt mit {{providerEmail}} überein. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "missing_email": "Ihr Identitätsanbieter hat keine E-Mail-Adresse zurückgegeben, daher konnte kein Kundenportal-Konto zugeordnet werden. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "inactive_user": "Das Kundenportal-Konto für {{providerEmail}} ist inaktiv. Wenden Sie sich an Ihren Dienstleister, um es zu reaktivieren.",
+      "user_type_mismatch": "{{providerEmail}} ist kein Kundenportal-Konto. Wenden Sie sich an Ihren Dienstleister.",
+      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister."
+    },
+    "configurationTitle": "Anmeldung fehlgeschlagen",
+    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister."
   },
   "account": {
     "title": "Konto",
@@ -442,7 +454,8 @@
         "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für abgeschlossene Rechnungen.",
         "enable": "Automatische Zahlung aktivieren",
         "noCards": "Fügen Sie eine Karte hinzu, um die automatische Zahlung zu aktivieren.",
-        "changeCard": "Diese Karte für die automatische Zahlung verwenden"
+        "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+        "updateError": "Die automatische Zahlung konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
       },
       "publicCardSetup": {
         "saved": "Karte gespeichert",
@@ -565,7 +578,8 @@
       "avatarDescription": "Dieser Avatar wird dem MSP-Team angezeigt, wenn es Ihre Kontaktinformationen ansieht.",
       "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
       "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
-      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+      "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",
@@ -681,7 +695,10 @@
       "deleteError": "Benutzer konnte nicht gelöscht werden",
       "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
       "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
-      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+      "reportsTo": "Berichtet an",
+      "noManager": "Keine Führungskraft",
+      "reportsToHelp": "Eine Führungskraft sieht die Tickets, Geräte und Projekte der ihr unterstellten Personen, wenn ihre Sichtbarkeitsgruppe auf die eigenen Datensätze beschränkt ist."
     },
     "visibilityGroups": {
       "title": "Sichtbarkeitsgruppen",
@@ -721,9 +738,22 @@
       "scopeClient": "Alle Tickets dieses Kunden",
       "scopeContact": "Nur eigene Tickets",
       "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
-      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
-      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
-      "boardHiddenFromPortal": "Im Kundenportal ausgeblendet"
+      "scopeContactDescription": "Mitglieder sehen Tickets, bei denen sie als Kontakt eingetragen sind, Tickets der ihnen unterstellten Personen und Tickets, die sie beobachten. Kundenadministratoren sehen auf den ausgewählten Boards immer alles, auch Tickets ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards sowie die sichtbaren Tickets, Geräte und Projekte dieser Person einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
+      "boardHiddenFromPortal": "Im Kundenportal ausgeblendet",
+      "assetScopeLabel": "Gerätesichtbarkeit",
+      "assetScopeClient": "Alle Geräte dieses Kunden",
+      "assetScopeContact": "Nur eigene Geräte",
+      "assetScopeClientDescription": "Mitglieder sehen alle Geräte dieses Kunden, auch nicht zugewiesene.",
+      "assetScopeContactDescription": "Mitglieder sehen nur Geräte, die ihnen oder ihnen unterstellten Personen zugewiesen sind. Nicht zugewiesene Geräte sind ausgeblendet. Kundenadministratoren sehen immer alles.",
+      "projectScopeLabel": "Projektsichtbarkeit",
+      "projectScopeClient": "Alle Projekte dieses Kunden",
+      "projectScopeContact": "Nur eigene Projekte",
+      "projectScopeClientDescription": "Mitglieder sehen alle Projekte dieses Kunden.",
+      "projectScopeContactDescription": "Mitglieder sehen nur Projekte, deren Kontakt sie selbst oder eine ihnen unterstellte Person ist. Projekte ohne Kontakt sind ausgeblendet. Kundenadministratoren sehen immer alles.",
+      "scopeSummary": "Tickets: {{tickets}} · Geräte: {{devices}} · Projekte: {{projects}}",
+      "scopeSummaryAll": "Alle",
+      "scopeSummaryOwn": "Eigene"
     },
     "messages": {
       "saveChanges": "Änderungen speichern",

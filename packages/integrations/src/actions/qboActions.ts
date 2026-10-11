@@ -13,6 +13,11 @@ import {
   setQboAutomatedSalesTaxEnabled
 } from '../lib/qbo/qboTaxSettings';
 import {
+  clearQboCompanyCountryCacheForTenant,
+  getQboCompanyCountry,
+  isUnitedStatesQboCountry
+} from '../lib/qbo/qboCompanyCountry';
+import {
   actionError,
   permissionError,
   type ActionMessageError,
@@ -405,6 +410,7 @@ function clearAllCatalogCachesForTenant(tenantId: string): void {
   clearCacheEntriesForTenant(accountCache, tenantId);
   clearCacheEntriesForTenant(classCache, tenantId);
   clearCacheEntriesForTenant(departmentCache, tenantId);
+  clearQboCompanyCountryCacheForTenant(tenantId);
 }
 
 export async function resetQboCatalogCacheForTenant(tenantId: string): Promise<void> {
@@ -1258,6 +1264,26 @@ export const getQboAutomatedSalesTaxMode = withAuth(async (
   const { knex } = await createTenantKnex();
   const enabled = await isQboAutomatedSalesTaxEnabled(knex, tenant, options.realmId ?? null);
   return { enabled };
+});
+
+/**
+ * Reads the connected QuickBooks company's country for a realm.
+ *
+ * The tax-code pick list needs it because Intuit's "only TAX/NON on the line"
+ * rule applies to US Automated Sales Tax companies only; a Canadian AST
+ * company keeps using its own codes. Cached per (tenant, realm) in
+ * qboCompanyCountry.ts; an unreadable company reports isUnitedStates false.
+ */
+export const getQboCompanyCountryInfo = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<{ country: string | null; isUnitedStates: boolean } | QboCatalogActionError> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
+  const country = await getQboCompanyCountry(tenant, options.realmId ?? null);
+  return { country, isUnitedStates: isUnitedStatesQboCountry(country) };
 });
 
 /**

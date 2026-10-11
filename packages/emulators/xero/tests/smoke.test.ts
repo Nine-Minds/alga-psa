@@ -287,6 +287,31 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(missing.Contacts).toHaveLength(0);
   });
 
+  it('rejects a line whose LineAmount does not match Quantity × UnitAmount, like api.xero.com', async () => {
+    const contactId = ((await (
+      await fetch(api(`/Contacts?where=${encodeURIComponent('Name=="Acme Rockets"')}`), { headers: authed() })
+    ).json()) as any).Contacts[0].ContactID;
+
+    // 5 min at $125/h stored as 0.08 h: 0.08 × 125 = 10.00, not 10.42
+    const rejected = await fetch(api('/Invoices'), {
+      method: 'POST',
+      headers: authed(),
+      body: JSON.stringify({
+        Invoices: [
+          {
+            Type: 'ACCREC',
+            Contact: { ContactID: contactId },
+            LineAmountTypes: 'Exclusive',
+            LineItems: [{ Description: 'Break fix', Quantity: 0.08, UnitAmount: 125, LineAmount: 10.42 }],
+          },
+        ],
+      }),
+    });
+    expect(rejected.status).toBe(400);
+    const body = (await rejected.json()) as any;
+    expect(JSON.stringify(body)).toContain('does not match the expected line total 10.00');
+  });
+
   it('creates an invoice, assigns InvoiceID/InvoiceNumber, and serves it back', async () => {
     const contactId = ((await (
       await fetch(api(`/Contacts?where=${encodeURIComponent('Name=="Acme Rockets"')}`), { headers: authed() })

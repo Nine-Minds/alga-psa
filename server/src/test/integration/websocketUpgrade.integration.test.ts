@@ -10,6 +10,7 @@ import {
   attachNextUpgradeHandler,
   attachUpgradeHandler,
   HMR_UPGRADE_PATH,
+  LEGACY_HMR_UPGRADE_PATH,
   type UpgradeHandlingOptions,
 } from '@/lib/http/upgradeHandling';
 
@@ -324,7 +325,7 @@ describe('websocket upgrade handling', () => {
     client.destroy();
   });
 
-  it('delegates /_next/webpack-hmr, including query strings, to Next', async () => {
+  it('delegates the Next HMR path, including query strings, to Next', async () => {
     const handledPaths: string[] = [];
     const { port } = await start({
       nextUpgradeHandler: (req, socket) => {
@@ -348,6 +349,29 @@ describe('websocket upgrade handling', () => {
     if (outcome.kind !== 'upgrade') return;
     expect(outcome.statusCode).toBe(101);
     expect(handledPaths).toEqual([`${HMR_UPGRADE_PATH}?id=123&ts=456`]);
+    outcome.socket.destroy();
+  });
+
+  it('still delegates the legacy /_next/webpack-hmr path to Next', async () => {
+    const handledPaths: string[] = [];
+    const { port } = await start({
+      nextUpgradeHandler: (req, socket) => {
+        handledPaths.push(req.url ?? '');
+        socket.write(
+          'HTTP/1.1 101 Switching Protocols\r\n' +
+            'Upgrade: websocket\r\n' +
+            'Connection: Upgrade\r\n' +
+            'Sec-WebSocket-Accept: test-accept\r\n' +
+            '\r\n',
+        );
+      },
+    });
+
+    const outcome = await requestUpgrade(port, `${LEGACY_HMR_UPGRADE_PATH}?id=legacy`);
+
+    expect(outcome.kind).toBe('upgrade');
+    if (outcome.kind !== 'upgrade') return;
+    expect(handledPaths).toEqual([`${LEGACY_HMR_UPGRADE_PATH}?id=legacy`]);
     outcome.socket.destroy();
   });
 

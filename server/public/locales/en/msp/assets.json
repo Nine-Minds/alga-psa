@@ -126,7 +126,8 @@
       "location": "Location",
       "actions": "Actions",
       "patching": "Patching",
-      "coverage": "Coverage"
+      "coverage": "Coverage",
+      "assignedTo": "Assigned to"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Location"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documents unavailable",
+      "loadFailed": "Linked documents could not be loaded. Reload the page or try again later."
+    }
+  },
   "assetDetails": {
     "title": "Asset Details",
     "description": "Full asset details page with summary cards, associations, documents, and operational actions",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Unable to load clients",
       "locationsLoadFailed": "Unable to load locations for this client",
       "updateFailed": "Failed to update asset",
-      "validation": "Please fix the highlighted fields before saving."
+      "validation": "Please fix the highlighted fields before saving.",
+      "contactsLoadFailed": "Unable to load contacts for this client"
     },
     "actions": {
       "viewClient": "View client",
@@ -618,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Purchase Date",
       "warrantyEndDate": "Warranty End Date",
-      "assetType": "Type"
+      "assetType": "Type",
+      "assignedTo": "Assigned to"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Select a client first",
       "customLocation": "Enter a custom location or area",
       "selectPurchaseDate": "Select purchase date",
-      "selectWarrantyEndDate": "Select warranty end date"
+      "selectWarrantyEndDate": "Select warranty end date",
+      "loadingContacts": "Loading contacts…",
+      "selectContact": "Select a contact"
     },
     "statusOptions": {
       "active": "Active",
@@ -664,7 +675,10 @@
       "printer": "Printer Details",
       "custom": "{{typeName}} Details"
     },
-    "additionalFields": "Additional fields"
+    "additionalFields": "Additional fields",
+    "help": {
+      "assignedTo": "In the client portal, people with limited visibility see this device only if it is assigned to them or to someone who reports to them."
+    }
   },
   "assetFormClient": {
     "title": "Asset Form Client",
@@ -978,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Serial Number",
       "customLocationOption": "Custom location",
-      "location": "Location"
+      "location": "Location",
+      "assignedTo": "Assigned to"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Enter a custom location or area",
       "loadingLocations": "Loading locations...",
       "selectClientFirst": "Select a client first",
-      "selectLocation": "Select location"
+      "selectLocation": "Select location",
+      "loadingContacts": "Loading contacts...",
+      "selectContact": "Select contact"
     },
     "sections": {
       "typeSpecificDetails": "Type-specific Details"
@@ -1060,7 +1077,8 @@
       "model": "Model",
       "serialNumber": "Serial Number",
       "purchaseDate": "Purchase Date",
-      "warrantyEnd": "Warranty End"
+      "warrantyEnd": "Warranty End",
+      "assignedTo": "Assigned to"
     },
     "values": {
       "unknownClient": "Unknown Client",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Permission denied: Cannot manage asset types",
       "readDocuments": "Permission denied: Cannot read asset documents",
       "associateDocuments": "Permission denied: Cannot associate documents with assets",
-      "removeDocuments": "Permission denied: Cannot remove documents from assets",
-      "updateDocumentNotes": "Permission denied: Cannot update asset document notes"
+      "removeDocuments": "Permission denied: Cannot remove documents from assets"
     },
     "asset": {
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
@@ -1601,7 +1618,18 @@
       "conflict": "This asset change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the asset values is not allowed. Please review the form and try again.",
       "missingField": "Missing required asset field.",
-      "missingFieldNamed": "Missing required asset field: {{field}}."
+      "missingFieldNamed": "Missing required asset field: {{field}}.",
+      "contactUnavailable": "Selected contact is not available for this client."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Failed to load assets"
+    },
+    "placeholder": "Add an asset...",
+    "searchPlaceholder": "Search assets",
+    "empty": "No matching assets for this client",
+    "loading": "Loading...",
+    "remove": "Remove asset"
   }
 }

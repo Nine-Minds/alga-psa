@@ -23,7 +23,8 @@ import {
   MobileDeviceAssetData,
   PrinterAssetData
 } from '../schemas/asset';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
@@ -112,6 +113,9 @@ export class AssetService extends BaseService<any> {
       if (filters.location_id) {
         query.where(`${this.tableName}.location_id`, filters.location_id);
       }
+      if (filters.contact_name_id) {
+        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+      }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
       }
@@ -185,6 +189,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.location_id) {
         countQuery.where(`${this.tableName}.location_id`, filters.location_id);
+      }
+      if (filters.contact_name_id) {
+        countQuery.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -300,6 +307,9 @@ export class AssetService extends BaseService<any> {
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
     }
+    if (assetData.contact_name_id) {
+      await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
+    }
     
     const assetRecord = {
       ...assetData,
@@ -319,14 +329,21 @@ export class AssetService extends BaseService<any> {
     }
 
     // Publish event
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'ASSET_CREATED',
-      payload: {
-        tenantId: context.tenant,
+      payload: buildAssetCreatedPayload({
         assetId: asset.asset_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
+        clientId: asset.client_id || undefined,
+        createdByUserId: context.userId,
+        createdAt: asset.created_at,
+        assetType: asset.asset_type,
+        serialNumber: asset.serial_number,
+      }),
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt: asset.created_at,
+        actor: { actorType: 'USER', actorUserId: context.userId },
+      },
     });
 
     return this.getWithDetails(asset.asset_id, context);
@@ -341,13 +358,14 @@ export class AssetService extends BaseService<any> {
 
     const needsCurrent =
       data.location_id !== undefined ||
+      data.contact_name_id !== undefined ||
       data.client_id !== undefined;
     const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'asset_type')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
       : null;
 
     if (needsAssetContext && !current) {
@@ -383,27 +401,59 @@ export class AssetService extends BaseService<any> {
       updateData.location_id = null;
     }
 
+    if (data.contact_name_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) {
+        throw new NotFoundError('Asset not found');
+      }
+      await this.assertContactBelongsToClient(knex, context.tenant, clientId, data.contact_name_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      current.contact_name_id &&
+      data.contact_name_id === undefined
+    ) {
+      // Client changed without an explicit new assignee — the old contact
+      // belongs to the previous client, so clear it.
+      updateData.contact_name_id = null;
+    }
+
     updateData.updated_at = new Date();
 
-    const updated = await scopedTable(knex, context.tenant, this.tableName)
+    const before = await scopedTable(knex, context.tenant, this.tableName)
       .where({ [this.primaryKey]: id })
-      .update(updateData);
+      .first();
 
-    if (!updated) {
+    const [after] = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
+      .update(updateData)
+      .returning('*');
+
+    if (!after) {
       throw new NotFoundError('Asset not found');
     }
 
     // Publish event
-    await publishEvent({
-      eventType: 'ASSET_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        assetId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
-      }
+    const updatePayload = buildAssetUpdatedPayload({
+      assetId: id,
+      before: (before ?? {}) as Record<string, unknown>,
+      after: after as Record<string, unknown>,
+      updatedPaths: Object.keys(updateData).filter((key) => key !== 'updated_at'),
+      updatedByUserId: context.userId,
+      updatedAt: updateData.updated_at as Date,
     });
+    if (updatePayload.updatedFields || updatePayload.changes) {
+      await publishWorkflowEvent({
+        eventType: 'ASSET_UPDATED',
+        payload: updatePayload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: updateData.updated_at as Date,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     const asset = await this.getById(id, context);
     if (!asset) {
@@ -429,6 +479,25 @@ export class AssetService extends BaseService<any> {
 
     if (!location) {
       throw new ValidationError('Selected location is not available for this client');
+    }
+  }
+
+  private async assertContactBelongsToClient(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    contactNameId: string
+  ): Promise<void> {
+    const contact = await scopedTable(knex, tenant, 'contacts')
+      .where({
+        client_id: clientId,
+        contact_name_id: contactNameId,
+      })
+      .whereNot({ contact_kind: 'shared_mailbox' })
+      .first('contact_name_id');
+
+    if (!contact) {
+      throw new ValidationError('Selected contact is not available for this client');
     }
   }
 

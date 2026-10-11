@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getMyCapabilities, type MyCapabilities } from "./capabilities";
+import { EMPTY_FEATURE_CAPABILITIES, getMyCapabilities, parseFeatureCapabilities, type MyCapabilities } from "./capabilities";
 import type { ApiClient } from "./client";
 import { ALGA_THEME_TOKENS } from "../ui/themes";
 
@@ -9,7 +9,7 @@ function mockClient(response: unknown): ApiClient {
 
 describe("capabilities api", () => {
   it("calls GET /api/v1/mobile/me/capabilities with the api key", async () => {
-    const client = mockClient({ ok: true, data: { data: { features: { inventory: true, opportunities: false, opportunitiesCreate: false } } } });
+    const client = mockClient({ ok: true, data: { data: { features: { ...EMPTY_FEATURE_CAPABILITIES, inventory: true } } } });
     const signal = new AbortController().signal;
 
     await getMyCapabilities(client, { apiKey: "api-key-1", signal });
@@ -26,10 +26,10 @@ describe("capabilities api", () => {
 
   it("T030 types a response with and without the theme block", () => {
     const withoutTheme: MyCapabilities = {
-      features: { inventory: true, opportunities: false, opportunitiesCreate: false },
+      features: { ...EMPTY_FEATURE_CAPABILITIES, inventory: true },
     };
     const withTheme: MyCapabilities = {
-      features: { inventory: true, opportunities: false, opportunitiesCreate: false },
+      features: { ...EMPTY_FEATURE_CAPABILITIES, inventory: true },
       theme: {
         pairId: "forest",
         label: "Forest",
@@ -41,5 +41,14 @@ describe("capabilities api", () => {
 
     expect(withoutTheme.theme).toBeUndefined();
     expect(withTheme.theme?.pairId).toBe("forest");
+  });
+
+  it("turns on only the flags the server sent as true", () => {
+    expect(parseFeatureCapabilities({ inventory: true, clientsCreate: true, contactsUpdate: "yes" })).toEqual({
+      ...EMPTY_FEATURE_CAPABILITIES,
+      inventory: true,
+      clientsCreate: true,
+    });
+    expect(parseFeatureCapabilities(undefined)).toEqual(EMPTY_FEATURE_CAPABILITIES);
   });
 });

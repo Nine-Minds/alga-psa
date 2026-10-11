@@ -6,10 +6,12 @@ const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getVisibilityContextMock = vi.fn();
 const applyTicketVisibilityFilterMock = vi.fn((query) => query);
+const hasPermissionMock = vi.fn(async () => true);
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -39,6 +41,7 @@ describe('client portal dashboard visibility enforcement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+    hasPermissionMock.mockImplementation(async () => true);
     currentUser = {
       user_id: 'client-user-1',
       user_type: 'client',
@@ -104,9 +107,44 @@ describe('client portal dashboard visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsQuery,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' }
+      { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
     );
     expect(metrics.openTickets).toBe(4);
+  });
+
+  it('skips the project count and project activity when the role lacks project:read', async () => {
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string) => resource !== 'project');
+
+    const tablesQueried: string[] = [];
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(Object.assign((table: string) => {
+        tablesQueried.push(table);
+        if (table === 'contacts') {
+          return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+        }
+        if (table === 'projects') {
+          return chain([{ name: 'Hidden rollout', timestamp: '2026-10-01T00:00:00Z' }]);
+        }
+        return chain([]);
+      }, { raw: vi.fn() }))
+    );
+
+    getVisibilityContextMock.mockResolvedValue({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-1'],
+    });
+
+    const { getDashboardMetrics, getRecentActivity } = await import('./dashboard');
+
+    expect(await getDashboardMetrics()).toMatchObject({ activeProjects: 0 });
+    // Fails closed before the query runs, not by filtering rows afterwards.
+    expect(tablesQueried).not.toContain('projects');
+
+    const activity = await getRecentActivity();
+    expect(JSON.stringify(activity)).not.toContain('Hidden rollout');
+    expect(tablesQueried).not.toContain('projects');
   });
 });
 

@@ -3,6 +3,62 @@ import { useInvoiceDesignerStore, DesignerNode } from '../state/designerStore';
 import clsx from 'clsx';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getNodeName } from '../utils/nodeProps';
+import {
+  DESIGNER_OUTLINE_DEPTH_ATTRIBUTE,
+  DESIGNER_OUTLINE_EXPANDED_ATTRIBUTE,
+  DESIGNER_OUTLINE_NODE_ID_ATTRIBUTE,
+  DESIGNER_OUTLINE_PANE_ATTRIBUTE,
+  revealCanvasNode,
+} from '../utils/canvasDom';
+import { useDraggable } from '@dnd-kit/core';
+
+type OutlineRowProps = {
+  node: DesignerNode;
+  depth: number;
+  className: string;
+  rowRef?: React.Ref<HTMLDivElement>;
+  expanded: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+};
+
+/** An Outline row; drag it to move the block (see resolveOutlineDropTarget). */
+const OutlineRow: React.FC<OutlineRowProps> = ({ node, depth, className, rowRef, expanded, onSelect, children }) => {
+  const draggable = node.type !== 'document' && node.type !== 'page';
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `outline:${node.id}`,
+    disabled: !draggable,
+    data: { dragKind: 'node', nodeId: node.id, layoutKind: 'flow', source: 'outline' },
+  });
+  const setRefs = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      setNodeRef(element);
+      if (typeof rowRef === 'function') rowRef(element);
+      else if (rowRef) (rowRef as React.MutableRefObject<HTMLDivElement | null>).current = element;
+    },
+    [rowRef, setNodeRef]
+  );
+  return (
+    <div
+      ref={setRefs}
+      id={`designer-outline-row-${node.id}`}
+      className={clsx(className, isDragging && 'opacity-50')}
+      style={{ paddingLeft: `${depth * 12 + 8}px` }}
+      {...{
+        [DESIGNER_OUTLINE_NODE_ID_ATTRIBUTE]: node.id,
+        [DESIGNER_OUTLINE_DEPTH_ATTRIBUTE]: depth,
+        [DESIGNER_OUTLINE_EXPANDED_ATTRIBUTE]: expanded ? 'true' : 'false',
+      }}
+      {...(draggable ? listeners : {})}
+      {...(draggable ? attributes : {})}
+      role={undefined}
+      tabIndex={undefined}
+      onClick={onSelect}
+    >
+      {children}
+    </div>
+  );
+};
 
 export const OutlineView: React.FC = () => {
   const { t } = useTranslation('msp/invoicing');
@@ -53,17 +109,21 @@ export const OutlineView: React.FC = () => {
 
     return (
       <div key={node.id} className="select-none" role="treeitem" aria-expanded={hasChildren ? isExpanded : undefined} aria-selected={isSelected}>
-        <div
-          ref={isSelected ? selectedRowRef : undefined}
-          id={`designer-outline-row-${node.id}`}
+        <OutlineRow
+          node={node}
+          depth={depth}
+          rowRef={isSelected ? selectedRowRef : undefined}
+          expanded={hasChildren && isExpanded}
           className={clsx(
             'flex items-center py-1 px-2 cursor-pointer text-xs rounded',
             isSelected
               ? 'bg-primary-600 text-white'
               : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
           )}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          onClick={() => selectNode(node.id)}
+          onSelect={() => {
+            selectNode(node.id);
+            revealCanvasNode(node.id);
+          }}
         >
           <button
             type="button"
@@ -90,7 +150,7 @@ export const OutlineView: React.FC = () => {
               {typeLabel}
             </span>
           )}
-        </div>
+        </OutlineRow>
         {hasChildren && isExpanded && (
           <div role="group">{children.map((child) => renderNode(child, depth + 1))}</div>
         )}
@@ -104,7 +164,13 @@ export const OutlineView: React.FC = () => {
   }
 
   return (
-    <div ref={paneRef} className="relative flex-1 overflow-y-auto py-2" role="tree" aria-label={t('designer.outline.title', { defaultValue: 'Outline' })}>
+    <div
+      ref={paneRef}
+      className="relative flex-1 overflow-y-auto py-2"
+      role="tree"
+      aria-label={t('designer.outline.title', { defaultValue: 'Outline' })}
+      {...{ [DESIGNER_OUTLINE_PANE_ATTRIBUTE]: 'true' }}
+    >
       {renderNode(rootNode)}
     </div>
   );

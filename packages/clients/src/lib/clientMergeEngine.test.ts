@@ -548,6 +548,38 @@ describe('executeClientMerge', () => {
     expect(result.counts['sales order']).toBe(1);
   });
 
+  it('moves a client\'s contacts together, so reports-to links and asset assignments stay within one client', async () => {
+    // contacts.manager_contact_id and assets.contact_name_id are composite NO
+    // ACTION FKs the merge never touches. That is only safe because the whole
+    // contact set (and every asset) moves in one client-wide update: a manager
+    // and their reports can never be split across the two clients.
+    table('contacts').push(
+      { tenant: TENANT, contact_name_id: 'boss-s', client_id: 'source', manager_contact_id: null },
+      { tenant: TENANT, contact_name_id: 'staff-s', client_id: 'source', manager_contact_id: 'boss-s' },
+      { tenant: TENANT, contact_name_id: 'boss-t', client_id: 'target', manager_contact_id: null },
+      { tenant: TENANT, contact_name_id: 'staff-t', client_id: 'target', manager_contact_id: 'boss-t' },
+    );
+    table('assets').push({ tenant: TENANT, asset_id: 'asset-s', client_id: 'source', contact_name_id: 'staff-s' });
+
+    await executeClientMerge(fakeTrx, TENANT, 'actor-1', {
+      sourceClientId: 'source',
+      targetClientId: 'target',
+    });
+
+    const contacts = table('contacts').filter((row) => ['boss-s', 'staff-s', 'boss-t', 'staff-t'].includes(row.contact_name_id));
+    expect(contacts.map((row) => row.client_id)).toEqual(['target', 'target', 'target', 'target']);
+    // Hierarchy untouched, and every manager link still resolves inside one client.
+    expect(contacts.map((row) => row.manager_contact_id)).toEqual([null, 'boss-s', null, 'boss-t']);
+    for (const contact of contacts) {
+      if (!contact.manager_contact_id) continue;
+      const manager = contacts.find((row) => row.contact_name_id === contact.manager_contact_id);
+      expect(manager?.client_id).toBe(contact.client_id);
+    }
+    const asset = table('assets')[0];
+    expect(asset).toMatchObject({ client_id: 'target', contact_name_id: 'staff-s' });
+    expect(contacts.find((row) => row.contact_name_id === asset.contact_name_id)?.client_id).toBe(asset.client_id);
+  });
+
   it('lets the target\'s own billing settings stand rather than moving a second row onto its key', async () => {
     // client_billing_settings is keyed (tenant, client_id): two rows cannot
     // coexist, and the client the group is now run as is the one whose settings

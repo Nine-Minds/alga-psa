@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Criar contatos para novos remetentes",
     "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
     "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
-    "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente."
+    "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente.",
+    "recurringTickets": "Tickets recorrentes"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Status",
     "actions": "Ações",
     "openMenu": "Abrir menu",
+    "viewDetails": "Ver detalhes",
     "unassign": "Cancelar atribuição",
     "loading": "Carregando contratos...",
     "empty": "Nenhum contrato foi atribuído a este cliente ainda.",
@@ -1912,6 +1914,15 @@
       "duplicateManager": "Um perfil de faturamento só pode ter um responsável.",
       "notThisClient": "Um dos contatos selecionados não pertence ao cliente deste perfil de faturamento."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Serviço padrão para registros de tempo",
+    "label": "Serviço padrão para registros de tempo",
+    "placeholder": "Usar o padrão da organização",
+    "help": "Usado em novos registros de tempo em tickets deste cliente. Limpe a seleção para usar o padrão da organização.",
+    "updatedSuccess": "Serviço padrão para registros de tempo atualizado.",
+    "saveError": "Falha ao salvar o serviço padrão para registros de tempo",
+    "loadError": "Falha ao carregar o serviço padrão para registros de tempo"
   },
   "clientAutopay": {
     "setupLinkTitle": "Link de configuração do cartão",

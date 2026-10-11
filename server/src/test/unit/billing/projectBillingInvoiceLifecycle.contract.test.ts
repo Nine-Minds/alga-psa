@@ -83,7 +83,7 @@ describe("project invoice lifecycle contracts", () => {
     const materialPersistence = section(
       invoiceGeneration,
       "// Mark ticket/project materials in this billing window as billed by this invoice.",
-      "for (const discount of billingResult.discounts)",
+      "const discountMagnitude = await reconcileAutomaticInvoiceAdjustments",
     );
 
     expect(materialPersistence).toContain(

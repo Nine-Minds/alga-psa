@@ -32,7 +32,7 @@ import {
   type ManagedDomainActionResult,
   type ManagedDomainActionFailure,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
-import { EmailProviderConfiguration, EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration, EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard, OutboundEmailDiagnosticsDialog } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import { isValidEmail } from '@alga-psa/validation';
@@ -123,6 +123,8 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [smtpTestRecipient, setSmtpTestRecipient] = useState('');
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [smtpDirty, setSmtpDirty] = useState(false);
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
   // Provider changes return the configuration required by dependent saves.
   // Keep those operations serialized so the UI cannot submit an older config.
@@ -206,6 +208,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       if (settings) {
         setEmailSettings(settings);
         setOutboundProvider(resolveOutboundProvider(settings.emailProvider));
+        setSmtpDirty(false);
       }
 
     } catch (err: any) {
@@ -261,6 +264,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       const updated = resolveEmailSettingsResult(result, t('managed.messages.switchProviderFailed'));
       if (!updated) return;
       setEmailSettings(updated);
+      setSmtpDirty(false);
       toast.success(t('managed.outbound.microsoft.saved', 'Outbound sending mailbox updated.'));
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to select Microsoft mailbox', err);
@@ -316,6 +320,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         return;
       }
       setEmailSettings(updated);
+      setSmtpDirty(false);
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to switch provider', err);
       toast.error(t('managed.messages.switchProviderFailed'));
@@ -343,6 +348,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         : config
     );
     setEmailSettings({ ...emailSettings, providerConfigs: updatedConfigs });
+    setSmtpDirty(true);
   };
 
   const persistSmtpSettings = async (): Promise<TenantEmailSettings | null> => {
@@ -386,6 +392,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
 
     setEmailSettings(updated);
+    setSmtpDirty(false);
     return updated;
   };
 
@@ -877,6 +884,40 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
           </div>
           </EmailSenderCardsProvider>
         )}
+
+        {emailSettings && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                {t('managed.outbound.diagnosticsButton', 'Run Outbound Diagnostics')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                id="open-outbound-diagnostics"
+                variant="outline"
+                onClick={() => setDiagnosticsOpen(true)}
+                disabled={outboundBusy || smtpDirty}
+                aria-describedby="outbound-diagnostics-save-help"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {t('managed.outbound.diagnosticsButton', 'Run Outbound Diagnostics')}
+              </Button>
+              {smtpDirty && (
+                <p id="outbound-diagnostics-save-help" className="text-sm text-muted-foreground">
+                  {t('managed.outbound.diagnosticsSaveHelp', { defaultValue: 'Save or discard your changes before checking the outbound settings.' })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <OutboundEmailDiagnosticsDialog
+          isOpen={diagnosticsOpen}
+          onClose={() => setDiagnosticsOpen(false)}
+          hasUnsavedChanges={smtpDirty}
+        />
       </TabsContent>
 
       <TabsContent value="inbound" className="space-y-6">

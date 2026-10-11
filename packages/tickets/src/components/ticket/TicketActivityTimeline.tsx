@@ -8,6 +8,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronRight,
+  Copy,
   Link2,
   Lock,
   Mail,
@@ -124,6 +125,9 @@ function eventIcon(eventType: string): React.ReactElement {
   switch (eventType) {
     case 'TICKET_CREATED':
       return <PlayCircle className="h-4 w-4" />;
+    case 'TICKET_DUPLICATED_FROM':
+    case 'TICKET_DUPLICATED_TO':
+      return <Copy className="h-4 w-4" />;
     case 'TICKET_CLOSED':
       return <CheckCircle className="h-4 w-4" />;
     case 'TICKET_REOPENED':
@@ -198,6 +202,22 @@ function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible
   switch (activity.event_type) {
     case 'TICKET_CREATED':
       return { title: `${actor} created the ticket` };
+    case 'TICKET_DUPLICATED_FROM': {
+      const details = (activity.details ?? {}) as { source_ticket_number?: string };
+      return {
+        title: details.source_ticket_number
+          ? `${actor} created this ticket as a duplicate of #${details.source_ticket_number}`
+          : `${actor} created this ticket as a duplicate of another ticket`,
+      };
+    }
+    case 'TICKET_DUPLICATED_TO': {
+      const details = (activity.details ?? {}) as { duplicate_ticket_number?: string };
+      return {
+        title: details.duplicate_ticket_number
+          ? `${actor} duplicated this ticket as #${details.duplicate_ticket_number}`
+          : `${actor} duplicated this ticket`,
+      };
+    }
     case 'TICKET_CLOSED':
       return { title: `${actor} closed the ticket`, annotation };
     case 'TICKET_REOPENED':
@@ -415,6 +435,8 @@ const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
   { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
   { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
+  { value: 'TICKET_DUPLICATED_FROM', label: 'Duplicated from' },
+  { value: 'TICKET_DUPLICATED_TO', label: 'Duplicated to' },
   { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
   { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: 'Bundle status propagated' },
 ];

@@ -34,6 +34,9 @@ const START_SIZE = 52;
 const INSERT_SIZE = 30;
 const EDGE_TYPE: Edge['type'] = 'step';
 const STRAIGHT_EDGE_TYPE: Edge['type'] = 'workflowAlignedVertical';
+// Runs straight down the source's column and turns only just above the target, so a branch's
+// last step reaches its join without cutting through the other branch's steps.
+export const MERGE_EDGE_TYPE: Edge['type'] = 'workflowMergeIntoJoin';
 const EXCLUDE_FROM_LAYOUT = { excludeFromLayout: true } as const;
 const NODE_WRAPPER_STYLE = { padding: 0, border: 'none', background: 'transparent', boxShadow: 'none' } as const;
 
@@ -139,47 +142,45 @@ const buildSequence = (
 	        pipePath: `${ctx.pipePath}.steps[${stepIndex}].else`
 	      });
 
-	      const thenHasSteps = (ifStep.then ?? []).length > 0;
-	      const elseHasSteps = (ifStep.else ?? []).length > 0;
-	      const needsJoin = Boolean(
-	        thenHasSteps && elseHasSteps && thenSeq.exits.length > 0 && elseSeq.exits.length > 0
-	      );
+	      // Every path out of the If meets at one join node: a branch's last step, or, for a branch with
+	      // no steps, a labelled edge straight from the If. Labelled edges then always leave the If
+	      // side by side (Then left, Else right) instead of one branch skipping past the other.
+	      const pathsToJoin: Array<{ from: string[]; label?: string }> = [];
+	      const skipLabels: string[] = [];
+	      const addBranch = (seq: { entry: string | null; exits: string[] }, label: string) => {
+	        if (seq.entry) {
+	          connect([ifNodeId], seq.entry, label);
+	          if (seq.exits.length) pathsToJoin.push({ from: seq.exits });
+	        } else {
+	          skipLabels.push(label);
+	        }
+	      };
+	      addBranch(thenSeq, 'then');
+	      addBranch(elseSeq, 'else');
 
-	      if (needsJoin) {
-	        const joinNodeId = `${ctx.idPrefix}${ifStep.id}::join`;
-	        ctx.nodes.push({
-	          id: joinNodeId,
-	          type: 'workflowJoin',
-	          position: { x: 0, y: 0 },
-	          style: NODE_WRAPPER_STYLE,
-	          data: { kind: 'join', label: 'Join' },
-	          width: JOIN_SIZE,
-	          height: JOIN_SIZE
-	        });
-
-	        connect([ifNodeId], thenSeq.entry!, 'then');
-	        connect([ifNodeId], elseSeq.entry!, 'else');
-	        connect(thenSeq.exits, joinNodeId);
-	        connect(elseSeq.exits, joinNodeId);
-	        return { entry: ifNodeId, exits: [joinNodeId] };
+	      if (skipLabels.length === 2) {
+	        return { entry: ifNodeId, exits: [ifNodeId] };
+	      }
+	      skipLabels.forEach((label) => pathsToJoin.push({ from: [ifNodeId], label }));
+	      if (pathsToJoin.length === 0) {
+	        return { entry: ifNodeId, exits: [] };
+	      }
+	      if (pathsToJoin.length === 1 && !pathsToJoin[0].label) {
+	        return { entry: ifNodeId, exits: Array.from(new Set(pathsToJoin[0].from)) };
 	      }
 
-	      const exitsToNext: string[] = [];
-	      if (thenSeq.entry) {
-	        connect([ifNodeId], thenSeq.entry, 'then');
-	        if (thenSeq.exits.length) exitsToNext.push(...thenSeq.exits);
-	      } else {
-	        exitsToNext.push(ifNodeId);
-	      }
-
-	      if (elseSeq.entry) {
-	        connect([ifNodeId], elseSeq.entry, 'else');
-	        if (elseSeq.exits.length) exitsToNext.push(...elseSeq.exits);
-	      } else {
-	        exitsToNext.push(ifNodeId);
-	      }
-
-	      return { entry: ifNodeId, exits: Array.from(new Set(exitsToNext)) };
+	      const joinNodeId = `${ctx.idPrefix}${ifStep.id}::join`;
+	      ctx.nodes.push({
+	        id: joinNodeId,
+	        type: 'workflowJoin',
+	        position: { x: 0, y: 0 },
+	        style: NODE_WRAPPER_STYLE,
+	        data: { kind: 'join', label: 'Join' },
+	        width: JOIN_SIZE,
+	        height: JOIN_SIZE
+	      });
+	      pathsToJoin.forEach((path) => connect(path.from, joinNodeId, path.label));
+	      return { entry: ifNodeId, exits: [joinNodeId] };
 	    }
 
 	    if (step.type === 'control.tryCatch') {
@@ -412,7 +413,15 @@ export async function buildWorkflowGraph(
       'elk.spacing.nodeNode': '40',
       'elk.edgeRouting': 'ORTHOGONAL',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP'
+      // Place each step as high as its predecessors allow, so every branch starts on the row right
+      // below its If/Try. The default (network simplex) pushes a shorter branch down toward the join,
+      // which drags its entry edge through the other branch.
+      'elk.layered.layering.strategy': 'LONGEST_PATH_SOURCE',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      // Keep branches in definition order (Then before Else, Try before Catch) so they are laid out
+      // left to right as they read; otherwise ELK may swap them and the labelled edges cross.
+      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+      'elk.layered.crossingMinimization.forceNodeModelOrder': 'true'
     },
     children: nodes.map((node) => ({
       id: node.id,
@@ -563,6 +572,13 @@ export async function buildWorkflowGraph(
       return {
         ...edge,
         type: STRAIGHT_EDGE_TYPE
+      };
+    }
+
+    if (nodeById.get(edge.target)?.type === 'workflowJoin') {
+      return {
+        ...edge,
+        type: MERGE_EDGE_TYPE
       };
     }
 

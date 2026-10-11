@@ -707,6 +707,79 @@
       "skip": "Överhoppad"
     }
   },
+  "outboundDiagnostics": {
+    "title": "Diagnostik för utgående e-post",
+    "description": "Kör den sparade utgående konfigurationen genom en leverantörskontrollista. Inget meddelande skickas om du inte uttryckligen aktiverar liveutskicket nedan.",
+    "unsavedNotice": "Osparade ändringar på den här skärmen ingår inte. Spara inställningarna innan du kör diagnostiken.",
+    "states": {
+      "running": "Kör diagnostik...",
+      "failed": "Diagnostiken misslyckades",
+      "copyFailed": "Det gick inte att kopiera supportpaketet. Använd Ladda ner för att spara det som en fil.",
+      "checking": "Kontrollerar e-postinställningar…"
+    },
+    "actions": {
+      "retry": "Försök igen",
+      "rerun": "Kör igen",
+      "copyBundle": "Kopiera supportpaket",
+      "copied": "Kopierat",
+      "downloadBundle": "Ladda ner"
+    },
+    "labels": {
+      "overall": "Sammanfattning:",
+      "provider": "Leverantör:",
+      "effectiveSender": "Effektiv avsändare:",
+      "authorizedUser": "Auktoriserad användare:",
+      "mailboxRoute": "Brevlådeflöde:",
+      "recommendations": "Rekommendationer",
+      "error": "Fel",
+      "redacted": "Supportexporten tar bort brevlådeidentifierare som standard."
+    },
+    "statuses": {
+      "pass": "Godkänd",
+      "warn": "Varning",
+      "fail": "Misslyckad",
+      "skip": "Hoppas över"
+    },
+    "liveSend": {
+      "label": "Skicka ett testmeddelande (live)",
+      "permissionHelp": "Skicka ett testmejl för att bekräfta att kontot kan skicka från den valda brevlådan.",
+      "recipient": "Mottagare",
+      "run": "Kör med liveutskick",
+      "invalidRecipient": "Ange en giltig mottagaradress.",
+      "enableTest": "Skicka ett testmejl",
+      "sendTo": "Skicka till",
+      "sendTest": "Skicka testmejl",
+      "sending": "Skickar testmejl…",
+      "unconfirmed": "Vi kunde inte bekräfta om testmejlet skickades. Kontrollera mottagarens inkorg innan du försöker igen."
+    },
+    "introduction": "Kontrollera dina sparade e-postinställningar. Att skicka ett testmejl är valfritt.",
+    "checkStatus": {
+      "pass": "Godkänd",
+      "warn": "Behöver åtgärdas",
+      "fail": "Misslyckad",
+      "skip": "Ej kontrollerad"
+    },
+    "result": {
+      "pass": "Alla kontroller godkändes",
+      "warn": "Vissa kontroller kunde inte slutföras",
+      "fail": "En e-postkontroll misslyckades",
+      "skip": "Vissa kontroller kunde inte slutföras"
+    },
+    "noTestSent": "Dessa kontroller skickade inget mejl.",
+    "emailService": "E-posttjänst",
+    "sender": "Från",
+    "connectedAccount": "Anslutet konto",
+    "checkAgain": "Kontrollera igen",
+    "nextSteps": "Nästa steg",
+    "limitedChecksHelp": "En del kontoinformation var otillgänglig för dessa kontroller. Skicka ett testmejl för att kontrollera om utskicket fungerar.",
+    "sentItemsHelp": "Mappen Skickat kunde inte kontrolleras. Efter att ha skickat ett testmejl, kontrollera att en kopia visas i den skickande brevlådans mapp Skickat.",
+    "copyReport": "Kopiera rapport",
+    "downloadReport": "Ladda ner rapport",
+    "copyConfirmed": "Rapporten kopierades till urklipp.",
+    "copyReportFailed": "Det gick inte att kopiera rapporten. Använd Ladda ner rapport för att spara den som en fil.",
+    "shareHelp": "Dela rapporten med supporten. E-postadresser och kontoidentifierare är dolda.",
+    "technicalDetails": "Tekniska detaljer för support"
+  },
   "integrations": {
     "entra": {
       "diagnostics": {

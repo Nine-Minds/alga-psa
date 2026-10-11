@@ -120,6 +120,24 @@ const User = {
     }
   },
 
+  /**
+   * Every user of this type with this email, across tenants. The `.first()`
+   * sibling above answers an arbitrary one of them, which is wrong for sign-in
+   * when no tenant is known: callers need to see the ambiguity to refuse it.
+   */
+  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser[]> => {
+    const db = await getAdminConnection();
+    try {
+      return await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON)
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType });
+    } catch (error) {
+      logger.error(`Error finding users with email ${email} and type ${userType}:`, error);
+      throw error;
+    }
+  },
+
   findUserByEmailTenantAndType: async (
     email: string,
     tenantId: string,
@@ -325,10 +343,35 @@ const User = {
   updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      const updated = await tenantDb(db, tenant).table<IUser>('users').where({ user_id }).update({ hashed_password });
+      if (updated !== 1) {
+        throw new Error(`Expected to update one password row for user ${user_id} in tenant ${tenant}; updated ${updated}`);
+      }
       logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
       logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
+      throw error;
+    }
+  },
+
+  updatePasswordIfCurrent: async (
+    user_id: string,
+    tenant: string,
+    observed_hash: string | null,
+    hashed_password: string,
+  ): Promise<boolean> => {
+    const db = await getAdminConnection();
+    try {
+      let query = tenantDb(db, tenant)
+        .table<IUser>('users')
+        .where({ user_id });
+      query = observed_hash === null
+        ? query.whereNull('hashed_password')
+        : query.where({ hashed_password: observed_hash });
+      const updated = await query.update({ hashed_password });
+      return updated > 0;
+    } catch (error) {
+      logger.error(`Error conditionally updating password for user ${user_id} in tenant ${tenant}:`, error);
       throw error;
     }
   },

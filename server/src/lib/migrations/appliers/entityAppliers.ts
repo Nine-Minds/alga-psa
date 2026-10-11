@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   type AmpAssetRecord,
@@ -309,7 +310,7 @@ export class TicketMigrationApplier implements EntityApplier {
       context.tenant,
       trx,
       {},
-      undefined,
+      silentTicketCreation('data migration'),
       undefined,
       context.actorUserId
     );

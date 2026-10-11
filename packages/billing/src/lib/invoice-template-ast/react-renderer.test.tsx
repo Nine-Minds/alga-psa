@@ -1443,3 +1443,129 @@ describe('legacy quote terms PDF compatibility', () => {
     }
   });
 });
+
+describe('titled sections with nothing to head', () => {
+  // Regression: alga-2026-0002383 — a quote without terms rendered an empty
+  // "Terms & Conditions" heading at the foot of page 1 and pushed the signature
+  // block onto a page of its own.
+  const renderSection = async (children: TemplateAst['layout']['children'], data: Record<string, unknown>) => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          termsRich: { id: 'termsRich', kind: 'value', path: 'terms', fallback: '' },
+          notes: { id: 'notes', kind: 'value', path: 'notes', fallback: '' },
+          logo: { id: 'logo', kind: 'value', path: 'logo' },
+        },
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'line_items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          { id: 'terms-section', type: 'section', title: 'Terms & Conditions', children: children ?? [] },
+          { id: 'after', type: 'text', content: { type: 'literal', value: 'Signature' } },
+        ],
+      },
+    };
+    const evaluation = evaluateTemplateAst(ast, data);
+    return renderEvaluatedTemplateAst(ast, evaluation);
+  };
+
+  const termsCopy = { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsRich' } } as const;
+
+  it('omits the section and its heading when a richText child resolves to nothing', async () => {
+    for (const terms of ['', '   \n', null, [], [{ type: 'paragraph', content: [] }]]) {
+      const rendered = await renderSection([termsCopy], { terms });
+      expect(rendered.html).not.toContain('Terms &amp; Conditions');
+      expect(rendered.html).not.toContain('id="terms-section"');
+      expect(rendered.html).toContain('Signature');
+    }
+  });
+
+  it('renders the heading with its content when the richText child has text', async () => {
+    const plain = await renderSection([termsCopy], { terms: 'Net 30.' });
+    expect(plain.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(plain.html).toContain('Net 30.');
+
+    const structured = await renderSection([termsCopy], {
+      terms: [{ type: 'paragraph', content: [{ type: 'text', text: 'Net 30.' }] }],
+    });
+    expect(structured.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(structured.html).toContain('Net 30.');
+  });
+
+  it('omits the section when a legacy text child resolves to whitespace', async () => {
+    const rendered = await renderSection(
+      [{ id: 'notes-copy', type: 'text', content: { type: 'binding', bindingId: 'notes' } }],
+      { notes: '  ' },
+    );
+    expect(rendered.html).not.toContain('Terms &amp; Conditions');
+  });
+
+  it('keeps a section whose table paints an empty-state row', async () => {
+    const rendered = await renderSection(
+      [
+        {
+          id: 'items',
+          type: 'dynamic-table',
+          repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+          columns: [{ id: 'description', header: 'Description', value: { type: 'path', path: 'description' } }],
+          emptyStateText: 'No items',
+        },
+      ],
+      { line_items: [] },
+    );
+    expect(rendered.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(rendered.html).toContain('No items');
+  });
+
+  it('omits the section when its only child is a repeating stack over an empty collection', async () => {
+    const rendered = await renderSection(
+      [
+        {
+          id: 'bands',
+          type: 'stack',
+          repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+          children: [{ id: 'band', type: 'text', content: { type: 'path', path: 'description' } }],
+        },
+      ],
+      { line_items: [] },
+    );
+    expect(rendered.html).not.toContain('Terms &amp; Conditions');
+  });
+
+  it('keeps a section when an image child resolves to a source', async () => {
+    const rendered = await renderSection(
+      [{ id: 'logo', type: 'image', src: { type: 'binding', bindingId: 'logo' } }],
+      { logo: 'https://example.test/logo.png' },
+    );
+    expect(rendered.html).toContain('<h2>Terms &amp; Conditions</h2>');
+    expect(rendered.html).toContain('<img');
+  });
+
+  it('leaves an untitled empty section in place as a layout wrapper', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [{ id: 'wrapper', type: 'section', children: [] }],
+      },
+    };
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}));
+    expect(rendered.html).toContain('id="wrapper"');
+  });
+
+  it('keeps headings with their content and the signature block whole across page breaks', async () => {
+    const rendered = await renderSection([termsCopy], { terms: 'Net 30.' });
+    expect(rendered.css).toContain('section > h2 { break-after: avoid; }');
+    expect(rendered.css).toContain('section > h2 + * { break-before: avoid; }');
+    expect(rendered.css).toContain('#signature-block { break-inside: avoid; }');
+  });
+});

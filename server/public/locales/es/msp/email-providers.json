@@ -803,7 +803,8 @@
           "recipientPlaceholder": "tu@ejemplo.com",
           "testingButton": "Probando...",
           "runButton": "Probar conexión"
-        }
+        },
+        "ticketIdentityRequired": "Seleccione una identidad de correo electrónico de tickets a continuación para establecer el dominio de envío."
       },
       "ticketingFrom": {
         "title": "Dirección de remitente de tickets",
@@ -842,7 +843,18 @@
         "description": "Los mensajes se envían como el buzón seleccionado a través de Microsoft Graph y se guardan en Elementos enviados.",
         "loadFailed": "No se pudieron cargar los buzones de Microsoft 365.",
         "saved": "Buzón de envío actualizado."
-      }
+      },
+      "diagnosticsButton": "Ejecutar diagnóstico de correo saliente",
+      "saveSettings": "Guardar configuración de salida",
+      "discardChanges": "Descartar cambios",
+      "unsaved": "Cambios sin guardar",
+      "noPendingChanges": "No hay cambios sin guardar",
+      "saving": "Guardando la configuración de salida…",
+      "saved": "Configuración de salida guardada.",
+      "saveFailed": "No se pudo guardar la configuración de salida. Sus cambios siguen aquí. Vuelva a intentarlo.",
+      "diagnosticsSaveHelp": "Guarde o descarte los cambios antes de comprobar la configuración de salida.",
+      "saveBeforeDomainRemoval": "Guarde o descarte los cambios de salida antes de eliminar un dominio.",
+      "senderAddressAfterSave": "Se muestra después de guardar."
     },
     "inbound": {
       "intro": "Configure el enrutamiento de correo entrante y la automatización específica del proveedor."

@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Ukończ poniższą weryfikację, a następnie zaloguj się ponownie.",
     "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą.",
+    "tenantRequiredMessage": "Twój adres e-mail jest powiązany z więcej niż jedną organizacją — wybierz swoją organizację, aby kontynuować.",
+    "tenantRequiredLink": "Wybierz swoją organizację",
     "tenantDiscovery": {
       "title": "Znajdź swoją organizację",
       "description": "Wpisz swój adres e-mail, a wyślemy Ci linki logowania do wszystkich organizacji, do których masz dostęp.",
@@ -320,7 +322,17 @@
         "verifiedContact": "Zweryfikowany adres e-mail kontaktu",
         "validPassword": "Prawidłowe hasło"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Logowanie SSO nie powiodło się",
+    "ssoNoMatch": {
+      "no_matching_user": "Żadne konto portalu klienta nie odpowiada adresowi {{providerEmail}}. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
+      "missing_email": "Dostawca tożsamości nie zwrócił adresu e-mail, więc nie udało się dopasować konta portalu klienta. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
+      "inactive_user": "Konto portalu klienta dla {{providerEmail}} jest nieaktywne. Skontaktuj się z usługodawcą, aby je ponownie aktywować.",
+      "user_type_mismatch": "{{providerEmail}} nie jest kontem portalu klienta. Skontaktuj się z usługodawcą.",
+      "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą."
+    },
+    "configurationTitle": "Logowanie nie powiodło się",
+    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą."
   },
   "account": {
     "title": "Konto",
@@ -442,7 +454,8 @@
         "consent": "Upoważniam do cyklicznego obciążania tej karty za zatwierdzone faktury.",
         "enable": "Włącz płatność automatyczną",
         "noCards": "Dodaj kartę, aby włączyć płatność automatyczną.",
-        "changeCard": "Użyj tej karty do płatności automatycznej"
+        "changeCard": "Użyj tej karty do płatności automatycznej",
+        "updateError": "Nie udało się zaktualizować płatności automatycznej. Spróbuj ponownie."
       },
       "publicCardSetup": {
         "saved": "Karta zapisana",
@@ -567,7 +580,8 @@
       "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych.",
       "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
       "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Prześlij awatar",
@@ -683,7 +697,10 @@
       "deleteError": "Nie udało się usunąć użytkownika",
       "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
       "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "reportsTo": "Podlega",
+      "noManager": "Brak przełożonego",
+      "reportsToHelp": "Przełożony widzi zgłoszenia, urządzenia i projekty osób mu podlegających, gdy jego grupa widoczności jest ograniczona do własnych danych."
     },
     "visibilityGroups": {
       "title": "Grupy widoczności",
@@ -723,9 +740,22 @@
       "scopeClient": "Wszystkie zgłoszenia tego klienta",
       "scopeContact": "Tylko własne zgłoszenia",
       "scopeClientDescription": "Członkowie widzą wszystkie zgłoszenia tego klienta na wybranych tablicach.",
-      "scopeContactDescription": "Członkowie widzą tylko zgłoszenia, w których są wskazani jako kontakt. Administratorzy klienta widzą wszystkie zgłoszenia na wybranych tablicach, również te bez kontaktu.",
-      "assignmentHelp": "Przypisz grupę, aby ograniczyć tablice i zgłoszenia, lub zachowaj pełny dostęp do klienta.",
-      "boardHiddenFromPortal": "Ukryta w portalu klienta"
+      "scopeContactDescription": "Członkowie widzą zgłoszenia, w których są kontaktem, zgłoszenia osób im podlegających oraz zgłoszenia, które obserwują. Administratorzy klienta zawsze widzą wszystko na wybranych tablicach, także zgłoszenia bez kontaktu.",
+      "assignmentHelp": "Przypisz grupę, aby ograniczyć tablice oraz zgłoszenia, urządzenia i projekty widoczne dla tej osoby, albo zachowaj pełny dostęp do klienta.",
+      "boardHiddenFromPortal": "Ukryta w portalu klienta",
+      "assetScopeLabel": "Widoczność urządzeń",
+      "assetScopeClient": "Wszystkie urządzenia tego klienta",
+      "assetScopeContact": "Tylko własne urządzenia",
+      "assetScopeClientDescription": "Członkowie widzą wszystkie urządzenia tego klienta, także nieprzypisane.",
+      "assetScopeContactDescription": "Członkowie widzą tylko urządzenia przypisane do nich lub do osób im podlegających. Nieprzypisane urządzenia są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "projectScopeLabel": "Widoczność projektów",
+      "projectScopeClient": "Wszystkie projekty tego klienta",
+      "projectScopeContact": "Tylko własne projekty",
+      "projectScopeClientDescription": "Członkowie widzą wszystkie projekty tego klienta.",
+      "projectScopeContactDescription": "Członkowie widzą tylko projekty, w których kontaktem są oni sami lub osoba im podlegająca. Projekty bez kontaktu są ukryte. Administratorzy klienta zawsze widzą wszystko.",
+      "scopeSummary": "Zgłoszenia: {{tickets}} · Urządzenia: {{devices}} · Projekty: {{projects}}",
+      "scopeSummaryAll": "Wszystkie",
+      "scopeSummaryOwn": "Własne"
     },
     "messages": {
       "saveChanges": "Zapisz zmiany",

@@ -802,6 +802,8 @@ export class StripeService {
     currentPeriodEnd: Date;
     prorationAmount: number;
     remainingAmount: number;
+    isTrialing: boolean;
+    trialEnd: Date | null;
   } | null> {
     await this.ensureInitialized();
     logger.info(`[StripeService] Getting invoice preview for tenant ${tenantId}, new quantity: ${newQuantity}`);
@@ -809,9 +811,12 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Get existing license subscription (add-on subscriptions previewed separately)
-    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active'])
+    // Get existing license subscription (add-on subscriptions previewed separately).
+    // Trialing subscriptions preview too: during a trial nothing is charged now and
+    // the new quantity simply becomes the first invoice at trial end.
+    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active', 'trialing'])
       .where({ stripe_customer_id: customer.stripe_customer_id })
+      .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
       .first();
 
     if (!existingSubscription || !existingSubscription.stripe_subscription_item_id) {
@@ -820,6 +825,7 @@ export class StripeService {
 
     const currentQuantity = existingSubscription.quantity;
     const isIncrease = newQuantity > currentQuantity;
+    const isTrialing = existingSubscription.status === 'trialing';
 
     // `newQuantity` is the user-facing total. For multi-item subscriptions
     // the per-user line item only carries the billable portion; preview must
@@ -846,7 +852,7 @@ export class StripeService {
             quantity: previewPerUserQuantity,
           },
         ],
-        proration_behavior: isIncrease ? 'always_invoice' : 'none',
+        proration_behavior: isIncrease && !isTrialing ? 'always_invoice' : 'none',
       },
     });
 
@@ -855,16 +861,29 @@ export class StripeService {
       .filter(line => (line as any).proration)
       .reduce((sum, line) => sum + line.amount, 0);
 
+    const currentPeriodEnd = existingSubscription.current_period_end || new Date();
+
     return {
       currentQuantity,
       newQuantity,
       isIncrease,
-      amountDue: upcomingInvoice.amount_due / 100, // Convert cents to dollars
+      amountDue: isTrialing ? 0 : upcomingInvoice.amount_due / 100, // Convert cents to dollars
       currency: upcomingInvoice.currency,
-      currentPeriodEnd: existingSubscription.current_period_end || new Date(),
-      prorationAmount: prorationAmount / 100,
+      currentPeriodEnd,
+      prorationAmount: isTrialing ? 0 : prorationAmount / 100,
       remainingAmount: upcomingInvoice.amount_remaining / 100,
+      isTrialing,
+      // A trialing subscription's current period is the trial itself
+      trialEnd: isTrialing ? currentPeriodEnd : null,
     };
+  }
+
+  private async countActiveInternalUsers(knex: Knex, tenantId: string): Promise<number> {
+    const row = await tenantScopedTable(knex, 'users', tenantId)
+      .where({ user_type: 'internal', is_inactive: false })
+      .count('user_id as count')
+      .first();
+    return parseInt(String(row?.count ?? '0'), 10);
   }
 
   /**
@@ -874,7 +893,10 @@ export class StripeService {
    * - Increase (active): Immediate change with prorated charge
    * - Increase (trialing): Immediate change, no charge — billing starts at the
    *   new quantity when the trial converts
-   * - Decrease: Scheduled for end of billing period (no immediate credit)
+   * - Decrease (trialing): Immediate change in place, no charge. A schedule
+   *   would end the trial, so trials never get one.
+   * - Decrease (active): Scheduled for end of billing period (no immediate credit)
+   * - Any decrease below the active internal user count is refused.
    *
    * Returns either an updated subscription or checkout session details
    */
@@ -923,16 +945,27 @@ export class StripeService {
         `${isIncrease ? 'increasing' : 'decreasing'} from ${currentQuantity} to ${quantity}`
       );
 
-      if (isIncrease) {
+      if (!isIncrease) {
+        const activeUsers = await this.countActiveInternalUsers(knex, tenantId);
+        if (quantity < activeUsers) {
+          throw new Error(
+            `Cannot reduce to ${quantity} licenses: tenant has ${activeUsers} active users`
+          );
+        }
+      }
+
+      if (isIncrease || isTrialing) {
         // INCREASE: Immediate change with prorated charge.
         // IMPORTANT: payment_behavior: 'error_if_incomplete' ensures the API call fails
         // if payment cannot be collected immediately, preventing license count updates
         // when payment fails (e.g., insufficient funds, expired card)
         //
-        // Trialing subscriptions increase in place with NO invoice: the seats are
-        // usable immediately and billing simply starts at the new quantity when the
-        // trial converts. Paying mid-trial is only for tier upgrades (upgradeTier),
-        // never for adding seats on the current plan.
+        // Trialing subscriptions change in place with NO invoice, in both
+        // directions: the seats are usable immediately and billing simply starts
+        // at the new quantity when the trial converts. Paying mid-trial is only
+        // for tier upgrades (upgradeTier), never for seats on the current plan.
+        // A decrease must not go through a schedule while trialing: a schedule
+        // phase without a trial ends the trial and bills the customer at once.
 
         // `quantity` is the user-facing total. For multi-item subscriptions
         // (platform fee + per-user line), the per-user line only carries the
@@ -983,7 +1016,10 @@ export class StripeService {
             updated_at: knex.fn.now(),
           });
 
-        logger.info(`[StripeService] Immediately increased subscription to ${quantity} licenses`);
+        logger.info(
+          `[StripeService] Immediately ${isIncrease ? 'increased' : 'decreased'} subscription to ${quantity} licenses` +
+          (isTrialing ? ' (trialing, no charge)' : '')
+        );
 
         return {
           type: 'updated',
@@ -991,7 +1027,7 @@ export class StripeService {
           scheduledChange: false,
         };
       } else {
-        // DECREASE: Schedule change for end of billing period
+        // DECREASE (active): Schedule change for end of billing period
         // Use subscription schedule to delay the change
         const currentPeriodEnd = existingSubscription.current_period_end;
 
@@ -1599,19 +1635,24 @@ export class StripeService {
         updatedMetadata[RETIRED_PREMIUM_SCHEDULE_SOURCE_KEY] = retiredPremiumScheduleSource;
       }
     }
+    // Stripe's subscription metadata never carries our pending-reduction marker,
+    // so carry it over from the local row until the schedule activates (quantity
+    // reaches the scheduled value) or disappears from the subscription.
     if (existingSubscription?.metadata?.scheduled_quantity) {
-      const scheduledQuantity = existingSubscription.metadata.scheduled_quantity;
+      const scheduledQuantity = Number(existingSubscription.metadata.scheduled_quantity);
 
-      // If the quantity now matches the scheduled quantity, the schedule has activated
       if (quantity === scheduledQuantity) {
         logger.info(
           `[StripeService] Scheduled license change activated for subscription ${subscription.id}: ` +
           `${existingSubscription.quantity} -> ${quantity}`
         );
-
-        // Clear the scheduled change metadata
-        const { scheduled_quantity, schedule_id, ...remainingMetadata } = existingSubscription.metadata;
-        updatedMetadata = remainingMetadata;
+      } else if (!subscription.schedule) {
+        logger.info(
+          `[StripeService] Schedule released for subscription ${subscription.id}; clearing pending change to ${scheduledQuantity}`
+        );
+      } else {
+        updatedMetadata.scheduled_quantity = existingSubscription.metadata.scheduled_quantity;
+        updatedMetadata.schedule_id = existingSubscription.metadata.schedule_id;
       }
     }
 

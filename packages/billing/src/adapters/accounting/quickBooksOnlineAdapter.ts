@@ -1,6 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
-import { AppError } from '@alga-psa/core';
+import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   AccountingChangeSet,
@@ -36,9 +36,24 @@ import {
   resolveInvoiceExportTarget,
 } from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import {
+  QBO_AST_PSEUDO_TAX_CODES,
+  QBO_PSEUDO_TAX_CODE_NON_TAXABLE,
+  QBO_PSEUDO_TAX_CODE_TAXABLE,
+  QboInvoice,
+  QboInvoiceLine,
+  QboSalesItemLineDetail
+} from '@alga-psa/integrations/lib/qbo/types';
 import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
+import {
+  getQboCompanyCountry,
+  isQboUnitedStatesCompany,
+  isUnitedStatesQboCountry
+} from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const QBO_MAX_QUANTITY_DECIMALS = 6;
 
 /**
  * QuickBooks' US pseudo tax codes. Intuit ships exactly these two on every US
@@ -49,8 +64,6 @@ import { getAccountingSyncSettings } from '../../services/accountingSync/account
  * means "not taxable" — AST treats it as TAX and falls back to the item's own
  * taxability. Opting a line out therefore requires sending NON explicitly.
  */
-const QBO_PSEUDO_TAX_CODE_TAXABLE = 'TAX';
-const QBO_PSEUDO_TAX_CODE_NON_TAXABLE = 'NON';
 
 type DbInvoice = {
   invoice_id: string;
@@ -213,6 +226,21 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   readonly type = QuickBooksOnlineAdapter.TYPE;
   private readonly companyAdapter = new QuickBooksOnlineCompanyAdapter();
 
+  /**
+   * A US Automated Sales Tax company accepts only TAX/NON on a line. Strict
+   * on the country, unlike transform: an unreadable company restricts nothing,
+   * so a transient QuickBooks error can't block a non-US batch.
+   */
+  async allowedLineTaxCodes(
+    tenantId: string,
+    targetRealm?: string | null
+  ): Promise<ReadonlySet<string> | null> {
+    if (!targetRealm) return null;
+    const { knex } = await createTenantKnex();
+    if (!(await isQboAutomatedSalesTaxEnabled(knex, tenantId, targetRealm))) return null;
+    return (await isQboUnitedStatesCompany(tenantId, targetRealm)) ? QBO_AST_PSEUDO_TAX_CODES : null;
+  }
+
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
@@ -286,6 +314,18 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       tenantId,
       context.batch.target_realm
     );
+
+    // TAX/NON is a US-only rule: a non-US AST company keeps its own codes.
+    // Read lazily, once per batch. An unreadable country counts as US, so a
+    // failed lookup can't bring back the 6100 fault on a US company.
+    let astCompanyKnownNonUs: boolean | null = null;
+    const isAstCompanyKnownNonUs = async (): Promise<boolean> => {
+      if (astCompanyKnownNonUs === null) {
+        const country = await getQboCompanyCountry(tenantId, context.batch.target_realm);
+        astCompanyKnownNonUs = country !== null && !isUnitedStatesQboCountry(country);
+      }
+      return astCompanyKnownNonUs;
+    };
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -415,6 +455,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       let invoiceTaxCents = 0;
       // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
       const isCreditNote = invoice.invoice_type === 'credit_note';
+      const invoiceCurrency = invoice.currency_code ?? 'USD';
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
@@ -425,34 +466,35 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new Error(`QuickBooks adapter: charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
-        if (!charge.service_id) {
+        const isServicelessDiscount = !charge.service_id && Boolean(charge.is_discount);
+        if (!charge.service_id && !isServicelessDiscount) {
           throw new Error(`QuickBooks adapter: charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
 
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
+        const serviceMapping = isServicelessDiscount
+          ? await resolver.resolveDiscountMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              targetRealm: context.batch.target_realm
+            })
+          : await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              serviceId: charge.service_id!,
+              targetRealm: context.batch.target_realm
+            });
 
         if (!serviceMapping) {
-          throw new Error(`QuickBooks adapter: no mapping for service ${charge.service_id}`);
+          throw new Error(
+            isServicelessDiscount
+              ? `QuickBooks adapter: no discount mapping for invoice ${invoiceId}`
+              : `QuickBooks adapter: no mapping for service ${charge.service_id}`
+          );
         }
 
         const salesDetail: QboSalesItemLineDetail = {
           ItemRef: { value: serviceMapping.external_entity_id }
         };
-
-        if (charge.quantity != null) {
-          salesDetail.Qty = isCreditNote ? Math.abs(charge.quantity) : charge.quantity;
-        }
-
-        if (charge.unit_price != null) {
-          salesDetail.UnitPrice = isCreditNote
-            ? centsToAmount(Math.abs(charge.unit_price))
-            : centsToAmount(charge.unit_price);
-        }
 
         const serviceDate = resolveQboServiceDate(line);
         if (serviceDate) {
@@ -504,7 +546,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
             }
           }
 
-          if (shouldSendAstTaxCode) {
+          // Only an AST batch pays for the country read.
+          const astPseudoCodesApply =
+            automatedSalesTaxEnabled && !(await isAstCompanyKnownNonUs());
+
+          if (shouldSendAstTaxCode && astPseudoCodesApply) {
             // A non-taxable charge must say NON out loud; an omitted code reads
             // as taxable to AST. Everything else falls back to the TAX pseudo
             // code so the AST engine picks the jurisdiction and rate itself.
@@ -514,6 +560,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
                   ? QBO_PSEUDO_TAX_CODE_NON_TAXABLE
                   : taxCodeRef ?? QBO_PSEUDO_TAX_CODE_TAXABLE
             };
+          } else if (astPseudoCodesApply && charge.is_taxable === false) {
+            // Alga owns the tax total here, but the line still carries a code,
+            // and on a US AST company Intuit accepts only TAX/NON — a mapped
+            // catalog code faults the whole invoice with "Invalid Line
+            // TaxCode" (6100). An exempt line says NON regardless of what its
+            // region is mapped to; omitting the code would read as taxable.
+            salesDetail.TaxCodeRef = { value: QBO_PSEUDO_TAX_CODE_NON_TAXABLE };
           } else if (taxCodeRef) {
             salesDetail.TaxCodeRef = { value: taxCodeRef };
           }
@@ -532,6 +585,17 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
         const netAmountCents = isCreditNote ? Math.abs(rawNetAmountCents) : rawNetAmountCents;
         invoiceNetCents += netAmountCents;
+
+        const rawUnitPriceCents = coerceChargeCents(charge.unit_price);
+        const lineQuantity = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents:
+            rawUnitPriceCents !== null && isCreditNote ? Math.abs(rawUnitPriceCents) : rawUnitPriceCents,
+          amountCents: netAmountCents,
+          maxQuantityDecimals: QBO_MAX_QUANTITY_DECIMALS
+        });
+        salesDetail.Qty = isCreditNote ? Math.abs(lineQuantity.quantity) : lineQuantity.quantity;
+        salesDetail.UnitPrice = fromMinorUnits(lineQuantity.unitPriceCents, 'en-US', invoiceCurrency);
         if (shouldIncludeAuthoritativeTax) {
           const rawTaxCents = coerceChargeCents(charge.tax_amount);
           if (rawTaxCents !== null) {
@@ -540,7 +604,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         qboLines.push({
-          Amount: centsToAmount(netAmountCents),
+          Amount: fromMinorUnits(netAmountCents, 'en-US', invoiceCurrency),
           DetailType: 'SalesItemLineDetail',
           Description: charge.description ?? undefined,
           SalesItemLineDetail: salesDetail
@@ -565,7 +629,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       if (shouldIncludeAuthoritativeTax && invoiceTaxCents > 0) {
         // Push Alga's authoritative tax total so QBO's books match Alga's internal calculation.
-        qboInvoice.TxnTaxDetail = { TotalTax: centsToAmount(invoiceTaxCents) };
+        qboInvoice.TxnTaxDetail = { TotalTax: fromMinorUnits(invoiceTaxCents, 'en-US', invoiceCurrency) };
       }
 
       if (invoice.po_number) {
@@ -785,6 +849,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         throw new Error(`QuickBooks adapter: vendor bill ${billId} has no lines`);
       }
 
+      const billCurrency = bill.currency_code ?? 'USD';
       const qboLines: QboBillLine[] = billLines.map((line) => {
         const amountCents = Number(line.amount ?? 0);
         const detail: QboBillLine['AccountBasedExpenseLineDetail'] = {
@@ -801,7 +866,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         return {
-          Amount: centsToAmount(amountCents),
+          Amount: fromMinorUnits(amountCents, 'en-US', billCurrency),
           DetailType: 'AccountBasedExpenseLineDetail',
           Description: line.description ?? line.service_name ?? undefined,
           AccountBasedExpenseLineDetail: detail
@@ -945,7 +1010,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         expense_account_ref: payload.expenseAccountRef,
         exported_total: typeof response.TotalAmt === 'number'
           ? response.TotalAmt
-          : centsToAmount(payload.totals.amountCents),
+          : fromMinorUnits(payload.totals.amountCents, 'en-US', payload.bill.CurrencyRef?.value ?? 'USD'),
         external_entity_type: 'Bill'
       }
     });
@@ -1417,8 +1482,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       }
 
       // Calculate total tax from QBO invoice
-      const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
-      const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
+      const qboInvoiceCurrency = qboInvoice.CurrencyRef?.value ?? 'USD';
+      const totalTax = toMinorUnits(qboInvoice.TxnTaxDetail?.TotalTax ?? 0, 'en-US', qboInvoiceCurrency);
+      const totalAmount = toMinorUnits(qboInvoice.TotalAmt ?? 0, 'en-US', qboInvoiceCurrency);
 
       // Extract line items with their amounts for proportional tax distribution
       const lineItems: Array<{
@@ -1433,7 +1499,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
           const detail = line.SalesItemLineDetail;
           // QBO line Amount is the line total before tax
-          const lineAmount = amountToCents(line.Amount ?? 0);
+          const lineAmount = toMinorUnits(line.Amount ?? 0, 'en-US', qboInvoiceCurrency);
           const qboLineId = line.Id ?? undefined;
 
           // Use stored charge ID if available, otherwise fall back to positional index
@@ -1466,6 +1532,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         // Calculate effective tax rate for this line
+        // Percentage (dimensionless ratio × 100), not a currency minor-unit conversion.
         const effectiveRate = item.amount > 0 ? (taxAmount / item.amount) * 100 : undefined;
 
         return {
@@ -1495,7 +1562,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         .map(line => ({
           name: line.TaxRateRef?.name ?? line.TaxRateRef?.value ?? 'Tax',
           rate: line.TaxPercent ?? 0,
-          amount: amountToCents(line.Amount ?? 0)
+          amount: toMinorUnits(line.Amount ?? 0, 'en-US', qboInvoiceCurrency)
         }));
 
       // If we have tax components, distribute them proportionally to line items
@@ -1644,10 +1711,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 }
 
-function centsToAmount(value: number): number {
-  return Math.round(value) / 100;
-}
-
 function coerceChargeCents(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.round(value);
@@ -1657,10 +1720,6 @@ function coerceChargeCents(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
-}
-
-function amountToCents(value: number): number {
-  return Math.round(value * 100);
 }
 
 function escapeQboString(value: string): string {
@@ -1746,6 +1805,9 @@ function normalizeQboPayment(
   const lines = Array.isArray(payload?.Line) ? (payload!.Line as any[]) : [];
   const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
   let isCreditApplication = false;
+  const currency =
+    typeof payload?.CurrencyRef?.value === 'string' ? String(payload.CurrencyRef.value) : undefined;
+  const paymentCurrency = currency ?? 'USD';
 
   for (const line of lines) {
     const linkedTxns = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
@@ -1753,7 +1815,7 @@ function normalizeQboPayment(
       isCreditApplication = true;
     }
     const invoiceTxn = linkedTxns.find((txn: any) => txn?.TxnType === 'Invoice' && txn?.TxnId);
-    const amountCents = Math.round(Number(line?.Amount) * 100);
+    const amountCents = toMinorUnits(Number(line?.Amount), 'en-US', paymentCurrency);
     if (invoiceTxn && Number.isFinite(amountCents) && amountCents > 0) {
       allocations.push({ externalInvoiceId: String(invoiceTxn.TxnId), amountCents });
     }
@@ -1761,14 +1823,12 @@ function normalizeQboPayment(
 
   const ref = payload?.PaymentRefNum;
   const reference = typeof ref === 'string' && ref.trim().length > 0 ? ref.trim() : externalId;
-  const currency =
-    typeof payload?.CurrencyRef?.value === 'string' ? String(payload.CurrencyRef.value) : undefined;
   const txnDate = typeof payload?.TxnDate === 'string' ? payload.TxnDate : undefined;
   const totalCents = Number.isFinite(Number(payload?.TotalAmt))
-    ? Math.round(Number(payload?.TotalAmt) * 100)
+    ? toMinorUnits(Number(payload?.TotalAmt), 'en-US', paymentCurrency)
     : undefined;
   const unappliedCents = Number.isFinite(Number(payload?.UnappliedAmt))
-    ? Math.round(Number(payload?.UnappliedAmt) * 100)
+    ? toMinorUnits(Number(payload?.UnappliedAmt), 'en-US', paymentCurrency)
     : undefined;
 
   return {

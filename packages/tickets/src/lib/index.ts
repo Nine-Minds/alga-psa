@@ -61,6 +61,7 @@ export {
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
   applyTicketVisibilityFilter,
+  ticketMatchesVisibility,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';

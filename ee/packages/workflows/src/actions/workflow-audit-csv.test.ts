@@ -4,6 +4,7 @@ import {
   buildCsv,
   buildWorkflowAuditCsvRows,
   formatActor,
+  formatActorName,
   type WorkflowAuditCsvEnrichment,
   type WorkflowAuditCsvLog
 } from './workflow-audit-csv';
@@ -211,5 +212,11 @@ describe('workflowAuditCsv formatter', () => {
     expect(formatActor({ user_id: 'u3', first_name: 'A', last_name: 'B', email: '' })).toBe('A B');
     expect(formatActor({ user_id: 'u4', first_name: '', last_name: '', email: '' })).toBe('Unresolved user');
     expect(formatActor(undefined)).toBe('Unresolved user');
+  });
+
+  it('formatActorName gives the on-screen name, falling back to email, else null', () => {
+    expect(formatActorName({ user_id: 'u1', first_name: 'A', last_name: 'B', email: 'a@b.com' })).toBe('A B');
+    expect(formatActorName({ user_id: 'u2', first_name: '', last_name: '', email: 'a@b.com' })).toBe('a@b.com');
+    expect(formatActorName({ user_id: 'u3', first_name: ' ', last_name: '', email: '' })).toBeNull();
   });
 });

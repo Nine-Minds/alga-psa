@@ -1344,7 +1344,6 @@ async function persistScenarioServicePeriods(
         period_key: `2025-01-15:2025-02-15`,
         revision: 1,
         obligation_id: line.origin_contract_line_id ?? line.key,
-        obligation_type: "contract_line",
         charge_family: chargeFamily,
         cadence_owner: "contract",
         due_position: "arrears",

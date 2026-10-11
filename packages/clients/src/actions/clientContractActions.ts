@@ -16,7 +16,7 @@ import {
   createClientContractAssignment,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
@@ -273,7 +273,7 @@ export const assignContractToClient = withAuth(async (
       idempotencyKey: `contract_created:${clientContract.contract_id}:${clientContract.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: clientContract.client_contract_id,
@@ -421,7 +421,7 @@ export const createClientContract = withAuth(async (
       idempotencyKey: `contract_created:${createdForEvent.contract_id}:${createdForEvent.client_id}`,
     });
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_CREATED',
       payload: {
         clientContractId: createdForEvent.client_contract_id,
@@ -607,7 +607,7 @@ export const updateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,
@@ -756,7 +756,7 @@ export const deactivateClientContract = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CLIENT_CONTRACT_UPDATED',
       payload: {
         clientContractId,

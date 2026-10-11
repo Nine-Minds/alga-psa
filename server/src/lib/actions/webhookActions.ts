@@ -29,6 +29,7 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.status_changed',
   'ticket.closed',
   'ticket.comment.added',
+  'ticket.response_state_changed',
   'project.created',
   'project.updated',
   'project.status_changed',

@@ -142,12 +142,12 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
               <div
                 className="text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap bg-destructive/10 text-destructive border-destructive/30"
                 title={t('graph.mapping.unmappedTitle', {
-                  defaultValue: '{{count}} required fields unmapped',
+                  defaultValue: '{{count}} required inputs still need a value',
                   count: unmappedRequiredInputCount,
                 })}
               >
                 {t('graph.mapping.unmappedBadge', {
-                  defaultValue: '{{count}} req unmapped',
+                  defaultValue: '{{count}} required missing',
                   count: unmappedRequiredInputCount,
                 })}
               </div>
@@ -237,6 +237,14 @@ const AlignedVerticalEdge: React.FC<EdgeProps> = ({ id, sourceX, sourceY, target
   return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />;
 };
 
+// Down the source's column, then across just above the target (see MERGE_EDGE_TYPE).
+const MergeIntoJoinEdge: React.FC<EdgeProps> = ({ id, sourceX, sourceY, targetX, targetY, markerEnd, style }) => {
+  const turnY = Math.max(sourceY, targetY - 16);
+  const path = `M ${sourceX},${sourceY} L ${sourceX},${turnY} L ${targetX},${turnY} L ${targetX},${targetY}`;
+
+  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />;
+};
+
 const nodeTypes: NodeTypes = {
   workflowStart: StartNode,
   workflowJoin: JoinNode,
@@ -245,7 +253,8 @@ const nodeTypes: NodeTypes = {
 };
 
 const edgeTypes: EdgeTypes = {
-  workflowAlignedVertical: AlignedVerticalEdge
+  workflowAlignedVertical: AlignedVerticalEdge,
+  workflowMergeIntoJoin: MergeIntoJoinEdge
 };
 
 export default function WorkflowGraph<TStep extends { id: string; type: string }>(props: WorkflowGraphProps<TStep>) {

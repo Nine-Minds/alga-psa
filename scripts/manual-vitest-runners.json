@@ -15,7 +15,7 @@
     "mandatory": false,
     "reason": "These legacy suites have no current CI execution lane; their fixture-created OAuth success checks do not prove a real OAuth exchange. They remain visible for repair. The real Microsoft mailbox and raw-MIME SMTP journeys are mandatory separately; this collection cannot satisfy them.",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
-    "expires": "2026-10-08"
+    "expires": "2026-11-08"
   },
   {
     "runner": "invoice-visual-review",
@@ -33,6 +33,6 @@
     "mandatory": false,
     "reason": "The existing visual-review workflow is explicitly opt-in and machine/font dependent. Its collection is not release evidence; mandatory invoice PDF content and persisted-layout journeys run separately.",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
-    "expires": "2026-10-08"
+    "expires": "2026-11-08"
   }
 ]

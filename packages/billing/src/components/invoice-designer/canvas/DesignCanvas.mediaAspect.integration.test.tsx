@@ -66,6 +66,8 @@ describe('DesignCanvas (media aspect-ratio integration)', () => {
         allowedChildren: [],
       },
     ];
+    // The canvas shows the designer's own document (hover state lives in the store).
+    useInvoiceDesignerStore.getState().loadNodes(nodes);
 
     render(
       <DndContext>

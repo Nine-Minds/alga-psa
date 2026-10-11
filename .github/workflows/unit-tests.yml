@@ -20,10 +20,25 @@ jobs:
           # which only exists on Node >= 22.5. Node 20 fails those suites with
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
+          cache: 'npm'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs scripts/tests/gate-metrics.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
+
+      # Emit-site guard (alga0002106): proves, with ts-morph and the type checker, that every
+      # catalogued workflow event is published through typed publishWorkflowEvent with a builder
+      # the emitter contract registry exercises, and that the untyped paths (calendar publisher,
+      # levelio sync engine, legacy raw publishers) never carry a catalogued event. Always runs
+      # (no path filter) so a drifted emitter fails CI even when the diff looks unrelated.
+      - name: Install dependencies for the emit-site guard
+        run: |
+          npm install -g npm@11
+          npm ci --ignore-scripts
+      - name: Emit-site guard self-test
+        run: node --test scripts/tests/check-workflow-event-emit-sites.test.mjs
+      - name: Check workflow event emit sites
+        run: npm run check:workflow-event-emit-sites
 
   unit-tests:
     name: Nx affected unit tests
@@ -198,8 +213,10 @@ jobs:
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
-      - name: Install dependencies
-        run: npm ci
+      - name: Install server unit dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.

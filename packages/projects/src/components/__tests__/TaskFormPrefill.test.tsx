@@ -154,8 +154,13 @@ vi.mock('../TaskTicketLinks', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: ({ value }: { value?: Date }) => (
-    <input data-testid="due-date" value={value ? value.toISOString() : ''} readOnly />
+  // The form renders a start-date and a due-date picker; tell them apart by id.
+  DatePicker: ({ value, id }: { value?: Date; id?: string }) => (
+    <input
+      data-testid={id === 'task-start-date-picker' ? 'start-date' : 'due-date'}
+      value={value ? value.toISOString() : ''}
+      readOnly
+    />
   )
 }));
 
@@ -377,6 +382,7 @@ describe('TaskForm prefillData', () => {
               created_at: new Date(),
               project_id: 'project-1',
               phase_id: 'phase-1',
+              bill_under_project: true,
               status_name: 'New',
               is_closed: false,
               tenant: 'tenant-1'
@@ -389,6 +395,6 @@ describe('TaskForm prefillData', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(addTaskToPhaseMock).toHaveBeenCalled());
-    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-9', 'phase-1');
+    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-9', 'phase-1', true);
   });
 });

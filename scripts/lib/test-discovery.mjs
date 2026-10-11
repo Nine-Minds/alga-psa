@@ -21,12 +21,12 @@ export function isWorkspaceDbTest(file) {
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|services\/workflow-worker\/src)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 
 export function isNodeToolingTest(file) {
-  return /^(scripts\/tests|tools\/i18n\/tests|tools\/workflow-harness\/tests|tools\/microsoft-graph|e2e-tests\/harness|test-harness\/graph-emulator|eslint-plugin-custom-rules)\//.test(file)
+  return /^(scripts\/tests|tools\/i18n\/tests|tools\/workflow-harness\/tests|tools\/microsoft-graph|tools\/mutation|e2e-tests\/harness|test-harness\/graph-emulator|eslint-plugin-custom-rules)\//.test(file)
     && /\.(test|spec)\.[cm]?js$/.test(file);
 }
 

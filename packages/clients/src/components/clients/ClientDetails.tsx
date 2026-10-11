@@ -243,7 +243,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -1457,6 +1457,15 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
+    ...(renderClientRecurringTickets ? [{
+      id: 'recurring-tickets',
+      label: t('clientDetails.recurringTickets', { defaultValue: 'Recurring tickets' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientRecurringTickets({ clientId: client.client_id })}
+        </div>
+      ),
+    }] : []),
     {
       id: 'assets',
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
@@ -1511,7 +1520,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
             clientId={client.client_id}
-            clients={[client]}
+            client={client}
           />
         </div>
       )

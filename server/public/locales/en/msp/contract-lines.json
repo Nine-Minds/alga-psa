@@ -276,7 +276,10 @@
       "heading": "Fixed Fee Services",
       "itemLabel": "Item {{index}}",
       "selectItemPlaceholder": "Select an item",
-      "servicesAndProducts": "Services & Products"
+      "servicesAndProducts": "Services & Products",
+      "recurringQuantity": "Recurring quantity",
+      "unitRateOptional": "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a line is created from this preset.",
+      "alertUnits": "To bill a service per seat or unit instead, choose recurring quantity pricing for it: it is billed quantity × unit rate every period and is not part of the base rate."
     },
     "hourly": {
       "addHourlyService": "Add Hourly Service",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Service {{index}}: Please select a service",
       "unitOfMeasureRequired": "Service {{index}}: Unit of measure is required",
       "unitRateRequired": "Service {{index}}: Unit rate is required",
-      "usageServiceRequired": "At least one usage-based service is required"
+      "usageServiceRequired": "At least one usage-based service is required",
+      "recurringQuantityInvalid": "Service {{index}}: Recurring quantity must be a whole number, zero or more"
     }
   },
   "forms": {
@@ -728,7 +732,8 @@
         "enterRatePlaceholder": "Enter rate",
         "metadata": "Service Type: {{type}} | Method: {{method}}",
         "noCurrencyPrice": "No {{currency}} price",
-        "rateDetail": "Rate: {{symbol}}{{amount}}"
+        "rateDetail": "Rate: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Catalog default: {{symbol}}{{amount}}"
       },
       "unknownService": "Unknown Service"
     },

@@ -51,20 +51,41 @@ export class S3StorageProvider extends BaseStorageProvider {
   async upload(
     file: Buffer | Readable,
     path: string,
-    options?: { mime_type?: string; metadata?: Record<string, string> },
+    options?: { mime_type?: string; metadata?: Record<string, string>; size?: number },
   ) {
     try {
-      return await this.withRetry(async () => {
+      // LEVERAGE: pattern s3-stream-put — identical stream/size/no-retry logic duplicated in the package and EE S3 providers (duplicated provider layer)
+      const isStream = !Buffer.isBuffer(file);
+      let contentLength: number | undefined;
+      if (isStream) {
+        // The SDK cannot measure a stream; without ContentLength it sends an
+        // undefined x-amz-decoded-content-length header and the PUT fails.
+        if (typeof options?.size !== 'number' || !Number.isFinite(options.size) || options.size < 0) {
+          throw new Error('S3 upload of a stream requires options.size (the exact byte length)');
+        }
+        contentLength = options.size;
+      }
+
+      const put = async () => {
         await this.client.send(
           new PutObjectCommand({
             Bucket: this.bucket,
             Key: path,
             Body: file,
+            ContentLength: contentLength,
             ContentType: options?.mime_type,
             Metadata: options?.metadata,
           }),
         );
+      };
+      // A Readable can be consumed only once, so a stream PUT must not be retried.
+      if (isStream) {
+        await put();
+      } else {
+        await this.withRetry(put);
+      }
 
+      return await this.withRetry(async () => {
         const head = await this.client.send(
           new HeadObjectCommand({
             Bucket: this.bucket,

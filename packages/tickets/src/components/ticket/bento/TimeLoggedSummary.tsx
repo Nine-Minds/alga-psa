@@ -3,7 +3,7 @@
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
+import { formatMinutesAsHoursAndMinutes, workedMinutes } from '@alga-psa/core';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
 
 interface TimeLoggedSummaryProps {
@@ -84,7 +84,7 @@ export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary
     let total = 0;
     for (const entry of entries) {
       const key = entryDayKey(entry);
-      const minutes = entry.billable_duration ?? 0;
+      const minutes = workedMinutes(entry);
       total += minutes;
       byDay.set(key, (byDay.get(key) ?? 0) + minutes);
     }

@@ -48,6 +48,16 @@ export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.USAGE_PERIOD_TOTAL_STALE';
 
 /**
+ * Namespaced message key for the stale recurring quantity/price revision
+ * failure (`RECURRING_PRICING_STALE`). Finalization must bill exactly the
+ * revision and inherited catalog price the preview priced; when either changed
+ * after the preview, generation refuses and the operator re-previews rather
+ * than being charged a different amount silently.
+ */
+export const RECURRING_PRICING_STALE_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.RECURRING_PRICING_STALE';
+
+/**
  * Namespaced message key for a per-service usage pricing failure
  * (`USAGE_CALCULATION_ERROR`). A service whose recorded usage cannot be priced
  * is a calculation error, never "unreported": preview surfaces the typed state
@@ -55,3 +65,34 @@ export const USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY =
  */
 export const USAGE_CALCULATION_ERROR_MESSAGE_KEY =
   'msp/invoicing:manualInvoices.errors.USAGE_CALCULATION_ERROR';
+
+/**
+ * Namespaced message key for a fixed-fee contract line whose rate could not be
+ * resolved (`FIXED_LINE_RATE_UNRESOLVED`). Such a line cannot be priced, so
+ * preview names it and generation refuses rather than billing a short invoice.
+ * A line whose rate legitimately resolves to zero is not this failure.
+ */
+export const FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.FIXED_LINE_RATE_UNRESOLVED';
+
+/**
+ * Namespaced message key for a fixed-fee contract line that has a rate but no
+ * service to bill it on (`FIXED_LINE_NO_SERVICES`). Distinct from a missing
+ * rate: the fix is to add a service to the line, not to set a rate.
+ */
+export const FIXED_LINE_NO_SERVICES_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.FIXED_LINE_NO_SERVICES';
+
+/**
+ * Namespaced message keys for the three expected engine refusals that used to
+ * reach the operator as bare English sentences (or, in the recurring run, as a
+ * generic failure string). Keyed so the run recovers the code
+ * (`RECURRING_PERIODS_NOT_MATERIALIZED`, `NO_ACTIVE_CONTRACT_LINES`,
+ * `NOTHING_TO_BILL`) without matching the sentence the localization boundary rewrites.
+ */
+export const RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.RECURRING_PERIODS_NOT_MATERIALIZED';
+export const NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.NO_ACTIVE_CONTRACT_LINES';
+export const NOTHING_TO_BILL_MESSAGE_KEY =
+  'msp/invoicing:manualInvoices.errors.NOTHING_TO_BILL';

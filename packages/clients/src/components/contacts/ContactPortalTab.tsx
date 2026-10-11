@@ -19,6 +19,7 @@ import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
   getUserByContactId,
+  getContactReportCount,
   getClientPortalVisibilityBoardsByClient,
   getClientPortalVisibilityGroupById,
   getClientPortalVisibilityGroupsForContact,
@@ -82,6 +83,8 @@ const FULL_ACCESS_VALUE = '__full_access__';
 
 interface VisibilityGroup {
   ticket_scope: 'client' | 'contact';
+  asset_scope: 'client' | 'contact';
+  project_scope: 'client' | 'contact';
   group_id: string;
   name: string;
   description: string | null;
@@ -137,6 +140,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [isRefreshingInvitationHistory, setIsRefreshingInvitationHistory] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
   const [visibilityGroups, setVisibilityGroups] = useState<VisibilityGroup[]>([]);
   const [visibilityBoards, setVisibilityBoards] = useState<IBoard[]>([]);
   const [selectedVisibilityGroupId, setSelectedVisibilityGroupId] = useState<string | null>(
@@ -145,6 +149,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [visibilityGroupName, setVisibilityGroupName] = useState('');
   const [visibilityGroupDescription, setVisibilityGroupDescription] = useState('');
   const [ticketScope, setTicketScope] = useState<'client' | 'contact'>('client');
+  const [assetScope, setAssetScope] = useState<'client' | 'contact'>('client');
+  const [projectScope, setProjectScope] = useState<'client' | 'contact'>('client');
   const [visibilityGroupBoardIds, setVisibilityGroupBoardIds] = useState<string[]>([]);
   const [editingVisibilityGroupId, setEditingVisibilityGroupId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -235,6 +241,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     setVisibilityGroupDescription('');
     setVisibilityGroupBoardIds([]);
     setTicketScope('client');
+    setAssetScope('client');
+    setProjectScope('client');
   };
 
   const handleVisibilityGroupSelect = async (selectedValue: string) => {
@@ -293,7 +301,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
           boardIds: visibilityGroupBoardIds,
-          ticketScope
+          ticketScope,
+          assetScope,
+          projectScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -305,7 +315,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
           boardIds: visibilityGroupBoardIds,
-          ticketScope
+          ticketScope,
+          assetScope,
+          projectScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -345,6 +357,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       setVisibilityGroupDescription(group.description || '');
       setVisibilityGroupBoardIds(group.board_ids || []);
       setTicketScope(group.ticket_scope);
+      setAssetScope(group.asset_scope ?? 'client');
+      setProjectScope(group.project_scope ?? 'client');
     } catch (error) {
       console.error('Failed to load visibility group:', error);
       toast({
@@ -540,6 +554,32 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         return 'default-muted';
     }
   };
+
+  const selectedGroup = visibilityGroups.find((group) => group.group_id === selectedVisibilityGroupId);
+  // The reports-to tree drives tickets, devices and projects alike.
+  const selectedGroupIsContactScoped =
+    selectedGroup?.ticket_scope === 'contact' ||
+    selectedGroup?.asset_scope === 'contact' ||
+    selectedGroup?.project_scope === 'contact';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedGroupIsContactScoped || !contact.client_id) {
+      setReportCount(0);
+      return;
+    }
+    (async () => {
+      try {
+        const count = await getContactReportCount(contact.contact_name_id);
+        if (!cancelled) setReportCount(typeof count === 'number' ? count : 0);
+      } catch (err) {
+        if (!cancelled) setReportCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGroupIsContactScoped, contact.client_id, contact.contact_name_id, contact.manager_contact_id]);
 
   const visibilityGroupSelectOptions = [
     { value: FULL_ACCESS_VALUE, label: 'Full access' },
@@ -960,6 +1000,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 options={visibilityGroupSelectOptions}
                 placeholder="Select visibility assignment"
               />
+              {selectedGroupIsContactScoped && !isPortalAdmin && reportCount > 0 && (
+                <p className="text-sm text-muted-foreground" id="visibility-group-report-count">
+                  {t('portal.visibilityGroups.managerScopeNote', {
+                    count: reportCount,
+                    defaultValue: 'Their view also includes records of {{count}} people who report to them.'
+                  })}
+                </p>
+              )}
 
               <div>
                 <Label className="text-sm font-medium">Visibility groups for client</Label>
@@ -1035,6 +1083,32 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     { value: 'contact', label: t('portal.visibilityGroups.scopeContact'), description: t('portal.visibilityGroups.scopeContactDescription') },
                   ]}
                 />
+                <RadioGroup
+                  id="contact-visibility-asset-scope"
+                  name="contact-visibility-asset-scope"
+                  label={t('portal.visibilityGroups.assetScopeLabel')}
+                  value={assetScope}
+                  onChange={(value) => setAssetScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.assetScopeClient'), description: t('portal.visibilityGroups.assetScopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.assetScopeContact'), description: t('portal.visibilityGroups.assetScopeContactDescription') },
+                  ]}
+                />
+                <RadioGroup
+                  id="contact-visibility-project-scope"
+                  name="contact-visibility-project-scope"
+                  label={t('portal.visibilityGroups.projectScopeLabel')}
+                  value={projectScope}
+                  onChange={(value) => setProjectScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.projectScopeClient'), description: t('portal.visibilityGroups.projectScopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.projectScopeContact'), description: t('portal.visibilityGroups.projectScopeContactDescription') },
+                  ]}
+                />
                 <div className="flex items-end justify-end gap-2">
                   {editingVisibilityGroupId && (
                     <Button
@@ -1067,7 +1141,12 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{group.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t(group.ticket_scope === 'contact' ? 'portal.visibilityGroups.scopeContact' : 'portal.visibilityGroups.scopeClient')} · {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
+                          {t('portal.visibilityGroups.scopeSummary', {
+                            defaultValue: 'Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}',
+                            tickets: t(group.ticket_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                            devices: t(group.asset_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                            projects: t(group.project_scope === 'contact' ? 'portal.visibilityGroups.scopeSummaryOwn' : 'portal.visibilityGroups.scopeSummaryAll'),
+                          })} · {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
                         </p>
                         {group.description ? (
                           <p className="text-xs text-muted-foreground">{group.description}</p>

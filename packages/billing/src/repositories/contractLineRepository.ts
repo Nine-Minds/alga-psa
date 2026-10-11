@@ -13,12 +13,13 @@ import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
   contract_line_type?: string;
+  description?: string | null;
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
@@ -172,6 +173,7 @@ export async function fetchDetailedContractLines(
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
+      'cl.description',
       'cl.billing_frequency',
       'cl.enable_proration',
       'cl.billing_cycle_alignment',
@@ -187,6 +189,7 @@ export async function fetchDetailedContractLines(
       ),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
+      description: row.description ?? null,
       billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
@@ -805,6 +808,14 @@ export async function cloneTemplateLineToContract(
           created_at: now,
           updated_at: now,
         });
+      }
+
+      // Pricing basis + default unit rate: without this a template's per-seat
+      // service would silently demote to a bundle allocation on the clone.
+      // LEVERAGE: pattern template-pool-roundtrip — this path re-enumerates the
+      // template config tables inline instead of sharing cloneTemplateContractLine.
+      if (configuration.configuration_type === 'Fixed') {
+        await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
       }
     }
   }

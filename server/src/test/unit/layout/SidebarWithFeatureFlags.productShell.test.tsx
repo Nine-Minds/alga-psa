@@ -9,6 +9,7 @@ import { TIER_FEATURES } from '@alga-psa/types';
 import SidebarWithFeatureFlags, {
   filterNavigationSectionsByEdition,
   filterNavigationSectionsByFeatureAccess,
+  filterNavigationSectionsByPermission,
 } from '../../../components/layout/SidebarWithFeatureFlags';
 import type { NavigationSection } from '../../../config/menuConfig';
 
@@ -232,5 +233,53 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     const featureFiltered = filterNavigationSectionsByFeatureAccess(editionFiltered, () => false);
 
     expect(featureFiltered[0].items[0].subItems?.map((item) => item.name)).toEqual(['CE child']);
+  });
+
+  it('hides the Recurring Tickets sub-item without recurring_ticket:read and keeps All Tickets', async () => {
+    getCurrentUserPermissions.mockResolvedValue([]);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(getCurrentUserPermissions).toHaveBeenCalled());
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string; subItems?: Array<{ name: string }> }> }>;
+      };
+      const tickets = latestProps.menuSections.flatMap((section) => section.items).find((item) => item.name === 'Tickets');
+      expect(tickets?.subItems?.map((item) => item.name)).toEqual(['All Tickets']);
+    });
+  });
+
+  it('shows the Recurring Tickets sub-item with recurring_ticket:read', async () => {
+    getCurrentUserPermissions.mockResolvedValue(['recurring_ticket:read']);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string; subItems?: Array<{ name: string }> }> }>;
+      };
+      const tickets = latestProps.menuSections.flatMap((section) => section.items).find((item) => item.name === 'Tickets');
+      expect(tickets?.subItems?.map((item) => item.name)).toEqual(['All Tickets', 'Recurring Tickets']);
+    });
+  });
+
+  it('drops a nav group whose sub-items are all permission-gated away', () => {
+    const Icon = () => null;
+    const sections: NavigationSection[] = [
+      {
+        title: '',
+        items: [
+          {
+            name: 'Gated group',
+            icon: Icon,
+            subItems: [{ name: 'Gated child', icon: Icon, href: '/gated', requiredPermission: 'x:read' }],
+          },
+        ],
+      },
+    ];
+
+    expect(filterNavigationSectionsByPermission(sections, [])).toEqual([]);
+    expect(filterNavigationSectionsByPermission(sections, ['x:read'])[0].items[0].subItems).toHaveLength(1);
   });
 });

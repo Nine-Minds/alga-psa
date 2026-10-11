@@ -14,6 +14,7 @@ import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePic
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
+  IExpectedRecurringPricingSource,
   IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
@@ -70,6 +71,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog'; // Corrected import
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { parseRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
@@ -186,6 +188,7 @@ interface RecurringInvoiceParentGroup {
 
 type RecurringSelectionGroup = {
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId: string | null;
@@ -461,12 +464,7 @@ const getRecurringAssignmentContext = (member: IRecurringDueWorkInvoiceCandidate
 
   const scheduleKey = member.scheduleKey?.trim();
   if (scheduleKey) {
-    const contractLineMatch = scheduleKey.match(/contract_line:([^:]+)/);
-    if (contractLineMatch?.[1]) {
-      return 'Assigned contract line';
-    }
-    const clientContractLineMatch = scheduleKey.match(/client_contract_line:([^:]+)/);
-    if (clientContractLineMatch?.[1]) {
+    if (parseRecurringServicePeriodScheduleKey(scheduleKey)?.obligationId) {
       return 'Assigned contract line';
     }
   }
@@ -651,8 +649,9 @@ const resolveStatusKey = (summary: {
 };
 
 // Saved views shown as the segmented control above the grid. Each is a pure
-// predicate over the already-loaded page of candidates, so counts and filtering
-// stay honest about what is on screen (server pagination still applies).
+// predicate over the already-loaded page of candidates, so view counts and chips
+// still apply only to the loaded page (server pagination still applies). The
+// client filter is different: it runs on the server before pagination.
 type AutomaticInvoiceViewKey = 'all' | 'ready' | 'combinable' | 'attention' | 'notYetDue';
 
 const matchesAutomaticInvoiceView = (
@@ -772,6 +771,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [totalInvoicedPeriods, setTotalInvoicedPeriods] = useState(0);
   const [invoicedSearchTerm, setInvoicedSearchTerm] = useState('');
   const [debouncedInvoicedSearchTerm, setDebouncedInvoicedSearchTerm] = useState('');
+  // Trimmed, debounced copy of clientFilter that drives the server fetch. Seeded
+  // from the same URL value so a deep link fetches filtered results first time.
+  const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(
+    () => readAutomaticInvoicesClientFilterFromLocation().trim(),
+  );
+  const debouncedClientFilterRef = useRef(debouncedClientFilter);
+  debouncedClientFilterRef.current = debouncedClientFilter;
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(true);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(true);
@@ -794,6 +800,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectorInputs: IRecurringDueSelectionInput[];
       usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
       expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+      expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
     }>;
     invoiceCount: number;
     billingCycleId: string | null;
@@ -804,8 +811,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
      * path. Handed to generation so finalization refuses (stale preview)
      * when a report or its pricing changed after this preview was shown.
      */
-    expectedUsagePeriodTotals: IExpectedUsagePeriodTotal[] | null;
-  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null });
+    expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[] | null;
+    expectedRecurringPricingSources?: IExpectedRecurringPricingSource[] | null;
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null, expectedRecurringPricingSources: null });
   // Structured code of the last preview failure; drives actionable remediation
   // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
   const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
@@ -924,10 +932,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => clearTimeout(timer);
   }, [clientFilter]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = clientFilter.trim();
+      // A filter that settles back to the committed value changes nothing.
+      // Otherwise commit filter + page reset + selection clear in one batch so
+      // exactly one fetch (page 1, new filter) follows.
+      if (trimmed === debouncedClientFilterRef.current) return;
+      setDebouncedClientFilter(trimmed);
+      setCurrentReadyPage(1);
+      setSelectedTargets(new Set());
+      setExpandedParentGroups(new Set());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientFilter]);
+
   const handleClientFilterChange = (value: string) => {
     if (value === clientFilter) return;
     setClientFilter(value);
-    setCurrentReadyPage(1);
     setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
@@ -973,7 +995,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         const result = await getAvailableRecurringDueWork({
           page: currentReadyPage,
           pageSize: pageSize,
-          dateRange: dateRangeFilter
+          dateRange: dateRangeFilter,
+          ...(debouncedClientFilter ? { clientName: debouncedClientFilter } : {}),
         });
 
         if (!isMounted) return;
@@ -1014,7 +1037,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return () => {
       isMounted = false;
     };
-  }, [currentReadyPage, pageSize, appliedDateRange, refreshTrigger]);
+  }, [currentReadyPage, pageSize, appliedDateRange, debouncedClientFilter, refreshTrigger]);
 
   // Rebuild every drifted client-cadence schedule in the tenant in one pass, so
   // the user does not have to repair each one by hand. Refreshes on success so
@@ -1051,15 +1074,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
   };
 
-  const normalizedReadyClientFilter = clientFilter.trim().toLowerCase();
-
-  // Client filtering is intentionally scoped to Needs Approval + Ready to Invoice only.
-  const filteredPeriods = normalizedReadyClientFilter.length === 0
-    ? periods
-    : periods.filter((period) =>
-        (period.clientName ?? '').toLowerCase().includes(normalizedReadyClientFilter),
-      );
-  const parentGroups = buildRecurringInvoiceParentGroups(filteredPeriods);
+  // The client filter is applied by the server before pagination, so `periods`
+  // is already the filtered page.
+  const parentGroups = buildRecurringInvoiceParentGroups(periods);
   const needsApprovalParentGroups = parentGroups.filter(
     (group) => (group.candidate.approvalBlockedEntryCount ?? 0) > 0,
   );
@@ -1656,6 +1673,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           response.previews.length === 1
             ? response.previews[0].expectedUsagePeriodTotals ?? null
             : null,
+        expectedRecurringPricingSources:
+          response.previews.length === 1
+            ? response.previews[0].expectedRecurringPricingSources ?? []
+            : null,
       });
       setShowPreviewDialog(true);
     } else {
@@ -1666,6 +1687,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         executionIdentityKey: null,
         selectorInput: null,
         expectedUsagePeriodTotals: null,
+        expectedRecurringPricingSources: null,
       }); // Clear preview state on error
       setPreviewFailureCode(response.code ?? null);
       // Prefill the remediation route from what was previewed: the selection's
@@ -2033,6 +2055,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
             : {}),
+          ...(previewState.expectedRecurringPricingSources != null
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
+            : {}),
         },
       ] : [];
       const groupedTargets = previewState.previews.map(preview => ({
@@ -2040,6 +2065,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInputs: preview.selectorInputs,
         billingCycleId: lastPreviewGroupsRef.current.find(group => group.groupKey === preview.previewGroupKey)?.billingCycleId ?? null,
         expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals,
+        expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
       }));
       const runResult = targets.length > 0
         ? await generateInvoicesAsRecurringBillingRun({ targets })
@@ -2120,6 +2146,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           // identity binding across the PO-overage confirmation.
           ...(previewState.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
+            : {}),
+          ...(previewState.expectedRecurringPricingSources != null
+            ? { expectedRecurringPricingSources: previewState.expectedRecurringPricingSources }
             : {}),
         },
       ];
@@ -3081,7 +3110,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             onPageChange={handleReadyPageChange}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            totalItems={normalizedReadyClientFilter.length > 0 ? filteredPeriods.length : totalPeriods}
+            totalItems={totalPeriods}
             rowClassName={(rowRecord: unknown) => {
               const record = rowRecord as AutomaticInvoiceDisplayRow;
               if (record.kind === 'member') {

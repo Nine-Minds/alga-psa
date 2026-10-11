@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Crea contatti per i nuovi mittenti",
     "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
     "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
-    "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente."
+    "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente.",
+    "recurringTickets": "Ticket ricorrenti"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Stato",
     "actions": "Azioni",
     "openMenu": "Apri il menu",
+    "viewDetails": "Visualizza dettagli",
     "unassign": "Annulla assegnazione",
     "loading": "Caricamento contratti...",
     "empty": "Nessun contratto è stato ancora assegnato a questo cliente.",
@@ -1912,6 +1914,15 @@
       "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",
       "notThisClient": "Uno dei contatti selezionati non appartiene al cliente di questo profilo di fatturazione."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Servizio predefinito per le registrazioni di tempo",
+    "label": "Servizio predefinito per le registrazioni di tempo",
+    "placeholder": "Usa il valore predefinito dell’organizzazione",
+    "help": "Utilizzato per le nuove registrazioni di tempo nei ticket di questo cliente. Cancella la selezione per usare il valore predefinito dell’organizzazione.",
+    "updatedSuccess": "Servizio predefinito per le registrazioni di tempo aggiornato.",
+    "saveError": "Impossibile salvare il servizio predefinito per le registrazioni di tempo",
+    "loadError": "Impossibile caricare il servizio predefinito per le registrazioni di tempo"
   },
   "clientAutopay": {
     "setupLinkTitle": "Link di configurazione della carta",

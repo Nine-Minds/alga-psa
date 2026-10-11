@@ -1,5 +1,16 @@
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildApiTicketCreatedPayload,
+  buildTicketClosedPayload,
+  buildTicketCommentAddedPayload,
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+  buildTicketTeamAssignedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
@@ -44,15 +55,17 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { publishBundleAfterCommitPublication } from '@alga-psa/tickets/lib/ticketBundlePublication';
 import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
@@ -62,6 +75,13 @@ import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
+import {
+  CommentEmailRecipientsError,
+  prepareCommentEmailRecipients,
+  readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -412,6 +432,7 @@ export class TicketService extends BaseService<ITicket> {
       boardColumn: 't.board_id',
       contactColumn: 't.contact_name_id',
       billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
     });
   }
 
@@ -465,7 +486,7 @@ export class TicketService extends BaseService<ITicket> {
     // Mirror the MSP server-action delete path: notify downstream consumers
     // (e.g. the search indexer removes the ticket from the index) once the
     // delete has committed. Publishing is best-effort and never fails the request.
-    await this.safePublishEvent('TICKET_DELETED', context, {
+    await this.safePublishNonCatalogEvent('TICKET_DELETED', context, {
       ticketId: id,
       userId: context.userId,
     });
@@ -1012,6 +1033,7 @@ export class TicketService extends BaseService<ITicket> {
           data.user_id,
           data.role ?? 'support',
           notificationSuppression,
+          'api',
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -1054,7 +1076,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, resource.assignment_id);
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
     });
   }
 
@@ -1089,13 +1111,13 @@ export class TicketService extends BaseService<ITicket> {
       return { ticket: updated as ITicket, assignedTo: resolvedAssignedTo };
     });
 
-    await this.safePublishEvent('TICKET_ASSIGNED', context, {
+    await this.safePublishEvent('TICKET_ASSIGNED', context, buildTicketTeamAssignedPayload({
       ticketId,
-      userId: assignedTo,
+      assignedToUserId: assignedTo,
       assignedByUserId: context.userId,
-      changes: { assigned_team_id: data.team_id },
+      teamId: data.team_id,
       ...notificationSuppression,
-    });
+    }));
 
     return this.withDescriptionHtml(ticket);
   }
@@ -1735,7 +1757,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          undefined,
+          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -1798,33 +1820,17 @@ export class TicketService extends BaseService<ITicket> {
         return { fullTicket, externalLinks };
       });
 
-      await this.safePublishEvent('TICKET_CREATED', context, {
+      await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
         ticketId: fullTicket.ticket_id,
         userId: context.userId,
-        createdByUserId: context.userId,
         createdAt: fullTicket.entered_at
           ? new Date(fullTicket.entered_at as unknown as string).toISOString()
           : new Date().toISOString(),
-        source: 'api',
-        board_id: fullTicket.board_id,
-        priority_id: fullTicket.priority_id,
-        client_id: fullTicket.client_id,
-        ...(externalLinks.length > 0
-          ? {
-              externalLinks: externalLinks.map((link) => ({
-                linkId: link.link_id,
-                entityType: link.entity_type,
-                entityId: link.entity_id,
-                system: link.system,
-                externalId: link.external_id,
-                externalParentId: link.external_parent_id ?? null,
-                realm: link.realm ?? null,
-                url: link.url ?? null,
-                relationship: link.relationship,
-              })),
-            }
-          : {}),
-      });
+        boardId: fullTicket.board_id,
+        priorityId: fullTicket.priority_id,
+        clientId: fullTicket.client_id,
+        externalLinks,
+      }));
 
       // Post-commit: announce each inline ticket link so subscribers see the
       // same events as links added through the dedicated endpoint. Publishing
@@ -2038,6 +2044,18 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Closing clears the response state in the same write, matching the UI
+      // close path, so a closed ticket never reads as awaiting a response.
+      const clearsResponseStateOnClose = Boolean(
+        statusChanged
+        && nextStatus?.is_closed
+        && !previousStatus?.is_closed
+        && currentTicket.response_state
+      );
+      if (clearsResponseStateOnClose) {
+        updateData.response_state = null;
+      }
+
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
       const isChangingAssignment =
@@ -2055,13 +2073,25 @@ export class TicketService extends BaseService<ITicket> {
         : null;
 
       // Update ticket
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id as string | null | undefined) })
         .returning('*');
 
       if (finalizeResourceReassignment) {
         await finalizeResourceReassignment();
+      }
+
+      if (clearsResponseStateOnClose) {
+        publishResponseStateChange(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          userId: context.userId ?? null,
+          previousState: currentTicket.response_state,
+          newState: null,
+          trigger: 'close',
+        });
       }
 
       // Handle tags if provided
@@ -2113,15 +2143,38 @@ export class TicketService extends BaseService<ITicket> {
       // Publish appropriate events
       if (statusChanged) {
         if (nextStatus?.is_closed) {
-          await this.safePublishEvent('TICKET_CLOSED', context, {
+          await this.safePublishEvent('TICKET_CLOSED', context, buildTicketClosedPayload({
             ticketId: ticket.ticket_id,
             closedByUserId: context.userId,
             closedAt: (closedAt ?? new Date()).toISOString(),
             suppressContactNotifications,
             suppressInternalNotifications,
-          });
+          }));
         }
       }
+
+      // Transition events (TICKET_STATUS_CHANGED etc.), published after commit.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: context.tenant,
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id ?? null,
+          assignedTo: currentTicket.assigned_to ?? null,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: ticket.status_id,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+          escalated: ticket.escalated,
+        },
+        actorUserId: context.userId,
+        statusChangedPayloadExtras: { suppressContactNotifications, suppressInternalNotifications },
+      });
 
       const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
       const trackedChangeFields: Array<keyof ITicket> = [
@@ -2146,13 +2199,13 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', context, {
+      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
         ticketId: ticket.ticket_id,
         updatedByUserId: context.userId,
         changes: structuredChanges,
         suppressContactNotifications,
         suppressInternalNotifications,
-      });
+      }));
 
       // Activity-timeline row for REST API updates. Uses curated diff so
       // only user-meaningful field changes produce a timeline entry; no-op
@@ -2252,7 +2305,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        undefined,
+        ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
       );
 
@@ -2281,18 +2334,16 @@ export class TicketService extends BaseService<ITicket> {
       return fullTicket as ITicket;
     });
 
-    await this.safePublishEvent('TICKET_CREATED', context, {
-      ticketId: fullTicket.ticket_id,
+    await this.safePublishEvent('TICKET_CREATED', context, buildApiTicketCreatedPayload({
+      ticketId: fullTicket.ticket_id!,
       userId: context.userId,
-      createdByUserId: context.userId,
       createdAt: fullTicket.entered_at
         ? new Date(fullTicket.entered_at as unknown as string).toISOString()
         : new Date().toISOString(),
-      source: 'api',
-      board_id: fullTicket.board_id,
-      priority_id: fullTicket.priority_id,
-      client_id: fullTicket.client_id,
-    });
+      boardId: fullTicket.board_id,
+      priorityId: fullTicket.priority_id,
+      clientId: fullTicket.client_id,
+    }));
 
     return fullTicket;
   }
@@ -2415,10 +2466,19 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -2430,6 +2490,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }
@@ -2536,6 +2597,32 @@ export class TicketService extends BaseService<ITicket> {
       // check runs after visibility is resolved rather than on the raw body.
       const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
 
+      // One-off Cc/Bcc for this comment only. The schema already rejects them
+      // on an explicitly internal body; this also catches a reply that
+      // inherits internal visibility from its thread.
+      let emailRecipients: Awaited<ReturnType<typeof prepareCommentEmailRecipients>> = null;
+      try {
+        emailRecipients = await prepareCommentEmailRecipients(trx, context.tenant, {
+          cc: data.cc,
+          bcc: data.bcc,
+          isInternal: apiIsInternal,
+        });
+      } catch (error) {
+        if (error instanceof CommentEmailRecipientsError) {
+          throw new ValidationError('Validation failed', [
+            { path: [error.field], message: error.message },
+          ]);
+        }
+        throw error;
+      }
+
+      // author_type comes from the authenticated key's user, via the same
+      // resolver the UI action uses; a client user also records its contact.
+      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
+      if (apiIsInternal && apiAuthor.authorType !== 'internal') {
+        throw new ForbiddenError('Only MSP users can create internal comments');
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2545,10 +2632,14 @@ export class TicketService extends BaseService<ITicket> {
         is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
+        author_type: apiAuthor.authorType,
+        contact_id: apiAuthor.contactId,
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
-        metadata: data.metadata,
+        metadata: emailRecipients
+          ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
+          : data.metadata,
         ...(scheduledPublication
           ? {
               publish_state: 'scheduled',
@@ -2587,7 +2678,18 @@ export class TicketService extends BaseService<ITicket> {
           });
       }
 
-      // A scheduled public comment is not a client reply until publication.
+      // A scheduled public comment is not a client reply until publication
+      // (the scheduled-publish worker applies the state then).
+      if (!scheduledPublication) {
+        await applyCommentResponseState(trx, {
+          tenant: context.tenant,
+          ticketId,
+          authorType: apiAuthor.authorType,
+          isInternal: Boolean(comment.is_internal),
+          userId: context.userId ?? null,
+        });
+      }
+
       if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
@@ -2616,14 +2718,15 @@ export class TicketService extends BaseService<ITicket> {
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
-        author_contact_email: null
+        author_contact_email: null,
+        email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
-      const eventPayload = {
-        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
-        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+      const eventPayload = buildTicketCommentAddedPayload({
+        tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
-      };
+      });
       if (scheduledPublication) {
         // Never arm the worker before the row is committed; the boot
         // reconciler repairs a post-commit scheduling failure.
@@ -2639,7 +2742,7 @@ export class TicketService extends BaseService<ITicket> {
             .update({ schedule_job_id: scheduled.jobId });
         }, `schedule comment publication ${comment.comment_id}`);
       } else {
-        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);
       }
       return { response, externalLinks: createdExternalLinks };
     });
@@ -3085,6 +3188,9 @@ export class TicketService extends BaseService<ITicket> {
             );
           }
           break;
+        case 'response_state':
+          query.where('t.response_state', value);
+          break;
         case 'has_assignment':
           if (value) {
             query.whereNotNull('t.assigned_to');
@@ -3229,28 +3335,44 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(
-    eventType: string,
+  private async safePublishEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
     context: ServiceContext,
-    payload: Record<string, unknown>,
+    payload: BuiltWorkflowPayload<T>,
     idempotencyKey?: string
   ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishWorkflowEvent({ eventType, payload, ctx: this.publishContext(context), idempotencyKey })
+    );
+  }
+
+  /** Events with no workflow catalog entry (TICKET_DELETED). */
+  private async safePublishNonCatalogEvent(
+    eventType: 'TICKET_DELETED',
+    context: ServiceContext,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishNonCatalogWorkflowEvent({ eventType, payload, ctx: this.publishContext(context) })
+    );
+  }
+
+  private publishContext(context: ServiceContext) {
+    return {
+      tenantId: context.tenant,
+      actor: context.userId
+        ? ({ actorType: 'USER', actorUserId: context.userId } as const)
+        : ({ actorType: 'SYSTEM' } as const),
+    };
+  }
+
+  private async safePublish(eventType: string, publish: () => Promise<void>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
-        payload,
-        ctx: {
-          tenantId: context.tenant,
-          actor: context.userId
-            ? { actorType: 'USER', actorUserId: context.userId }
-            : { actorType: 'SYSTEM' },
-        },
-        idempotencyKey,
-      });
+      await publish();
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
@@ -3344,11 +3466,8 @@ export class TicketService extends BaseService<ITicket> {
       registerAfterCommit(
         trx,
         () =>
-          this.safePublishEvent(
-            publication.eventType,
-            context,
-            publication.payload,
-            publication.idempotencyKey
+          publishBundleAfterCommitPublication(publication, (event) =>
+            this.safePublishEvent(event.eventType, context, event.payload, event.idempotencyKey)
           ),
         `${publication.eventType} bundle-attach`
       );
@@ -3510,12 +3629,12 @@ export class TicketService extends BaseService<ITicket> {
       return { oldMasterTicketId: params.oldMasterTicketId, newMasterTicketId: params.newMasterTicketId };
     });
 
-    await this.safePublishEvent('TICKET_MERGED', context, {
+    await this.safePublishEvent('TICKET_MERGED', context, buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: new Date().toISOString(),
       reason: 'bundle:promote_master',
-    });
+    }));
 
     return result;
   }
@@ -3588,12 +3707,12 @@ export class TicketService extends BaseService<ITicket> {
       return { masterTicketId, childTicketId: params.childTicketId, remainingChildren: remaining };
     });
 
-    await this.safePublishEvent('TICKET_SPLIT', context, {
+    await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: new Date().toISOString(),
       reason: 'bundle:remove_child',
-    });
+    }));
 
     return result;
   }
@@ -3630,12 +3749,12 @@ export class TicketService extends BaseService<ITicket> {
     });
 
     if (result.childTicketIds.length > 0) {
-      await this.safePublishEvent('TICKET_SPLIT', context, {
+      await this.safePublishEvent('TICKET_SPLIT', context, buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: new Date().toISOString(),
         reason: 'bundle:unbundle_master',
-      });
+      }));
     }
 
     return result;

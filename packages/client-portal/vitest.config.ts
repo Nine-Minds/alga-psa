@@ -18,6 +18,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@alga-psa\/core\/fileNames$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
+      },
+      {
         find: /^@alga-psa\/workflows(.*)$/,
         replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}$1`,
       },

@@ -31,6 +31,7 @@ import {
   getConfigurationWithDetails,
   upsertPlanServiceBucketConfigurationAction as upsertContractLineServiceBucketConfigurationAction
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import { deleteBucketOverlay } from '@alga-psa/billing/actions/bucketOverlayActions';
 import {
   getActiveClientLocationsForBilling,
   type BillingLocationSummary,
@@ -43,7 +44,11 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
-import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
+import { RecurringUnitSchedulePanel } from './RecurringUnitSchedulePanel';
+import {
+  listBucketBusinessHoursSchedules,
+  listBucketPoolsForLine,
+} from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
   type ContractLineServiceSelection,
@@ -128,6 +133,8 @@ interface ServiceConfiguration {
     service_name: string;
     service_type?: string;
     billing_method?: string;
+    /** `product` marks a catalog product billed through the recurring product path. */
+    item_kind?: string | null;
   };
   configuration: {
     config_id: string;
@@ -213,6 +220,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [pricingOnly, setPricingOnly] = useState(false);
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
+  // Services whose bucket was already saved when this edit began. A null draft
+  // only means "delete the overlay" for these; for the rest it means "never had
+  // one".
+  const [savedBucketOverlayServiceIds, setSavedBucketOverlayServiceIds] = useState<string[]>([]);
   const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
   const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
   // "Reset to standard" confirmation (plan §3.3): shows the current rate and the
@@ -455,7 +466,43 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
-  const initializeServiceConfigEdits = (services: ServiceConfiguration[]) => {
+  /**
+   * An enabled bucket is persisted as a single-member pool, not as a per-service
+   * Bucket configuration row, so `bucketConfig` alone leaves the switch off for
+   * every bucket saved from this screen. Read those pools back so a saved bucket
+   * shows as enabled — otherwise turning it off is indistinguishable from never
+   * having had one and the overlay can never be removed.
+   */
+  const loadSavedBucketOverlays = async (
+    contractLineId: string,
+  ): Promise<Record<string, BucketOverlayInput>> => {
+    if (contract.is_template) return {};
+    const overlays: Record<string, BucketOverlayInput> = {};
+    try {
+      const pools = await listBucketPoolsForLine(contractLineId);
+      if (isReturnedActionError(pools)) return overlays;
+      for (const pool of pools) {
+        // Only a pool whose sole member is this service round-trips through the
+        // single-service switch; a shared pool is edited in the pool editor.
+        if (pool.members.length !== 1) continue;
+        overlays[pool.members[0].service_id] = {
+          total_minutes: pool.total_minutes,
+          overage_rate: pool.overage_rate,
+          allow_rollover: pool.allow_rollover,
+          billing_period: pool.billing_period === 'weekly' ? 'weekly' : 'monthly',
+        };
+      }
+    } catch {
+      // The pool read only decides how the switch starts; failing it must not
+      // block editing the rest of the line.
+    }
+    return overlays;
+  };
+
+  const initializeServiceConfigEdits = (
+    services: ServiceConfiguration[],
+    savedBucketOverlays: Record<string, BucketOverlayInput> = {},
+  ) => {
     const serviceConfigsData: Record<string, any> = {};
     const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
 
@@ -485,11 +532,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             allow_rollover: serviceConfig.bucketConfig.allow_rollover,
             billing_period: serviceConfig.bucketConfig.billing_period,
           }
-        : null;
+        : savedBucketOverlays[serviceId] ?? null;
     });
 
     setEditServiceConfigs(serviceConfigsData);
     setEditBucketConfigs(bucketConfigsData);
+    setSavedBucketOverlayServiceIds(
+      Object.entries(bucketConfigsData)
+        .filter(([, overlay]) => Boolean(overlay))
+        .map(([serviceId]) => serviceId)
+    );
   };
 
   const resetServiceMembershipDraft = () => {
@@ -648,7 +700,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
       });
-      initializeServiceConfigEdits(effectiveServices);
+      initializeServiceConfigEdits(
+        effectiveServices,
+        await loadSavedBucketOverlays(line.contract_line_id),
+      );
       resetServiceMembershipDraft();
     } catch (err) {
       console.error('Error checking contract invoices:', err);
@@ -670,7 +725,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         if (isReturnedActionError(details)) throw new Error(getErrorMessage(details));
         return { ...service, configuration: { ...service.configuration, ...details.baseConfig }, typeConfig: details.typeConfig, rateTiers: details.rateTiers };
       }));
-      initializeServiceConfigEdits(effectiveServices);
+      initializeServiceConfigEdits(
+        effectiveServices,
+        await loadSavedBucketOverlays(contractLineId),
+      );
     } catch (err) {
       setEffectiveBoundary('');
       setError(err instanceof Error ? err.message : String(err));
@@ -904,6 +962,19 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             setError(getErrorMessage(bucketResult));
             return;
           }
+        } else if (!bucketConfig && (
+          serviceById.get(serviceId)?.bucketConfig
+          || savedBucketOverlayServiceIds.includes(serviceId)
+        )) {
+          // The switch was turned off on a service that has a saved overlay
+          // (a legacy Bucket configuration row or the single-member pool the
+          // enable path writes). Without this the draft null is simply skipped
+          // and the overlay reappears on reload.
+          const deleteResult = await deleteBucketOverlay(contractLineId, serviceId);
+          if (isReturnedActionError(deleteResult)) {
+            setError(getErrorMessage(deleteResult));
+            return;
+          }
         }
       }
 
@@ -921,6 +992,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setEditLineData({});
       setEditServiceConfigs({});
       setEditBucketConfigs({});
+      setSavedBucketOverlayServiceIds([]);
       resetServiceMembershipDraft();
       setShowServiceSelectionDialog(false);
       onContractLinesChanged?.();
@@ -937,6 +1009,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     setEditLineData({});
     setEditServiceConfigs({});
     setEditBucketConfigs({});
+    setSavedBucketOverlayServiceIds([]);
     resetServiceMembershipDraft();
     setShowServiceSelectionDialog(false);
   };
@@ -1544,6 +1617,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           minimum_billable_time: e.target.value ? parseInt(e.target.value) : undefined
                                         })}
                                         placeholder="15"
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                         className="mt-1"
                                       />
                                     ) : (
@@ -1572,6 +1646,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           round_up_to_nearest: e.target.value ? parseInt(e.target.value) : undefined
                                         })}
                                         placeholder="15"
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                         className="mt-1"
                                       />
                                     ) : (
@@ -1587,7 +1662,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               )}
 
                               {/* Fixed contract line - show info message */}
-                              {line.contract_line_type === 'Fixed' && !services.some(service => service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
+                              {line.contract_line_type === 'Fixed' && !services.some(service => service.service.item_kind === 'product' || service.typeConfig?.pricing_basis === 'unit' || service.configuration.configuration_type === 'Usage') && (
                                 <div className="col-span-2 space-y-2">
                                   <p className="text-sm text-muted-foreground">
                                     {t('contractLines.configuration.fixedInfo', {
@@ -1664,6 +1739,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               <div className="space-y-3">
                                 {services.filter(s => s.configuration.configuration_type !== 'Bucket').map((serviceConfig, idx) => {
                                   const isUnitPriced = serviceConfig.typeConfig?.pricing_basis === 'unit';
+                                  const isRecurringProduct = serviceConfig.service.item_kind === 'product';
                                   const isEditing = editingLineId === line.contract_line_id && (!pricingOnly || isUnitPriced || serviceConfig.configuration.configuration_type === 'Usage');
                                   const configId = serviceConfig.configuration.config_id;
                                   const editData = editServiceConfigs[configId] || {};
@@ -1728,7 +1804,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                              {isUnitPriced ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
+                                              {isUnitPriced || isRecurringProduct ? t('contractLines.services.recurringUnits', {defaultValue: 'Recurring seats/units'}) : line.contract_line_type === 'Fixed'
                                                 ? t('contractLines.services.quantityTaxAllocation', {
                                                   defaultValue: 'Quantity (for tax allocation)',
                                                 })
@@ -1747,6 +1823,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                                     quantity: e.target.value ? parseInt(e.target.value) : undefined
                                                   }
                                                 })}
+                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                 className="mt-1"
                                               />
                                             ) : (
@@ -1762,7 +1839,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                             {serviceConfig.configuration.configuration_type === 'Hourly'
                                               ? t('contractLines.services.hourlyRate', { defaultValue: 'Hourly Rate' })
-                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced
+                                              : serviceConfig.configuration.configuration_type === 'Usage' || isUnitPriced || isRecurringProduct
                                               ? t('contractLines.services.unitRate', { defaultValue: 'Unit Rate' })
                                               : t('contractLines.services.rateTaxAllocation', { defaultValue: 'Rate (for tax allocation)' })}
                                           </Label>
@@ -1799,6 +1876,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                                     });
                                                   }
                                                 }}
+                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                 className="pl-10"
                                               />
                                             </div>
@@ -1928,6 +2006,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             </div>
                                           </div>
                                         </div>
+                                      )}
+
+                                      {serviceConfig.configuration.configuration_type === 'Fixed'
+                                        && (serviceConfig.typeConfig?.pricing_basis === 'unit'
+                                          || serviceConfig.service.item_kind === 'product') && (
+                                        <details className="pt-2">
+                                          <summary className="cursor-pointer text-sm font-medium text-[rgb(var(--color-primary-700))]">
+                                            {t('contractLines.recurringSchedule.openPanel', {
+                                              defaultValue: 'Schedule recurring change & history',
+                                            })}
+                                          </summary>
+                                          <div className="mt-3">
+                                            <RecurringUnitSchedulePanel
+                                              contractLineId={line.contract_line_id}
+                                              serviceId={serviceConfig.service.service_id}
+                                              configId={serviceConfig.configuration.config_id}
+                                              currencyCode={contract.currency_code || 'USD'}
+                                              disabled={isSavingLine}
+                                            />
+                                          </div>
+                                        </details>
                                       )}
                                     </div>
                                   );

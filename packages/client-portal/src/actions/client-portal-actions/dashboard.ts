@@ -11,7 +11,9 @@ import {
   applyTicketVisibilityFilter,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
+import { applyAssetVisibilityFilter, applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
+import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
 export interface DashboardMetrics {
@@ -188,6 +190,9 @@ export const getDashboardMetrics = withAuth(async (
 
     const userContactId = user.contact_id;
     const { knex } = await createTenantKnex();
+    // Project tiles and project activity ride on the same role-based gate the
+    // portal projects routes enforce.
+    const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -221,16 +226,21 @@ export const getDashboardMetrics = withAuth(async (
               'is_closed': false
             }),
           visibility,
-          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' }
+          { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
         ).count('ticket_id as count') as unknown as Promise<Array<{ count: string }>>,
 
-        // Get active projects count
-        scopedDb.table('projects')
-          .where({
-            'projects.client_id': clientId,
-            'is_inactive': false
-          })
-          .count('project_id as count') as unknown as Promise<Array<{ count: string }>>,
+        // Get active projects count (only for roles granted project:read)
+        canReadProjects
+          ? applyProjectVisibilityFilter(
+              scopedDb.table('projects')
+                .where({
+                  'projects.client_id': clientId,
+                  'is_inactive': false
+                }),
+              visibility,
+              { contactColumn: 'projects.contact_name_id' }
+            ).count('project_id as count') as unknown as Promise<Array<{ count: string }>>
+          : Promise.resolve([{ count: '0' }]),
 
         // Pending invoice counts remain financial-document / invoice-state
         // metrics. They should not silently pivot to recurring coverage dates.
@@ -242,10 +252,14 @@ export const getDashboardMetrics = withAuth(async (
           .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
         // Get active assets count
-        scopedDb.table('assets')
-          .where({
-            'assets.client_id': clientId
-          })
+        applyAssetVisibilityFilter(
+          scopedDb.table('assets')
+            .where({
+              'assets.client_id': clientId
+            }),
+          visibility,
+          { contactColumn: 'assets.contact_name_id' }
+        )
           .andWhere('status', '!=', 'inactive')
           .count('* as count') as unknown as Promise<Array<{ count: string }>>,
 
@@ -292,6 +306,9 @@ export const getRecentActivity = withAuth(async (
 
     const userContactId = user.contact_id;
     const { knex } = await createTenantKnex();
+    // Project tiles and project activity ride on the same role-based gate the
+    // portal projects routes enforce.
+    const canReadProjects = await hasClientProjectReadPermission(knex, user, tenant);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -344,7 +361,7 @@ export const getRecentActivity = withAuth(async (
             .orWhere('comments.publish_state', 'published');
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
         })
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);
@@ -381,10 +398,13 @@ export const getRecentActivity = withAuth(async (
           'assets.name as asset_name'
         ]);
       scopedDb.tenantJoin(assetActivitiesQuery, 'assets', 'assets.asset_id', 'asset_maintenance_history.asset_id');
-      const assetActivities = await assetActivitiesQuery
-        .where({
+      const assetActivities = await applyAssetVisibilityFilter(
+        assetActivitiesQuery.where({
           'assets.client_id': clientId
-        })
+        }),
+        visibility,
+        { contactColumn: 'assets.contact_name_id' }
+      )
         .orderBy('asset_maintenance_history.performed_at', 'desc')
         .limit(3);
 
@@ -398,12 +418,17 @@ export const getRecentActivity = withAuth(async (
         .orderBy('updated_at', 'desc')
         .limit(3);
 
-      // Recent project updates for this client.
-      const projects = await scopedDb.table('projects')
-        .where({ client_id: clientId })
-        .select(['project_name as name', 'description', 'updated_at as timestamp'])
-        .orderBy('updated_at', 'desc')
-        .limit(3);
+      // Recent project updates for this client (only for roles granted project:read).
+      const projects = canReadProjects
+        ? await applyProjectVisibilityFilter(
+            scopedDb.table('projects').where({ client_id: clientId }),
+            visibility,
+            { contactColumn: 'projects.contact_name_id' }
+          )
+            .select(['project_name as name', 'description', 'updated_at as timestamp'])
+            .orderBy('updated_at', 'desc')
+            .limit(3)
+        : [];
 
       // Recent service request submissions.
       const serviceRequests = await scopedDb.table('service_request_submissions')

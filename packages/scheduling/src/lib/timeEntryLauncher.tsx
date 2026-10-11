@@ -64,6 +64,7 @@ const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkIte
     task_name: context.taskName,
     service_id: context.serviceId,
     service_name: context.serviceName,
+    service_source: context.serviceSource,
   };
 };
 
@@ -233,6 +234,8 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
         userTimeZone={timeZone}
         periods={periods}
         defaults={defaults}
+        contextNotice={context.notice}
+        stopwatchSessionId={context.stopwatchSessionId}
       />,
       undefined,
       undefined,

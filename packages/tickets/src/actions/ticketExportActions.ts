@@ -82,6 +82,7 @@ function formatTicketOrigin(origin: string | null | undefined): string {
     case 'email': return 'Email';
     case 'client_portal': return 'Client Portal';
     case 'manual': return 'Manual';
+    case 'recurring': return 'Recurring';
     default: return origin;
   }
 }

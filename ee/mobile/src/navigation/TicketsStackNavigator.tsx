@@ -9,6 +9,7 @@ import { TicketsListScreen } from "../screens/TicketsListScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
+import { HeaderAddButton } from "../ui/components/HeaderAddButton";
 
 const Stack = createNativeStackNavigator<TicketsStackParamList>();
 
@@ -35,27 +36,9 @@ function DrawerToggleButton() {
 }
 
 function CreateTicketButton() {
-  const theme = useTheme();
   const { t } = useTranslation("tickets");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  return (
-    <Pressable
-      onPress={() => navigation.navigate("CreateTicket")}
-      accessibilityRole="button"
-      accessibilityLabel={t("list.createTicket")}
-      style={({ pressed }) => ({
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: theme.colors.primary,
-        alignItems: "center" as const,
-        justifyContent: "center" as const,
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <Feather name="plus" size={20} color={theme.colors.textInverse} />
-    </Pressable>
-  );
+  return <HeaderAddButton onPress={() => navigation.navigate("CreateTicket")} accessibilityLabel={t("list.createTicket")} />;
 }
 
 export function TicketsStackNavigator() {

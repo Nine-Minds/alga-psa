@@ -76,6 +76,8 @@ vi.mock('@alga-psa/integrations/components', () => ({
   EmailSenderCardsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   EmailSenderAddressesCard: () => <div data-testid="email-sender-addresses-card" />,
   EmailSenderRoutingCard: () => <div data-testid="email-sender-routing-card" />,
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -648,5 +650,17 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
         })
       );
     });
+  });
+
+  it('opens the shared outbound diagnostics dialog for saved settings', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(smtpSettings);
+
+    render(<ManagedEmailSettings />);
+
+    const diagnostics = await screen.findByRole('button', { name: /run outbound diagnostics/i });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
+    fireEvent.click(diagnostics);
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 });

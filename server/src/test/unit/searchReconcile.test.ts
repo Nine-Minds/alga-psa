@@ -18,6 +18,7 @@ import {
   reindexRowsAfterWatermark,
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { resolveCeMaintenanceSchedules } from '@alga-psa/types';
 
 const repoRoot = resolve(__dirname, '../../../..');
 
@@ -196,11 +197,11 @@ describe('search reconciliation', () => {
     expect(registerAllHandlers).toContain('JobHandlerRegistry.register<SearchReconcileJobData');
     expect(registerAllHandlers).toContain('name: SEARCH_RECONCILE_JOB_NAME');
     expect(registerAllHandlers).toContain('await searchReconcileHandler(data)');
-    expect(initializeScheduledJobs).toContain("const cron = '0 6 * * *';");
-    expect(initializeScheduledJobs).toContain('scheduleSearchReconcileJob(tenantId, cron)');
+    expect(resolveCeMaintenanceSchedules({})).toContainEqual({ jobName: 'search:reconcile', cron: '0 6 * * *' });
+    expect(initializeScheduledJobs).toContain('convergeCeMaintenanceSchedules(');
     expect(reconcileHandler).toContain("SEARCH_RECONCILE_JOB_NAME = 'search:reconcile'");
     expect(reconcileHandler).toContain(".unscoped<TenantRecord>('tenants', SEARCH_RECONCILE_TENANT_ENUMERATION_REASON)");
-    expect(jobsIndex).toContain('scheduleRecurringJob<SearchReconcileJobData>');
+    expect(jobsIndex).not.toContain('scheduleSearchReconcileJob');
   });
 
   it('T173 restores a manually deleted index row during reconciliation', async () => {

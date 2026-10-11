@@ -206,6 +206,22 @@ Controls discovery of the Contract Simulator while it is being rolled out.
 - Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
   flag controls only the Contract Details tab and is not an authorization boundary.
 
+### 14. `release-v2-0-feature`
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Project Details → view switcher → Timeline
+
+**Behavior:**
+- When disabled (default): The Timeline option is not offered in the project view switcher.
+  A saved Timeline preference or a `?view=gantt` link falls back to the Kanban view; the
+  preference itself is left untouched, so it applies again once the flag is on.
+- When enabled: The Timeline option is available alongside Kanban, List and Billing.
+- Task start dates, the dependency warnings, CSV, API, templates, mobile and client portal
+  changes that shipped with the timeline are not gated. This flag controls only the view's
+  entry point and is not an authorization boundary.
+
 ## Implementation Details
 
 ### User Identification

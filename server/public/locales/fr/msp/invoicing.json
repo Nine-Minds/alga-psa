@@ -385,9 +385,15 @@
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
       "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
       "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement.",
+      "RECURRING_PERIODS_NOT_MATERIALIZED": "Les périodes de service de cette fenêtre de facturation n'ont pas encore été générées. Utilisez Tout corriger sur la page des factures automatiques, ou régénérez-les dans Facturation > Périodes de service, puis relancez l'aperçu.",
+      "NO_ACTIVE_CONTRACT_LINES": "Aucune ligne de contrat n'est active pour cette période de facturation. Vérifiez les dates de début et de fin du contrat et que le contrat est actif.",
+      "NOTHING_TO_BILL": "Rien n'est prêt à être facturé pour cette fenêtre. Les lignes facturées à terme échu ne peuvent l'être qu'après la fin de leur période de service ; vérifiez donc l'échéance de facturation et les dates.",
+      "FIXED_LINE_RATE_UNRESOLVED": "La ligne à tarif forfaitaire {{lines}} n'a pas de tarif. Définissez un tarif sur la ligne de contrat (ou un prix pour ses services dans la devise du contrat), puis réessayez.",
+      "FIXED_LINE_NO_SERVICES": "La ligne à tarif fixe {{lines}} a un tarif mais aucun service sur lequel le facturer. Ajoutez un service à la ligne de contrat, puis réessayez.",
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
+      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
     },
     "warnings": {
@@ -1218,7 +1224,10 @@
         "drags": "Glisser : {{count}}",
         "success": "Succès : {{count}}",
         "invalid": "Invalide : {{count}}"
-      }
+      },
+      "zoomOut": "Zoom arrière",
+      "zoomIn": "Zoom avant",
+      "zoomFit": "Ajuster"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1934,8 @@
       "companyLogo": "Logo de l'entreprise",
       "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
       "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",
-      "localeChip": "Libellés traduits affichés en {{language}} (Langue d'aperçu)"
+      "localeChip": "Libellés traduits affichés en {{language}} (Langue d'aperçu)",
+      "badgeDragHint": "Faites glisser pour déplacer ce bloc"
     },
     "dragOverlay": {
       "component": "Composant"
@@ -1972,6 +1982,19 @@
       "collapse": "Réduire {{name}}",
       "expand": "Développer {{name}}",
       "title": "Plan"
+    },
+    "dragPreview": {
+      "noTarget": "Hors de la page — relâchez pour annuler",
+      "noChange": "Reste à sa place",
+      "before": "Avant {{block}}",
+      "after": "Après {{block}}",
+      "inside": "Dans {{container}}",
+      "dropOnPage": "Déposez sur la page pour ajouter ce bloc.",
+      "cancelled": "Non déplacé — relâchez au-dessus de la page ou du Plan pour déposer."
+    },
+    "resize": {
+      "handleHint": "Faites glisser pour redimensionner · double-cliquez pour ajuster au contenu",
+      "autoValue": "Automatique ({{value}})"
     }
   },
   "projectBilling": {
@@ -2037,7 +2060,8 @@
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
       }
-    }
+    },
+    "emptyTimeHint": "Le temps et les matériels approuvés ne sont jamais mis en file ici : ils sont facturés par la facturation normale ou par le bouton Générer la facture du projet."
   },
   "invoiceDesigner": {
     "transforms": {

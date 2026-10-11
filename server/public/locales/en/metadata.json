@@ -546,6 +546,9 @@
       "detail": {
         "title": "Ticket #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticket Details"
+      },
+      "recurring": {
+        "title": "Recurring tickets"
       }
     },
     "timeEntry": {

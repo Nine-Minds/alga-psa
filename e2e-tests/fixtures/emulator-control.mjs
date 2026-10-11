@@ -1,6 +1,6 @@
 /** Control-plane client; application traffic must still use vendor endpoints. */
 export class EmulatorControl {
-  constructor(baseURL, providers, { timeoutMs = 10000 } = {}) {
+  constructor(baseURL, providers, { timeoutMs = 10000, settleMs = 30000, settleIntervalMs = 250 } = {}) {
     const url = new URL(baseURL);
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
       throw new Error('Emulator control URL must be an HTTP origin without credentials, query or fragment');
@@ -12,6 +12,8 @@ export class EmulatorControl {
     this.baseURL = url.origin;
     this.providers = [...providers];
     this.timeoutMs = timeoutMs;
+    this.settleMs = settleMs;
+    this.settleIntervalMs = settleIntervalMs;
     this.operations = [];
   }
 
@@ -48,9 +50,18 @@ export class EmulatorControl {
     for (const provider of this.providers) await this.call(this.path(provider, 'reset'), {});
   }
 
+  // Application side effects (e.g. a notification's SMTP DATA) can still be
+  // finishing when a test body returns. Evidence is taken once vendor traffic
+  // drains; an operation that never finishes is still reported as in flight.
   async diagnostics() {
-    const requests = {};
-    for (const provider of this.providers) requests[provider] = await this.requests(provider);
+    const deadline = Date.now() + this.settleMs;
+    let requests;
+    for (;;) {
+      requests = {};
+      for (const provider of this.providers) requests[provider] = await this.requests(provider);
+      if (Object.values(requests).every(history => history.inFlight === 0) || Date.now() >= deadline) break;
+      await new Promise(resolve => setTimeout(resolve, this.settleIntervalMs));
+    }
     return { controlOrigin: this.baseURL, providers: this.providers, operations: [...this.operations], requests };
   }
 }

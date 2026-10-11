@@ -29,6 +29,7 @@ interface TaskEditProps {
   inDrawer?: boolean;
   projectTreeData?: any[]; // Add projectTreeData prop
   onCommentCountChange?: (taskId: string, count: number) => void;
+  confirmBeforeSave?: React.ComponentProps<typeof TaskForm>['confirmBeforeSave'];
 }
 
 export default function TaskEdit({
@@ -41,7 +42,8 @@ export default function TaskEdit({
   users,
   inDrawer = false,
   projectTreeData = [],
-  onCommentCountChange
+  onCommentCountChange,
+  confirmBeforeSave
 }: TaskEditProps): React.JSX.Element {
   const { t } = useTranslation('projects');
   // toLocaleDateString() with no locale follows the browser, not the app.
@@ -135,6 +137,7 @@ export default function TaskEdit({
         inDrawer={inDrawer}
         projectTreeData={projectTreeData}
         onCommentCountChange={onCommentCountChange}
+        confirmBeforeSave={confirmBeforeSave}
         printButton={printButton}
         printableHeader={printableHeader}
         printTitle={task.task_name}

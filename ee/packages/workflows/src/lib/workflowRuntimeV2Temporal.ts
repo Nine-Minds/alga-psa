@@ -28,11 +28,16 @@ const resolveWorkflowRuntimeV2TemporalTimeout = <T extends string>(value: string
 };
 
 export async function startWorkflowRuntimeV2TemporalRun(
-  input: WorkflowRuntimeV2TemporalRunInput
+  input: WorkflowRuntimeV2TemporalRunInput,
+  options: {
+    /** How long to wait for the engine connection; the Temporal client default (10s) when unset. */
+    connectTimeoutMs?: number;
+  } = {}
 ): Promise<{ workflowId: string; firstExecutionRunId: string | null }> {
   const temporal = await import('@temporalio/client');
   const connection = await temporal.Connection.connect({
     address: process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS,
+    ...(options.connectTimeoutMs ? { connectTimeout: options.connectTimeoutMs } : {}),
   });
   const client = new temporal.Client({
     connection,

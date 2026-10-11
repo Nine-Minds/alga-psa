@@ -192,7 +192,78 @@ docker volume ls | grep -E "postgres_data|files_data"
 
 ### Network Exposure
 
-The shared base compose file exposes Postgres, PgBouncer, Redis, and the application ports to the host for local convenience. For hardened environments, either remove or override the `ports:` entries with a compose override file, bind them to `127.0.0.1` behind a reverse proxy/firewall, or enforce host-level firewall rules that only allow trusted networks. Restart the stack after applying your chosen approach.
+By default the stack publishes only `server` (port 3000) and `hocuspocus` (port 1234) on the host. Your reverse proxy needs those two. Postgres, PgBouncer, and Redis are reachable only on the Compose network, so the other containers use them and nothing outside Docker can.
+
+Do not rely on a host firewall to protect a published port. Docker adds its own rules for published ports, and those rules are evaluated before ufw and firewalld. Filtering a published port requires rules in the `DOCKER-USER` chain. Not publishing the port at all is the safe default.
+
+#### Host access on the same machine
+
+To reach Postgres, PgBouncer, or Redis from tools on the Docker host, add `docker-compose.expose-infra.yaml` as the **last** `-f` file. It binds the three services to `127.0.0.1`:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  -f docker-compose.expose-infra.yaml \
+  --env-file server/.env --env-file .env.image up -d
+```
+
+Check the result:
+
+```bash
+docker ps --format '{{.Names}}\t{{.Ports}}'
+```
+
+You should see `127.0.0.1:5432->5432/tcp`, `127.0.0.1:6432->6432/tcp`, and `127.0.0.1:6379->6379/tcp`. Use `127.0.0.1` rather than `localhost` in connection strings. Some clients try the IPv6 address `::1` first, and the loopback binding is IPv4 only.
+
+The overlay uses the host ports from `EXPOSE_DB_PORT` (5432), `EXPOSE_PGBOUNCER_PORT` (6432), and `EXPOSE_REDIS_PORT` (6379). Set them in your environment file if those ports are taken.
+
+#### Remote access
+
+Use an SSH tunnel to the loopback port. Nothing else needs to listen on a network interface:
+
+```bash
+ssh -L 5432:127.0.0.1:5432 user@your-docker-host
+psql -h 127.0.0.1 -p 5432 -U postgres server
+```
+
+If a tool cannot use a tunnel, set `EXPOSE_INFRA_BIND_ADDR` to the address of one private or VPN interface, and restrict that address in the `DOCKER-USER` chain:
+
+```bash
+# In server/.env or your shell: bind to one private address
+EXPOSE_INFRA_BIND_ADDR=10.8.0.5
+```
+
+```bash
+# Allow Postgres only from the VPN subnet; drop it from everything else.
+# Replace eth0 with the host's external interface.
+sudo iptables -I DOCKER-USER -i eth0 -p tcp -m conntrack --ctorigdstport 5432 \
+  ! -s 10.8.0.0/24 -j DROP
+```
+
+> **Never set `EXPOSE_INFRA_BIND_ADDR=0.0.0.0`.** It publishes the database and cache on every network the host is connected to, including the public internet on a cloud VM. `EXPOSE_INFRA_BIND_ADDR` applies only to Postgres, PgBouncer, and Redis. It does not change the `server` or `hocuspocus` ports.
+
+`iptables` rules do not survive a reboot unless you save them with your distribution's tooling, for example `iptables-persistent`.
+
+#### Changing published ports in your own override file
+
+Override files and `extends` add to a service's `ports:` list. They never replace it. To remove a published port or replace the list, use `!reset` or `!override`. Both need Docker Compose 2.24 or later:
+
+```yaml
+# docker-compose.local.yaml
+services:
+  hocuspocus:
+    ports: !reset []          # publish nothing
+  server:
+    ports: !override          # replace the list
+      - "127.0.0.1:3000:3000"
+```
+
+Add your file after the other `-f` files, and keep `docker-compose.expose-infra.yaml` last if you use it.
+
+The source-built production overlay, `docker-compose.prod.yaml`, uses `!reset` to publish no database or cache ports. It requires Compose 2.24 or later. The prebuilt files do not use `!reset`, so the v2.20 minimum above still applies to them.
+
+#### Maintenance without host ports
+
+Database maintenance does not need host ports. `docker compose exec postgres psql -U postgres server` opens a shell in the database container, and the backup commands below use `docker exec`.
 
 ### Backups
 
@@ -271,6 +342,8 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
     --env-file server/.env --env-file .env.image up -d
   ```
+- The first start after an upgrade from v1.6.0 or earlier sets the `postgres` role's password to `secrets/postgres_password` once, while it replaces legacy `trust` entries in `pg_hba.conf`. See [Postgres authentication](#postgres-authentication-upgrading-from-v160-or-earlier). Later secret changes are not synced automatically, so use the commands above.
+- `setup` stops with `pg_hba.conf has rules that do not require a password` when a `trust` rule is present. Recreate the `postgres` container to repair it, or change the listed rules to `md5` and run `SELECT pg_reload_conf();`.
 - After credentials are in sync, the `setup` container will finish running and migrations plus seed data will be applied automatically.
 
 ## Verification
@@ -343,6 +416,7 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 ✓ Encryption keys are at least 32 characters
 ✓ RLS policies properly configured
 ✓ Database users have appropriate permissions
+✓ `pg_hba.conf` has no `trust` entries
 ✓ Environment variables properly validated
 
 ## Production/Public Deployment Configuration
@@ -454,7 +528,6 @@ EMAIL_USERNAME=noreply@your-domain.com
 - Configure firewall rules appropriately
 - Regular backup procedures
 - Monitor access logs
-cies
 
 ## Upgrading
 
@@ -483,6 +556,8 @@ When upgrading from a previous version:
      --env-file server/.env --env-file .env.image up -d
    ```
 
+   Postgres, PgBouncer, and Redis no longer publish host ports, so Compose recreates those containers when you restart. The data in `postgres_data` is not affected. If something on the host connects to `localhost:5432`, `6432`, or `6379`, add `-f docker-compose.expose-infra.yaml` as the last file. See [Network Exposure](#network-exposure).
+
 5. Review changes in:
    - Docker Compose files
    - Environment variables
@@ -492,6 +567,56 @@ When upgrading from a previous version:
    - Protocol Buffer definitions (EE only)
 
 6. Update configurations as needed and verify the application starts cleanly before removing the old backups.
+
+### Postgres authentication (upgrading from v1.6.0 or earlier)
+
+Postgres now requires a password for every network connection. Earlier releases could create the `postgres_data` volume with legacy `trust` entries in `pg_hba.conf`. Those entries accepted connections without a password.
+
+Fresh installs need no action. On an existing install, the first `up` after the upgrade repairs the volume before Postgres starts listening:
+
+- The `postgres` container rewrites every `trust` entry in `pg_hba.conf` to `md5`.
+- It sets the `postgres` role's password to the value in `secrets/postgres_password`. Components of the stack already use that secret, so they keep working.
+- It saves the original file as `$PGDATA/pg_hba.conf.pre-trust-removal` (mode 600).
+- It leaves the `app_user` and `hocuspocus_user` passwords alone. The `setup` container applies them from their secrets on every run.
+
+Look for this line in the `postgres` logs:
+
+```text
+alga-postgres: Repaired legacy trust rules in /var/lib/postgresql/data/pg_hba.conf (now md5); superuser 'postgres' password synced to the configured secret; original saved to ...
+```
+
+To check the result, list the active rules. None of them should end in `trust`:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image exec postgres \
+  sh -c 'grep -v "^#" "$PGDATA/pg_hba.conf" | grep -v "^$"'
+```
+
+If you run Postgres outside these compose files, make the same change by hand. Set every `trust` method in `pg_hba.conf` to `md5`, make sure each login role has a password, then run `SELECT pg_reload_conf();`.
+
+The stack refuses to start in three cases:
+
+- `POSTGRES_HOST_AUTH_METHOD=trust is not allowed`: the postgres container found that environment value. Remove it or set it to `md5`.
+- `no postgres password is available`: the volume still has legacy entries, and `secrets/postgres_password` is empty or missing. Restore the secret and start again.
+- `pg_hba.conf has rules that do not require a password`: `setup` found a rule without a password after Postgres started. Recreate the `postgres` container so it repairs the file, or fix the rule by hand as described above.
+
+### Database image changes
+
+The bundled Postgres image moves to the maintained pgvector image and is pinned by digest in `docker-compose.images.yaml`; the Compose files and the Helm chart use that pinned image rather than a floating tag.
+
+For an existing data directory, the first `up` after upgrading runs the one-shot `postgres-extension-update` service before `setup`. It waits for the new server, brings the system catalogs and installed extensions (for example `vector`) up to date in every database, and logs each change; on a fresh volume or a repeat run it logs that there is nothing to do. It never touches an external database configured through `DB_HOST`.
+
+To check the result:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs postgres-extension-update
+```
+
+and, in each database, `SELECT extname, extversion FROM pg_extension;`.
+
+If you run your own Postgres instead of the bundled one, run `ALTER EXTENSION vector UPDATE;` in each database that uses it after changing the server or pgvector version. If you have custom objects in the bundled database, review the [PostgreSQL 15 release notes](https://www.postgresql.org/docs/release/) for the minor versions between your previous and current server version.
 
 ## Additional Resources
 

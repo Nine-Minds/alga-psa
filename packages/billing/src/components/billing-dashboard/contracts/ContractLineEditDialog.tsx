@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { getCurrencySymbol } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ContractLineEditDialogProps {
   line: {
@@ -21,7 +22,12 @@ interface ContractLineEditDialogProps {
     custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
   };
-  currencyCode: string;
+  /**
+   * Currency of the contract being edited. Omit (null) for a contract template,
+   * which is currency-neutral: no symbol is shown and the rate is scaled by the
+   * same fraction digits `useTemplateNeutralRate` uses to display it.
+   */
+  currencyCode?: string | null;
   onClose: () => void;
   onSave: (contractLineId: string, rateCents: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
 }
@@ -35,14 +41,21 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
         ? Math.round(Number(line.custom_rate))
         : 0;
 
-  const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / 100).toFixed(2));
+  const neutral = !currencyCode;
+  const { fractionDigits } = useCurrencyFormat();
+  // Contracts keep their historical cents scale; neutral template rates use the
+  // authoring currency's minor-unit scale, matching useTemplateNeutralRate.
+  const digits = neutral ? fractionDigits() : 2;
+  const scale = 10 ** digits;
+
+  const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / scale).toFixed(digits));
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
     line.billing_timing || 'arrears'
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const currencySymbol = getCurrencySymbol(currencyCode);
+  const currencySymbol = neutral ? null : getCurrencySymbol(currencyCode as string);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +68,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
       return;
     }
 
-    const rateCents = Math.round(dollars * 100);
+    const rateCents = Math.round(dollars * scale);
 
     setIsSaving(true);
     try {
@@ -120,9 +133,11 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
             <div>
               <Label htmlFor="contract-line-rate">{t('contractLineEdit.fields.rate', { defaultValue: 'Rate' })}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                  {currencySymbol}
-                </span>
+                {currencySymbol && (
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                    {currencySymbol}
+                  </span>
+                )}
                 <Input
                   id="contract-line-rate"
                   type="text"
@@ -137,18 +152,18 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                   }}
                   onBlur={() => {
                     if (rateInput.trim() === '' || rateInput === '.') {
-                      setRateInput('0.00');
+                      setRateInput((0).toFixed(digits));
                       return;
                     }
                     const dollars = Number.parseFloat(rateInput);
                     if (!Number.isFinite(dollars) || dollars < 0) {
-                      setRateInput('0.00');
+                      setRateInput((0).toFixed(digits));
                       return;
                     }
-                    const cents = Math.round(dollars * 100);
-                    setRateInput((cents / 100).toFixed(2));
+                    const minor = Math.round(dollars * scale);
+                    setRateInput((minor / scale).toFixed(digits));
                   }}
-                  className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className={`${neutral ? '' : 'pl-10 '}[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
               </div>
             </div>

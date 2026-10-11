@@ -1,0 +1,187 @@
+{
+  "format": "alga-psa.workflow-bundle",
+  "formatVersion": 1,
+  "exportedAt": "2026-10-06T00:00:00.000Z",
+  "workflows": [
+    {
+      "key": "fixture.ticket-waiting-email-assignees",
+      "metadata": {
+        "name": "Fixture: Ticket Waiting → Email Requester and Assignees",
+        "description": "Emails the requester contact and Cc's the ticket's assigned technician and additional resources.",
+        "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+        "payloadSchemaMode": "pinned",
+        "pinnedPayloadSchemaRef": "payload.TicketStatusChanged.v1",
+        "trigger": {
+          "type": "event",
+          "eventName": "TICKET_STATUS_CHANGED"
+        },
+        "isSystem": false,
+        "isVisible": true,
+        "isPaused": false,
+        "concurrencyLimit": null,
+        "autoPauseOnFailure": false,
+        "failureRateThreshold": null,
+        "failureRateMinRuns": null,
+        "retentionPolicyOverride": null
+      },
+      "dependencies": {
+        "actions": [
+          {
+            "actionId": "email.send",
+            "version": 1
+          }
+        ],
+        "nodeTypes": [
+          "action.call",
+          "control.if",
+          "control.return",
+          "state.set"
+        ],
+        "schemaRefs": [
+          "payload.TicketStatusChanged.v1"
+        ]
+      },
+      "draft": {
+        "draftVersion": 1,
+        "definition": {
+          "id": "00000000-0000-0000-0000-00000000f730",
+          "version": 1,
+          "name": "Fixture: Ticket Waiting → Email Requester and Assignees",
+          "description": "Emails the requester contact and Cc's the ticket's assigned technician and additional resources.",
+          "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+          "trigger": {
+            "type": "event",
+            "eventName": "TICKET_STATUS_CHANGED"
+          },
+          "steps": [
+            {
+              "id": "state-waiting-email",
+              "type": "state.set",
+              "config": {
+                "state": "WAITING_EMAIL_ASSIGNEES"
+              }
+            },
+            {
+              "id": "if-waiting",
+              "type": "control.if",
+              "condition": {
+                "$expr": "payload.newStatusId == payload.fixtureWaitingStatusId"
+              },
+              "then": [
+                {
+                  "id": "send-reminder",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "email.send",
+                    "version": 1,
+                    "inputMapping": {
+                      "to": {
+                        "$expr": "[{\"email\": payload.fixtureRequesterEmail}]"
+                      },
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      },
+                      "ticket_assignees": "assigned_and_additional",
+                      "users_as": "cc",
+                      "subject": {
+                        "$expr": "'[fixture ticket-waiting-email-assignees] Reminder: waiting on customer'"
+                      },
+                      "text": {
+                        "$expr": "'[fixture ticket-waiting-email-assignees] ticketId=' & payload.ticketId"
+                      },
+                      "idempotency_key": {
+                        "$expr": "'fixture.ticket-waiting-email-assignees:email:' & payload.ticketId"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "done",
+                  "type": "control.return"
+                }
+              ],
+              "else": [
+                {
+                  "id": "skip",
+                  "type": "control.return"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "publishedVersions": [
+        {
+          "version": 1,
+          "definition": {
+            "id": "00000000-0000-0000-0000-00000000f730",
+            "version": 1,
+            "name": "Fixture: Ticket Waiting → Email Requester and Assignees",
+            "description": "Emails the requester contact and Cc's the ticket's assigned technician and additional resources.",
+            "payloadSchemaRef": "payload.TicketStatusChanged.v1",
+            "trigger": {
+              "type": "event",
+              "eventName": "TICKET_STATUS_CHANGED"
+            },
+            "steps": [
+              {
+                "id": "state-waiting-email",
+                "type": "state.set",
+                "config": {
+                  "state": "WAITING_EMAIL_ASSIGNEES"
+                }
+              },
+              {
+                "id": "if-waiting",
+                "type": "control.if",
+                "condition": {
+                  "$expr": "payload.newStatusId == payload.fixtureWaitingStatusId"
+                },
+                "then": [
+                  {
+                    "id": "send-reminder",
+                    "type": "action.call",
+                    "config": {
+                      "actionId": "email.send",
+                      "version": 1,
+                      "inputMapping": {
+                        "to": {
+                          "$expr": "[{\"email\": payload.fixtureRequesterEmail}]"
+                        },
+                        "ticket_id": {
+                          "$expr": "payload.ticketId"
+                        },
+                        "ticket_assignees": "assigned_and_additional",
+                        "users_as": "cc",
+                        "subject": {
+                          "$expr": "'[fixture ticket-waiting-email-assignees] Reminder: waiting on customer'"
+                        },
+                        "text": {
+                          "$expr": "'[fixture ticket-waiting-email-assignees] ticketId=' & payload.ticketId"
+                        },
+                        "idempotency_key": {
+                          "$expr": "'fixture.ticket-waiting-email-assignees:email:' & payload.ticketId"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "done",
+                    "type": "control.return"
+                  }
+                ],
+                "else": [
+                  {
+                    "id": "skip",
+                    "type": "control.return"
+                  }
+                ]
+              }
+            ]
+          },
+          "payloadSchemaJson": null
+        }
+      ]
+    }
+  ]
+}

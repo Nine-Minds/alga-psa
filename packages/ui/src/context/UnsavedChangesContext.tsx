@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { useLeaveGuard } from '../lib/leaveGuard';
 
 interface UnsavedChangesContextType {
   /**
@@ -108,18 +109,9 @@ export function UnsavedChangesProvider({
   const router = useRouter();
   const pendingNavigationRef = useRef<string | null>(null);
 
-  // Handle browser beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (unsavedComponentsRef.current.size > 0) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  // Reload / tab close and browser history chords (outside an editable) while
+  // anything is dirty. Shared with DismissGuard so there is one implementation.
+  useLeaveGuard(hasAnyUnsavedChanges);
 
   // Intercept link clicks for client-side navigation (Next.js App Router)
   useEffect(() => {

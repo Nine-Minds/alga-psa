@@ -26,7 +26,9 @@ import {
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import {
@@ -264,7 +266,8 @@ export class TimeSheetService extends BaseService<any> {
         return timeSheet;
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CREATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -311,7 +314,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_UPDATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_UPDATED',
         payload: {
           tenantId: context.tenant,
@@ -352,7 +356,8 @@ export class TimeSheetService extends BaseService<any> {
           .del();
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_DELETED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_DELETED',
         payload: {
           tenantId: context.tenant,
@@ -401,7 +406,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_SUBMITTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_SUBMITTED',
         payload: {
           tenantId: context.tenant,
@@ -458,7 +464,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVED',
         payload: {
           tenantId: context.tenant,
@@ -509,7 +516,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CHANGES_REQUESTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CHANGES_REQUESTED',
         payload: {
           tenantId: context.tenant,
@@ -597,7 +605,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVAL_REVERSED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVAL_REVERSED',
         payload: {
           tenantId: context.tenant,
@@ -1090,18 +1099,10 @@ export class TimeSheetService extends BaseService<any> {
         return entry;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: entry.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: context.userId, entryId: entry.entry_id, changes: {
             after: entry,
             assignedUserIds: data.assigned_user_ids || [],
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1185,19 +1186,11 @@ export class TimeSheetService extends BaseService<any> {
         };
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: context.userId, entryId: id, changes: {
             before: result.existing,
             after: result.updated,
             assignedUserIds: data.assigned_user_ids,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1239,17 +1232,9 @@ export class TimeSheetService extends BaseService<any> {
         return existing;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_DELETED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: buildScheduleEntryDeletedPayload({ userId: context.userId, entryId: id, changes: {
             before: existing,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
     }
 
 
