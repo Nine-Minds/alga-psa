@@ -6,10 +6,10 @@
  */
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
-import type { ITimePeriod, ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
+import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { toPlainDate } from '@alga-psa/core';
-import { validateData, validateArray } from '@alga-psa/validation';
+import { validateData } from '@alga-psa/validation';
 import { withTransaction } from '@alga-psa/db';
 import { TimePeriod } from '../models/timePeriod';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
@@ -25,23 +25,24 @@ interface ITimePeriodWithPlainDate extends Omit<ITimePeriod, 'start_date' | 'end
   end_date: Temporal.PlainDate;
 }
 
-async function fetchAllTimePeriodsWithTrx(trx: Knex | Knex.Transaction, tenant: string): Promise<ITimePeriodView[]> {
-  const timePeriods = await TimePeriod.getAll(trx, tenant);
+// Rebuilds the row field by field rather than returning the parse result: under `strict: false`
+// consumers (e.g. ee/server) Zod infers every schema field as optional, so the parsed object
+// would not be assignable to the required-field interfaces.
+function parseTimePeriod(row: unknown): ITimePeriodWithPlainDate {
+  const { tenant, period_id, start_date, end_date } = validateData(timePeriodSchema, row);
+  return { tenant, period_id, start_date, end_date };
+}
 
-  // Validate and convert to view type
-  const validatedPeriods = validateArray(timePeriodSchema, timePeriods);
-  return validatedPeriods.map((period): ITimePeriodView => ({
-    ...period,
-    start_date: period.start_date.toString(),
-    end_date: period.end_date.toString()
-  }));
+async function fetchAllTimePeriodsWithTrx(trx: Knex | Knex.Transaction, tenant: string): Promise<ITimePeriodWithPlainDate[]> {
+  const timePeriods = await TimePeriod.getAll(trx, tenant);
+  return timePeriods.map(parseTimePeriod);
 }
 
 async function createTimePeriodWithTrx(
   trx: Knex | Knex.Transaction,
   tenant: string,
   timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>
-): Promise<ITimePeriod> {
+): Promise<ITimePeriodWithPlainDate> {
   // Check for overlapping periods
   const overlappingPeriod = await TimePeriod.findOverlapping(trx, tenant, timePeriodData.start_date, timePeriodData.end_date);
   if (overlappingPeriod) {
@@ -49,15 +50,7 @@ async function createTimePeriodWithTrx(
   }
 
   const timePeriod = await TimePeriod.create(trx, tenant, timePeriodData);
-  return validateData(timePeriodSchema, timePeriod);
-}
-
-function toModelPeriodsWithPlainDate(periods: ITimePeriodView[]): ITimePeriodWithPlainDate[] {
-  return periods.map(period => ({
-    ...period,
-    start_date: toPlainDate(period.start_date),
-    end_date: toPlainDate(period.end_date)
-  }));
+  return parseTimePeriod(timePeriod);
 }
 
 /**
@@ -78,9 +71,8 @@ export async function createTimePeriodsThrough(
   const createdPeriods: ITimePeriod[] = [];
 
   // Read after taking the lock, so a concurrent creator's periods are visible.
-  const existingPeriods = await fetchAllTimePeriodsWithTrx(trx, tenant);
   // Keep model periods in memory to avoid repeated DB queries
-  const modelPeriods: ITimePeriodWithPlainDate[] = toModelPeriodsWithPlainDate(existingPeriods);
+  const modelPeriods = await fetchAllTimePeriodsWithTrx(trx, tenant);
 
   // Days from today to a period start. Positive = future, negative = past (gap that needs filling).
   const daysFromToday = (start: Temporal.PlainDate): number => start.since(today, { largestUnit: 'day' }).days;
@@ -124,11 +116,7 @@ export async function createTimePeriodsThrough(
     });
 
     createdPeriods.push(newPeriod);
-    modelPeriods.push({
-      ...newPeriod,
-      start_date: toPlainDate(newPeriod.start_date),
-      end_date: toPlainDate(newPeriod.end_date)
-    });
+    modelPeriods.push(newPeriod);
 
     logger.debug(`Created time period: ${newPeriod.start_date} to ${newPeriod.end_date}`);
   }
