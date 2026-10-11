@@ -5304,7 +5304,7 @@ export class BillingEngine {
       currency: contractCurrency,
       alias: "sp",
     });
-    // Branch supersedes main's project_ticket_links/project_tasks/project_phases/
+    // Branch supersedes main's ticket-link/project_tasks/project_phases/
     // projects/tickets LEFT JOIN chain with the unioned billing_work subquery,
     // which resolves the same columns and additionally covers retained
     // co-managed work references.

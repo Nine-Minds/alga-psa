@@ -112,7 +112,7 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     // deterministic selector, reporting *why* it could not pick a line. Both
     // entry points still go through that candidate loader and nowhere else.
     expect(timeEntryCrudActionsSource).toContain('resolveTimeEntryContract');
-    expect(timeEntryCrudActionsSource).toContain("from '../lib/timeEntryContract'");
+    expect(timeEntryCrudActionsSource).toContain("from './timeEntryContract'");
     expect(schedulingTimeEntryContractSource).toContain("from './timeContractCandidates'");
     expect(schedulingTimeEntryContractSource).toContain('loadEligibleTimeContractLines');
     expect(schedulingTimeEntryContractSource).toContain('resolveDeterministicContractLineSelection');

@@ -5,8 +5,8 @@ import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { TimeEntryProvider, useTimeEntry } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryProvider';
 
 const mocks = vi.hoisted(() => ({ mode: vi.fn(), services: vi.fn(), tax: vi.fn(), clientId: vi.fn(), client: vi.fn() }));
-vi.mock('@alga-psa/scheduling/actions/timeEntryCrudActions', () => ({ getTimeEntryBillingMode: mocks.mode }));
-vi.mock('@alga-psa/scheduling/actions/timeEntryActions', () => ({ fetchServicesForTimeEntry: mocks.services, fetchTaxRegions: mocks.tax, fetchClientTaxRateForWorkItem: vi.fn(), fetchScheduleEntryForWorkItem: vi.fn() }));
+// The provider reads the billing mode through the actions barrel.
+vi.mock('@alga-psa/scheduling/actions/timeEntryActions', () => ({ getTimeEntryBillingMode: mocks.mode, fetchServicesForTimeEntry: mocks.services, fetchTaxRegions: mocks.tax, fetchClientTaxRateForWorkItem: vi.fn(), fetchScheduleEntryForWorkItem: vi.fn() }));
 vi.mock('@alga-psa/scheduling/lib/contractLineDisambiguation', () => ({ getClientIdForWorkItem: mocks.clientId }));
 vi.mock('@alga-psa/scheduling/actions/clientInteractionLookupActions', () => ({ getSchedulingClientById: mocks.client }));
 let context: ReturnType<typeof useTimeEntry>;
