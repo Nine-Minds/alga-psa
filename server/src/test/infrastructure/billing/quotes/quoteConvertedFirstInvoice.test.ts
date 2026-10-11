@@ -223,18 +223,18 @@ describe('quote-converted contract first invoice (alga0002168)', () => {
     expect(run.invoicesCreated).toBe(1);
   }, 180000);
 
-  it('4. legacy shape (lines inactive, cc active) is healed by Set to Active', async () => {
+  it('4. activation does not rewrite legacy-shaped lines (repair is migration 20261010040511)', async () => {
     const { contractId, clientContractId } = await threeLineQuote();
+    // Legacy shape: every line inactive, assignment active. Existing rows are repaired by
+    // migration 20261010040511 (which skips lines that were once live), never by Set to Active.
     await context.db('contract_lines').where({ tenant: context.tenantId, contract_id: contractId }).update({ is_active: false });
     await context.db('client_contracts').where({ tenant: context.tenantId, client_contract_id: clientContractId }).update({ is_active: true });
 
     await activateClientContractForBilling(clientContractId);
     const lines = await context.db('contract_lines').where({ tenant: context.tenantId, contract_id: contractId });
-    expect(lines.every((l: any) => l.is_active === true)).toBe(true);
-
-    const { run } = await previewAndRun();
-    expect(run.failures).toEqual([]);
-    expect(run.invoicesCreated).toBe(1);
+    expect(lines).toHaveLength(3);
+    expect(lines.every((l: any) => l.is_active === false)).toBe(true);
+    expect(await context.db('recurring_service_periods').where({ tenant: context.tenantId }).count('* as n').first().then((r: any) => Number(r.n))).toBe(0);
   }, 180000);
 
   it('5. removing one line leaves the other lines billable with no not-materialized refusal', async () => {
