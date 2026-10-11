@@ -1,6 +1,6 @@
 'use server';
 
-import { buildInventorySalesOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
+import { buildInventorySalesOrderPayload, buildInventorySoFulfilledPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -498,14 +498,14 @@ export const fulfillSalesOrderLine = withAuth(
         warnings,
         pendingAssets,
         pendingStockLowSignals,
-        so_fulfilled_event: {
+        so_fulfilled_event: buildInventorySoFulfilledPayload({
           tenant,
-          so_id: so.so_id,
-          so_number: so.so_number,
-          client_id: so.client_id ?? null,
-          fulfilled_line_count: Number(fulfilledLineCount?.c ?? 0),
-          drop_ship: false,
-        },
+          soId: so.so_id,
+          soNumber: so.so_number,
+          clientId: so.client_id ?? null,
+          fulfilledLineCount: Number(fulfilledLineCount?.c ?? 0),
+          dropShip: false,
+        }),
       };
     }).then(async (core) => {
       // F029: create + link managed assets only after the stock transaction is

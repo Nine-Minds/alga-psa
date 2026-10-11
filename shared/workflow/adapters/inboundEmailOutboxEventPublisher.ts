@@ -14,8 +14,10 @@
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import type { IEventPublisher } from '@alga-psa/types';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import {
   buildInboundPublisherTicketAssignedPayload,
+  buildInboundPublisherTicketCommentAddedPayload,
   buildInboundPublisherTicketClosedPayload,
   buildInboundPublisherTicketCreatedPayload,
   buildInboundPublisherTicketUpdatedPayload,
@@ -58,7 +60,21 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     return this.suppressCommentEmailValue;
   }
 
-  private async enqueue(params: {
+  /**
+   * Catalogued events: the payload must come from a registered builder
+   * (`BuiltWorkflowPayload<T>`). The dispatcher re-validates the stored row
+   * with `reviveStoredWorkflowPayload` before replaying it.
+   */
+  private async enqueue<T extends WorkflowCatalogEventType>(params: {
+    eventKey: string;
+    eventType: T;
+    payload: BuiltWorkflowPayload<T>;
+    publishOptions?: Record<string, unknown> | null;
+  }): Promise<void> {
+    await this.insertRow({ ...params, payload: params.payload as Record<string, unknown> });
+  }
+
+  private async insertRow(params: {
     eventKey: string;
     eventType: string;
     payload: Record<string, unknown>;
@@ -74,7 +90,8 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       // Workflow triggers validate payloads against schemas that require
       // `occurredAt`. Stamp it when the event is recorded (not when the
       // dispatcher publishes) so a retried publish keeps the original time.
-      payload: withOutboxOccurredAt(params.payload, new Date().toISOString()),
+      // Every outbox payload carries `tenantId` (the replay uses the raw event bus, no envelope).
+      payload: withOutboxOccurredAt({ tenantId: this.ctx.tenantId, ...params.payload }, new Date().toISOString()),
       publish_options: params.publishOptions ?? null,
     });
   }
@@ -92,9 +109,10 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     });
   }
 
-  async publishContactCreated(payload: Record<string, unknown>): Promise<void> {
+  /** `payload` comes from `buildContactCreatedPayload` (shared/workflow/streams/domainEventBuilders). */
+  async publishContactCreated(payload: Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_CREATED'>): Promise<void> {
     const contactId = String(payload.contactId ?? 'unknown');
-    await this.enqueue({ eventKey: `contact_created:${contactId}`, eventType: 'CONTACT_CREATED', payload: { tenantId: this.ctx.tenantId, ...payload } });
+    await this.enqueue({ eventKey: `contact_created:${contactId}`, eventType: 'CONTACT_CREATED', payload });
   }
 
   async publishTicketUpdated(data: {
@@ -150,17 +168,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     await this.enqueue({
       eventKey: isInitial ? 'initial-comment-created' : 'reply-comment-created',
       eventType: 'TICKET_COMMENT_ADDED',
-      payload: {
-        tenantId: data.tenantId,
-        ticketId: data.ticketId,
-        userId: data.userId || data.ticketId,
-        comment: {
-          id: data.commentId,
-          content: data.metadata?.content ?? '',
-          author: data.metadata?.author ?? 'System',
-          isInternal: data.metadata?.isInternal ?? false,
-        },
-      },
+      payload: buildInboundPublisherTicketCommentAddedPayload(data),
       publishOptions: isInitial ? { channel: 'internal-notifications' } : null,
     });
   }

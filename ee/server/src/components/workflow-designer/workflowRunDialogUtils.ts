@@ -223,7 +223,7 @@ export const applyDerivedTicketBoardScope = <T extends RunDialogPickerFieldLike>
   };
 };
 
-// The pattern zod emits for dateOnlySchema (shared/workflow/runtime/schemas/commonEventPayloadSchemas.ts).
+// The pattern zod emits for dateOnlySchema (packages/event-schemas/src/schemas/domain/commonEventPayloadSchemas.ts).
 const DATE_ONLY_PATTERNS = new Set(['^(\\d{4})-(\\d{2})-(\\d{2})$', '^\\d{4}-\\d{2}-\\d{2}$']);
 
 /**

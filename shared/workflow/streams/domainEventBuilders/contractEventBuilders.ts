@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 90;
@@ -60,7 +62,7 @@ export function buildContractCreatedPayload(params: {
   endDate?: string | null;
   status?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_CREATED', {
     contractId: params.contractId,
     clientId: params.clientId,
     createdByUserId: params.createdByUserId,
@@ -68,7 +70,7 @@ export function buildContractCreatedPayload(params: {
     startDate: params.startDate,
     endDate: params.endDate ?? undefined,
     status: params.status,
-  };
+  });
 }
 
 export function buildContractUpdatedPayload(params: {
@@ -78,13 +80,13 @@ export function buildContractUpdatedPayload(params: {
   updatedFields?: string[];
   changes?: Record<string, { previous: unknown; new: unknown }>;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_UPDATED', {
     contractId: params.contractId,
     clientId: params.clientId,
     updatedAt: params.updatedAt,
     updatedFields: params.updatedFields,
     changes: params.changes,
-  };
+  });
 }
 
 export function buildContractStatusChangedPayload(params: {
@@ -94,13 +96,13 @@ export function buildContractStatusChangedPayload(params: {
   newStatus: string;
   changedAt?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_STATUS_CHANGED', {
     contractId: params.contractId,
     clientId: params.clientId,
     previousStatus: params.previousStatus,
     newStatus: params.newStatus,
     changedAt: params.changedAt,
-  };
+  });
 }
 
 export function buildContractRenewalUpcomingPayload(params: {
@@ -112,7 +114,7 @@ export function buildContractRenewalUpcomingPayload(params: {
   daysUntilDecisionDue?: number;
   renewalCycleKey?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_RENEWAL_UPCOMING', {
     contractId: params.contractId,
     clientId: params.clientId,
     renewalAt: params.renewalAt,
@@ -120,7 +122,7 @@ export function buildContractRenewalUpcomingPayload(params: {
     daysUntilRenewal: params.daysUntilRenewal,
     daysUntilDecisionDue: params.daysUntilDecisionDue,
     renewalCycleKey: params.renewalCycleKey,
-  };
+  });
 }
 
 /**
@@ -135,7 +137,7 @@ export function buildContractRecordCreatedPayload(params: {
   occurredAt: string;
   status?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_CREATED', {
     contractId: params.contractId,
     ...(params.ownerClientId ? { clientId: params.ownerClientId } : {}),
     createdByUserId: params.userId,
@@ -143,7 +145,7 @@ export function buildContractRecordCreatedPayload(params: {
     status: params.status,
     userId: params.userId,
     timestamp: params.occurredAt,
-  };
+  });
 }
 
 /**
@@ -168,7 +170,7 @@ export function buildContractRecordUpdatedPayload(params: {
       changes[key] = { previous: previous ?? null, new: next ?? null };
     }
   }
-  return {
+  return builtWorkflowPayload('CONTRACT_UPDATED', {
     contractId: params.contractId,
     ...(params.ownerClientId ? { clientId: params.ownerClientId } : {}),
     updatedAt: params.occurredAt,
@@ -177,5 +179,5 @@ export function buildContractRecordUpdatedPayload(params: {
     status: params.status,
     userId: params.userId,
     timestamp: params.occurredAt,
-  };
+  });
 }

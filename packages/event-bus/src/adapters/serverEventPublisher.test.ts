@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../publishers', () => ({
-  publishWorkflowEventByName: mocks.publishWorkflowEvent,
+  publishWorkflowEvent: mocks.publishWorkflowEvent,
 }));
 
 vi.mock('@alga-psa/db', () => ({

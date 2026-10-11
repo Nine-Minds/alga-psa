@@ -30,15 +30,19 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { publishEvent, publishWorkflowEvent, publishCatalogEventPayload } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
+  buildProjectBillingSchedulePayload,
+  buildProjectMilestoneReadyPayload,
   buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
+  buildProjectAssignedPayload,
+  buildProjectClosedPayload,
 } from '@alga-psa/workflow-streams';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -1148,21 +1152,21 @@ export const markPhaseComplete = withAuth(async (
     });
 
     for (const entry of result.ready_events) {
-        await publishCatalogEventPayload({
+        const ctx = { tenantId: tenant, actor: { actorType: 'USER' as const, actorUserId: user.user_id } };
+        await publishWorkflowEvent({
             eventType: 'PROJECT_MILESTONE_READY',
-            payload: {
-                tenantId: tenant,
+            payload: buildProjectMilestoneReadyPayload({
                 projectId: result.projectId,
                 entryId: entry.entryId,
                 description: entry.description,
                 computedAmount: entry.computedAmount,
                 trigger: 'phase',
-            },
+            }),
+            ctx,
         });
-        await publishCatalogEventPayload({
+        await publishWorkflowEvent({
             eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
-            payload: {
-                tenantId: tenant,
+            payload: buildProjectBillingSchedulePayload({
                 projectId: result.projectId,
                 configId: entry.configId,
                 entryId: entry.entryId,
@@ -1171,7 +1175,8 @@ export const markPhaseComplete = withAuth(async (
                 previousStatus: 'pending',
                 requiresPaymentBeforeWork: entry.requiresPaymentBeforeWork,
                 userId: user.user_id,
-            },
+            }),
+            ctx,
         });
     }
 
@@ -1814,15 +1819,17 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
                 updatedProject.assigned_user = assignedUser || null;
 
                 // Publish project assigned event only if assigned_to actually changed
-                await publishEvent({
+                await publishWorkflowEvent({
                     eventType: 'PROJECT_ASSIGNED',
-                    payload: {
+                    payload: buildProjectAssignedPayload({
+                        projectId,
+                        assignedToId: updatedProject.assigned_to,
+                        assignedByUserId: user.user_id,
+                    }),
+                    ctx: {
                         tenantId: tenant,
-                        projectId: projectId,
-                        userId: user.user_id,
-                        assignedTo: updatedProject.assigned_to,
-                        timestamp: new Date().toISOString()
-                    }
+                        actor: { actorType: 'USER', actorUserId: user.user_id },
+                    },
                 });
             } else {
                 updatedProject.assigned_user = null;
@@ -2469,14 +2476,17 @@ export const updateProjectStatus = withAuth(async (
 
         // If the status is closed, publish project closed event
         if (statusData.is_closed) {
-            await publishEvent({
+            await publishWorkflowEvent({
                 eventType: 'PROJECT_CLOSED',
-                payload: {
+                payload: buildProjectClosedPayload({
+                    projectId,
+                    closedByUserId: user.user_id,
+                    statusChanges: statusData as Record<string, unknown>,
+                }),
+                ctx: {
                     tenantId: tenant,
-                    projectId: projectId,
-                    userId: user.user_id,
-                    changes: statusData
-                }
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
             });
         }
 

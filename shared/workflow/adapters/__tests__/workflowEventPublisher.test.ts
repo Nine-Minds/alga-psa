@@ -4,7 +4,8 @@ const publishEventMock = vi.fn();
 const registerAfterCommitMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEventByName: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: (...args: any[]) => publishEventMock(...args),
+  publishEvent: (...args: any[]) => publishEventMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -89,6 +90,7 @@ describe('WorkflowEventPublisher', () => {
         tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
         ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
         userId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+        commentId: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
         comment: {
           id: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
           content: 'Customer reply body',
@@ -121,6 +123,7 @@ describe('WorkflowEventPublisher', () => {
         tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
         ticketId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
         userId: '7fa265ac-3a50-4ad6-9454-4a860d884996',
+        commentId: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
         comment: {
           id: 'd4c6bbe0-2d3d-4a27-af98-643070961eaa',
           content: 'Original inbound email body',

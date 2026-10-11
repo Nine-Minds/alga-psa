@@ -10,12 +10,12 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildTicketCommentAddedPayload, buildTicketResponseStateChangedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 import {
@@ -409,7 +409,7 @@ export const createComment = withAuth(async (
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
             })
-          }, publishEvent);
+          }, publishStoredWorkflowEvent);
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -452,11 +452,7 @@ export const createComment = withAuth(async (
           });
 
           for (const ev of events) {
-            await publishWorkflowEvent({
-              eventType: ev.eventType,
-              payload: ev.payload,
-              ctx: workflowCtx,
-            });
+            await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
           }
         } catch (eventError) {
           console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);

@@ -34,6 +34,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/workflow-streams', () => ({
   buildInteractionLoggedPayload: hoisted.buildInteractionLoggedPayloadMock,
+  buildScheduleEntryCreatedPayload: (input: Record<string, unknown>) => ({ ...input }),
 }));
 
 vi.mock('next/cache', () => ({
@@ -372,16 +373,14 @@ describe('interactionCreateHelper', () => {
         }),
         { assignedUserIds: ['user-1'], assignedByUserId: 'user-1' },
       );
-      expect(hoisted.publishEventMock).not.toHaveBeenCalled();
+      expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
 
       await result!.publishScheduleEntryCreated();
 
-      expect(hoisted.publishEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledWith(expect.objectContaining({
         eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: expect.objectContaining({
-          tenantId: 'tenant-1',
-          entryId: 'schedule-entry-1',
-        }),
+        payload: expect.objectContaining({ entryId: 'schedule-entry-1' }),
+        ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
       }));
     });
 

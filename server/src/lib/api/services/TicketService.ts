@@ -1,8 +1,9 @@
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildApiTicketCreatedPayload,
   buildTicketClosedPayload,
+  buildTicketCommentAddedPayload,
   buildTicketMergedPayload,
   buildTicketSplitPayload,
   buildTicketTeamAssignedPayload,
@@ -61,7 +62,9 @@ import {
   type RemoveTeamFromTicketOptions,
 } from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { publishWorkflowEventByName } from 'server/src/lib/eventBus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { publishBundleAfterCommitPublication } from '@alga-psa/tickets/lib/ticketBundlePublication';
 import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
@@ -481,7 +484,7 @@ export class TicketService extends BaseService<ITicket> {
     // Mirror the MSP server-action delete path: notify downstream consumers
     // (e.g. the search indexer removes the ticket from the index) once the
     // delete has committed. Publishing is best-effort and never fails the request.
-    await this.safePublishEvent('TICKET_DELETED', context, {
+    await this.safePublishNonCatalogEvent('TICKET_DELETED', context, {
       ticketId: id,
       userId: context.userId,
     });
@@ -2672,11 +2675,11 @@ export class TicketService extends BaseService<ITicket> {
         email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
-      const eventPayload = {
-        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
-        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+      const eventPayload = buildTicketCommentAddedPayload({
+        tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
-      };
+      });
       if (scheduledPublication) {
         // Never arm the worker before the row is committed; the boot
         // reconciler repairs a post-commit scheduling failure.
@@ -2692,7 +2695,7 @@ export class TicketService extends BaseService<ITicket> {
             .update({ schedule_job_id: scheduled.jobId });
         }, `schedule comment publication ${comment.comment_id}`);
       } else {
-        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);
       }
       return { response, externalLinks: createdExternalLinks };
     });
@@ -3282,28 +3285,44 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Safely publish events
    */
-  private async safePublishEvent(
-    eventType: string,
+  private async safePublishEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
     context: ServiceContext,
-    payload: Record<string, unknown>,
+    payload: BuiltWorkflowPayload<T>,
     idempotencyKey?: string
   ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishWorkflowEvent({ eventType, payload, ctx: this.publishContext(context), idempotencyKey })
+    );
+  }
+
+  /** Events with no workflow catalog entry (TICKET_DELETED). */
+  private async safePublishNonCatalogEvent(
+    eventType: 'TICKET_DELETED',
+    context: ServiceContext,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    await this.safePublish(eventType, () =>
+      publishNonCatalogWorkflowEvent({ eventType, payload, ctx: this.publishContext(context) })
+    );
+  }
+
+  private publishContext(context: ServiceContext) {
+    return {
+      tenantId: context.tenant,
+      actor: context.userId
+        ? ({ actorType: 'USER', actorUserId: context.userId } as const)
+        : ({ actorType: 'SYSTEM' } as const),
+    };
+  }
+
+  private async safePublish(eventType: string, publish: () => Promise<void>): Promise<void> {
     if (process.env.E2E_SKIP_APP_INIT === 'true') {
       return;
     }
 
     try {
-      await publishWorkflowEventByName({
-        eventType: eventType,
-        payload,
-        ctx: {
-          tenantId: context.tenant,
-          actor: context.userId
-            ? { actorType: 'USER', actorUserId: context.userId }
-            : { actorType: 'SYSTEM' },
-        },
-        idempotencyKey,
-      });
+      await publish();
     } catch (error) {
       console.error(`Failed to publish ${eventType} event:`, error);
     }
@@ -3397,11 +3416,8 @@ export class TicketService extends BaseService<ITicket> {
       registerAfterCommit(
         trx,
         () =>
-          this.safePublishEvent(
-            publication.eventType,
-            context,
-            publication.payload,
-            publication.idempotencyKey
+          publishBundleAfterCommitPublication(publication, (event) =>
+            this.safePublishEvent(event.eventType, context, event.payload, event.idempotencyKey)
           ),
         `${publication.eventType} bundle-attach`
       );

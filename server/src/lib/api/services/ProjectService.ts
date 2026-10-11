@@ -38,6 +38,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../middleware/api
 import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
 import { SharedNumberingService } from '@shared/services/numberingService';
@@ -45,6 +46,7 @@ import {
   buildProjectCreatedPayload,
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
+  buildProjectAssignedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   buildProjectTaskAssignedPayload,
@@ -57,10 +59,37 @@ type InternalUpdateProjectTaskData = UpdateProjectTaskData & {
   description_rich_text?: string | null;
 };
 
+type DeferredTaskEventType =
+  | 'PROJECT_TASK_CREATED'
+  | 'PROJECT_TASK_ASSIGNED'
+  | 'PROJECT_TASK_STATUS_CHANGED'
+  | 'PROJECT_TASK_COMPLETED';
+
 type DeferredWorkflowEvent = {
-  eventType: Parameters<typeof publishWorkflowEvent>[0]['eventType'];
-  payload: Record<string, unknown>;
-};
+  [T in DeferredTaskEventType]: { eventType: T; payload: BuiltWorkflowPayload<T> };
+}[DeferredTaskEventType];
+
+// LEVERAGE: friction correlated-event-payload — BuiltWorkflowPayload<T> is contravariant, so a union of
+// {eventType, payload} pairs cannot be passed to the generic publishWorkflowEvent without narrowing per case.
+async function publishDeferredWorkflowEvent(
+  event: DeferredWorkflowEvent,
+  ctx: Parameters<typeof publishWorkflowEvent>[0]['ctx'],
+): Promise<void> {
+  switch (event.eventType) {
+    case 'PROJECT_TASK_CREATED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_ASSIGNED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_STATUS_CHANGED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+    case 'PROJECT_TASK_COMPLETED':
+      await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+      return;
+  }
+}
 
 /** Hierarchy and `service_catalog` aliases used by `getTaskById`'s service fallback. */
 const TASK_SERVICE_ALIASES = { task: 'project_tasks', phase: 'project_phases', project: 'projects' };
@@ -413,15 +442,15 @@ export class ProjectService extends BaseService<IProject> {
         result.beforeProject.assigned_to !== result.project.assigned_to &&
         result.project.assigned_to
       ) {
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'PROJECT_ASSIGNED',
-          payload: {
-            tenantId: context.tenant,
+          ctx,
+          payload: buildProjectAssignedPayload({
             projectId: id,
-            userId: context.userId,
-            assignedTo: result.project.assigned_to,
-            timestamp: new Date().toISOString()
-          }
+            assignedToId: result.project.assigned_to,
+            assignedByUserId: context.userId,
+            assignedAt: occurredAt,
+          }),
         });
       }
 
@@ -752,11 +781,7 @@ export class ProjectService extends BaseService<IProject> {
       });
 
       for (const event of result.workflowEvents) {
-        await publishWorkflowEvent({
-          eventType: event.eventType,
-          ctx: result.ctx,
-          payload: event.payload,
-        });
+        await publishDeferredWorkflowEvent(event, result.ctx);
       }
 
       return result.task as IProjectTask;
@@ -863,11 +888,7 @@ export class ProjectService extends BaseService<IProject> {
 
       if (result.ctx) {
         for (const event of result.workflowEvents) {
-          await publishWorkflowEvent({
-            eventType: event.eventType,
-            ctx: result.ctx,
-            payload: event.payload,
-          });
+          await publishDeferredWorkflowEvent(event, result.ctx);
         }
       }
 

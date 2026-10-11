@@ -5,7 +5,7 @@ let statusRows: Array<{ status_id: string; is_closed: boolean }> = [];
 let ticketRow: any = null;
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEventByName: (args: any) => publishWorkflowEvent(args),
+  publishWorkflowEvent: (args: any) => publishWorkflowEvent(args),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({

@@ -202,7 +202,11 @@ export const createPurchaseOrder = withAuth(
 
       await publishInventoryEvent(
         'INVENTORY_PURCHASE_ORDER_CREATED',
-        timestampPayload(core.purchase_order_created_event),
+        buildInventoryPurchaseOrderPayload({
+          tenant: core.purchase_order_created_event.tenant,
+          poId: core.purchase_order_created_event.po_id,
+          userId: core.purchase_order_created_event.user_id,
+        }),
       );
 
       return core.purchase_order;

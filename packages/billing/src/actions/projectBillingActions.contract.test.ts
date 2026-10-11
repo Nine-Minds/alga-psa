@@ -49,8 +49,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishCatalogEventPayload: vi.fn(async (event: unknown) => {
-    state.publishedEvents.push(event);
+  publishWorkflowEvent: vi.fn(async (event: { eventType: string; payload: Record<string, unknown>; ctx: { tenantId: string } }) => {
+    // publishWorkflowEvent stamps tenantId from ctx; mirror that so assertions see the wire payload.
+    state.publishedEvents.push({
+      eventType: event.eventType,
+      payload: { tenantId: event.ctx.tenantId, ...event.payload },
+    });
   }),
 }));
 

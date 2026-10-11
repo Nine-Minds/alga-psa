@@ -3,8 +3,8 @@ import { dispatchCommentPublication, resolveCommentAuthorDisplay } from '@shared
 import { randomUUID } from 'node:crypto';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildTicketResponseStateChangedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { publishBuiltWorkflowPayload, publishStoredWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketCommentAddedPayload, buildTicketResponseStateChangedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { BaseJobData } from '../interfaces';
 import { getJobRunner } from '../JobRunnerFactory';
 import {
@@ -22,7 +22,7 @@ async function dispatchScheduledCommentNotification(knex: any, tenantId: string,
     .whereNull('scheduled_publish_dispatched_at').first();
   if (!comment || comment.deleted_at) return;
   if (comment.comment_publication_payload) {
-    await dispatchCommentPublication(knex, tenantId, commentId, publishEvent);
+    await dispatchCommentPublication(knex, tenantId, commentId, publishStoredWorkflowEvent);
     return;
   }
   const eventId = comment.scheduled_publish_event_id;
@@ -30,11 +30,14 @@ async function dispatchScheduledCommentNotification(knex: any, tenantId: string,
   // The schema requires a uuid actor and an author string; user-less comments
   // reuse the ticket id as the sentinel actor and name the real sender.
   const author = await resolveCommentAuthorDisplay(knex, tenantId, comment);
-  await publishEvent({ eventType: 'TICKET_COMMENT_ADDED', payload: {
-    tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id ?? comment.ticket_id,
-    thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id),
-    comment: { id: comment.comment_id, content: comment.note, author, isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
-  } }, { eventId, strict: true });
+  await publishBuiltWorkflowPayload({
+    eventType: 'TICKET_COMMENT_ADDED',
+    payload: buildTicketCommentAddedPayload({
+      tenantId, occurredAt: new Date().toISOString(), ticketId: comment.ticket_id, commentId: comment.comment_id, userId: comment.user_id ?? comment.ticket_id,
+      thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id),
+      comment: { content: comment.note, author, isInternal: comment.is_internal, authorType: comment.author_type, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id ?? null, is_reply: Boolean(comment.parent_comment_id) },
+    }),
+  }, { eventId, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: eventId }).whereNull('scheduled_publish_dispatched_at')
     .update({ scheduled_publish_dispatched_at: knex.fn.now() });
 }

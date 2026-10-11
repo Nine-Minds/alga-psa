@@ -18,7 +18,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
-import { buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
+import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -1629,11 +1629,11 @@ export class TicketModel {
           // The inbound publisher writes its durable outbox in this transaction.
           await eventPublisher.publishCommentCreated(event);
         } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
-            comment: { id: commentId, content: validatedData.content, author: authorName,
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
+            comment: { content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
-          } });
+          }) });
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);

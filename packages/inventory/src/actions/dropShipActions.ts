@@ -1,6 +1,6 @@
 'use server';
 
-import { buildInventorySalesOrderPayload, buildInventoryPurchaseOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
+import { buildInventorySalesOrderPayload, buildInventoryPurchaseOrderPayload, buildInventorySoFulfilledPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -516,14 +516,14 @@ export const confirmDropShipShipment = withAuth(
         units,
         quantity_fulfilled: quantity,
         pendingAssets,
-        so_fulfilled_event: {
+        so_fulfilled_event: buildInventorySoFulfilledPayload({
           tenant,
-          so_id: so.so_id,
-          so_number: so.so_number,
-          client_id: so.client_id ?? null,
-          fulfilled_line_count: Number(fulfilledLineCount?.c ?? 0),
-          drop_ship: true,
-        },
+          soId: so.so_id,
+          soNumber: so.so_number,
+          clientId: so.client_id ?? null,
+          fulfilledLineCount: Number(fulfilledLineCount?.c ?? 0),
+          dropShip: true,
+        }),
       };
     });
 

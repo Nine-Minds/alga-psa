@@ -1,9 +1,11 @@
 import type { IEventPublisher } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import {
   buildModelPublisherTicketAssignedPayload,
+  buildModelPublisherTicketCommentAddedPayload,
   buildModelPublisherTicketClosedPayload,
   buildModelPublisherTicketCreatedPayload,
   buildModelPublisherTicketUpdatedPayload,
@@ -57,36 +59,39 @@ export class TicketModelEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', data.tenantId, {
-      ticketId: data.ticketId,
-      commentId: data.commentId,
-      userId: data.userId,
-      ...data.metadata,
-    });
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', data.tenantId, buildModelPublisherTicketCommentAddedPayload(data));
   }
 
   async publishTicketAssigned(data: { tenantId: string; ticketId: string; userId: string; assignedByUserId?: string }): Promise<void> {
     await this.safePublishEvent('TICKET_ASSIGNED', data.tenantId, buildModelPublisherTicketAssignedPayload(data));
   }
 
-  private async safePublishEvent(eventType: string, tenantId: string, payload: any): Promise<void> {
+  private safePublishEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    tenantId: string,
+    payload: BuiltWorkflowPayload<T>
+  ): Promise<void> {
+    return this.deliver(eventType, payload, (ctx) =>
+      publishWorkflowEvent({ eventType, payload, ctx: { tenantId, ...ctx } })
+    );
+  }
+
+  private async deliver(
+    eventType: string,
+    payload: unknown,
+    publishWith: (ctx: { actor: { actorType: 'USER'; actorUserId: string } | { actorType: 'SYSTEM' } }) => Promise<void>
+  ): Promise<void> {
+    const fields = payload as { assignedByUserId?: unknown; userId?: unknown; ticketId?: unknown } | undefined;
     const actorUserId =
-      typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
-        ? payload.assignedByUserId
-        : (typeof payload?.userId === 'string' ? payload.userId : undefined);
+      typeof fields?.assignedByUserId === 'string' && fields.assignedByUserId
+        ? fields.assignedByUserId
+        : (typeof fields?.userId === 'string' ? fields.userId : undefined);
 
     const publish = () =>
-      publishWorkflowEventByName({
-        eventType: eventType,
-        payload,
-        ctx: {
-          tenantId,
-          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
-        }
-      });
+      publishWith({ actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' } });
 
     if (this.trx) {
-      registerAfterCommit(this.trx, publish, `${eventType} ticket=${payload?.ticketId ?? 'unknown'}`);
+      registerAfterCommit(this.trx, publish, `${eventType} ticket=${fields?.ticketId ?? 'unknown'}`);
       return;
     }
 

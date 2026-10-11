@@ -16,6 +16,7 @@ import {
   buildTagDefinitionCreatedPayload,
   buildTagDefinitionUpdatedPayload,
   buildTagRemovedPayload,
+  buildProjectTaskUpdatedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
@@ -223,18 +224,20 @@ async function publishEntityTagUpdateEvent(params: {
       return;
     }
 
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'PROJECT_TASK_UPDATED',
-      payload: {
-        tenantId: params.tenant,
+      payload: buildProjectTaskUpdatedPayload({
         projectId: context.projectId,
-        // Canonical PROJECT_TASK_UPDATED shape (shared with search index):
-        // taskId/timestamp, not projectTaskId/occurredAt.
         taskId: params.taggedId,
         phaseId: context.phaseId,
         userId: params.userId,
-        timestamp: params.occurredAt,
+        updatedAt: params.occurredAt,
         changes,
+      }),
+      ctx: {
+        tenantId: params.tenant,
+        occurredAt: params.occurredAt,
+        actor: { actorType: 'USER', actorUserId: params.userId },
       },
     });
     return;

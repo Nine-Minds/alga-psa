@@ -479,7 +479,7 @@ async function publishSafely(
   result: RmmAlertProcessingResult,
   assetId?: string | null
 ): Promise<void> {
-  if (!ctx.deps?.publishWorkflowEvent) return;
+  if (!ctx.deps?.publishRmmAlertEvent) return;
   try {
     // Shape matches RmmAlertEventPayloadSchema: optional fields are omitted,
     // never null.
@@ -500,7 +500,7 @@ async function publishSafely(
     if (eventType === 'RMM_ALERT_TRIGGERED') payload.triggeredAt = event.occurredAt;
     if (eventType === 'RMM_ALERT_RESOLVED') payload.resolvedAt = event.occurredAt;
 
-    await ctx.deps.publishWorkflowEvent({ eventType, tenantId: event.tenantId, payload });
+    await ctx.deps.publishRmmAlertEvent({ eventType, tenantId: event.tenantId, payload });
   } catch (error) {
     ctx.deps?.logger?.warn?.(`[rmm-alerts] Failed to publish ${eventType}: ${String(error)}`);
   }

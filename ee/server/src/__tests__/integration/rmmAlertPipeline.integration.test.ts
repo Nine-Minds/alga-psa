@@ -686,7 +686,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
   it('publishes workflow events for non-suppressed outcomes via injected deps', async () => {
     const published: Array<{ eventType: string; payload: Record<string, unknown> }> = [];
     const deps = {
-      publishWorkflowEvent: async (args: { eventType: string; tenantId: string; payload: Record<string, unknown> }) => {
+      publishRmmAlertEvent: async (args: { eventType: string; tenantId: string; payload: Record<string, unknown> }) => {
         published.push({ eventType: args.eventType, payload: args.payload });
       },
     };

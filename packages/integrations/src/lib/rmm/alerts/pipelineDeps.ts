@@ -8,7 +8,7 @@ import type { RmmAlertPipelineDeps } from '@alga-psa/shared/rmm/alerts';
  */
 export function buildRmmAlertPipelineDeps(overrides?: Partial<RmmAlertPipelineDeps>): RmmAlertPipelineDeps {
   return {
-    publishWorkflowEvent: async ({ eventType, tenantId, payload }) => {
+    publishRmmAlertEvent: async ({ eventType, tenantId, payload }) => {
       await publishNonCatalogWorkflowEvent({
         eventType,
         payload,

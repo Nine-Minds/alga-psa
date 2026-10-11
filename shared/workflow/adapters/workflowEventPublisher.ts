@@ -8,8 +8,10 @@ import type { IEventPublisher } from '@alga-psa/types';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import {
   buildInboundPublisherTicketAssignedPayload,
+  buildInboundPublisherTicketCommentAddedPayload,
   buildInboundPublisherTicketClosedPayload,
   buildInboundPublisherTicketCreatedPayload,
   buildInboundPublisherTicketUpdatedPayload,
@@ -29,11 +31,11 @@ import {
 async function publishNotificationEvent(
   eventType: string,
   payload: Record<string, any>,
+  send: (options?: PublishOptions) => Promise<void>,
   options?: PublishOptions
 ): Promise<void> {
   try {
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
-    await publishEventByName({ eventType, payload }, options);
+    await send(options);
 
     console.log(`[WorkflowEventPublisher] Published ${eventType} through event bus`, {
       tenantId: payload.tenantId,
@@ -59,9 +61,27 @@ export class WorkflowEventPublisher implements IEventPublisher {
     this.workflowExecutionId = options?.workflowExecutionId;
   }
 
-  private async publish(
+  /** Catalogued events: the payload must come from a registered builder. */
+  private async publish<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    payload: BuiltWorkflowPayload<T>,
+    options?: PublishOptions
+  ): Promise<void> {
+    await this.dispatch(
+      eventType,
+      payload as Record<string, any>,
+      async (opts) => {
+        const { publishBuiltWorkflowPayload } = await import('@alga-psa/event-bus/publishers');
+        await publishBuiltWorkflowPayload({ eventType, payload }, opts);
+      },
+      options
+    );
+  }
+
+  private async dispatch(
     eventType: string,
     payload: Record<string, any>,
+    send: (options?: PublishOptions) => Promise<void>,
     options?: PublishOptions
   ): Promise<void> {
     // workflowExecutionId stamps the originating run on the event so workflow
@@ -69,7 +89,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const effectiveOptions: PublishOptions | undefined = this.workflowExecutionId
       ? { ...options, workflow: { ...(options?.workflow ?? {}), executionId: this.workflowExecutionId } }
       : options;
-    const publish = () => publishNotificationEvent(eventType, payload, effectiveOptions);
+    const publish = () => publishNotificationEvent(eventType, payload, send, effectiveOptions);
 
     if (this.trx) {
       registerAfterCommit(
@@ -118,18 +138,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId || data.ticketId, // fallback for schema validation
-      comment: {
-        id: data.commentId,
-        content: data.metadata?.content || '',
-        author: data.metadata?.author || 'System',
-        isInternal: data.metadata?.isInternal || false
-      }
-    };
-
     // Inbound replies fan out to internal + email channels (like the other publish*
     // methods) so the assigned tech/resources are emailed. The email subscriber excludes
     // the comment author and only emails external contacts for agent-authored comments,
@@ -138,7 +146,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const options = this.suppressCommentEmail
       ? { channel: 'internal-notifications' }
       : undefined;
-    await this.publish('TICKET_COMMENT_ADDED', payload, options);
+    await this.publish('TICKET_COMMENT_ADDED', buildInboundPublisherTicketCommentAddedPayload(data), options);
   }
 
   /**

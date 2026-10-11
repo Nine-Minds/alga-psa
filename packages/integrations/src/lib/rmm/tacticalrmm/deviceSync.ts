@@ -15,7 +15,7 @@ import axios, { AxiosError } from 'axios';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { publishEventByName } from '@alga-psa/event-bus/publishers';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
@@ -68,7 +68,7 @@ export async function publishRmmSyncEvent(args: {
   };
 
   try {
-    await publishEventByName({ eventType: args.eventType, payload });
+    await publishEvent({ eventType: args.eventType, payload });
   } catch {
     // Best-effort: never fail the sync on event-publish issues.
   }

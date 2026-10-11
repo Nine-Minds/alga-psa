@@ -87,6 +87,8 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({

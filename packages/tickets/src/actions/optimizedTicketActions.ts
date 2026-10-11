@@ -39,8 +39,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
@@ -93,8 +92,8 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketResolutionSlaStageCompletionEvent, publishWorkflowTicketSlaStageEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   propagateBundleMasterStatus,
@@ -138,13 +137,6 @@ function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   }
 
   return ticketActionErrorFrom(error);
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -444,18 +436,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
     due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 /**
@@ -3171,12 +3151,7 @@ export async function updateTicketInTransaction(
       });
       if (slaCompletionEvent) {
         registerAfterCommit(trx, () =>
-          publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          }),
+          publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx),
           `${slaCompletionEvent.eventType} ticket=${id}`
         );
       }
@@ -3644,7 +3619,7 @@ export const addTicketCommentWithCache = withAuth(async (
           suppressContactNotifications,
           suppressInternalNotifications,
         })
-      }, publishEvent);
+      }, publishStoredWorkflowEvent);
 
     // Publish workflow v2 ticket message events (additive).
     if (!isScheduled) try {
@@ -3668,7 +3643,7 @@ export const addTicketCommentWithCache = withAuth(async (
       for (const ev of events) {
         registerAfterCommit(
           trx,
-          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+          () => publishTicketCommunicationWorkflowEvent(ev, workflowCtx),
           `${ev.eventType} ticket=${ticketId}`
         );
       }

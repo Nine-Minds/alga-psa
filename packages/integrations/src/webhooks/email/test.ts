@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { publishEvent } from '@alga-psa/shared/events/publisher';
+import { randomUUID } from 'crypto';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { buildInboundEmailReceivedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
 
@@ -16,28 +17,25 @@ export async function POST(request: NextRequest) {
 
     // Publish test event
     const receivedAt = new Date().toISOString();
-    const eventId = await publishEvent({
+    const eventId = randomUUID();
+    await publishWorkflowEvent({
       eventType: 'INBOUND_EMAIL_RECEIVED',
-      tenant: user.tenant,
-      payload: {
-        tenantId: user.tenant,
-        occurredAt: receivedAt,
-        ...buildInboundEmailReceivedPayload({
+      payload: buildInboundEmailReceivedPayload({
+        tenant: user.tenant,
+        providerId: 'test-provider',
+        emailData: {
+          id: messageId,
+          from: { email: 'test@example.com' },
+          to: [{ email: 'support@example.com' }],
+          subject: `Test webhook event (${provider})`,
+          body: { text: 'Synthetic INBOUND_EMAIL_RECEIVED published by the webhook test endpoint.' },
+          receivedAt,
           tenant: user.tenant,
           providerId: 'test-provider',
-          emailData: {
-            id: messageId,
-            from: { email: 'test@example.com' },
-            to: [{ email: 'support@example.com' }],
-            subject: `Test webhook event (${provider})`,
-            body: { text: 'Synthetic INBOUND_EMAIL_RECEIVED published by the webhook test endpoint.' },
-            receivedAt,
-            tenant: user.tenant,
-            providerId: 'test-provider',
-          },
-        }),
-      },
-    });
+        },
+      }),
+      ctx: { tenantId: user.tenant, occurredAt: receivedAt, actor: { actorType: 'USER', actorUserId: user.user_id } },
+    }, { eventId });
 
     return NextResponse.json({
       success: true,

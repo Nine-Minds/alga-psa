@@ -1,3 +1,4 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -91,14 +92,14 @@ describe('date trigger scan and workflow launch integration', () => {
       const cycleKey = savedContract.renewal_cycle_key ?? normalizeDateDomainKeyDate(savedContract.decision_due_date);
       const published = await emitDateDomainEventOnce(trx, tenantId, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContractId, cycleKey,
-        occursOn: normalizeDateDomainKeyDate(savedContract.decision_due_date), payload: {},
+        occursOn: normalizeDateDomainKeyDate(savedContract.decision_due_date), payload: builtWorkflowPayload('CONTRACT_RENEWAL_UPCOMING', {}),
       });
       expect(published).toBe(false);
       const savedAsset = await trx('assets').where({ tenant: tenantId, asset_id: assetId }).first('warranty_end_date');
       const warrantyDate = toTenantLocalDate(savedAsset.warranty_end_date, 'UTC');
       await expect(emitDateDomainEventOnce(trx, tenantId, {
         eventType: 'ASSET_WARRANTY_EXPIRING', entityId: assetId, cycleKey: warrantyDate,
-        occursOn: warrantyDate, payload: {},
+        occursOn: warrantyDate, payload: builtWorkflowPayload('ASSET_WARRANTY_EXPIRING', {}),
       })).resolves.toBe(false);
       expect(mocks.publish).toHaveBeenCalledTimes(3);
     } finally {

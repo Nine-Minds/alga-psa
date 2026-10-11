@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import { publishWorkflowEventByName, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
@@ -13,10 +13,10 @@ import {
   writeTicketActivity,
 } from '../../lib/ticketActivity';
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
-import { addTicketResourceCore } from './ticketResourceCore';
+import { addTicketResourceCore, type TicketAdditionalAgentEvent } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
-import { buildTicketResolutionSlaStageEnteredEvent } from './ticketSlaStageEvents';
-import { buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
+import { buildTicketResolutionSlaStageEnteredEvent, publishWorkflowTicketSlaStageEvent } from './ticketSlaStageEvents';
+import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
  * Who is creating the ticket.
@@ -177,7 +177,7 @@ export async function createTicketWithSideEffects(
 
   // Agent events are published after commit. A promotion event (resource === null)
   // is dropped: the single TICKET_ASSIGNED published below covers it.
-  const agentEvents: Awaited<ReturnType<typeof addTicketResourceCore>>['event'][] = [];
+  const agentEvents: TicketAdditionalAgentEvent[] = [];
   for (const agentId of requestedAgentIds) {
     if (existingAgentIds.has(agentId)) continue;
     const result = await addTicketResourceCore(
@@ -189,7 +189,7 @@ export async function createTicketWithSideEffects(
       ADDITIONAL_AGENT_ROLE,
       suppressionPayload,
     );
-    if (result.resource) agentEvents.push(result.event);
+    if (result.resource && result.event.eventType === 'TICKET_ADDITIONAL_AGENT_ASSIGNED') agentEvents.push(result.event);
   }
 
   for (const tagText of new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))) {
@@ -238,31 +238,25 @@ export async function createTicketWithSideEffects(
     },
   });
 
-  const publishTicketEvent = (
-    eventType: string,
-    payload: Record<string, unknown>,
-    extra: { occurredAt?: string; idempotencyKey?: string; provenanceOnly?: boolean } = {},
-  ) =>
-    publishWorkflowEventByName({
-      eventType: eventType,
-      payload: { ...payload, ...(extra.provenanceOnly ? provenance : eventExtras) },
-      ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },
-      ...(extra.idempotencyKey ? { idempotencyKey: extra.idempotencyKey } : {}),
-    });
+  const eventCtx = (extra: { occurredAt?: string } = {}) => ({
+    ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },
+  });
 
   const assignee: string | null = fullTicket.assigned_to ?? null;
   if (assignee) {
     registerAfterCommit(
       trx,
       () =>
-        publishTicketEvent(
-          'TICKET_ASSIGNED',
-          buildTicketAssignedPayload({
+        publishWorkflowEvent({
+          eventType: 'TICKET_ASSIGNED',
+          payload: buildTicketAssignedPayload({
             ticketId,
             userId: assignee,
             ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
+            extras: eventExtras,
           }),
-        ),
+          ...eventCtx(),
+        }),
       `TICKET_ASSIGNED ticket=${ticketId}`,
     );
   }
@@ -270,12 +264,25 @@ export async function createTicketWithSideEffects(
   for (const event of agentEvents) {
     registerAfterCommit(
       trx,
-      () => publishTicketEvent(event.eventType, event.payload as Record<string, unknown>),
+      () =>
+        publishWorkflowEvent({
+          eventType: event.eventType,
+          payload: buildTicketAdditionalAgentAssignedPayload({
+            ticketId,
+            primaryAgentId: event.payload.primaryAgentId as string,
+            additionalAgentId: event.payload.additionalAgentId as string,
+            assignedByUserId: event.payload.assignedByUserId as string | undefined,
+            extras: eventExtras,
+          }),
+          ...eventCtx(),
+        }),
       `${event.eventType} ticket=${ticketId}`,
     );
   }
 
   const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
+    // Suppression flags describe notifications; an SLA stage event has none, so only provenance rides along.
+    payloadExtras: provenance,
     tenantId: tenant,
     ticketId,
     itilPriorityLevel: fullTicket.itil_priority_level,
@@ -285,12 +292,10 @@ export async function createTicketWithSideEffects(
     registerAfterCommit(
       trx,
       () =>
-        publishTicketEvent(enteredSlaEvent.eventType, enteredSlaEvent.payload, {
-          occurredAt: toIso(fullTicket.entered_at),
-          idempotencyKey: enteredSlaEvent.idempotencyKey,
-          // Suppression flags describe notifications; an SLA stage event has none.
-          provenanceOnly: true,
-        }),
+        publishWorkflowTicketSlaStageEvent(
+          enteredSlaEvent,
+          eventCtx({ occurredAt: toIso(fullTicket.entered_at) }).ctx,
+        ),
       `${enteredSlaEvent.eventType} ticket=${ticketId}`,
     );
   }

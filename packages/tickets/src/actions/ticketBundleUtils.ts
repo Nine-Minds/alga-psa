@@ -16,6 +16,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   BundlePropagationConfirmationRequiredError,
@@ -410,14 +411,27 @@ export async function mirrorCommentToChild(
   return childGenerated.comment_id;
 }
 
+type BundlePublicationEventType =
+  | 'TICKET_MERGED'
+  | 'TICKET_CLOSED'
+  | 'TICKET_STATUS_CHANGED'
+  | 'TICKET_UPDATED'
+  | 'TICKET_REOPENED'
+  | 'TICKET_SLA_STAGE_ENTERED'
+  | 'TICKET_SLA_STAGE_MET'
+  | 'TICKET_SLA_STAGE_BREACHED';
+
+/** Discriminated by `eventType` so each payload keeps its `BuiltWorkflowPayload<T>` brand. */
 export type BundleAfterCommitPublication = {
-  eventType: string;
-  payload: Record<string, unknown>;
-  eventName?: string;
-  fromState?: string;
-  toState?: string;
-  idempotencyKey?: string;
-};
+  [T in BundlePublicationEventType]: {
+    eventType: T;
+    payload: BuiltWorkflowPayload<T>;
+    eventName?: string;
+    fromState?: string;
+    toState?: string;
+    idempotencyKey?: string;
+  };
+}[BundlePublicationEventType];
 
 /**
  * The child-row fields the apply_resolution consequence needs to mirror the
@@ -553,7 +567,13 @@ export async function applyClosedMasterChoice(
         enteredAt: snapshot?.entered_at ?? null,
         closedAt: occurredAt,
       });
-      if (slaCompletionEvent) {
+      if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_MET') {
+        publications.push({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      } else if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_BREACHED') {
         publications.push({
           eventType: slaCompletionEvent.eventType,
           payload: slaCompletionEvent.payload,
@@ -610,13 +630,17 @@ export async function applyClosedMasterChoice(
     }).filter((event) => event.eventType === 'TICKET_REOPENED' || event.eventType === 'TICKET_STATUS_CHANGED');
 
     for (const transitionEvent of transition) {
-      publications.push({
-        eventType: transitionEvent.eventType,
-        payload: transitionEvent.payload,
+      const meta = {
         eventName: transitionEvent.workflow?.eventName,
         fromState: transitionEvent.workflow?.fromState,
         toState: transitionEvent.workflow?.toState,
-      });
+      };
+      // Narrow per event so each payload keeps its own brand.
+      if (transitionEvent.eventType === 'TICKET_REOPENED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      } else if (transitionEvent.eventType === 'TICKET_STATUS_CHANGED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      }
     }
   }
 

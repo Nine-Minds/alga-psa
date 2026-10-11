@@ -50,7 +50,6 @@ vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEventByName: vi.fn(async () => undefined),
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
 }));
@@ -150,13 +149,13 @@ describe('Tactical event-bus publishing', () => {
 
     knexMock.fn = { now: vi.fn(() => new Date('2026-02-13T12:00:00.000Z')) };
 
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
-    vi.mocked(publishEventByName).mockClear();
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    vi.mocked(publishEvent).mockClear();
   });
 
   it('publishes sync started/completed events for org sync', async () => {
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
-    const publish = vi.mocked(publishEventByName);
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    const publish = vi.mocked(publishEvent);
 
     const { syncTacticalRmmOrganizations } = await import(
       '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
@@ -173,8 +172,8 @@ describe('Tactical event-bus publishing', () => {
   });
 
   it('publishes sync failed event when org sync throws after start', async () => {
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
-    const publish = vi.mocked(publishEventByName);
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    const publish = vi.mocked(publishEvent);
 
     const { syncTacticalRmmOrganizations } = await import(
       '@alga-psa/integrations/actions/integrations/tacticalRmmActions'

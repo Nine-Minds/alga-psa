@@ -371,6 +371,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         };
       });
 
+      // KNOWN DEFECT alga-2026-0002675: CONTRACT_LINE_CREATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'CONTRACT_LINE_CREATED',
         payload: {

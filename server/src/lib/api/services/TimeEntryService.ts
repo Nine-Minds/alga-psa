@@ -23,6 +23,7 @@ import {
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
+import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
@@ -872,15 +873,36 @@ export class TimeEntryService extends BaseService<any> {
         results.push({ success: true, entry_id: entryId });
 
         // Publish event
-        await publishEvent({
-          eventType: 'TIME_ENTRY_APPROVED',
-          payload: {
-            tenantId: context.tenant,
-            timeEntryId: entryId,
-            approvedBy: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
+        const timestamp = new Date().toISOString();
+        const workItemType = toWorkflowTimeEntryWorkItemType(entry.work_item_type);
+        if (workItemType && entry.user_id && entry.work_item_id && context.userId) {
+          await publishWorkflowEvent({
+            eventType: 'TIME_ENTRY_APPROVED',
+            payload: buildTimeEntryApprovedPayload({
+              timeEntryId: entryId,
+              userId: entry.user_id,
+              workItemId: entry.work_item_id,
+              workItemType,
+              approvedBy: context.userId,
+              timestamp,
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          });
+        } else {
+          // Ad-hoc / interaction / non-billable time has no workflow representation.
+          await publishEvent({
+            eventType: 'TIME_ENTRY_UPDATED',
+            payload: {
+              tenantId: context.tenant,
+              timeEntryId: entryId,
+              approvedBy: context.userId,
+              timestamp,
+            },
+          });
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         results.push({ success: false, error: errorMessage, entry_id: entryId });

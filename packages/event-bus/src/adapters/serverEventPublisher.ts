@@ -5,9 +5,11 @@
 
 import type { IEventPublisher } from '@alga-psa/types';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishWorkflowEventByName } from '../publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { publishWorkflowEvent } from '../publishers';
 import {
   buildServerPublisherTicketAssignedPayload,
+  buildServerPublisherTicketCommentAddedPayload,
   buildServerPublisherTicketClosedPayload,
   buildServerPublisherTicketCreatedPayload,
   buildServerPublisherTicketUpdatedPayload,
@@ -51,13 +53,7 @@ export class ServerEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    // Legacy comment payloads are modeled as TICKET_COMMENT_ADDED in the event bus schema.
-    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, data.userId, {
-      ticketId: data.ticketId,
-      comment: { id: data.commentId },
-      userId: data.userId,
-      ...data.metadata
-    });
+    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, data.userId, buildServerPublisherTicketCommentAddedPayload(data));
   }
 
   async publishTicketAssigned(data: {
@@ -69,22 +65,30 @@ export class ServerEventPublisher implements IEventPublisher {
     await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, data.assignedByUserId ?? data.userId, buildServerPublisherTicketAssignedPayload(data, new Date().toISOString()));
   }
 
-  private async safePublishWorkflowEvent(
-    eventType: string,
+  private ctxFor(tenantId: string, actorUserId: string | undefined) {
+    return {
+      tenantId,
+      actor: actorUserId
+        ? ({ actorType: 'USER', actorUserId } as const)
+        : ({ actorType: 'SYSTEM' } as const),
+    };
+  }
+
+  private async safePublishWorkflowEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
     tenantId: string,
     actorUserId: string | undefined,
-    payload: Record<string, unknown>
+    payload: BuiltWorkflowPayload<T> & { ticketId?: unknown }
   ): Promise<void> {
+    await this.runAfterCommit(eventType, payload.ticketId, async () => {
+      await publishWorkflowEvent({ eventType, payload, ctx: this.ctxFor(tenantId, actorUserId) });
+    });
+  }
+
+  private async runAfterCommit(eventType: string, ticketId: unknown, doPublish: () => Promise<void>): Promise<void> {
     const publish = async () => {
       try {
-        await publishWorkflowEventByName({
-          eventType: eventType,
-          payload,
-          ctx: {
-            tenantId,
-            actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
-          }
-        });
+        await doPublish();
       } catch (error) {
         console.error(`Failed to publish ${eventType} event:`, error);
         // Don't throw - event publishing failure shouldn't break ticket operations
@@ -92,11 +96,7 @@ export class ServerEventPublisher implements IEventPublisher {
     };
 
     if (this.trx) {
-      registerAfterCommit(
-        this.trx,
-        publish,
-        `${eventType} ticket=${String(payload.ticketId ?? 'unknown')}`
-      );
+      registerAfterCommit(this.trx, publish, `${eventType} ticket=${String(ticketId ?? 'unknown')}`);
       return;
     }
 

@@ -1,5 +1,7 @@
 export * from '@alga-psa/shared/workflow/streams';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/appointmentEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/appointmentRequestEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/scheduleEntryEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/assetEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
@@ -23,12 +25,14 @@ export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integration
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/integrationWebhookEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/projectBillingEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/scheduleBlockEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/surveyEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/tagEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/technicianDispatchEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/timeEntryEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/redisStreamClient';
 export {
   buildNotificationDeliveredPayload,

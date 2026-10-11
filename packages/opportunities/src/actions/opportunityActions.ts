@@ -10,7 +10,7 @@ import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema
 import { OpportunityModel } from '../models/opportunityModel';
 import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngine';
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
-import { buildOpportunityCreatedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
+import { buildOpportunityCreatedPayload, buildOpportunityStageChangedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
 import { completeOpportunityNextAction, removeOpportunityStepScheduleEntries } from '../lib/opportunitySteps';
 import type { OpportunityListResult } from '../models/opportunityModel';
@@ -155,9 +155,9 @@ async function closeOpportunity(trx: Knex.Transaction, tenant: string, opportuni
   const changedAt = new Date().toISOString();
   const updated = await OpportunityModel.update(trx, tenant, opportunityId, { ...patch, status, stage: status, next_action: null, next_action_due: null });
   if (current.stage !== status) {
-    publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STAGE_CHANGED', {
+    publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STAGE_CHANGED', buildOpportunityStageChangedPayload({
       opportunityId, clientId: current.client_id, previousStage: current.stage, newStage: status, changedAt,
-    }, `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
+    }), `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
   }
   const payload = buildOpportunityStatusChangedPayload({ opportunityId, clientId: current.client_id, previousStatus: current.status, newStatus: status, changedAt });
   publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STATUS_CHANGED', payload, `opportunity_status_changed:${opportunityId}:${status}:${changedAt}`);

@@ -1292,6 +1292,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
+	      // KNOWN DEFECT alga-2026-0002675: event type is not registered; publish is rejected by the transport (see ticket)
 	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_PAYMENT_RECORDED',
 	        payload: {
@@ -1466,6 +1467,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
 
         // Publish event
+        // KNOWN DEFECT alga-2026-0002675: event type is not registered; publish is rejected by the transport (see ticket)
         deferredEvents.push(() => publishUnregisteredEventType({
           eventType: 'INVOICE_CREDIT_APPLIED',
           payload: {
@@ -1634,6 +1636,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      }
 
 	      // Publish event
+	      // KNOWN DEFECT alga-2026-0002675: event type is not registered; publish is rejected by the transport (see ticket)
 	      deferredEvents.push(() => publishUnregisteredEventType({
 	        eventType: 'INVOICE_REFUND_RECORDED',
 	        payload: {
@@ -1798,6 +1801,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Publish bulk event
+      // KNOWN DEFECT alga-2026-0002675: event type is not registered; publish is rejected by the transport (see ticket)
       deferredEvents.push(() => publishUnregisteredEventType({
         eventType: 'INVOICE_BULK_STATUS_UPDATE',
         payload: {

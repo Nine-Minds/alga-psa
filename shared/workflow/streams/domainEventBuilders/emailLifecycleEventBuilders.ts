@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 /**
  * Builders for the inbound-receipt and outbound-send email lifecycle events.
  * Replaces the hand-built literals in BaseEmailService (OUTBOUND_EMAIL_*) and the inbound
@@ -20,14 +22,14 @@ export function buildInboundEmailReceivedPayload(params: {
   emailData: Record<string, unknown>;
   /** Legacy top-level `tenant` field still read by older subscribers; kept alongside `tenantId`. */
   tenant?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'INBOUND_EMAIL_RECEIVED'> {
   requireNonEmpty(params.providerId, 'providerId');
   requireNonEmpty(params.emailData, 'emailData');
-  return {
+  return builtWorkflowPayload('INBOUND_EMAIL_RECEIVED', {
     ...(params.tenant ? { tenant: params.tenant } : {}),
     providerId: params.providerId,
     emailData: params.emailData,
-  };
+  });
 }
 
 export function buildOutboundEmailQueuedPayload(params: {
@@ -40,11 +42,11 @@ export function buildOutboundEmailQueuedPayload(params: {
   subject?: string;
   queuedAt?: string;
   provider: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'OUTBOUND_EMAIL_QUEUED'> {
   requireNonEmpty(params.messageId, 'messageId');
   requireNonEmpty(params.from, 'from');
   requireNonEmpty(params.provider, 'provider');
-  return {
+  return builtWorkflowPayload('OUTBOUND_EMAIL_QUEUED', {
     messageId: params.messageId,
     ...optionalThreadAndTicket(params),
     from: params.from,
@@ -53,7 +55,7 @@ export function buildOutboundEmailQueuedPayload(params: {
     subject: params.subject,
     ...(params.queuedAt ? { queuedAt: params.queuedAt } : {}),
     provider: params.provider,
-  };
+  });
 }
 
 export function buildOutboundEmailSentPayload(params: {
@@ -63,17 +65,17 @@ export function buildOutboundEmailSentPayload(params: {
   ticketId?: string;
   sentAt?: string;
   provider: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'OUTBOUND_EMAIL_SENT'> {
   requireNonEmpty(params.messageId, 'messageId');
   requireNonEmpty(params.providerMessageId, 'providerMessageId');
   requireNonEmpty(params.provider, 'provider');
-  return {
+  return builtWorkflowPayload('OUTBOUND_EMAIL_SENT', {
     messageId: params.messageId,
     providerMessageId: params.providerMessageId,
     ...optionalThreadAndTicket(params),
     ...(params.sentAt ? { sentAt: params.sentAt } : {}),
     provider: params.provider,
-  };
+  });
 }
 
 export function buildOutboundEmailFailedPayload(params: {
@@ -85,11 +87,11 @@ export function buildOutboundEmailFailedPayload(params: {
   errorCode?: string;
   errorMessage: string;
   retryable?: boolean;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'OUTBOUND_EMAIL_FAILED'> {
   requireNonEmpty(params.messageId, 'messageId');
   requireNonEmpty(params.provider, 'provider');
   requireNonEmpty(params.errorMessage, 'errorMessage');
-  return {
+  return builtWorkflowPayload('OUTBOUND_EMAIL_FAILED', {
     messageId: params.messageId,
     ...optionalThreadAndTicket(params),
     ...(params.failedAt ? { failedAt: params.failedAt } : {}),
@@ -97,5 +99,5 @@ export function buildOutboundEmailFailedPayload(params: {
     ...(params.errorCode ? { errorCode: params.errorCode } : {}),
     errorMessage: params.errorMessage,
     ...(typeof params.retryable === 'boolean' ? { retryable: params.retryable } : {}),
-  };
+  });
 }

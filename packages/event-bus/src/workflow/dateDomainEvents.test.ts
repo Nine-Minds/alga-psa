@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), insert: vi.fn(), delete: vi.fn(), insertRow: undefined as Record<string, unknown> | undefined }));
-vi.mock('../publishers', () => ({ publishWorkflowEventByName: mocks.publish }));
+vi.mock('../publishers', () => ({ publishWorkflowEvent: mocks.publish }));
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: () => ({
     insert: (row: Record<string, unknown>) => {
@@ -14,6 +14,7 @@ vi.mock('@alga-psa/db', () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { buildDateDomainEventDedupeKey, emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate } from './dateDomainEvents';
 
 describe('date domain event helpers', () => {
@@ -39,7 +40,7 @@ describe('date domain event helpers', () => {
   it('publishes only when it inserts the dedupe key', async () => {
     mocks.insert.mockResolvedValueOnce([{ dedupe_key: 'inserted' }]).mockResolvedValueOnce([]);
     mocks.publish.mockResolvedValue(undefined);
-    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING', entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: {} };
+    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING' as const, entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: builtWorkflowPayload('CLIENT_ANNIVERSARY_UPCOMING', {}) };
     await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).resolves.toBe(true);
     await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).resolves.toBe(false);
     expect(mocks.publish).toHaveBeenCalledOnce();
@@ -49,7 +50,7 @@ describe('date domain event helpers', () => {
   it('uses a stable event id for the same event key', async () => {
     mocks.insert.mockResolvedValue([{ dedupe_key: 'inserted' }]);
     mocks.publish.mockResolvedValue(undefined);
-    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING', entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: {} };
+    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING' as const, entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: builtWorkflowPayload('CLIENT_ANNIVERSARY_UPCOMING', {}) };
     await emitDateDomainEventOnce({} as never, 'tenant-1', params);
     await emitDateDomainEventOnce({} as never, 'tenant-1', params);
     expect(mocks.publish.mock.calls[0][1]).toEqual(mocks.publish.mock.calls[1][1]);
@@ -59,7 +60,7 @@ describe('date domain event helpers', () => {
     mocks.insert.mockResolvedValue([{ dedupe_key: 'inserted' }]);
     mocks.delete.mockResolvedValue(1);
     mocks.publish.mockRejectedValueOnce(new Error('publish unavailable'));
-    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING', entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: {} };
+    const params = { eventType: 'CLIENT_ANNIVERSARY_UPCOMING' as const, entityId: 'client-1', cycleKey: '2026-09-22', occursOn: '2026-09-22', payload: builtWorkflowPayload('CLIENT_ANNIVERSARY_UPCOMING', {}) };
     await expect(emitDateDomainEventOnce({} as never, 'tenant-1', params)).rejects.toThrow('publish unavailable');
     expect(mocks.delete).toHaveBeenCalledOnce();
   });

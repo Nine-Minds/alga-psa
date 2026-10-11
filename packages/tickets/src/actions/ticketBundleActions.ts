@@ -7,7 +7,8 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
-import { publishWorkflowEventByName, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
+import { publishBundleAfterCommitPublication } from '../lib/ticketBundlePublication';
+import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -166,6 +167,23 @@ function bundleAttachFailureToActionError(
   }
 }
 
+function publishBundlePublication(
+  publication: BundleAfterCommitPublication,
+  workflowCtx: WorkflowEventPublishContext
+): Promise<void> {
+  return publishBundleAfterCommitPublication(publication, (event) =>
+    publishWorkflowEvent({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx: workflowCtx,
+      eventName: event.eventName,
+      fromState: event.fromState,
+      toState: event.toState,
+      idempotencyKey: event.idempotencyKey,
+    })
+  );
+}
+
 function registerBundlePublications(
   trx: Knex.Transaction,
   workflowCtx: WorkflowEventPublishContext,
@@ -174,16 +192,7 @@ function registerBundlePublications(
   for (const publication of publications) {
     registerAfterCommit(
       trx,
-      () =>
-        publishWorkflowEventByName({
-          eventType: publication.eventType,
-          payload: publication.payload,
-          ctx: workflowCtx,
-          eventName: publication.eventName,
-          fromState: publication.fromState,
-          toState: publication.toState,
-          idempotencyKey: publication.idempotencyKey,
-        }),
+      () => publishBundlePublication(publication, workflowCtx),
       `${publication.eventType} bundle-attach`
     );
   }
@@ -498,7 +507,7 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     return { oldMasterTicketId: data.oldMasterTicketId, newMasterTicketId: data.newMasterTicketId };
   });
 
-  await publishWorkflowEventByName({
+  await publishWorkflowEvent({
     eventType: 'TICKET_MERGED',
     ctx: workflowCtx,
     eventName: 'Ticket Merged',
@@ -617,7 +626,7 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
     return { masterTicketId, childTicketId: data.childTicketId, remainingChildren: remaining };
   });
 
-  await publishWorkflowEventByName({
+  await publishWorkflowEvent({
     eventType: 'TICKET_SPLIT',
     ctx: workflowCtx,
     eventName: 'Ticket Split',
@@ -789,7 +798,7 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
   });
 
   if (result.childTicketIds.length > 0) {
-    await publishWorkflowEventByName({
+    await publishWorkflowEvent({
       eventType: 'TICKET_SPLIT',
       ctx: workflowCtx,
       eventName: 'Ticket Split',

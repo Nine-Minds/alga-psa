@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { publishWorkflowEventByName } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
-import { buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
+import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -27,13 +28,23 @@ export class TicketResourceError extends Error {
  * the envelope (tenantId, occurredAt, actor) is added at publish time from
  * `tenant` / `actorUserId`.
  */
-export type TicketResourceEvent = {
-  eventType: 'TICKET_ASSIGNED' | 'TICKET_ADDITIONAL_AGENT_ASSIGNED';
-  payload: Record<string, unknown>;
-  tenant: string;
-  /** Null for system-initiated work. */
-  actorUserId: string | null;
-};
+export type TicketResourceEvent =
+  | {
+      eventType: 'TICKET_ASSIGNED';
+      payload: Record<string, unknown> & BuiltWorkflowPayload<'TICKET_ASSIGNED'>;
+      tenant: string;
+      /** Null for system-initiated work. */
+      actorUserId: string | null;
+    }
+  | {
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED';
+      payload: Record<string, unknown> & BuiltWorkflowPayload<'TICKET_ADDITIONAL_AGENT_ASSIGNED'>;
+      tenant: string;
+      /** Null for system-initiated work. */
+      actorUserId: string | null;
+    };
+
+export type TicketAdditionalAgentEvent = Extract<TicketResourceEvent, { eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED' }>;
 
 export interface AddTicketResourceResult {
   /** Null when the ticket had no primary assignee and the user was promoted. */
@@ -48,14 +59,15 @@ export type TicketResourceNotificationSuppression = {
 
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
-  await publishWorkflowEventByName({
-    eventType: event.eventType,
-    payload: event.payload,
-    ctx: {
-      tenantId: event.tenant,
-      actor: event.actorUserId ? { actorType: 'USER', actorUserId: event.actorUserId } : { actorType: 'SYSTEM' },
-    },
-  });
+  const ctx = {
+    tenantId: event.tenant,
+    actor: event.actorUserId ? ({ actorType: 'USER', actorUserId: event.actorUserId } as const) : ({ actorType: 'SYSTEM' } as const),
+  };
+  if (event.eventType === 'TICKET_ASSIGNED') {
+    await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+    return;
+  }
+  await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
 }
 
 /**
@@ -147,13 +159,13 @@ export async function addTicketResourceCore(
     resource,
     event: {
       eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
-      payload: {
-        ticketId: ticketId,
+      payload: buildTicketAdditionalAgentAssignedPayload({
+        ticketId,
         primaryAgentId: ticket.assigned_to,
         additionalAgentId: additionalUserId,
-        ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
+        assignedByUserId: actorUserId,
         ...notificationSuppression,
-      },
+      }),
       tenant,
       actorUserId,
     }

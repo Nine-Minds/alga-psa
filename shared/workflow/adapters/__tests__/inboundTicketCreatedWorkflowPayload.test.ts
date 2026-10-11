@@ -23,7 +23,8 @@ const registerAfterCommitMock = vi.fn();
 const insertOutboxRowMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEventByName: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: (...args: any[]) => publishEventMock(...args),
+  publishEvent: (...args: any[]) => publishEventMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({

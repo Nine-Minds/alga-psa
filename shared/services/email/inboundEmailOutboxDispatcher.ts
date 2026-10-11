@@ -97,17 +97,14 @@ export async function processInboundOutboxJob(
   let published = false;
   let publishError: string | null = null;
   try {
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
+    const publishers = await import('@alga-psa/event-bus/publishers');
     const publishOptions = publishOptionsFor(row);
     const options: PublishOptions = {
       eventId: row.outbox_id,
       strict: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await publishEventByName(
-      { eventType: String(row.event_type), payload: outboxPayload(row.payload) },
-      options
-    );
+    await replayOutboxEvent(publishers, String(row.event_type), outboxPayload(row.payload), options);
     published = true;
   } catch (error: any) {
     publishError = error?.message || String(error);
@@ -183,7 +180,7 @@ export async function processInboundOutboxRepublishJob(
   }
 
   try {
-    const { publishEventByName } = await import('@alga-psa/event-bus/publishers');
+    const publishers = await import('@alga-psa/event-bus/publishers');
     const publishOptions = publishOptionsFor(row);
     const options: PublishOptions = {
       eventId: row.outbox_id,
@@ -191,10 +188,7 @@ export async function processInboundOutboxRepublishJob(
       force: true,
     };
     if (publishOptions?.channel) options.channel = String(publishOptions.channel);
-    await publishEventByName(
-      { eventType: String(row.event_type), payload: outboxPayload(row.payload) },
-      options
-    );
+    await replayOutboxEvent(publishers, String(row.event_type), outboxPayload(row.payload), options);
     console.log('[InboundEmailOutboxDispatcher] recovery republished outbox event', {
       event: 'inbound_email_outbox_republished',
       tenantId: row.tenant,
@@ -214,6 +208,25 @@ export async function processInboundOutboxRepublishJob(
     });
     return { disposition: 'retry', error: `outbox_republish_failed:${message}` };
   }
+}
+
+/**
+ * Replays a stored outbox row. The payload was produced by a registered builder when the row was
+ * written; catalogued types are re-validated by `reviveStoredWorkflowPayload` (the single runtime
+ * seam) and re-published without re-stamping the envelope, the rest go out by name.
+ */
+async function replayOutboxEvent(
+  publishers: typeof import('@alga-psa/event-bus/publishers'),
+  eventType: string,
+  payload: Record<string, unknown>,
+  options: PublishOptions
+): Promise<void> {
+  const revived = publishers.reviveStoredWorkflowPayload(eventType, payload);
+  if (revived) {
+    await publishers.publishBuiltWorkflowPayload(revived, options);
+    return;
+  }
+  await publishers.publishNonCatalogEventByName({ eventType, payload }, options);
 }
 
 function boundedBackoffMs(attemptCount: number): number {

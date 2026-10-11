@@ -44,8 +44,7 @@ import {
 } from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -84,7 +83,7 @@ import {
   buildTicketResponseStateChangedPayload,
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
   copyChecklistFromSource,
@@ -105,6 +104,7 @@ import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
+  publishWorkflowTicketSlaStageEvent,
 } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   parseTicketStatusFilterValue,
@@ -150,13 +150,6 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 
 function ticketBulkFailuresForAll(ticketIds: string[], message: string): Array<{ ticketId: string; message: string }> {
   return ticketIds.map((ticketId) => ({ ticketId, message }));
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 export type TicketNotificationSuppressionOptions = Pick<
@@ -387,18 +380,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
     due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 // Helper function to publish response state change events
@@ -1422,12 +1403,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           closedAt: occurredAt,
         });
         if (slaCompletionEvent) {
-          await publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          });
+          await publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx);
         }
 
         // Track ticket resolved analytics
@@ -1885,7 +1861,7 @@ export const addTicketComment = withAuth(async (
             isInternal
           }
         })
-      }, publishEvent);
+      }, publishStoredWorkflowEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {
@@ -1910,7 +1886,7 @@ export const addTicketComment = withAuth(async (
         });
 
         for (const ev of events) {
-          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+          await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
         }
       } catch (eventError) {
         console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);

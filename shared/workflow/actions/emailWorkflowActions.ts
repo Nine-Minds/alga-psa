@@ -783,9 +783,10 @@ export async function createContactForInboundSender(
 ): Promise<{ contactId: string; created: boolean } | null> {
   const normalizedEmail = normalizeEmailAddress(input.email);
   if (!normalizedEmail) return null;
+  const contactCreatedParams = (contact: any): Parameters<typeof buildContactCreatedPayload>[0] => ({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
   const { withAdminTransaction } = await import('@alga-psa/db');
   let createdContact: any = null;
-  let eventPayload: Record<string, unknown> | null = null;
+  let eventPayload: ReturnType<typeof buildContactCreatedPayload> | null = null;
   try {
     const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
       const run = async (savepoint: Knex.Transaction) => {
@@ -809,7 +810,7 @@ export async function createContactForInboundSender(
         }
         const contact = await ContactModel.createContact({ full_name: input.name?.trim() || normalizedEmail, email: normalizedEmail, client_id: input.clientId }, tenant, savepoint);
         createdContact = contact;
-        eventPayload = buildContactCreatedPayload({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
+        eventPayload = buildContactCreatedPayload(contactCreatedParams(contact));
         if (executionOptions?.existingConnection) {
           if (!executionOptions.contactEventPublisher || typeof (executionOptions.contactEventPublisher as any).publishContactCreated !== 'function') {
             throw new Error('CONTACT_CREATED outbox publisher is required for durable inbound contact creation');
@@ -835,7 +836,7 @@ export async function createContactForInboundSender(
     }, executionOptions?.existingConnection as any);
     if (result?.created && eventPayload && !executionOptions?.existingConnection) {
       try {
-        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: eventPayload, ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
+        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: buildContactCreatedPayload(contactCreatedParams(createdContact)), ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
       } catch (eventError) {
         console.warn('createContactForInboundSender: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: createdContact?.contact_name_id, error: eventError instanceof Error ? eventError.message : String(eventError) });
       }
@@ -1763,7 +1764,7 @@ export async function createCommentFromEmail(
 
     // Building/validating the event is best-effort: a reply comment is never
     // rolled back or orphaned by an event we cannot construct or validate.
-    let payload: Record<string, unknown> | null = null;
+    let payload: ReturnType<typeof buildInboundEmailReplyReceivedPayload> | null = null;
     try {
       payload = buildInboundEmailReplyReceivedPayload({
         tenantId: tenant,

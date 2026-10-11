@@ -23,7 +23,7 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildPortalTicketReopenedPayload,
   buildTicketClosedPayload,
@@ -709,7 +709,7 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         })
-      }, publishEvent);
+      }, publishStoredWorkflowEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,

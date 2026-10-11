@@ -401,6 +401,7 @@ export class TeamService extends BaseService<ITeam> {
         }
   
         // Publish team created event
+        // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
         await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -479,6 +480,7 @@ export class TeamService extends BaseService<ITeam> {
         .update(updateData);
 
       // Publish team updated event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -520,6 +522,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish team deleted event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -586,6 +589,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish member added event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -631,6 +635,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish member removed event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -699,6 +704,7 @@ export class TeamService extends BaseService<ITeam> {
       await tenantDb(trx, context.tenant).table('team_members').insert(memberInserts);
 
       // Publish bulk members added event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -737,6 +743,7 @@ export class TeamService extends BaseService<ITeam> {
         .del();
 
       // Publish bulk members removed event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -795,6 +802,7 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Publish manager assigned event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -910,6 +918,7 @@ export class TeamService extends BaseService<ITeam> {
         });
 
       // Publish hierarchy created event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -928,6 +937,7 @@ export class TeamService extends BaseService<ITeam> {
       .del();
 
     // Publish hierarchy removed event
+    // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
     await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -974,6 +984,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish permission granted event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -1004,6 +1015,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
     // Publish permission revoked event
+    // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
     await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
@@ -1086,6 +1098,7 @@ export class TeamService extends BaseService<ITeam> {
       });
 
       // Publish assignment event
+      // KNOWN DEFECT alga-2026-0002675: PLACEHOLDER is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
       await publishUnregisteredEventType({
         eventType: 'PLACEHOLDER',
         payload: {}
