@@ -173,7 +173,9 @@ async function save() {
   ];
 }
 
-describe('QuickAddInteraction start/end pickers inside the real Dialog', () => {
+// Each case drives the real Dialog and DateTimePicker through full pointer sequences; on a
+// loaded CI runner (Nx runs projects in parallel) a case takes ~4.5-5s, over vitest's 5s default.
+describe('QuickAddInteraction start/end pickers inside the real Dialog', { timeout: 30_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ toFake: ['Date'], now: NOW });
