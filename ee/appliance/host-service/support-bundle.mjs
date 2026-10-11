@@ -159,6 +159,9 @@ export function generateSupportBundle(options = {}) {
   captureCommand(path.join(tempDir, 'cluster', 'statefulsets.txt'), `${k} get statefulsets -A`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'jobs.txt'), `${k} get jobs -A`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'pvcs.txt'), `${k} get pvc -A`, runCommand);
+  // email-service inbound health summary and metrics via the API-server service proxy.
+  captureCommand(path.join(tempDir, 'cluster', 'email-service-status.json'), `${k} get --raw /api/v1/namespaces/msp/services/http:email-service:http/proxy/status`, runCommand);
+  captureCommand(path.join(tempDir, 'cluster', 'email-service-metrics.txt'), `${k} get --raw /api/v1/namespaces/msp/services/http:email-service:http/proxy/metrics`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'events.txt'), `${k} get events -A --sort-by=.lastTimestamp`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'flux-sources.txt'), `${k} -n flux-system get gitrepositories.source.toolkit.fluxcd.io -o yaml`, runCommand);
   captureCommand(path.join(tempDir, 'cluster', 'flux-kustomizations.txt'), `${k} -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o yaml`, runCommand);

@@ -51,6 +51,8 @@
     "./extensions/types.js": "./dist/extensions/types.js",
     "./lib/quoteTerms": "./dist/lib/quoteTerms.js",
     "./lib/quoteTerms.js": "./dist/lib/quoteTerms.js",
+    "./lib/ticketStatusClock": "./dist/lib/ticketStatusClock.js",
+    "./lib/ticketStatusClock.js": "./dist/lib/ticketStatusClock.js",
     "./lib/ticketActivity": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketActivity/index.js": "./dist/lib/ticketActivity/index.js",
     "./lib/ticketChecklists": "./dist/lib/ticketChecklists/index.js",

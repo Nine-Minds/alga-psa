@@ -456,6 +456,14 @@ describe('ticket assignment and additional agents', () => {
       });
       // The core hands the event back so the caller can emit it post-commit.
       expect(publishEventMock).not.toHaveBeenCalled();
+
+      // Work-trail audit row: acting user is the actor, written in the same transaction.
+      const audit = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId, event_type: 'TICKET_ASSIGNED' })
+        .select('*');
+      expect(audit).toHaveLength(1);
+      expect(audit[0]).toMatchObject({ actor_type: 'user', actor_user_id: actorId });
+      expect(audit[0].details).toMatchObject({ additional_agent_id: userB });
     });
 
     it('promotes the user to primary when the ticket is unassigned', async () => {
@@ -506,11 +514,18 @@ describe('ticket assignment and additional agents', () => {
     it('removes an assignment row and reports unknown ones', async () => {
       const assignmentId = await addResource(tenantId, ticketId, userA, userB);
 
-      await withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, assignmentId));
+      await withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, assignmentId));
       expect(await resourcesFor(ticketId)).toHaveLength(0);
 
+      const audit = await scoped('ticket_audit_logs')
+        .where({ ticket_id: ticketId, event_type: 'TICKET_UNASSIGNED' })
+        .select('*');
+      expect(audit).toHaveLength(1);
+      expect(audit[0]).toMatchObject({ actor_type: 'user', actor_user_id: actorId });
+      expect(audit[0].details).toMatchObject({ additional_agent_id: userB });
+
       await expect(
-        withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, uuidv4()))
+        withTransaction(db, (trx) => removeTicketResourceCore(trx, tenantId, actorId, uuidv4()))
       ).rejects.toMatchObject({ kind: 'not_found' });
     });
   });

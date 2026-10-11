@@ -6,7 +6,7 @@ import { defineDateDomainEvent } from '../defineDateDomainEvent';
 import { buildAssetWarrantyExpiringPayload } from '@alga-psa/workflow-streams';
 
 export const assetWarrantyEndSource: DateTriggerSource = {
-  id: 'asset.warranty_end', payloadSchemaRef: 'payload.AssetWarrantyEnd.v1',
+  id: 'asset.warranty_end',
   domainEvent: defineDateDomainEvent({ eventType: 'ASSET_WARRANTY_EXPIRING', windowDays: 30, buildPayload: (occurrence, daysUntil) => buildAssetWarrantyExpiringPayload({ assetId: occurrence.entityId, clientId: occurrence.clientId || undefined, expiresAt: `${occurrence.occursOn}T00:00:00.000Z`, daysUntilExpiry: daysUntil }) }),
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string) {
     const rows = await tenantDb(knex, tenant).table('assets as a')

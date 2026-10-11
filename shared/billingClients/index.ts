@@ -27,6 +27,7 @@ export * from './postDropRecurringObligationIdentity';
 export * from './bucketUsageService';
 export * from './hourBlockService';
 export * from './clientCadenceScheduleRegeneration';
+export * from './liveClientCadenceRecurringLine';
 export * from './applyClientCadenceChange';
 export * from './clipRecurringCandidatesToObligationBounds';
 export * from './calendarMonthEndClosePolicy';

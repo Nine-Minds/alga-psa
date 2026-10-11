@@ -157,12 +157,11 @@ describe('tickets modal route infrastructure', () => {
       // Full success refreshes exactly once, from inside the shared helper. An extra
       // refreshList() here would fire a second router.refresh() that races the close the
       // helper hands to the empty-selection effect.
-      const branchSplit = routeClient.indexOf('\n      } else {');
-      expect(branchSplit).toBeGreaterThan(0);
-      const partialFailureBranch = routeClient.slice(
-        routeClient.indexOf('if (result.failed.length > 0) {'),
-        branchSplit,
-      );
+      const partialFailureStart = routeClient.indexOf('if (result.failed.length > 0) {');
+      expect(partialFailureStart).toBeGreaterThan(0);
+      const branchSplit = routeClient.indexOf('\n      } else {', partialFailureStart);
+      expect(branchSplit).toBeGreaterThan(partialFailureStart);
+      const partialFailureBranch = routeClient.slice(partialFailureStart, branchSplit);
       const fullSuccessBranch = routeClient.slice(branchSplit);
 
       expect(partialFailureBranch).toContain('keepFailedSelection(result.failed)');

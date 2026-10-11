@@ -287,7 +287,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       {
         // A client with no contract lines has no materialized recurring service
         // periods, so generation stops before the billing engine's own guard.
-        messagePattern: /Recurring service periods were not materialized for this client billing schedule window\./
+        messagePattern: /^Service periods haven't been generated for this billing window yet\./
       }
     );
 

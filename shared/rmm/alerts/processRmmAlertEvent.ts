@@ -15,6 +15,7 @@ import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
@@ -372,9 +373,10 @@ async function processReset(
           const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
             const transitionBefore = await captureTicketTransitionSnapshot(trx, event.tenantId, existing.ticket_id);
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, ...ticketUpdateStamp(trx, null) });
+              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), ...ticketUpdateStamp(trx, null) });
             await publishTicketTransitionsAfterCommit(trx, {
               tenant: event.tenantId,
               before: transitionBefore,

@@ -4,6 +4,13 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
 import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
+import { writeTicketActivity } from '../../lib/ticketActivity/writeTicketActivity';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+} from '../../lib/ticketActivity/types';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -11,6 +18,35 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * Audit row for an additional-agent change. Written in the caller's transaction so it rolls
+ * back with the mutation. The acting user is the actor (this feeds the per-user work trail);
+ * system-initiated work (null actor) is recorded as a system actor.
+ */
+async function writeAdditionalAgentActivity(
+  trx: Knex.Transaction,
+  tenant: string,
+  actorUserId: string | null,
+  ticketId: string,
+  eventType: string,
+  additionalUserId: string,
+  details: Record<string, unknown>,
+  source: string,
+): Promise<void> {
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId,
+    eventType,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: ticketId,
+    actor: actorUserId
+      ? { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: actorUserId }
+      : { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
+    source: actorUserId ? source : TICKET_ACTIVITY_SOURCE.SYSTEM,
+    details: { additional_agent_id: additionalUserId, ...details },
+  });
 }
 
 export class TicketResourceError extends Error {
@@ -90,6 +126,7 @@ export async function addTicketResourceCore(
   additionalUserId: string,
   role: string,
   notificationSuppression: TicketResourceNotificationSuppression = {},
+  source: string = TICKET_ACTIVITY_SOURCE.UI,
 ): Promise<AddTicketResourceResult> {
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
@@ -113,6 +150,11 @@ export async function addTicketResourceCore(
     if (!updatedTicket) {
       throw new Error(`Primary assignment update for ticket ${ticketId} completed without returning the updated ticket.`);
     }
+
+    await writeAdditionalAgentActivity(
+      trx, tenant, actorUserId, ticketId, TICKET_ACTIVITY_EVENT.ASSIGNED, additionalUserId,
+      { role, promoted_to_primary: true }, source,
+    );
 
     return {
       resource: null,
@@ -155,6 +197,11 @@ export async function addTicketResourceCore(
     })
     .returning('*');
 
+  await writeAdditionalAgentActivity(
+    trx, tenant, actorUserId, ticketId, TICKET_ACTIVITY_EVENT.ASSIGNED, additionalUserId,
+    { role }, source,
+  );
+
   return {
     resource,
     event: {
@@ -175,7 +222,9 @@ export async function addTicketResourceCore(
 export async function removeTicketResourceCore(
   trx: Knex.Transaction,
   tenant: string,
-  assignmentId: string
+  actorUserId: string | null,
+  assignmentId: string,
+  source: string = TICKET_ACTIVITY_SOURCE.UI,
 ): Promise<void> {
   const resource = await tenantScopedTable(trx, 'ticket_resources', tenant)
     .where({ assignment_id: assignmentId })
@@ -188,6 +237,11 @@ export async function removeTicketResourceCore(
   await tenantScopedTable(trx, 'ticket_resources', tenant)
     .where({ assignment_id: assignmentId })
     .delete();
+
+  await writeAdditionalAgentActivity(
+    trx, tenant, actorUserId, resource.ticket_id, TICKET_ACTIVITY_EVENT.UNASSIGNED,
+    resource.additional_user_id, { role: resource.role ?? null }, source,
+  );
 }
 
 export async function getTicketResourcesCore(

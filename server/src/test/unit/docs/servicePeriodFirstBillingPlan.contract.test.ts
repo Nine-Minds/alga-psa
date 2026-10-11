@@ -325,6 +325,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
+  // Quote-converted first-invoice regression (alga0002168) asserts the contract
+  // line's first service period was materialized.
+  'server/src/test/integration/billing/quoteConvertedFirstInvoice.integration.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

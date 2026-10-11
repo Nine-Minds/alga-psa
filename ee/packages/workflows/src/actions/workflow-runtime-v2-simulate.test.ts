@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { hasPermission } from '@alga-psa/auth';
+import { applyTriggerPayloadMapping } from '@alga-psa/workflows/runtime';
 
 type RuntimeEventRow = {
   event_id: string;
@@ -326,6 +327,45 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
     expect(result.payloadSource).toBe('replayed-event');
     expect(result.errors[0]?.message).toContain('Production would skip this event');
     expect(result.replayedEvent?.event_id).toBe('66666666-6666-4666-8666-666666666666');
+    expect(fixture.simulatedCalls).toHaveLength(0);
+  });
+
+  it('returns a failed result (not a 500) when the trigger mapping throws during replay', async () => {
+    fixture.events = [eventRow({ event_id: '77777777-7777-4777-8777-777777777777' })];
+    vi.mocked(applyTriggerPayloadMapping).mockRejectedValueOnce(new Error('boom'));
+
+    const result = await simulateWorkflowDefinitionDraftAction({
+      definition,
+      eventId: '77777777-7777-4777-8777-777777777777'
+    }) as any;
+
+    expect(result.status).toBe('failed');
+    expect(result.payloadSource).toBe('replayed-event');
+    expect(result.errors[0]?.message).toContain('Production would skip this event: trigger payload mapping failed: boom');
+    expect(fixture.simulatedCalls).toHaveLength(0);
+  });
+
+  it('fails replay with missing-source-ref when no source schema ref is known, even with a mapping', async () => {
+    fixture.events = [eventRow({
+      event_id: '88888888-8888-4888-8888-888888888888',
+      payload_schema_ref: null
+    })];
+    const noSourceRefDefinition = {
+      ...definition,
+      trigger: {
+        type: 'event',
+        eventName: 'ticket.created',
+        payloadMapping: { ticketId: { $expr: 'event.payload.ticket_id' } }
+      }
+    };
+
+    const result = await simulateWorkflowDefinitionDraftAction({
+      definition: noSourceRefDefinition,
+      eventId: '88888888-8888-4888-8888-888888888888'
+    }) as any;
+
+    expect(result.status).toBe('failed');
+    expect(result.errors[0]?.message).toContain('Production would skip this event: no source payload schema is known');
     expect(fixture.simulatedCalls).toHaveLength(0);
   });
 

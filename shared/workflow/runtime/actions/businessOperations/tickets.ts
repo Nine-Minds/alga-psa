@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { ticketStatusClockPatch } from '../../../../lib/ticketStatusClock';
 import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
@@ -677,6 +678,10 @@ export function registerTicketActions(): void {
             is_resolution: false,
             author_type: 'system',
             author_id: tx.actorUserId,
+            // `metadata.source = 'workflow'` is the persisted workflow-origin marker: the ticket.status_age
+            // no-activity clock ignores such comments, so a workflow's own comment can't re-arm itself.
+            // Not `is_system_generated`: that would also make the comment uneditable and change how its
+            // author renders, which is user-visible.
             metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath },
             ...(hasEmailRecipients ? { emailRecipients: { cc: ccAddresses, bcc: bccAddresses } } : {})
           },
@@ -1219,8 +1224,10 @@ export function registerTicketActions(): void {
       // Update ticket closure fields.
       await tenantScopedTable(tx, 'tickets')
         .where('ticket_id', input.ticket_id)
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: closedStatus.status_id,
+          ...ticketStatusClockPatch(tx.trx, closedStatus.status_id as string),
           is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,

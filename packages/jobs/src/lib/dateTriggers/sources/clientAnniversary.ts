@@ -7,7 +7,7 @@ import { defineDateDomainEvent } from '../defineDateDomainEvent';
 
 export const clientAnniversarySource: DateTriggerSource = {
   id: 'client.anniversary',
-  payloadSchemaRef: 'payload.ClientAnniversary.v1',
+ 
   domainEvent: defineDateDomainEvent({ eventType: 'CLIENT_ANNIVERSARY_UPCOMING', windowDays: 30, buildPayload: (occurrence, daysUntil) => buildClientAnniversaryUpcomingPayload({ clientId: occurrence.clientId, clientName: String(occurrence.payload.clientName), anniversaryDate: occurrence.occursOn, yearsAsClient: Number(occurrence.payload.yearsAsClient), daysUntilAnniversary: daysUntil }) }),
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string): Promise<DateOccurrence[]> {
     const rows = await tenantDb(knex, tenant).table('clients as c')

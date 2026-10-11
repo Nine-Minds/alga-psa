@@ -3,6 +3,8 @@
  */
 
 export * from './timeEntryActions';
+export * from './stopwatchActions';
+export * from './workTrailActions';
 export * from './timeEntryChangeRequestActions';
 export * from './timeEntrySchemas';
 export * from './timePeriodsActions';

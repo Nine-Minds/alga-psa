@@ -94,7 +94,7 @@ describe('onboarding catalog reads', () => {
     expect(qboCreateMock).not.toHaveBeenCalled();
   });
 
-  it('matches historical invoices through the TxnDate-windowed simulator query for an authorized user', async () => {
+  it.each(['USD', 'JPY', 'KWD'])('matches historical %s invoices through the TxnDate-windowed simulator query for an authorized user', async (currency) => {
     grantOnly('accounting_integrations:catalog_read');
     const sim = new QboSimulator({ realmId: 'realm-100' });
     const customer = sim.seedCustomer({ name: 'Historical Customer' });
@@ -103,6 +103,15 @@ describe('onboarding catalog reads', () => {
       amountCents: 12500,
       docNumber: 'INV-100',
       txnDate: '2026-07-15',
+      currency,
+    });
+    // An older invoice with the same number must not cause a match collision.
+    sim.seedInvoice({
+      customerId: customer.Id,
+      amountCents: 12500,
+      docNumber: 'INV-100',
+      txnDate: '2026-06-30',
+      currency,
     });
     const providerQuery = vi.spyOn(sim.client, 'query');
     qboCreateMock.mockResolvedValue(sim.client);
@@ -122,6 +131,8 @@ describe('onboarding catalog reads', () => {
               invoice_number: 'INV-100',
               total_amount: 12500,
               client_id: 'client-local-1',
+              // Legacy rows may lack a currency; use the remote CurrencyRef.
+              currency_code: null,
             }] : [],
           };
           return query;
@@ -150,11 +161,12 @@ describe('onboarding catalog reads', () => {
       invoiceId: 'invoice-local-1',
       externalId: remoteInvoice.Id,
       externalDocNumber: 'INV-100',
+      externalTotal: 12500,
     })]);
     expect(result.review).toEqual([]);
     expect(qboCreateMock).toHaveBeenCalledTimes(1);
     expect(providerQuery).toHaveBeenCalledWith(
-      "SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice WHERE TxnDate >= '2026-07-01' STARTPOSITION 1 MAXRESULTS 1000"
+      "SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef, CurrencyRef FROM Invoice WHERE TxnDate >= '2026-07-01' STARTPOSITION 1 MAXRESULTS 1000"
     );
   });
 });

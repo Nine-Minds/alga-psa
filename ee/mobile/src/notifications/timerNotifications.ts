@@ -139,7 +139,7 @@ export async function syncTimerNotifications(
           body: i18n.t("timeEntries:timer.notifications.ongoingBody", {
             defaultValue: "{{workItem}} · started at {{time}}",
             workItem: label,
-            time: formatStartTime(snapshot.startTimeMs - snapshot.offsetMs),
+            time: formatStartTime((snapshot.firstStartMs ?? snapshot.startTimeMs) - snapshot.offsetMs),
           }),
           sticky: true,
           autoDismiss: false,

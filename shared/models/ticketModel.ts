@@ -14,6 +14,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
@@ -1262,6 +1263,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
@@ -1386,6 +1388,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');

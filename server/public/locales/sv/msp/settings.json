@@ -673,8 +673,8 @@
           "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar."
         },
         "liveTimer": {
-          "label": "Aktivera löpande timer för ärenden",
-          "help": "Visar den löpande timern och registrerade intervall för ärenden på tavlan. Manuell tidregistrering är fortsatt tillgänglig."
+          "label": "Visa stoppur på ärenden",
+          "help": "Visar stoppursknapparna på ärenden på tavlan. Stäng av för att dölja stoppuret här; manuell tidregistrering är fortsatt tillgänglig. Ett stoppur som redan går fortsätter att gå."
         },
         "clientPortalVisible": {
           "label": "Synlig i kundportalen",
@@ -851,7 +851,7 @@
           "statuses": "Prioriteter och statusar",
           "statusesHelp": "Standardprioritet och ärendestatusar för tavlan",
           "display": "Visning och beteende",
-          "displayHelp": "Löpande timer och taveltyp"
+          "displayHelp": "Stoppur och taveltyp"
         },
         "saveChanges": "Spara ändringar",
         "unsaved": "Osparat",

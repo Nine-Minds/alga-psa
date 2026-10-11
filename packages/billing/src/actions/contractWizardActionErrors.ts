@@ -3,6 +3,42 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 
 export type ContractWizardActionError = ActionMessageError | ActionPermissionError;
 
+/**
+ * Returned (not thrown) when rebuilding an existing draft would change its
+ * server-computed monthly recurring value and the submission did not
+ * acknowledge that exact baseline. The transaction has been rolled back.
+ */
+export type RecurringTotalChangeConfirmation = {
+  confirmation_required: 'recurring_total_change';
+  baseline_monthly_cents: number;
+  resulting_monthly_cents: number;
+};
+
+export function isRecurringChangeConfirmation(value: unknown): value is RecurringTotalChangeConfirmation {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { confirmation_required?: unknown }).confirmation_required === 'recurring_total_change'
+  );
+}
+
+/** Thrown inside the finalize transaction to roll it back; mapped to {@link RecurringTotalChangeConfirmation}. */
+export class RecurringTotalChangeRequiresConfirmation extends Error {
+  constructor(
+    readonly baselineMonthlyCents: number,
+    readonly resultingMonthlyCents: number,
+  ) {
+    super('Rebuilding this draft changes its monthly recurring value');
+    this.name = 'RecurringTotalChangeRequiresConfirmation';
+  }
+}
+
+export const FIXED_LINE_NO_SERVICE_PREFIX = 'Fixed line "';
+
+export function fixedLineNoServiceMessage(lineName: string): string {
+  return `Fixed line "${lineName}" has a recurring amount but no service to bill it on — add a service before finishing`;
+}
+
 export function contractWizardActionErrorFrom(error: unknown): ContractWizardActionError | null {
   if (!(error instanceof Error)) return null;
 
@@ -10,7 +46,13 @@ export function contractWizardActionErrorFrom(error: unknown): ContractWizardAct
     return permissionError(error.message);
   }
 
+  if (error.message.startsWith(FIXED_LINE_NO_SERVICE_PREFIX) && error.message.includes('has a recurring amount but no service')) {
+    const match = /^Fixed line "(.*)" has a recurring amount/.exec(error.message);
+    return actionError(error.message, 'msp/contracts:errors.wizard.fixedLineNoService', { lineName: match?.[1] ?? '' });
+  }
+
   if (
+    error.message === 'Submit either fixed_lines or the legacy fixed_services/fixed_base_rate fields, not both' ||
     error.message.startsWith('Catalog item "') ||
     error.message.startsWith('Product "') ||
     error.message.startsWith('Cannot create contract in') ||

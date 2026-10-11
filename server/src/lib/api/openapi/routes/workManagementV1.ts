@@ -1,5 +1,12 @@
 import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import {
+  activeStopwatchQuerySchema,
+  logStopwatchSchema,
+  startStopwatchSchema,
+  stopwatchSessionResponseSchema,
+  updateStopwatchSchema,
+} from '../../schemas/stopwatch';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -374,7 +381,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     { method: 'get', path: '/api/v1/time-entries', summary: 'List time entries', description: 'Lists time entries via ApiBaseController list flow.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries', summary: 'Create time entry', description: 'Creates time entry.', family: 'time_entry' },
-    { method: 'get', path: '/api/v1/time-entries/active-session', summary: 'Get active tracking session', description: 'Returns active tracking session for current user context.', family: 'time_entry' },
+    { method: 'get', path: '/api/v1/time-entries/active-session', summary: 'Get active tracking session', description: 'Deprecated: use GET /api/v1/stopwatch/active. Returns the caller\'s open stopwatch session in the legacy time-entry-row shape (`session_id` is the stopwatch session id, `start_time` the first segment start). Requires time_entry:read.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/approve', summary: 'Approve time entries', description: 'Approves time entries payload.', family: 'time_entry' },
     { method: 'delete', path: '/api/v1/time-entries/bulk', summary: 'Bulk delete time entries', description: 'Bulk delete time entry operation.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/bulk', summary: 'Bulk create time entries', description: 'Bulk create time entry operation.', family: 'time_entry' },
@@ -382,9 +389,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-entries/export', summary: 'Export time entries', description: 'Exports time entries with optional filter/format query.', family: 'time_entry' },
     { method: 'post', path: '/api/v1/time-entries/request-changes', summary: 'Request time entry changes', description: 'Requests changes for submitted time entries.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/search', summary: 'Search time entries', description: 'Searches time entries with controller-specific filters.', family: 'time_entry' },
-    { method: 'post', path: '/api/v1/time-entries/start-tracking', summary: 'Start time tracking', description: 'Starts active tracking session.', family: 'time_entry' },
+    { method: 'post', path: '/api/v1/time-entries/start-tracking', summary: 'Start time tracking', description: 'Deprecated: use POST /api/v1/stopwatch. Starts a stopwatch session and returns it in the legacy time-entry-row shape. 409 when a session is already open.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/stats', summary: 'Get time entry stats', description: 'Returns time entry statistics.', family: 'time_entry' },
-    { method: 'post', path: '/api/v1/time-entries/stop-tracking/{sessionId}', summary: 'Stop time tracking', description: 'Stops active tracking session by session id.', family: 'time_entry' },
+    { method: 'post', path: '/api/v1/time-entries/stop-tracking/{sessionId}', summary: 'Stop time tracking', description: 'Deprecated: use POST /api/v1/stopwatch/{id}/log. Logs the open (running or paused) session as a time entry and returns the entry.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/templates', summary: 'List time entry templates', description: 'Lists available time entry templates.', family: 'time_entry' },
     { method: 'delete', path: '/api/v1/time-entries/{id}', summary: 'Delete time entry', description: 'Deletes time entry UUID.', family: 'time_entry' },
     { method: 'get', path: '/api/v1/time-entries/{id}', summary: 'Get time entry', description: 'Gets time entry UUID.', family: 'time_entry' },
@@ -432,6 +439,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'post /api/v1/time-sheets/{id}/reject',
     'delete /api/v1/time-sheets/{id}/remove-entry',
     'get /api/v1/time-sheets/{id}/summary',
+  ]);
+
+  // Legacy mobile tracking endpoints: adapters over the server-side stopwatch, kept for installed builds.
+  const LEGACY_TRACKING_OPS = new Set([
+    'post /api/v1/time-entries/start-tracking',
+    'post /api/v1/time-entries/stop-tracking/{sessionId}',
+    'get /api/v1/time-entries/active-session',
   ]);
 
   // Delete endpoints whose service runs deleteEntityWithValidation and can
@@ -552,6 +566,11 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       extensions['x-route-controller-mismatch'] = true;
     }
 
+    const deprecated = LEGACY_TRACKING_OPS.has(opKey);
+    if (deprecated) {
+      extensions['x-replaced-by'] = '/api/v1/stopwatch';
+    }
+
     registry.registerRoute({
       method: def.method,
       path: def.path,
@@ -562,9 +581,192 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       request: requestFor(def),
       responses: responsesFor(def),
       extensions,
+      deprecated: deprecated || undefined,
       edition: 'both',
     });
   }
+
+  // ==========================================================================
+  // Stopwatch (server-side sessions) - /api/v1/stopwatch
+  // ==========================================================================
+  const StopwatchSessionSchema = registry.registerSchema('WorkV1StopwatchSession', stopwatchSessionResponseSchema);
+  const StopwatchSessionResponse = registry.registerSchema(
+    'WorkV1StopwatchSessionResponse',
+    zOpenApi.object({ data: StopwatchSessionSchema }),
+  );
+  const StopwatchActiveResponse = registry.registerSchema(
+    'WorkV1StopwatchActiveResponse',
+    zOpenApi.object({ data: StopwatchSessionSchema.nullable().describe('The open (running or paused) session, or null.') }),
+  );
+  const StopwatchLogResponse = registry.registerSchema(
+    'WorkV1StopwatchLogResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        session: StopwatchSessionSchema,
+        time_entry: zOpenApi.record(zOpenApi.unknown()).describe('The persisted time entry.'),
+      }),
+    }),
+  );
+  const StopwatchConflictError = registry.registerSchema(
+    'WorkV1StopwatchConflictError',
+    zOpenApi.object({
+      error: zOpenApi.object({
+        code: zOpenApi.literal('CONFLICT'),
+        message: zOpenApi.string(),
+        details: zOpenApi.object({
+          reason: zOpenApi.string().describe('`open_session_exists`, or the message key of the failure (closed session, stopwatch disabled for the board, locked time sheet).'),
+          open_session: StopwatchSessionSchema.optional().describe('Present when reason is `open_session_exists`: the session that is already open.'),
+        }),
+      }),
+    }),
+  );
+  const StopwatchActiveQuery = registry.registerSchema('WorkV1StopwatchActiveQuery', activeStopwatchQuerySchema);
+  const StopwatchStartBody = registry.registerSchema('WorkV1StopwatchStartBody', startStopwatchSchema);
+  const StopwatchUpdateBody = registry.registerSchema('WorkV1StopwatchUpdateBody', updateStopwatchSchema);
+  const StopwatchLogBody = registry.registerSchema('WorkV1StopwatchLogBody', logStopwatchSchema);
+
+  const stopwatchExtensions = (action: 'read' | 'create') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiBaseController.authenticate()',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_entry',
+    'x-rbac-action': action,
+  });
+  const stopwatchCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_entry:create for mutations, time_entry:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const stopwatchSessionNotFound = { description: 'Stopwatch session not found (or it belongs to another user).', schema: ApiError };
+  const stopwatchSessionClosed = { description: 'The session is already logged or discarded (details.reason is the message key).', schema: StopwatchConflictError };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/stopwatch/active',
+    summary: 'Get active stopwatch session',
+    description: 'Returns the caller\'s open (running or paused) stopwatch session, or `data: null`. Elapsed time is derived from `segments`; `active_ms` and `server_now` are computed by the server. `user_id` reads another user\'s session and requires delegation rights (time_sheet:approve plus read_all or manager-of-subject).',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: StopwatchActiveQuery },
+    responses: {
+      200: { description: 'Open session or null.', schema: StopwatchActiveResponse },
+      400: { description: 'Invalid query.', schema: ApiError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch',
+    summary: 'Start stopwatch',
+    description: 'Starts a stopwatch session on a ticket or project task. A user has at most one open session: starting while one exists returns 409 with `details.open_session`. Also 409 when the ticket\'s board has the stopwatch turned off.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: StopwatchStartBody } },
+    responses: {
+      201: { description: 'Session started.', schema: StopwatchSessionResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: { description: 'Work item not found.', schema: ApiError },
+      409: { description: 'An open session already exists (details.open_session) or the board disabled the stopwatch.', schema: StopwatchConflictError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/pause',
+    summary: 'Pause stopwatch',
+    description: 'Closes the open segment. Idempotent: pausing a paused session returns it unchanged.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Paused session.', schema: StopwatchSessionResponse },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/resume',
+    summary: 'Resume stopwatch',
+    description: 'Opens a new segment. Idempotent: resuming a running session returns it unchanged.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Running session.', schema: StopwatchSessionResponse },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch',
+    path: '/api/v1/stopwatch/{id}',
+    summary: 'Update stopwatch draft',
+    description: 'Updates the notes and/or service of an open session. Omitted fields are unchanged; `service_id: null` clears the service.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: StopwatchUpdateBody } },
+    responses: {
+      200: { description: 'Updated session.', schema: StopwatchSessionResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/stopwatch/{id}/log',
+    summary: 'Log stopwatch as time entry',
+    description: 'Logs the session as exactly one time entry: start = first segment start (to the minute), end = start + active duration, billable_duration = active minutes (min 1). Any body field overrides the derived value. The time sheet is resolved server-side from the start date; a locked (submitted/approved) sheet returns 409 and the session is left untouched.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: StopwatchLogBody } },
+    responses: {
+      201: { description: 'Session logged.', schema: StopwatchLogResponse },
+      400: { description: 'Validation failure (e.g. no service, no time period covers the date).', schema: ApiError },
+      404: stopwatchSessionNotFound,
+      409: { description: 'Session already closed, or the target time sheet is locked (details.reason is the message key).', schema: StopwatchConflictError },
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/stopwatch/{id}',
+    summary: 'Discard stopwatch',
+    description: 'Discards an open session without logging time.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Session discarded; no content.', emptyBody: true },
+      404: stopwatchSessionNotFound,
+      409: stopwatchSessionClosed,
+      ...stopwatchCommonErrors,
+    },
+    extensions: stopwatchExtensions('create'),
+    edition: 'both',
+  });
 
   // ==========================================================================
   // Ticket sub-resources (priorities, statuses, comments, documents, materials)

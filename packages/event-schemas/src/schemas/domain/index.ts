@@ -16,6 +16,7 @@ export * from './workflowEventPayloadSchemas';
 export * from './inboundEmailEventSchemas';
 export * from './timeEventSchemas';
 export * from './inboundWebhookSchemas';
+export * from './dateTriggerSourceDefinitions';
 export * from './dateTriggerPayloadSchemas';
 export * from './emptyWorkflowPayloadSchema';
 export * from './workflowClockTriggerSchema';

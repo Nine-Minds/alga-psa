@@ -28,9 +28,7 @@ describe('ticket properties i18n wiring contract', () => {
 
     expect(source).toContain("const { t } = useTranslation('features/tickets');");
     expect(source).toContain("t('properties.timeEntry', 'Time Entry')");
-    expect(source).toContain("t('properties.ticketTimer', 'Ticket Timer - #{{ticketNumber}}', { ticketNumber: ticket.ticket_number })");
     expect(source).toContain("t('fields.description', 'Description')");
-    expect(source).toContain("t('properties.enterWorkDescription', 'Enter work description')");
     expect(source).toContain("t('properties.contactInfo', 'Contact Info')");
     expect(source).toContain("t('properties.location', 'Location')");
     expect(source).toContain("t('properties.agentTeam', 'Agent team')");
@@ -78,8 +76,6 @@ describe('ticket properties i18n wiring contract', () => {
       expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
 
-    expect(getLeaf(pseudo, 'properties.ticketTimer')).toMatch(pseudoPattern('xx'));
-
-    expect(getLeaf(pseudo, 'properties.ticketTimer')).toContain('{{ticketNumber}}');
+    expect(getLeaf(pseudo, 'stopwatch.start')).toMatch(pseudoPattern('xx'));
   });
 });

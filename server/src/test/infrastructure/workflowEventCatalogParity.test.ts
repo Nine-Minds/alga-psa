@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
-import { WORKFLOW_EVENT_CATALOG } from '@alga-psa/event-schemas';
+import { WORKFLOW_EVENT_CATALOG, dateTriggerSourceDefinitions } from '@alga-psa/event-schemas';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
@@ -28,7 +28,14 @@ describe('workflow event catalog parity (system_event_catalog)', () => {
       .whereNotNull('payload_schema_ref')
       .select('event_type', 'payload_schema_ref');
 
-    const actual = Object.fromEntries(rows.map((row) => [row.event_type, row.payload_schema_ref]));
+    // Date-trigger documentation rows (e.g. TICKET_STATUS_AGE) are not events: nothing publishes them, so
+    // they are deliberately outside the publishable catalog. Their refs live in dateTriggerSourceDefinitions.
+    const dateTriggerDocRows = new Set<string>(
+      dateTriggerSourceDefinitions.flatMap((definition) => ('catalogEventType' in definition ? [definition.catalogEventType] : []))
+    );
+    const actual = Object.fromEntries(
+      rows.filter((row) => !dateTriggerDocRows.has(row.event_type)).map((row) => [row.event_type, row.payload_schema_ref])
+    );
     const expected = Object.fromEntries(
       Object.entries(WORKFLOW_EVENT_CATALOG).map(([eventType, { schemaRef }]) => [eventType, schemaRef])
     );

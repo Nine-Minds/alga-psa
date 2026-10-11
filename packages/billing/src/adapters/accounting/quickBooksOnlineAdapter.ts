@@ -1,6 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
-import { AppError } from '@alga-psa/core';
+import { AppError, fromMinorUnits, toMinorUnits } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   AccountingChangeSet,
@@ -455,6 +455,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       let invoiceTaxCents = 0;
       // Credit notes store negative amounts in Alga; QBO CreditMemos require positive amounts.
       const isCreditNote = invoice.invoice_type === 'credit_note';
+      const invoiceCurrency = invoice.currency_code ?? 'USD';
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
@@ -594,7 +595,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           maxQuantityDecimals: QBO_MAX_QUANTITY_DECIMALS
         });
         salesDetail.Qty = isCreditNote ? Math.abs(lineQuantity.quantity) : lineQuantity.quantity;
-        salesDetail.UnitPrice = centsToAmount(lineQuantity.unitPriceCents);
+        salesDetail.UnitPrice = fromMinorUnits(lineQuantity.unitPriceCents, 'en-US', invoiceCurrency);
         if (shouldIncludeAuthoritativeTax) {
           const rawTaxCents = coerceChargeCents(charge.tax_amount);
           if (rawTaxCents !== null) {
@@ -603,7 +604,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         qboLines.push({
-          Amount: centsToAmount(netAmountCents),
+          Amount: fromMinorUnits(netAmountCents, 'en-US', invoiceCurrency),
           DetailType: 'SalesItemLineDetail',
           Description: charge.description ?? undefined,
           SalesItemLineDetail: salesDetail
@@ -628,7 +629,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       if (shouldIncludeAuthoritativeTax && invoiceTaxCents > 0) {
         // Push Alga's authoritative tax total so QBO's books match Alga's internal calculation.
-        qboInvoice.TxnTaxDetail = { TotalTax: centsToAmount(invoiceTaxCents) };
+        qboInvoice.TxnTaxDetail = { TotalTax: fromMinorUnits(invoiceTaxCents, 'en-US', invoiceCurrency) };
       }
 
       if (invoice.po_number) {
@@ -848,6 +849,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         throw new Error(`QuickBooks adapter: vendor bill ${billId} has no lines`);
       }
 
+      const billCurrency = bill.currency_code ?? 'USD';
       const qboLines: QboBillLine[] = billLines.map((line) => {
         const amountCents = Number(line.amount ?? 0);
         const detail: QboBillLine['AccountBasedExpenseLineDetail'] = {
@@ -864,7 +866,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         return {
-          Amount: centsToAmount(amountCents),
+          Amount: fromMinorUnits(amountCents, 'en-US', billCurrency),
           DetailType: 'AccountBasedExpenseLineDetail',
           Description: line.description ?? line.service_name ?? undefined,
           AccountBasedExpenseLineDetail: detail
@@ -1008,7 +1010,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         expense_account_ref: payload.expenseAccountRef,
         exported_total: typeof response.TotalAmt === 'number'
           ? response.TotalAmt
-          : centsToAmount(payload.totals.amountCents),
+          : fromMinorUnits(payload.totals.amountCents, 'en-US', payload.bill.CurrencyRef?.value ?? 'USD'),
         external_entity_type: 'Bill'
       }
     });
@@ -1480,8 +1482,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       }
 
       // Calculate total tax from QBO invoice
-      const totalTax = amountToCents(qboInvoice.TxnTaxDetail?.TotalTax ?? 0);
-      const totalAmount = amountToCents(qboInvoice.TotalAmt ?? 0);
+      const qboInvoiceCurrency = qboInvoice.CurrencyRef?.value ?? 'USD';
+      const totalTax = toMinorUnits(qboInvoice.TxnTaxDetail?.TotalTax ?? 0, 'en-US', qboInvoiceCurrency);
+      const totalAmount = toMinorUnits(qboInvoice.TotalAmt ?? 0, 'en-US', qboInvoiceCurrency);
 
       // Extract line items with their amounts for proportional tax distribution
       const lineItems: Array<{
@@ -1496,7 +1499,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
           const detail = line.SalesItemLineDetail;
           // QBO line Amount is the line total before tax
-          const lineAmount = amountToCents(line.Amount ?? 0);
+          const lineAmount = toMinorUnits(line.Amount ?? 0, 'en-US', qboInvoiceCurrency);
           const qboLineId = line.Id ?? undefined;
 
           // Use stored charge ID if available, otherwise fall back to positional index
@@ -1529,6 +1532,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         // Calculate effective tax rate for this line
+        // Percentage (dimensionless ratio × 100), not a currency minor-unit conversion.
         const effectiveRate = item.amount > 0 ? (taxAmount / item.amount) * 100 : undefined;
 
         return {
@@ -1558,7 +1562,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         .map(line => ({
           name: line.TaxRateRef?.name ?? line.TaxRateRef?.value ?? 'Tax',
           rate: line.TaxPercent ?? 0,
-          amount: amountToCents(line.Amount ?? 0)
+          amount: toMinorUnits(line.Amount ?? 0, 'en-US', qboInvoiceCurrency)
         }));
 
       // If we have tax components, distribute them proportionally to line items
@@ -1707,10 +1711,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 }
 
-function centsToAmount(value: number): number {
-  return Math.round(value) / 100;
-}
-
 function coerceChargeCents(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.round(value);
@@ -1720,10 +1720,6 @@ function coerceChargeCents(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
-}
-
-function amountToCents(value: number): number {
-  return Math.round(value * 100);
 }
 
 function escapeQboString(value: string): string {
@@ -1809,6 +1805,9 @@ function normalizeQboPayment(
   const lines = Array.isArray(payload?.Line) ? (payload!.Line as any[]) : [];
   const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
   let isCreditApplication = false;
+  const currency =
+    typeof payload?.CurrencyRef?.value === 'string' ? String(payload.CurrencyRef.value) : undefined;
+  const paymentCurrency = currency ?? 'USD';
 
   for (const line of lines) {
     const linkedTxns = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
@@ -1816,7 +1815,7 @@ function normalizeQboPayment(
       isCreditApplication = true;
     }
     const invoiceTxn = linkedTxns.find((txn: any) => txn?.TxnType === 'Invoice' && txn?.TxnId);
-    const amountCents = Math.round(Number(line?.Amount) * 100);
+    const amountCents = toMinorUnits(Number(line?.Amount), 'en-US', paymentCurrency);
     if (invoiceTxn && Number.isFinite(amountCents) && amountCents > 0) {
       allocations.push({ externalInvoiceId: String(invoiceTxn.TxnId), amountCents });
     }
@@ -1824,14 +1823,12 @@ function normalizeQboPayment(
 
   const ref = payload?.PaymentRefNum;
   const reference = typeof ref === 'string' && ref.trim().length > 0 ? ref.trim() : externalId;
-  const currency =
-    typeof payload?.CurrencyRef?.value === 'string' ? String(payload.CurrencyRef.value) : undefined;
   const txnDate = typeof payload?.TxnDate === 'string' ? payload.TxnDate : undefined;
   const totalCents = Number.isFinite(Number(payload?.TotalAmt))
-    ? Math.round(Number(payload?.TotalAmt) * 100)
+    ? toMinorUnits(Number(payload?.TotalAmt), 'en-US', paymentCurrency)
     : undefined;
   const unappliedCents = Number.isFinite(Number(payload?.UnappliedAmt))
-    ? Math.round(Number(payload?.UnappliedAmt) * 100)
+    ? toMinorUnits(Number(payload?.UnappliedAmt), 'en-US', paymentCurrency)
     : undefined;
 
   return {

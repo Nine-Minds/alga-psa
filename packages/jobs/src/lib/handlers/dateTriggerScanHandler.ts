@@ -27,17 +27,18 @@ export function createDateTriggerScanHandler(
     if (Number.isNaN(now.getTime())) throw new Error(`Invalid date-trigger-scan clock value: ${data.now}`);
     const today = localDate(timezone, now);
     for (const source of dateTriggerSources) {
-      if (!source.domainEvent) continue;
-      const toDate = Temporal.PlainDate.from(today).add({ days: source.domainEvent.windowDays }).toString();
+      const domainEvent = source.domainEvent;
+      if (!domainEvent) continue;
+      const toDate = Temporal.PlainDate.from(today).add({ days: domainEvent.windowDays }).toString();
       const occurrences = await source.findOccurrences(knex, data.tenantId, today, toDate);
       for (const occurrence of occurrences) {
         const distance = daysUntil(today, occurrence.occursOn);
         try {
-          await source.domainEvent.emitOnce(knex, data.tenantId, occurrence, distance);
+          await domainEvent.emitOnce(knex, data.tenantId, occurrence, distance);
         } catch (error) {
           logger.error('Failed to emit date-trigger domain event; the ledger entry can retry on the next scan', {
             tenantId: data.tenantId,
-            eventType: source.domainEvent.eventType,
+            eventType: domainEvent.eventType,
             entityId: occurrence.entityId,
             error,
           });

@@ -102,6 +102,7 @@ export default defineConfig({
     'billingClients/ticketProjectAttribution': 'billingClients/ticketProjectAttribution.ts',
     'billingClients/renewalTicket': 'billingClients/renewalTicket.ts',
     'lib/quoteTerms': 'lib/quoteTerms.ts',
+    'lib/ticketStatusClock': 'lib/ticketStatusClock.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',
