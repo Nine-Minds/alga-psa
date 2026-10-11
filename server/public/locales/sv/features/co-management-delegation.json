@@ -1,0 +1,43 @@
+{
+  "title": "Delegerad administration",
+  "description": "Kundgodkänd hjälp med utvalda inställningar och användarposter.",
+  "banner": "Kundens arbetsyta: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Läser in godkänd åtkomst…",
+  "refresh": "Uppdatera åtkomst",
+  "loadError": "Åtkomsten kunde inte läsas in. Uppdatera för att kontrollera dina aktuella behörigheter.",
+  "noWorkspaces": "Inga kundarbetsytor har för närvarande godkända administrationsuppgifter åt dig.",
+  "noGrants": "Inga administrationsuppgifter är godkända just nu.",
+  "readOnly": "Den här arbetsytan är skrivskyddad. Kundadministratörer kan fortfarande återkalla åtkomst.",
+  "approveTitle": "Godkänn en specifik administrationsuppgift",
+  "approvalHint": "Välj en tilldelad MSP-tekniker eller ett tilldelat team, en åtgärd och en kundpost. Godkännandet ger inte allmän administrationsåtkomst.",
+  "approvalSummary": "Tillåt {{principal}} att utföra ”{{operation}}” för {{target}}.",
+  "principal": "Tilldelad MSP-tekniker eller tilldelat team",
+  "target": "Kundpost",
+  "operation": "Åtgärd",
+  "search": "Sök poster",
+  "previous": "Föregående",
+  "next": "Nästa",
+  "approve": "Godkänn uppgift",
+  "retry": "Försök igen med samma begäran",
+  "revoke": "Återkalla åtkomst",
+  "save": "Spara ändringar",
+  "resend": "Skicka om godkänd inbjudan",
+  "saveError": "Begäran kunde inte bekräftas. Försök igen med samma begäran eller uppdatera åtkomsten innan du gör en ny ändring.",
+  "unavailable": "Otillgänglig post",
+  "unavailableHint": "Det här godkännandet ger inte längre åtkomst till posten. Du kan återkalla det.",
+  "invitationHint": "När inbjudan skickas om behålls kundens befintliga mottagare, roll, installationslänk och giltighetstid. Inbjudan förlängs eller ersätts inte.",
+  "invitationTerms": "Mottagare: {{email}} · Roll: {{role}} · Går ut: {{expires}}",
+  "operations": {
+    "board_settings": "Redigera visningsinställningar för tavla",
+    "user_profile": "Redigera en profil som inte tillhör en administratör",
+    "invitation_resend": "Skicka om en inbjudan som skapats av kunden"
+  },
+  "fields": {
+    "board_name": "Tavlans namn",
+    "description": "Beskrivning",
+    "enable_live_ticket_timer": "Aktivera live-timer för ärenden",
+    "first_name": "Förnamn",
+    "last_name": "Efternamn",
+    "timezone": "Tidszon"
+  }
+}

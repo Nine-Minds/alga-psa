@@ -104,7 +104,10 @@
     "emailLogs": "E-postloggar",
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
-    "ticketsRecurring": "Återkommande ärenden"
+    "ticketsRecurring": "Återkommande ärenden",
+    "coManaged": "Samhanterad IT",
+    "coManagedDelegation": "Delegerad administration",
+    "coManagedAccess": "Samhanterad åtkomst"
   },
   "marketing": {
     "dialogs": {

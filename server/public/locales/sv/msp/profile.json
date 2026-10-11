@@ -186,7 +186,8 @@
       "advanced": {
         "title": "Avancerat: anpassad routning till identitetsleverantör",
         "description": "Styr SSO för MSP-inloggning till din egen identitetsleverantör med verifierade inloggningsdomäner. Behövs endast för anpassade eller lokala installationer.",
-        "inertNotice": "Ingen identitetsleverantör har konfigurerats för organisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här."
+        "inertNotice": "Ingen identitetsleverantör har konfigurerats för organisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här.",
+        "openProviderSetup": "Konfigurera ditt eget Google- eller Microsoft-program"
       }
     },
     "userRoles": {

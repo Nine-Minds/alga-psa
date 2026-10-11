@@ -325,6 +325,18 @@
     "results": {
       "summary": "Importerade artiklar: {{imported}} av {{total}}",
       "failedCount": "Misslyckade importer ({{count}}):"
+    },
+    "recovery": {
+      "title": "Ofullständiga importer",
+      "refresh": "Uppdatera",
+      "paused": "Importer är pausade för den här arbetsytan. Dina filer är sparade.",
+      "retry": "Dina filer är sparade. Återuppta importen för att fortsätta utan att ladda upp dem igen.",
+      "resume": "Återuppta import",
+      "remaining": "{{pending}} av {{total}} filer återstår",
+      "open": "Visa förlopp",
+      "previous": "Föregående",
+      "next": "Nästa",
+      "loadError": "Det gick inte att läsa in ofullständiga importer"
     }
   },
   "staleness": {

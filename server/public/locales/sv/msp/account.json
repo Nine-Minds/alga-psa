@@ -427,5 +427,8 @@
       "loading": "Läser in…",
       "loadMore": "Läs in fler"
     }
+  },
+  "coManaged": {
+    "accountTitle": "Samhanterad IT"
   }
 }

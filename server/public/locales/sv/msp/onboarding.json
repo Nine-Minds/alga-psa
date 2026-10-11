@@ -36,7 +36,8 @@
       "clientContact": "Kundkontakt",
       "billing": "Fakturering",
       "ticketing": "Ärendehantering",
-      "algadeskWorkspace": "Arbetsyta"
+      "algadeskWorkspace": "Arbetsyta",
+      "coManagedWorkspace": "Arbetsyta"
     },
     "errors": {
       "saveClientInfo": "Det gick inte att spara företagsuppgifterna",
@@ -65,7 +66,9 @@
       "title": "Konfigurera ditt system",
       "description": "Konfigurera din arbetsyta så att den är redo att användas.",
       "algadeskTitle": "Konfigurera AlgaDesk",
-      "algadeskDescription": "Konfigurera din supportarbetsyta, dina kunder och standardinställningarna för ärenden."
+      "algadeskDescription": "Konfigurera din supportarbetsyta, dina kunder och standardinställningarna för ärenden.",
+      "coManagedTitle": "Konfigurera din IT-arbetsyta",
+      "coManagedDescription": "Konfigurera din arbetsyta, ditt IT-team och dina standardinställningar för ärendehantering."
     }
   },
   "addClientStep": {
@@ -303,7 +306,9 @@
     },
     "header": {
       "title": "Ditt företag och administratörskonto",
-      "description": "Börja med ditt eget MSP-företags uppgifter och din administratörsinloggning, inte med uppgifterna för en kund som du ger support till."
+      "description": "Börja med ditt eget MSP-företags uppgifter och din administratörsinloggning, inte med uppgifterna för en kund som du ger support till.",
+      "coManagedTitle": "Din organisation och ditt administratörskonto",
+      "coManagedDescription": "Vi börjar med uppgifter om din organisation och din administratörsinloggning."
     },
     "fields": {
       "firstName": {
@@ -354,7 +359,8 @@
           "label": "Land",
           "placeholder": "Välj land"
         }
-      }
+      },
+      "coManagedDescription": "Din organisations adress. Granska och korrigera den vid behov."
     },
     "password": {
       "resetRequired": {
