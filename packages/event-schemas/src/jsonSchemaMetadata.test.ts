@@ -5,7 +5,7 @@ import {
   buildWorkflowJsonDescription,
   withWorkflowJsonSchemaMetadata,
   zodToWorkflowJsonSchema,
-} from '../jsonSchemaMetadata';
+} from './jsonSchemaMetadata';
 
 describe('workflow json schema metadata', () => {
   it('T161/T162/T163/T164: preserves additive picker annotations through JSON-schema export', () => {

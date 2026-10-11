@@ -35,7 +35,7 @@ import {
   withWorkflowJsonSchemaMetadata,
   withWorkflowPicker,
   withWorkflowNotFoundPolicy,
-} from '../../jsonSchemaMetadata';
+} from '@alga-psa/event-schemas';
 import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
 /**

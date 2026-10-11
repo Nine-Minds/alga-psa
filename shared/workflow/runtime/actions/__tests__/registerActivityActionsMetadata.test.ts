@@ -9,7 +9,7 @@ vi.mock('@alga-psa/user-activities/server/activity-actions', () => ({
   removeActivityFromGroupsForApi: vi.fn(),
 }));
 
-import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerActivityActions } from '../businessOperations/activities';
 

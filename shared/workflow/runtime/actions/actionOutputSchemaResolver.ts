@@ -1,4 +1,4 @@
-import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 
 import { isWorkflowAiInferAction, resolveWorkflowAiSchemaFromConfig } from '../ai/aiSchema';
 import {

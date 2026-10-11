@@ -1,4 +1,4 @@
-import type { dateTriggerPayloadSchemaRefs } from './schemas/dateTriggerPayloadSchemas';
+import type { dateTriggerPayloadSchemaRefs } from '@alga-psa/event-schemas';
 
 /**
  * When a date trigger fires, and what its payload says about the date. One definition shared by the

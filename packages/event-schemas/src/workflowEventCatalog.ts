@@ -24,6 +24,7 @@
  *   20260715150000_seed_project_billing_event_catalog
  *   20260716140000_seed_inventory_workflow_events
  *   20260923120000_add_client_anniversary_workflow_event
+ *   20261010120000_register_worker_schema_workflow_events
  *
  * Adding a catalogued event: add the row here, add the seed migration, add the
  * schema to `workflowEventPayloadSchemas`, and add an entry to the emitter
@@ -195,6 +196,23 @@ export const WORKFLOW_EVENT_CATALOG = {
   INVENTORY_COUNT_SUBMITTED: { schemaRef: 'payload.InventoryCountSubmitted.v1' },
   INVENTORY_COUNT_APPROVED: { schemaRef: 'payload.InventoryCountApproved.v1' },
   CLIENT_ANNIVERSARY_UPCOMING: { schemaRef: 'payload.ClientAnniversaryUpcoming.v1' },
+  TICKET_COMMENT_ADDED: { schemaRef: 'payload.TicketCommentAdded.v1' },
+  TICKET_ADDITIONAL_AGENT_ASSIGNED: { schemaRef: 'payload.TicketAdditionalAgentAssigned.v1' },
+  APPOINTMENT_REQUEST_CREATED: { schemaRef: 'payload.AppointmentRequestCreated.v1' },
+  APPOINTMENT_REQUEST_APPROVED: { schemaRef: 'payload.AppointmentRequestApproved.v1' },
+  APPOINTMENT_REQUEST_DECLINED: { schemaRef: 'payload.AppointmentRequestDeclined.v1' },
+  APPOINTMENT_REQUEST_CANCELLED: { schemaRef: 'payload.AppointmentRequestCancelled.v1' },
+  SCHEDULE_ENTRY_CREATED: { schemaRef: 'payload.ScheduleEntryCreated.v1' },
+  SCHEDULE_ENTRY_UPDATED: { schemaRef: 'payload.ScheduleEntryUpdated.v1' },
+  SCHEDULE_ENTRY_DELETED: { schemaRef: 'payload.ScheduleEntryDeleted.v1' },
+  PROJECT_ASSIGNED: { schemaRef: 'payload.ProjectAssigned.v1' },
+  PROJECT_CLOSED: { schemaRef: 'payload.ProjectClosed.v1' },
+  PROJECT_TASK_UPDATED: { schemaRef: 'payload.ProjectTaskUpdated.v1' },
+  PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: { schemaRef: 'payload.ProjectTaskAdditionalAgentAssigned.v1' },
+  TASK_COMMENT_ADDED: { schemaRef: 'payload.TaskCommentAdded.v1' },
+  TASK_COMMENT_UPDATED: { schemaRef: 'payload.TaskCommentUpdated.v1' },
+  TIME_ENTRY_SUBMITTED: { schemaRef: 'payload.TimeEntrySubmitted.v1' },
+  TIME_ENTRY_APPROVED: { schemaRef: 'payload.TimeEntryApproved.v1' },
 } as const satisfies Record<string, { readonly schemaRef: string }>;
 
 export type WorkflowEventCatalog = typeof WORKFLOW_EVENT_CATALOG;

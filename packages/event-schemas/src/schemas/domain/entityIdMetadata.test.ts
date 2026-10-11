@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
-import { dateTriggerPayloadSchemas } from '../dateTriggerPayloadSchemas';
-import { contractCreatedEventPayloadSchema } from '../billingEventSchemas';
-import { workflowEventPayloadSchemas } from '../workflowEventPayloadSchemas';
+import { dateTriggerPayloadSchemas } from './dateTriggerPayloadSchemas';
+import { contractCreatedEventPayloadSchema } from './billingEventSchemas';
+import { workflowEventPayloadSchemas } from './workflowEventPayloadSchemas';
 
 const propertiesOf = (schema: Record<string, unknown>) =>
   (schema.properties ?? {}) as Record<string, Record<string, unknown>>;

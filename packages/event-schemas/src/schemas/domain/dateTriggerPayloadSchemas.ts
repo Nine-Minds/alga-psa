@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { withWorkflowPicker } from '../jsonSchemaMetadata';
+import { withWorkflowPicker } from '../../jsonSchemaMetadata';
 import { dateOnlySchema } from './commonEventPayloadSchemas';
 
 const date = dateOnlySchema('Calendar date (YYYY-MM-DD)');

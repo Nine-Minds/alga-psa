@@ -1,10 +1,11 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
-import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   buildAppointmentAssignedPayload,
@@ -335,9 +336,11 @@ async function ensureTechnicianEligibility(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED';
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<
+  T extends 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED',
+>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;

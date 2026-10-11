@@ -2,3 +2,5 @@
 // Re-export everything from the schemas
 export * from './schemas/index';
 export * from './workflowEventCatalog';
+export * from './builtWorkflowPayload';
+export * from './jsonSchemaMetadata';

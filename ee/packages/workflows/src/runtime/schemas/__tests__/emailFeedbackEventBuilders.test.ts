@@ -4,7 +4,7 @@ import {
   emailComplaintReceivedEventPayloadSchema,
   emailDeliveredEventPayloadSchema,
   emailUnsubscribedEventPayloadSchema,
-} from '../communicationsEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildEmailBouncedPayload,
