@@ -20,9 +20,9 @@ describe('phase status copy/remove action contracts', () => {
       'utf8'
     );
     expect(modelSource).toContain('copyProjectStatusMappingsToPhase: async (');
-    expect(modelSource).toContain("const defaultMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);");
+    expect(modelSource).toContain("const defaultMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);");
     expect(modelSource).toContain('buildStatusMappingCloneCorrespondence(defaultMappings, newMappings);');
-    expect(modelSource).toContain("tenantScopedTable(knexOrTrx, 'project_tasks', tenant)");
+    expect(modelSource).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
     expect(modelSource).toContain("project_status_mapping_id: oldId");
   });
 

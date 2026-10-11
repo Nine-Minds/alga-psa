@@ -1,4 +1,7 @@
 import { getEventBus } from '../index';
+import { handleCoManagedTaskCommentEmailEvent } from './coManagedCommentEmailSubscriber';
+import { deliverCoManagedRequesterTaskCommentEmailEvent } from './coManagedRequesterCommentEmailSubscriber';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import {
   EventType,
   BaseEvent,
@@ -20,7 +23,7 @@ import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent, convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
@@ -1441,6 +1444,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
   try {
     const { knex: db } = await createTenantKnex();
+    if (await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenantId))) return;
     const scopedDb = tenantDb(db, tenantId);
 
     // Get task and project details
@@ -1650,6 +1654,8 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       await getEventBus().subscribe(eventType, handleProjectEvent, { channel });
       logger.info(`[ProjectEmailSubscriber] Successfully subscribed to ${eventType} events on channel "${channel}"`);
     }
+    await getEventBus().subscribe('PROJECT_TASK_COMMENT_CREATED', handleCoManagedTaskCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
+    await getEventBus().subscribe('PROJECT_TASK_COMMENT_CREATED', deliverCoManagedRequesterTaskCommentEmailEvent, { channel, subscriberId: 'requester-email' });
 
   } catch (error) {
     logger.error('Failed to register project email subscribers:', error);
@@ -1680,6 +1686,8 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       // @ts-ignore - EventType union
       await getEventBus().unsubscribe(eventType, handleProjectEvent, { channel });
     }
+    await getEventBus().unsubscribe('PROJECT_TASK_COMMENT_CREATED', handleCoManagedTaskCommentEmailEvent, { channel });
+    await getEventBus().unsubscribe('PROJECT_TASK_COMMENT_CREATED', deliverCoManagedRequesterTaskCommentEmailEvent, { channel });
 
     logger.info('[ProjectEmailSubscriber] Successfully unregistered from project events', { channel });
   } catch (error) {
@@ -1687,3 +1695,5 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
     throw error;
   }
 }
+
+export const projectEmailSubscriberTestHarness = { handleProjectEvent };

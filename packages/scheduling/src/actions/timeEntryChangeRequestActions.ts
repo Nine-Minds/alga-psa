@@ -14,6 +14,9 @@ import {
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 
+import { readCoManagedNativeTimeSheet } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+
 interface DbTimeEntryChangeRequestRow {
   change_request_id: string;
   time_entry_id: string;
@@ -136,6 +139,10 @@ export const fetchTimeEntryChangeRequestsForTimeSheet = withAuth(async (
 ): Promise<ITimeEntryChangeRequest[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.entries.flatMap(entry => entry.change_requests ?? [])
+      .sort((a, b) => b.created_at.localeCompare(a.created_at) || a.change_request_id.localeCompare(b.change_request_id));
 
     if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read time entry change requests');

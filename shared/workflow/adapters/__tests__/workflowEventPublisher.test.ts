@@ -76,7 +76,7 @@ describe('WorkflowEventPublisher', () => {
 
   it('publishes inbound-created comment notifications through the event-bus fanout (internal + email)', async () => {
     const { WorkflowEventPublisher } = await import('../workflowEventPublisher');
-    const publisher = new WorkflowEventPublisher();
+    const publisher = new WorkflowEventPublisher({ transaction: { isTransaction: true } as any, retainConversationEvent: async () => false });
 
     await publisher.publishCommentCreated({
       tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
@@ -89,6 +89,8 @@ describe('WorkflowEventPublisher', () => {
       },
     });
 
+    expect(publishEventMock).not.toHaveBeenCalled();
+    await registerAfterCommitMock.mock.calls[0][1]();
     expect(publishEventMock).toHaveBeenCalledTimes(1);
     expect(publishEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_COMMENT_ADDED',
@@ -110,7 +112,7 @@ describe('WorkflowEventPublisher', () => {
 
   it('keeps the new-ticket first comment on the internal-notifications channel only', async () => {
     const { WorkflowEventPublisher } = await import('../workflowEventPublisher');
-    const publisher = new WorkflowEventPublisher({ suppressCommentEmail: true });
+    const publisher = new WorkflowEventPublisher({ suppressCommentEmail: true, transaction: { isTransaction: true } as any, retainConversationEvent: async () => false });
 
     await publisher.publishCommentCreated({
       tenantId: '91a53464-0b67-4e3f-ae88-922d9c5af6ed',
@@ -123,6 +125,8 @@ describe('WorkflowEventPublisher', () => {
       },
     });
 
+    expect(publishEventMock).not.toHaveBeenCalled();
+    await registerAfterCommitMock.mock.calls[0][1]();
     expect(publishEventMock).toHaveBeenCalledTimes(1);
     expect(publishEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_COMMENT_ADDED',
@@ -141,4 +145,13 @@ describe('WorkflowEventPublisher', () => {
       },
     }, { channel: 'internal-notifications' });
   });
+
+  it('requires the owning transaction before attempting comment delivery', async () => {
+    const { WorkflowEventPublisher } = await import('../workflowEventPublisher');
+    await expect(new WorkflowEventPublisher().publishCommentCreated({ tenantId: 'tenant', ticketId: 'ticket', commentId: 'comment' }))
+      .rejects.toThrow('owning transaction');
+    expect(publishEventMock).not.toHaveBeenCalled();
+    expect(registerAfterCommitMock).not.toHaveBeenCalled();
+  });
+
 });

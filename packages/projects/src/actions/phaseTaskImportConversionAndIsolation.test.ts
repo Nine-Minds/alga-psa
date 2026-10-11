@@ -79,6 +79,8 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  // The fake transaction commits immediately, so after-commit work runs at once.
+  registerAfterCommit: (_trx: unknown, work: () => unknown) => { void work(); },
   tenantDb: (conn: any) => ({
     table: () => stubQuery(conn),
     tenantJoin: (query: any) => query,
@@ -86,6 +88,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/shared/db', () => ({ withTransaction: withTransactionMock }));
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn() }));
 vi.mock('@alga-psa/core', () => ({ unparseCSV: vi.fn(() => '') }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getAllUsersBasic: vi.fn(async () => []),

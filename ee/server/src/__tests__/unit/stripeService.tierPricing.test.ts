@@ -28,8 +28,19 @@ function queryFixture(handlers: {
       return query;
     },
     whereRaw: (sql: string) => {
-      if (sql !== "COALESCE(metadata->>'addon_key', '') = ''") throw new Error(`Unexpected fixture predicate: ${sql}`);
-      predicates.push(row => !row.metadata?.addon_key);
+      // One entry per raw predicate `licenseSubscriptions` applies, so adding a
+      // predicate to the query is a one-line addition here rather than a throw
+      // in the middle of an otherwise unrelated assertion.
+      const RAW_PREDICATES: Record<string, (row: any) => boolean> = {
+        "COALESCE(metadata->>'addon_key', '') = ''": row => !row.metadata?.addon_key,
+        // A co-managed seat subscription is billed on its own SKU and must never
+        // be counted as, or mutated by, the tenant's own license subscription.
+        "COALESCE(metadata->>'subscription_kind', '') <> 'co_managed'":
+          row => (row.metadata?.subscription_kind ?? '') !== 'co_managed',
+      };
+      const predicate = RAW_PREDICATES[sql];
+      if (!predicate) throw new Error(`Unexpected fixture predicate: ${sql}`);
+      predicates.push(predicate);
       return query;
     },
     orderByRaw: () => query,

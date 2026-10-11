@@ -26,6 +26,8 @@ export interface PublishOptions {
    * that already completed are skipped by their own idempotency ledger.
    */
   force?: boolean;
+  /** Recovery for one durable subscriber; bypasses normal channel fanout. */
+  targetSubscriber?: string;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -42,6 +44,7 @@ const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
   'PROJECT_ASSIGNED',
   'PROJECT_TASK_ASSIGNED',
   'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+  'PROJECT_TASK_COMMENT_CREATED',
   'PROJECT_MILESTONE_READY',
   'PROJECT_BUDGET_THRESHOLD_REACHED',
   'PROJECT_BUDGET_EXCEEDED',
@@ -66,6 +69,7 @@ const INTERNAL_NOTIFICATION_EVENT_TYPES = new Set<Event['eventType']>([
   'PROJECT_MILESTONE_READY',
   'PROJECT_BUDGET_THRESHOLD_REACHED',
   'PROJECT_BUDGET_EXCEEDED',
+  'PROJECT_TASK_COMMENT_CREATED',
   'TASK_COMMENT_ADDED',
   'INVOICE_GENERATED',
   'MESSAGE_SENT',
@@ -164,6 +168,23 @@ export async function publishNonCatalogEventByName(
 }
 
 /**
+ * Replay a PERSISTED event whose type is only known at runtime and may be either kind (a
+ * co-managed conversation outbox row, a retained workflow comment). A catalogued type is revived
+ * against its canonical schema (`publishStoredWorkflowEvent`); anything else goes out through
+ * `publishNonCatalogEventByName`. Neither path can bypass the event contract.
+ */
+export async function publishStoredEvent(
+  event: { eventType: string; payload: Record<string, unknown> },
+  options?: PublishOptions
+): Promise<void> {
+  if (isWorkflowCatalogEventType(event.eventType)) {
+    await publishStoredWorkflowEvent(event, options);
+    return;
+  }
+  await publishNonCatalogEventByName(event, options);
+}
+
+/**
  * KNOWN DEFECT (alga-2026-0002675): publishes an event type that is NOT in EVENT_TYPES (e.g.
  * TeamService 'PLACEHOLDER', TIME_SHEET_*, INVOICE_PAYMENT_RECORDED, CONTRACT_LINE_CREATED). The
  * transport rejects them, so these publishes never deliver. Behaviour is deliberately unchanged;
@@ -182,6 +203,10 @@ async function publishEventUnchecked(
   options?: PublishOptions
 ): Promise<void> {
   try {
+    if (options?.targetSubscriber !== undefined) {
+      await getEventBus().publish(event as any, options);
+      return;
+    }
     const isEmailEvent = EMAIL_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const isInternalNotificationEvent = INTERNAL_NOTIFICATION_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const channel = options?.channel;

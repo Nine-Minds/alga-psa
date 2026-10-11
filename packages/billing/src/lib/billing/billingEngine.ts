@@ -1,4 +1,5 @@
 import { resolveInvoiceDiscounts } from './resolveInvoiceDiscounts';
+import { joinTimeEntryBillingWorkContext, timeEntryBillingWorkColumns } from './timeEntryWorkContext';
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
 import { capAppliesToInvoiceCurrency, resolveInvoiceCurrency } from './compute/projectCapMath';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
@@ -68,11 +69,7 @@ import {
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
-import {
-  ambiguousTicketProjectLinksQuery,
-  ticketProjectAttributionJoin,
-  ticketProjectIdExpression,
-} from "@alga-psa/shared/billingClients/ticketProjectAttribution";
+import { ambiguousTicketProjectLinksQuery } from "@alga-psa/shared/billingClients/ticketProjectAttribution";
 import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
@@ -2655,42 +2652,7 @@ export class BillingEngine {
       "time_entries.service_id",
       { type: "left" },
     );
-    // Ticket time counts as project time when its link says so, so the project
-    // reached below is the phase's project for task time and the resolved link
-    // project for ticket time.
-    timeEntriesQuery.joinRaw(ticketProjectAttributionJoin("time_entries"));
-    db.tenantJoin(
-      timeEntriesQuery,
-      "project_tasks",
-      "time_entries.work_item_id",
-      "project_tasks.task_id",
-      { type: "left" },
-    );
-    db.tenantJoin(
-      timeEntriesQuery,
-      "project_phases",
-      "project_tasks.phase_id",
-      "project_phases.phase_id",
-      { type: "left" },
-    );
-    db.tenantJoin(
-      timeEntriesQuery,
-      "projects",
-      this.knex.raw(
-        ticketProjectIdExpression("project_phases"),
-      ) as unknown as string,
-      "projects.project_id",
-      // project_phases is null for ticket time, so the tenant predicate has to
-      // come from the time entry rather than the (inferred) phase.
-      { type: "left", rootTenantColumn: "time_entries.tenant" },
-    );
-    db.tenantJoin(
-      timeEntriesQuery,
-      "tickets",
-      "time_entries.work_item_id",
-      "tickets.ticket_id",
-      { type: "left" },
-    );
+    joinTimeEntryBillingWorkContext(this.knex, this.tenant!, timeEntriesQuery);
 
     timeEntriesQuery
       .where({
@@ -2701,15 +2663,10 @@ export class BillingEngine {
       .whereNotNull("time_entries.service_id")
       .where("time_entries.approval_status", "APPROVED")
       .where("time_entries.billable_duration", ">", 0)
-      .where(function (this: Knex.QueryBuilder) {
-        this.where("projects.client_id", clientId).orWhere(
-          "tickets.client_id",
-          clientId,
-        );
-      });
+      .where("billing_work.client_id", clientId);
 
     if (projectTarget) {
-      timeEntriesQuery.where("projects.project_id", projectTarget.projectId);
+      timeEntriesQuery.where("billing_work.project_id", projectTarget.projectId);
     } else {
       timeEntriesQuery
         .where("time_entries.start_time", ">=", billingPeriod.startDate)
@@ -2722,8 +2679,8 @@ export class BillingEngine {
         .map((config) => config.project_id) ?? [];
     if (fixedPriceProjectIds.length > 0) {
       timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
-        this.whereNull("projects.project_id").orWhereNotIn(
-          "projects.project_id",
+        this.whereNull("billing_work.project_id").orWhereNotIn(
+          "billing_work.project_id",
           fixedPriceProjectIds,
         );
       });
@@ -2734,19 +2691,7 @@ export class BillingEngine {
       "service_catalog.service_name",
       "service_catalog.default_rate",
       "service_catalog.tax_rate_id",
-      // Same customer-visible work-item fields as the contract-line loader,
-      // so unresolved/catalog-priced time carries an identical snapshot.
-      "tickets.ticket_number as ticket_number",
-      "tickets.title as ticket_title",
-      this.knex.raw(
-        "tickets.attributes->>'description' as ticket_description",
-      ),
-      "project_tasks.task_name as project_task_name",
-      "project_phases.phase_id as project_phase_id",
-      "projects.project_id as project_id",
-      this.knex.raw(
-        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
-      ),
+      ...timeEntryBillingWorkColumns,
       this.knex.raw(
         "COALESCE((SELECT SUM(a.minutes) FROM hour_block_time_allocations a " +
           "WHERE a.tenant = time_entries.tenant AND a.time_entry_id = time_entries.entry_id), 0) " +
@@ -5359,39 +5304,11 @@ export class BillingEngine {
       currency: contractCurrency,
       alias: "sp",
     });
-    // Same attribution as the non-contract loader: a flagged ticket link makes
-    // the ticket's time reachable through its project.
-    query.joinRaw(ticketProjectAttributionJoin("time_entries"));
-    db.tenantJoin(
-      query,
-      "project_tasks",
-      "time_entries.work_item_id",
-      "project_tasks.task_id",
-      { type: "left" },
-    );
-    db.tenantJoin(
-      query,
-      "project_phases",
-      "project_tasks.phase_id",
-      "project_phases.phase_id",
-      { type: "left" },
-    );
-    db.tenantJoin(
-      query,
-      "projects",
-      this.knex.raw(
-        ticketProjectIdExpression("project_phases"),
-      ) as unknown as string,
-      "projects.project_id",
-      { type: "left", rootTenantColumn: "time_entries.tenant" },
-    );
-    db.tenantJoin(
-      query,
-      "tickets",
-      "time_entries.work_item_id",
-      "tickets.ticket_id",
-      { type: "left" },
-    );
+    // Branch supersedes main's project_ticket_links/project_tasks/project_phases/
+    // projects/tickets LEFT JOIN chain with the unioned billing_work subquery,
+    // which resolves the same columns and additionally covers retained
+    // co-managed work references.
+    joinTimeEntryBillingWorkContext(this.knex, this.tenant!, query);
 
     query
       .where({
@@ -5416,25 +5333,7 @@ export class BillingEngine {
           });
         }
       })
-      .where(function (this: Knex.QueryBuilder) {
-        this.where(function (this: Knex.QueryBuilder) {
-          this.where(
-            "time_entries.work_item_type",
-            "=",
-            "project_task",
-          ).whereNotNull("project_tasks.task_id");
-        }).orWhere(function (this: Knex.QueryBuilder) {
-          this.where("time_entries.work_item_type", "=", "ticket").whereNotNull(
-            "tickets.ticket_id",
-          );
-        });
-      })
-      .where(function (this: Knex.QueryBuilder) {
-        this.where("projects.client_id", clientId).orWhere(
-          "tickets.client_id",
-          clientId,
-        );
-      })
+      .where("billing_work.client_id", clientId)
       .where("time_entries.approval_status", "APPROVED");
 
     if (!projectTarget) {
@@ -5455,7 +5354,7 @@ export class BillingEngine {
     }
 
     if (projectTarget) {
-      query.where("projects.project_id", projectTarget.projectId);
+      query.where("billing_work.project_id", projectTarget.projectId);
     } else {
       query
         .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
@@ -5468,8 +5367,8 @@ export class BillingEngine {
         .map((config) => config.project_id) ?? [];
     if (fixedPriceProjectIds.length > 0) {
       query.where(function (this: Knex.QueryBuilder) {
-        this.whereNull("projects.project_id").orWhereNotIn(
-          "projects.project_id",
+        this.whereNull("billing_work.project_id").orWhereNotIn(
+          "billing_work.project_id",
           fixedPriceProjectIds,
         );
       });
@@ -5481,26 +5380,7 @@ export class BillingEngine {
       "service_catalog.default_rate",
       "service_catalog.tax_rate_id",
       "sp.rate as currency_rate",
-      this.knex.raw(
-        "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
-      ),
-      // Work-item identity + customer-visible fields for the immutable
-      // invoice snapshot. Same joins as work_item_name; internal comments and
-      // time-entry notes are deliberately excluded.
-      "tickets.ticket_number as ticket_number",
-      "tickets.title as ticket_title",
-      this.knex.raw(
-        "tickets.attributes->>'description' as ticket_description",
-      ),
-      "project_tasks.task_name as project_task_name",
-      "project_phases.phase_id as project_phase_id",
-      "projects.project_id as project_id",
-      // Step 4 of the billing-profile resolution chain. The ticket and project
-      // joins already exist for work-item naming; this is the whole cost of
-      // making the work-item step reachable for time charges.
-      this.knex.raw(
-        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
-      ),
+      ...timeEntryBillingWorkColumns,
     );
 
     const timeEntries = await query;

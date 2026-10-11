@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do poczty przychodzącej, logowania pracowników i konfiguracji katalogu. Te poświadczenia należą do Twojego obszaru roboczego.",
+      "backToEmail": "Powrót do ustawień poczty e-mail"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niezapisana zmiana",
     "unsavedChanges_few": "{{count}} niezapisane zmiany",

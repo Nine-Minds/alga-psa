@@ -32,6 +32,10 @@ vi.mock('@alga-psa/shared/billingClients/ticketProjectAttribution', () => ({
 
 vi.mock('./project', () => ({ default: {} }));
 
+vi.mock('@alga-psa/licensing', () => ({
+  withCoManagedOperationalTransaction: async (db: unknown, _tenant: string, work: (trx: unknown) => Promise<unknown>) => work(db),
+}));
+
 import ProjectTaskModel from './projectTask';
 
 const knexStub: any = { fn: { now: () => 'now()' } };

@@ -206,6 +206,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereNull: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (
@@ -243,6 +244,7 @@ describe('search ACL SQL predicate', () => {
     const commentQuery = {
       select: vi.fn(() => commentQuery),
       where: vi.fn(() => commentQuery),
+      whereNull: vi.fn(() => commentQuery),
       first: vi.fn(() => commentQuery),
       andWhere: vi.fn(() => commentQuery),
       then: (
@@ -307,6 +309,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereNull: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (
@@ -350,6 +353,7 @@ describe('search ACL SQL predicate', () => {
       const query = {
         select: vi.fn(() => query),
         where: vi.fn(() => query),
+        whereNull: vi.fn(() => query),
         first: vi.fn(() => query),
         andWhere: vi.fn(() => query),
         then: (

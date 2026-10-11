@@ -83,7 +83,7 @@ function buildReportKnex(params: {
     if (table === 'contract_line_service_configuration as clsc') {
       return buildThenableQuery([]);
     }
-    // Usage-config variability check reads the table without an alias.
+    // Unaliased: the usage-configuration probe that flags a line as variable.
     if (table === 'contract_line_service_configuration') {
       return buildThenableQuery([]);
     }
@@ -174,7 +174,7 @@ describe('contractReportActions recurring service-period basis', () => {
       if (table === 'contract_line_service_configuration as clsc') {
         return buildThenableQuery([]);
       }
-      // Usage-config variability check reads the table without an alias.
+      // Unaliased: the usage-configuration probe that flags a line as variable.
       if (table === 'contract_line_service_configuration') {
         return buildThenableQuery([]);
       }

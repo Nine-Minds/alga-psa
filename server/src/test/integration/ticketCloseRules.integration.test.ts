@@ -178,6 +178,11 @@ describe('ticket close rules', () => {
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
       user_id: seededUser.user_id,
+      // A real session user always carries its tenant. Without it,
+      // `updateTicketInTransaction`'s foreign-actor guard sees
+      // `undefined !== tenant` and refuses the write -- correctly, since that
+      // guard must fail closed rather than treat an unknown tenant as local.
+      tenant: seededUser.tenant,
       user_type: 'internal',
       first_name: seededUser.first_name ?? 'Test',
       last_name: seededUser.last_name ?? 'User',
@@ -679,6 +684,7 @@ describe('ticket close rules', () => {
     const mspUser = userRef.user;
     userRef.user = {
       user_id: portalUserId,
+      tenant: mspUser.tenant,
       user_type: 'client',
       email: `portal-${portalUserId.slice(0, 8)}@example.com`,
     };
@@ -749,6 +755,10 @@ describe('ticket close rules', () => {
   it('T047: reopening clears closure fields and publishes TICKET_REOPENED', async () => {
     const ticketId = await insertTicket(db, fixture);
 
+    // withTransaction, not a raw db.transaction: transition events publish via
+    // registerAfterCommit, and only the owning withTransaction frame flushes
+    // those hooks. See the note on the import above -- the rest of this file
+    // already uses it for the same reason.
     await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.closedStatusId,

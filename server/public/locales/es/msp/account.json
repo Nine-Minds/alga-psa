@@ -427,5 +427,8 @@
       "loading": "Cargando…",
       "loadMore": "Cargar más"
     }
+  },
+  "coManaged": {
+    "accountTitle": "TI cogestionada"
   }
 }

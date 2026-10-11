@@ -41,7 +41,8 @@ export const projectTaskCommentResponseSchema = z.object({
   task_id: uuidSchema,
   thread_id: uuidSchema.nullable(),
   parent_comment_id: uuidSchema.nullable(),
-  user_id: uuidSchema,
+  /** Null for comments written by a co-managed collaborator, who has no users row here. */
+  user_id: uuidSchema.nullable(),
   author_type: z.literal('internal'),
   /** BlockNote JSON; "[deleted]" once soft-deleted. */
   note: z.string(),

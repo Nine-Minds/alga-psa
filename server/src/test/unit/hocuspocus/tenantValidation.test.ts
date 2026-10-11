@@ -96,13 +96,9 @@ describe('ticket room validation', () => {
     ).toThrow('room ticket mismatch');
   });
 
-  it('T016: notifications rooms still bypass validation unchanged', () => {
-    expect(
-      validateDocumentRoomAccess(
-        'notifications:tenant-1:user-1',
-        new Request('http://localhost/hocuspocus')
-      )
-    ).toEqual({ status: 'bypass', reason: 'notifications' });
+  it('rejects legacy notification rooms instead of reopening their cached contents', () => {
+    expect(() => validateDocumentRoomAccess('notifications:tenant-1:user-1', new Request('http://localhost/hocuspocus')))
+      .toThrow('Legacy notification rooms');
   });
 
   it('T017: document room validation still uses tenantId from the request query', () => {

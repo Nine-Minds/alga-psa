@@ -58,6 +58,16 @@ vi.mock('@alga-psa/licensing', () => ({
 const ENTRA_PREFIX = 'entra-all-tenants-sync-schedule';
 
 describe('setupSchedules Entra tier gating', () => {
+  it('schedules installation restore recovery without tenant or paid-tier prerequisites', async () => {
+    const { setupSchedules } = await import('../setupSchedules');
+    await setupSchedules();
+    expect(scheduleCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+      scheduleId: 'maintenance-fanout:portable-restore-upload-cleanup',
+      spec: { cronExpressions: ['*/15 * * * *'] },
+      action: expect.objectContaining({ args: [{ jobName: 'portable-restore-upload-cleanup' }] }),
+    }));
+    expect(resolveTenantTierMock).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     entraSettingsRows.length = 0;

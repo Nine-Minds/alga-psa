@@ -63,6 +63,7 @@ vi.mock('@alga-psa/tags/actions/tagActionErrors', () => ({ isTagActionError: () 
 vi.mock('../lib/taskRichText', () => ({ extractTaskDescriptionText: (value: any) => value ?? '' }));
 vi.mock('@shared/services/productAccessGuard', () => ({
   assertPsaOnlyTenantAccess: vi.fn(async () => undefined),
+  assertTenantProductCapability: vi.fn(async () => undefined),
   ProductAccessError: class ProductAccessError extends Error {},
 }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({

@@ -205,6 +205,8 @@ export default defineConfig({
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@alga-psa/shared', replacement: path.resolve(__dirname, '../shared') },
+      // Worker bootstrap modules use the ESM specifier in the shared admin API.
+      { find: '@alga-psa/db/admin.js', replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
       // @alga-psa/search export names mirror its src layout, so a prefix alias
       // resolves all subpaths (./sql, ./indexers/*, ...) to source for Vitest.
       { find: '@alga-psa/search', replacement: path.resolve(__dirname, '../packages/search/src') },
@@ -244,6 +246,9 @@ export default defineConfig({
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
+      // Some co-managed subpaths publish only built dist/ files, which unit runs never build.
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../packages/co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, '../packages/co-managed/src/$1.ts') },
       { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../packages/licensing/src/index.ts') },
       { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/index.ts') },
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },

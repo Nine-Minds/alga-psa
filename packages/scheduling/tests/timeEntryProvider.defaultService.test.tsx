@@ -14,6 +14,7 @@ const getClientIdForWorkItem = vi.fn();
 const getSchedulingClientById = vi.fn();
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  getTimeEntryBillingMode: vi.fn(async () => 'commercial'),
   fetchServicesForTimeEntry: (...args: unknown[]) => fetchServicesForTimeEntry(...args),
   fetchTaxRegions: (...args: unknown[]) => fetchTaxRegions(...args),
   fetchClientTaxRateForWorkItem: (...args: unknown[]) => fetchClientTaxRateForWorkItem(...args),

@@ -1,3 +1,4 @@
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
@@ -328,6 +329,9 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
   for (const row of due) {
     try {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // The shared update core admits again before writing. Acquire the same
+        // lifecycle locks here before its resolution comment takes ticket locks.
+        await assertCoManagedOperationalWrite(trx, tenant);
         // Revalidate from current state inside the transaction: the ticket
         // must still match the rule and still be inactive past the deadline.
         const [stillPending] = await computePendingCloses(trx, tenant, row.ticket_id);

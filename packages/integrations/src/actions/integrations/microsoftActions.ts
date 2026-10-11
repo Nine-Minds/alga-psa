@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   getMicrosoftEmailSetupReadiness,
   getMicrosoftProfileReadiness,
@@ -1250,7 +1251,7 @@ export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
     baseUrl,
     mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
     setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
-    returnTo: `${baseUrl}/msp/settings/integrations?category=providers`,
+    returnTo: `${baseUrl}${PROVIDER_SETUP_ENTRY_PATH}`,
   };
 }
 

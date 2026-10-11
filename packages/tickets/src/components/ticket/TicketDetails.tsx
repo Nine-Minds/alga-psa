@@ -1,5 +1,6 @@
 'use client';
 
+import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -808,11 +809,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
     const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
     const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
-    const pendingRemoteUpdateRef = useRef<{
-        updatedFields: string[];
-        updatedBy: { userId: string; displayName: string };
-        updatedAt: string;
-    } | null>(null);
+    const pendingRemoteUpdateRef = useRef<TicketLiveRemoteUpdate | null>(null);
     const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
     const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
@@ -981,7 +978,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const refreshTicketSnapshot = useCallback(async (
         updatedFields: string[] = [],
-        remoteUpdatedBy?: { userId: string; displayName: string }
+        remoteUpdatedBy?: { userId: string | null; displayName: string }
     ) => {
         if (!ticket.ticket_id) {
             return { refreshed: false as const };
@@ -1159,7 +1156,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
 
-    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+    const queueRemoteUpdate = useCallback((update: TicketLiveRemoteUpdate) => {
         const currentPendingUpdate = pendingRemoteUpdateRef.current;
 
         pendingRemoteUpdateRef.current = currentPendingUpdate

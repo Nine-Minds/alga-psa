@@ -1,0 +1,473 @@
+[
+  {
+    "id": "CF001",
+    "description": "Reconcile every foundation and follow-on requirement into a source/evidence inventory, preserving open or stale statuses and the existing external-provider scope.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [],
+    "prdRefs": [
+      "PRD.md#c1--reconcile-requirements-and-preserve-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF002",
+    "description": "Capture the first requester intake error and reproducible CI/source/runtime/schema/order differences without recursive error serialization or secrets.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c2--diagnose-and-repair-requester-lifecycle-deferral"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF003",
+    "description": "Repair the demonstrated requester lifecycle cause so separately compiled admission pauses defer, roll back effects and refund claims while unknown failures retry.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF002"
+    ],
+    "prdRefs": [
+      "PRD.md#c2--diagnose-and-repair-requester-lifecycle-deferral"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF004",
+    "description": "Preserve requester audience/token isolation, both worker entry points and exactly-once renewal replay through the deferral repair.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF003"
+    ],
+    "prdRefs": [
+      "PRD.md#c2--diagnose-and-repair-requester-lifecycle-deferral"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF005",
+    "description": "Expose a customer-permitted provider setup composition with working Email/identity/directory links and return navigation while denying unrelated integration categories.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c3--complete-customer-email-identity-and-directory-setup"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF006",
+    "description": "Retain product/RBAC/tenant/secret admission on every customer provider configuration read, save and OAuth callback.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF005"
+    ],
+    "prdRefs": [
+      "PRD.md#c3--complete-customer-email-identity-and-directory-setup"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF007",
+    "description": "Complete Microsoft test-authority discovery and real application sign-in/callback execution with production issuer, signature, state, nonce and audience checks preserved.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF006"
+    ],
+    "prdRefs": [
+      "PRD.md#c3--complete-customer-email-identity-and-directory-setup"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF008",
+    "description": "Complete customer-owned inbound email and requester reply through configured providers and running workers, including duplicate, pause and revoked-credential behavior.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF004",
+      "CF007"
+    ],
+    "prdRefs": [
+      "PRD.md#c3--complete-customer-email-identity-and-directory-setup"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF009",
+    "description": "Complete supported customer directory provisioning/sync and revocation through normal controls with signed identity and seat-limit enforcement.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF007"
+    ],
+    "prdRefs": [
+      "PRD.md#c3--complete-customer-email-identity-and-directory-setup"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF010",
+    "description": "Preserve completed initial invitation retain/send/acknowledge behavior through fresh setup, retry, token races and customer acceptance.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF011",
+    "description": "Close ticket-list coordinator, native state/history/detail-return and qualified initial-entry requirements F003/F006/F012 with native fallback.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF012",
+    "description": "Close list composition, native metadata/defaults and qualified view/filter/search/sort/pagination requirements F010/F015/F017/F020/F021/F022.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF011"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF013",
+    "description": "Close full filtered CSV and routed MSP-owned creation requirements F024/F025/F026 without scope or identity confusion.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF012"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF014",
+    "description": "Close qualified selection and handback F027-F031 with immutable uncertain-retry identity, actor-scoped reload recovery and per-item reconciliation.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF012"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF015",
+    "description": "Close stale-result/error/flag/presentation/entry consolidation F032/F036/F038/F039 and client integration presentation evidence.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF013",
+      "CF014"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF016",
+    "description": "Resolve the team picker interaction failure and demonstrate customer/shared work assignment through the actual UI.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c4--finish-the-existing-client-and-ticket-list-experience"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF017",
+    "description": "Render shared MSP effort in ordinary timesheet grid/detail/export consistently with totals while retaining empty-sheet dispatch and qualified edit authority.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c5--make-shared-time-visible-and-preserve-billing"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF018",
+    "description": "Complete native/customer/shared time approval and billing journeys; repair the reported absent-column API path if reachable by required flows or prove its exclusion.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF017"
+    ],
+    "prdRefs": [
+      "PRD.md#c5--make-shared-time-visible-and-preserve-billing"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF019",
+    "description": "Prove assembled revocation across live UI/API/files/search and queued delivery without late unauthorized effects.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF004",
+      "CF008"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF020",
+    "description": "Prove the original 30-day lapse deadline, immediate growth denial and durable once-only recovery with both deployed worker compositions.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF004",
+      "CF008"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF021",
+    "description": "Complete independent customer/MSP SLA transitions, author/audience qualification and both running SLA backends.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF014"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF022",
+    "description": "Complete hosted pool purchase and independent upgrade through real application/simulator flows with verified entitlement and one allocation release.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF010"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF023",
+    "description": "Complete self-host pool admission, renewal and independent upgrade through signed test-license controls without inheriting the sponsor license.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF010"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF024",
+    "description": "Complete source-unavailable customer export/restore through native screens including files, encrypted business credentials, attribution and excluded live trust.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF025",
+    "description": "Verify actual customer deletion after departure preserves authorized MSP invoice/archive content and denies revived live access.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF022",
+      "CF023",
+      "CF024"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF026",
+    "description": "Verify fresh/populated-upgrade PostgreSQL/Citus migrations and each distributed invariant whose trigger is omitted; repair any unguarded production write.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c6--complete-lifecycle-continuity-and-deployment-mode-evidence"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF027",
+    "description": "Diagnose app healing and align app/worker/dist/schema provenance; complete the sustained authenticated review and worker-consumption stability check.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c7--establish-a-reproducible-review-environment-and-regression-result"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF028",
+    "description": "Produce reproducible fixture reset/apply logs and faithful screenshot/DB/browser evidence without deleting unrelated records or secrets.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF027"
+    ],
+    "prdRefs": [
+      "PRD.md#c7--establish-a-reproducible-review-environment-and-regression-result"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF029",
+    "description": "Obtain affected build/type/native regression and mandatory exact-candidate CI success while preserving lane collection, failures and runtime schema selection.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF003",
+      "CF015",
+      "CF018",
+      "CF026"
+    ],
+    "prdRefs": [
+      "PRD.md#c7--establish-a-reproducible-review-environment-and-regression-result"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF030",
+    "description": "Implement the complete-ID readiness manifest and fail-closed read-only verifier with separate implementation, human-review and production verdicts.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#c8--enforce-completion-before-requesting-human-review"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF031",
+    "description": "Reconcile the final PR/guide/plan/evidence packet and supply the verifier verdict to the XO, preserving false readiness until all in-card gates pass.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF008",
+      "CF009",
+      "CF010",
+      "CF015",
+      "CF016",
+      "CF018",
+      "CF019",
+      "CF020",
+      "CF021",
+      "CF022",
+      "CF023",
+      "CF024",
+      "CF025",
+      "CF026",
+      "CF028",
+      "CF029",
+      "CF030"
+    ],
+    "prdRefs": [
+      "PRD.md#c8--enforce-completion-before-requesting-human-review"
+    ],
+    "evidence": []
+  },
+  {
+    "id": "CF032",
+    "description": "Record owned external real-provider/deployment prerequisites separately from card-scoped simulator acceptance, with production readiness false until release-owner acceptance.",
+    "implemented": false,
+    "status": "pending",
+    "ownerRole": "implementing-ood",
+    "dependsOn": [
+      "CF001"
+    ],
+    "prdRefs": [
+      "PRD.md#external-prerequisites-and-rollout"
+    ],
+    "evidence": []
+  }
+]

@@ -6,6 +6,9 @@
  * propagation engine (which reaches the database and Node async hooks).
  */
 
+import type { CloseRuleBypassSource } from '@alga-psa/shared/lib/ticketCloseRules';
+import type { TicketActivityActorInfo } from '@alga-psa/shared/lib/ticketActivity';
+
 export type TicketBundleBoundary = 'close' | 'reopen';
 
 export interface BundlePropagationChild {
@@ -55,10 +58,29 @@ export interface BundleStatusPropagationContext {
   source?: string;
   /** The master ticket's status before this update was applied. */
   previousMasterStatusId: string | null;
+  /**
+   * Set when the acting principal is a co-managed collaborator. A collaborator
+   * is admitted to the master ticket only; a bundle-wide child write can reach
+   * tickets it was never admitted to, so propagation is refused outright rather
+   * than silently narrowed to the children it happens to be able to see.
+   */
+  collaborator?: boolean;
+  /**
+   * Actor attribution for the per-child TICKET_CLOSED / TICKET_REOPENED rows.
+   * Falls back to the propagating user when omitted.
+   */
+  actor?: TicketActivityActorInfo;
 }
 
 export interface PropagateBundleMasterStatusOptions {
   propagateToChildren?: boolean;
+  /**
+   * Close-rule handling for children closed by propagation. Children are real
+   * tickets: a propagated close must clear the same board close rules a direct
+   * close would, and honour the same operator override/bypass.
+   */
+  overrideCloseRules?: { requested: boolean; reason: string | null; user: unknown };
+  bypassCloseRules?: { source: CloseRuleBypassSource } | undefined;
 }
 
 export interface PropagateBundleMasterStatusResult {

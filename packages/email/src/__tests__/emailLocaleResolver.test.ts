@@ -200,7 +200,7 @@ describe('getTenantDefaultLocale', () => {
 
   it('ignores unsupported configured locales', async () => {
     rows = [
-      { __table: 'tenant_settings', tenant: TENANT, settings: { defaultLocale: 'xx' } }
+      { __table: 'tenant_settings', tenant: TENANT, settings: { defaultLocale: 'zz' } }
     ];
 
     await expect(getTenantDefaultLocale(TENANT)).resolves.toBe('en');

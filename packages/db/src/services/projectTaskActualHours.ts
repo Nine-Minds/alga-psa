@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '../lib/tenantDb';
+import { withTransaction } from '../lib/tenant';
 
 export interface ProjectTaskTimeEntryRef {
   work_item_id?: string | null;
@@ -11,9 +12,19 @@ export async function recalculateProjectTaskActualHours(
   tenant: string,
   taskIds: Iterable<string | null | undefined>,
 ): Promise<void> {
-  const uniqueTaskIds = [...new Set([...taskIds].filter((taskId): taskId is string => Boolean(taskId)))];
+  const uniqueTaskIds = [...new Set([...taskIds].filter((taskId): taskId is string => Boolean(taskId)))].sort();
   if (uniqueTaskIds.length === 0) return;
 
+  await withTransaction(connection, async trx => {
+    const scoped = tenantDb(trx, tenant);
+    // Serialize before taking the aggregate snapshot. Locking only on the final
+    // UPDATE lets concurrent entries overwrite the total with a stale sum.
+    await scoped.table('project_tasks').whereIn('task_id', uniqueTaskIds).orderBy('task_id').forUpdate().select('task_id');
+    await updateActualMinutes(trx, tenant, uniqueTaskIds);
+  });
+}
+
+async function updateActualMinutes(connection: Knex.Transaction, tenant: string, uniqueTaskIds: string[]) {
   const db = tenantDb(connection, tenant);
   const totals = await db.table('time_entries')
     .where({ work_item_type: 'project_task' })

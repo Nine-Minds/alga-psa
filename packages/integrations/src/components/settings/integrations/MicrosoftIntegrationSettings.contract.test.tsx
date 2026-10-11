@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import { MAILBOX_SETUP_ENTRY_PATH, resolveProductNavDestination } from '@alga-psa/types';
 
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
@@ -415,7 +416,20 @@ describe('MicrosoftIntegrationSettings contracts', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Connect a mailbox →' }));
 
-    expect(routerPushMock).toHaveBeenCalledWith('/msp/settings/integrations?category=communication');
+    // This assertion used to name the PSA Communication URL directly. Since
+    // the product-neutral dispatcher landed, the contract it protected -- a PSA
+    // tenant clicking "Connect a mailbox" lands on the PSA Communication page
+    // -- is split across two places, so both halves are asserted here.
+    //
+    // Half 1: the component pushes the dispatcher link, so a co-managed tenant
+    // is never sent to a PSA settings page it is denied.
+    expect(routerPushMock).toHaveBeenCalledWith(MAILBOX_SETUP_ENTRY_PATH);
+    // Half 2: the dispatcher resolves that link back to the PSA Communication
+    // page for a PSA tenant. Deleting the psa row from PRODUCT_NAV_DESTINATIONS
+    // turns this red.
+    expect(resolveProductNavDestination('mailbox', 'psa')).toBe(
+      '/msp/settings/integrations?category=communication'
+    );
   });
 
   it('does not offer the platform app when the server reports a self-hosted deployment', async () => {

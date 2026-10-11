@@ -25,6 +25,32 @@ function tenantScopedTable(
 
 type UserWithOptionalRoles = IUser & { roles?: Array<{ role_id?: string } | string> };
 
+/**
+ * Outcome of an opt-in admission pass that runs before the kernel decision.
+ *
+ * `handled: false` means the admission mechanism does not apply to this request
+ * at all and the caller's documents pass through untouched. When `handled` is
+ * true the listed documents are withheld, and `assertCurrent` (if supplied) is
+ * re-checked after the decision so a credential that was revoked mid-flight
+ * still fails closed.
+ */
+export interface DocumentAdmissionOutcome {
+  handled: boolean;
+  deniedDocumentIds?: string[];
+  assertCurrent?: () => Promise<void>;
+}
+
+/**
+ * Admission runs *in addition to* — never instead of — the checks below. It can
+ * only ever withhold documents, so an admission hook cannot widen access.
+ */
+export type DocumentAdmissionHook = (
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  documentIds: string[],
+) => Promise<DocumentAdmissionOutcome>;
+
 interface DocumentAssociationRow {
   document_id: string;
   entity_id: string;
@@ -341,8 +367,23 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   tenant: string,
   user: IUser,
   documents: T[],
-  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>,
+  admitDocuments?: DocumentAdmissionHook
 ): Promise<T[]> {
+  if (documents.length === 0) {
+    return [];
+  }
+
+  // Opt-in admission (e.g. co-managed meeting artifacts) narrows the candidate
+  // set first. It never replaces the checks below — an admitted document still
+  // has to survive the kernel, client visibility, and the attachment lifecycle.
+  const admission = admitDocuments
+    ? await admitDocuments(trx, tenant, user, documents.map((document) => document.document_id))
+    : null;
+  if (admission?.handled) {
+    const deniedDocumentIds = new Set(admission.deniedDocumentIds ?? []);
+    documents = documents.filter((document) => !deniedDocumentIds.has(document.document_id));
+  }
   if (documents.length === 0) {
     return [];
   }
@@ -428,6 +469,11 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     authorizedDocuments.push(applyDocumentRedactions(annotated, decision.redactedFields));
   }
 
+  // Re-assert the admitting credential after the decision so a session revoked
+  // while we were resolving still fails closed.
+  if (admission?.handled && typeof admission.assertCurrent === 'function') {
+    await admission.assertCurrent();
+  }
   return authorizedDocuments;
 }
 

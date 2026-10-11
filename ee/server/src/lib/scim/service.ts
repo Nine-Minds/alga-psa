@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { lockCoManagedSeatScope, assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
 
 import {
@@ -131,6 +132,7 @@ export class ScimProvisioningService {
 
   async createUser(input: NormalizedScimUser): Promise<Record<string, unknown>> {
     const result = await this.knex.transaction(async (trx): Promise<ProvisionResult> => {
+      await lockCoManagedSeatScope(trx, this.connection.tenant);
       const existing = await this.findLinkByExternalId(trx, input.externalId);
 
       if (existing) {
@@ -228,6 +230,7 @@ export class ScimProvisioningService {
 
   async replaceUser(linkId: string, input: NormalizedScimUser): Promise<Record<string, unknown>> {
     return this.knex.transaction(async (trx) => {
+      await lockCoManagedSeatScope(trx, this.connection.tenant);
       const link = await this.requireLockedLink(trx, linkId);
       if (link.external_id !== input.externalId) {
         throw new ScimError(409, 'externalId is immutable after linking.', 'mutability');
@@ -243,6 +246,7 @@ export class ScimProvisioningService {
     operations: ScimPatchOperation[]
   ): Promise<Record<string, unknown>> {
     return this.knex.transaction(async (trx) => {
+      await lockCoManagedSeatScope(trx, this.connection.tenant);
       const link = await this.requireLockedLink(trx, linkId);
       const next = this.applyPatchOperations(link, operations);
       const updated = await this.applyLifecycle(trx, link, next, 'patch');
@@ -252,6 +256,7 @@ export class ScimProvisioningService {
 
   async deleteUser(linkId: string): Promise<void> {
     await this.knex.transaction(async (trx) => {
+      await lockCoManagedSeatScope(trx, this.connection.tenant);
       const link = await this.requireLockedLink(trx, linkId, true);
       if (link.link_state === 'unlinked') {
         throw new ScimError(404, 'The SCIM user resource was not found.');
@@ -457,6 +462,11 @@ export class ScimProvisioningService {
         });
     } else if (link.scim_inactive_at) {
       if (user.is_inactive) {
+        try { await assertCoManagedSeatAdmission(trx, this.connection.tenant, { email: user.email || undefined, existingUserId: link.user_id }); }
+        catch (error) {
+          if (error instanceof CoManagedAdmissionError) throw new ScimError(409, error.message);
+          throw error;
+        }
         await db.table('users').where('user_id', link.user_id).update({
           is_inactive: false,
           updated_at: trx.fn.now(),

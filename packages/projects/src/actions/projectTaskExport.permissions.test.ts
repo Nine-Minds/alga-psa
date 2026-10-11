@@ -54,6 +54,7 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@shared/services/productAccessGuard', () => ({
   assertPsaOnlyTenantAccess: async () => undefined,
+  assertTenantProductCapability: async () => undefined,
   ProductAccessError: class ProductAccessError extends Error {},
 }));
 

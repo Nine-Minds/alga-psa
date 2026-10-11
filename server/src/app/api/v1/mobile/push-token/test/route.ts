@@ -27,7 +27,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const serverHost = new URL(req.url).host;
-    const sent = await sendPushNotifications(
+    const { results: sent } = await sendPushNotifications(
       tokens.map((t) => buildTestPushMessage(t.expo_push_token, serverHost)),
       tenant,
     );

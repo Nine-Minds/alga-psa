@@ -1,3 +1,5 @@
+vi.mock('@shared/services/productAccessGuard', () => ({ assertTenantProductCapability: vi.fn(async () => undefined), ProductAccessError: class extends Error {} }));
+
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
 
 let secretProvider: { getTenantSecret: (tenant: string, key: string) => Promise<string | null> };

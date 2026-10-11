@@ -427,5 +427,8 @@
       "loading": "Wird geladen…",
       "loadMore": "Mehr laden"
     }
+  },
+  "coManaged": {
+    "accountTitle": "Co-Managed IT"
   }
 }

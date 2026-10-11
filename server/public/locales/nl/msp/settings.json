@@ -1,4 +1,11 @@
 {
+  "coManaged": {
+    "providers": {
+      "title": "E-mail- en identiteitsproviders",
+      "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail, aanmelding van medewerkers en het instellen van de directory. Deze inloggegevens horen bij uw werkruimte.",
+      "backToEmail": "Terug naar e-mailinstellingen"
+    }
+  },
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
     "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"

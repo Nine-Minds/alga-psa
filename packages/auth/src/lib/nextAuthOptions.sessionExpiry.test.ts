@@ -52,8 +52,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 vi.mock('@alga-psa/licensing', () => ({
-  getLicenseStateRow: vi.fn(async () => null),
-  resolveSelfHostTier: vi.fn(() => undefined),
+  getTenantSelfHostLicenseState: vi.fn(async () => null),
+  resolveTenantTier: vi.fn(async () => 'pro'),
 }));
 vi.mock('./sso/registry', () => ({
   getSSORegistry: () => ({

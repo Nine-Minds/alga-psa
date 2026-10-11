@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} von {{total}} Artikel importiert",
       "failedCount": "{{count}} fehlgeschlagen:"
+    },
+    "recovery": {
+      "title": "Unvollständige Importe",
+      "refresh": "Aktualisieren",
+      "paused": "Importe sind für diesen Arbeitsbereich pausiert. Ihre Dateien sind gespeichert.",
+      "retry": "Ihre Dateien sind gespeichert. Setzen Sie den Import fort, ohne sie erneut hochzuladen.",
+      "resume": "Import fortsetzen",
+      "remaining": "{{pending}} von {{total}} Dateien verbleibend",
+      "open": "Fortschritt anzeigen",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "loadError": "Unvollständige Importe konnten nicht geladen werden"
     }
   },
   "staleness": {

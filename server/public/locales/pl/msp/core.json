@@ -104,7 +104,10 @@
     },
     "passwords": "Hasła",
     "ticketsAll": "Wszystkie zgłoszenia",
-    "ticketsRecurring": "Zgłoszenia cykliczne"
+    "ticketsRecurring": "Zgłoszenia cykliczne",
+    "coManaged": "Współzarządzane IT",
+    "coManagedDelegation": "Administracja delegowana",
+    "coManagedAccess": "Dostęp do współzarządzania"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

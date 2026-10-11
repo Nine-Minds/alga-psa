@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} of {{total}} article(s) imported",
       "failedCount": "{{count}} failed:"
+    },
+    "recovery": {
+      "title": "Unfinished imports",
+      "refresh": "Refresh",
+      "paused": "Imports are paused for this workspace. Your files are saved.",
+      "retry": "Your files are saved. Resume the import to continue without uploading them again.",
+      "resume": "Resume import",
+      "remaining": "{{pending}} of {{total}} files remaining",
+      "open": "View progress",
+      "previous": "Previous",
+      "next": "Next",
+      "loadError": "Could not load unfinished imports"
     }
   },
   "staleness": {

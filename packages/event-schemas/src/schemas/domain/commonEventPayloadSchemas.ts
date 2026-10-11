@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { withWorkflowPicker, type WorkflowPickerKind } from '../../jsonSchemaMetadata';
+import { collaborationActorReferenceSchema } from '../collaborationActorSchemas';
 
 export const tenantIdSchema = z.string().min(1).describe('Tenant ID');
 export const occurredAtSchema = z.string().datetime().describe('Timestamp when the event occurred (ISO 8601)');
@@ -26,7 +27,7 @@ const isCalendarDate = (value: string): boolean => {
 export const dateOnlySchema = (label: string) =>
   z.string().regex(DATE_ONLY_PATTERN, 'Expected a YYYY-MM-DD date').refine(isCalendarDate, 'Invalid calendar date').describe(label);
 
-export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM']).describe('Actor type');
+export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM', 'COLLABORATOR']).describe('Actor type');
 
 export const BaseDomainEventPayloadSchema = z.object({
   tenantId: tenantIdSchema,
@@ -38,6 +39,7 @@ export const BaseDomainEventPayloadSchema = z.object({
   // that led here; the event-stream worker uses it to refuse a workflow already in the chain.
   workflowRunId: uuidSchema('Workflow Run ID').optional(),
   workflowLineage: z.array(z.string().uuid()).describe('Workflow ids that caused this event, oldest first').optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
 });
 
 export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of updated fields').optional();

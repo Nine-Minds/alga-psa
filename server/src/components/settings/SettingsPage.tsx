@@ -86,7 +86,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const tabParam = searchParams?.get('tab') ?? initialTabParam;
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
-  const isAlgaDesk = productCode === 'algadesk';
+  const hasRestrictedSettings = productCode !== 'psa';
   const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);
 
   const baseTabContent: SettingsTabContent[] = [
@@ -175,12 +175,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
 
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
-    if (!isAlgaDesk) {
+    if (!hasRestrictedSettings) {
       return tabs;
     }
 
     return tabs.filter((tab) => allowedTabIds.has(tab.id));
-  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgaDesk]);
+  }, [allowedTabIds, baseTabContent, extensionsTab, hasRestrictedSettings]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

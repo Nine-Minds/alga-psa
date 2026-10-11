@@ -65,6 +65,7 @@ export class ApiSearchController extends ApiBaseController {
             apiRequest.context.tenant,
             apiRequest.context.user as IUserWithRoles,
             input,
+            { kind: 'api_key', apiKeyId: apiRequest.context.apiKeyId! },
           );
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

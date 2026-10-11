@@ -128,9 +128,22 @@ export function publishResponseStateChange(
   );
 }
 
+export type ResponseStateChange = {
+  tenant: string;
+  ticketId: string;
+  userId: string | null;
+  previousState: TicketResponseState;
+  newState: TicketResponseState;
+};
+
 /**
  * Apply the comment rules to the ticket inside the caller's transaction and
  * queue the change event. Skips both when tracking is disabled for the tenant.
+ *
+ * `afterChange` runs in the transaction once the state row has changed (the
+ * co-managed awaiting-client SLA follows it). `publishChange` replaces the
+ * default after-commit publication, for callers whose comment events are
+ * retained with the mutation (co-managed conversations).
  */
 export async function applyCommentResponseState(
   trx: Knex.Transaction,
@@ -140,7 +153,11 @@ export async function applyCommentResponseState(
     authorType: CommentAuthorType;
     isInternal: boolean;
     userId: string | null;
-  }
+  },
+  options: {
+    afterChange?: (change: ResponseStateChange) => Promise<void>;
+    publishChange?: (change: ResponseStateChange) => Promise<void>;
+  } = {}
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
   const { tenant, ticketId } = params;
 
@@ -163,14 +180,13 @@ export async function applyCommentResponseState(
       .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
-    publishResponseStateChange(trx, {
-      tenant,
-      ticketId,
-      userId: params.userId,
-      previousState,
-      newState,
-      trigger: 'comment',
-    });
+    const change: ResponseStateChange = { tenant, ticketId, userId: params.userId, previousState, newState };
+    await options.afterChange?.(change);
+    if (options.publishChange) {
+      await options.publishChange(change);
+    } else {
+      publishResponseStateChange(trx, { ...change, trigger: 'comment' });
+    }
   }
 
   return { previousState, newState };

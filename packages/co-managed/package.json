@@ -1,0 +1,81 @@
+{
+  "name": "@alga-psa/co-managed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./conversationRichText": {
+      "types": "./src/conversationRichText.ts",
+      "import": "./src/conversationRichText.ts"
+    },
+    "./conversationContent": {
+      "types": "./src/conversationContent.ts",
+      "import": "./src/conversationContent.ts"
+    },
+    "./inboundRequesterReply": {
+      "types": "./src/inboundRequesterReply.ts",
+      "import": "./dist/inboundRequesterReply.js"
+    },
+    "./scheduledCommentCommands": {
+      "types": "./src/scheduledCommentCommands.ts",
+      "import": "./dist/scheduledCommentCommands.js"
+    },
+    "./workflowTicketMutation": {
+      "types": "./src/workflowTicketMutation.ts",
+      "import": "./dist/workflowTicketMutation.js"
+    },
+    "./workflowConversationEvents": {
+      "types": "./src/workflowConversationEvents.ts",
+      "import": "./dist/workflowConversationEvents.js"
+    },
+    "./scheduledCommentPublication": {
+      "types": "./src/scheduledCommentPublication.ts",
+      "import": "./dist/scheduledCommentPublication.js"
+    },
+    "./nativeConversationEvents": {
+      "types": "./src/nativeConversationEvents.ts",
+      "import": "./dist/nativeConversationEvents.js"
+    },
+    "./inboundConversationEvents": {
+      "types": "./src/inboundConversationEvents.ts",
+      "import": "./dist/inboundConversationEvents.js"
+    },
+    "./inboundEmailAttachments": {
+      "types": "./src/inboundEmailAttachments.ts",
+      "import": "./dist/inboundEmailAttachments.js"
+    },
+    "./inboundEmailReply": {
+      "types": "./src/inboundEmailReply.ts",
+      "import": "./dist/inboundEmailReply.js"
+    },
+    "./localProjectSearchPolicy": {
+      "types": "./src/localProjectSearchPolicy.ts",
+      "import": "./dist/localProjectSearchPolicy.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@alga-psa/db": "*",
+    "@alga-psa/licensing": "*",
+    "knex": "^3.1.0",
+    "@alga-psa/authorization": "*",
+    "@alga-psa/shared": "*",
+    "@alga-psa/storage": "*",
+    "micromark": "^4.0.2",
+    "parse5": "^7.3.0",
+    "@alga-psa/core": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsup": "^8.0.0"
+  }
+}

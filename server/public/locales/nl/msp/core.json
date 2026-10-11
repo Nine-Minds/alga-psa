@@ -104,7 +104,10 @@
     },
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
-    "ticketsRecurring": "Terugkerende tickets"
+    "ticketsRecurring": "Terugkerende tickets",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedDelegation": "Gedelegeerd beheer",
+    "coManagedAccess": "Toegang voor gezamenlijk beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

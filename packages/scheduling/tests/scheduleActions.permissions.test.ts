@@ -37,6 +37,12 @@ vi.mock('@alga-psa/db', () => {
   };
 });
 
+// An ordinary PSA tenant: the co-managed native schedule command declines, so the local path runs.
+vi.mock('@alga-psa/co-managed', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  commandCoManagedNativeSchedule: vi.fn(async () => ({ handled: false })),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: unknown[]) =>
     action(authState.currentUser, { tenant: authState.currentUser.tenant }, ...args),

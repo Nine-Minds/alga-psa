@@ -1,0 +1,36 @@
+# CF003 / CF004 — refund, rollback, retry and exactly-once assertions
+# Collected 2026-09-21T01:40:59Z
+# RE-RUN at the final candidate source (PRD C8: no silent SHA relabel). The earlier
+# capture in this round ran at 40423ed9f3; this one ran against the exact source tree
+# committed as the candidate, so the recorded sha is the sha that executed.
+# server: npx vitest run ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts
+# env: DB_NAME_SERVER=server_co_managed, TEST_MIGRATIONS_DIR=<CE+EE overlay>, VITEST_SEED=20260610
+
+## Whole-file run — the documented green baseline, unchanged:
+ Test Files  1 passed (1)
+      Tests  1418 passed (1418)
+   Duration  307.54s (transform 7.95s, setup 66ms, collect 3.84s, tests 303.19s, environment 0ms, prepare 27ms)
+
+## The five cases these two rows turn on, named (-t, --reporter=verbose):
+### group 1: refund / defer / negative-control trio
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > durable co-managed email intake pauses > retains pending and expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements 220ms 183 MB heap used
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > durable co-managed email intake pauses > refunds the claim when grace expires during source fetch and resumes the same inbox exactly once after renewal 398ms 201 MB heap used
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > durable co-managed email intake pauses > does not release another worker lease or refund a reclaimed attempt, and preserves prior error provenance 73ms 197 MB heap used
+      Tests  3 passed | 1415 skipped (1418)
+
+### group 2: requester admission adapter
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > retains requester email for retry when its worker lacks the required admission adapter 1338ms 229 MB heap used
+      Tests  1 passed | 1417 skipped (1418)
+
+### group 3: technician admission adapter
+ ✓ ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts > retains technician mail for retry if a durable worker has no qualified admission adapter 1244ms 261 MB heap used
+      Tests  1 passed | 1417 skipped (1418)
+
+## The refund assertions in source (coManagedBootstrap.integration.test.ts:725-727, :742-744)
+## — this is what CF004 was recorded as lacking:
+    expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+    row = await customer.table('inbound_email_inbox').first();
+    expect(row).toMatchObject({ status: 'received', attempt_count: 0, completed_at: null });
+    expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+    expect(await customer.table('inbound_email_inbox').first()).toMatchObject({ status: 'received', attempt_count: 0,
+      lease_owner: null, lease_token: null, completed_at: null });

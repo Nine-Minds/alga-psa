@@ -114,6 +114,11 @@ class QueryBuilder {
     return duplicate;
   }
 
+  modify(callback: (query: QueryBuilder) => void): QueryBuilder {
+    callback(this);
+    return this;
+  }
+
   select(...columns: Array<string>): QueryBuilder {
     this.selectedColumns = columns;
     return this;
@@ -457,6 +462,13 @@ const authHoisted = vi.hoisted(() => ({
     tenant: 'tenant-1',
     roles: [] as any[],
   },
+}));
+
+// These fixtures exercise ordinary notifications with an in-memory Knex double.
+// Shared receipt/session/SQL visibility is exercised by coManagedBootstrap's real
+// PostgreSQL inbox-action cases; native notifications retain the identity scope.
+vi.mock('@alga-psa/notifications/lib/coManagedInbox', () => ({
+  coManagedInboxScope: async () => ({ apply: () => {}, render: (row: any) => row, assertCurrent: async () => {} }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

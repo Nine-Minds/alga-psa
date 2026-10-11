@@ -36,7 +36,8 @@
       "clientContact": "Contatto cliente",
       "billing": "Fatturazione",
       "ticketing": "Gestione ticket",
-      "algadeskWorkspace": "Area di lavoro"
+      "algadeskWorkspace": "Area di lavoro",
+      "coManagedWorkspace": "Area di lavoro"
     },
     "errors": {
       "saveClientInfo": "Impossibile salvare le informazioni del cliente",
@@ -65,7 +66,9 @@
       "title": "Configura il tuo sistema",
       "description": "Configuriamo il tuo workspace e lo rendiamo pronto all'uso.",
       "algadeskTitle": "Configura AlgaDesk",
-      "algadeskDescription": "Configura l’area di lavoro dell’help desk, i clienti e le impostazioni predefinite dei ticket."
+      "algadeskDescription": "Configura l’area di lavoro dell’help desk, i clienti e le impostazioni predefinite dei ticket.",
+      "coManagedTitle": "Configura la tua area di lavoro IT",
+      "coManagedDescription": "Configura la tua area di lavoro, il tuo team IT e le tue impostazioni predefinite dei ticket."
     }
   },
   "addClientStep": {
@@ -303,7 +306,9 @@
     },
     "header": {
       "title": "La tua azienda e account amministratore",
-      "description": "Iniziamo con i dati della tua azienda MSP e le tue credenziali da amministratore, non quelli di un cliente che assisti."
+      "description": "Iniziamo con i dati della tua azienda MSP e le tue credenziali da amministratore, non quelli di un cliente che assisti.",
+      "coManagedTitle": "La tua organizzazione e account amministratore",
+      "coManagedDescription": "Iniziamo con i dati della tua organizzazione e le tue credenziali da amministratore."
     },
     "fields": {
       "firstName": {
@@ -354,7 +359,8 @@
           "label": "Paese",
           "placeholder": "Seleziona paese"
         }
-      }
+      },
+      "coManagedDescription": "L'indirizzo della tua organizzazione. Controlla e correggi se necessario."
     },
     "password": {
       "resetRequired": {

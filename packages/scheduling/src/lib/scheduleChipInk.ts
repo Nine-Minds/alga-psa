@@ -2,6 +2,7 @@ import type { WorkItemType } from '@alga-psa/types';
 
 /** The fill each work item type paints its calendar chip with, base and hover. */
 export const workItemFills: Record<WorkItemType, string> = {
+  co_managed: '--color-primary-200',
   ticket: '--color-primary-200',
   project_task: '--color-secondary-100',
   non_billable_category: '--color-event-non-billable',
@@ -12,6 +13,7 @@ export const workItemFills: Record<WorkItemType, string> = {
 };
 
 export const workItemHoverFills: Record<WorkItemType, string> = {
+  co_managed: '--color-primary-200',
   ticket: '--color-primary-300',
   project_task: '--color-secondary-200',
   non_billable_category: '--color-event-non-billable-hover',

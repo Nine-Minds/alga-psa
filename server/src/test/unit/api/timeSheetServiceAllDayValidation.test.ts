@@ -7,7 +7,16 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: (name: string) => {
     const query = {
       where: () => query,
-      first: async () => ({ ...state.row }),
+      forShare: () => query,
+      // Answer per table rather than handing the schedule row to every query. This
+      // subject is an ordinary PSA tenant: product_code 'psa', no operational time
+      // entries. That is what makes retainCoManagedTimeCalendar decline, so the
+      // co-managed native schedule command returns { handled: false } and the generic
+      // path under test actually runs. A mock that returns the same row for every
+      // table instead reports a co-managed calendar on every tenant.
+      first: async () => name === 'schedule_entries' ? { ...state.row }
+        : name === 'tenants' ? { product_code: 'psa', suspended_at: null }
+        : undefined,
       pluck: async () => name === 'schedule_entry_assignees' ? ['owner'] : [],
       update: async (patch: Record<string, unknown>) => { state.update(patch); Object.assign(state.row, patch); return 1; },
     };
@@ -18,6 +27,16 @@ vi.mock('@alga-psa/db', () => ({
 // @alga-psa/event-bus/publishers, so the publication assertions (state.publish) are bound to that function.
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: state.publish, publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
+// This suite covers the generic schedule path: an ordinary PSA tenant, where
+// retainCoManagedTimeCalendar declines and the co-managed native command returns
+// { handled: false }. Stub that boundary explicitly rather than leave it to the db mock,
+// which cannot model the engine's reads and would otherwise let it claim the update and
+// fail on an incomplete row. Co-managed tenants take the native command instead, and its
+// own all-day rule is covered by nativeScheduleCommandAllDay.test.ts.
+vi.mock('@alga-psa/co-managed', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  commandCoManagedNativeSchedule: async () => ({ handled: false }),
+}));
 vi.mock('@alga-psa/scheduling/models/timePeriod', () => ({ TimePeriod: {} }));
 vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: vi.fn().mockResolvedValue(true) }));
 vi.mock('../../../lib/api/middleware/apiMiddleware', () => ({

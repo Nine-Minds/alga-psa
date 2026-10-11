@@ -91,6 +91,10 @@ export async function setupE2ETestEnvironment(options: {
         // Stopwatch sessions and suggestion dismissals reference users (segments cascade)
         await tenantTable('time_tracking_sessions').delete();
         await tenantTable('time_entry_suggestion_dismissals').delete();
+        // Running/completed native timers reference both users and time_entries
+        // (completed_entry_id), so they must go before either. Matches the product's
+        // own ordering in tenant-deletion-activities.ts.
+        await tenantTable('native_time_tracking_sessions').delete();
 
         // Clean up time entries first
         await tenantTable('time_entries').delete();

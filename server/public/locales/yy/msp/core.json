@@ -104,7 +104,10 @@
     "emailLogs": "〖Ḗḿȧīŀ Ŀȯɠş ····〗",
     "extensions": "〖Ḗẋŧḗƞşīȯƞş ····〗",
     "ticketsAll": "〖Ȧŀŀ Ŧīƈķḗŧş ·····〗",
-    "ticketsRecurring": "〖Řḗƈŭřřīƞɠ Ŧīƈķḗŧş ·······〗"
+    "ticketsRecurring": "〖Řḗƈŭřřīƞɠ Ŧīƈķḗŧş ·······〗",
+    "coManaged": "〖Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ ······〗",
+    "coManagedDelegation": "〖Ḓḗŀḗɠȧŧḗḓ ȧḓḿīƞīşŧřȧŧīȯƞ ··········〗",
+    "coManagedAccess": "〖Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş ·······〗"
   },
   "marketing": {
     "dialogs": {

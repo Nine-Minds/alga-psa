@@ -4,7 +4,7 @@ import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within, configure, cleanup } from '@testing-library/react';
+import { render, screen, within, configure, cleanup, act, waitFor } from '@testing-library/react';
 
 // Components under test attach automation ids via the plain
 // `data-automation-id` attribute, so point Testing Library's testId queries
@@ -20,6 +20,7 @@ afterAll(() => {
 });
 import userEvent from '@testing-library/user-event';
 import TaskCommentThread from './TaskCommentThread';
+import { getTaskComments, updateTaskComment } from '../actions/projectTaskCommentActions';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
 
 const NOTE = JSON.stringify([
@@ -249,4 +250,58 @@ describe('TaskCommentThread threaded replies', () => {
     expect(container.querySelector('.comment-thread-bar')).toBeNull();
     expect(container.querySelector('.thread-children')).toBeNull();
   });
+
+  it('shows durable foreign names and audiences without legacy mutation controls', async () => {
+    taskStore.comments = [buildTaskComment({ userId: null, firstName: 'Morgan Provider', lastName: '', email: '',
+      organizationName: 'Provider organization', audience: 'shared_it', canEdit: false, canReply: false, canReact: false })];
+    render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+    const comment = await screen.findByTestId('task-comment-root');
+    expect(within(comment).getByText('Morgan Provider')).toBeInTheDocument();
+    expect(within(comment).getByText('Provider organization')).toBeInTheDocument();
+    expect(within(comment).getByText('comments.audiences.shared_it')).toBeInTheDocument();
+    expect(within(comment).queryByRole('button', { name: 'Reply to comment' })).not.toBeInTheDocument();
+    expect(within(comment).queryByRole('button', { name: /edit|delete/i })).not.toBeInTheDocument();
+  });
+
+  it('does not open a reply composer for a read-only shared thread in the drawer', async () => {
+    const user = userEvent.setup();
+    taskStore.comments = [buildTaskComment({ canReply: false, canEdit: false }), buildTaskComment({
+      taskCommentId: 'reply-1', parentCommentId: 'root', canReply: false, canEdit: false })];
+    render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+    await screen.findByTestId('task-comment-root');
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+    await user.click(screen.getByRole('button', { name: 'Show in drawer' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByTestId('task-comment-editor')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+  });
+
+  it('clears previous task content while loading and ignores a late response from another task', async () => {
+    let finishOld!: (value: IProjectTaskCommentWithUser[]) => void;
+    vi.mocked(getTaskComments).mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }));
+    const { rerender } = render(<TaskCommentThread taskId="old-task" projectId="project-1" />);
+    await waitFor(() => expect(getTaskComments).toHaveBeenCalledWith('old-task'));
+    taskStore.comments = [buildTaskComment({ taskCommentId: 'new-comment', taskId: 'new-task', firstName: 'Current author' })];
+    rerender(<TaskCommentThread taskId="new-task" projectId="project-1" />);
+    await screen.findByTestId('task-comment-new-comment');
+    await act(async () => { finishOld([buildTaskComment({ firstName: 'Obsolete author' })]); });
+    expect(screen.queryByText('Obsolete author User')).not.toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-new-comment')).toBeInTheDocument();
+    vi.mocked(getTaskComments).mockRejectedValueOnce(new Error('Current access denied'));
+    rerender(<TaskCommentThread taskId="denied-task" projectId="project-1" />);
+    await waitFor(() => expect(screen.queryByTestId('task-comment-new-comment')).not.toBeInTheDocument());
+    expect(screen.queryByText('Current author User')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('comments.loadError');
+  });
+
+  it('passes the displayed revision when editing a native private note', async () => {
+    const user = userEvent.setup();
+    taskStore.comments = [buildTaskComment({ collaborationRevision: 7, canEdit: true })];
+    render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+    const comment = await screen.findByTestId('task-comment-root');
+    await user.click(within(comment).getByRole('button', { name: /edit/i }));
+    await user.click(within(comment).getByRole('button', { name: 'Save' }));
+    expect(updateTaskComment).toHaveBeenCalledWith('root', expect.objectContaining({ note: expect.any(String) }), 7);
+  });
+
 });

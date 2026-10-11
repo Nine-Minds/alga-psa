@@ -134,7 +134,7 @@ vi.mock('@alga-psa/db', () => {
   // returns the builder, awaiting it resolves to an empty result set. The
   // authorization kernel path issues real-looking queries (team_members,
   // user_roles, ...) through the trx, so the fake must be callable.
-  const makeBuilder = () => {
+  const makeBuilder = (table?: string) => {
     const builder: any = {};
     const chainMethods = [
       'where', 'andWhere', 'orWhere', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull',
@@ -144,7 +144,12 @@ vi.mock('@alga-psa/db', () => {
     for (const method of chainMethods) {
       builder[method] = () => builder;
     }
-    builder.first = () => Promise.resolve(undefined);
+    // Co-managed lifecycle admission reads the workspace product first. These
+    // fixtures are an ordinary (non co-managed) PSA tenant, so the admission
+    // guard resolves to `independent` and the write proceeds.
+    builder.first = () => Promise.resolve(
+      table && /(^|\s)tenants(\s|$)/.test(table) ? { product_code: 'psa' } : undefined,
+    );
     builder.pluck = () => Promise.resolve([]);
     // count() now feeds either a direct await (resolves to the rows array) or a
     // chained .first() (resolves to the single count row), so return a hybrid
@@ -163,7 +168,10 @@ vi.mock('@alga-psa/db', () => {
     return builder;
   };
 
-  const fakeKnex: any = (_table: string) => makeBuilder();
+  const fakeKnex: any = (table: string) => makeBuilder(table);
+  // The fake stands in for both the connection and the transaction handed to
+  // callbacks; lifecycle admission refuses to run outside a transaction.
+  fakeKnex.isTransaction = true;
   fakeKnex.raw = () => Promise.resolve({ rows: [] });
   fakeKnex.fn = { now: () => new Date() };
   fakeKnex.transaction = (callback: any) => callback(fakeKnex);
@@ -175,6 +183,7 @@ vi.mock('@alga-psa/db', () => {
     }),
     requireTenantId: vi.fn().mockResolvedValue('550e8400-e29b-41d4-a716-446655440000'),
     withTransaction: vi.fn().mockImplementation(async (_knex, callback) => callback(fakeKnex)),
+    registerAfterCommit: (_trx: unknown, callback: () => Promise<void>) => callback(),
     tenantDb: (conn: any, _tenant: string) => ({
       table: (t: string) => conn(t),
       unscoped: (t: string) => conn(t),

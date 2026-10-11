@@ -1,10 +1,11 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import type { IClientContractLine } from '@alga-psa/types';
-import { formatISO } from 'date-fns';
+import { loadEligibleTimeContractLines, type EligibleContractLine } from './timeContractCandidates';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { admitCoManagedNativeTimeSource, assertCoManagedTimeSaveFields, CoManagedSharedWorkError, isNativeTimeFieldHidden } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from './nativeTimeReader';
 import {
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionOptions,
@@ -12,36 +13,6 @@ import {
 } from './contractLineDisambiguation.shared';
 
 // Copied from @alga-psa/billing/lib/contractLineDisambiguation to avoid scheduling → billing deps.
-
-type EligibleContractLine = IClientContractLine & {
-  contract_line_type: string;
-  /** contract_lines.billing_profile_id — step 2 of the resolution chain. */
-  billing_profile_id?: string | null;
-  /** client_contracts.billing_profile_id — step 3 of the resolution chain. */
-  contract_billing_profile_id?: string | null;
-  bucket_overlay?: {
-    config_id: string;
-    total_minutes?: number | null;
-    overage_rate?: number | null;
-    allow_rollover?: boolean | null;
-  };
-};
-
-const resolveEffectiveDateRange = (
-  effectiveDate?: string | Date
-): { rangeStart: string; rangeEnd: string } => {
-  const source =
-    effectiveDate instanceof Date
-      ? effectiveDate.toISOString()
-      : typeof effectiveDate === 'string' && effectiveDate.trim().length > 0
-        ? effectiveDate
-        : new Date().toISOString();
-  const normalizedDate = source.slice(0, 10);
-  return {
-    rangeStart: `${normalizedDate}T00:00:00.000Z`,
-    rangeEnd: `${normalizedDate}T23:59:59.999Z`,
-  };
-};
 
 const logResolverDecision = (payload: {
   tenant: string;
@@ -129,127 +100,8 @@ export async function determineDefaultContractLine(
   return resolution.selectedContractLineId;
 }
 
-export async function getEligibleContractLines(
-  knex: Knex,
-  tenant: string,
-  clientId: string,
-  serviceId: string,
-  effectiveDate?: string | Date
-): Promise<EligibleContractLine[]> {
-  if (typeof clientId !== 'string' || clientId.trim().length === 0) return [];
-  const { rangeStart, rangeEnd } = resolveEffectiveDateRange(effectiveDate);
-  const db = tenantDb(knex, tenant);
-
-  const serviceInfo = await db.table('service_catalog')
-    .where({
-      'service_catalog.service_id': serviceId,
-    })
-    .first('category_id', 'custom_service_type_id as service_type_id');
-
-  if (!serviceInfo) {
-    console.warn(`Service not found: ${serviceId}`);
-    return [];
-  }
-
-  const query = db.table('client_contracts');
-  db.tenantJoin(query, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
-  db.tenantJoin(query, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
-  db.tenantJoin(query, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
-  // Scope-resolution rule (weighted-burn model): explicit membership on a line
-  // bucket, else the line's catch-all bucket. Replacement for the legacy
-  // configuration_type='Bucket' overlay join.
-  db.tenantJoin(
-    query,
-    'contract_line_bucket_services as member',
-    'member.contract_line_id',
-    'contract_lines.contract_line_id',
-    {
-      type: 'left',
-      on(join) {
-        join.andOn('member.service_id', '=', 'contract_line_services.service_id');
-      },
-    }
-  );
-  db.tenantJoin(
-    query,
-    'contract_line_buckets as catch_all',
-    'catch_all.contract_line_id',
-    'contract_lines.contract_line_id',
-    {
-      type: 'left',
-      on(join) {
-        join.andOnVal('catch_all.covers_all_services', '=', true);
-      },
-    }
-  );
-
-  query
-    .where({
-      'client_contracts.client_id': clientId,
-      'client_contracts.is_active': true,
-      'contract_line_services.service_id': serviceId,
-    })
-    .where(function (this: Knex.QueryBuilder) {
-      this.where('client_contracts.start_date', '<=', rangeEnd);
-    })
-    .where(function (this: Knex.QueryBuilder) {
-      this.whereNull('client_contracts.end_date').orWhere('client_contracts.end_date', '>=', rangeStart);
-    })
-    .where(function (this: Knex.QueryBuilder) {
-      this.whereNull('contracts.is_system_managed_default')
-        .orWhere('contracts.is_system_managed_default', false);
-    });
-
-  const rows = await query.select(
-    'contract_lines.contract_line_id as client_contract_line_id',
-    'client_contracts.client_id',
-    'contract_lines.contract_line_id',
-    'client_contracts.start_date',
-    'client_contracts.end_date',
-    'client_contracts.is_active',
-    'client_contracts.tenant',
-    'client_contracts.client_contract_id',
-    'contracts.contract_id',
-    'contract_lines.contract_line_type',
-    'contract_lines.contract_line_name',
-    'contracts.contract_name',
-    // Steps 2 and 3 of the billing-profile chain, so profile-aware narrowing
-    // can prefer the line whose contract belongs to the work item's profile.
-    'contract_lines.billing_profile_id',
-    'client_contracts.billing_profile_id as contract_billing_profile_id',
-    'member.bucket_id as member_bucket_id',
-    'catch_all.bucket_id as catch_all_bucket_id'
-  );
-
-  return rows.map((row) => {
-    const {
-      member_bucket_id,
-      catch_all_bucket_id,
-      start_date,
-      end_date,
-      ...rest
-    } = row as Record<string, any>;
-
-    const { bucket_overlay: existingOverlay, ...restWithoutOverlay } = rest;
-
-    const bucket_config_id = member_bucket_id ?? catch_all_bucket_id ?? null;
-
-    const bucket_overlay = bucket_config_id
-      ? {
-          config_id: bucket_config_id,
-          total_minutes: null,
-          overage_rate: null,
-          allow_rollover: null,
-        }
-      : existingOverlay;
-
-    return {
-      ...restWithoutOverlay,
-      start_date: start_date ? formatISO(start_date) : '',
-      end_date: end_date ? formatISO(end_date) : null,
-      bucket_overlay,
-    } as EligibleContractLine;
-  });
+export async function getEligibleContractLines(knex: Knex, tenant: string, clientId: string, serviceId: string, effectiveDate?: string | Date): Promise<EligibleContractLine[]> {
+  return loadEligibleTimeContractLines(knex, tenant, clientId, serviceId, effectiveDate);
 }
 
 export async function getEligibleContractLinesForUI(
@@ -301,7 +153,7 @@ export async function getEligibleContractLinesForUI(
   }
 }
 
-export async function getClientIdForWorkItem(workItemId: string, workItemType: string): Promise<string | null> {
+export async function getClientIdForWorkItem(workItemId: string, workItemType: string, existingEntryId?: string): Promise<string | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('User not authenticated');
@@ -315,6 +167,24 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
   try {
     const db = tenantDb(knex, tenant);
 
+    if (workItemType === 'co_managed') {
+      const actor = await resolveNativeTimeBrowserActor(currentUser, tenant);
+      return withTransaction(knex, async trx => {
+        const entry = existingEntryId ? await tenantDb(trx, tenant).table('time_entries').where({ entry_id: existingEntryId,
+          work_item_type: 'co_managed', work_item_id: workItemId, co_managed_work_reference_id: workItemId }).first('user_id', 'time_sheet_id') : null;
+        if (existingEntryId && !entry) throw new CoManagedSharedWorkError();
+        const access = await admitCoManagedNativeTimeSource(trx, actor, { entry_id: existingEntryId, user_id: entry?.user_id ?? currentUser.user_id,
+          time_sheet_id: entry?.time_sheet_id, work_item_type: 'co_managed', work_item_id: workItemId }, entry ? 'read' : 'create');
+        if (!entry) assertCoManagedTimeSaveFields(access, 'co_managed');
+        if (entry) {
+          const current = await tenantDb(trx, tenant).table('time_entries').where({ entry_id: existingEntryId,
+            work_item_type: 'co_managed', work_item_id: workItemId, co_managed_work_reference_id: workItemId }).forShare().first('user_id', 'time_sheet_id');
+          if (!current || current.user_id !== entry.user_id || current.time_sheet_id !== entry.time_sheet_id) throw new CoManagedSharedWorkError();
+        }
+        await access.assertCurrent();
+        return isNativeTimeFieldHidden(access.redactedTimeFields, ['client_id', 'billing']) ? null : access.clientId ?? null;
+      });
+    }
     if (workItemType === 'project_task') {
       const query = db.table('project_tasks');
       db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
@@ -336,6 +206,7 @@ export async function getClientIdForWorkItem(workItemId: string, workItemType: s
     }
     return null;
   } catch (error) {
+    if (workItemType === 'co_managed') throw error;
     console.error('Error getting client ID for work item:', error);
     return null;
   }

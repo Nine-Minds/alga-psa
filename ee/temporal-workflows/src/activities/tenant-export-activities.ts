@@ -41,6 +41,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
 
   // Time tracking
   'time_entries',
+  'native_time_tracking_sessions',
   'time_sheets',
   'time_sheet_comments',
 

@@ -1,3 +1,4 @@
+import type { NotificationDeliveryResult } from '@alga-psa/notifications/lib/notificationTransportTypes';
 import Expo, { type ExpoPushMessage, type ExpoPushTicket } from 'expo-server-sdk';
 import logger from '@alga-psa/core/logger';
 import { deactivateInvalidTokens } from './pushTokenService';
@@ -11,6 +12,7 @@ export interface TicketPushParams {
   title: string;
   body: string;
   ticketId: string;
+  notificationId?: string;
   tenant: string;
   /** Configured in-app notification priority (high|normal|low). */
   priority?: PushPriority;
@@ -39,6 +41,7 @@ export interface TaskPushParams {
   taskId: string;
   tenant: string;
   priority?: PushPriority;
+  notificationId?: string;
 }
 
 function buildPushMessage(params: {
@@ -46,6 +49,7 @@ function buildPushMessage(params: {
   title: string;
   body: string;
   priority?: PushPriority;
+  notificationId?: string;
   data: Record<string, unknown>;
 }): ExpoPushMessage {
   const priority = params.priority ?? 'normal';
@@ -55,8 +59,9 @@ function buildPushMessage(params: {
     sound: delivery.sound,
     title: params.title,
     body: params.body,
-    // Payload metadata so the mobile app can route the tap and render/sort by priority.
-    data: { ...params.data, priority },
+    // Payload metadata so the mobile app can route the tap, mark the notification
+    // read, and render/sort by priority.
+    data: { ...params.data, ...(params.notificationId ? { notificationId: params.notificationId } : {}), priority },
     priority: delivery.priority,
     interruptionLevel: delivery.interruptionLevel,
     channelId: delivery.channelId,
@@ -84,6 +89,18 @@ export interface PushSendResult {
   error?: string | null;
 }
 
+/**
+ * Both callers of `sendPushNotifications` need a different view of the same
+ * send. The dispatcher classifies the whole attempt so the notification
+ * transport can decide whether to retry; the mobile push-token test endpoint
+ * reports per-device success back to the user. Returning both keeps one send
+ * path rather than making either caller re-derive the other's answer.
+ */
+export interface PushSendOutcome {
+  delivery: NotificationDeliveryResult;
+  results: PushSendResult[];
+}
+
 export function buildTestPushMessage(expoPushToken: string, serverHost: string): ExpoPushMessage {
   return {
     to: expoPushToken,
@@ -100,21 +117,23 @@ export function buildTestPushMessage(expoPushToken: string, serverHost: string):
 export async function sendPushNotifications(
   messages: ExpoPushMessage[],
   tenant: string,
-): Promise<PushSendResult[]> {
+): Promise<PushSendOutcome> {
   const results: PushSendResult[] = [];
   const valid = messages.filter((m) => {
     const ok = Expo.isExpoPushToken(m.to as string);
     if (!ok) results.push({ to: String(m.to), status: 'error', error: 'InvalidExpoPushToken' });
     return ok;
   });
-  if (valid.length === 0) return results;
+  if (valid.length === 0) return { delivery: { status: 'skipped', reason: 'no_valid_devices' }, results };
 
   const chunks = expo.chunkPushNotifications(valid);
   const invalidTokens: string[] = [];
+  let accepted = 0, retryableFailure = false, permanentFailure = false;
 
   for (const chunk of chunks) {
     try {
       const tickets: ExpoPushTicket[] = await expo.sendPushNotificationsAsync(chunk);
+      if (tickets.length !== chunk.length) retryableFailure = true;
 
       for (let i = 0; i < tickets.length; i++) {
         const ticket = tickets[i];
@@ -127,12 +146,18 @@ export async function sendPushNotifications(
           results.push({ to: chunk[i].to as string, status: 'error', error: ticket.details?.error ?? ticket.message ?? 'error' });
           if (ticket.details?.error === 'DeviceNotRegistered') {
             invalidTokens.push(chunk[i].to as string);
+          } else if (ticket.details?.error === 'MessageTooBig') {
+            permanentFailure = true;
+          } else {
+            retryableFailure = true;
           }
         } else {
+          accepted++;
           results.push({ to: chunk[i].to as string, status: 'ok' });
         }
       }
     } catch (err) {
+      retryableFailure = true;
       // Typically the server cannot reach exp.host (egress blocked, proxy,
       // DNS); the message names it so a support bundle shows the cause.
       const message = err instanceof Error ? err.message : String(err);
@@ -146,6 +171,7 @@ export async function sendPushNotifications(
       logger.error('[ExpoPush] Failed to deactivate invalid tokens', { err }),
     );
   }
-
-  return results;
+  if (retryableFailure) return { delivery: { status: 'failed', errorCode: 'push_provider_failed', retryable: true }, results };
+  if (permanentFailure) return { delivery: { status: 'failed', errorCode: 'push_message_too_big', retryable: false }, results };
+  return { delivery: accepted ? { status: 'delivered' } : { status: 'skipped', reason: 'no_valid_devices' }, results };
 }

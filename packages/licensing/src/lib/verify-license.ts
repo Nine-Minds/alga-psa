@@ -164,8 +164,19 @@ function verifyLicenseUncached(token: string): LicenseVerifyResult {
     typeof sub !== 'string' || !sub ||
     typeof cust !== 'string' || !cust ||
     (encodedTier !== 'pro' && encodedTier !== 'premium') ||
-    typeof iat !== 'number' ||
-    typeof exp !== 'number'
+    typeof iat !== 'number' || !Number.isFinite(iat) ||
+    typeof exp !== 'number' || !Number.isFinite(exp)
+  ) {
+    return { valid: false, reason: 'malformed' };
+  }
+
+  if (
+    (payload.aud !== undefined && (typeof payload.aud !== 'string' || !payload.aud.trim())) ||
+    (payload.co_managed_seats !== undefined && (
+      typeof payload.co_managed_seats !== 'number' ||
+      !Number.isSafeInteger(payload.co_managed_seats) ||
+      payload.co_managed_seats < 0
+    ))
   ) {
     return { valid: false, reason: 'malformed' };
   }
@@ -180,6 +191,8 @@ function verifyLicenseUncached(token: string): LicenseVerifyResult {
     iat,
     exp,
     ...(typeof payload.seats === 'number' ? { seats: payload.seats } : {}),
+    ...(typeof payload.aud === 'string' ? { aud: payload.aud } : {}),
+    ...(typeof payload.co_managed_seats === 'number' ? { co_managed_seats: payload.co_managed_seats } : {}),
   };
 
   return { valid: true, claims };

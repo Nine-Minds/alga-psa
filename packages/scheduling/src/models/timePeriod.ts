@@ -1,9 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import type { ISO8601String, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { toPlainDate } from '@alga-psa/core';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction, insertTimePeriodCalendar, updateTimePeriodCalendar, deleteTimePeriodCalendar } from '@alga-psa/db';
 
 // Database representation of time period
 // After migration to DATE type, pg driver may return Date objects for date columns
@@ -71,15 +70,9 @@ export class TimePeriod {
     tenant: string,
     timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>
   ): Promise<ITimePeriod> {
-    // Create a clean object with only the fields we want to insert
-    const dbData: DbTimePeriod = {
-      tenant,
-      period_id: uuidv4(),
-      start_date: toDbDate(timePeriodData.start_date),
-      end_date: toDbDate(timePeriodData.end_date),
-    };
-
-    const [newPeriod] = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant).insert(dbData).returning('*');
+    const [newPeriod] = await withTransaction(knexOrTrx, trx => insertTimePeriodCalendar(trx, tenant, [{
+      start_date: toDbDate(timePeriodData.start_date), end_date: toDbDate(timePeriodData.end_date),
+    }]));
 
     return {
       ...newPeriod,
@@ -191,14 +184,7 @@ export class TimePeriod {
       dbUpdates.end_date = toDbDate(updates.end_date);
     }
 
-    const [updatedPeriod] = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
-      .where('period_id', periodId)
-      .update(dbUpdates)
-      .returning('*');
-
-    if (!updatedPeriod) {
-      throw new Error('Time period not found or belongs to different tenant');
-    }
+    const updatedPeriod = await withTransaction(knexOrTrx, trx => updateTimePeriodCalendar(trx, tenant, periodId, dbUpdates));
 
     return {
       ...updatedPeriod,
@@ -208,10 +194,6 @@ export class TimePeriod {
   }
 
   static async delete(knexOrTrx: Knex | Knex.Transaction, tenant: string, periodId: string): Promise<void> {
-    const deleted = await tenantScopedTable(knexOrTrx, 'time_periods', tenant).where('period_id', periodId).delete();
-
-    if (!deleted) {
-      throw new Error('Time period not found or belongs to different tenant');
-    }
+    await withTransaction(knexOrTrx, trx => deleteTimePeriodCalendar(trx, tenant, periodId));
   }
 }

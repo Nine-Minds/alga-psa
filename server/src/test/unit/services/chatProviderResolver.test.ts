@@ -7,6 +7,7 @@ const rolloutEnabledMock = vi.hoisted(() => vi.fn());
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
+  getSelfHostAiGatewayCredential: vi.fn(),
   isSelfHostLicensing: vi.fn(),
 }));
 
@@ -106,6 +107,8 @@ describe('resolveChatProvider()', () => {
     );
     openAiConfigs.splice(0, openAiConfigs.length);
     licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.getSelfHostAiGatewayCredential.mockReset();
+    licensingMocks.getSelfHostAiGatewayCredential.mockResolvedValue(null);
     licensingMocks.isSelfHostLicensing.mockReset();
     licensingMocks.getLicenseStateRow.mockResolvedValue(null);
     licensingMocks.isSelfHostLicensing.mockResolvedValue(false);
@@ -391,12 +394,22 @@ describe('resolveChatProvider()', () => {
     expect(secondConfig?.apiKey).not.toBe(firstConfig?.apiKey);
   });
 
+  it('does not fall back to installation providers when a customer lacks its own gateway connection', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
+    licensingMocks.getSelfHostAiGatewayCredential.mockRejectedValue(new Error('This workspace requires its own AI gateway connection'));
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    await expect(resolveChatProvider('customer-tenant', 'chat')).rejects.toThrow('own AI gateway connection');
+    expect(openAiConfigs).toHaveLength(0);
+  });
+
   it('routes a self-hosted install through the gateway without the rollout flag', async () => {
     process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
     licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
     licensingMocks.getLicenseStateRow.mockResolvedValue({
       appliance_credential: 'b'.repeat(64),
     });
+    licensingMocks.getSelfHostAiGatewayCredential.mockResolvedValue('b'.repeat(64));
     setSecrets({ AI_GATEWAY_MODEL: 'gateway/appliance-model' });
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');

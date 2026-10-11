@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { CornerUpLeft, Pencil, Trash } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
+import EntityAvatar from '@alga-psa/ui/components/EntityAvatar';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -44,6 +45,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   userNames,
 }) => {
   const { t } = useTranslation('common');
+  const { t: taskT } = useTranslation('features/projects');
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -102,16 +104,16 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
-    if (comment.deletedAt) return false;
+    if (comment.deletedAt || comment.canEdit === false) return false;
     return currentUserId === comment.userId;
-  }, [comment.deletedAt, comment.userId, currentUserId]);
+  }, [comment.deletedAt, comment.userId, comment.canEdit, currentUserId]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const result = await updateTaskComment(comment.taskCommentId, {
         note: JSON.stringify(editedContent)
-      });
+      }, comment.collaborationRevision);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
@@ -128,7 +130,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   const handleDelete = async () => {
     try {
-      const result = await deleteTaskComment(comment.taskCommentId);
+      const result = await deleteTaskComment(comment.taskCommentId, comment.collaborationRevision);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
@@ -169,7 +171,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
     setIsEditing(false);
   };
 
-  const authorName = `${comment.firstName} ${comment.lastName}`;
+  const authorName = [comment.firstName, comment.lastName].filter(Boolean).join(' ') || taskT('comments.authorUnavailable', 'Author unavailable');
 
   // Check if comment has been edited
   const hasBeenEdited = comment.editedAt &&
@@ -210,13 +212,13 @@ const TaskComment: React.FC<TaskCommentProps> = ({
     >
       <div className="flex items-start mb-1">
         <div className="mr-2">
-          <UserAvatar
+          {comment.userId ? <UserAvatar
             {...withDataAutomationId({ id: `${commentId}-avatar` })}
             userId={comment.userId}
             userName={authorName}
             avatarUrl={comment.avatarUrl || null}
             size="md"
-          />
+          /> : <EntityAvatar entityId={comment.taskCommentId} entityName={authorName} imageUrl={null} size="md" />}
         </div>
         <div className="flex-grow">
           <div className="flex justify-between items-start">
@@ -229,6 +231,8 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                   {authorName}
                 </p>
               </div>
+              {comment.organizationName && <p className="text-sm text-[rgb(var(--color-text-500))]">{comment.organizationName}</p>}
+              {comment.audience && <p className="text-xs text-[rgb(var(--color-text-500))]">{taskT(`comments.audiences.${comment.audience}`)}</p>}
               <div className="flex flex-col">
                 {comment.email && (
                   <p
@@ -253,9 +257,9 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 </p>
               </div>
             </div>
-            {((onReply && !comment.deletedAt) || (canEdit && !isEditing)) && (
+            {((onReply && comment.canReply !== false && !comment.deletedAt) || (canEdit && !isEditing)) && (
               <div className="c-actions space-x-2">
-                {onReply && !comment.deletedAt && (
+                {onReply && comment.canReply !== false && !comment.deletedAt && (
                   <Button
                     id={`reply-comment-${comment.taskCommentId}-button`}
                     variant="ghost"
@@ -336,7 +340,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
               />
             </div>
           )}
-          {reactions && onToggleReaction && (
+          {reactions && onToggleReaction && comment.canReact !== false && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
               reactions={reactions}

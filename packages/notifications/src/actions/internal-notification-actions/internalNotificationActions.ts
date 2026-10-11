@@ -2,6 +2,7 @@
 
 import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { coManagedInboxScope } from '../../lib/coManagedInbox';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../../lib/authHelpers';
@@ -21,13 +22,12 @@ import {
   UpdateUserInternalNotificationPreferenceRequest
 } from "../../types/internalNotification";
 import {
-  broadcastNotification,
   broadcastNotificationRead,
   broadcastAllNotificationsRead,
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
-import { runPostCreationHooks } from './notificationHooks';
+import { registerNotificationCreatedEffects } from './notificationCreatedEffects';
 import {
   createNotificationRowFromTemplate,
   resolveNotificationPriority as resolveNotificationPriorityCore,
@@ -35,7 +35,6 @@ import {
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
-  buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import {
   notificationActionErrorFrom,
@@ -114,49 +113,7 @@ export async function createNotificationFromTemplateInternal(
       return null;
     }
 
-    const createdAt = normalizeDateTime(notification?.created_at);
-
-    // External effects must not run inside the open transaction: the enclosing
-    // ledger transaction can still roll back (effect failure, completion-mark
-    // failure, crash before commit) or be replayed by the recovery sweeper,
-    // either of which would orphan or duplicate them. registerAfterCommit
-    // attaches them to the owning transaction and flushes them exactly once
-    // after a successful commit; on rollback the queue is dropped. This gives
-    // at-most-once per committed transaction: a crash after commit but before
-    // the flush loses the fire-and-forget effect (same exposure as before
-    // deferral) — never emit for a rolled-back transaction, never double-emit
-    // on replay.
-    registerAfterCommit(
-      trx,
-      () => {
-        safePublishNotificationWorkflowEvent({
-          eventType: 'NOTIFICATION_SENT',
-          payload: buildNotificationSentPayload({
-            notificationId: notification.internal_notification_id,
-            channel: 'in_app',
-            recipientId: request.user_id,
-            sentAt: createdAt,
-            templateId: request.template_name,
-          }),
-          ctx: {
-            tenantId: request.tenant,
-            occurredAt: createdAt,
-            actor: { actorType: 'SYSTEM' },
-            correlationId: notification.internal_notification_id,
-          },
-          idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-        });
-
-        // Broadcast notification to connected clients (async, don't await)
-        broadcastNotification(notification).catch(err => {
-          console.error('Failed to broadcast notification:', err);
-        });
-
-        // Fire post-creation hooks (e.g., push notifications)
-        runPostCreationHooks(notification);
-      },
-      `notification=${notification.internal_notification_id} broadcast`
-    );
+    registerNotificationCreatedEffects(trx, notification);
 
     return notification;
   });
@@ -193,40 +150,7 @@ export const createNotificationFromTemplateAction = withAuth(async (
         return null;
       }
 
-      const createdAt = normalizeDateTime(notification?.created_at);
-
-      // Defer the external effects (workflow event publication + realtime
-      // broadcast) until the owning transaction commits so a rollback cannot
-      // orphan them and a replay cannot double-emit; see the identical
-      // registerAfterCommit block in createNotificationFromTemplateInternal.
-      registerAfterCommit(
-        trx,
-        () => {
-          safePublishNotificationWorkflowEvent({
-            eventType: 'NOTIFICATION_SENT',
-            payload: buildNotificationSentPayload({
-              notificationId: notification.internal_notification_id,
-              channel: 'in_app',
-              recipientId: targetUserId,
-              sentAt: createdAt,
-              templateId: request.template_name,
-            }),
-            ctx: {
-              tenantId: targetTenant,
-              occurredAt: createdAt,
-              actor: { actorType: 'SYSTEM' },
-              correlationId: notification.internal_notification_id,
-            },
-            idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-          });
-
-          // Broadcast notification to connected clients (async, don't await)
-          broadcastNotification(notification).catch(err => {
-            console.error('Failed to broadcast notification:', err);
-          });
-        },
-        `notification=${notification.internal_notification_id} broadcast`
-      );
+      registerNotificationCreatedEffects(trx, notification, { postCreationHooks: false });
 
       return notification;
     });
@@ -276,11 +200,12 @@ export const getNotificationsAction = withAuth(async (
   });
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scope = await coManagedInboxScope(trx, currentUser, tenant);
     const limit = request.limit || 20;
     const offset = request.offset || 0;
 
     // Build base query
-    let query = tenantScopedTable(trx, 'internal_notifications', tenant)
+    let query = tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId
       })
@@ -305,7 +230,7 @@ export const getNotificationsAction = withAuth(async (
       .offset(offset);
 
     // Get unread count
-    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -315,7 +240,7 @@ export const getNotificationsAction = withAuth(async (
 
     // Unread high-priority count so the bell badge can render high-only
     // (task 29.8.46) without a second round-trip.
-    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false,
@@ -324,8 +249,9 @@ export const getNotificationsAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    await scope.assertCurrent();
     return {
-      notifications,
+      notifications: notifications.map(scope.render).filter((row: InternalNotification | null): row is InternalNotification => row !== null),
       total: Number(totalCount),
       unread_count: Number(unreadCount),
       unread_high: Number(unreadHighCount),
@@ -351,7 +277,8 @@ export const getNotificationByIdAction = withAuth(async (
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const notification = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const scope = await coManagedInboxScope(trx, currentUser, tenant, { id: internalNotificationId });
+    const notification = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         internal_notification_id: internalNotificationId,
         user_id: currentUser.user_id
@@ -359,7 +286,8 @@ export const getNotificationByIdAction = withAuth(async (
       .whereNull('deleted_at')
       .first();
 
-    return notification || null;
+    await scope.assertCurrent();
+    return notification ? scope.render(notification) : null;
   });
 });
 
@@ -382,8 +310,9 @@ export const getUnreadCountAction = withAuth(async (
   const userId = currentUser.user_id;
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scope = await coManagedInboxScope(trx, currentUser, tenant);
     // Get total unread count
-    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -394,7 +323,7 @@ export const getUnreadCountAction = withAuth(async (
     // Split the unread count by priority tier so the bell can render a
     // high-only badge (and a neutral dot for normal/low) without a second
     // round-trip. `total` mirrors `unread_count`; `high` is unread-high.
-    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false,
@@ -411,7 +340,7 @@ export const getUnreadCountAction = withAuth(async (
 
     // Get counts by category if requested
     if (byCategory) {
-      const categoryCounts = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      const categoryCounts = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
         .where({
           user_id: userId,
           is_read: false
@@ -428,6 +357,7 @@ export const getUnreadCountAction = withAuth(async (
       }, {});
     }
 
+    await scope.assertCurrent();
     return response;
   });
 });
@@ -453,7 +383,8 @@ export const markAsReadAction = withAuth(async (
   const notification = await (async () => {
     try {
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+        const scope = await coManagedInboxScope(trx, currentUser, tenant, { id: notificationId, forUpdate: true });
+        const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
           .where({
             internal_notification_id: notificationId,
             user_id: userId
@@ -469,7 +400,10 @@ export const markAsReadAction = withAuth(async (
           throw new Error('Notification not found');
         }
 
-        return notif;
+        await scope.assertCurrent();
+        const visible = scope.render(notif);
+        if (!visible) throw new Error('Notification not found');
+        return visible;
       });
     } catch (error) {
       const expected = notificationActionErrorFrom(error);
@@ -527,7 +461,8 @@ export const markAllAsReadAction = withAuth(async (
   const userId = currentUser.user_id;
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const updatedCount = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const scope = await coManagedInboxScope(trx, currentUser, tenant, { forUpdate: true });
+    const updatedCount = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -539,6 +474,7 @@ export const markAllAsReadAction = withAuth(async (
         updated_at: trx.fn.now()
       });
 
+    await scope.assertCurrent();
     return { updated_count: updatedCount };
   });
 

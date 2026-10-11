@@ -25,6 +25,7 @@ const {
 }));
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  getTimeEntryBillingMode: vi.fn(async () => 'commercial'),
   fetchServicesForTimeEntry,
   fetchTaxRegions,
   fetchScheduleEntryForWorkItem,

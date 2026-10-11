@@ -33,7 +33,9 @@ export default function LicenseBanner() {
       .catch(() => {});
   }, []);
 
-  if (!status?.selfHostMode || dismissed) return null;
+  // Independent workspace status belongs to its tenant license panel; appliance
+  // trial and connection messaging must not describe a customer's entitlement.
+  if (!status?.selfHostMode || status.scope === 'tenant' || dismissed) return null;
 
   const { state, daysRemaining, tier } = status;
 

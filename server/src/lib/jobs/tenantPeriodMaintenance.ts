@@ -1,5 +1,7 @@
 import logger from '@alga-psa/core/logger';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { getCoManagedOperationalState } from '@alga-psa/licensing';
+import { productTimeEntryMode } from '@alga-psa/types';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
@@ -46,6 +48,18 @@ export type NextTimePeriodOutcome =
 export async function createNextTimePeriodForTenant(tenantId: string): Promise<NextTimePeriodOutcome> {
   return runWithTenant(tenantId, async () => {
     const tenantKnex = await getConnection(tenantId);
+    // A workspace without time tracking, or a co-managed workspace whose
+    // lifecycle no longer allows writes, gets no new periods.
+    const blocked = await withTransaction(tenantKnex, async (trx) => {
+      const workspace = await tenantDb(trx, tenantId).table('tenants').first('product_code');
+      if (!workspace || !productTimeEntryMode(workspace.product_code)) return 'time tracking is unavailable for this product';
+      const state = await getCoManagedOperationalState(trx, tenantId);
+      return state.canWrite ? null : `co-management ${state.state}`;
+    });
+    if (blocked) {
+      return { status: 'skipped', details: `Skipped - ${blocked}` };
+    }
+
     const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
 
     if (!settings || settings.length === 0) {

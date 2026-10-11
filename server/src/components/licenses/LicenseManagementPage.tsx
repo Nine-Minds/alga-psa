@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { TFunction } from "i18next";
@@ -39,6 +40,8 @@ import {
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import TenantLicensePanel from './TenantLicensePanel';
+import { CoManagedFeatureBoundary } from '../co-managed/CoManagedFeatureBoundary';
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -250,7 +253,12 @@ function toneClasses(tone: Tone) {
  * Gated by admin RBAC only — NOT by eeRuntimeEnabled — so an expired install
  * can always navigate here to renew or start a trial.
  */
-export default function LicenseManagementPage() {
+export default function LicenseManagementPage({ returnTo }: { returnTo?: string } = {}) {
+  const { data: session } = useSession();
+  return <LicenseManagementContent key={JSON.stringify([session?.user?.tenant, session?.user?.id])} returnTo={returnTo} />;
+}
+
+function LicenseManagementContent({ returnTo }: { returnTo?: string } = {}) {
   const { t } = useTranslation("msp/licensing");
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -302,23 +310,27 @@ export default function LicenseManagementPage() {
     setError(null);
     setSuccessMsg(null);
     startTransition(async () => {
-      const result = await submitLicense(licenseKey.trim());
-      if (result.success && result.status) {
-        await refresh(result.status);
-        setLicenseKey("");
-        setSuccessMsg(
-          t("managementPage.success.licenseKeyActivated", {
-            defaultValue:
-              "License key activated. Paid features are now available on this appliance.",
-          }),
-        );
-      } else {
-        setError(
-          result.error ??
-            t("managementPage.errors.activateLicenseKey", {
-              defaultValue: "Failed to activate license key.",
+      try {
+        const result = await submitLicense(licenseKey.trim());
+        if (result.success && result.status) {
+          await refresh(result.status);
+          setLicenseKey("");
+          setSuccessMsg(
+            t(result.status.scope === 'tenant' ? 'coManaged.tenantLicense.activated' : "managementPage.success.licenseKeyActivated", {
+              defaultValue:
+                result.status.scope === 'tenant' ? 'Workspace license key activated.' : "License key activated. Paid features are now available on this appliance.",
             }),
-        );
+          );
+        } else {
+          setError(
+            result.error ??
+              t("managementPage.errors.activateLicenseKey", {
+                defaultValue: "Failed to activate license key.",
+              }),
+          );
+        }
+      } catch {
+        setError(t('managementPage.errors.activateLicenseKey', { defaultValue: 'Failed to activate license key.' }));
       }
     });
   }
@@ -431,6 +443,11 @@ export default function LicenseManagementPage() {
     );
   }
 
+  if (status.scope === 'tenant') return <CoManagedFeatureBoundary>
+    <TenantLicensePanel status={status} licenseKey={licenseKey} onKeyChange={setLicenseKey}
+      onActivate={handleSubmitLicense} pending={isPending} error={error} success={successMsg} portalUrl={PORTAL_URL} />
+  </CoManagedFeatureBoundary>;
+
   const presentation = statusPresentation(status, t);
   const classes = toneClasses(presentation.tone);
   const canStartTrial = !status.trialUsed && status.state !== "licensed";
@@ -444,6 +461,9 @@ export default function LicenseManagementPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
       <header className="space-y-2">
+        {returnTo && <Link id="license-return" href={returnTo} className="text-sm font-medium text-[rgb(var(--color-primary-600))] underline">
+          {t("managementPage.returnToClient", { defaultValue: "Return to client" })}
+        </Link>}
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">
           {t("managementPage.eyebrow", { defaultValue: "Appliance licensing" })}
         </p>

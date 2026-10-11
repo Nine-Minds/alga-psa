@@ -157,6 +157,9 @@ describe('MSP i18n Phase 0 - config', () => {
       'features/tickets',
       'msp/time-entry',
       'msp/user-activities',
+      // Co-managed escalation, handoff and shared-conversation copy renders
+      // inside the ticket detail view, and lives in msp/licensing.
+      'msp/licensing',
     ]);
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',

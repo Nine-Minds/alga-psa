@@ -8,7 +8,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import type { S3ProviderConfig, StorageCapabilities } from '../types/storage';
-import { BaseStorageProvider } from './StorageProvider';
+import { BaseStorageProvider, type StorageUploadOptions } from './StorageProvider';
 
 export class S3StorageProvider extends BaseStorageProvider {
   private readonly client: S3Client;
@@ -38,20 +38,24 @@ export class S3StorageProvider extends BaseStorageProvider {
   }
 
   getCapabilities(): StorageCapabilities {
+    if (!Number.isSafeInteger(this.config.maxFileSize) || this.config.maxFileSize < 0) {
+      throw new Error('S3 storage file-size limit is invalid');
+    }
     return {
       supportsBuckets: true,
       supportsStreaming: true,
       supportsMetadata: true,
       supportsTags: true,
       supportsVersioning: true,
-      maxFileSize: 5 * 1024 * 1024 * 1024,
+      maxFileSize: Math.min(this.config.maxFileSize, 5 * 1024 * 1024 * 1024),
+      allowedMimeTypes: [...this.config.allowedMimeTypes],
     };
   }
 
   async upload(
     file: Buffer | Readable,
     path: string,
-    options?: { mime_type?: string; metadata?: Record<string, string>; size?: number },
+    options?: StorageUploadOptions,
   ) {
     try {
       // LEVERAGE: pattern s3-stream-put — identical stream/size/no-retry logic duplicated in the package and EE S3 providers (duplicated provider layer)
@@ -60,12 +64,14 @@ export class S3StorageProvider extends BaseStorageProvider {
       if (isStream) {
         // The SDK cannot measure a stream; without ContentLength it sends an
         // undefined x-amz-decoded-content-length header and the PUT fails.
-        if (typeof options?.size !== 'number' || !Number.isFinite(options.size) || options.size < 0) {
+        if (typeof options?.size !== 'number' || !Number.isSafeInteger(options.size) || options.size < 0) {
           throw new Error('S3 upload of a stream requires options.size (the exact byte length)');
         }
         contentLength = options.size;
+      } else if (options?.size !== undefined && options.size !== file.length) {
+        // A declared buffer length is a caller assertion; a mismatch is rejected before any request.
+        throw new Error('S3 upload content length is invalid');
       }
-
       const put = async () => {
         await this.client.send(
           new PutObjectCommand({
@@ -78,28 +84,26 @@ export class S3StorageProvider extends BaseStorageProvider {
           }),
         );
       };
-      // A Readable can be consumed only once, so a stream PUT must not be retried.
-      if (isStream) {
-        await put();
-      } else {
-        await this.withRetry(put);
-      }
+      // Buffers are replayable; a Readable may already be partly or completely
+      // consumed after an error. Retrying it can replace an object with a prefix
+      // or empty body. The caller can start a new upload with a fresh source.
+      if (isStream) await put();
+      else await this.withRetry(put);
 
-      return await this.withRetry(async () => {
-        const head = await this.client.send(
-          new HeadObjectCommand({
-            Bucket: this.bucket,
-            Key: path,
-          }),
-        );
+      // A failed receipt read must never repeat an already successful PUT.
+      const head = await this.withRetry(() => this.client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: path,
+        }),
+      ));
 
-        return {
-          path,
-          size: head.ContentLength || 0,
-          mime_type: head.ContentType || options?.mime_type || 'application/octet-stream',
-          metadata: head.Metadata,
-        };
-      });
+      return {
+        path,
+        size: head.ContentLength || 0,
+        mime_type: head.ContentType || options?.mime_type || 'application/octet-stream',
+        metadata: head.Metadata,
+      };
     } catch (error) {
       this.handleError('upload', error);
     }

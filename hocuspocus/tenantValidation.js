@@ -49,7 +49,10 @@ export function getTenantFromRequest(request) {
 
 export function validateDocumentRoomAccess(roomName, request) {
   if (roomName?.startsWith('notifications:')) {
-    return { status: 'bypass', reason: 'notifications' };
+    throw new Error('Legacy notification rooms are no longer supported');
+  }
+  if (roomName?.startsWith('notification-signals:')) {
+    return validateNotificationSignalRoom(roomName, request);
   }
 
   const parsedTicketRoom = parseTicketRoom(roomName);
@@ -113,4 +116,20 @@ export function validateDocumentRoomAccess(roomName, request) {
     tenantId: tenantFromRequest,
     documentId: parsedRoom.documentId,
   };
+}
+
+
+export function validateNotificationSignalRoom(roomName, request) {
+  const parts = typeof roomName === 'string' ? roomName.split(':') : [];
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (parts.length !== 3 || parts[0] !== 'notification-signals' || !uuid.test(parts[1]) || !uuid.test(parts[2])) {
+    throw new Error('Invalid notification signal room');
+  }
+  const token = new URL(request?.url || '', 'http://localhost').searchParams.get('token');
+  if (!token) throw new Error('Notification validation failed: missing token');
+  const claims = jwt.verify(token, getHocuspocusJwtSecret(), { algorithms: ['HS256'], audience: 'notification-signals' });
+  if (claims.scope !== 'notification-signals' || claims.tenantId !== parts[1] || claims.userId !== parts[2] ||
+    !uuid.test(claims.sessionId) || !Number.isSafeInteger(claims.exp) || !Number.isSafeInteger(claims.iat) ||
+    claims.exp <= claims.iat || claims.exp - claims.iat > 60 || claims.exp > Math.floor(Date.now() / 1000) + 60) throw new Error('Notification validation failed: room or token scope mismatch');
+  return { status: 'ok', tenantId: parts[1], userId: parts[2], expiresAt: claims.exp * 1000 };
 }

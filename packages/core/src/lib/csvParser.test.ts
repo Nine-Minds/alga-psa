@@ -165,6 +165,7 @@ describe('round trip', () => {
   it('reads back what it wrote for values needing escapes', () => {
     const original = [
       { name: 'Acme, Inc.', note: 'He said "hi"', city: 'Berlin' },
+      { name: 'Customer', note: 'Call\rback', city: 'Paris' },
     ];
     const fields = ['name', 'note', 'city'];
 

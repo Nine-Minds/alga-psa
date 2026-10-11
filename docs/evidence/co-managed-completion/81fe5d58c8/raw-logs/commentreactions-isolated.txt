@@ -1,0 +1,443 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "1789921405204"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+stdout | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[RedisConfig] Using configuration: {
+  url: 'redis://localhost:6379',
+  prefix: 'alga-psa:',
+  eventBus: {
+    streamPrefix: 'event-stream:',
+    consumerGroup: 'event-processors',
+    maxStreamLength: 1000,
+    blockingTimeout: 5000,
+    claimTimeout: 30000,
+    batchSize: 10,
+    maxDeliveries: 10,
+    reconnectStrategy: { retries: 10, initialDelay: 100, maxDelay: 3000 }
+  }
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+[publishTicketUpdate] Failed to publish live ticket update: ReconnectStrategyError: Max reconnection attempts reached
+    at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:140:16)
+    at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+    at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3) {
+  originalError: Error: Max reconnection attempts reached
+      at Object.reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:112:18)
+      at RedisSocket._RedisSocket_reconnectStrategy (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:119:85)
+      at RedisSocket._RedisSocket_shouldReconnect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:131:111)
+      at RedisSocket._RedisSocket_connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/socket.js:162:117)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at Commander.connect (/home/robert/alga-copies/feature-co-managed-it/node_modules/@redis/client/dist/lib/client/index.js:185:9)
+      at getRedisClient (/home/robert/alga-copies/feature-co-managed-it/packages/event-bus/src/config/redisConfig.ts:136:3),
+  socketError: [ErrorReply: ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?]
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+stderr | src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+[Redis] Client error {
+  error: 'ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?'
+}
+
+ ❯ src/test/integration/commentReactions.integration.test.ts (23 tests | 8 failed) 159319ms 57 MB heap used
+   × Comment Reactions - Ticket Comments > should add a reaction to a comment 20299ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should remove a reaction when toggled again 20219ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment 23145ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should get aggregated reactions in batch 20267ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   ✓ Comment Reactions - Ticket Comments > should return empty object for empty comment IDs  3932ms
+   ✓ Comment Reactions - Ticket Comments > should return empty arrays for comments with no reactions  345ms
+   × Comment Reactions - Ticket Comments > should support custom alga emoji 20252ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji 20527ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted 6904ms
+     → insert into "comment_reactions" ("comment_id", "emoji", "tenant", "user_id") values ($1, $2, $3, $4) - duplicate key value violates unique constraint "uq_comment_reactions_user_emoji"
+   ✓ Comment Reactions - Task Comments > should add a reaction to a task comment 214ms
+   ✓ Comment Reactions - Task Comments > should remove a reaction when toggled again 220ms
+   ✓ Comment Reactions - Task Comments > should allow multiple different emojis on the same task comment 219ms
+   ✓ Comment Reactions - Task Comments > should get aggregated reactions in batch for task comments 195ms
+   ✓ Comment Reactions - Task Comments > should manually cascade delete reactions when task comment is deleted 208ms
+   ✓ Comment Reactions - Task Comments > should return empty object for empty task comment IDs 254ms
+   ✓ Comment Reactions - Task Comments > should return undefined for task comments with no reactions 193ms
+   ✓ Comment Reactions - Task Comments > should support custom alga emoji on task comment 211ms
+   ✓ Comment Reactions - Task Comments > should count reactions from multiple users on the same emoji 215ms
+   ✓ Emoji Validation > should reject empty emoji string on ticket comment 218ms
+   ✓ Emoji Validation > should reject emoji exceeding max length on ticket comment 210ms
+   ✓ Emoji Validation > should reject empty emoji string on task comment 217ms
+   ✓ Emoji Validation > should reject emoji exceeding max length on task comment 212ms
+   × Tenant Isolation > should only return reactions belonging to the current tenant 20271ms
+     → Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should add a reaction to a comment
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:186:3
+    184|   }, HOOK_TIMEOUT);
+    185|
+    186|   it('should add a reaction to a comment', async () => {
+       |   ^
+    187|     const result = await toggleCommentReaction(commentId, '\u{1F44D}');
+    188|     expect(result).toEqual({ added: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should remove a reaction when toggled again
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:198:3
+    196|   });
+    197|
+    198|   it('should remove a reaction when toggled again', async () => {
+       |   ^
+    199|     await toggleCommentReaction(commentId, '\u{1F44D}');
+    200|     const result = await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should allow multiple different emojis on the same comment
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:208:3
+    206|   });
+    207|
+    208|   it('should allow multiple different emojis on the same comment', asy…
+       |   ^
+    209|     await toggleCommentReaction(commentId, '\u{1F44D}');
+    210|     await toggleCommentReaction(commentId, '\u{2764}\u{FE0F}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should get aggregated reactions in batch
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:221:3
+    219|   });
+    220|
+    221|   it('should get aggregated reactions in batch', async () => {
+       |   ^
+    222|     // Add reactions to first comment
+    223|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should support custom alga emoji
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:259:3
+    257|   });
+    258|
+    259|   it('should support custom alga emoji', async () => {
+       |   ^
+    260|     const result = await toggleCommentReaction(commentId, ':alga:');
+    261|     expect(result).toEqual({ added: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should count reactions from multiple users on the same emoji
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:269:3
+    267|   });
+    268|
+    269|   it('should count reactions from multiple users on the same emoji', a…
+       |   ^
+    270|     // Add reaction as primary user
+    271|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Comment Reactions - Ticket Comments > should cascade delete reactions when ticket comment is deleted
+error: insert into "comment_reactions" ("comment_id", "emoji", "tenant", "user_id") values ($1, $2, $3, $4) - duplicate key value violates unique constraint "uq_comment_reactions_user_emoji"
+ ❯ Object.queryBuilder ../node_modules/knex/lib/knex-builder/make-knex.js:112:26
+ ❯ createQueryBuilder ../node_modules/knex/lib/knex-builder/make-knex.js:320:26
+ ❯ knex ../node_modules/knex/lib/knex-builder/make-knex.js:101:12
+ ❯ createTenantScopedRootQuery ../packages/db/src/lib/tenantScopedQuery.ts:66:5
+     64|   const metadata = createMetadata(options);
+     65|   return tagTenantScopedQuery(
+     66|     conn(options.table).where(metadata.qualifiedTenantColumn, options.…
+       |     ^
+     67|     metadata
+     68|   );
+ ❯ scoped ../packages/db/src/lib/tenantDb.ts:149:12
+ ❯ Object.table ../packages/db/src/lib/tenantDb.ts:175:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/test/integration/commentReactions.integration.test.ts > Tenant Isolation > should only return reactions belonging to the current tenant
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/test/integration/commentReactions.integration.test.ts:734:3
+    732|   }, HOOK_TIMEOUT);
+    733|
+    734|   it('should only return reactions belonging to the current tenant', a…
+       |   ^
+    735|     // Add a reaction as the current tenant
+    736|     await toggleCommentReaction(commentId, '\u{1F44D}');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 15 passed (23)
+   Start at  16:23:25
+   Duration  161.63s (transform 1.17s, setup 58ms, collect 1.83s, tests 159.32s, environment 0ms, prepare 29ms)

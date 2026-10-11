@@ -21,6 +21,7 @@ import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
+import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
@@ -178,10 +179,10 @@ export function MspLayoutClient({
 
   const isAlgaDesk = productCode === 'algadesk';
 
-  const content = shouldForceOnboarding && !isOnboardingPage ? (
-    <OnboardingRedirectFallback />
-  ) : (
+  const content = (
     <AppSessionProvider session={session}>
+      <CoManagedWorkspaceBoundary productCode={productCode} requireAcceptance>
+      {shouldForceOnboarding && !isOnboardingPage ? <OnboardingRedirectFallback /> : (
       <MspBrandingProvider branding={mspBranding}>
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
@@ -225,7 +226,9 @@ export function MspLayoutClient({
                   ) : (
                     <AIChatContextProvider>
                       <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                        {children}
+                        {productCode === 'co_managed' && routeBehavior !== 'allowed'
+                          ? <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                          : children}
                       </DefaultLayout>
                     </AIChatContextProvider>
                   )
@@ -240,6 +243,8 @@ export function MspLayoutClient({
         </TierProvider>
       </ProductProvider>
       </MspBrandingProvider>
+      )}
+      </CoManagedWorkspaceBoundary>
     </AppSessionProvider>
   );
 

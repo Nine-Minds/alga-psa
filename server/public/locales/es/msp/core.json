@@ -104,7 +104,10 @@
     },
     "passwords": "Contraseñas",
     "ticketsAll": "Todos los tickets",
-    "ticketsRecurring": "Tickets recurrentes"
+    "ticketsRecurring": "Tickets recurrentes",
+    "coManaged": "TI cogestionada",
+    "coManagedDelegation": "Administración delegada",
+    "coManagedAccess": "Acceso cogestionado"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

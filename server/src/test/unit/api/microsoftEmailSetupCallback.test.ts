@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { PROVIDER_SETUP_ENTRY_PATH, resolveProductNavDestination } from '@alga-psa/types';
 
 const hoisted = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
@@ -78,9 +79,22 @@ describe('Microsoft email setup callback', () => {
       ));
       const html = await response.text();
 
+      // This assertion used to name the PSA integrations URL directly. Since
+      // the product-neutral dispatcher landed, the contract it protected -- a
+      // PSA tenant that abandons provider setup lands on the PSA Providers
+      // page -- is split across two places, so both halves are asserted here.
+      //
+      // Half 1: the callback emits the dispatcher link, not a product-specific
+      // URL, so a co-managed tenant is never handed a PSA page.
       expect(html).toContain(Buffer.from(
-        'https://psa.example.com/msp/settings/integrations?category=providers'
+        `https://psa.example.com${PROVIDER_SETUP_ENTRY_PATH}`
       ).toString('base64'));
+      // Half 2: the dispatcher resolves that link back to the PSA Providers
+      // page for a PSA tenant. Deleting the psa row from
+      // PRODUCT_NAV_DESTINATIONS turns this red.
+      expect(resolveProductNavDestination('providers', 'psa')).toBe(
+        '/msp/settings/integrations?category=providers'
+      );
       expect(html).not.toContain(Buffer.from(
         'https://psa.example.com/msp/settings?category=providers'
       ).toString('base64'));

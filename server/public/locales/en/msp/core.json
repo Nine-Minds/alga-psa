@@ -104,7 +104,10 @@
     "emailLogs": "Email Logs",
     "extensions": "Extensions",
     "ticketsAll": "All Tickets",
-    "ticketsRecurring": "Recurring Tickets"
+    "ticketsRecurring": "Recurring Tickets",
+    "coManaged": "Co-managed IT",
+    "coManagedDelegation": "Delegated administration",
+    "coManagedAccess": "Co-managed access"
   },
   "marketing": {
     "dialogs": {

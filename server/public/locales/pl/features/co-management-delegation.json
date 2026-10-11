@@ -1,0 +1,43 @@
+{
+  "title": "Administracja delegowana",
+  "description": "Zatwierdzona przez klienta pomoc przy wybranych ustawieniach i danych użytkowników.",
+  "banner": "Obszar roboczy klienta: {{customer}} · MSP: {{sponsor}}",
+  "loading": "Wczytywanie zatwierdzonego dostępu…",
+  "refresh": "Odśwież dostęp",
+  "loadError": "Nie udało się wczytać dostępu. Odśwież, aby sprawdzić swoje bieżące uprawnienia.",
+  "noWorkspaces": "Żaden obszar roboczy klienta nie ma obecnie zatwierdzonych dla Ciebie zadań administracyjnych.",
+  "noGrants": "Obecnie nie zatwierdzono żadnych zadań administracyjnych.",
+  "readOnly": "Ten obszar roboczy jest tylko do odczytu. Administratorzy klienta nadal mogą cofnąć dostęp.",
+  "approveTitle": "Zatwierdź pojedyncze zadanie administracyjne",
+  "approvalHint": "Wybierz przypisanego technika lub zespół MSP, operację oraz jeden rekord klienta. Zatwierdzenie nie nadaje ogólnego dostępu administracyjnego.",
+  "approvalSummary": "Zezwól, aby {{principal}} wykonał operację „{{operation}}” dla: {{target}}.",
+  "principal": "Przypisany technik lub zespół MSP",
+  "target": "Rekord klienta",
+  "operation": "Operacja",
+  "search": "Szukaj rekordów",
+  "previous": "Poprzednie",
+  "next": "Następne",
+  "approve": "Zatwierdź zadanie",
+  "retry": "Ponów to samo żądanie",
+  "revoke": "Cofnij dostęp",
+  "save": "Zapisz zmiany",
+  "resend": "Wyślij ponownie zatwierdzone zaproszenie",
+  "saveError": "Nie udało się potwierdzić żądania. Ponów to samo żądanie lub odśwież dostęp przed wprowadzeniem kolejnej zmiany.",
+  "unavailable": "Rekord niedostępny",
+  "unavailableHint": "To zatwierdzenie nie daje już dostępu do swojego rekordu. Możesz je cofnąć.",
+  "invitationHint": "Ponowne wysłanie zachowuje ustalonego przez klienta odbiorcę, rolę, link konfiguracyjny i termin ważności. Nie przedłuża ani nie zastępuje zaproszenia.",
+  "invitationTerms": "Odbiorca: {{email}} · Rola: {{role}} · Wygasa: {{expires}}",
+  "operations": {
+    "board_settings": "Edytuj ustawienia wyświetlania tablicy",
+    "user_profile": "Edytuj profil użytkownika bez uprawnień administratora",
+    "invitation_resend": "Wyślij ponownie zaproszenie utworzone przez klienta"
+  },
+  "fields": {
+    "board_name": "Nazwa tablicy",
+    "description": "Opis",
+    "enable_live_ticket_timer": "Włącz licznik czasu zgłoszenia na żywo",
+    "first_name": "Imię",
+    "last_name": "Nazwisko",
+    "timezone": "Strefa czasowa"
+  }
+}

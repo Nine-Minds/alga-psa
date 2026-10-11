@@ -165,3 +165,23 @@ describe('registerAfterCommit', () => {
     expect(trx.commit).toHaveBeenCalledTimes(1);
   });
 });
+
+it('passes the owning root connection only to explicitly opted-in hooks after a nested transaction commits', async () => {
+  const { withTransaction, registerAfterCommit, registerAfterCommitWithConnection } = await import('@alga-psa/db');
+  const trx = createOwnedTrx(), knex = createKnex(trx), ordinary = vi.fn(), durable = vi.fn(async root => {
+    expect(root).toBe(knex); expect(root).not.toBe(trx); expect(trx.commit).toHaveBeenCalledOnce();
+  });
+  await withTransaction(knex, async parent => {
+    await withTransaction(parent, async child => { registerAfterCommit(child, ordinary); registerAfterCommitWithConnection(child, durable); });
+    expect(durable).not.toHaveBeenCalled();
+  });
+  expect(ordinary).toHaveBeenCalledExactlyOnceWith(); expect(durable).toHaveBeenCalledExactlyOnceWith(knex);
+});
+it('does not run connection hooks after rollback or a manual flush without an owning root', async () => {
+  const { withTransaction, registerAfterCommitWithConnection } = await import('@alga-psa/db');
+  const { flushAfterCommitHooks } = await import('./afterCommit');
+  const trx = createOwnedTrx(), knex = createKnex(trx), hook = vi.fn();
+  await expect(withTransaction(knex, async tx => { registerAfterCommitWithConnection(tx, hook); throw new Error('Rollback'); })).rejects.toThrow('Rollback');
+  expect(hook).not.toHaveBeenCalled();
+  const manual = createOwnedTrx(); registerAfterCommitWithConnection(manual, hook); await flushAfterCommitHooks(manual); expect(hook).not.toHaveBeenCalled();
+});

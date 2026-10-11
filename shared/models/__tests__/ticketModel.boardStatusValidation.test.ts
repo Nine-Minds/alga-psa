@@ -81,6 +81,7 @@ function createUpdateTicketTrx(options: {
 
     if (table === 'tickets') {
       const where = vi.fn(() => ({
+        forUpdate: vi.fn(() => ({ first: vi.fn(async () => options.currentTicket) })),
         first: vi.fn(async () => options.currentTicket),
         update: vi.fn((data: Record<string, unknown>) => {
           updates.push(data);

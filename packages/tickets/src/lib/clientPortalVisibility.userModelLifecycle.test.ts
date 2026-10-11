@@ -81,6 +81,8 @@ function createUserModelTrx(state: UserModelState) {
         where: (filters: Record<string, any>) => {
           const matches = state.contacts.filter((row) => matchesFilters(row, filters));
           return {
+            modify(callback: (query: any) => void) { callback(this); return this; },
+            forShare() { return this; },
             first: async (...columns: string[]) => pickFields(matches[0], columns),
             // Hierarchy edges: onboarding never sets a manager.
             whereNotNull: () => ({ select: async () => [] }),
@@ -137,6 +139,8 @@ function createUserModelTrx(state: UserModelState) {
         where: (filters: Record<string, any>) => {
           const matches = state.groups.filter((row) => matchesFilters(row, filters));
           return {
+            modify(callback: (query: any) => void) { callback(this); return this; },
+            forShare() { return this; },
             first: async (...columns: string[]) => pickFields(matches[0], columns),
           };
         },
@@ -162,6 +166,8 @@ function createUserModelTrx(state: UserModelState) {
       return {
         join: () => ({
           where: (filters: Record<string, any>) => ({
+            modify(callback: (query: any) => void) { callback(this); return this; },
+            forShare() { return this; },
             select: async () =>
               state.groupBoards
                 .filter((row) => {

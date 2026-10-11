@@ -34,6 +34,45 @@ import {
   getOnboardingWizardStepIndexes,
 } from '../lib/onboardingWizardSteps';
 
+interface TranslatedCopy {
+  key: string;
+  defaultValue: string;
+}
+
+// Each product names what is actually being set up. PSA sets up an MSP, AlgaDesk a
+// help desk, and co-managed IT the customer's own workspace under an MSP sponsor.
+const WIZARD_SHELL_TITLE_BY_PRODUCT: Record<ProductCode, TranslatedCopy> = {
+  psa: { key: 'onboardingWizard.shell.title', defaultValue: 'Setup Your System' },
+  algadesk: { key: 'onboardingWizard.shell.algadeskTitle', defaultValue: 'Set Up AlgaDesk' },
+  co_managed: {
+    key: 'onboardingWizard.shell.coManagedTitle',
+    defaultValue: 'Set Up Your IT Workspace',
+  },
+};
+
+const WIZARD_SHELL_DESCRIPTION_BY_PRODUCT: Record<ProductCode, TranslatedCopy> = {
+  psa: {
+    key: 'onboardingWizard.shell.description',
+    defaultValue: "Let's get your workspace configured and ready to use.",
+  },
+  algadesk: {
+    key: 'onboardingWizard.shell.algadeskDescription',
+    defaultValue: 'Configure your help desk workspace, clients, and ticketing defaults.',
+  },
+  co_managed: {
+    key: 'onboardingWizard.shell.coManagedDescription',
+    defaultValue: 'Configure your workspace, your IT team, and your ticketing defaults.',
+  },
+};
+
+// Step 0 covers workspace identity. Only PSA frames it as "your company", because
+// only PSA onboards the service provider itself.
+const WIZARD_FIRST_STEP_LABEL_BY_PRODUCT: Record<ProductCode, TranslatedCopy> = {
+  psa: { key: 'onboardingWizard.steps.clientInfo', defaultValue: 'Your Company' },
+  algadesk: { key: 'onboardingWizard.steps.algadeskWorkspace', defaultValue: 'Workspace' },
+  co_managed: { key: 'onboardingWizard.steps.coManagedWorkspace', defaultValue: 'Workspace' },
+};
+
 interface OnboardingWizardProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -43,6 +82,12 @@ interface OnboardingWizardProps {
   onComplete?: (data: WizardData) => void;
   fullPage?: boolean;
   isRevisit?: boolean;
+  /**
+   * False once the administrator has already chosen their own password — an invited
+   * administrator does that while claiming the invitation, so onboarding must not ask
+   * again. Defaults to true so the prompt survives any caller that cannot resolve it.
+   */
+  requiresPasswordReset?: boolean;
   productCode?: ProductCode;
 }
 
@@ -55,6 +100,7 @@ export function OnboardingWizard({
   onComplete,
   fullPage = false,
   isRevisit = false,
+  requiresPasswordReset = true,
   productCode = 'psa',
 }: OnboardingWizardProps) {
   const { t } = useTranslation('msp/onboarding');
@@ -79,7 +125,11 @@ export function OnboardingWizard({
   const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const stepPositionSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const currentOriginalStepIndex = activeStepIndexes[currentStep] ?? activeStepIndexes[0] ?? 0;
-  const isAlgaDesk = productCode === 'algadesk';
+  const shellTitle = WIZARD_SHELL_TITLE_BY_PRODUCT[productCode] ?? WIZARD_SHELL_TITLE_BY_PRODUCT.psa;
+  const shellDescription =
+    WIZARD_SHELL_DESCRIPTION_BY_PRODUCT[productCode] ?? WIZARD_SHELL_DESCRIPTION_BY_PRODUCT.psa;
+  const firstStepLabel =
+    WIZARD_FIRST_STEP_LABEL_BY_PRODUCT[productCode] ?? WIZARD_FIRST_STEP_LABEL_BY_PRODUCT.psa;
 
   const [wizardData, setWizardData] = useState<WizardData>({
     // MSP Company Info
@@ -147,8 +197,8 @@ export function OnboardingWizard({
   };
 
   const translatedStepLabelsByOriginalIndex = [
-    t(isAlgaDesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
-      defaultValue: isAlgaDesk ? 'Workspace' : 'Your Company'
+    t(firstStepLabel.key, {
+      defaultValue: firstStepLabel.defaultValue
     }),
     t('onboardingWizard.steps.teamMembers', {
       defaultValue: 'Team Members'
@@ -443,13 +493,21 @@ export function OnboardingWizard({
       return !!tenantName;
     }
 
-    // For first-time users, validate all fields including password
-    // Basic field validation
-    if (!firstName || !lastName || !tenantName || !email || !newPassword || !confirmPassword) {
+    if (!firstName || !lastName || !tenantName || !email) {
       return false;
     }
 
-    // Password validation
+    // The password fields are only rendered while a reset is still owed, so they are
+    // only validated then. Requiring them regardless would deadlock an administrator
+    // who already set their own password on a step with no visible password input.
+    if (!requiresPasswordReset) {
+      return true;
+    }
+
+    if (!newPassword || !confirmPassword) {
+      return false;
+    }
+
     if (newPassword.length < 8) {
       return false;
     }
@@ -516,7 +574,15 @@ export function OnboardingWizard({
   const renderStep = () => {
     switch (currentOriginalStepIndex) {
       case 0:
-        return <ClientInfoStep data={wizardData} updateData={updateData} isRevisit={isRevisit} />;
+        return (
+          <ClientInfoStep
+            data={wizardData}
+            updateData={updateData}
+            isRevisit={isRevisit}
+            requiresPasswordReset={requiresPasswordReset}
+            productCode={productCode}
+          />
+        );
       case 1:
         return <TeamMembersStep data={wizardData} updateData={updateData} />;
       case 2:
@@ -634,15 +700,13 @@ export function OnboardingWizard({
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
-                defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
+              {t(shellTitle.key, {
+                defaultValue: shellTitle.defaultValue
               })}
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskDescription' : 'onboardingWizard.shell.description', {
-                defaultValue: isAlgaDesk
-                  ? 'Configure your help desk workspace, clients, and ticketing defaults.'
-                  : 'Let\'s get your workspace configured and ready to use.'
+              {t(shellDescription.key, {
+                defaultValue: shellDescription.defaultValue
               })}
             </p>
           </div>
@@ -659,8 +723,8 @@ export function OnboardingWizard({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange?.(false)}
-      title={t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
-        defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
+      title={t(shellTitle.key, {
+        defaultValue: shellTitle.defaultValue
       })}
       className="max-w-4xl"
       footer={wizardNavigation}
