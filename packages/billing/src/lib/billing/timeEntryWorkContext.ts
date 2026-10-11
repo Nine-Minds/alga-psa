@@ -11,7 +11,7 @@ import { ticketProjectAttributionByTicketJoin } from '@alga-psa/shared/billingCl
 export function joinTimeEntryBillingWorkContext(db: Knex, tenant: string, query: Knex.QueryBuilder, entryAlias = 'time_entries') {
   const work = db.raw(`(
     SELECT t.tenant, t.ticket_id AS work_item_id, 'ticket'::text AS work_item_type,
-      t.client_id, COALESCE(t.billing_profile_id, linked_project.billing_profile_id), t.ticket_number::text, t.title AS ticket_title,
+      t.client_id, COALESCE(t.billing_profile_id, linked_project.billing_profile_id) AS billing_profile_id, t.ticket_number::text, t.title AS ticket_title,
       t.attributes->>'description' AS ticket_description, NULL::text AS project_task_name,
       NULL::uuid AS project_phase_id, ticket_project.project_id AS project_id, t.title AS work_item_name,
       t.tenant AS source_tenant, 'ticket'::text AS source_kind, t.ticket_id AS source_id, NULL::uuid AS relationship_id
