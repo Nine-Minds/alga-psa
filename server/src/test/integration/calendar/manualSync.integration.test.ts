@@ -34,6 +34,9 @@ const context = vi.hoisted(() => ({
   providerReadFailures: new Map<string, Error>(),
   providerWriteFailures: new Map<string, Error>(),
   nextEventNumber: 1,
+  // Runs on a pool connection (not the sync's transaction) right after a
+  // provider is marked connected, to observe what other readers can see then.
+  onProviderConnected: null as null | (() => Promise<void>),
 }));
 
 function buildDbExports() {
@@ -169,6 +172,9 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', (
           last_sync_at: updates.lastSyncAt ? new Date(updates.lastSyncAt) : null,
           updated_at: new Date(),
         });
+      if (updates.status === 'connected') {
+        await context.onProviderConnected?.();
+      }
     }
   },
 }));
@@ -356,6 +362,7 @@ describe('Manual calendar sync integration', () => {
     context.providerReadFailures.clear();
     context.providerWriteFailures.clear();
     context.nextEventNumber = 1;
+    context.onProviderConnected = null;
     providerTenantMap.clear();
 
     await tenantTable(db, testTenant, 'calendar_event_mappings').del();
@@ -698,6 +705,37 @@ describe('Manual calendar sync integration', () => {
       expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
     }
   );
+
+  it('marks the provider connected only after its push and pull writes are committed', async () => {
+    const providerId = await seedBidirectionalProvider('google');
+    const { entryId } = await seedCalendarEntry({ calendarType: 'group', notes: 'Alga baseline' });
+    const visibleWhenConnected: Array<{ mapped: boolean; notes: string | undefined }> = [];
+    context.onProviderConnected = async () => {
+      const mapping = await readMapping(providerId, entryId);
+      const entry = await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).first();
+      visibleWhenConnected.push({ mapped: Boolean(mapping), notes: entry?.notes });
+    };
+    const syncService = new CalendarSyncService();
+
+    const pushed = await syncService.syncScheduleEntryToExternal(entryId, providerId, true);
+    expect(pushed.success).toBe(true);
+    expect(visibleWhenConnected).toEqual([{ mapped: true, notes: 'Alga baseline' }]);
+
+    const mapping = await readMapping(providerId, entryId);
+    const eventKey = `${providerId}:${mapping.external_event_id}`;
+    const providerNotes = 'Notes authored in the provider';
+    context.providerEvents.set(eventKey, {
+      ...context.providerEvents.get(eventKey),
+      description: `${providerNotes}\n[Alga calendar: Operations]`,
+      updated: new Date(Date.now() + 60_000).toISOString(),
+    });
+    visibleWhenConnected.length = 0;
+
+    const pulled = await syncService.syncExternalEventToSchedule(mapping.external_event_id, providerId, false);
+    expect(pulled).toMatchObject({ success: true });
+    expect(pulled.skipped).toBeFalsy();
+    expect(visibleWhenConnected).toEqual([{ mapped: true, notes: providerNotes }]);
+  });
 
   it.each(['google', 'microsoft'] as const)(
     'pushes a %s local-only edit after confirming the provider version', async providerType => {
