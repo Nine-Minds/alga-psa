@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
+import { whereLiveRecurringContractLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 
 /**
@@ -127,10 +128,16 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
       db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
       db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
+      whereLiveRecurringContractLine(
+        query,
+        // Unchanged from before: this guard never excluded system-managed
+        // defaults.
+        { excludeSystemManagedDefault: false },
+      );
+
       return query
         .where({
           'cc.client_id': params.clientId,
-          'cc.is_active': true,
           'cl.cadence_owner': 'client',
         })
         .whereNotNull('cl.billing_frequency')
