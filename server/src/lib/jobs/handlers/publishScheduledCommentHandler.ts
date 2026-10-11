@@ -24,6 +24,7 @@ export async function reconcileScheduledCommentPublications(rearmFutureSchedules
     if (new Date(row.scheduled_publish_at).getTime() <= Date.now()) {
       await publishScheduledCommentHandler({ tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id });
     } else {
+      if (!rearmFutureSchedules && row.schedule_job_id) continue;
       const scheduled = await runner.scheduleJobAt(
         PUBLISH_SCHEDULED_COMMENT_JOB,
         { tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id },
@@ -37,10 +38,10 @@ export async function reconcileScheduledCommentPublications(rearmFutureSchedules
       logger.warn('Scheduled comment remains pending for recovery', { tenantId: row.tenant, commentId: row.comment_id });
     }
   }
-  const pending = await root('comments').where({ publish_state: 'published' }).whereNotNull('scheduled_publish_event_id')
+  const pending = await root('comments').modify(scope).where({ publish_state: 'published' }).whereNull('deleted_at').whereNotNull('scheduled_publish_event_id')
     .where(query => query.whereNull('scheduled_publish_dispatched_at')
       .orWhere(response => response.whereNotNull('scheduled_response_event_id').whereNull('scheduled_response_dispatched_at')))
-    .select('tenant', 'comment_id', 'ticket_id');
+    .limit(100).select('tenant', 'comment_id', 'ticket_id');
   for (const row of pending) {
     try { await publishScheduledCommentHandler({ tenantId: row.tenant, ticketId: row.ticket_id, commentId: row.comment_id }); }
     catch { logger.warn('Scheduled comment delivery remains pending for recovery', { tenantId: row.tenant, commentId: row.comment_id }); }
