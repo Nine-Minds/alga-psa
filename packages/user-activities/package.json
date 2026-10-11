@@ -30,6 +30,10 @@
       "import": "./src/hooks/useActivitiesCache.ts",
       "types": "./src/hooks/useActivitiesCache.ts"
     },
+    "./lib/groupPartition": {
+      "import": "./src/lib/groupPartition.ts",
+      "types": "./src/lib/groupPartition.ts"
+    },
     "./constants": {
       "import": "./src/components/constants.ts",
       "types": "./src/components/constants.ts"

@@ -168,7 +168,8 @@
       "expandGroup": "Gruppe erweitern",
       "collapseGroup": "Gruppe reduzieren",
       "renameGroup": "Gruppe umbenennen",
-      "deleteGroup": "Gruppe löschen"
+      "deleteGroup": "Gruppe löschen",
+      "groupMenu": "Gruppenaktionen"
     },
     "dropActivitiesHere": "Aktivitäten hier ablegen",
     "ungroupedHeading": "Nicht gruppiert",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Priorität",
       "dueDate": "Fälligkeitsdatum"
+    },
+    "defaultBadge": "Standard",
+    "defaultBadgeHint": "Aktivitäten, die Sie keiner Gruppe zugeordnet haben, erscheinen hier, einschließlich neu zugewiesener Arbeit.",
+    "defaultGroupEmpty": "Neu zugewiesene Arbeit erscheint hier",
+    "menu": {
+      "setDefault": "Als Standard für neue Arbeit festlegen",
+      "unsetDefault": "Nicht mehr als Standard verwenden"
+    },
+    "errors": {
+      "setDefaultFailed": "Die Standardgruppe konnte nicht aktualisiert werden"
     }
   },
   "printable": {
