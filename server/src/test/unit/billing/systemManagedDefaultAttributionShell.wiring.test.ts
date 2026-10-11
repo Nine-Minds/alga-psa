@@ -68,8 +68,8 @@ describe('system-managed default attribution-shell cutover wiring', () => {
   it('F072/F085: excludes system-managed defaults from recurring materialization and due-work/admin recurring schedule authority paths', () => {
     expect(contractCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
     expect(clientCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
-    expect(billingAndTaxSource).toContain("where('rsp.obligation_type', 'contract_line')");
-    expect(billingAndTaxSource).toContain("where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)");
+    expect(billingAndTaxSource).not.toContain('rsp.obligation_type');
+    expect(billingAndTaxSource).not.toContain('POST_DROP');
     expect(billingAndTaxSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
     expect(recurringAdminSource).toContain('context.is_system_managed_default');
     expect(recurringAdminSource).toContain('attribution-only and cannot be managed in recurring service period admin tools');

@@ -319,10 +319,9 @@ function createClientRow(options: { billingCycleId?: string | null } = {}) {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'client_contract_line',
         chargeFamily: 'fixed',
       },
-      scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:client:advance',
       periodKey: 'period:2025-03-01:2025-04-01',
       invoiceWindow: {
         start: '2025-03-01',
@@ -352,7 +351,6 @@ function createContractRow() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {
@@ -541,11 +539,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-contract-1',
-        schedule_key: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+        schedule_key: 'schedule:tenant-1:line-1:contract:arrears',
         period_key: 'period:2025-03-08:2025-04-08',
         lifecycle_state: 'generated',
         cadence_owner: 'contract',
-        obligation_type: 'contract_line',
         service_period_start: '2025-03-08',
         service_period_end: '2025-04-08',
         invoice_window_start: '2025-04-08',
@@ -562,11 +559,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       {
         tenant: 'tenant-1',
         record_id: 'rsp-client-1',
-        schedule_key: 'schedule:tenant-1:client_contract_line:line-2:client:advance',
+        schedule_key: 'schedule:tenant-1:line-2:client:advance',
         period_key: 'period:2025-03-01:2025-04-01',
         lifecycle_state: 'generated',
         cadence_owner: 'client',
-        obligation_type: 'client_contract_line',
         service_period_start: '2025-03-01',
         service_period_end: '2025-04-01',
         invoice_window_start: '2025-03-01',
@@ -951,7 +947,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
           selectionKey: 'gap-selection-blocked-filtered',
           clientId: 'client-gap-filtered',
           clientName: 'Repair Co',
-          scheduleKey: 'schedule:tenant-1:client_contract_line:line-gap:client:advance',
+          scheduleKey: 'schedule:tenant-1:line-gap:client:advance',
           periodKey: 'period:2025-03-01:2025-04-01',
           billingCycleId: 'cycle-gap',
           invoiceWindowStart: '2025-03-01',
@@ -1179,8 +1175,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       clientId: 'synthetic-client', clientName: `Synthetic ${chargeFamily}`, billingCycleId: 'november-cycle',
       record: buildRecurringServicePeriodRecord({
         cadenceOwner: 'client', duePosition: 'arrears',
-        sourceObligation: {tenant: 'tenant-1', obligationId: `new-${chargeFamily}`, obligationType: 'client_contract_line', chargeFamily},
-        scheduleKey: `schedule:tenant-1:client_contract_line:new-${chargeFamily}:client:arrears`,
+        sourceObligation: {tenant: 'tenant-1', obligationId: `new-${chargeFamily}`, chargeFamily},
+        scheduleKey: `schedule:tenant-1:new-${chargeFamily}:client:arrears`,
         periodKey: 'period:2026-10-01:2026-11-01',
         servicePeriod: {start: '2026-10-01', end: '2026-11-01', semantics: 'half_open'},
         invoiceWindow: {start: '2026-11-01', end: '2026-12-01', semantics: 'half_open'},
@@ -1223,11 +1219,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       invoiceCandidates: [],
       materializationGaps: [
         {
-          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
-          selectionKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+          selectionKey: 'client_schedule:client-1:schedule:tenant-1:line-1:client:advance:period:2025-03-01:2025-04-01',
           clientId: 'client-1',
           clientName: 'Acme Co',
-          scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+          scheduleKey: 'schedule:tenant-1:line-1:client:advance',
           periodKey: 'period:2025-03-01:2025-04-01',
           billingCycleId: 'cycle-2025-03',
           invoiceWindowStart: '2025-03-01',
@@ -1248,7 +1244,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const gapPanel = await screen.findByTestId('recurring-materialization-gap-panel');
     const gapEntry = within(gapPanel).getByTestId(
-      'recurring-materialization-gap-client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+      'recurring-materialization-gap-client_schedule:client-1:schedule:tenant-1:line-1:client:advance:period:2025-03-01:2025-04-01',
     );
     const readyTable = screen.getByTestId('automatic-invoices-table');
 
@@ -1264,7 +1260,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     const repairLink = within(gapEntry).getByRole('link', { name: 'Review Service Periods' });
     expect(repairLink).toHaveAttribute(
       'href',
-      '/msp/billing?tab=service-periods&scheduleKey=schedule%3Atenant-1%3Aclient_contract_line%3Aline-1%3Aclient%3Aadvance',
+      '/msp/billing?tab=service-periods&scheduleKey=schedule%3Atenant-1%3Aline-1%3Aclient%3Aadvance',
     );
   });
 
@@ -1273,11 +1269,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       invoiceCandidates: [],
       materializationGaps: [
         {
-          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
-          selectionKey: 'client_schedule:client-1:schedule:tenant-1:client_contract_line:line-1:client:advance:period:2025-03-01:2025-04-01',
+          executionIdentityKey: 'client_schedule:client-1:schedule:tenant-1:line-1:client:advance:period:2025-03-01:2025-04-01:2025-03-01:2025-04-01',
+          selectionKey: 'client_schedule:client-1:schedule:tenant-1:line-1:client:advance:period:2025-03-01:2025-04-01',
           clientId: 'client-1',
           clientName: 'Acme Co',
-          scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:advance',
+          scheduleKey: 'schedule:tenant-1:line-1:client:advance',
           periodKey: 'period:2025-03-01:2025-04-01',
           billingCycleId: 'cycle-2025-03',
           invoiceWindowStart: '2025-03-01',

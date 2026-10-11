@@ -13,7 +13,6 @@ import type {
   IRecurringServicePeriodRecord,
   ISO8601String,
   RecurringChargeFamily,
-  RecurringObligationType,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
@@ -29,11 +28,9 @@ import {
   regenerateRecurringServicePeriods,
 } from '@alga-psa/shared/billingClients/regenerateRecurringServicePeriods';
 import {
-  isClientCadencePostDropObligationType,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-  POST_DROP_RECURRING_OBLIGATION_TYPES,
-  buildPersistedClientCadencePostDropObligationRef,
-} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+  parseRecurringServicePeriodScheduleKey,
+  type ParsedRecurringServicePeriodScheduleKey,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSchedule';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
@@ -60,7 +57,6 @@ type DbRecordRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: RecurringObligationType;
   charge_family: RecurringChargeFamily;
   cadence_owner: IRecurringServicePeriodRecord['cadenceOwner'];
   due_position: IRecurringServicePeriodRecord['duePosition'];
@@ -104,15 +100,6 @@ type LiveScheduleContextRow = ObligationContextRow & {
   assignment_end_date: unknown;
 };
 
-interface ParsedRecurringServicePeriodScheduleKey {
-  scheduleKey: string;
-  tenant: string;
-  obligationType: RecurringObligationType;
-  obligationId: string;
-  cadenceOwner: IRecurringServicePeriodRecord['cadenceOwner'];
-  duePosition: IRecurringServicePeriodRecord['duePosition'];
-}
-
 export interface RecurringServicePeriodManagementRow {
   record: IRecurringServicePeriodRecord;
   displayState: ReturnType<typeof getRecurringServicePeriodDisplayState>;
@@ -140,7 +127,6 @@ export interface RecurringServicePeriodManagementSummary {
 export interface RecurringServicePeriodManagementView {
   scheduleKey: string;
   obligationId: string;
-  obligationType: RecurringObligationType;
   cadenceOwner: IRecurringServicePeriodRecord['cadenceOwner'];
   duePosition: IRecurringServicePeriodRecord['duePosition'];
   chargeFamily: RecurringChargeFamily;
@@ -170,7 +156,6 @@ export interface RecurringServicePeriodScheduleSummary {
   scheduleKey: string;
   cadenceOwner: IRecurringServicePeriodRecord['cadenceOwner'];
   duePosition: IRecurringServicePeriodRecord['duePosition'];
-  obligationType: RecurringObligationType;
   obligationId: string;
   clientName: string | null;
   contractName: string | null;
@@ -269,7 +254,6 @@ function mapRecurringServicePeriodRowToRecord(row: DbRecordRow): IRecurringServi
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type,
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -379,24 +363,9 @@ function buildEmptyManagementSummary(): RecurringServicePeriodManagementSummary 
   };
 }
 
-function parseRecurringServicePeriodScheduleKey(
-  scheduleKey: string,
-): ParsedRecurringServicePeriodScheduleKey | null {
-  const match = scheduleKey.match(
-    /^schedule:([^:]+):([^:]+):([^:]+):(client|contract):(advance|arrears)$/,
-  );
-  if (!match) {
-    return null;
-  }
-
-  return {
-    scheduleKey,
-    tenant: match[1]!,
-    obligationType: match[2]! as RecurringObligationType,
-    obligationId: match[3]!,
-    cadenceOwner: match[4]! as IRecurringServicePeriodRecord['cadenceOwner'],
-    duePosition: match[5]! as IRecurringServicePeriodRecord['duePosition'],
-  };
+function canonicalizeScheduleKeyInput(scheduleKey: string): string {
+  const trimmed = scheduleKey.trim();
+  return parseRecurringServicePeriodScheduleKey(trimmed)?.scheduleKey ?? trimmed;
 }
 
 function compareIsoDateOnly(left: ISO8601String, right: ISO8601String) {
@@ -453,7 +422,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -483,105 +451,44 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
 async function loadObligationContext(input: {
   trx: any;
   tenant: string;
-  obligationType: RecurringObligationType;
   obligationId: string;
 }): Promise<ObligationContextRow> {
-  const { trx, tenant, obligationType, obligationId } = input;
+  const { trx, tenant, obligationId } = input;
 
-  if (obligationType === 'contract_line') {
-    const db = tenantDb(trx, tenant);
-    const query = db.table('contract_lines as cl');
-    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-    db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
+  const db = tenantDb(trx, tenant);
+  const query = db.table('contract_lines as cl');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
 
-    const row = await query
-      .where('cl.contract_line_id', obligationId)
-      .first(
-        'c.client_id as client_id',
-        'c.client_name as client_name',
-        'ct.contract_id as contract_id',
-        'ct.contract_name as contract_name',
-        'cl.contract_line_id as contract_line_id',
-        'cl.contract_line_name as contract_line_name',
-        'ct.is_system_managed_default as is_system_managed_default',
-      ) as ObligationContextRow | undefined;
-
-    return {
-      client_id: row?.client_id ?? null,
-      client_name: row?.client_name ?? null,
-      contract_id: row?.contract_id ?? null,
-      contract_name: row?.contract_name ?? null,
-      contract_line_id: row?.contract_line_id ?? null,
-      contract_line_name: row?.contract_line_name ?? null,
-      is_system_managed_default: row?.is_system_managed_default === true,
-    };
-  }
-
-  if (isClientCadencePostDropObligationType(obligationType)) {
-    const db = tenantDb(trx, tenant);
-    const query = db.table('contract_lines as cl');
-    db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-    db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id');
-
-    const row = await query
-      .where('cl.contract_line_id', obligationId)
-      .first(
-        'c.client_id as client_id',
-        'c.client_name as client_name',
-        'ct.contract_id as contract_id',
-        'ct.contract_name as contract_name',
-        'cl.contract_line_id as contract_line_id',
-        'cl.contract_line_name as contract_line_name',
-        'ct.is_system_managed_default as is_system_managed_default',
-      ) as ObligationContextRow | undefined;
-
-    return {
-      client_id: row?.client_id ?? null,
-      client_name: row?.client_name ?? null,
-      contract_id: row?.contract_id ?? null,
-      contract_name: row?.contract_name ?? null,
-      contract_line_id: row?.contract_line_id ?? null,
-      contract_line_name: row?.contract_line_name ?? null,
-      is_system_managed_default: row?.is_system_managed_default === true,
-    };
-  }
+  const row = await query
+    .where('cl.contract_line_id', obligationId)
+    .first(
+      'c.client_id as client_id',
+      'c.client_name as client_name',
+      'ct.contract_id as contract_id',
+      'ct.contract_name as contract_name',
+      'cl.contract_line_id as contract_line_id',
+      'cl.contract_line_name as contract_line_name',
+      'ct.is_system_managed_default as is_system_managed_default',
+    ) as ObligationContextRow | undefined;
 
   return {
-    client_id: null,
-    client_name: null,
-    contract_id: null,
-    contract_name: null,
-    contract_line_id: null,
-    contract_line_name: null,
-    is_system_managed_default: false,
+    client_id: row?.client_id ?? null,
+    client_name: row?.client_name ?? null,
+    contract_id: row?.contract_id ?? null,
+    contract_name: row?.contract_name ?? null,
+    contract_line_id: row?.contract_line_id ?? null,
+    contract_line_name: row?.contract_line_name ?? null,
+    is_system_managed_default: row?.is_system_managed_default === true,
   };
 }
 
 async function loadLiveScheduleContext(input: {
   trx: any;
   tenant: string;
-  obligationType: RecurringObligationType;
   obligationId: string;
 }): Promise<LiveScheduleContextRow> {
-  const { trx, tenant, obligationType, obligationId } = input;
-
-  if (obligationType !== 'contract_line' && !isClientCadencePostDropObligationType(obligationType)) {
-    return {
-      client_id: null,
-      client_name: null,
-      contract_id: null,
-      contract_name: null,
-      contract_line_id: null,
-      contract_line_name: null,
-      is_system_managed_default: false,
-      contract_line_type: null,
-      cadence_owner: null,
-      billing_frequency: null,
-      billing_timing: null,
-      assignment_start_date: null,
-      assignment_end_date: null,
-    };
-  }
+  const { trx, tenant, obligationId } = input;
 
   const db = tenantDb(trx, tenant);
   const query = db.table('contract_lines as cl');
@@ -645,7 +552,6 @@ async function loadScheduleRows(input: {
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -758,7 +664,6 @@ async function repairScheduleMaterialization(input: {
       sourceObligation: {
         tenant,
         obligationId: context.contract_line_id,
-        obligationType: 'contract_line',
         chargeFamily,
       },
       duePosition: schedule.duePosition,
@@ -802,10 +707,6 @@ async function repairScheduleMaterialization(input: {
       supersededRows: repairPlan.supersededRecords.length,
       activeRows: repairPlan.activeRecords.length,
     };
-  }
-
-  if (!isClientCadencePostDropObligationType(schedule.obligationType)) {
-    throw new Error(`Unsupported recurring schedule type ${schedule.obligationType}.`);
   }
 
   if (!context.client_id) {
@@ -854,11 +755,11 @@ async function repairScheduleMaterialization(input: {
     asOf: regenerationStart,
     materializedAt: repairedAt,
     billingCycle: billingSchedule.billingCycle,
-    sourceObligation: buildPersistedClientCadencePostDropObligationRef({
+    sourceObligation: {
       tenant,
-      contractLineId: context.contract_line_id,
+      obligationId: context.contract_line_id,
       chargeFamily,
-    }),
+    },
     duePosition: schedule.duePosition,
     sourceRuleVersion,
     sourceRunKey,
@@ -956,7 +857,8 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
     return denied;
   }
 
-  const normalizedScheduleKey = scheduleKey.trim();
+  // Legacy 6-segment keys (bookmarked deep links) are canonicalized at the input boundary.
+  const normalizedScheduleKey = canonicalizeScheduleKeyInput(scheduleKey);
   if (!normalizedScheduleKey) {
     return permissionError('A schedule key is required to inspect recurring service periods.', 'msp/billing:errors.recurringServicePeriod.scheduleKeyRequiredInspect');
   }
@@ -981,7 +883,6 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
       const context = await loadLiveScheduleContext({
         trx,
         tenant,
-        obligationType: parsedScheduleKey.obligationType,
         obligationId: parsedScheduleKey.obligationId,
       });
       if (context.is_system_managed_default) {
@@ -996,7 +897,6 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
       return {
         scheduleKey: normalizedScheduleKey,
         obligationId: parsedScheduleKey.obligationId,
-        obligationType: parsedScheduleKey.obligationType,
         cadenceOwner: parsedScheduleKey.cadenceOwner,
         duePosition: parsedScheduleKey.duePosition,
         chargeFamily: resolveRecurringChargeFamily(context.contract_line_type),
@@ -1016,7 +916,6 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
     const context = await loadObligationContext({
       trx,
       tenant,
-      obligationType: firstRow.obligation_type,
       obligationId: firstRow.obligation_id,
     });
     if (context.is_system_managed_default) {
@@ -1043,7 +942,6 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
     return {
       scheduleKey: normalizedScheduleKey,
       obligationId: firstRow.obligation_id,
-      obligationType: firstRow.obligation_type,
       cadenceOwner: firstRow.cadence_owner,
       duePosition: firstRow.due_position,
       chargeFamily: firstRow.charge_family,
@@ -1074,7 +972,8 @@ export const repairMissingRecurringServicePeriods = withAuth(async (
     return denied;
   }
 
-  const normalizedScheduleKey = scheduleKey.trim();
+  // Legacy 6-segment keys (bookmarked deep links) are canonicalized at the input boundary.
+  const normalizedScheduleKey = canonicalizeScheduleKeyInput(scheduleKey);
   if (!normalizedScheduleKey) {
     return permissionError('A schedule key is required to repair recurring service periods.', 'msp/billing:errors.recurringServicePeriod.scheduleKeyRequiredRepair');
   }
@@ -1092,7 +991,6 @@ export const repairMissingRecurringServicePeriods = withAuth(async (
     const context = await loadLiveScheduleContext({
       trx,
       tenant,
-      obligationType: parsedScheduleKey.obligationType,
       obligationId: parsedScheduleKey.obligationId,
     });
     if (context.is_system_managed_default) {
@@ -1141,7 +1039,6 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
     db.tenantJoin(query, 'clients as c', 'c.client_id', 'ct.owner_client_id', { type: 'left' });
 
     const rows = await query
-      .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereNotIn('rsp.lifecycle_state', ['superseded', 'archived'])
       .where((builder: any) =>
         builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
@@ -1153,7 +1050,6 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
         'rsp.schedule_key',
         'rsp.cadence_owner',
         'rsp.due_position',
-        'rsp.obligation_type',
         'rsp.obligation_id',
         'c.client_name',
         'ct.contract_name',
@@ -1163,7 +1059,6 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
         'rsp.schedule_key',
         'rsp.cadence_owner',
         'rsp.due_position',
-        'rsp.obligation_type',
         'rsp.obligation_id',
         'c.client_name',
         'ct.contract_name',
@@ -1177,7 +1072,6 @@ export const listRecurringServicePeriodScheduleSummaries = withAuth(async (
       scheduleKey: row.schedule_key,
       cadenceOwner: row.cadence_owner,
       duePosition: row.due_position,
-      obligationType: row.obligation_type,
       obligationId: row.obligation_id,
       clientName: row.client_name ?? null,
       contractName: row.contract_name ?? null,

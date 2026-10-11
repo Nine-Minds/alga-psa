@@ -1623,6 +1623,12 @@
     "threecxDialing": "Chiamata in corso dal tuo interno 3CX",
     "threecxFailed": "Il centralino non è riuscito a effettuare la chiamata"
   },
+  "unsavedChangesGuard": {
+    "title": "Annullare le modifiche non salvate?",
+    "message": "Hai modifiche non salvate che andranno perse se chiudi. Vuoi annullarle?",
+    "discard": "Annulla modifiche",
+    "keepEditing": "Continua a modificare"
+  },
   "editor": {
     "attachFiles": "Allega file",
     "uploadingFiles": "Caricamento dei file…",

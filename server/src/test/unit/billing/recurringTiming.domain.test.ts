@@ -158,7 +158,7 @@ describe('recurring timing shared domain', () => {
   it('T181: recurring run execution identity supports client-cadence scheduling without relying only on a raw billingCycleId string', () => {
     const window = buildClientExecutionWindow({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-01-01',
       windowEnd: '2025-02-01',
@@ -167,10 +167,10 @@ describe('recurring timing shared domain', () => {
     expect(window).toEqual({
       kind: 'client_cadence_window',
       identityKey:
-        'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-01-01:2025-02-01:2025-01-01:2025-02-01',
+        'client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-01-01:2025-02-01:2025-01-01:2025-02-01',
       cadenceOwner: 'client',
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-01-01:2025-02-01',
       windowStart: '2025-01-01',
       windowEnd: '2025-02-01',
@@ -188,7 +188,7 @@ describe('recurring timing shared domain', () => {
     });
     const clientWindow = buildClientExecutionWindow({
       clientId: 'client-1',
-      scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+      scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
       periodKey: 'period:2025-02-01:2025-03-01',
       windowStart: '2025-02-01',
       windowEnd: '2025-03-01',

@@ -1,5 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- QBO item import resolves QBO Items (integrations) against the billing catalog */
 import type { QboItem } from '@alga-psa/integrations/lib/qbo/types';
+import { toMinorUnits } from '@alga-psa/core';
 
 /**
  * Pure matching/diffing for the QBO Products & Services import. No I/O:
@@ -116,9 +117,9 @@ export interface ItemResolution {
  */
 const PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
 
-function toCents(amount: number | undefined | null): number | null {
+function toCents(amount: number | undefined | null, currency: string): number | null {
   if (amount === undefined || amount === null || Number.isNaN(Number(amount))) return null;
-  return Math.round(Number(amount) * 100);
+  return toMinorUnits(Number(amount), 'en-US', currency);
 }
 
 function normalizedName(name: string): string {
@@ -136,7 +137,9 @@ function itemKindFor(item: QboItem): 'service' | 'product' {
 
 function desiredFields(
   item: QboItem,
-  taxRateByQboTaxCodeId: Map<string, string>
+  taxRateByQboTaxCodeId: Map<string, string>,
+  /** QBO item prices are quoted in the company file's home currency. */
+  currencyCode: string
 ): { fields: ResolvedItemFields; flags: ItemResolutionFlag[] } {
   const flags: ItemResolutionFlag[] = [];
 
@@ -160,8 +163,8 @@ function desiredFields(
       item_kind: itemKindFor(item),
       sku: sku.length > 0 ? sku : null,
       description: item.Description?.trim() || null,
-      default_rate: toCents(item.UnitPrice) ?? 0,
-      cost: toCents(item.PurchaseCost),
+      default_rate: toCents(item.UnitPrice, currencyCode) ?? 0,
+      cost: toCents(item.PurchaseCost, currencyCode),
       is_active: isActive,
       tax_rate_id: taxRateId
     },
@@ -197,7 +200,9 @@ export function resolveQboItems(
   qboItems: QboItem[],
   existingServices: ExistingServiceRow[],
   existingMappings: ExistingItemMappingRow[],
-  taxRateByQboTaxCodeId: Map<string, string>
+  taxRateByQboTaxCodeId: Map<string, string>,
+  /** Company home currency: QBO item UnitPrice/PurchaseCost are quoted in it. */
+  currencyCode: string
 ): ItemResolution[] {
   const mappingByExternalId = new Map(existingMappings.map((m) => [m.external_entity_id, m]));
   const mappedServiceToExternal = new Map(existingMappings.map((m) => [m.alga_entity_id, m.external_entity_id]));
@@ -226,7 +231,7 @@ export function resolveQboItems(
       continue;
     }
 
-    const { fields, flags } = desiredFields(item, taxRateByQboTaxCodeId);
+    const { fields, flags } = desiredFields(item, taxRateByQboTaxCodeId, currencyCode);
     const skuKey = normalizedSku(fields.sku);
 
     // 1. Existing ledger mapping wins.
