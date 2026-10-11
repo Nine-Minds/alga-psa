@@ -6,6 +6,13 @@ import {
   failUnifiedInboundEmailQueueJob,
   reclaimExpiredUnifiedInboundEmailQueueJobs,
 } from './unifiedInboundEmailQueue';
+import { observeQueueJobDuration, recordConsumerLoopError, recordQueueJobOutcome } from './inboundEmailMetrics';
+
+/** Loop-error backoff bounds (alga0002256): survive Redis/DB errors instead of dying. */
+const LOOP_ERROR_BACKOFF_INITIAL_MS = 1_000;
+const LOOP_ERROR_BACKOFF_MAX_MS = 30_000;
+/** Slack added to the job timeout before the heartbeat counts as stale. */
+const HEARTBEAT_STALE_SLACK_MS = 30_000;
 
 export interface UnifiedInboundEmailQueueConsumerOptions {
   consumerId?: string;
@@ -47,6 +54,8 @@ export class UnifiedInboundEmailQueueConsumer {
   private readonly options: UnifiedInboundEmailQueueConsumerOptions;
   private readonly handleJobTimeoutMs: number;
   private running = false;
+  private lastSuccessfulTickAtMs: number | null = null;
+  private readonly startedAtMs = Date.now();
 
   constructor(options: UnifiedInboundEmailQueueConsumerOptions) {
     this.options = options;
@@ -59,6 +68,24 @@ export class UnifiedInboundEmailQueueConsumer {
 
   public get id(): string {
     return this.consumerId;
+  }
+
+  /**
+   * Epoch ms of the last `runOnce()` that completed without throwing (an empty
+   * poll counts). Null until the first success. Advances on success only, so
+   * both a hang and an error loop read as a stale heartbeat.
+   */
+  public get lastSuccessfulTickAt(): number | null {
+    return this.lastSuccessfulTickAtMs;
+  }
+
+  /** A legitimately long job holds the tick up to the job timeout. */
+  public get heartbeatStaleAfterMs(): number {
+    return this.handleJobTimeoutMs + HEARTBEAT_STALE_SLACK_MS;
+  }
+
+  public get startedAt(): number {
+    return this.startedAtMs;
   }
 
   public async runOnce(): Promise<boolean> {
@@ -74,6 +101,7 @@ export class UnifiedInboundEmailQueueConsumer {
       return false;
     }
 
+    const jobStartedAt = Date.now();
     try {
       const result = await withTimeout(
         this.options.handleJob(claim.job),
@@ -99,11 +127,22 @@ export class UnifiedInboundEmailQueueConsumer {
               ? resultAsAny.reason
               : null,
         });
+        recordQueueJobOutcome({ queue: 'v1', providerType: claim.job.provider, outcome: 'skip' });
       }
       await ackUnifiedInboundEmailQueueJob(claim);
+      observeQueueJobDuration({
+        queue: 'v1',
+        providerType: claim.job.provider,
+        seconds: (Date.now() - jobStartedAt) / 1000,
+      });
       return true;
     } catch (error: any) {
       const reason = error?.message || String(error);
+      observeQueueJobDuration({
+        queue: 'v1',
+        providerType: claim.job.provider,
+        seconds: (Date.now() - jobStartedAt) / 1000,
+      });
       const result = await failUnifiedInboundEmailQueueJob({
         claim,
         error: reason,
@@ -125,10 +164,26 @@ export class UnifiedInboundEmailQueueConsumer {
     if (this.running) return;
     this.running = true;
 
+    // LEVERAGE: pattern queue-consumer-resilient-loop — identical loop in unifiedInboundEmailQueueConsumerV2.ts
+    let errorBackoffMs = LOOP_ERROR_BACKOFF_INITIAL_MS;
     while (this.running) {
-      const processed = await this.runOnce();
-      if (!processed && this.options.pollDelayMs && this.options.pollDelayMs > 0) {
-        await sleep(this.options.pollDelayMs);
+      try {
+        const processed = await this.runOnce();
+        this.lastSuccessfulTickAtMs = Date.now();
+        errorBackoffMs = LOOP_ERROR_BACKOFF_INITIAL_MS;
+        if (!processed && this.options.pollDelayMs && this.options.pollDelayMs > 0) {
+          await sleep(this.options.pollDelayMs);
+        }
+      } catch (error: any) {
+        recordConsumerLoopError({ queue: 'v1' });
+        console.error('[UnifiedInboundEmailQueueConsumer] loop error; backing off', {
+          event: 'inbound_email_queue_consumer_loop_error',
+          consumerId: this.consumerId,
+          backoffMs: errorBackoffMs,
+          error: error?.message || String(error),
+        });
+        await sleep(errorBackoffMs);
+        errorBackoffMs = Math.min(errorBackoffMs * 2, LOOP_ERROR_BACKOFF_MAX_MS);
       }
     }
   }

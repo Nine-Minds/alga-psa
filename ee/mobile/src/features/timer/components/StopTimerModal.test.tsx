@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, Text, TextInput } from "react-native";
 import { act, create, type ReactTestRenderer, type ReactTestInstance } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ActiveTimeSession } from "../../../api/timeTracking";
+import type { StopwatchSession } from "../../../api/stopwatch";
 
 const { getServicesMock, datePickerProps, timePickerProps } = vi.hoisted(() => ({
   getServicesMock: vi.fn(),
@@ -61,17 +61,26 @@ import { StopTimerModal } from "./StopTimerModal";
 const NOW = new Date(2026, 6, 2, 12, 0, 0);
 const START = new Date(2026, 6, 2, 11, 30, 0);
 
-function makeSession(over: Partial<ActiveTimeSession> = {}): ActiveTimeSession {
+function makeSession(over: Partial<StopwatchSession> = {}): StopwatchSession {
   return {
     session_id: "session-1",
+    user_id: "user-1",
     work_item_id: "ticket-1",
     work_item_type: "ticket",
-    start_time: START.toISOString(),
-    notes: null,
     service_id: "svc-1",
-    user_id: "user-1",
-    elapsed_minutes: 30,
+    notes: "",
+    status: "running",
+    time_entry_id: null,
+    closed_at: null,
+    created_at: START.toISOString(),
+    updated_at: START.toISOString(),
+    segments: [{ segment_id: "seg-1", started_at: START.toISOString(), ended_at: null }],
+    active_ms: 30 * 60_000,
+    server_now: NOW.toISOString(),
+    ticket_number: "T-1",
     work_item_title: "Printer down",
+    project_name: null,
+    client_name: null,
     service_name: "Remote Support",
     ...over,
   };
@@ -180,6 +189,7 @@ describe("StopTimerModal", () => {
     pressSave(renderer);
 
     expect(props.onSubmit).toHaveBeenCalledWith({
+      start_time: undefined,
       end_time: undefined,
       notes: undefined,
       service_id: "svc-1",
@@ -197,6 +207,7 @@ describe("StopTimerModal", () => {
     pressSave(renderer);
 
     expect(props.onSubmit).toHaveBeenCalledWith({
+      start_time: undefined,
       end_time: undefined,
       notes: "rebooted the print server",
       service_id: "svc-1",
@@ -261,6 +272,7 @@ describe("StopTimerModal", () => {
     pressSave(renderer);
 
     expect(props.onSubmit).toHaveBeenCalledWith({
+      start_time: START.toISOString(),
       end_time: new Date(2026, 6, 2, 11, 45, 0).toISOString(),
       notes: undefined,
       service_id: "svc-1",
@@ -270,8 +282,7 @@ describe("StopTimerModal", () => {
 
   it("maps the adjusted end into server time when the clocks are offset", async () => {
     // Server is 10 minutes ahead: a timer started at server 11:30 began at
-    // local 11:20, so a local 11:25 end is valid even though it is "before"
-    // the server start timestamp.
+    // local 11:20, so a local 11:25 end is valid. It is sent as a server instant.
     const props = makeProps({ offsetMs: 10 * 60_000 });
     const renderer = await renderModal(props);
 
@@ -280,8 +291,27 @@ describe("StopTimerModal", () => {
     pressSave(renderer);
 
     expect(props.onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ end_time: new Date(2026, 6, 2, 11, 25, 0).toISOString() }),
+      expect.objectContaining({ end_time: new Date(2026, 6, 2, 11, 35, 0).toISOString() }),
     );
+  });
+
+  it("shows the paused-time notice and bills active time only", async () => {
+    // 11:00-11:30 and 11:45-now(12:00): 45m active across 2 segments, 15m paused.
+    const session = makeSession({
+      segments: [
+        { segment_id: "a", started_at: new Date(2026, 6, 2, 11, 0).toISOString(), ended_at: new Date(2026, 6, 2, 11, 30).toISOString() },
+        { segment_id: "b", started_at: new Date(2026, 6, 2, 11, 45).toISOString(), ended_at: null },
+      ],
+    });
+    const renderer = await renderModal(makeProps({ session }));
+
+    expect(getTextContent(renderer)).toContain("45m");
+    expect(getTextContent(renderer)).toContain("timer.stopModal.pausedNotice");
+  });
+
+  it("hides the paused notice for an uninterrupted session", async () => {
+    const renderer = await renderModal(makeProps());
+    expect(getTextContent(renderer)).not.toContain("timer.stopModal.pausedNotice");
   });
 
   it("resets the form each time it opens", async () => {

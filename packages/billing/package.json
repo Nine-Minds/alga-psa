@@ -29,6 +29,10 @@
       "types": "./src/schemas/index.ts",
       "import": "./dist/schemas/index.mjs"
     },
+    "./lib/catalog/serviceCatalogPricing": {
+      "types": "./src/lib/catalog/serviceCatalogPricing.ts",
+      "import": "./dist/lib/catalog/serviceCatalogPricing.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"

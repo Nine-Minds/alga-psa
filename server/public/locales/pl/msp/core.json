@@ -239,6 +239,19 @@
       "ariaLabel": "Zapytaj AI o ten workflow",
       "title": "Zapytaj AI",
       "shortcutHint": "Otwórz szybkie pytanie, aby uzyskać wskazówki dotyczące workflow"
+    },
+    "stopwatch": {
+      "untitled": "Bez tytułu",
+      "ariaLabelPaused": "Stoper wstrzymany: {{label}} przy {{clock}}",
+      "ariaLabelRunning": "Stoper działa: {{label}} przy {{clock}}",
+      "paused": "Stoper wstrzymany",
+      "running": "Stoper działa",
+      "resume": "Wznów",
+      "pause": "Wstrzymaj",
+      "stop": "Zatrzymaj i zapisz",
+      "discard": "Odrzuć",
+      "pausedNoDrawer": "Stoper wstrzymany na {{clock}}. Otwórz element pracy, aby zarejestrować czas.",
+      "openTicket": "Otwórz zgłoszenie"
     }
   },
   "dialogs": {

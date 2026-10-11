@@ -24,7 +24,11 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 
 describe('FixedFeeServicesStep i18n wiring contract', () => {
   it('T049: heading, service picker, base-rate/proration, and empty state copy use translated keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx');
+    // Per-line controls live in FixedLineEditor; the step keeps the heading and line list.
+    const source = [
+      read('../../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx'),
+      read('../../src/components/billing-dashboard/contracts/wizard-steps/FixedLineEditor.tsx'),
+    ].join('\n');
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -50,6 +54,11 @@ describe('FixedFeeServicesStep i18n wiring contract', () => {
       'wizardFixed.services.addService',
       'wizardFixed.emptyState',
       'wizardFixed.alternateFrequencyLabel',
+      'wizard.fixedLines.addLine',
+      'wizard.fixedLines.nameLabel',
+      'wizard.fixedLines.namePlaceholder',
+      'wizard.fixedLines.removeLine',
+      'wizard.fixedLines.noServiceWarning',
     ];
 
     for (const key of keyChecks) {

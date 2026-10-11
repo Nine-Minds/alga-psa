@@ -74,6 +74,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { DEFAULT_BOARD_STOPWATCH_ENABLED, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 
@@ -504,7 +505,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     inbound_reply_reopen_cutoff_hours: 168,
     inbound_reply_reopen_status_id: '',
     inbound_reply_ai_ack_suppression_enabled: false,
-    enable_live_ticket_timer: true,
+    enable_live_ticket_timer: DEFAULT_BOARD_STOPWATCH_ENABLED,
     client_portal_visible: true,
     is_pinned: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
@@ -889,7 +890,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       inbound_reply_reopen_cutoff_hours: board.inbound_reply_reopen_cutoff_hours ?? 168,
       inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
       inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
-      enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      enable_live_ticket_timer: resolveBoardStopwatchEnabled(board.enable_live_ticket_timer),
       client_portal_visible: board.client_portal_visible ?? true,
       is_pinned: board.is_pinned ?? false,
       ticket_statuses: [],
@@ -1417,7 +1418,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             is_inactive: board.is_inactive || false,
             category_type: 'itil',
             priority_type: 'itil',
-            enable_live_ticket_timer: true,
+            enable_live_ticket_timer: DEFAULT_BOARD_STOPWATCH_ENABLED,
           });
           if (isReturnedActionError(createdBoard)) {
             allResults.skipped.push({
@@ -2926,7 +2927,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             id="display"
             error={sectionErrors['display']}
             title={t('ticketing.boards.editor.sections.display', 'Display & behaviour')}
-            description={t('ticketing.boards.editor.sections.displayHelp', 'Live timer and board type')}
+            description={t('ticketing.boards.editor.sections.displayHelp', 'Stopwatch and board type')}
             icon={<Clock className="h-4 w-4" />}
             open={!collapsedSections.has('display')}
             dirty={isSectionDirty('display')}

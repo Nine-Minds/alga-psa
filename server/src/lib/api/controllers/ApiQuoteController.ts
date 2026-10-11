@@ -29,7 +29,10 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  isSelfApprovalAttempt,
+  isSelfApprovalBlocked,
 } from '@alga-psa/authorization/kernel';
+import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
@@ -130,7 +133,15 @@ export class ApiQuoteController extends ApiBaseController {
     return quote as Record<string, any>;
   }
 
-  private async assertQuoteApproveAllowed(apiRequest: AuthenticatedApiRequest, quote: Record<string, any>) {
+  /**
+   * Enforces the not-self-approver rules for an API approval and reports whether this
+   * approval is a permitted self-approval (sole approver, alga-2026-0002597) so the
+   * caller can write the audit activity.
+   */
+  private async assertQuoteApproveAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    quote: Record<string, any>
+  ): Promise<{ selfApproved: boolean }> {
     const knex = await getConnection(apiRequest.context.tenant);
     const subject = buildAuthorizationPrincipalSubject(apiRequest.context.user, apiRequest.context.apiKeyId);
     subject.tenant = apiRequest.context.tenant;
@@ -139,7 +150,8 @@ export class ApiQuoteController extends ApiBaseController {
       builtinProvider: new BuiltinAuthorizationKernelProvider({
         mutationGuards: [
           (input) => {
-            if (input.mutation?.kind === 'approve' && input.record?.ownerUserId === input.subject.userId) {
+            // Shared decision (see packages/authorization selfApproval.ts).
+            if (isSelfApprovalBlocked(input)) {
               return {
                 allowed: false,
                 reasons: [
@@ -166,7 +178,16 @@ export class ApiQuoteController extends ApiBaseController {
       rbacEvaluator: async () => true,
     });
 
-    const decision = await kernel.authorizeMutation({
+    const record = this.buildQuoteRecordContext(quote);
+    // Allowed only when no OTHER active approver exists in the tenant. Computed here
+    // because the kernel/providers must not query the database.
+    const allowSelfApproval = await resolveAllowSelfApprovalFlag(
+      knex,
+      apiRequest.context.tenant,
+      subject.userId,
+      record.ownerUserId
+    );
+    const mutationInput = {
       knex,
       subject,
       resource: {
@@ -174,16 +195,43 @@ export class ApiQuoteController extends ApiBaseController {
         action: 'approve',
         id: quote.quote_id,
       },
-      record: this.buildQuoteRecordContext(quote),
+      record,
       mutation: {
         kind: 'approve',
-        record: this.buildQuoteRecordContext(quote),
+        record,
+        allowSelfApproval,
       },
       requestCache: new RequestLocalAuthorizationCache(),
-    });
+    };
+    const decision = await kernel.authorizeMutation(mutationInput);
 
     if (!decision.allowed) {
       throw new ForbiddenError('Permission denied: Cannot approve your own quote');
+    }
+
+    return { selfApproved: isSelfApprovalAttempt(mutationInput) };
+  }
+
+  /**
+   * Reads the JSON request body, turning a missing/empty/unparseable body into a 400
+   * instead of the raw SyntaxError from `req.json()` (which surfaced as HTTP 500).
+   */
+  private async readJsonBody(req: NextRequest): Promise<unknown> {
+    let raw: string;
+    try {
+      raw = await req.text();
+    } catch {
+      throw new ValidationError('Request body could not be read');
+    }
+
+    if (raw.trim() === '') {
+      throw new ValidationError('Request body is required and must be a JSON object');
+    }
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new ValidationError('Request body must be valid JSON');
     }
   }
 
@@ -601,8 +649,8 @@ export class ApiQuoteController extends ApiBaseController {
             throw new ConflictError('Only quotes pending approval can be approved');
           }
 
-          await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
-          const quote = await this.quoteService.approve(id, apiRequest.context);
+          const { selfApproved } = await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
+          const quote = await this.quoteService.approve(id, apiRequest.context, { selfApproved });
 
           return createSuccessResponse(quote);
         });
@@ -622,7 +670,7 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          const body = await req.json();
+          const body = await this.readJsonBody(req);
           const data = approvalRequestChangesSchema.parse(body);
           const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
@@ -680,6 +728,7 @@ export class ApiQuoteController extends ApiBaseController {
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
           await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          // LEVERAGE: pattern api-json-body-400 — raw req.json() throws SyntaxError -> 500 on empty/bad bodies; readJsonBody() (added for request-changes) belongs in ApiBaseController.
           const body = await req.json();
           const data = convertQuoteSchema.parse(body);
 

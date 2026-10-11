@@ -63,6 +63,7 @@ import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
   CommentEmailRecipientsError,
   prepareCommentEmailRecipients,
@@ -1020,6 +1021,7 @@ export class TicketService extends BaseService<ITicket> {
           data.user_id,
           data.role ?? 'support',
           notificationSuppression,
+          'api',
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -1062,7 +1064,7 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Additional agent not found on this ticket');
       }
 
-      await removeTicketResourceCore(trx, context.tenant, resource.assignment_id);
+      await removeTicketResourceCore(trx, context.tenant, context.userId, resource.assignment_id, 'api');
     });
   }
 
@@ -2063,9 +2065,10 @@ export class TicketService extends BaseService<ITicket> {
         : null;
 
       // Update ticket
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id as string | null | undefined) })
         .returning('*');
 
       if (finalizeResourceReassignment) {

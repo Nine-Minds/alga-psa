@@ -369,7 +369,10 @@ class FakeQueryBuilder {
 }
 
 function createFakeTrx(tables: TableMap) {
-  return ((tableName: string) => new FakeQueryBuilder(tableName, tables)) as any;
+  const trx: any = (tableName: string) => new FakeQueryBuilder(tableName, tables);
+  // ticketStatusClockPatch builds a CASE expression through trx.raw; the fake keeps it opaque.
+  trx.raw = (sql: string, bindings?: unknown[]) => ({ sql, bindings });
+  return trx;
 }
 
 function setTenantTx(tables: TableMap): void {
