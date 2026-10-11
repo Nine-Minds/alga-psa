@@ -10,10 +10,11 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
 import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 import {
@@ -300,7 +301,7 @@ export const createComment = withAuth(async (
           const eventComment = await Comment.get(trx, commentTenant, commentId);
           await persistCommentPublication(trx, {
             eventType: 'TICKET_COMMENT_ADDED',
-            payload: {
+            payload: buildTicketCommentAddedPayload({
               tenantId: commentTenant,
               occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
@@ -310,7 +311,6 @@ export const createComment = withAuth(async (
               parent_comment_id: eventComment?.parent_comment_id ?? null,
               is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
-                id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
@@ -319,8 +319,8 @@ export const createComment = withAuth(async (
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
-            }
-          }, publishEvent);
+            })
+          }, publishStoredWorkflowEvent);
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -363,11 +363,7 @@ export const createComment = withAuth(async (
           });
 
           for (const ev of events) {
-            await publishWorkflowEvent({
-              eventType: ev.eventType,
-              payload: ev.payload,
-              ctx: workflowCtx,
-            });
+            await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
           }
         } catch (eventError) {
           console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);

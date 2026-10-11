@@ -78,7 +78,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
   signalWorkflowRuntimeV2QuotaResume
 } from '../lib/workflowRuntimeV2Temporal';
-import { getDateTriggerSourceDefinition } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import { getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 import { resolveWorkflowEventCorrelation } from '../lib/workflowEventCorrelation';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {

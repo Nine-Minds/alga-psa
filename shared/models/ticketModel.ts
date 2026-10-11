@@ -12,7 +12,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
-import { resolveTicketEventActor, ticketEventActorFields } from '@alga-psa/event-schemas';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
@@ -20,6 +20,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -1282,7 +1283,7 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
-          changes: updateData,
+          changes: buildTicketModelChanges(currentTicket, updateData),
           metadata: {
             updated_fields: Object.keys(updateData)
           }
@@ -1640,11 +1641,11 @@ export class TicketModel {
           // The inbound publisher writes its durable outbox in this transaction.
           await eventPublisher.publishCommentCreated(event);
         } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, ...ticketEventActorFields(actor),
-            comment: { id: commentId, content: validatedData.content, author: authorName,
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+            comment: { content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
-          } });
+          }) });
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);

@@ -79,3 +79,48 @@ test('scenario reset refuses an unfinished vendor operation and succeeds after c
     assert.equal((await controls.requests('probe')).generation, 1);
   } finally { release(); await host.stop(); }
 });
+
+test('scenario evidence waits for application vendor operations still finishing at teardown', async () => {
+  let arrived;
+  let stuckArrived;
+  let release;
+  const started = new Promise(resolve => { arrived = resolve; });
+  const stuckStarted = new Promise(resolve => { stuckArrived = resolve; });
+  const waiting = new Promise(resolve => { release = resolve; });
+  const probe = {
+    id: 'probe', displayName: 'Teardown drain probe', defaultPort: 0,
+    createCore: () => ({ reset() {} }), register() {},
+    wire(router) {
+      router.get('/pending', async (_req, res) => { arrived(); await waiting; res.json({ done: true }); });
+      router.get('/stuck', () => stuckArrived());
+    },
+  };
+  const host = new EmulatorHost({ emulators: [probe], controlPort: 0, log() {} });
+  try {
+    const { controlPort, ports } = await host.start();
+    const controls = new EmulatorControl(`http://127.0.0.1:${controlPort}`, ['probe'], { settleMs: 2000, settleIntervalMs: 10 });
+    await controls.reset();
+    // Mirrors an app notification whose SMTP DATA is mid-flight when the test body returns.
+    const request = fetch(`http://127.0.0.1:${ports.probe}/pending`);
+    await started;
+    setTimeout(release, 100);
+    const evidence = await controls.diagnostics();
+    assert.equal(evidence.requests.probe.inFlight, 0);
+    assert.equal(evidence.requests.probe.complete, true);
+    assert.deepEqual(evidence.requests.probe.requests.map(r => [r.path, r.status]), [['/pending', 200]]);
+    await (await request).json();
+
+    // A vendor operation that never finishes is reported as incomplete within the settle bound.
+    const bounded = new EmulatorControl(`http://127.0.0.1:${controlPort}`, ['probe'], { settleMs: 200, settleIntervalMs: 10 });
+    const abandon = new AbortController();
+    const stuck = fetch(`http://127.0.0.1:${ports.probe}/stuck`, { signal: abandon.signal }).catch(() => undefined);
+    await stuckStarted;
+    const startedAt = Date.now();
+    const incomplete = await bounded.diagnostics();
+    assert.ok(Date.now() - startedAt < 2000);
+    assert.equal(incomplete.requests.probe.inFlight, 1);
+    assert.equal(incomplete.requests.probe.complete, false);
+    abandon.abort();
+    await stuck;
+  } finally { release(); await host.stop(); }
+});

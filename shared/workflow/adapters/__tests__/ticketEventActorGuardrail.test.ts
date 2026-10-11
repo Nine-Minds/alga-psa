@@ -6,8 +6,13 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 const captured: Array<{ eventType: string; payload: any }> = [];
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishBuiltWorkflowPayload: async (e: any) => { captured.push({ eventType: e.eventType, payload: e.payload }); },
   publishEvent: async (e: any) => { captured.push({ eventType: e.eventType, payload: e.payload }); },
-  publishWorkflowEvent: async (e: any) => { captured.push({ eventType: e.eventType, payload: e.payload }); },
+  // Mirror publishWorkflowEvent: the ctx envelope (tenantId, occurredAt, actor) is stamped onto the payload.
+  publishWorkflowEvent: async (e: any) => {
+    const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+    captured.push({ eventType: e.eventType, payload: buildWorkflowPayload(e.payload, e.ctx) });
+  },
 }));
 vi.mock('@alga-psa/db', () => ({ registerAfterCommit: () => undefined }));
 vi.mock('../../../services/email/inboundEmailDurableStore', () => ({

@@ -14,6 +14,7 @@ import {
   type WorkflowPublishHooks
 } from './schemas/eventBusSchema';
 import { WorkflowEventBaseSchema } from './schemas/workflowEventSchema';
+import { enforceWorkflowEventContract } from './workflow/workflowEventContract';
 
 type EventHandler = (event: Event) => Promise<void>;
 
@@ -815,6 +816,17 @@ export class EventBus {
         throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
       }
       return;
+    }
+
+    // Plan step F: validate catalogued payloads against the schema the workflow worker uses.
+    // Deliberately OUTSIDE the try/catch below, which swallows publish errors: a contract
+    // violation must reach the emitter (throws in test, warns in development, no-op in production).
+    if ((options?.channel || this.defaultChannel) === this.defaultChannel) {
+      const wire = convertToWorkflowEvent(
+        { ...event, id: options?.eventId ?? 'contract-check', timestamp: new Date().toISOString() } as Event,
+        options?.workflow
+      );
+      enforceWorkflowEventContract(wire.event_type, wire.payload);
     }
 
     try {

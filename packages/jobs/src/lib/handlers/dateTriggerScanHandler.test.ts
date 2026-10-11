@@ -14,9 +14,10 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: mocks
 vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', () => ({ emitDateDomainEventOnce: mocks.emitDateDomainEventOnce }));
 vi.mock('../dateTriggers/registry', () => ({
   dateTriggerSources: [mocks.source],
-  dateTriggerSourceDomainEvents: new Map([['client.anniversary', { eventType: 'CLIENT_ANNIVERSARY_UPCOMING', windowDays: 30 }]]),
 }));
 
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+import { defineDateDomainEvent } from '../dateTriggers/defineDateDomainEvent';
 import { createDateTriggerScanHandler } from './dateTriggerScanHandler';
 
 describe('date-trigger-scan handler', () => {
@@ -30,7 +31,11 @@ describe('date-trigger-scan handler', () => {
       entityId: 'client-1', clientId: 'client-1', occursOn: '2026-09-24', cycleKey: '2026-09-24', payload: {},
     }]);
     mocks.source.id = 'client.anniversary';
-    mocks.source.buildDomainEventPayload = vi.fn(() => ({ clientId: 'client-1' }));
+    mocks.source.domainEvent = defineDateDomainEvent({
+      eventType: 'CLIENT_ANNIVERSARY_UPCOMING',
+      windowDays: 30,
+      buildPayload: vi.fn(() => builtWorkflowPayload('CLIENT_ANNIVERSARY_UPCOMING', { clientId: 'client-1' })),
+    });
     mocks.source.findOccurrences = mocks.findOccurrences;
     mocks.emitDateDomainEventOnce.mockResolvedValue(true);
   });

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { EventSchemas } from '@alga-psa/event-schemas';
-import { buildWorkflowPayload } from '../workflow/workflowEventPublishHelpers';
+import { EventSchemas, buildWorkflowPayload } from '@alga-psa/event-schemas';
 
 const published: Array<{ eventType: string; payload: any; ctx: any }> = [];
 vi.mock('../publishers', () => ({

@@ -4,9 +4,17 @@
  */
 
 import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
-import { resolveTicketEventActor, ticketEventActorFields } from '../workflow/workflowEventPublishHelpers';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { registerAfterCommit } from '@alga-psa/db';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { publishWorkflowEvent } from '../publishers';
+import {
+  buildServerPublisherTicketAssignedPayload,
+  buildServerPublisherTicketCommentAddedPayload,
+  buildServerPublisherTicketClosedPayload,
+  buildServerPublisherTicketCreatedPayload,
+  buildServerPublisherTicketUpdatedPayload,
+} from './serverEventPublisherPayloads';
 
 /** The explicit actor if given, else derived from `userId` (never a substitute id). */
 function actorOf(data: { userId?: string; actor?: WorkflowActor }): WorkflowActor {
@@ -23,12 +31,7 @@ export class ServerEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, actorOf(data), {
-      ticketId: data.ticketId,
-      createdByUserId: data.userId,
-      createdAt: new Date().toISOString(),
-      ...data.metadata
-    });
+    await this.safePublishWorkflowEvent('TICKET_CREATED', data.tenantId, actorOf(data), buildServerPublisherTicketCreatedPayload(data, new Date().toISOString()));
   }
 
   async publishTicketUpdated(data: {
@@ -39,13 +42,7 @@ export class ServerEventPublisher implements IEventPublisher {
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, actorOf(data), {
-      ticketId: data.ticketId,
-      updatedByUserId: data.userId,
-      updatedFields: Object.keys(data.changes ?? {}),
-      changes: data.changes,
-      ...data.metadata
-    });
+    await this.safePublishWorkflowEvent('TICKET_UPDATED', data.tenantId, actorOf(data), buildServerPublisherTicketUpdatedPayload(data));
   }
 
   async publishTicketClosed(data: {
@@ -55,12 +52,7 @@ export class ServerEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, actorOf(data), {
-      ticketId: data.ticketId,
-      closedByUserId: data.userId,
-      closedAt: new Date().toISOString(),
-      ...data.metadata
-    });
+    await this.safePublishWorkflowEvent('TICKET_CLOSED', data.tenantId, actorOf(data), buildServerPublisherTicketClosedPayload(data, new Date().toISOString()));
   }
 
   async publishCommentCreated(data: {
@@ -71,14 +63,7 @@ export class ServerEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    // Legacy comment payloads are modeled as TICKET_COMMENT_ADDED in the event bus schema.
-    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, actorOf(data), {
-      ticketId: data.ticketId,
-      commentId: data.commentId,
-      comment: { id: data.commentId },
-      ...ticketEventActorFields(actorOf(data)),
-      ...data.metadata
-    });
+    await this.safePublishWorkflowEvent('TICKET_COMMENT_ADDED', data.tenantId, actorOf(data), buildServerPublisherTicketCommentAddedPayload({ ...data, actor: actorOf(data) }));
   }
 
   async publishTicketAssigned(data: {
@@ -87,38 +72,24 @@ export class ServerEventPublisher implements IEventPublisher {
     userId: string;
     assignedByUserId?: string;
   }): Promise<void> {
-    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, { actorType: 'USER', actorUserId: data.assignedByUserId ?? data.userId }, {
-      ticketId: data.ticketId,
-      // The recipient must ride in payload.userId — that is the single field the
-      // internal-notification subscriber reads for the assignee (handleTicketAssigned
-      // destructures event.payload.userId). Emitting only assignedToUserId (the v2
-      // workflow field) loses the recipient through union validation, so the
-      // notification is either created for the wrong user or stamped the subtype
-      // default. Every other TICKET_ASSIGNED publisher carries userId; this one
-      // must too.
-      userId: data.userId,
-      assignedToUserId: data.userId,
-      assignedByUserId: data.assignedByUserId,
-      assignedAt: new Date().toISOString(),
+    await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, { actorType: 'USER', actorUserId: data.assignedByUserId ?? data.userId }, buildServerPublisherTicketAssignedPayload(data, new Date().toISOString()));
+  }
+
+  private async safePublishWorkflowEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    tenantId: string,
+    actor: WorkflowActor,
+    payload: BuiltWorkflowPayload<T> & { ticketId?: unknown }
+  ): Promise<void> {
+    await this.runAfterCommit(eventType, payload.ticketId, async () => {
+      await publishWorkflowEvent({ eventType, payload, ctx: { tenantId, actor } });
     });
   }
 
-  private async safePublishWorkflowEvent(
-    eventType: string,
-    tenantId: string,
-    actor: WorkflowActor,
-    payload: Record<string, unknown>
-  ): Promise<void> {
+  private async runAfterCommit(eventType: string, ticketId: unknown, doPublish: () => Promise<void>): Promise<void> {
     const publish = async () => {
       try {
-        await publishWorkflowEvent({
-          eventType: eventType as any,
-          payload,
-          ctx: {
-            tenantId,
-            actor
-          }
-        });
+        await doPublish();
       } catch (error) {
         console.error(`Failed to publish ${eventType} event:`, error);
         // Don't throw - event publishing failure shouldn't break ticket operations
@@ -126,11 +97,7 @@ export class ServerEventPublisher implements IEventPublisher {
     };
 
     if (this.trx) {
-      registerAfterCommit(
-        this.trx,
-        publish,
-        `${eventType} ticket=${String(payload.ticketId ?? 'unknown')}`
-      );
+      registerAfterCommit(this.trx, publish, `${eventType} ticket=${String(ticketId ?? 'unknown')}`);
       return;
     }
 

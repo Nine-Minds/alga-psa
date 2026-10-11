@@ -16,7 +16,12 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingConfigCreatedPayload,
+  buildProjectBillingConfigDeletedPayload,
+  buildProjectBillingConfigUpdatedPayload,
+} from '@alga-psa/workflow-streams';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -581,16 +586,16 @@ export const createProjectBillingConfig = withAuth(withProjectBillingActionError
     }, trx);
   });
   revalidateProjectBilling(created.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_CREATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigCreatedPayload({
       projectId: created.project_id,
       configId: created.config_id,
       billingModel: created.billing_model,
       invoiceMode: created.invoice_mode,
       userId: user.user_id,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return created;
 }));
@@ -662,17 +667,17 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     return Object.assign(updated, { allocation_warning: allocationWarning });
   });
   revalidateProjectBilling(result.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigUpdatedPayload({
       projectId: result.project_id,
       configId: result.config_id,
       billingModel: result.billing_model,
       invoiceMode: result.invoice_mode,
       userId: user.user_id,
       changes: updates,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return result;
 }));
@@ -766,17 +771,17 @@ export const recalculateProjectTotalFromSchedule = withAuth(withProjectBillingAc
   });
 
   revalidateProjectBilling(result.projectId);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigUpdatedPayload({
       projectId: result.projectId,
       configId,
       billingModel: result.config.billing_model,
       invoiceMode: result.config.invoice_mode,
       userId: user.user_id,
       changes: { total_price: result.config.total_price, source: 'schedule_recalculation' },
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   return { config: result.config, entries: result.entries, rollup: result.rollup };
 }));
@@ -801,16 +806,16 @@ export const deleteProjectBillingConfig = withAuth(withProjectBillingActionError
     return config;
   });
   revalidateProjectBilling(deletedConfig.project_id);
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_BILLING_CONFIG_DELETED',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectBillingConfigDeletedPayload({
       projectId: deletedConfig.project_id,
       configId: deletedConfig.config_id,
       billingModel: deletedConfig.billing_model,
       invoiceMode: deletedConfig.invoice_mode,
       userId: user.user_id,
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
 }));
 

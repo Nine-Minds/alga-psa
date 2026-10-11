@@ -13,7 +13,8 @@
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTaskCommentAddedPayload, buildTaskCommentUpdatedPayload } from '@alga-psa/workflow-streams';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IAggregatedReaction, IProjectTaskComment, IProjectTaskCommentWithUser, IReactionsBatchResult } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -255,24 +256,23 @@ export async function createTaskCommentWithDb(
     }
 
     // Publish event (mention extraction happens in event handler)
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TASK_COMMENT_ADDED',
-      payload: {
-        tenantId: tenant,
+      payload: buildTaskCommentAddedPayload({
         taskId: comment.taskId,
         projectId: task.project_id,
-        userId,
+        createdByUserId: userId,
         taskCommentId: newComment.task_comment_id,
         threadId,
         parentCommentId,
         isReply,
-        thread_id: threadId,
-        parent_comment_id: parentCommentId,
-        is_reply: isReply,
         taskName: task.task_name,
         commentContent: comment.note,  // BlockNote JSON with embedded mentions
-        isUpdate: false  // Flag to indicate this is a new comment, not an update
-      }
+      }),
+      ctx: {
+        tenantId: tenant,
+        actor: { actorType: 'USER', actorUserId: userId },
+      },
     });
 
     await publishEvent({
@@ -381,19 +381,21 @@ export async function updateTaskCommentWithDb(
 
     // Publish event for smart mention notifications
     // Event handler will compare old vs new mentions and only notify NEW ones
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TASK_COMMENT_UPDATED',
-      payload: {
-        tenantId: tenant,
+      payload: buildTaskCommentUpdatedPayload({
         taskId: existingComment.task_id,
         projectId: task.project_id,
-        userId,
-        taskCommentId: taskCommentId,
+        updatedByUserId: userId,
+        taskCommentId,
         taskName: task.task_name,
         oldCommentContent: existingComment.note,  // Old BlockNote JSON
-        newCommentContent: updates.note,          // New BlockNote JSON
-        isUpdate: true  // Flag to indicate this is an update
-      }
+        newCommentContent: updates.note ?? existingComment.note,          // New BlockNote JSON
+      }),
+      ctx: {
+        tenantId: tenant,
+        actor: { actorType: 'USER', actorUserId: userId },
+      },
     });
 
     await publishEvent({

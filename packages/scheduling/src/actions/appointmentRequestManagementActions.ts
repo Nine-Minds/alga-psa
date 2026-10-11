@@ -20,11 +20,14 @@ import {
 import { SystemEmailService } from '@alga-psa/email';
 import { enqueueImmediateJob } from '@alga-psa/core';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCreatedPayload,
+  buildAppointmentRequestApprovedPayload,
+  buildAppointmentRequestDeclinedPayload,
+  buildScheduleEntryCreatedPayload,
+  buildScheduleEntryUpdatedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   getTenantSettings,
@@ -891,18 +894,10 @@ export const approveAppointmentRequest = withAuth(async (
 
         // Publish SCHEDULE_ENTRY_UPDATED event for calendar sync
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_UPDATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: request.schedule_entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: request.schedule_entry_id, changes: {
                 after: updatedEntry,
                 assignedUserIds: [validatedData.assigned_user_id]
-              }
-            }
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
         }
@@ -950,18 +945,10 @@ export const approveAppointmentRequest = withAuth(async (
 
         // Publish SCHEDULE_ENTRY_CREATED event for calendar sync
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_CREATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: scheduleEntry.entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: scheduleEntry.entry_id, changes: {
                 after: scheduleEntry,
                 assignedUserIds: [validatedData.assigned_user_id]
-              }
-            }
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
         }
@@ -1133,10 +1120,7 @@ export const approveAppointmentRequest = withAuth(async (
       }
 
       // Publish event (will trigger internal notifications automatically)
-      await publishEvent({
-        eventType: 'APPOINTMENT_REQUEST_APPROVED',
-        payload: {
-          tenantId: tenant || '',
+      await publishWorkflowEvent({ eventType: 'APPOINTMENT_REQUEST_APPROVED', payload: buildAppointmentRequestApprovedPayload({
           appointmentRequestId: request.appointment_request_id,
           clientId: request.client_id,
           contactId: request.contact_id,
@@ -1151,9 +1135,8 @@ export const approveAppointmentRequest = withAuth(async (
           requesterName: request.requester_name,
           approvedByUserId: user.user_id,
           assignedUserId: validatedData.assigned_user_id,
-          scheduleEntryId: scheduleEntry.entry_id
-        }
-      });
+          scheduleEntryId: scheduleEntry.entry_id,
+        }), ctx: { tenantId: tenant || '', actor: { actorType: 'USER', actorUserId: user.user_id } } });
 
       // Send emails using SystemEmailService
       try {
@@ -1452,10 +1435,7 @@ export const declineAppointmentRequest = withAuth(async (
       }
 
       // Publish event (will trigger internal notifications automatically)
-      await publishEvent({
-        eventType: 'APPOINTMENT_REQUEST_DECLINED',
-        payload: {
-          tenantId: tenant || '',
+      await publishWorkflowEvent({ eventType: 'APPOINTMENT_REQUEST_DECLINED', payload: buildAppointmentRequestDeclinedPayload({
           appointmentRequestId: request.appointment_request_id,
           clientId: request.client_id,
           contactId: request.contact_id,
@@ -1468,9 +1448,8 @@ export const declineAppointmentRequest = withAuth(async (
           isAuthenticated: request.is_authenticated,
           requesterEmail: request.requester_email || '',
           requesterName: request.requester_name,
-          declineReason: validatedData.decline_reason
-        }
-      });
+          declineReason: validatedData.decline_reason,
+        }), ctx: { tenantId: tenant || '', actor: { actorType: 'USER', actorUserId: user.user_id } } });
 
       // Send notification email
       try {
@@ -1665,18 +1644,10 @@ export const updateAppointmentRequestDateTime = withAuth(async (
 
           if (previousScheduleEntry && updatedScheduleEntry) {
             try {
-              await publishEvent({
-                eventType: 'SCHEDULE_ENTRY_UPDATED',
-                payload: {
-                  tenantId: tenant,
-                  userId: user.user_id,
-                  entryId: request.schedule_entry_id,
-                  changes: {
+              await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: request.schedule_entry_id, changes: {
                     before: previousScheduleEntry,
                     after: updatedScheduleEntry,
-                  }
-                }
-              });
+                  } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
             } catch (eventError) {
               console.error('[AppointmentRequestUpdate] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
             }

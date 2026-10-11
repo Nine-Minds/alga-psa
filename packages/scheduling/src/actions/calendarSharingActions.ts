@@ -11,7 +11,8 @@
 import type { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import type {
   CalendarAccessLevel,
@@ -629,19 +630,11 @@ async function setGroupCalendarArchived(
   });
   if ('error' in outcome) return fail(outcome.error as string);
   for (const entry of outcome.entries) {
-    await publishEvent({
-      eventType: 'SCHEDULE_ENTRY_UPDATED',
-      payload: {
-        tenantId: tenant,
-        userId: user.user_id,
-        entryId: entry.entry_id,
-        changes: {
+    await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: entry.entry_id, changes: {
           before: { assignedUserIds: outcome.assignedUserIds[entry.entry_id] || [] },
           after: { assignedUserIds: outcome.assignedUserIds[entry.entry_id] || [] },
           calendarArchived: isArchived,
-        },
-      },
-    });
+        } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
   }
   return { success: true, data: null };
 }

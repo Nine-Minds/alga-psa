@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
+import { withWorkflowRequireOneOf } from '@alga-psa/event-schemas';
 import { validateWorkflowDefinition } from '../publishValidation';
 import { registerDefaultNodes } from '../../nodes/registerDefaultNodes';
 import { getNodeTypeRegistry } from '../../registries/nodeTypeRegistry';

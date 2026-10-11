@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { buildInventoryPurchaseOrderPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { normalizeGtin } from '@alga-psa/core';
 import {
   BaseService,
@@ -868,12 +869,7 @@ export class InventoryService extends BaseService<any> {
       });
 
       await publishInventoryEvent('INVENTORY_PO_RECEIVED', core.po_received_event);
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', timestampPayload({
-        tenant: context.tenant,
-        po_id: core.po_line.po_id,
-        user_id: context.userId,
-        changed_fields: ['status', 'quantity_received'],
-      }));
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_UPDATED', buildInventoryPurchaseOrderPayload({ tenant: context.tenant, poId: core.po_line.po_id, userId: context.userId, changedFields: ['status', 'quantity_received'] }));
       for (const unit of core.units) {
         await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
           tenant: context.tenant,

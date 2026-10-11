@@ -5,14 +5,18 @@
  */
 
 import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
-import {
-  buildWorkflowPayload,
-  resolveTicketEventActor,
-  ticketEventActorFields,
-} from '@alga-psa/event-schemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import {
+  buildInboundPublisherTicketAssignedPayload,
+  buildInboundPublisherTicketCommentAddedPayload,
+  buildInboundPublisherTicketClosedPayload,
+  buildInboundPublisherTicketCreatedPayload,
+  buildInboundPublisherTicketUpdatedPayload,
+} from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-event-publisher — ticket-event publishing is wired per call site (this adapter, TicketModelEventPublisher, publishTicketEvent in createTicketWithSideEffects); one ticket-event publisher layer would unify them
 
@@ -28,11 +32,11 @@ import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 async function publishNotificationEvent(
   eventType: string,
   payload: Record<string, any>,
+  send: (options?: PublishOptions) => Promise<void>,
   options?: PublishOptions
 ): Promise<void> {
   try {
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-    await publishEvent({ eventType: eventType as any, payload } as any, options);
+    await send(options);
 
     console.log(`[WorkflowEventPublisher] Published ${eventType} through event bus`, {
       tenantId: payload.tenantId,
@@ -46,25 +50,12 @@ async function publishNotificationEvent(
 }
 
 /**
- * Base ticket/comment payload with an honest actor. `userId` is only ever a real user id;
- * when nobody acted it is omitted and actorType states who did (never the ticket id).
- * Stamping through buildWorkflowPayload adds occurredAt so the payload also validates
- * on the domain schema branch.
+ * Stamps occurredAt (via buildWorkflowPayload) so the payload also validates on the domain
+ * schema branch. The payload builders already carry an honest actor: `userId` is only ever
+ * a real user id, and actorType states who acted (never the ticket id).
  */
-function ticketEventPayload(
-  data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor },
-  fields: Record<string, unknown>
-): Record<string, any> {
-  const actor = data.actor ?? resolveTicketEventActor({ userId: data.userId });
-  return buildWorkflowPayload(
-    {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      ...ticketEventActorFields(actor),
-      ...fields,
-    },
-    { tenantId: data.tenantId }
-  );
+function stampOccurredAt<P extends Record<string, unknown>>(payload: P, tenantId: string) {
+  return buildWorkflowPayload(payload, { tenantId });
 }
 
 export class WorkflowEventPublisher implements IEventPublisher {
@@ -80,9 +71,27 @@ export class WorkflowEventPublisher implements IEventPublisher {
     this.workflowExecutionId = options?.workflowExecutionId;
   }
 
-  private async publish(
+  /** Catalogued events: the payload must come from a registered builder. */
+  private async publish<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    payload: BuiltWorkflowPayload<T>,
+    options?: PublishOptions
+  ): Promise<void> {
+    await this.dispatch(
+      eventType,
+      payload as Record<string, any>,
+      async (opts) => {
+        const { publishBuiltWorkflowPayload } = await import('@alga-psa/event-bus/publishers');
+        await publishBuiltWorkflowPayload({ eventType, payload }, opts);
+      },
+      options
+    );
+  }
+
+  private async dispatch(
     eventType: string,
     payload: Record<string, any>,
+    send: (options?: PublishOptions) => Promise<void>,
     options?: PublishOptions
   ): Promise<void> {
     // workflowExecutionId stamps the originating run on the event so workflow
@@ -90,7 +99,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const effectiveOptions: PublishOptions | undefined = this.workflowExecutionId
       ? { ...options, workflow: { ...(options?.workflow ?? {}), executionId: this.workflowExecutionId } }
       : options;
-    const publish = () => publishNotificationEvent(eventType, payload, effectiveOptions);
+    const publish = () => publishNotificationEvent(eventType, payload, send, effectiveOptions);
 
     if (this.trx) {
       registerAfterCommit(
@@ -111,9 +120,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = ticketEventPayload(data, { ...data.metadata });
-
-    await this.publish('TICKET_CREATED', payload);
+    await this.publish('TICKET_CREATED', stampOccurredAt(buildInboundPublisherTicketCreatedPayload(data), data.tenantId));
   }
 
   async publishTicketUpdated(data: {
@@ -124,9 +131,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = ticketEventPayload(data, { changes: data.changes, ...data.metadata });
-
-    await this.publish('TICKET_UPDATED', payload);
+    await this.publish('TICKET_UPDATED', stampOccurredAt(buildInboundPublisherTicketUpdatedPayload(data), data.tenantId));
   }
 
   async publishTicketClosed(data: {
@@ -136,9 +141,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = ticketEventPayload(data, { ...data.metadata });
-
-    await this.publish('TICKET_CLOSED', payload);
+    await this.publish('TICKET_CLOSED', stampOccurredAt(buildInboundPublisherTicketClosedPayload(data), data.tenantId));
   }
 
   async publishCommentCreated(data: {
@@ -149,16 +152,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
     actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    const payload = ticketEventPayload(data, {
-      commentId: data.commentId,
-      comment: {
-        id: data.commentId,
-        content: data.metadata?.content || '',
-        author: data.metadata?.author || 'System',
-        isInternal: data.metadata?.isInternal || false
-      }
-    });
-
     // Inbound replies fan out to internal + email channels (like the other publish*
     // methods) so the assigned tech/resources are emailed. The email subscriber excludes
     // the comment author and only emails external contacts for agent-authored comments,
@@ -167,7 +160,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const options = this.suppressCommentEmail
       ? { channel: 'internal-notifications' }
       : undefined;
-    await this.publish('TICKET_COMMENT_ADDED', payload, options);
+    await this.publish('TICKET_COMMENT_ADDED', stampOccurredAt(buildInboundPublisherTicketCommentAddedPayload(data), data.tenantId), options);
   }
 
   /**
@@ -179,13 +172,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId: string;
     assignedByUserId?: string;
   }): Promise<void> {
-    const payload = {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      assignedByUserId: data.assignedByUserId
-    };
-
-    await this.publish('TICKET_ASSIGNED', payload);
+    await this.publish('TICKET_ASSIGNED', buildInboundPublisherTicketAssignedPayload(data));
   }
 }

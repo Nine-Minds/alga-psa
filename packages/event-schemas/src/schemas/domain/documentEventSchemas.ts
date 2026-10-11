@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const documentIdSchema = uuidSchema('Document ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
 
 export const documentUploadedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
@@ -24,15 +24,6 @@ export const documentDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
 }).describe('Payload for DOCUMENT_DELETED');
 
 export type DocumentDeletedEventPayload = z.infer<typeof documentDeletedEventPayloadSchema>;
-
-export const documentUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  documentId: documentIdSchema,
-  updatedByUserId: userIdSchema.optional(),
-  updatedAt: z.string().datetime().optional(),
-  changedFields: z.array(z.string()).optional(),
-}).describe('Payload for DOCUMENT_UPDATED');
-
-export type DocumentUpdatedEventPayload = z.infer<typeof documentUpdatedEventPayloadSchema>;
 
 export const documentAssociatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
@@ -103,6 +94,15 @@ export const documentSignatureExpiredEventPayloadSchema = BaseDomainEventPayload
 }).describe('Payload for DOCUMENT_SIGNATURE_EXPIRED');
 
 export type DocumentSignatureExpiredEventPayload = z.infer<typeof documentSignatureExpiredEventPayloadSchema>;
+
+export const documentUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  documentId: documentIdSchema,
+  updatedByUserId: userIdSchema.optional(),
+  updatedAt: z.string().datetime().optional(),
+  changedFields: z.array(z.string()).optional(),
+}).describe('Payload for DOCUMENT_UPDATED');
+
+export type DocumentUpdatedEventPayload = z.infer<typeof documentUpdatedEventPayloadSchema>;
 
 export const kbArticleEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   articleId: z.string().uuid(),

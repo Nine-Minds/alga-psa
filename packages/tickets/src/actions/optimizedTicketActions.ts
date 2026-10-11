@@ -1,5 +1,6 @@
 'use server';
 
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -39,8 +40,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
@@ -87,9 +87,15 @@ import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSq
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildTicketAssignedPayload,
+  buildTicketClosedPayload,
+  buildTicketResponseStateChangedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketResolutionSlaStageCompletionEvent, publishWorkflowTicketSlaStageEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   propagateBundleMasterStatus,
@@ -134,13 +140,6 @@ function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   }
 
   return ticketActionErrorFrom(error);
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -410,18 +409,19 @@ async function updateTicketResponseStateFromComment(
       .update({ response_state: newState });
 
     registerAfterCommit(trx, () =>
-      publishEvent({
+      publishWorkflowEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
+        payload: buildTicketResponseStateChangedPayload({
           ticketId,
           userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment',
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
         },
       }),
       `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
@@ -440,18 +440,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
     due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 /**
@@ -3142,7 +3130,7 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: id,
             ...(isSystemActor
               ? {}
@@ -3151,7 +3139,7 @@ export async function updateTicketInTransaction(
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
@@ -3169,33 +3157,29 @@ export async function updateTicketInTransaction(
       });
       if (slaCompletionEvent) {
         registerAfterCommit(trx, () =>
-          publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          }),
+          publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx),
           `${slaCompletionEvent.eventType} ticket=${id}`
         );
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
+      const newAssigneeId = updateData.assigned_to;
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
+          payload: buildTicketAssignedPayload({
             ticketId: id,
-            userId: updateData.assigned_to, // Legacy: assigned user
+            userId: newAssigneeId, // Legacy: assigned user
             assignedByUserId: user.user_id,
             previousAssigneeId: currentTicket.assigned_to ?? undefined,
             previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-            newAssigneeId: updateData.assigned_to,
+            newAssigneeId,
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
         }),
@@ -3206,14 +3190,14 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
+          payload: buildTicketUpdatedPayload({
             ticketId: id,
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
         }),
@@ -3307,18 +3291,19 @@ export async function updateTicketInTransaction(
     // open-to-closed reset.
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       registerAfterCommit(trx, () =>
-        publishEvent({
+        publishWorkflowEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-          payload: {
-            tenantId: tenant,
-            occurredAt,
+          payload: buildTicketResponseStateChangedPayload({
             ticketId: id,
             userId: user.user_id,
-            previousResponseState: currentTicket.response_state || null,
-            newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
             trigger: clearsResponseStateOnClose ? 'close' : 'manual',
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
@@ -3639,14 +3624,13 @@ export async function addTicketCommentInTransaction(
   // Publish comment added event after the comment transaction commits.
   if (!isScheduled) await persistCommentPublication(trx, {
       eventType: 'TICKET_COMMENT_ADDED',
-      payload: {
+      payload: buildTicketCommentAddedPayload({
         tenantId: tenant,
         occurredAt: newComment.created_at ?? new Date().toISOString(),
         ticketId: ticketId,
-        commentId: newComment.comment_id,
-        userId: user.user_id,
+        commentId: newComment.comment_id!,
+        userId: user.user_id!,
         comment: {
-          id: newComment.comment_id,
           content: content,
           author: `${user.first_name} ${user.last_name}`,
           isInternal,
@@ -3654,8 +3638,8 @@ export async function addTicketCommentInTransaction(
         },
         suppressContactNotifications,
         suppressInternalNotifications,
-      }
-    }, publishEvent);
+      }),
+    }, publishStoredWorkflowEvent);
 
   // Publish workflow v2 ticket message events (additive).
   if (!isScheduled) try {
@@ -3679,7 +3663,7 @@ export async function addTicketCommentInTransaction(
     for (const ev of events) {
       registerAfterCommit(
         trx,
-        () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
+        () => publishTicketCommunicationWorkflowEvent(ev, workflowCtx),
         `${ev.eventType} ticket=${ticketId}`
       );
     }

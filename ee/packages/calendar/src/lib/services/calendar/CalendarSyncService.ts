@@ -22,6 +22,8 @@ import {
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '../../eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { hasPermission } from '@alga-psa/auth';
 import { evaluateEntryAccess, resolveCalendarAccess } from '@alga-psa/scheduling/lib/calendarAccess';
 
@@ -1093,19 +1095,11 @@ export class CalendarSyncService {
     after: IScheduleEntry
   ): Promise<void> {
     try {
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_UPDATED',
-        payload: {
-          tenantId: tenant,
-          userId: provider.user_id,
-          entryId: after.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: provider.user_id, entryId: after.entry_id, changes: {
             before: { assignedUserIds: before.assigned_user_ids ?? [] },
             after: { assignedUserIds: after.assigned_user_ids ?? [] },
             sourceCalendarProviderId: provider.id,
-          },
-        },
-      });
+          } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: provider.user_id } } });
     } catch (error) {
       console.warn('[CalendarSyncService] Failed to publish inbound edit', {
         providerId: provider.id,

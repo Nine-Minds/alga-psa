@@ -68,6 +68,23 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => {
     publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
       publishedEvents.push(event);
     }),
+    // Catalogued events (TICKET_RESPONSE_STATE_CHANGED) go through publishWorkflowEvent; stamp
+    // ctx onto the payload exactly like the real publisher (buildWorkflowPayload).
+    publishWorkflowEvent: vi.fn(async (params: { eventType: string; payload: any; ctx: any; idempotencyKey?: string }) => {
+      const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+      const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+      publishedEvents.push({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, ctx) });
+    }),
+    // TICKET_COMMENT_ADDED is replayed from the comment publication outbox with an already-complete
+    // payload; the real function revives (validates) then forwards it unchanged, so capture it as-is.
+    publishStoredWorkflowEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
+      const revived = actual.reviveStoredWorkflowPayload(event.eventType, event.payload);
+      if (!revived) throw new Error(`${event.eventType} is not a catalogued workflow event`);
+      publishedEvents.push({ eventType: revived.eventType, payload: revived.payload });
+    }),
+    publishBuiltWorkflowPayload: vi.fn(async (event: { eventType: string; payload: any }) => {
+      publishedEvents.push(event);
+    }),
   };
 });
 

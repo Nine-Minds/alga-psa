@@ -136,7 +136,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingSchedulePayload,
+  buildProjectBudgetExceededPayload,
+  buildProjectBudgetThresholdReachedPayload,
+} from '@alga-psa/workflow-streams';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 
@@ -4266,11 +4271,11 @@ export async function createInvoiceFromBillingResultImpl(
       'entry.description',
       'entry.requires_payment_before_work',
     );
+  const projectBillingCtx = { tenantId: tenant, actor: { actorType: 'USER' as const, actorUserId: userId } };
   for (const entry of invoicedScheduleRows) {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
-      payload: {
-        tenantId: tenant,
+      payload: buildProjectBillingSchedulePayload({
         projectId: entry.project_id,
         configId: entry.config_id,
         entryId: entry.schedule_entry_id,
@@ -4280,35 +4285,36 @@ export async function createInvoiceFromBillingResultImpl(
         requiresPaymentBeforeWork: entry.requires_payment_before_work,
         userId,
         changes: { invoiceId: newInvoice.invoice_id },
-      },
+      }),
+      ctx: projectBillingCtx,
     });
   }
 
   for (const delta of persistedCapDeltas) {
     for (const threshold of delta.notifiedThresholds) {
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'PROJECT_BUDGET_THRESHOLD_REACHED',
-        payload: {
-          tenantId: tenant,
+        payload: buildProjectBudgetThresholdReachedPayload({
           projectId: delta.projectId,
           threshold,
           billed: delta.billedAfter,
           cap: delta.cap,
-        },
+        }),
+        ctx: projectBillingCtx,
       });
     }
     if (isFirstProjectCapOverage(delta.writtenDownBefore, delta.writtenDownAfter)) {
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'PROJECT_BUDGET_EXCEEDED',
-        payload: {
-          tenantId: tenant,
+        payload: buildProjectBudgetExceededPayload({
           projectId: delta.projectId,
           invoiceId: newInvoice.invoice_id,
           billed: delta.billedAfter,
           attempted: delta.billedAfter + delta.writtenDownAfter,
           cap: delta.cap,
           writtenDown: delta.writtenDownAfter,
-        },
+        }),
+        ctx: projectBillingCtx,
       });
     }
   }

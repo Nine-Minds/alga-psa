@@ -1,3 +1,4 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { Temporal } from '@js-temporal/polyfill';
 
 export type InvoiceDeliveryMethod = 'email' | 'portal' | 'print';
@@ -129,14 +130,14 @@ export function buildInvoiceSentPayload(params: {
   deliveryMethod: InvoiceDeliveryMethod;
   recurringProvenance?: InvoiceRecurringProvenance;
 }) {
-  return {
+  return builtWorkflowPayload('INVOICE_SENT', {
     invoiceId: params.invoiceId,
     clientId: params.clientId ?? undefined,
     sentByUserId: params.sentByUserId,
     sentAt: params.sentAt,
     deliveryMethod: params.deliveryMethod,
     recurringProvenance: params.recurringProvenance,
-  };
+  });
 }
 
 export function buildInvoiceStatusChangedPayload(params: {
@@ -146,13 +147,13 @@ export function buildInvoiceStatusChangedPayload(params: {
   changedAt: string;
   recurringProvenance?: InvoiceRecurringProvenance;
 }) {
-  return {
+  return builtWorkflowPayload('INVOICE_STATUS_CHANGED', {
     invoiceId: params.invoiceId,
     previousStatus: params.previousStatus,
     newStatus: params.newStatus,
     changedAt: params.changedAt,
     recurringProvenance: params.recurringProvenance,
-  };
+  });
 }
 
 export function buildInvoiceDueDateChangedPayload(params: {
@@ -162,13 +163,13 @@ export function buildInvoiceDueDateChangedPayload(params: {
   changedAt: string;
   recurringProvenance?: InvoiceRecurringProvenance;
 }) {
-  return {
+  return builtWorkflowPayload('INVOICE_DUE_DATE_CHANGED', {
     invoiceId: params.invoiceId,
     previousDueDate: params.previousDueDate,
     newDueDate: params.newDueDate,
     changedAt: params.changedAt,
     recurringProvenance: params.recurringProvenance,
-  };
+  });
 }
 
 export function buildInvoiceOverduePayload(params: {
@@ -180,7 +181,7 @@ export function buildInvoiceOverduePayload(params: {
   currency: string;
   recurringProvenance?: InvoiceRecurringProvenance;
 }) {
-  return {
+  return builtWorkflowPayload('INVOICE_OVERDUE', {
     invoiceId: params.invoiceId,
     clientId: params.clientId ?? undefined,
     overdueAt: params.overdueAt,
@@ -189,7 +190,7 @@ export function buildInvoiceOverduePayload(params: {
     currency: params.currency,
     daysOverdue: calculateDaysOverdue({ dueDate: params.dueDate, overdueAt: params.overdueAt }),
     recurringProvenance: params.recurringProvenance,
-  };
+  });
 }
 
 export function buildInvoiceWrittenOffPayload(params: {
@@ -200,12 +201,30 @@ export function buildInvoiceWrittenOffPayload(params: {
   reason?: string;
   recurringProvenance?: InvoiceRecurringProvenance;
 }) {
-  return {
+  return builtWorkflowPayload('INVOICE_WRITTEN_OFF', {
     invoiceId: params.invoiceId,
     writtenOffAt: params.writtenOffAt,
     amountWrittenOff: formatMoneyAmount(params.amountWrittenOff),
     currency: params.currency,
     reason: params.reason,
     recurringProvenance: params.recurringProvenance,
-  };
+  });
+}
+
+/**
+ * INVOICE_FINALIZED. `totalAmount` is a string on the wire (payload.InvoiceFinalized.v1); `userId`
+ * and `timestamp` are the legacy fields existing consumers read.
+ */
+export function buildInvoiceFinalizedPayload(params: {
+  invoiceId: string;
+  totalAmount: number;
+  userId?: string;
+  occurredAt: string;
+}) {
+  return builtWorkflowPayload('INVOICE_FINALIZED', {
+    invoiceId: params.invoiceId,
+    totalAmount: String(params.totalAmount),
+    userId: params.userId,
+    timestamp: params.occurredAt,
+  });
 }

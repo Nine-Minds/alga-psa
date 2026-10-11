@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { Buffer } from 'buffer';
 import { env } from 'process';
 import WorkflowDataStoreModel from '../../../persistence/workflowDataStoreModel';
-import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, type WorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   actionProvidedKey,

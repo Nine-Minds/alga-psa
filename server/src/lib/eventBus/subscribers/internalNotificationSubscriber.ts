@@ -1,4 +1,5 @@
 
+import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
 import {
@@ -514,7 +515,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
     // ticketEmailSubscriber.handleTicketAssigned: fire only for first
     // individual agent assignments that happen AFTER ticket creation. The
     // ticket-created-client notification already covers creation time.
-    const assignedTeamIdCheck = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    const assignedTeamIdCheck = readAssignedTeamId(event.payload);
     const previousAssigneeId = (event.payload as any).previousAssigneeId as string | undefined;
     const previousAssigneeType = (event.payload as any).previousAssigneeType as 'user' | 'team' | undefined;
     const isFirstIndividualAssignment = !previousAssigneeId || previousAssigneeType === 'team';
@@ -573,7 +574,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
     });
 
     // If this is a team assignment, notify team members (excluding primary assignee)
-    const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    const assignedTeamId = readAssignedTeamId(event.payload);
     if (assignedTeamId && shouldCreateStaffTicketNotification(suppression)) {
       const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name')

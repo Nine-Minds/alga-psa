@@ -17,6 +17,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   BundlePropagationConfirmationRequiredError,
@@ -35,11 +36,17 @@ import {
 } from '../lib/validateTicketClosure';
 import type { CloseRuleFailure } from '../lib/closeRuleConstants';
 import {
+  buildTicketStatusChangedPayload,
   buildTicketTransitionEvents,
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import {
+  buildTicketClosedPayload,
+  buildTicketMergedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,
@@ -407,14 +414,27 @@ export async function mirrorCommentToChild(
   return childGenerated.comment_id;
 }
 
+type BundlePublicationEventType =
+  | 'TICKET_MERGED'
+  | 'TICKET_CLOSED'
+  | 'TICKET_STATUS_CHANGED'
+  | 'TICKET_UPDATED'
+  | 'TICKET_REOPENED'
+  | 'TICKET_SLA_STAGE_ENTERED'
+  | 'TICKET_SLA_STAGE_MET'
+  | 'TICKET_SLA_STAGE_BREACHED';
+
+/** Discriminated by `eventType` so each payload keeps its `BuiltWorkflowPayload<T>` brand. */
 export type BundleAfterCommitPublication = {
-  eventType: string;
-  payload: Record<string, unknown>;
-  eventName?: string;
-  fromState?: string;
-  toState?: string;
-  idempotencyKey?: string;
-};
+  [T in BundlePublicationEventType]: {
+    eventType: T;
+    payload: BuiltWorkflowPayload<T>;
+    eventName?: string;
+    fromState?: string;
+    toState?: string;
+    idempotencyKey?: string;
+  };
+}[BundlePublicationEventType];
 
 /**
  * The child-row fields the apply_resolution consequence needs to mirror the
@@ -512,7 +532,7 @@ export async function applyClosedMasterChoice(
 
       publications.push({
         eventType: 'TICKET_CLOSED',
-        payload: {
+        payload: buildTicketClosedPayload({
           ticketId: childTicketId,
           ...(actor.userId ? { userId: actor.userId, closedByUserId: actor.userId } : {}),
           closedAt: occurredAt,
@@ -521,7 +541,7 @@ export async function applyClosedMasterChoice(
             closed_at: { old: null, new: occurredAt },
             closed_by: { old: null, new: actor.userId ?? null },
           },
-        },
+        }),
         eventName: 'Ticket Closed',
         fromState: previousStatusId ?? undefined,
         toState: master.statusId ?? undefined,
@@ -530,12 +550,12 @@ export async function applyClosedMasterChoice(
       if (previousStatusId && master.statusId && previousStatusId !== master.statusId) {
         publications.push({
           eventType: 'TICKET_STATUS_CHANGED',
-          payload: {
+          payload: buildTicketStatusChangedPayload({
             ticketId: childTicketId,
             previousStatusId,
             newStatusId: master.statusId,
             changedAt: occurredAt,
-          },
+          }),
           eventName: 'Ticket Status Changed',
           fromState: previousStatusId,
           toState: master.statusId,
@@ -552,7 +572,13 @@ export async function applyClosedMasterChoice(
         enteredAt: snapshot?.entered_at ?? null,
         closedAt: occurredAt,
       });
-      if (slaCompletionEvent) {
+      if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_MET') {
+        publications.push({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      } else if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_BREACHED') {
         publications.push({
           eventType: slaCompletionEvent.eventType,
           payload: slaCompletionEvent.payload,
@@ -575,13 +601,13 @@ export async function applyClosedMasterChoice(
   if (reopenResult.reopened && reopenResult.previousStatusId && reopenResult.newStatusId) {
     publications.push({
       eventType: 'TICKET_UPDATED',
-      payload: {
+      payload: buildTicketUpdatedPayload({
         ticketId: master.masterTicketId,
         ...(actor.userId ? { userId: actor.userId, updatedByUserId: actor.userId } : {}),
         changes: {
           status_id: { old: reopenResult.previousStatusId, new: reopenResult.newStatusId },
         },
-      },
+      }),
       eventName: 'Ticket Updated',
     });
 
@@ -609,13 +635,17 @@ export async function applyClosedMasterChoice(
     }).filter((event) => event.eventType === 'TICKET_REOPENED' || event.eventType === 'TICKET_STATUS_CHANGED');
 
     for (const transitionEvent of transition) {
-      publications.push({
-        eventType: transitionEvent.eventType,
-        payload: transitionEvent.payload,
+      const meta = {
         eventName: transitionEvent.workflow?.eventName,
         fromState: transitionEvent.workflow?.fromState,
         toState: transitionEvent.workflow?.toState,
-      });
+      };
+      // Narrow per event so each payload keeps its own brand.
+      if (transitionEvent.eventType === 'TICKET_REOPENED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      } else if (transitionEvent.eventType === 'TICKET_STATUS_CHANGED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      }
     }
   }
 
@@ -886,12 +916,12 @@ export async function attachChildrenToBundle(
 
   const publications: BundleAfterCommitPublication[] = childIds.map((childId) => ({
     eventType: 'TICKET_MERGED',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: childId,
       targetTicketId: params.masterTicketId,
       mergedAt: occurredAt,
       reason: params.mergedReason ?? 'bundle:added_children',
-    },
+    }),
     eventName: 'Ticket Merged',
   }));
 
