@@ -114,6 +114,7 @@ export default defineConfig({
     'lib/boardTicketDefaults': 'lib/boardTicketDefaults.ts',
     'lib/commentAudience': 'lib/commentAudience.ts',
     'lib/quoteTerms': 'lib/quoteTerms.ts',
+    'lib/ticketStatusClock': 'lib/ticketStatusClock.ts',
     'lib/email/senderAuthVerification': 'lib/email/senderAuthVerification.ts',
     'lib/tickets/responseState': 'lib/tickets/responseState.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
