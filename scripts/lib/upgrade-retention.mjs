@@ -26,8 +26,22 @@ export async function captureUpgradeRecords(db, fixture) {
   return JSON.parse(JSON.stringify(result));
 }
 
+// The obligation_type collapse (alga0002072) is the one sanctioned rewrite of
+// retained records: legacy `schedule:{tenant}:{label}:{id}:{owner}:{due}` keys
+// lose their label. Every other value must survive the upgrade unchanged.
+// LEVERAGE: pattern schedule-key-legacy-label — mirrors shared/billingClients/recurringServicePeriodKeys.ts and the collapse migration; .mjs tooling cannot import the TS parser.
+const LEGACY_OBLIGATION_TYPES = new Set(['contract_line', 'client_contract_line', 'template_line', 'preset_line']);
+const collapseLegacyScheduleKey = key => {
+  const segments = typeof key === 'string' ? key.split(':') : [];
+  return segments.length === 6 && segments[0] === 'schedule' && LEGACY_OBLIGATION_TYPES.has(segments[2])
+    ? [...segments.slice(0, 2), ...segments.slice(3)].join(':') : key;
+};
+const expectedAfterUpgrade = before => Object.fromEntries(Object.entries(before).map(([tenant, tables]) => [tenant,
+  { ...tables, ...(tables.recurring_service_periods && { recurring_service_periods: tables.recurring_service_periods
+    .map(row => Object.hasOwn(row, 'schedule_key') ? { ...row, schedule_key: collapseLegacyScheduleKey(row.schedule_key) } : row) }) }]));
+
 export function verifyUpgradeRetention(before, after, baselineLedger, upgradedLedger) {
-  assert.deepEqual(after, before, 'Upgrade changed pre-existing business records');
+  assert.deepEqual(after, expectedAfterUpgrade(before), 'Upgrade changed pre-existing business records');
   assert.ok(baselineLedger.length > 0, 'Baseline migration ledger is empty');
   for (const row of baselineLedger) {
     assert.deepEqual(upgradedLedger.find(item => item.name === row.name), row, `Baseline migration history changed: ${row.name}`);

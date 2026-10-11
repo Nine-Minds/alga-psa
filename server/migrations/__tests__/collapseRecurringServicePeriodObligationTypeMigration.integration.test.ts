@@ -12,6 +12,9 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 const require = createRequire(import.meta.url);
 const TARGET_MIGRATION = '20261010120000_collapse_recurring_service_period_obligation_type.cjs';
 const MIGRATIONS_DIR = path.resolve(__dirname, '..');
+// Citus runs need the combined CE+EE chain (CE migrations colocate with tables
+// only EE migrations distribute), which CI exposes as TEST_MIGRATIONS_DIR.
+const CHAIN_DIR = process.env.TEST_MIGRATIONS_DIR || MIGRATIONS_DIR;
 const MIGRATION = require(path.join(MIGRATIONS_DIR, TARGET_MIGRATION));
 const SCRATCH_DB = 'test_db_collapse_obligation_type_migration';
 const TABLE = 'recurring_service_periods';
@@ -88,8 +91,8 @@ describe('collapse recurring_service_periods.obligation_type migration', () => {
   beforeAll(async () => {
     wireLocalTestDbEnv();
     preDir = fs.mkdtempSync(path.join(os.tmpdir(), 'collapse-obligation-pre-'));
-    for (const file of fs.readdirSync(MIGRATIONS_DIR).filter((n) => n < TARGET_MIGRATION && n.endsWith('.cjs'))) {
-      fs.writeFileSync(path.join(preDir, file), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, file))});\n`);
+    for (const file of fs.readdirSync(CHAIN_DIR).filter((n) => n < TARGET_MIGRATION && n.endsWith('.cjs'))) {
+      fs.writeFileSync(path.join(preDir, file), `module.exports = require(${JSON.stringify(path.join(CHAIN_DIR, file))});\n`);
     }
     db = await createTestDbConnection({ databaseName: SCRATCH_DB, migrationsDir: preDir, runSeeds: false });
     fs.writeFileSync(path.join(preDir, TARGET_MIGRATION), `module.exports = require(${JSON.stringify(path.join(MIGRATIONS_DIR, TARGET_MIGRATION))});\n`);
