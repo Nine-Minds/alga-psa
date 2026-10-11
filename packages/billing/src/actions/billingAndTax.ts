@@ -33,7 +33,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
-import { groupDueServicePeriodsForInvoiceCandidates, isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
+import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
 import { evaluateCalendarMonthEndEarlyCloseEligibility } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
 import {
     listCanonicalClientCadenceWindowPeriods,
@@ -48,8 +48,8 @@ import {
     buildRecurringServicePeriodScheduleKey,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import {
-    loadClientBilledLedgerBoundary,
-    resolveClientCadenceObligationStart,
+    loadClientCadenceContractBilledBoundaries,
+    isClientCadenceLineExpectedInWindow,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
 import {
@@ -224,6 +224,7 @@ type ClientBillingMetadata = {
 interface ClientCadenceRecurringLineActivityRow {
     client_id: string;
     client_contract_line_id: string;
+    contract_id: string;
     start_date?: ISO8601String | null;
     end_date?: ISO8601String | null;
     cadence_owner?: 'client' | 'contract' | null;
@@ -500,6 +501,7 @@ async function fetchClientCadenceMaterializationGaps(
         .select(
             'cc.client_id',
             'cl.contract_line_id as client_contract_line_id',
+            'cl.contract_id as contract_id',
             'cc.start_date',
             'cc.end_date',
             'cl.cadence_owner',
@@ -518,11 +520,14 @@ async function fetchClientCadenceMaterializationGaps(
         recurringClientsById.set(row.client_id, clientRows);
     }
 
-    // Load once per client, not once per line/window. A new schedule has no
-    // billed rows of its own; its first obligation still respects sibling history.
-    const billedBoundaryByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
+    // Load once per client, not once per line/window. The boundary is per
+    // CONTRACT: a line added to an already-billed contract starts after that
+    // contract's ledger, but another contract's invoices must not hide a new
+    // contract's first partial period. Must match regeneration/repair or gaps
+    // never clear.
+    const billedBoundariesByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
         clientId,
-        await loadClientBilledLedgerBoundary(trx, { tenant, clientId }),
+        await loadClientCadenceContractBilledBoundaries(trx, { tenant, clientId }),
     ] as const)));
     const fallbackStart = new Date().toISOString();
 
@@ -566,15 +571,13 @@ async function fetchClientCadenceMaterializationGaps(
                 continue;
             }
 
-            const obligationStart = resolveClientCadenceObligationStart({
-                assignmentStart: row.start_date,
-                billedBoundaryEnd: billedBoundaryByClient.get(period.client_id) ?? null,
-                fallbackStart,
-            });
-            if (!isRecurringLineExpectedInClientCadenceWindow({
+            if (!isClientCadenceLineExpectedInWindow({
                 duePosition,
-                assignmentStart: obligationStart,
+                assignmentStart: row.start_date,
                 assignmentEnd: row.end_date ? normalizeDateOnly(row.end_date) : null,
+                billedBoundaryEnd:
+                    billedBoundariesByClient.get(period.client_id)?.get(row.contract_id) ?? null,
+                fallbackStart,
                 windowStart: invoiceWindowForGap.period_start_date,
                 windowEnd: invoiceWindowForGap.period_end_date,
             })) {
