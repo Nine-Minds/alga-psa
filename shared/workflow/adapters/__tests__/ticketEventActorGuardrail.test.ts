@@ -14,7 +14,12 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
     captured.push({ eventType: e.eventType, payload: buildWorkflowPayload(e.payload, e.ctx) });
   },
 }));
-vi.mock('@alga-psa/db', () => ({ registerAfterCommit: () => undefined }));
+// Comment events are published after commit, so run each hook and let the table await it.
+const hooks: Array<Promise<unknown>> = [];
+vi.mock('@alga-psa/db', async () => {
+  const { fakeTenantDb } = await import('@alga-psa/db/testing');
+  return { registerAfterCommit: (_trx: unknown, hook: () => Promise<unknown>) => { hooks.push(hook()); }, tenantDb: fakeTenantDb() };
+});
 vi.mock('../../../services/email/inboundEmailDurableStore', () => ({
   insertOutboxRow: async (_trx: any, row: any) => { captured.push({ eventType: row.event_type, payload: row.payload }); },
 }));
@@ -30,17 +35,18 @@ async function publishers() {
   const { InboundEmailOutboxEventPublisher } = await import('../inboundEmailOutboxEventPublisher');
   const { TicketModelEventPublisher } = await import('../../../services/tickets/ticketModelEventPublisher');
   return {
-    WorkflowEventPublisher: new WorkflowEventPublisher(),
+    WorkflowEventPublisher: new WorkflowEventPublisher({ transaction: { isTransaction: true } as any, retainConversationEvent: async () => false }),
     InboundEmailOutboxEventPublisher: new InboundEmailOutboxEventPublisher({ trx: {} as any, tenantId, inboxId: randomUUID() } as any),
     TicketModelEventPublisher: new TicketModelEventPublisher(),
   };
 }
 
+const settled = async (publish: Promise<void>) => { await publish; await Promise.all(hooks.splice(0)); };
 const calls = (p: any, extra: Record<string, unknown>) => [
-  () => p.publishTicketCreated({ tenantId, ticketId, ...extra }),
-  () => p.publishTicketUpdated({ tenantId, ticketId, changes: { status_id: 'x' }, ...extra }),
-  () => p.publishTicketClosed({ tenantId, ticketId, ...extra }),
-  () => p.publishCommentCreated({ tenantId, ticketId, commentId, metadata: { content: 'c', author: 'a', isInternal: false }, ...extra }),
+  () => settled(p.publishTicketCreated({ tenantId, ticketId, ...extra })),
+  () => settled(p.publishTicketUpdated({ tenantId, ticketId, changes: { status_id: 'x' }, ...extra })),
+  () => settled(p.publishTicketClosed({ tenantId, ticketId, ...extra })),
+  () => settled(p.publishCommentCreated({ tenantId, ticketId, commentId, metadata: { content: 'c', author: 'a', isInternal: false }, ...extra })),
 ];
 
 describe('ticket event actor guardrail', () => {

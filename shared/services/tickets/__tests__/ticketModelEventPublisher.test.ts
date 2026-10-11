@@ -101,7 +101,8 @@ describe('TicketModelEventPublisher', () => {
     await mocks.registerAfterCommit.mock.calls[0][1]();
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'TICKET_COMMENT_ADDED',
-      payload: { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-1', userId: 'user-1', content: 'Original comment', isInternal: false },
+      // tenantId travels in ctx; buildWorkflowPayload stamps the USER actor on the wire payload.
+      payload: { ticketId: 'ticket-1', commentId: 'comment-1', userId: 'user-1', actorType: 'USER', actorUserId: 'user-1', content: 'Original comment', isInternal: false },
       ctx: { tenantId: 'tenant-1', actor: { actorType: 'USER', actorUserId: 'user-1' } },
     });
   });

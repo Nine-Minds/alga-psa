@@ -18,18 +18,22 @@ function buildTrx() {
 
   const trx: any = vi.fn((table: string) => {
     if (table === 'statuses') {
-      return { where: () => ({ first: async () => ({ status_id: NEW_STATUS, board_id: BOARD_ID }) }) };
+      const status: any = { first: async () => ({ status_id: NEW_STATUS, board_id: BOARD_ID, is_closed: false }) };
+      status.forShare = () => status;
+      return { where: () => status };
     }
     if (table === 'tickets') {
-      return {
-        where: () => ({
-          first: async () => currentTicket,
-          update: (data: Record<string, unknown>) => {
-            updates.push(data);
-            return { returning: async () => [{ ...currentTicket, ...data }] };
-          },
-        }),
+      // The row is read under `forUpdate()` before the patch is written.
+      const selected: any = {
+        first: async () => currentTicket,
+        update: (data: Record<string, unknown>) => {
+          updates.push(data);
+          return { returning: async () => [{ ...currentTicket, ...data }] };
+        },
       };
+      selected.forUpdate = () => selected;
+      selected.forShare = () => selected;
+      return { where: () => selected };
     }
     throw new Error(`Unexpected table: ${table}`);
   });
