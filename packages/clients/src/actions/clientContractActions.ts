@@ -841,6 +841,7 @@ export const applyContractToClient = withAuth(async (
       }
 
       for (const line of contractLines) {
+        // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
         // Clone services and configuration from template to this contract line
         await cloneTemplateContractLineAsync(trx, {
           tenant,
