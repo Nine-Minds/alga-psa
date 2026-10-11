@@ -121,7 +121,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildNotificationDeliveredPayload: (value: unknown) => value,
   buildNotificationFailedPayload: (value: unknown) => value,
   buildNotificationSentPayload: (value: unknown) => value,

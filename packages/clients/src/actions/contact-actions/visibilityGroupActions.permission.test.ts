@@ -63,7 +63,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildContactArchivedPayload: vi.fn(),
   buildContactCreatedPayload: vi.fn(),
   buildContactUpdatedPayload: vi.fn(),

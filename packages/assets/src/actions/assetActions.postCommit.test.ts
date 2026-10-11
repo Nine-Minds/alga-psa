@@ -200,7 +200,7 @@ vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', () => ({
 }));
 
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildAssetAssignedPayload: vi.fn(() => ({})),
   buildAssetCreatedPayload: vi.fn(() => ({})),
   buildAssetUnassignedPayload: vi.fn(() => ({})),

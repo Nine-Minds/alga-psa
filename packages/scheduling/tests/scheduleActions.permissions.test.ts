@@ -85,7 +85,7 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
 }));
 
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildAppointmentAssignedPayload: () => ({}),
   buildAppointmentCanceledPayload: () => ({}),
   buildAppointmentCompletedPayload: () => ({}),

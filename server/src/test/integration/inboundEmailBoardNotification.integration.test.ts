@@ -51,7 +51,7 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => {
     published.push({ id: options?.eventId ?? uuidv4(), eventType: event.eventType, payload: event.payload, force: Boolean(options?.force) });
   };
   return {
-    reviveStoredWorkflowPayload: (await importOriginal<any>()).reviveStoredWorkflowPayload,
+    reviveStoredWorkflowPayload: ((await importOriginal()) as any).reviveStoredWorkflowPayload,
     publishEvent: vi.fn(record),
     publishBuiltWorkflowPayload: vi.fn(record),
     publishNonCatalogEventByName: vi.fn(record),

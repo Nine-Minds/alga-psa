@@ -4,7 +4,7 @@ import { dateTriggerSourceDefinitions } from '@alga-psa/event-schemas';
 vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 vi.mock('@alga-psa/event-bus/workflow/dateDomainEvents', () => ({ toTenantLocalDate: vi.fn() }));
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildClientAnniversaryUpcomingPayload: vi.fn(),
   buildContractRenewalUpcomingPayload: vi.fn(),
   buildAssetWarrantyExpiringPayload: vi.fn(),

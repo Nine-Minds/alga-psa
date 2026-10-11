@@ -67,7 +67,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...(await importOriginal<any>()),
+  ...((await importOriginal()) as any),
   buildClientCreatedPayload: (params: Record<string, unknown>) => ({ ...params, eventType: 'CLIENT_CREATED' }),
   buildClientStatusChangedPayload: (params: Record<string, unknown>) => ({
     ...params,
