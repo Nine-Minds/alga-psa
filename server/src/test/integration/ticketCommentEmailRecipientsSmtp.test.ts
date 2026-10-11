@@ -136,6 +136,7 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
     const event = {
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
       payload: {
         tenantId: tenant, ticketId: ticket, actorUserId: options.systemAuthored ? undefined : agent,
         ...(options.suppressContactNotifications ? { suppressContactNotifications: true } : {}),
@@ -157,6 +158,7 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
     return {
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
       payload: {
         tenantId: tenant, ticketId: ticket, actorUserId: agent,
         comment: { id: comment, content: note, author: 'Agent Smith', isInternal: false },
