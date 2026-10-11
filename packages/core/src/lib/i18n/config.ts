@@ -214,7 +214,8 @@ export const ROUTE_NAMESPACES = {
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   // msp/time-entry loads on ticket and project surfaces because the shared
   // time-entry launcher (period picker + blocked-launch feedback) is opened
-  // from both.
+  // from both. msp/user-activities loads on ticket, project and dispatch
+  // surfaces because they host the shared "My group" activity-group control.
   '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities'],
   '/msp/projects': ['common', 'msp/core', 'features/projects', 'msp/time-entry', 'msp/user-activities'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits'],
