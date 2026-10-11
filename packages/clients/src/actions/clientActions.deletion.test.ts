@@ -111,8 +111,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
-  ...((await importOriginal()) as any),
+vi.mock('@alga-psa/workflow-streams', () => ({
   buildClientArchivedPayload: vi.fn(),
   buildClientCreatedPayload: vi.fn(),
   buildClientOwnerAssignedPayload: vi.fn(),
