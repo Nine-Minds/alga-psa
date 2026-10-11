@@ -25,7 +25,7 @@ const {
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
   const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
   // Keep the real formatters (the launch-skip banner uses useFormatters); only translations are stubbed.
-  return { ...(await importOriginal<Record<string, unknown>>()), ...createLocaleTranslationMock('msp/workflows') };
+  return { ...((await importOriginal()) as Record<string, unknown>), ...createLocaleTranslationMock('msp/workflows') };
 });
 
 vi.mock('next/navigation', () => ({
