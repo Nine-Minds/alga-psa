@@ -13,7 +13,7 @@ import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
-import { cloneTemplateLinePools, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type DetailedContractLine = IContractLineMapping & {
@@ -366,6 +366,28 @@ const nonNegativeCentsOrNull = (value: unknown): number | null => {
   return Math.max(0, Math.round(numeric));
 };
 
+/**
+ * The line rate a Fixed template line carries over (cents), or null when the
+ * line follows the catalog. A rate stored on the template line itself is an
+ * intentional snapshot, $0 included. The line fixed config is written as
+ * `fixed_base_rate ?? 0` by template authoring, so there 0 means "no rate".
+ */
+function templateLineRateCents(templateLine: any, templateFixedConfig: any): number | null {
+  return nonNegativeCentsOrNull(templateLine?.custom_rate) ?? positiveCentsOrNull(templateFixedConfig?.base_rate);
+}
+
+/**
+ * The rate a Fixed template member carries over (cents). A per-seat member's
+ * unit rate lives only in its service fixed config (null follows the catalog);
+ * a bundle member's allocated share lives on the configuration/service row.
+ */
+function templateFixedMemberRateCents(configuration: any, service: any, serviceFixedConfig: any): number | null {
+  if (serviceFixedConfig?.pricing_basis === 'unit') {
+    return positiveCentsOrNull(serviceFixedConfig.base_rate);
+  }
+  return positiveCentsOrNull(configuration?.custom_rate) ?? positiveCentsOrNull(service.custom_rate);
+}
+
 export interface CurrencyCatalogRates {
   /** `service_catalog_mode_defaults` rows for the line's billing mode. */
   modeDefaults: Map<string, number>;
@@ -479,6 +501,20 @@ export async function cloneTemplateLineToContract(
   const templateConfigurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
     .where('template_line_id', templateLineId);
 
+  // Per-service fixed config: pricing basis and, for a per-seat member, its unit rate.
+  const templateServiceFixedConfigs = templateConfigurations.length
+    ? await tenantScopedTable(trx, tenant, 'contract_template_line_service_fixed_config')
+        .whereIn('config_id', templateConfigurations.map((c: any) => c.config_id))
+    : [];
+  const serviceFixedByConfigId = new Map<string, any>(
+    (templateServiceFixedConfigs as any[]).map((row) => [row.config_id, row]),
+  );
+  const unitServiceIds = new Set<string>(
+    (templateConfigurations as any[])
+      .filter((c) => serviceFixedByConfigId.get(c.config_id)?.pricing_basis === 'unit')
+      .map((c) => c.service_id as string),
+  );
+
   const serviceIds = templateServices.map((s: any) => s.service_id as string);
   const catalogRows = serviceIds.length
     ? await tenantScopedTable(trx, tenant, 'service_catalog')
@@ -501,10 +537,7 @@ export async function cloneTemplateLineToContract(
   }
 
   // ----- line-level rate (Fixed) -------------------------------------------
-  // Template authoring writes `fixed_base_rate ?? 0`, so 0 means "no line
-  // rate", not a stored zero; only a positive number is a rate to carry over.
-  const templateLineRate =
-    positiveCentsOrNull(templateLine.custom_rate) ?? positiveCentsOrNull(templateFixedConfig?.base_rate);
+  const templateLineRate = templateLineRateCents(templateLine, templateFixedConfig);
   // undefined = nothing explicit; null = explicitly cleared (line follows catalog).
   let explicitLineRate: number | null | undefined;
   if (edits.fixed_base_rate !== undefined) {
@@ -577,7 +610,10 @@ export async function cloneTemplateLineToContract(
   const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateLineId, newContractLineId);
 
   // Proportional shares of an edited line rate, so per-member rates stay
-  // consistent with the line rate (same allocation the wizard uses).
+  // consistent with the line rate (same allocation the wizard uses). Only
+  // bundle members share the line rate; a per-seat member bills
+  // quantity x unit rate on its own.
+  const bundleServices = templateServices.filter((s: any) => !unitServiceIds.has(s.service_id));
   const lineRateEdited = edits.fixed_base_rate !== undefined && effectiveLineRate !== null;
   const anyServiceRateEdit = (edits.services ?? []).some((s) => s.rate !== undefined);
   const memberQuantity = (service: any): number => {
@@ -585,13 +621,14 @@ export async function cloneTemplateLineToContract(
     const quantity = edit?.quantity !== undefined ? edit.quantity : service.quantity;
     return quantity != null && Number(quantity) > 0 ? Number(quantity) : 1;
   };
-  const totalQuantity = templateServices.reduce((sum: number, s: any) => sum + memberQuantity(s), 0) || 1;
+  const totalQuantity = bundleServices.reduce((sum: number, s: any) => sum + memberQuantity(s), 0) || 1;
   let allocated = 0;
 
   const unpricedServices: UnpricedTemplateService[] = [];
 
-  for (const [index, service] of templateServices.entries()) {
+  for (const service of templateServices) {
     const edit = serviceEditById.get(service.service_id);
+    const isUnitMember = unitServiceIds.has(service.service_id);
     const configurations = templateConfigurations.filter((c: any) => c.service_id === service.service_id);
     const configuration = configurations[0];
 
@@ -623,17 +660,21 @@ export async function cloneTemplateLineToContract(
           ? positiveCentsOrNull(primaryTyped?.usage?.base_rate) ??
             positiveCentsOrNull(configuration?.custom_rate) ??
             positiveCentsOrNull(service.custom_rate)
-          : positiveCentsOrNull(configuration?.custom_rate) ?? positiveCentsOrNull(service.custom_rate);
+          : templateFixedMemberRateCents(
+              configuration,
+              service,
+              configuration ? serviceFixedByConfigId.get(configuration.config_id) : undefined,
+            );
 
     let memberRate: number | null;
     let rateFromEdit = false;
     if (edit && edit.rate !== undefined) {
       memberRate = edit.rate === null ? null : positiveCentsOrNull(edit.rate);
       rateFromEdit = true;
-    } else if (lineType === 'Fixed' && lineRateEdited && !anyServiceRateEdit) {
-      // The line rate was edited: re-split it across members by quantity.
+    } else if (lineType === 'Fixed' && lineRateEdited && !anyServiceRateEdit && !isUnitMember) {
+      // The line rate was edited: re-split it across bundle members by quantity.
       const share = memberQuantity(service) / totalQuantity;
-      if (index === templateServices.length - 1) {
+      if (service === bundleServices[bundleServices.length - 1]) {
         memberRate = (effectiveLineRate as number) - allocated;
       } else {
         memberRate = Math.round((effectiveLineRate as number) * share);
@@ -659,7 +700,8 @@ export async function cloneTemplateLineToContract(
     }
 
     if (currencyRates && memberRate === null) {
-      const coveredByLineRate = lineType === 'Fixed' && effectiveLineRate !== null;
+      // A line rate pays for bundle members only, never for a per-seat member.
+      const coveredByLineRate = lineType === 'Fixed' && !isUnitMember && effectiveLineRate !== null;
       const coveredByCatalog = lineType === 'Fixed' && currencyRates.pricedServiceIds.has(service.service_id);
       if (!coveredByLineRate && !coveredByCatalog) {
         unpricedServices.push({
@@ -711,7 +753,9 @@ export async function cloneTemplateLineToContract(
           config_id: newConfigId,
           base_rate: memberRate,
           rate_provenance: memberRate === null ? 'inherited' : 'custom',
-          pricing_basis: 'bundle',
+          pricing_basis: serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
+            ? 'unit'
+            : 'bundle',
           created_at: now,
           updated_at: now,
         });
@@ -808,14 +852,6 @@ export async function cloneTemplateLineToContract(
           created_at: now,
           updated_at: now,
         });
-      }
-
-      // Pricing basis + default unit rate: without this a template's per-seat
-      // service would silently demote to a bundle allocation on the clone.
-      // LEVERAGE: pattern template-pool-roundtrip — this path re-enumerates the
-      // template config tables inline instead of sharing cloneTemplateContractLine.
-      if (configuration.configuration_type === 'Fixed') {
-        await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
       }
     }
   }
@@ -937,7 +973,15 @@ export async function fetchTemplateLineViews(
             ? positiveCentsOrNull(usage?.base_rate) ??
               positiveCentsOrNull(configuration?.custom_rate) ??
               positiveCentsOrNull(service.custom_rate)
-            : positiveCentsOrNull(configuration?.custom_rate) ?? positiveCentsOrNull(service.custom_rate);
+            : templateFixedMemberRateCents(
+                configuration,
+                service,
+                configuration
+                  ? await tenantScopedTable(knex, tenant, 'contract_template_line_service_fixed_config')
+                      .where('config_id', configuration.config_id)
+                      .first()
+                  : undefined,
+              );
       const currencyRate =
         lineType === 'Fixed'
           ? rates.modeDefaults.get(service.service_id) ?? null
@@ -972,7 +1016,7 @@ export async function fetchTemplateLineViews(
       cadence_owner: recurring.cadence_owner,
       billing_timing: recurring.billing_timing,
       display_order: line.display_order ?? 0,
-      fixed_base_rate: positiveCentsOrNull(line.custom_rate) ?? positiveCentsOrNull(fixedConfig?.base_rate),
+      fixed_base_rate: templateLineRateCents(line, fixedConfig),
       enable_proration: fixedConfig?.enable_proration ?? false,
       minimum_billable_time: line.minimum_billable_time ?? null,
       round_up_to_nearest: line.round_up_to_nearest ?? null,

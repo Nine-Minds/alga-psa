@@ -2586,10 +2586,16 @@ export const getDraftContractForResume = withAuth(async (
 
   // Fidelity: the wizard must be able to hold everything that affects revenue. If re-projecting the
   // resumed data differs from what is stored, refuse rather than let Finish Setup rewrite it.
-  const differences = diffRecurringShapes(
-    recurringShapeFromStoredLines(storedLines, { contractBillingFrequency: resumed.billing_frequency }),
-    recurringShapeFromWizard(resumed),
-  );
+  // A template-derived draft is re-saved by re-cloning the template with the per-line edits above
+  // (per-line cadence, billable-time rounding and rates included), not from the flat wizard lines,
+  // so the flat projection does not describe what it will write; the save-time monthly-value guard
+  // still covers it.
+  const differences = resumed.template_id
+    ? []
+    : diffRecurringShapes(
+        recurringShapeFromStoredLines(storedLines, { contractBillingFrequency: resumed.billing_frequency }),
+        recurringShapeFromWizard(resumed),
+      );
   if (differences.length > 0) {
     const summary = differences.map((d) => d.message).join('; ');
     return actionError(

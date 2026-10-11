@@ -27,6 +27,7 @@ let createContractTemplateFromWizard: typeof import('@alga-psa/billing/actions/c
 let getServiceCatalogRatesForCurrency: typeof import('@alga-psa/billing/actions/serviceActions').getServiceCatalogRatesForCurrency;
 let sharedCloneTemplateContractLine: typeof import('@alga-psa/shared/billingClients/templateClone').cloneTemplateContractLine;
 let billingCloneTemplateContractLine: typeof import('@alga-psa/billing/lib/billing/utils/templateClone').cloneTemplateContractLine;
+let getContractTemplateLinesForClientWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').getContractTemplateLinesForClientWizard;
 let getContractOverview: typeof import('@alga-psa/billing/actions/contractActions').getContractOverview;
 let addContractLine: typeof import('@alga-psa/billing/repositories/contractLineRepository').addContractLine;
 
@@ -188,7 +189,7 @@ describe('contract templates: per-seat recurring services', () => {
     await db.migrate.latest();
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
-    ({ createClientContractFromWizard, createContractTemplateFromWizard } =
+    ({ createClientContractFromWizard, createContractTemplateFromWizard, getContractTemplateLinesForClientWizard } =
       await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
@@ -301,6 +302,51 @@ describe('contract templates: per-seat recurring services', () => {
     expect((cloned.get(catalog.user.serviceId) as any).pricing_basis).toBe('unit');
     expect((cloned.get(catalog.endpoint.serviceId) as any).pricing_basis ?? 'bundle').toBe('bundle');
     expect((cloned.get(catalog.location.serviceId) as any).pricing_basis ?? 'bundle').toBe('bundle');
+  }, HOOK_TIMEOUT);
+
+  it('a line-rate edit on a mixed template re-splits across the bundle members only; the seat member keeps its unit rate', async () => {
+    const catalog = await seatCatalog();
+    const template = await createTemplate(
+      [
+        { service_id: catalog.endpoint.serviceId, pricing_basis: 'bundle', quantity: 1 },
+        { service_id: catalog.location.serviceId, quantity: 3 },
+        { service_id: catalog.user.serviceId, pricing_basis: 'unit', quantity: 5, unit_rate: 10000 },
+      ],
+      { fixed_base_rate: 20000 },
+    );
+
+    const client = await createSeatClient(db, tenantId);
+    const view: any = ok(await getContractTemplateLinesForClientWizard(template.contract_id, client.clientId));
+    const viewMembers = new Map<string, any>(view.lines[0].services.map((svc: any) => [svc.service_id, svc]));
+    // The client wizard shows the seat member's unit rate, not an empty allocation.
+    expect(viewMembers.get(catalog.user.serviceId).template_rate).toBe(10000);
+
+    const created = ok(
+      await createClientContractFromWizard({
+        contract_name: `From template ${uuidv4().slice(0, 6)}`,
+        client_id: client.clientId,
+        start_date: DECEMBER_START,
+        end_date: '2025-06-30',
+        billing_frequency: 'monthly',
+        enable_proration: false,
+        template_id: template.contract_id,
+        template_lines: [{ template_line_id: template.contract_line_id!, fixed_base_rate: 40000 }],
+      } as any),
+    ) as { contract_id: string; contract_line_id: string };
+
+    expect(await lineCustomRate(created.contract_line_id)).toBe(40000);
+    const cloned = await lineFixedConfigs(created.contract_line_id);
+    const user: any = cloned.get(catalog.user.serviceId);
+    expect(user).toMatchObject({ pricing_basis: 'unit', rate_provenance: 'custom' });
+    expect(Number(user.base_rate)).toBe(10000);
+    expect(Number(user.quantity)).toBe(5);
+    // The whole $400 line rate lands on the bundle members, by quantity (1 : 3).
+    const endpoint: any = cloned.get(catalog.endpoint.serviceId);
+    const location: any = cloned.get(catalog.location.serviceId);
+    expect(endpoint.pricing_basis).toBe('bundle');
+    expect(location.pricing_basis).toBe('bundle');
+    expect(Number(endpoint.base_rate)).toBe(10000);
+    expect(Number(location.base_rate)).toBe(30000);
   }, HOOK_TIMEOUT);
 
   it('an existing bundle template is unchanged: no fixed-config rows, bundle clone', async () => {
