@@ -10,6 +10,7 @@ import { addTicket } from '../../actions/ticketActions';
 
 const getTicketFormDataMock = vi.fn();
 const getTicketStatusesMock = vi.fn();
+const getTicketDuplicateSourceMock = vi.fn();
 
 // Real Dialog / ConfirmationDialog / dismiss guard on purpose: this test is about what
 // Escape, the X button and Cmd+Arrow do to typed text in the new-ticket dialog.
@@ -81,6 +82,7 @@ vi.mock('next-auth/react', () => ({
 vi.mock('../../actions/ticketActions', () => ({
   addTicket: vi.fn(),
   updateTicket: vi.fn(),
+  getTicketDuplicateSource: (...args: unknown[]) => getTicketDuplicateSourceMock(...args),
 }));
 
 vi.mock('../../actions/ticketResourceActions', () => ({
@@ -595,5 +597,78 @@ describe('QuickAddTicket after a create starts (Create + View reload window)', (
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(addTicket).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('QuickAddTicket duplicate mode dismiss guard', () => {
+  const SOURCE_ID = 'source-ticket-1';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [],
+      statuses: [],
+      priorities: [],
+      clients: [],
+    });
+    getTicketStatusesMock.mockResolvedValue([]);
+    getTicketDuplicateSourceMock.mockResolvedValue({
+      ticket_id: SOURCE_ID,
+      ticket_number: 'TIC-1042',
+      title: 'Onboard new employee',
+      description: 'Laptop, accounts, badge',
+      client: { id: 'client-1', name: 'Acme', type: 'company' },
+      contact: null,
+      location_id: null,
+      board_id: null,
+      category_id: null,
+      subcategory_id: null,
+      priority_id: null,
+      itil_impact: null,
+      itil_urgency: null,
+      assigned_to: null,
+      assigned_team_id: null,
+      additional_agents: [],
+      tags: [],
+      checklist: [],
+      custom_field_count: 0,
+    });
+  });
+
+  afterEach(() => cleanup());
+
+  async function renderDuplicateDialog() {
+    const onOpenChange = vi.fn();
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={onOpenChange}
+        onTicketAdded={vi.fn()}
+        duplicateFromTicketId={SOURCE_ID}
+      />
+    );
+    const title = (await screen.findByPlaceholderText('Ticket Title *')) as HTMLInputElement;
+    await waitFor(() => expect(title).toHaveValue('Onboard new employee'));
+    return { onOpenChange, title };
+  }
+
+  it('Escape on an untouched duplicate closes without asking: the copied text is not a typed draft', async () => {
+    const { onOpenChange } = await renderDuplicateDialog();
+
+    pressEscape();
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(question()).toBeNull();
+  });
+
+  it('Escape after editing the copied title asks first', async () => {
+    const { onOpenChange, title } = await renderDuplicateDialog();
+    fireEvent.change(title, { target: { value: 'Onboard new contractor' } });
+
+    pressEscape(title);
+
+    await waitFor(() => expect(question()).toBeTruthy());
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });

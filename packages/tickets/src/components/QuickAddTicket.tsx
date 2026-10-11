@@ -837,6 +837,8 @@ export function QuickAddTicket({
   // Typed-but-unsent text: a title or description that differs from what the dialog
   // opened with. Staged clipboard images already have their own discard confirmation
   // in requestDiscard, so they are not counted here (that would ask twice).
+  // In duplicate mode the dialog opens with the source ticket's title and description
+  // (applyDuplicateSource), so those are the baseline rather than the prefilled props.
   //
   // Never dirty while a create is in flight or done: the ticket is saved (or being saved), and a
   // reload from addTicket's revalidatePath would otherwise raise a "Leave site?" prompt, whose
@@ -845,15 +847,17 @@ export function QuickAddTicket({
   // round trip can finish, and isSubmitting stays true until the same batch that has
   // ticketCreated/isNavigatingToTicket set, so there is no window where all three are false
   // for a saved ticket. A failed create clears isSubmitting without latching, so the guard returns.
+  const draftBaselineTitle = duplicateSource ? duplicateSource.title : prefilledTitle;
+  const draftBaselineDescription = duplicateSource ? duplicateSource.description : prefilledDescription;
   const hasUnsavedDraftText =
     open &&
     !isSubmitting &&
     !isNavigatingToTicket &&
     !ticketCreated &&
     descriptionUploadSession.stagedClipboardImages.length === 0 &&
-    (title.trim() !== (prefilledTitle || '').trim() ||
+    (title.trim() !== (draftBaselineTitle || '').trim() ||
       extractTicketRichTextPlainText(descriptionContent).trim() !==
-        extractTicketRichTextPlainText(prefilledDescription || '').trim());
+        extractTicketRichTextPlainText(draftBaselineDescription || '').trim());
 
 
   const validateForm = () => {
