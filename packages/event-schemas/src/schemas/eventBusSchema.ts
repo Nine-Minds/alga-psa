@@ -152,7 +152,6 @@ import {
   ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
-  ticketRequesterFieldsSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
   ticketExternalLinkEventPayloadSchema,
@@ -1194,14 +1193,16 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
   rawPayload: z.record(z.unknown()), // Full webhook payload for processing
 });
 
-// The legacy branch parses first and strips unknown keys, so it must carry the requester identity too.
-const TicketCreatedPayloadSchema = z.union([
-  TicketEventPayloadSchema.extend(ticketRequesterFieldsSchema),
-  ticketCreatedEventPayloadSchema,
-]);
-const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
-const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
-const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+// The legacy branch parses first and strips unknown keys, and with `userId` optional it matches
+// domain payloads too. Give it the domain fields as optional extras (legacy definitions win on
+// shared keys) so a domain payload parsed by it keeps fields like contactNameId or closedAt.
+function legacyTicketUnion<D extends z.AnyZodObject>(domainSchema: D) {
+  return z.union([domainSchema.partial().merge(TicketEventPayloadSchema), domainSchema]);
+}
+const TicketCreatedPayloadSchema = legacyTicketUnion(ticketCreatedEventPayloadSchema);
+const TicketUpdatedPayloadSchema = legacyTicketUnion(ticketUpdatedEventPayloadSchema);
+const TicketClosedPayloadSchema = legacyTicketUnion(ticketClosedEventPayloadSchema);
+const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWarningEventPayloadSchema);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
 // On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.

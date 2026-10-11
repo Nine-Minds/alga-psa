@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const migration = require('../20261010120000_ticket_event_catalog_optional_user_id.cjs');
+const migration = require('../20261010000000_ticket_event_catalog_optional_user_id.cjs');
 
 const legacy = {
   type: 'object',

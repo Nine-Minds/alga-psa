@@ -30,6 +30,32 @@ describe('ticket event actor schemas', () => {
     expect(parsed).not.toHaveProperty('userId');
   });
 
+  // A domain payload has no userId either, so the legacy branch now matches it first; it must not
+  // strip the domain-only fields consumers read (the auto-close warning email needs contactNameId).
+  it('TICKET_AUTO_CLOSE_WARNING keeps its domain fields after parse', () => {
+    const contactNameId = randomUUID();
+    const enteredBy = randomUUID();
+    const scheduledCloseAt = new Date().toISOString();
+    const parsed = (EventSchemas as any).TICKET_AUTO_CLOSE_WARNING.parse(wrap('TICKET_AUTO_CLOSE_WARNING', {
+      tenantId, ticketId, occurredAt: scheduledCloseAt, ticketNumber: 'T-1', title: 'Stale',
+      scheduledCloseAt, contactNameId, assignedTo: null, enteredBy,
+    })).payload;
+    expect(parsed).toMatchObject({ ticketNumber: 'T-1', title: 'Stale', scheduledCloseAt, contactNameId, assignedTo: null, enteredBy });
+  });
+
+  it('TICKET_CLOSED and TICKET_UPDATED keep domain-only fields after parse', () => {
+    const actorUserId = randomUUID();
+    const occurredAt = new Date().toISOString();
+    const closed = (EventSchemas as any).TICKET_CLOSED.parse(wrap('TICKET_CLOSED', {
+      tenantId, ticketId, occurredAt, actorType: 'USER', actorUserId, closedByUserId: actorUserId, closedAt: occurredAt, reason: 'done',
+    })).payload;
+    expect(closed).toMatchObject({ closedByUserId: actorUserId, closedAt: occurredAt, reason: 'done' });
+    const updated = (EventSchemas as any).TICKET_UPDATED.parse(wrap('TICKET_UPDATED', {
+      tenantId, ticketId, occurredAt, updatedByUserId: actorUserId, updatedFields: ['status_id'],
+    })).payload;
+    expect(updated).toMatchObject({ updatedByUserId: actorUserId, updatedFields: ['status_id'] });
+  });
+
   it('TICKET_ASSIGNED still requires userId (the assignee) on the legacy branch', () => {
     expect(() => (EventSchemas as any).TICKET_ASSIGNED.parse(wrap('TICKET_ASSIGNED', { tenantId, ticketId }))).toThrow();
     expect(() => (EventSchemas as any).TICKET_ASSIGNED.parse(wrap('TICKET_ASSIGNED', { tenantId, ticketId, userId: randomUUID() }))).not.toThrow();

@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../migrations/20261010120000_ticket_event_catalog_optional_user_id.cjs');
+const migration = require('../../../migrations/20261010000000_ticket_event_catalog_optional_user_id.cjs');
 const TYPES = ['TICKET_CREATED', 'TICKET_UPDATED', 'TICKET_CLOSED'];
 const asObject = (v: any) => (typeof v === 'string' ? JSON.parse(v) : v);
 

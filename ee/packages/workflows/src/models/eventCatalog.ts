@@ -9,7 +9,7 @@ import {
 } from '@alga-psa/workflows/types';
 
 // Ticket events: userId is the acting user and is absent when nobody acted.
-// Keep in step with server/migrations/20261010120000_ticket_event_catalog_optional_user_id.cjs.
+// Keep in step with server/migrations/20261010000000_ticket_event_catalog_optional_user_id.cjs.
 const TICKET_EVENT_USER_ID = {
   type: 'string',
   format: 'uuid',
