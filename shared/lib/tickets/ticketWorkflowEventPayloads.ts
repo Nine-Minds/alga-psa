@@ -15,6 +15,7 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 
 export type TicketNotificationSuppression = {
   suppressContactNotifications?: boolean;
@@ -62,7 +63,7 @@ export function buildTicketResponseStateChangedPayload(input: {
   newState: TicketResponseStateValue;
   trigger: TicketResponseStateTrigger;
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_RESPONSE_STATE_CHANGED', {
     ticketId: input.ticketId,
     userId: input.userId,
     previousResponseState: input.previousState,
@@ -70,7 +71,7 @@ export function buildTicketResponseStateChangedPayload(input: {
     previousState: input.previousState,
     newState: input.newState,
     trigger: input.trigger,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +100,7 @@ export function buildApiTicketCreatedPayload(input: {
   clientId?: string | null;
   externalLinks?: readonly TicketCreatedExternalLink[];
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_CREATED', {
     ticketId: input.ticketId,
     userId: input.userId,
     createdByUserId: input.userId,
@@ -123,12 +124,12 @@ export function buildApiTicketCreatedPayload(input: {
           })),
         }
       : {}),
-  };
+  });
 }
 
 /** RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). */
 export function buildRmmTicketCreatedPayload(input: { ticketId: string; source: string }) {
-  return { ticketId: input.ticketId, source: input.source };
+  return builtWorkflowPayload('TICKET_CREATED', { ticketId: input.ticketId, source: input.source });
 }
 
 // ---------------------------------------------------------------------------
@@ -143,12 +144,12 @@ export function buildTicketUpdatedPayload(
     changes: TicketChangeMap;
   }
 ) {
-  return {
+  return builtWorkflowPayload('TICKET_UPDATED', {
     ticketId: input.ticketId,
     ...withDefined({ userId: input.userId, updatedByUserId: input.updatedByUserId }),
     changes: input.changes,
     ...suppressionFields(input),
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -165,13 +166,13 @@ export function buildTicketClosedPayload(
     changes?: TicketChangeMap;
   }
 ) {
-  return {
+  return builtWorkflowPayload('TICKET_CLOSED', {
     ticketId: input.ticketId,
     ...withDefined({ userId: input.userId, closedByUserId: input.closedByUserId }),
     closedAt: input.closedAt,
     ...withDefined({ changes: input.changes }),
     ...suppressionFields(input),
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -191,9 +192,11 @@ export function buildTicketAssignedPayload(
     assignedAt?: string;
     changes?: Record<string, unknown>;
     assignedTeamId?: string;
+    /** Extra payload fields (e.g. workflow provenance), merged over the base fields. */
+    extras?: Record<string, unknown>;
   }
 ) {
-  return {
+  return builtWorkflowPayload('TICKET_ASSIGNED', {
     ticketId: input.ticketId,
     ...withDefined({
       userId: input.userId,
@@ -207,14 +210,21 @@ export function buildTicketAssignedPayload(
       changes: input.changes,
     }),
     ...suppressionFields(input),
-  };
+    ...input.extras,
+  });
 }
 
 /**
- * Team assignment: the ticket keeps `userId` = resolved assignee and records the team in
- * `changes.assigned_team_id` as a `{ old, previous, new }` entry (the v2 schema requires every
- * `changes` value to be an object; it used to be the bare team id, which the worker rejected) and
- * as top-level `assignedTeamId`. Read it back with `readAssignedTeamId`.
+ * Team assignment: the ticket keeps `userId` = resolved assignee and records the team ONLY in the
+ * top-level `assignedTeamId`. Read it back with `readAssignedTeamId`.
+ *
+ * ROLLING-DEPLOY SAFETY: this payload deliberately has NO `changes.assigned_team_id`. The worker's
+ * v2 schema requires every `changes` value to be an `{old,new}` object, but pods still running the
+ * previous `ticketEmailSubscriber` cast `changes.assigned_team_id` to a string and feed it to a uuid
+ * query, so an object there crashes them ("invalid input syntax for type uuid"). Omitting the key
+ * keeps both sides safe: old pods see no team change (they skip team fan-out until they are
+ * replaced; no crash), new pods read `assignedTeamId`. Do not re-add `changes.assigned_team_id`
+ * until no pre-`readAssignedTeamId` subscriber can still be running.
  */
 export function buildTicketTeamAssignedPayload(
   input: TicketNotificationSuppression & {
@@ -228,7 +238,6 @@ export function buildTicketTeamAssignedPayload(
     ticketId: input.ticketId,
     userId: input.assignedToUserId,
     assignedByUserId: input.assignedByUserId,
-    changes: { assigned_team_id: { old: null, previous: null, new: input.teamId } },
     assignedTeamId: input.teamId,
     suppressContactNotifications: input.suppressContactNotifications,
     suppressInternalNotifications: input.suppressInternalNotifications,
@@ -252,7 +261,7 @@ export function buildPortalTicketReopenedPayload(input: {
   reopenedAt: string;
   changes: TicketChangeMap;
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_REOPENED', {
     ticketId: input.ticketId,
     userId: input.userId,
     reopenedByUserId: input.userId,
@@ -260,7 +269,7 @@ export function buildPortalTicketReopenedPayload(input: {
     newStatusId: input.newStatusId,
     reopenedAt: input.reopenedAt,
     changes: input.changes,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -273,12 +282,12 @@ export function buildTicketMergedPayload(input: {
   mergedAt: string;
   reason: string;
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_MERGED', {
     sourceTicketId: input.sourceTicketId,
     targetTicketId: input.targetTicketId,
     mergedAt: input.mergedAt,
     reason: input.reason,
-  };
+  });
 }
 
 export function buildTicketSplitPayload(input: {
@@ -287,12 +296,12 @@ export function buildTicketSplitPayload(input: {
   splitAt: string;
   reason: string;
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_SPLIT', {
     originalTicketId: input.originalTicketId,
     newTicketIds: [...input.newTicketIds],
     splitAt: input.splitAt,
     reason: input.reason,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +315,7 @@ export function buildTicketSplitPayload(input: {
 type PublishTicketCreatedInput = Parameters<IEventPublisher['publishTicketCreated']>[0];
 type PublishTicketUpdatedInput = Parameters<IEventPublisher['publishTicketUpdated']>[0];
 type PublishTicketClosedInput = Parameters<IEventPublisher['publishTicketClosed']>[0];
+type PublishTicketCommentCreatedInput = Parameters<IEventPublisher['publishCommentCreated']>[0];
 type PublishTicketAssignedInput = Parameters<IEventPublisher['publishTicketAssigned']>[0];
 
 /**
@@ -330,19 +340,26 @@ export function buildModelPublisherTicketCreatedPayload(
   data: PublishTicketCreatedInput,
   extras?: Record<string, unknown>
 ) {
-  return withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata, ...extras });
+  return builtWorkflowPayload('TICKET_CREATED', withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata, ...extras }));
 }
 
 export function buildModelPublisherTicketUpdatedPayload(data: PublishTicketUpdatedInput) {
-  return withDefined({ ticketId: data.ticketId, userId: data.userId, changes: data.changes, ...data.metadata });
+  return builtWorkflowPayload('TICKET_UPDATED', withDefined({ ticketId: data.ticketId, userId: data.userId, changes: data.changes, ...data.metadata }));
 }
 
 export function buildModelPublisherTicketClosedPayload(data: PublishTicketClosedInput) {
-  return withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata });
+  return builtWorkflowPayload('TICKET_CLOSED', withDefined({ ticketId: data.ticketId, userId: data.userId, ...data.metadata }));
 }
 
 export function buildModelPublisherTicketAssignedPayload(data: PublishTicketAssignedInput) {
-  return withDefined({ ticketId: data.ticketId, userId: data.userId, assignedByUserId: data.assignedByUserId });
+  return builtWorkflowPayload('TICKET_ASSIGNED', withDefined({ ticketId: data.ticketId, userId: data.userId, assignedByUserId: data.assignedByUserId }));
+}
+
+export function buildModelPublisherTicketCommentAddedPayload(data: PublishTicketCommentCreatedInput) {
+  return builtWorkflowPayload(
+    'TICKET_COMMENT_ADDED',
+    withDefined({ ticketId: data.ticketId, commentId: data.commentId, userId: data.userId, ...data.metadata })
+  );
 }
 
 /**
@@ -352,40 +369,56 @@ export function buildModelPublisherTicketAssignedPayload(data: PublishTicketAssi
  * there is no actor, a sentinel older subscribers rely on.
  */
 export function buildInboundPublisherTicketCreatedPayload(data: PublishTicketCreatedInput) {
-  return {
+  return builtWorkflowPayload('TICKET_CREATED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     userId: data.userId || data.ticketId,
     ...data.metadata,
-  };
+  });
 }
 
 export function buildInboundPublisherTicketUpdatedPayload(data: PublishTicketUpdatedInput) {
-  return {
+  return builtWorkflowPayload('TICKET_UPDATED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     userId: data.userId || data.ticketId,
     changes: data.changes,
     ...data.metadata,
-  };
+  });
 }
 
 export function buildInboundPublisherTicketClosedPayload(data: PublishTicketClosedInput) {
-  return {
+  return builtWorkflowPayload('TICKET_CLOSED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     userId: data.userId || data.ticketId,
     ...data.metadata,
-  };
+  });
 }
 
 export function buildInboundPublisherTicketAssignedPayload(data: PublishTicketAssignedInput) {
-  return {
+  return builtWorkflowPayload('TICKET_ASSIGNED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     userId: data.userId,
     assignedByUserId: data.assignedByUserId,
-  };
+  });
+}
+
+/** Same shape for WorkflowEventPublisher and the inbound-email outbox (the legacy `comment` object feeds the notification subscribers). */
+export function buildInboundPublisherTicketCommentAddedPayload(data: PublishTicketCommentCreatedInput) {
+  return builtWorkflowPayload('TICKET_COMMENT_ADDED', {
+    tenantId: data.tenantId,
+    ticketId: data.ticketId,
+    commentId: data.commentId,
+    userId: data.userId || data.ticketId,
+    comment: {
+      id: data.commentId,
+      content: data.metadata?.content || '',
+      author: data.metadata?.author || 'System',
+      isInternal: data.metadata?.isInternal || false,
+    },
+  });
 }
 
 /**
@@ -401,7 +434,7 @@ export function buildTicketStatusChangedOutboxPayload(data: {
   newStatusId: string;
   changedAt: string;
 }) {
-  return {
+  return builtWorkflowPayload('TICKET_STATUS_CHANGED', {
     tenantId: data.tenantId,
     ticketId: data.ticketId,
     occurredAt: data.changedAt,
@@ -409,7 +442,7 @@ export function buildTicketStatusChangedOutboxPayload(data: {
     previousStatusId: data.previousStatusId,
     newStatusId: data.newStatusId,
     changedAt: data.changedAt,
-  };
+  });
 }
 
 /**
@@ -423,9 +456,9 @@ export function withOutboxOccurredAt<T extends Record<string, unknown>>(payload:
 }
 
 /**
- * The team a TICKET_ASSIGNED event assigns, from either payload shape: the current
- * `changes.assigned_team_id = { new }` / top-level `assignedTeamId`, or the legacy bare string on
- * events already sitting in a stream when the shape changed.
+ * The team a TICKET_ASSIGNED event assigns: top-level `assignedTeamId` (current), or a
+ * `changes.assigned_team_id` entry (bare string or `{ new }`) on events emitted by earlier builds
+ * that are still sitting in a stream.
  */
 export function readAssignedTeamId(payload: unknown): string | undefined {
   const p = (payload ?? {}) as { assignedTeamId?: unknown; changes?: { assigned_team_id?: unknown } };
@@ -462,11 +495,13 @@ export type TicketCommentAddedInput = {
 };
 
 /**
- * TICKET_COMMENT_ADDED (legacy bus event; not in the workflow catalog, validated against
- * payload.TicketCommentAdded.v1). Carries `commentId` at the top level, which workflows correlate on.
+ * TICKET_COMMENT_ADDED (payload.TicketCommentAdded.v1). Carries `commentId` at the top level, which
+ * workflows correlate on. The payload is context-complete (tenantId/occurredAt/userId inside it)
+ * because the comment publication outbox persists it; replay it with `publishStoredWorkflowEvent`.
+ * The nested `comment` object and `thread_*` fields are legacy notification-subscriber fields.
  */
 export function buildTicketCommentAddedPayload(input: TicketCommentAddedInput) {
-  return {
+  return builtWorkflowPayload('TICKET_COMMENT_ADDED', {
     tenantId: input.tenantId,
     occurredAt: input.occurredAt,
     ticketId: input.ticketId,
@@ -482,5 +517,29 @@ export function buildTicketCommentAddedPayload(input: TicketCommentAddedInput) {
       suppressContactNotifications: input.suppressContactNotifications,
       suppressInternalNotifications: input.suppressInternalNotifications,
     }),
-  };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// TICKET_ADDITIONAL_AGENT_ASSIGNED
+// ---------------------------------------------------------------------------
+
+export function buildTicketAdditionalAgentAssignedPayload(
+  input: TicketNotificationSuppression & {
+    ticketId: string;
+    primaryAgentId: string;
+    additionalAgentId: string;
+    assignedByUserId?: string | null;
+    /** Provenance (workflowRunId, ...) merged onto the payload. */
+    extras?: Record<string, unknown>;
+  }
+) {
+  return builtWorkflowPayload('TICKET_ADDITIONAL_AGENT_ASSIGNED', {
+    ticketId: input.ticketId,
+    primaryAgentId: input.primaryAgentId,
+    additionalAgentId: input.additionalAgentId,
+    ...(input.assignedByUserId ? { assignedByUserId: input.assignedByUserId } : {}),
+    ...suppressionFields(input),
+    ...input.extras,
+  });
 }
