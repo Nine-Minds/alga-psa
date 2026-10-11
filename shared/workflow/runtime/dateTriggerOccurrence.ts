@@ -1,4 +1,5 @@
-import type { dateTriggerPayloadSchemaRefs } from './schemas/dateTriggerPayloadSchemas';
+import type { DateTriggerSourceId } from './dateTriggerSourceDefinitions';
+import { validateDateTriggerParams, type TicketStatusAgeParams } from './dateTriggerParams';
 
 /**
  * When a date trigger fires, and what its payload says about the date. One definition shared by the
@@ -9,7 +10,7 @@ import type { dateTriggerPayloadSchemaRefs } from './schemas/dateTriggerPayloadS
  * stores offsetDays = -30 and fires on occursOn - 30 days; "after" is positive; "on the day" is 0.
  */
 
-export type WorkflowDateTriggerSourceId = keyof typeof dateTriggerPayloadSchemaRefs;
+export type WorkflowDateTriggerSourceId = DateTriggerSourceId;
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})/;
 
@@ -39,6 +40,49 @@ export const addDaysToIsoDate = (date: string, days: number): string | null => {
 /** The day a date trigger fires for an occurrence: the occurrence date plus the trigger's offset. */
 export const computeDateTriggerFireDate = (occursOn: string, offsetDays: number): string | null =>
   addDaysToIsoDate(occursOn, offsetDays);
+
+/** Whole calendar days from `from` to `to` (YYYY-MM-DD, UTC arithmetic so daylight saving never shifts a day). */
+export const daysBetweenIsoDates = (from: string, to: string): number | null => {
+  const a = parseIsoDate(from);
+  const b = parseIsoDate(to);
+  if (!a || !b) return null;
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86_400_000);
+};
+
+export type StatusAgeOccurrence = {
+  /** The date this occurrence is about: the anchor date plus N days, plus k repeat periods. */
+  occursOn: string;
+  /** 0 for the first firing, k for the k-th repeat. */
+  repeatIndex: number;
+  /** False while the first occurrence is still in the future (`today` is before anchor + N). */
+  due: boolean;
+};
+
+/**
+ * The occurrence of "ticket has been in a status for N days, repeating every R days".
+ *
+ * `anchorDate` is the local calendar date the ticket entered its status (or, with "no activity",
+ * the date of its last activity if later). First occurrence: anchor + N. With a repeat period R the
+ * occurrence is the LATEST k >= 0 with anchor + N + k*R <= today: periods missed (scan outage,
+ * workflow published late) collapse to the latest one instead of a burst of catch-ups.
+ */
+export const computeStatusAgeOccurrence = (params: {
+  anchorDate: string;
+  days: number;
+  repeatEveryDays?: number | null;
+  today: string;
+}): StatusAgeOccurrence | null => {
+  const first = addDaysToIsoDate(params.anchorDate, params.days);
+  if (!first || !Number.isInteger(params.days) || params.days < 0) return null;
+  const elapsed = daysBetweenIsoDates(first, params.today);
+  if (elapsed === null) return null;
+  if (elapsed < 0) return { occursOn: first, repeatIndex: 0, due: false };
+  const repeat = params.repeatEveryDays;
+  if (!repeat || !Number.isInteger(repeat) || repeat < 1) return { occursOn: first, repeatIndex: 0, due: true };
+  const repeatIndex = Math.floor(elapsed / repeat);
+  const occursOn = addDaysToIsoDate(first, repeatIndex * repeat);
+  return occursOn ? { occursOn, repeatIndex, due: true } : null;
+};
 
 const daysInMonth = (year: number, month: number): number => new Date(Date.UTC(year, month, 0)).getUTCDate();
 
@@ -73,11 +117,11 @@ export type DateTriggerOccurrence = {
 
 export type DateTriggerOccurrenceRule = {
   /** The kind of record a run of this source is about (the picker kind of its id field). */
-  recordKind: 'client' | 'contract' | 'asset';
+  recordKind: 'client' | 'contract' | 'asset' | 'ticket';
   /** Payload field holding the occurrence date itself, when the payload has one. */
   payloadDateField?: string;
   /** The occurrence for a record, as the scheduler would build it; null when the record has no such date. */
-  fromRecord: (record: RecordFields, today: string) => DateTriggerOccurrence | null;
+  fromRecord: (record: RecordFields, today: string, params?: Record<string, unknown>) => DateTriggerOccurrence | null;
 };
 
 /**
@@ -136,6 +180,28 @@ export const DATE_TRIGGER_OCCURRENCE_RULES: Record<WorkflowDateTriggerSourceId, 
       return occursOn ? { occursOn, payload: { warrantyEndDate: occursOn } } : null;
     },
   },
+  'ticket.status_age': {
+    recordKind: 'ticket',
+    fromRecord: (record, today, params) => {
+      const validated = validateDateTriggerParams('ticket.status_age', params);
+      if (!validated.ok || !validated.params) return null;
+      const { days, repeatEveryDays } = validated.params as unknown as TicketStatusAgeParams;
+      // The Run dialog has no tenant timezone; the date part of the timestamp is close enough for a test payload.
+      const entered = record.status_changed_at ?? record.entered_at ?? record.created_at;
+      const anchorDate = toIsoDateOnly(entered);
+      if (!anchorDate) return null;
+      const occurrence = computeStatusAgeOccurrence({ anchorDate, days, repeatEveryDays, today });
+      if (!occurrence) return null;
+      return {
+        occursOn: occurrence.occursOn,
+        payload: {
+          enteredStatusAt: typeof entered === 'string' ? entered : entered instanceof Date ? entered.toISOString() : `${anchorDate}T00:00:00.000Z`,
+          daysInStatus: Math.max(0, daysBetweenIsoDates(anchorDate, today) ?? 0),
+          repeatIndex: occurrence.repeatIndex,
+        },
+      };
+    },
+  },
 };
 
 export const isWorkflowDateTriggerSource = (source: unknown): source is WorkflowDateTriggerSourceId =>
@@ -155,9 +221,11 @@ export const deriveDateTriggerTiming = (params: {
   payload: Record<string, unknown>;
   record?: RecordFields | null;
   today: string;
+  /** The trigger's `params`, for sources that take them. */
+  params?: Record<string, unknown>;
 }): Record<string, unknown> => {
   const rule = DATE_TRIGGER_OCCURRENCE_RULES[params.source];
-  const occurrence = params.record ? rule.fromRecord(params.record, params.today) : null;
+  const occurrence = params.record ? rule.fromRecord(params.record, params.today, params.params) : null;
   const occursOn = occurrence?.occursOn
     ?? (rule.payloadDateField ? toIsoDateOnly(params.payload[rule.payloadDateField]) : null)
     ?? toIsoDateOnly(params.payload.occursOn);

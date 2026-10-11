@@ -168,7 +168,8 @@
       "expandGroup": "Expand group",
       "collapseGroup": "Collapse group",
       "renameGroup": "Rename group",
-      "deleteGroup": "Delete group"
+      "deleteGroup": "Delete group",
+      "groupMenu": "Group actions"
     },
     "dropActivitiesHere": "Drop activities here",
     "ungroupedHeading": "Ungrouped",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Priority",
       "dueDate": "Due Date"
+    },
+    "defaultBadge": "Default",
+    "defaultBadgeHint": "Activities you haven't placed in a group appear here, including newly assigned work.",
+    "defaultGroupEmpty": "New work assigned to you will appear here",
+    "menu": {
+      "setDefault": "Make default for new work",
+      "unsetDefault": "Stop using as default"
+    },
+    "errors": {
+      "setDefaultFailed": "Couldn't update the default group"
     }
   },
   "printable": {

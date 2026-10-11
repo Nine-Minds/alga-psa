@@ -18,6 +18,7 @@ import type {
   ClaimedInboundEmailQueueJobV2,
   UnifiedInboundEmailQueueJobV2,
 } from '../../interfaces/inbound-email.interfaces';
+import { recordQueueJobOutcome } from './inboundEmailMetrics';
 
 const DEFAULT_V2_READY_KEY = 'email:inbound:unified:v2:ready';
 const DEFAULT_V2_PROCESSING_KEY = 'email:inbound:unified:v2:processing';
@@ -514,6 +515,7 @@ export async function claimInboundEmailDurableJob(params: {
     }
 
     if ((envelope as any).status === 'invalid') {
+      recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'invalid_payload' });
       console.error('[UnifiedInboundEmailQueueV2] invalid_payload_dlq', {
         event: 'inbound_email_queue_v2_invalid_payload_dlq',
         payloadLength: Number((envelope as any).payloadLength || 0),
@@ -555,6 +557,7 @@ export async function ackInboundEmailDurableJob(
   });
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   if (parsed?.status === 'noop') {
+    recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'stale' });
     console.warn('[UnifiedInboundEmailQueueV2] ack_noop', {
       event: 'inbound_email_queue_v2_stale_ack',
       ...getJobLogFields(claim.job),
@@ -562,6 +565,7 @@ export async function ackInboundEmailDurableJob(
     });
     return { status: 'noop' };
   }
+  recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'ack' });
   console.log('[UnifiedInboundEmailQueueV2] ack', {
     event: 'inbound_email_queue_v2_ack',
     ...getJobLogFields(claim.job),
@@ -594,6 +598,7 @@ export async function failInboundEmailDurableJob(params: {
   });
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   if (parsed?.status === 'noop') {
+    recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'stale' });
     console.warn('[UnifiedInboundEmailQueueV2] fail_noop', {
       event: 'inbound_email_queue_v2_stale_fail',
       ...getJobLogFields(params.claim.job),
@@ -603,6 +608,7 @@ export async function failInboundEmailDurableJob(params: {
   }
   const attempt = Number(parsed?.attempt ?? params.claim.job.attempt + 1);
   if (parsed?.status === 'dlq') {
+    recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'dlq' });
     console.error('[UnifiedInboundEmailQueueV2] dlq', {
       event: 'inbound_email_queue_v2_dlq',
       ...getJobLogFields(params.claim.job),
@@ -612,6 +618,7 @@ export async function failInboundEmailDurableJob(params: {
     });
     return { action: 'dlq', attempt };
   }
+  recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'retry' });
   console.warn('[UnifiedInboundEmailQueueV2] retry', {
     event: 'inbound_email_queue_v2_retry',
     ...getJobLogFields(params.claim.job),
@@ -642,6 +649,7 @@ export async function deferInboundEmailDurableJob(params: {
   });
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   if (parsed?.status === 'noop') {
+    recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'stale' });
     console.warn('[UnifiedInboundEmailQueueV2] defer_noop', {
       event: 'inbound_email_queue_v2_stale_defer',
       ...getJobLogFields(params.claim.job),
@@ -649,6 +657,7 @@ export async function deferInboundEmailDurableJob(params: {
     });
     return { status: 'noop' };
   }
+  recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'defer' });
   console.log('[UnifiedInboundEmailQueueV2] defer', {
     event: 'inbound_email_queue_v2_defer',
     ...getJobLogFields(params.claim.job),
@@ -685,6 +694,9 @@ export async function reclaimExpiredInboundEmailDurableJobs(limit: number = 20):
   const parsed = typeof result === 'string' ? JSON.parse(result) : result;
   const reclaimed = Number(parsed?.reclaimed ?? 0);
   if (reclaimed > 0) {
+    for (let i = 0; i < reclaimed; i += 1) {
+      recordQueueJobOutcome({ queue: 'v2', providerType: 'other', outcome: 'reclaim' });
+    }
     console.warn('[UnifiedInboundEmailQueueV2] reclaim', {
       event: 'inbound_email_queue_v2_reclaim',
       reclaimed,

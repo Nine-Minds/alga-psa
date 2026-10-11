@@ -819,6 +819,26 @@ describe('quoteActions', () => {
   });
 
 
+  it('requestQuoteApprovalChanges rejects a blank comment without touching the quote', async () => {
+    const { requestQuoteApprovalChanges } = await import('../../src/actions/quoteActions');
+    const result = await requestQuoteApprovalChanges(QUOTE_ID, '   ');
+
+    expect(result).toMatchObject({ actionError: 'A comment is required when requesting quote changes' });
+    expect(Quote.update).not.toHaveBeenCalled();
+    expect(QuoteActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('requestQuoteApprovalChanges requires quotes:approve permission', async () => {
+    hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
+      !(resource === 'quotes' && action === 'approve')
+    ));
+    const { requestQuoteApprovalChanges } = await import('../../src/actions/quoteActions');
+    const result = await requestQuoteApprovalChanges(QUOTE_ID, 'Please revise');
+
+    expect(result).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(Quote.update).not.toHaveBeenCalled();
+  });
+
   it('T122: approveQuote requires quotes:approve permission', async () => {
     hasPermissionMock.mockImplementation(async (_user: unknown, resource: string, action: string) => (
       !(resource === 'quotes' && action === 'approve')

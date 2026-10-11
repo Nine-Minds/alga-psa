@@ -677,8 +677,8 @@
           "suppressAiHelp": "Tylko dodatek Enterprise AI Assistant. Jeśli niedostępny, odpowiedzi otwierają zgłoszenia normalnie."
         },
         "liveTimer": {
-          "label": "Włącz stoper zgłoszeń na żywo",
-          "help": "Pokazuje stoper na żywo i rejestrowane interwały na zgłoszeniach tej tablicy. Ręczne wprowadzanie czasu pozostaje dostępne."
+          "label": "Pokaż stoper przy zgłoszeniach",
+          "help": "Pokazuje elementy sterujące stoperem przy zgłoszeniach tej tablicy. Wyłącz, aby ukryć tutaj stoper; ręczne wprowadzanie czasu pozostaje dostępne. Już uruchomiony stoper działa dalej."
         },
         "clientPortalVisible": {
           "label": "Widoczna w portalu klienta",
@@ -855,7 +855,7 @@
           "statuses": "Priorytety i statusy",
           "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
           "display": "Wyświetlanie i zachowanie",
-          "displayHelp": "Licznik na żywo i typ tablicy"
+          "displayHelp": "Stoper i typ tablicy"
         },
         "saveChanges": "Zapisz zmiany",
         "unsaved": "Niezapisane",

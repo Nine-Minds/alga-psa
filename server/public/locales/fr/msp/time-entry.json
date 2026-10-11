@@ -213,9 +213,9 @@
     },
     "labels": {
       "status": "Statut :",
-      "showIntervals": "Afficher les intervalles",
       "grid": "Grille",
-      "list": "Liste"
+      "list": "Liste",
+      "showSuggestions": "Suggestions"
     }
   },
   "approval": {
@@ -402,52 +402,6 @@
     "title": "Légende facturable",
     "description": "Indicateurs de couleur pour les ratios de temps facturables"
   },
-  "intervalItem": {
-    "now": "Maintenant",
-    "autoClosed": "Fermeture automatique",
-    "active": "Actif"
-  },
-  "intervals": {
-    "createdFromNote_one": "Créé à partir de {{count}} intervalle",
-    "createdFromNote_other": "Créé à partir de {{count}} intervalles",
-    "selectedCount_one": "{{count}} intervalle sélectionné",
-    "selectedCount_other": "{{count}} intervalles sélectionnés",
-    "title": "Intervalles de temps des tickets",
-    "hideShortIntervals": "Masquer les intervalles inférieurs à 1 minute",
-    "totalTime": "Durée totale: {{value}}",
-    "selectedOne": "{{count}} intervalle sélectionné",
-    "selectedOther": "{{count}} intervalles sélectionnés",
-    "tooltips": {
-      "createTimeEntry": "Créer une entrée de temps à partir d'intervalles sélectionnés",
-      "deleteSelected": "Supprimer les intervalles sélectionnés",
-      "mergeSelected": "Fusionner les intervalles sélectionnés"
-    },
-    "actions": {
-      "selectAll": "Sélectionner tout",
-      "deselectAll": "Désélectionner tout",
-      "merge": "Fusionner"
-    },
-    "states": {
-      "loading": "Intervalles de chargement...",
-      "noIntervalsThisPeriod": "Aucun intervalle trouvé pour cette période",
-      "noIntervalsThisTicket": "Aucun intervalle trouvé pour ce ticket",
-      "noIntervalsLongerThanMinute": "Aucun intervalle de plus d'une minute trouvé"
-    },
-    "entryName": "Entrée de temps du ticket",
-    "messages": {
-      "cannotFindTimeSheet": "Impossible de créer une saisie de temps - impossible de trouver ou de créer une feuille de temps",
-      "mergeFirst": "Veuillez fusionner les intervalles avant de créer une entrée de temps",
-      "sameTicketOnly": "Peut uniquement créer des entrées de temps à partir d'intervalles du même ticket",
-      "mergeSameTicketOnly": "Ne peut fusionner que les intervalles du même ticket",
-      "mergeSuccess": "Les intervalles ont été fusionnés avec succès",
-      "failedMerge": "Échec de la fusion des intervalles",
-      "noActivePeriod": "Aucune période active trouvée",
-      "failedFetchTimeSheet": "Échec de la création ou de la récupération de la feuille de temps",
-      "failedPrepareTimeEntry": "Échec de la préparation de la saisie du temps",
-      "savedSuccess": "La saisie du temps a été enregistrée avec succès",
-      "failedSave": "Échec de l'enregistrement de la saisie du temps"
-    }
-  },
   "addWorkItemDialog": {
     "title": "Ajouter un élément de travail",
     "description": "Sélectionnez un élément de travail à ajouter à la feuille de temps",
@@ -511,6 +465,15 @@
       "duplicate": "Un paramètre de période en conflit existe déjà.",
       "missingField": "Un champ obligatoire du paramètre de période est manquant.",
       "missingFieldNamed": "Un champ obligatoire du paramètre de période est manquant : {{field}}."
+    },
+    "stopwatch": {
+      "notFound": "Session de chronomètre introuvable. Elle a peut-être déjà été enregistrée ou abandonnée. Veuillez actualiser.",
+      "notOpen": "Cette session de chronomètre est déjà fermée.",
+      "workItemNotFound": "L'élément de travail de ce chronomètre est introuvable.",
+      "unsupportedWorkItem": "Le chronomètre ne peut être démarré que sur des tickets et des tâches de projet.",
+      "boardDisabled": "Le chronomètre est désactivé pour le tableau de ce ticket.",
+      "alreadyOpen": "Vous avez déjà un chronomètre en cours. Arrêtez-le ou abandonnez-le d'abord.",
+      "serviceRequired": "Choisissez un service avant d'enregistrer cette session de chronomètre."
     }
   },
   "workItemEntry": {
@@ -540,5 +503,49 @@
     "noPeriods": "Aucune période de temps n'est configurée, la saisie du temps est donc impossible. Demandez à un administrateur de créer des périodes de temps sous Paramètres → Saisie du temps.",
     "noEditablePeriods": "Toutes les feuilles de temps sont soumises ou approuvées ; il n’y a donc aucun jour où ajouter du temps. Demandez à un approbateur de rouvrir une feuille, ou à un administrateur d’ajouter une période.",
     "prepareFailed": "Une erreur s'est produite lors de la préparation de l'entrée de temps. Veuillez réessayer."
+  },
+  "suggestions": {
+    "title": "Suggestions",
+    "description": "Tickets sur lesquels vous avez travaillé pendant cette période sans temps enregistré. Rien n'est enregistré tant que vous ne choisissez pas Saisir le temps.",
+    "loading": "Chargement des suggestions...",
+    "empty": "Aucune suggestion pour cette période",
+    "dismissAllForDay": "Ignorer tout pour ce jour",
+    "logTime": "Saisir le temps",
+    "dismiss": "Ignorer",
+    "estimatedNotice": "Ces heures sont estimées à partir de votre activité sur ce ticket. Ajustez-les selon le temps réellement travaillé.",
+    "dismissFailed": "Échec du rejet de la suggestion",
+    "activitySummary_one": "première activité {{first}} · dernière {{last}} · {{count}} action ({{kinds}})",
+    "activitySummary_other": "première activité {{first}} · dernière {{last}} · {{count}} actions ({{kinds}})",
+    "kinds": {
+      "created": "créé",
+      "commented": "commenté",
+      "internalNote": "note interne",
+      "statusChanged": "statut modifié",
+      "priorityChanged": "priorité modifiée",
+      "assignmentChanged": "affectation modifiée",
+      "documentsChanged": "documents modifiés",
+      "checklistChanged": "liste de contrôle modifiée",
+      "linksChanged": "liens modifiés",
+      "updated": "mis à jour"
+    }
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} suivi en {{count}} segment (pause : {{paused}})",
+    "pausedNotice_other": "{{active}} suivis en {{count}} segments (pause : {{paused}})",
+    "discardDialog": {
+      "title": "Supprimer ce chronomètre ?",
+      "message": "Le temps suivi sur {{workItem}} ({{duration}}) sera supprimé et aucune entrée de temps ne sera créée. Cette action est irréversible.",
+      "confirm": "Supprimer",
+      "cancel": "Conserver le chronomètre"
+    },
+    "conflictDialog": {
+      "title": "Un chronomètre est déjà ouvert",
+      "message": "Vous suivez déjà {{duration}} sur {{workItem}}. Un seul chronomètre peut être ouvert à la fois.",
+      "stopAndLog": "Arrêter et enregistrer l'actuel, puis démarrer",
+      "discard": "Supprimer l'actuel, puis démarrer (le temps suivi est supprimé)",
+      "confirm": "Continuer",
+      "cancel": "Annuler"
+    },
+    "ticketFallbackName": "Ticket {{number}}"
   }
 }

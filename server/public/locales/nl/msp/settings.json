@@ -673,8 +673,8 @@
           "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal."
         },
         "liveTimer": {
-          "label": "Live tickettimer inschakelen",
-          "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+          "label": "Stopwatch tonen bij tickets",
+          "help": "Toont de stopwatchbediening bij tickets in dit bord. Schakel dit uit om de stopwatch hier te verbergen; handmatige tijdinvoer blijft beschikbaar. Een stopwatch die al loopt, blijft lopen."
         },
         "clientPortalVisible": {
           "label": "Zichtbaar in klantportaal",
@@ -851,7 +851,7 @@
           "statuses": "Prioriteiten & statussen",
           "statusesHelp": "Standaardprioriteit en de ticketstatussen voor dit bord",
           "display": "Weergave & gedrag",
-          "displayHelp": "Live-timer en bordtype"
+          "displayHelp": "Stopwatch en bordtype"
         },
         "saveChanges": "Wijzigingen opslaan",
         "unsaved": "Niet opgeslagen",

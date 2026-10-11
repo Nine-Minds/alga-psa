@@ -168,7 +168,8 @@
       "expandGroup": "Rozwiń grupę",
       "collapseGroup": "Zwiń grupę",
       "renameGroup": "Zmień nazwę grupy",
-      "deleteGroup": "Usuń grupę"
+      "deleteGroup": "Usuń grupę",
+      "groupMenu": "Akcje grupy"
     },
     "dropActivitiesHere": "Upuść aktywności tutaj",
     "ungroupedHeading": "Niepogrupowane",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Priorytet",
       "dueDate": "Termin"
+    },
+    "defaultBadge": "Domyślna",
+    "defaultBadgeHint": "Aktywności, których nie umieszczono w żadnej grupie, pojawiają się tutaj, w tym nowo przypisane zadania.",
+    "defaultGroupEmpty": "Nowa praca przypisana do Ciebie pojawi się tutaj",
+    "menu": {
+      "setDefault": "Ustaw jako domyślną dla nowej pracy",
+      "unsetDefault": "Przestań używać jako domyślnej"
+    },
+    "errors": {
+      "setDefaultFailed": "Nie udało się zaktualizować grupy domyślnej"
     }
   },
   "printable": {

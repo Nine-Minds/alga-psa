@@ -63,7 +63,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -967,9 +967,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
 
-  // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
-
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
     const filterQuery = getCurrentFiltersQuery();
@@ -979,8 +976,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo(href);
   }, [getCurrentFiltersQuery, navigateAwayTo]);
 
-
-  // Handle saving time entries created from intervals
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());

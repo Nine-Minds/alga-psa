@@ -33,6 +33,11 @@ import {
   generateInvoiceNumber,
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
+  NOTHING_TO_BILL_MESSAGE_KEY,
+  RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+} from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
@@ -160,7 +165,19 @@ function throwRecurringInvoiceApiError(error: unknown): never {
   throw error;
 }
 
-function isReturnedActionError(value: unknown): value is { readonly actionError: string } | { readonly permissionError: string } {
+// Expected engine refusals the generation action returns keyed, with operator-facing
+// wording; recognized by key so the API answers 409 however the sentence reads.
+const RECURRING_CONFLICT_MESSAGE_KEYS: ReadonlySet<string> = new Set([
+  RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+  NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
+  NOTHING_TO_BILL_MESSAGE_KEY,
+]);
+
+type ReturnedActionError =
+  | { readonly actionError: string; readonly messageKey?: string }
+  | { readonly permissionError: string };
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
   return Boolean(
     value &&
       typeof value === 'object' &&
@@ -171,7 +188,10 @@ function isReturnedActionError(value: unknown): value is { readonly actionError:
   );
 }
 
-function throwReturnedActionError(error: { readonly actionError: string } | { readonly permissionError: string }): never {
+function throwReturnedActionError(error: ReturnedActionError): never {
+  if ('actionError' in error && error.messageKey && RECURRING_CONFLICT_MESSAGE_KEYS.has(error.messageKey)) {
+    throw new ConflictError(error.actionError);
+  }
   throwRecurringInvoiceApiError(new Error('permissionError' in error ? error.permissionError : error.actionError));
 }
 

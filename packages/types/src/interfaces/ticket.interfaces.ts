@@ -57,6 +57,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   assigned_to: string | null;
   assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
+  /** When the ticket entered its current status (maintained on every status change). */
+  status_changed_at?: string | null;
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
   /** Denormalized close flag kept in sync with the selected status. */

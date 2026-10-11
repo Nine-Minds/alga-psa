@@ -519,7 +519,7 @@ async function completeContractWizardFlow(
 
     const serviceSelectComponent = await findComponent(
       page,
-      (component) => component.id === 'service-select-0'
+      (component) => component.id === 'fixed-line-0-service-select-0'
     );
 
     const serviceSelectLocator = page.locator(`[data-automation-id="${serviceSelectComponent.id}"]`);
@@ -527,9 +527,9 @@ async function completeContractWizardFlow(
     await expect(page.getByRole('option', { name: serviceName })).toBeVisible({ timeout: 10_000 });
     await page.getByRole('option', { name: serviceName }).click();
 
-    await page.locator('[data-automation-id="quantity-0"]').fill('1');
+    await page.locator('[data-automation-id="fixed-line-0-quantity-0"]').fill('1');
 
-    const baseRateField = page.locator('[data-automation-id="fixed_base_rate"]');
+    const baseRateField = page.locator('[data-automation-id="fixed-line-0-base-rate"]');
     const baseRateToUse = options?.baseRate ?? 500;
     await baseRateField.fill(baseRateToUse.toString());
     await baseRateField.blur();
@@ -1261,12 +1261,12 @@ test.describe('Contract Wizard Invalid Numeric Inputs', () => {
       await page.getByRole('option', { name: fixedServiceName }).click();
 
       // Set quantity to 0; UI coerces to 1
-      const qty = page.locator('[data-automation-id="quantity-0"], #quantity-0');
+      const qty = page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0');
       await qty.fill('0');
       await expect(qty).toHaveValue('1', { timeout: 2000 });
 
       // Set base rate to 0 and attempt Next -> expect validation error
-      const baseRate = page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate');
+      const baseRate = page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate');
       await baseRate.fill('0');
       await baseRate.blur();
       await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
@@ -1412,9 +1412,9 @@ test.describe('Date Picker Timezone Regression', () => {
       const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
       await serviceSelect.click();
       await page.getByRole('option', { name: fixedServiceName }).click();
-      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('500');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').fill('500');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').blur();
       for (const _ of [0,1,2,3]) { await page.locator('[data-automation-id="wizard-next"], #wizard-next').click(); }
       await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
       await page.locator('[data-automation-id="dialog-dialog"]').waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
@@ -1552,7 +1552,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
       await serviceSelect.click();
       await page.getByRole('option', { name: fixedServiceName }).click();
-      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('2');
+      await page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0').fill('2');
       await page.locator('[data-automation-id="wizard-next"], #wizard-next').click();
       await expect(page.getByText(/Base rate is required/i)).toBeVisible();
       // Skip should still move forward per current design
@@ -1604,9 +1604,9 @@ test.describe('Contract Wizard Corner Cases', () => {
       const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).first();
       await serviceSelect.click();
       await page.getByRole('option', { name: fixedServiceName }).click();
-      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('500');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').fill('500');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').blur();
       await advanceToReview(page);
       await expect(page.locator('[data-automation-id="wizard-finish"], #wizard-finish')).toBeVisible({ timeout: 10000 });
       await page.locator('[data-automation-id="wizard-finish"], #wizard-finish').click();
@@ -1701,7 +1701,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       let select = page.getByRole('combobox', { name: /Select a service/i }).first();
       await select.click();
       await page.getByRole('option', { name: serviceA }).click();
-      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('2');
+      await page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0').fill('2');
       // Add B
       await page.getByRole('button', { name: 'Add Service' }).click();
       select = page.getByRole('combobox', { name: /Select a service/i }).last();
@@ -1709,8 +1709,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       await page.getByRole('option', { name: serviceB }).click();
       await page.locator('[data-automation-id="quantity-1"], #quantity-1').fill('3');
       // Base rate
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('750');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').fill('750');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').blur();
       // Advance to review then finish
       await advanceToReview(page);
       const review = (await page.locator('[data-automation-id="dialog-dialog"]').textContent()) || '';
@@ -1967,9 +1967,9 @@ test.describe('Contract Wizard Corner Cases', () => {
       const sel = page.getByRole('combobox', { name: /Select a service/i }).first();
       await sel.click();
       await page.getByRole('option', { name: serviceName }).click();
-      await page.locator('[data-automation-id="quantity-0"], #quantity-0').fill('1');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').fill('250');
-      await page.locator('[data-automation-id="fixed_base_rate"], #fixed_base_rate').blur();
+      await page.locator('[data-automation-id="fixed-line-0-quantity-0"], #fixed-line-0-quantity-0').fill('1');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').fill('250');
+      await page.locator('[data-automation-id="fixed-line-0-base-rate"], #fixed-line-0-base-rate').blur();
       await advanceToReview(page);
       // Double click finish quickly
       const finish = page.locator('[data-automation-id="wizard-finish"], #wizard-finish');

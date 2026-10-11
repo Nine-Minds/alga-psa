@@ -37,8 +37,15 @@ const { FixedFeeServicesStep } = await import('./FixedFeeServicesStep');
 
 const withService = (overrides: Record<string, unknown> = {}) => ({
   ...createDefaultContractWizardData(),
-  fixed_services: [
-    { service_id: 'svc-1', service_name: 'Managed Services', quantity: 1, pricing_basis: 'bundle' as const },
+  fixed_lines: [
+    {
+      line_key: 'line-1',
+      enable_proration: true,
+      base_rate: null,
+      services: [
+        { service_id: 'svc-1', service_name: 'Managed Services', quantity: 1, pricing_basis: 'bundle' as const },
+      ],
+    },
   ],
   ...overrides,
 });
@@ -103,7 +110,7 @@ describe('FixedFeeServicesStep advance-billing suggestion', () => {
 
   it('is hidden until a fixed-fee service has been added', () => {
     render(
-      <FixedFeeServicesStep data={withService({ fixed_services: [] })} updateData={vi.fn()} />,
+      <FixedFeeServicesStep data={withService({ fixed_lines: [{ line_key: 'line-1', enable_proration: true, base_rate: null, services: [] }] })} updateData={vi.fn()} />,
     );
 
     expect(document.getElementById('fixed-fee-advance-suggestion')).toBeNull();

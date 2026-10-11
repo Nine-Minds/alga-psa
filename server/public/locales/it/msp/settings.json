@@ -673,8 +673,8 @@
           "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
         },
         "liveTimer": {
-          "label": "Attiva timer ticket in tempo reale",
-          "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+          "label": "Mostra il cronometro sui ticket",
+          "help": "Mostra i controlli del cronometro sui ticket di questa bacheca. Disattivare per nascondere qui il cronometro; l'inserimento manuale del tempo rimane disponibile. Un cronometro già in esecuzione continua a funzionare."
         },
         "clientPortalVisible": {
           "label": "Visibile nel portale clienti",
@@ -851,7 +851,7 @@
           "statuses": "Priorità e stati",
           "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
           "display": "Visualizzazione e comportamento",
-          "displayHelp": "Timer dal vivo e tipo di bacheca"
+          "displayHelp": "Cronometro e tipo di bacheca"
         },
         "saveChanges": "Salva modifiche",
         "unsaved": "Non salvato",
