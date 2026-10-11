@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { launchDateTriggeredWorkflows } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
-import { dateTriggerPayloadSchemas } from '../../../../../shared/workflow/runtime/schemas/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemas } from '@alga-psa/event-schemas/schemas/domain/dateTriggerPayloadSchemas';
 import { TicketModel } from '../../../../../shared/models/ticketModel';
 import {
   writeTicketActivity,
