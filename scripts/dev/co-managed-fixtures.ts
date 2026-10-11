@@ -1422,6 +1422,18 @@ async function reset(db: Knex): Promise<void> {
     await trx('import_jobs').whereIn('job_id', fixtureJobs.clone()).del();
     await trx('jobs').whereIn('user_id', fixtureUserIds).del();
 
+    // Fifth table, same class: a fixture user's own work appends
+    // `ticket_audit_logs` rows, including on tickets the fixture never created
+    // (so `purgeTicket` cannot reach them). The foreign key
+    // `ticket_audit_logs_actor_user_fkey` is composite (tenant, actor_user_id)
+    // with NO ACTION, so it blocked deleting the user. These are audit rows the
+    // fixture user authored, so they go with the user -- but strictly by
+    // (tenant, user): each user's rows in that user's own tenant, never a
+    // tenant-wide or user-only sweep. Rows by anyone else are untouched.
+    for (const user of USERS.filter(candidate => candidate.tenant !== MUNCHKIN)) {
+      await trx('ticket_audit_logs').where({ tenant: user.tenant, actor_user_id: user.userId }).del();
+    }
+
     // The complete set was established empirically, not guessed: every foreign
     // key into `users` was enumerated from pg_constraint and counted against
     // the four fixture user ids. Beyond the fixture data FIXTURE_ROWS already
