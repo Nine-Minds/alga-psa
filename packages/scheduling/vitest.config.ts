@@ -28,6 +28,7 @@ export default defineConfig({
       'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
       'tests/monthScheduleChip.calendarColor.test.tsx',
       'tests/timeEntryLauncher.test.tsx',
+      'tests/schedulingProjectTaskDetails.activityGroup.test.tsx',
       'tests/suggestedEntriesSection.test.tsx',
       'tests/newWorkItemTimeEntry.test.tsx',
       'tests/stopwatchProvider.test.tsx',

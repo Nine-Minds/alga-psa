@@ -11,6 +11,7 @@ import type {
   ActivityEntryPopupRenderProps,
   ActivityTimeEntryDialogRenderProps,
   ActivityConvertAdHocRenderProps,
+  ActivityGroupControlRenderProps,
 } from '@alga-psa/ui/context';
 
 // Ticket imports
@@ -36,6 +37,12 @@ import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/tim
 
 // Document imports
 import { getBlockContent, updateBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
+
+// "My group" control (ticket / project-task detail screens) and the workspace-wide store that
+// backs it and the activities board. Hosts reach the control only through the cross-feature
+// context, so tickets/projects/scheduling never depend on user-activities.
+import { ActivityGroupControl } from '@alga-psa/user-activities/components/ActivityGroupControl';
+import { MyActivityGroupsProvider } from '@alga-psa/user-activities/components/MyActivityGroupsProvider';
 
 // Workflow-task (EE-only) cross-feature members. Resolves to a CE stub that supplies
 // nothing, and in the EE app build to the real TaskForm + task-inbox actions. Keeping
@@ -168,6 +175,10 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
     (props: ActivityEntryPopupRenderProps) => renderEntryPopupRef.current!(props),
     []
   );
+  const renderActivityGroupControl = useCallback(
+    (props: ActivityGroupControlRenderProps) => <ActivityGroupControl {...props} />,
+    []
+  );
   const renderTimeEntryDialog = useCallback(
     (props: ActivityTimeEntryDialogRenderProps) => renderTimeEntryDialogRef.current!(props),
     []
@@ -185,6 +196,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       renderTimeEntryDialog,
       renderConvertAdHocToTicket,
       renderConvertAdHocToProjectTask,
+      renderActivityGroupControl,
       getConsolidatedTicketData,
       getTaskWithDetails,
       getScheduleEntries,
@@ -198,12 +210,14 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       getAllContacts,
       ...workflowTaskMembers,
     }),
-    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, workflowTaskMembers]
+    [renderTicketDetails, renderTaskEdit, renderEntryPopup, renderTimeEntryDialog, renderConvertAdHocToTicket, renderConvertAdHocToProjectTask, renderActivityGroupControl, workflowTaskMembers]
   );
 
   return (
     <ActivityCrossFeatureProvider value={value}>
-      {children}
+      <MyActivityGroupsProvider>
+        {children}
+      </MyActivityGroupsProvider>
     </ActivityCrossFeatureProvider>
   );
 }

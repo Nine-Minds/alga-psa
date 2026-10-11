@@ -31,7 +31,8 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../.
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
-import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
+import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -211,6 +212,7 @@ export function BentoHero({
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
   const [additionalAgentsOpen, setAdditionalAgentsOpen] = useState(false);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -970,6 +972,21 @@ export function BentoHero({
             </Button>
           </div>
         </div>
+
+        {/* Personal "My group" control: under the title row, outside the shared field tiles.
+            Rendered only when a composition layer supplies it (absent in AlgaDesk). */}
+        {ticket.ticket_id && activityCrossFeature?.renderActivityGroupControl ? (
+          <div className="mt-2">
+            {activityCrossFeature.renderActivityGroupControl({
+              id: `${id}-activity-group`,
+              activityType: 'ticket',
+              activityId: ticket.ticket_id,
+              // Built from SAVED state (props), not unsaved hero edits. Same id resolution as
+              // TicketDetails' additionalAgentsForInfo, so the key matches TicketInfo's.
+              assignmentKey: buildTicketAssignmentKey(ticket.assigned_to, additionalAgents?.map((a) => a.additional_user_id || a.assigned_to)),
+            })}
+          </div>
+        ) : null}
 
         {hasUnsavedChanges ? (
           <Alert id={`${id}-unsaved-changes-banner`} variant="warning" className="mt-3">
