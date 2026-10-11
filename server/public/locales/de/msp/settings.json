@@ -2057,7 +2057,7 @@
       "openMenu": "Menü öffnen",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Enddatum",
+        "endDate": "Letzter Tag",
         "actions": "Aktionen"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Startdatum auswählen",
         "noEndDate": "Kein Enddatum",
-        "endDate": "Enddatum",
+        "endDate": "Letzter Tag des Zeitraums",
+        "endDateHelp": "Der Zeitraum schließt diesen Tag ein.",
         "endDatePlaceholder": "Enddatum auswählen",
         "deletePeriod": "Zeitraum löschen",
         "confirmDeleteTitle": "Löschen bestätigen",
@@ -2083,7 +2084,7 @@
         "noSettings": "Keine Abrechnungszeitraum-Einstellungen vorhanden. Es kann kein neuer Zeitraum erstellt werden.",
         "settingsRequired": "Ohne Einstellungen kann kein Zeitraum verwaltet werden.",
         "startDateRequired": "Es muss ein Startdatum angegeben werden.",
-        "startBeforeEnd": "Das Startdatum muss vor dem Enddatum liegen.",
+        "startBeforeEnd": "Das Enddatum darf nicht vor dem Startdatum liegen.",
         "overlap": "Der Zeitraum überschneidet sich mit einem bestehenden Zeitraum.",
         "overlapRetry": "Dieser Zeitraum überschneidet sich mit einem bestehenden. Bitte wählen Sie andere Daten.",
         "create": "Der Zeitraum konnte nicht erstellt werden.",

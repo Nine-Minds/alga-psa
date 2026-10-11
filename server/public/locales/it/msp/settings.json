@@ -2057,7 +2057,7 @@
       "openMenu": "Apri menu",
       "columns": {
         "startDate": "Data di inizio",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno",
         "actions": "Azioni"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Data di inizio",
         "startDatePlaceholder": "Seleziona la data di inizio",
         "noEndDate": "Nessuna data di fine",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno del periodo",
+        "endDateHelp": "Il periodo include questo giorno.",
         "endDatePlaceholder": "Seleziona la data di fine",
         "deletePeriod": "Elimina periodo",
         "confirmDeleteTitle": "Conferma eliminazione",
@@ -2083,7 +2084,7 @@
         "noSettings": "Nessuna impostazione dei periodi disponibile. Impossibile creare un nuovo periodo.",
         "settingsRequired": "Impossibile gestire un periodo senza impostazioni.",
         "startDateRequired": "È necessario indicare una data di inizio.",
-        "startBeforeEnd": "La data di inizio deve precedere la data di fine.",
+        "startBeforeEnd": "La data di fine non può essere precedente alla data di inizio.",
         "overlap": "Il periodo si sovrappone a un periodo esistente.",
         "overlapRetry": "Questo periodo si sovrappone a uno esistente. Scegli date diverse.",
         "create": "Impossibile creare il periodo.",
