@@ -2057,7 +2057,7 @@
       "openMenu": "Menu openen",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Einddatum",
+        "endDate": "Laatste dag",
         "actions": "Acties"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Startdatum selecteren",
         "noEndDate": "Geen einddatum",
-        "endDate": "Einddatum",
+        "endDate": "Laatste dag van de periode",
+        "endDateHelp": "De periode omvat deze dag.",
         "endDatePlaceholder": "Einddatum selecteren",
         "deletePeriod": "Periode verwijderen",
         "confirmDeleteTitle": "Verwijderen bevestigen",
@@ -2083,7 +2084,7 @@
         "noSettings": "Geen periode-instellingen beschikbaar. Er kan geen nieuwe periode worden gemaakt.",
         "settingsRequired": "Zonder instellingen kan geen periode worden beheerd.",
         "startDateRequired": "Er moet een startdatum worden opgegeven.",
-        "startBeforeEnd": "De startdatum moet vóór de einddatum liggen.",
+        "startBeforeEnd": "De einddatum mag niet vóór de startdatum liggen.",
         "overlap": "De periode overlapt met een bestaande periode.",
         "overlapRetry": "Deze periode overlapt met een bestaande. Kies andere datums.",
         "create": "De periode kon niet worden gemaakt.",

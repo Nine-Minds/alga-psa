@@ -2063,7 +2063,7 @@
       "openMenu": "Otwórz menu",
       "columns": {
         "startDate": "Data początkowa",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień",
         "actions": "Akcje"
       },
       "form": {
@@ -2075,7 +2075,8 @@
         "startDate": "Data początkowa",
         "startDatePlaceholder": "Wybierz datę początkową",
         "noEndDate": "Bez daty końcowej",
-        "endDate": "Data końcowa",
+        "endDate": "Ostatni dzień okresu",
+        "endDateHelp": "Okres obejmuje ten dzień.",
         "endDatePlaceholder": "Wybierz datę końcową",
         "deletePeriod": "Usuń okres",
         "confirmDeleteTitle": "Potwierdź usunięcie",
@@ -2089,7 +2090,7 @@
         "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
         "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
         "startDateRequired": "Należy podać datę początkową.",
-        "startBeforeEnd": "Data początkowa musi być wcześniejsza niż data końcowa.",
+        "startBeforeEnd": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.",
         "overlap": "Okres nakłada się na istniejący okres.",
         "overlapRetry": "Ten okres nakłada się na istniejący. Wybierz inne daty.",
         "create": "Nie udało się utworzyć okresu.",

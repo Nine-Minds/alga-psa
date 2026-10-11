@@ -581,7 +581,7 @@ export const ticketContracts = {
     cases: [
       // null -> value (first transition)
       responseState(
-        'packages/tickets/src/actions/comment-actions/commentActions.ts#updateTicketResponseState',
+        'shared/lib/tickets/responseState.ts#publishResponseStateChange',
         null,
         'awaiting_client',
         'comment'

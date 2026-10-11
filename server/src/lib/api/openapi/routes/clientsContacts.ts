@@ -1,3 +1,4 @@
+import { createContactSchema, updateContactSchema } from '../../schemas/contact';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   clientLocationResponseSchema,
@@ -144,23 +145,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ContactBody = registry.registerSchema(
-    'ContactBody',
-    zOpenApi.object({
-      full_name: zOpenApi.string().min(1).max(255),
-      client_id: zOpenApi.string().uuid().optional(),
-      phone_numbers: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      email: zOpenApi.string().email(),
-      primary_email_canonical_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type_id: zOpenApi.string().uuid().optional().nullable(),
-      additional_email_addresses: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      role: zOpenApi.string().optional(),
-      notes: zOpenApi.string().optional(),
-      is_inactive: zOpenApi.boolean().optional(),
-      tags: zOpenApi.array(zOpenApi.string()).optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const ContactBody = registry.registerSchema('ContactBody', createContactSchema);
+  const ContactUpdateBody = registry.registerSchema('ContactUpdateBody', updateContactSchema);
 
   const ContactSearchQuery = registry.registerSchema(
     'ContactSearchQuery',
@@ -930,7 +917,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     description: 'Inherited ApiBaseController update route for one contact_name_id.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ContactIdParam, body: { schema: ContactBody.partial() } },
+    request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
     responses: {
       200: { description: 'Contact updated.', schema: ContactEnvelope },
       400: { description: 'Invalid contact id or request payload.', schema: ApiError },

@@ -1,4 +1,11 @@
 import type { ZodTypeAny } from 'zod';
+import {
+  bulkDeleteTimeEntrySchema,
+  bulkTimeEntrySchema,
+  bulkUpdateTimeEntrySchema,
+  createTimeEntrySchema,
+  updateTimeEntrySchema,
+} from '../../schemas/timeEntry';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   activeStopwatchQuerySchema,
@@ -238,19 +245,20 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const CreateTimeEntryBody = registry.registerSchema(
-    'WorkV1CreateTimeEntryBody',
-    zOpenApi.object({
-      work_item_type: zOpenApi.string().optional(),
-      work_item_id: zOpenApi.string().optional(),
-      user_id: zOpenApi.string().uuid().optional(),
-      started_at: zOpenApi.string().optional(),
-      ended_at: zOpenApi.string().optional(),
-      duration_minutes: zOpenApi.number().optional(),
-      billable_minutes: zOpenApi.number().optional(),
-      notes: zOpenApi.string().optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const CreateTimeEntryBody = registry.registerSchema('WorkV1CreateTimeEntryBody', createTimeEntrySchema);
+  const UpdateTimeEntryBody = registry.registerSchema('WorkV1UpdateTimeEntryBody', updateTimeEntrySchema);
+  const BulkCreateTimeEntriesBody = registry.registerSchema('WorkV1BulkCreateTimeEntriesBody', bulkTimeEntrySchema);
+  const BulkUpdateTimeEntriesBody = registry.registerSchema('WorkV1BulkUpdateTimeEntriesBody', bulkUpdateTimeEntrySchema);
+  const BulkDeleteTimeEntriesBody = registry.registerSchema('WorkV1BulkDeleteTimeEntriesBody', bulkDeleteTimeEntrySchema);
+
+  const timeEntryBodySchemas: Record<string, ZodTypeAny> = {
+    'post /api/v1/time-entries': CreateTimeEntryBody,
+    'put /api/v1/time-entries/{id}': UpdateTimeEntryBody,
+    'post /api/v1/time-entries/bulk': BulkCreateTimeEntriesBody,
+    'put /api/v1/time-entries/bulk': BulkUpdateTimeEntriesBody,
+    'delete /api/v1/time-entries/bulk': BulkDeleteTimeEntriesBody,
+  };
 
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
@@ -397,12 +405,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-entries/{id}', summary: 'Get time entry', description: 'Gets time entry UUID.', family: 'time_entry' },
     { method: 'put', path: '/api/v1/time-entries/{id}', summary: 'Update time entry', description: 'Updates time entry UUID.', family: 'time_entry' },
 
-    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods', summary: 'List time periods', description: 'Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-periods', summary: 'Create time period', description: 'Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-periods/current', summary: 'Get current time period', description: 'Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-periods/{id}', summary: 'Delete time period', description: 'Deletes time period UUID via deleteTimePeriod().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod().', family: 'time_sheet' },
-    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-periods/{id}', summary: 'Get time period', description: 'Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
+    { method: 'put', path: '/api/v1/time-periods/{id}', summary: 'Update time period', description: 'Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-periods/{id}/close', summary: 'Close time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.', family: 'time_sheet' },
 
@@ -493,7 +501,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.body = { schema };
     }
     if (def.path.startsWith('/api/v1/tags') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/tags' && def.method === 'post' ? CreateTagBody : GenericBody };
-    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-entries' && def.method === 'post' ? CreateTimeEntryBody : GenericBody };
+    if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) {
+      req.body = { schema: timeEntryBodySchemas[`${def.method} ${def.path}`] ?? GenericBody };
+    }
     if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/time-periods') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
 
     return req;
