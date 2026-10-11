@@ -27,7 +27,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return { ...actual, requireTenantId: vi.fn(async () => tenantId) };
 });
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(async () => undefined), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 const HOOK_TIMEOUT = 300_000;
 const FUTURE = (() => {

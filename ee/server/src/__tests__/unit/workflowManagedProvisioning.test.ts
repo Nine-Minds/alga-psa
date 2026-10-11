@@ -5,6 +5,12 @@ const publishWorkflowEventMock = vi.fn();
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
 }));
 
 function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {

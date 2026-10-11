@@ -8,6 +8,11 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishBuiltWorkflowPayload: publishEventMock,
   publishNonCatalogEventByName: vi.fn(),
   reviveStoredWorkflowPayload: (eventType: string, payload: Record<string, unknown>) => ({ eventType, payload }),
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { publishInventoryEvent } from './inventoryEvents';

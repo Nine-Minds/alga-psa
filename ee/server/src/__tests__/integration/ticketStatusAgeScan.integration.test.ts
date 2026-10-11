@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { launchDateTriggeredWorkflows } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
-import { dateTriggerPayloadSchemas } from '@alga-psa/event-schemas/schemas/domain/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemas } from '@alga-psa/event-schemas/schemas';
 import { TicketModel } from '../../../../../shared/models/ticketModel';
 import {
   writeTicketActivity,
@@ -23,7 +23,7 @@ import { ticketStatusClockPatch } from '../../../../../shared/lib/ticketStatusCl
  */
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish, publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
   ...((await importOriginal()) as typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,

@@ -8,7 +8,7 @@ import { emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate 
 import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish, publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
   ...((await importOriginal()) as typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,

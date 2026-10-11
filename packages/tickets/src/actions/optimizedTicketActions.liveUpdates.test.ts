@@ -82,6 +82,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
   // Comment-publication outbox replay (persisted intent, dispatched after commit).
   publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
