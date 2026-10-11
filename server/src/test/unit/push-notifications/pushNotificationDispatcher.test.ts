@@ -197,7 +197,7 @@ describe('pushNotificationDispatcher', () => {
       mockGetActiveTokens.mockResolvedValue([
         { expo_push_token: 'ExponentPushToken[t]', device_id: 'd', platform: 'ios' },
       ]);
-      mockSendPush.mockResolvedValue(undefined);
+      mockSendPush.mockResolvedValue({ delivery: { status: 'delivered' }, results: [] });
     });
 
     it.each(['task-assigned', 'task-additional-agent-assigned', 'task-additional-agent-added', 'task-comment-added'])(
