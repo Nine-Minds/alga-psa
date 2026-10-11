@@ -27,6 +27,7 @@ const WEBHOOK_TICKET_EVENT_TYPES = [
   'TICKET_CLOSED',
   'TICKET_ASSIGNED',
   'TICKET_COMMENT_ADDED',
+  'TICKET_RESPONSE_STATE_CHANGED',
 ] as const satisfies readonly TicketWebhookInternalEvent[];
 
 let isRegistered = false;

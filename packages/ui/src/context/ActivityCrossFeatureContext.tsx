@@ -66,6 +66,16 @@ export interface ActivityWorkflowTaskFormRenderProps {
   isInDrawer: boolean;
 }
 
+export interface ActivityGroupControlRenderProps {
+  /** DOM id prefix (automation ids). */
+  id: string;
+  activityId: string;
+  /** ActivityType.TICKET | ActivityType.PROJECT_TASK */
+  activityType: 'ticket' | 'projectTask';
+  /** Changes whenever the record's saved assignment changes; re-runs the eligibility check. */
+  assignmentKey: string;
+}
+
 export interface ActivityCrossFeatureCallbacks {
   // Render callbacks
   renderTicketDetails: (props: ActivityTicketDetailsRenderProps) => ReactNode;
@@ -98,6 +108,10 @@ export interface ActivityCrossFeatureCallbacks {
   hideTask?: (taskId: string) => Promise<any>;
   unhideTask?: (taskId: string) => Promise<any>;
   renderWorkflowTaskForm?: (props: ActivityWorkflowTaskFormRenderProps) => ReactNode;
+
+  // "My group" control for ticket / project-task detail screens. Optional: absent where no
+  // MSP composition provider is mounted (e.g. AlgaDesk) or the host doesn't supply it.
+  renderActivityGroupControl?: (props: ActivityGroupControlRenderProps) => ReactNode;
 }
 
 const ActivityCrossFeatureContext = createContext<ActivityCrossFeatureCallbacks | null>(null);
@@ -111,6 +125,15 @@ export function useActivityCrossFeature(): ActivityCrossFeatureCallbacks {
     );
   }
   return ctx;
+}
+
+/**
+ * Like `useActivityCrossFeature`, but returns `null` instead of throwing when no provider is
+ * mounted. Use it from feature screens (ticket / project detail) that render outside the
+ * MSP composition layer too, e.g. AlgaDesk.
+ */
+export function useOptionalActivityCrossFeature(): ActivityCrossFeatureCallbacks | null {
+  return useContext(ActivityCrossFeatureContext);
 }
 
 export function ActivityCrossFeatureProvider({

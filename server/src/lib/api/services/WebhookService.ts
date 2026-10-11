@@ -21,6 +21,7 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
+import { webhookEventTypeSchema } from '../schemas/webhookSchemas';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
@@ -32,6 +33,8 @@ import {
   generateCollectionLinks, 
   addHateoasLinks 
 } from '../utils/responseHelpers';
+import { randomBytes } from 'node:crypto';
+import { webhookModel } from '../../webhooks/webhookModel';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { computeBackoff } from '../../webhooks/backoff';
 import { BadGatewayError, ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -47,92 +50,91 @@ export class WebhookService {
   // WEBHOOK CRUD OPERATIONS
   // ============================================================================
 
+  /**
+   * Create a webhook through the same persistence path as the settings UI:
+   * webhookModel.insert stores the row and the signing secret (vault), and the
+   * generated secret is returned once in the response, as rotate does.
+   * Delivery requires that secret (webhookModel.getSigningSecret).
+   */
   async createWebhook(
-      data: CreateWebhookData,
-      tenantId: string,
-      userId?: string
-    ): Promise<SuccessResponse<WebhookResponse>> {
-      await validateTenantAccess(tenantId);
-  
-      // Validate webhook URL
-      await this.validateWebhookUrl(data.url);
-  
-      // Validate event types
-      for (const eventType of data.event_types) {
-        await this.validateEventType(eventType);
-      }
-  
-      const webhookId = crypto.randomUUID();
-      const now = new Date().toISOString();
-  
-      const webhook = {
-        webhook_id: webhookId,
-        tenant: tenantId,
-        created_at: now,
-        updated_at: now,
-        total_deliveries: 0,
-        successful_deliveries: 0,
-        failed_deliveries: 0,
-        last_delivery_at: null,
-        last_success_at: null,
-        last_failure_at: null,
-        ...data
-      };
-  
-      await this.db.insert('webhooks', webhook);
-  
-      // Create subscriptions for each event type
-      for (const eventType of data.event_types) {
-        await this.createEventSubscription(webhookId, eventType, tenantId);
-      }
-  
-      // Publish event
-      await this.eventBus.publish('webhook.created', {
-        webhookId,
-        tenantId,
-        webhookName: data.name,
-        eventTypes: data.event_types,
-        userId
-      });
-  
-      // Audit log
-      await this.auditLog.log({
-        action: 'webhook_created',
-        entityType: 'webhook',
-        entityId: webhookId,
-        userId,
-        tenantId,
-        changes: webhook
-      });
-  
-      // Generate HATEOAS links
-      const links = generateComprehensiveLinks('webhooks', webhookId, '/api/v1', {
-        crudActions: ['read', 'update', 'delete'],
-        customActions: {
-          test: { method: 'POST', path: 'test' },
-          deliveries: { method: 'GET', path: 'deliveries' },
-          analytics: { method: 'GET', path: 'analytics' }
-        },
-        relationships: {
-          subscriptions: { resource: 'webhook-subscriptions', many: true },
-          templates: { resource: 'webhook-templates', many: true }
-        }
-      });
-  
-      const responseData = {
-        ...webhook,
-        last_delivery_at: webhook.last_delivery_at || undefined,
-        last_failure_at: webhook.last_failure_at || undefined,
-        last_success_at: webhook.last_success_at || undefined,
-        description: webhook.description || null
-      } as unknown as WebhookResponse;
-  
-      return {
-        success: true,
-        data: addHateoasLinks(responseData, links)
-      };
+    data: CreateWebhookData,
+    tenantId: string,
+    userId?: string
+  ): Promise<SuccessResponse<WebhookResponse & { signing_secret: string }>> {
+    await validateTenantAccess(tenantId);
+
+    if (!userId) {
+      throw new ValidationError('A user is required to create a webhook');
     }
 
+    // Validate webhook URL
+    await this.validateWebhookUrl(data.url);
+
+    // Validate event types
+    for (const eventType of data.event_types) {
+      await this.validateEventType(eventType);
+    }
+
+    const signingSecret = randomBytes(32).toString('base64url');
+    const created = await webhookModel.insert({
+      tenant: tenantId,
+      name: data.name,
+      url: data.url,
+      method: data.method,
+      eventTypes: data.event_types,
+      customHeaders: data.custom_headers ?? null,
+      eventFilter: (data.event_filter as Record<string, unknown> | undefined) ?? null,
+      payloadFields: data.payload_fields ?? null,
+      signingSecret,
+      retryConfig: (data.retry_config as Record<string, unknown> | undefined) ?? null,
+      verifySsl: data.verify_ssl,
+      rateLimitPerMin: data.rate_limit?.requests_per_minute,
+      isActive: data.is_active,
+      createdByUserId: userId,
+    });
+
+    // Generate HATEOAS links
+    const links = generateComprehensiveLinks('webhooks', created.webhookId, '/api/v1', {
+      crudActions: ['read', 'update', 'delete'],
+      customActions: {
+        test: { method: 'POST', path: 'test' },
+        deliveries: { method: 'GET', path: 'deliveries' },
+        analytics: { method: 'GET', path: 'analytics' }
+      },
+      relationships: {
+        subscriptions: { resource: 'webhook-subscriptions', many: true },
+        templates: { resource: 'webhook-templates', many: true }
+      }
+    });
+
+    const responseData = {
+      webhook_id: created.webhookId,
+      tenant: created.tenant,
+      name: created.name,
+      description: data.description ?? null,
+      url: created.url,
+      method: created.method,
+      event_types: created.eventTypes,
+      custom_headers: created.customHeaders,
+      event_filter: created.eventFilter,
+      payload_fields: created.payloadFields,
+      retry_config: created.retryConfig,
+      is_active: created.isActive,
+      verify_ssl: created.verifySsl,
+      total_deliveries: created.totalDeliveries,
+      successful_deliveries: created.successfulDeliveries,
+      failed_deliveries: created.failedDeliveries,
+      created_at: created.createdAt,
+      updated_at: created.updatedAt,
+      // Shown once, like rotate. Never returned by read endpoints.
+      signing_secret: signingSecret,
+    } as unknown as WebhookResponse & { signing_secret: string };
+
+    return {
+      success: true,
+      data: addHateoasLinks(responseData, links) as WebhookResponse & { signing_secret: string }
+    };
+  }
 
   async getWebhook(
       webhookId: string,
@@ -887,13 +889,7 @@ export class WebhookService {
   }
 
   private async validateEventType(eventType: string): Promise<void> {
-    // Implementation would validate against supported event types
-    const supportedEvents = [
-      'ticket.created', 'ticket.updated', 'project.created', 
-      // ... other supported events
-    ];
-
-    if (!supportedEvents.includes(eventType)) {
+    if (!webhookEventTypeSchema.safeParse(eventType).success) {
       throw new ValidationError(`Unsupported event type: ${eventType}`);
     }
   }
