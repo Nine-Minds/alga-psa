@@ -45,6 +45,7 @@ vi.mock('next/cache', async importOriginal => ({
 }));
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const statusEmail = vi.hoisted(() => ({ create: vi.fn(), send: vi.fn() }));
+// `create` now stands for the tenant settings read that precedes transport.
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
 const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn(), getReadStream: vi.fn() }));
@@ -65,7 +66,14 @@ vi.mock('../../../../../shared/services/email/inboundEmailSourceStager', () => (
 vi.mock('../../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
 vi.mock('@alga-psa/email', () => ({
   sendTeamInvitationEmail: delivery.send,
-  SystemEmailProviderFactory: { createProvider: statusEmail.create },
+  // Main sends project status mail through the tenant email service. `create`
+  // is the settings read made while preparing the send; `send` is transport.
+  TenantEmailService: {
+    getTenantEmailSettings: (...args: unknown[]) => statusEmail.create(...args),
+    getDefaultFromAddress: () => ({ email: 'noreply@customer.test', name: 'Customer IT' }),
+    getInstance: () => ({ sendEmail: (input: unknown) => statusEmail.send(input) }),
+  },
+  StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text: string) {} },
   resolveTenantCompanyName: async () => 'Customer IT',
   // Main's brand-logo embedder, which the status-update mail now runs through.
   // Its own contract is that a logo is never a reason to lose the mail, so the
@@ -1311,7 +1319,7 @@ describe('inherited operational API mutations', () => {
   it('enforces admission on every inherited single and bulk mutation for boards, statuses, and priorities', async () => {
     const { operation, actor, input, customer } = await readyForAcceptance();
     const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId }, id = randomUUID();
-    const publisher = await import('../../../../../server/src/lib/eventBus/publishers');
+    const publisher = await import('@alga-psa/event-bus/publishers');
     const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
     try {
       for (const expectedCode of ['CO_MANAGED_NOT_ACTIVE', 'CO_MANAGED_READ_ONLY']) {
@@ -1337,7 +1345,7 @@ describe('inherited operational API mutations', () => {
   it('supports real configuration edits and bulk operations after renewal without writing missing audit columns', async () => {
     const { operation, actor, input, customer } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
     const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId };
-    const publisher = await import('../../../../../server/src/lib/eventBus/publishers');
+    const publisher = await import('@alga-psa/event-bus/publishers');
     const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
     try {
       const board = await services.boards.create({ board_name: 'Temporary customer board', is_inactive: false }, context);
@@ -1376,7 +1384,7 @@ async function withProjectFixture(work: (fixture: Awaited<ReturnType<typeof read
   const { ProjectService } = await import('../../../../../server/src/lib/api/services/ProjectService');
   const service = new ProjectService();
   const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
-  const events = await import('../../../../../server/src/lib/eventBus/publishers');
+  const events = await import('@alga-psa/event-bus/publishers');
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
   try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, service, connection, publish, workflow })); }
@@ -1469,8 +1477,10 @@ describe('co-managed project API lifecycle admission', () => {
     for (const table of ['projects', 'project_phases', 'project_status_mappings', 'project_tasks']) expect(await customer.table(table)).toEqual([]);
     expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
     await withTransaction(db, createWork);
-    expect(publish).toHaveBeenCalledOnce();
-    expect(workflow).toHaveBeenCalledOnce();
+    // Main publishes project and task creation as workflow events only; each
+    // fires once, after the owning transaction commits.
+    expect(publish).not.toHaveBeenCalled();
+    expect(workflow.mock.calls.map((call: any) => call[0].eventType)).toEqual(['PROJECT_CREATED', 'PROJECT_TASK_CREATED']);
     connection.mockResolvedValue({ knex: db });
     const context = { tenant: actor.tenant, userId: actor.userId };
     await service.updatePhase(phaseId!, { phase_name: 'Discovery completed' }, context);
@@ -2270,8 +2280,8 @@ it('admits project status email at send time while retaining previews during pen
   const actions = await import('../../../../../packages/projects/src/actions/projectStatusUpdateActions');
   const dbModule = await import('@alga-psa/db');
   const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
-  statusEmail.create.mockReset().mockResolvedValue({ sendEmail: statusEmail.send });
-  statusEmail.send.mockReset().mockResolvedValue(undefined);
+  statusEmail.create.mockReset().mockResolvedValue(null);
+  statusEmail.send.mockReset().mockResolvedValue({ success: true });
   try {
     const projectId = randomUUID();
     const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
@@ -2286,13 +2296,13 @@ it('admits project status email at send time while retaining previews during pen
     expect(statusEmail.send).not.toHaveBeenCalled();
     await acceptCoManagedRelationship(db, actor, input);
     expect(await actions.sendProjectStatusUpdate(projectId, 'Ready')).toMatchObject({ recipientEmail: contact.email });
-    expect(statusEmail.send).toHaveBeenCalledWith(expect.objectContaining({ subject: 'Customer rollout update', text: 'Ready' }), actor.tenant);
+    expect(statusEmail.send).toHaveBeenCalledWith(expect.objectContaining({ tenantId: actor.tenant, subject: 'Customer rollout update', text: 'Ready' }));
     statusEmail.send.mockClear();
     // Expiry after the UI preview, while preparing a provider, must still stop
     // transmission. An initial request-time check alone would miss this race.
     statusEmail.create.mockImplementationOnce(async () => {
       await expireCoManagedEntitlement(operation.tenant);
-      return { sendEmail: statusEmail.send };
+      return null;
     });
     expect(await actions.sendProjectStatusUpdate(projectId, 'Blocked')).toMatchObject({ actionError: expect.any(String) });
     expect(statusEmail.send).not.toHaveBeenCalled();
@@ -3888,7 +3898,7 @@ async function withSharedTicketMutationFixture(work: (fixture: Awaited<ReturnTyp
   const events = await import('@alga-psa/event-bus/publishers');
   const updates = await import('../../../../../packages/tickets/src/lib/liveUpdates');
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
-  const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  const publish = vi.spyOn(events, 'publishStoredEvent').mockResolvedValue(undefined);
   const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
   try {
     const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
@@ -12817,7 +12827,7 @@ async function withOperationalTimeApiFixture(work: (fixture: any) => Promise<voi
     const { TimeEntryService } = await import('../../../../../server/src/lib/api/services/TimeEntryService');
     const schemas = await import('../../../../../server/src/lib/api/schemas/timeEntry'), service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
-    const apiEvents = await import('../../../../../server/src/lib/eventBus/publishers');
+    const apiEvents = await import('@alga-psa/event-bus/publishers');
     const publish = vi.spyOn(apiEvents, 'publishEvent').mockResolvedValue(undefined);
     const context = { tenant: resource.tenant, userId: user.user_id, user, apiKeyId };
     const input = { work_item_type: 'project_task', work_item_id: resource.id, start_time: fixture.input.start_time, end_time: fixture.input.end_time, notes: 'Private API effort' };

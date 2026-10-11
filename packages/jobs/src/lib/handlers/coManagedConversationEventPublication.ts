@@ -4,11 +4,15 @@ import { enqueueCoManagedConversationEvent, dispatchCoManagedConversationEvents,
 import type { CoManagedEventPublication, CoManagedEventConsumer } from '@alga-psa/co-managed';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { publishStoredEvent, publishWorkflowEvent, type WorkflowEventPublishContext, type PublishOptions, reviveStoredWorkflowPayload } from '@alga-psa/event-bus/publishers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 // LEVERAGE: pattern retained-workflow-replay — tickets and jobs replay retained co-managed workflow publications the same way.
 /** A retained workflow publication is a stored payload: revive it against the
  * catalogue schema before it goes back through the typed publisher. */
 async function publishRetainedWorkflow(publication: CoManagedEventPublication, options?: PublishOptions) {
-  const revived = reviveStoredWorkflowPayload(publication.eventType, publication.payload as Record<string, unknown>);
+  // The retained payload is the builder's output; tenant, time and actor live in
+  // the retained context, and the catalogue contract is checked on the stamped form.
+  const stamped = buildWorkflowPayload(publication.payload as Record<string, unknown>, publication.workflowContext as WorkflowEventPublishContext);
+  const revived = reviveStoredWorkflowPayload(publication.eventType, stamped);
   if (!revived) throw new Error(`${publication.eventType} is not a catalogued workflow event`);
   await publishWorkflowEvent({ eventType: revived.eventType, payload: revived.payload,
     ctx: publication.workflowContext as WorkflowEventPublishContext, idempotencyKey: publication.idempotencyKey } as Parameters<typeof publishWorkflowEvent>[0], options);
