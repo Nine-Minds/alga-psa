@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   getCurrentUserMock,
@@ -12,8 +12,10 @@ const {
   updateWorkflowDefinitionDraftActionMock,
   updateWorkflowDefinitionMetadataActionMock,
   toastErrorMock,
+  getWorkflowLaunchSkipSummaryActionMock,
 } = vi.hoisted(() => ({
   updateWorkflowDefinitionMetadataActionMock: vi.fn(),
+  getWorkflowLaunchSkipSummaryActionMock: vi.fn(),
   toastErrorMock: vi.fn(),
   getCurrentUserMock: vi.fn(),
   getCurrentUserPermissionsMock: vi.fn(),
@@ -22,10 +24,16 @@ const {
   updateWorkflowDefinitionDraftActionMock: vi.fn(),
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
-  // Keep the real formatters (the launch-skip banner uses useFormatters); only translations are stubbed.
-  return { ...((await importOriginal()) as Record<string, unknown>), ...createLocaleTranslationMock('msp/workflows') };
+  const base = await createLocaleTranslationMock('msp/workflows');
+  return {
+    ...base,
+    useFormatters: () => ({
+      formatRelativeTime: (value: string) => `rel(${value})`,
+      formatDate: (value: string) => `date(${value})`,
+    }),
+  };
 });
 
 vi.mock('next/navigation', () => ({
@@ -184,6 +192,8 @@ vi.mock('@alga-psa/workflows/actions', async (importOriginal) => {
     listWorkflowRunsAction: vi.fn(async () => ({ runs: [] })),
     listEventCatalogOptionsV2Action: vi.fn(async () => ({ events: [] })),
     getWorkflowStepQuotaSummaryAction: vi.fn(async () => null),
+    getWorkflowLaunchSkipSummaryAction: (...args: unknown[]) => getWorkflowLaunchSkipSummaryActionMock(...args),
+    listWorkflowLaunchSkipsPagedAction: vi.fn(async () => ({ items: [], totalItems: 0 })),
     createWorkflowDefinitionAction: vi.fn(),
     getWorkflowDefinitionVersionAction: vi.fn(),
     publishWorkflowDefinitionAction: (...args: unknown[]) => publishWorkflowDefinitionActionMock(...args),
@@ -215,13 +225,12 @@ vi.mock('../WorkflowActionInputFixedPicker', () => ({ WorkflowActionInputFixedPi
 
 import WorkflowDesigner from '../WorkflowDesigner';
 
-const WORKFLOW_ID = 'wf-publish-error-reset';
-const EMPTY_EXPR_MESSAGE = 'Expression is empty. Pick a source field or enter an expression.';
+const WORKFLOW_ID = 'wf-launch-skip-anchor';
 
 const draftDefinition = () => ({
   id: WORKFLOW_ID,
   version: 2,
-  name: 'Publish error reset',
+  name: 'Launch skip anchor',
   payloadSchemaRef: 'payload.Test.v1',
   steps: [
     {
@@ -235,7 +244,7 @@ const draftDefinition = () => ({
 
 const cleanRecord = () => ({
   workflow_id: WORKFLOW_ID,
-  name: 'Publish error reset',
+  name: 'Launch skip anchor',
   description: '',
   draft_definition: draftDefinition(),
   draft_version: 2,
@@ -252,147 +261,73 @@ const cleanRecord = () => ({
   is_paused: false,
 });
 
-const publishButton = () => screen.getByRole('button', { name: 'Publish' });
 
-describe('WorkflowDesigner publish error reset', () => {
+
+describe('WorkflowDesigner floating panel anchor', () => {
+  const observers: Array<{ callback: () => void; observed: Element[] }> = [];
+  const anchorRectCalls: Element[] = [];
+  const originalRO = (globalThis as any).ResizeObserver;
+  const originalRect = Element.prototype.getBoundingClientRect;
+
   beforeEach(() => {
-    getCurrentUserMock.mockReset();
-    getCurrentUserPermissionsMock.mockReset();
-    listWorkflowDefinitionsActionMock.mockReset();
-    publishWorkflowDefinitionActionMock.mockReset();
-    updateWorkflowDefinitionDraftActionMock.mockReset();
-
+    observers.length = 0;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      // Async like a real frame: update() assigns its rAF id before the callback clears it.
+      setTimeout(() => cb(0), 0);
+      return 1;
+    });
+    anchorRectCalls.length = 0;
+    (globalThis as any).ResizeObserver = class {
+      private entry: { callback: () => void; observed: Element[] };
+      constructor(callback: () => void) {
+        this.entry = { callback, observed: [] };
+        observers.push(this.entry);
+      }
+      observe(el: Element) { this.entry.observed.push(el); }
+      unobserve() {}
+      disconnect() {}
+    };
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      anchorRectCalls.push(this);
+      return originalRect.call(this);
+    };
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', roles: [] });
     getCurrentUserPermissionsMock.mockResolvedValue(['workflow:read', 'workflow:manage', 'workflow:publish']);
     listWorkflowDefinitionsActionMock.mockResolvedValue([cleanRecord()]);
-    updateWorkflowDefinitionDraftActionMock.mockResolvedValue({});
-    updateWorkflowDefinitionMetadataActionMock.mockReset();
-    updateWorkflowDefinitionMetadataActionMock.mockResolvedValue({});
-    toastErrorMock.mockReset();
     window.localStorage.clear();
   });
 
-  it('saves a pause with an empty concurrency limit as unlimited', async () => {
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    const paused = await screen.findByTestId('workflow-settings-paused');
-
-    fireEvent.click(paused);
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
-
-    await waitFor(() => expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalled());
-    expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowId: WORKFLOW_ID,
-      isPaused: true,
-      concurrencyLimit: null,
-    }));
+  afterEach(() => {
+    (globalThis as any).ResizeObserver = originalRO;
+    Element.prototype.getBoundingClientRect = originalRect;
+    vi.restoreAllMocks();
   });
 
-  it('rolls the settings back and explains the error when saving them fails', async () => {
-    updateWorkflowDefinitionMetadataActionMock.mockRejectedValue(new Error(JSON.stringify([
-      { code: 'invalid_type', expected: 'number', received: 'undefined', path: ['concurrencyLimit'], message: 'Required' },
-    ])));
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    const paused = await screen.findByTestId('workflow-settings-paused');
-
-    fireEvent.click(paused);
-    expect(paused).toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
-
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
-    expect(String(toastErrorMock.mock.calls[0][0])).toContain('Concurrency limit is required');
-    await waitFor(() => expect(screen.getByTestId('workflow-settings-paused')).not.toBeChecked());
-  });
-
-  it('keeps the draft and asks the user to sign in again when the session has ended', async () => {
-    updateWorkflowDefinitionDraftActionMock.mockRejectedValue(new Error('User not authenticated'));
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    await waitFor(() => expect(publishButton()).toBeEnabled());
-    const nameInput = screen.getByLabelText('Workflow name');
-
-    fireEvent.change(nameInput, { target: { value: 'Renamed before the session ended' } });
-    expect(screen.getByLabelText('Workflow name')).toHaveValue('Renamed before the session ended');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
-
-    expect(await screen.findByText(/Your session ended\. Sign in again in a new tab/)).toBeInTheDocument();
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Workflow name')).toHaveValue('Renamed before the session ended');
-  });
-
-  it('pauses and resumes a published workflow from the header switch, sending only the pause flag change', async () => {
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    const toggle = await screen.findByRole('switch');
-    expect(toggle).toHaveAttribute('aria-checked', 'true');
-    expect(toggle).toHaveTextContent('Active');
-
-    fireEvent.click(toggle);
-
-    await waitFor(() => expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowId: WORKFLOW_ID,
-      isPaused: true,
-    })));
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByRole('switch')).toHaveTextContent('Paused');
-  });
-
-  it('rolls the header switch back and explains the error when pausing fails', async () => {
-    updateWorkflowDefinitionMetadataActionMock.mockRejectedValue(new Error('Database unavailable'));
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    const toggle = await screen.findByRole('switch');
-
-    fireEvent.click(toggle);
-
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true'));
-  });
-
-  it('asks before the first publish starts the workflow, and publishes only once confirmed', async () => {
-    listWorkflowDefinitionsActionMock.mockResolvedValue([{ ...cleanRecord(), published_version: null }]);
-    publishWorkflowDefinitionActionMock.mockResolvedValue({ ok: true, errors: [], warnings: [], publishedVersion: 2 });
-    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
-    await waitFor(() => expect(publishButton()).toBeEnabled());
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
-
-    fireEvent.click(publishButton());
-
-    const dialog = await screen.findByRole('dialog', { name: 'Publish and start this workflow?' });
-    expect(dialog).toHaveTextContent('Nothing starts it automatically');
-    expect(publishWorkflowDefinitionActionMock).not.toHaveBeenCalled();
-
-    fireEvent.click(document.getElementById('workflow-designer-first-publish-dialog-confirm')!);
-
-    await waitFor(() => expect(publishWorkflowDefinitionActionMock).toHaveBeenCalledTimes(1));
-  });
-
-  it('clears a blocked publish result once the draft is saved again', async () => {
-    publishWorkflowDefinitionActionMock.mockResolvedValue({
-      ok: false,
-      errors: [
-        {
-          severity: 'error',
-          stepPath: 'root.steps[0].condition',
-          stepId: 'if-1',
-          code: 'INVALID_EXPR',
-          message: EMPTY_EXPR_MESSAGE,
-        },
-      ],
-      warnings: [],
+  it('re-anchors the floating panels when the async launch-skip banner mounts above the anchor', async () => {
+    getWorkflowLaunchSkipSummaryActionMock.mockResolvedValue({
+      from: '2026-10-03T00:00:00.000Z',
+      alarming: { total: 2, lastSkippedAt: '2026-10-09T10:00:00.000Z', byReason: [{ reason: 'schema_mismatch', count: 2 }] },
+      intentional: { total: 0, lastSkippedAt: null, byReason: [] },
     });
 
     render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    const banner = await waitFor(() => {
+      const el = document.getElementById('workflow-launch-skip-banner');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
 
-    await waitFor(() => expect(publishButton()).toBeEnabled());
+    // Some observer watches an element that contains the banner (the header), so its
+    // mount/height change reaches the same update() path as the anchor's own resize.
+    const observer = [...observers].reverse().find((o) => o.observed.some((el) => el.contains(banner)));
+    expect(observer).toBeDefined();
+    // The anchor is identified by its class; the designer may remount it when the definition loads.
+    const anchorCalls = () => anchorRectCalls.filter((el) => el.className.includes('relative flex flex-col flex-1 min-h-0')).length;
 
-    fireEvent.click(publishButton());
-
-    await waitFor(() => expect(publishButton()).toBeDisabled());
-    expect(publishButton()).toHaveAttribute('title', EMPTY_EXPR_MESSAGE);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
-
-    await waitFor(() => expect(updateWorkflowDefinitionDraftActionMock).toHaveBeenCalled());
-    // Without clearing the stale publish result the badge stays Invalid and Publish
-    // stays disabled until the page is reloaded.
-    await waitFor(() => expect(publishButton()).toBeEnabled());
-    expect(publishButton()).not.toHaveAttribute('title');
+    // Wait for the initial frame so the update() throttle is clear.
+    await waitFor(() => expect(anchorCalls()).toBeGreaterThan(0));
+    const before = anchorCalls();
+    act(() => observer!.callback());
+    await waitFor(() => expect(anchorCalls()).toBeGreaterThan(before));
   });
 });

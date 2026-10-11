@@ -11,7 +11,8 @@ import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
-  submitWorkflowEventAction
+  submitWorkflowEventAction,
+  getWorkflowLaunchSkipSummaryAction
 } from '@alga-psa/workflows/actions';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
 import {
@@ -82,6 +83,11 @@ vi.mock('@alga-psa/auth', () => {
     preCheckDeletion: vi.fn()
   };
 });
+
+// The worker resolves its DB through the shared admin helper; point it at the test database.
+vi.mock('@shared/db/admin.js', () => ({
+  getAdminConnection: async () => db
+}));
 
 vi.mock('@alga-psa/workflows/lib/workflowRuntimeV2Temporal', () => ({
   startWorkflowRuntimeV2TemporalRun: (...args: unknown[]) => startWorkflowRuntimeV2TemporalRunMock(...args)

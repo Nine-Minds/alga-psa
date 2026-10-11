@@ -603,7 +603,12 @@
       "waitStepLine": "Step: {{value}}",
       "matchedRunLabel": "Matched run",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Payload"
+      "payloadLabel": "Payload",
+      "launchSkips": {
+        "title": "Workflows not launched",
+        "unknownWorkflow": "Deleted workflow",
+        "intentional": "Intentional"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Failed to load workflow events",
@@ -1384,6 +1389,39 @@
       "unsaved": "Unsaved changes",
       "savedAgo": "Saved · {{ago}}",
       "saved": "Saved"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "Skipped {{count}} event in the last {{days}} days — {{reasons}}",
+        "summary_other": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
+        "lastSkipped": "Last skipped {{when}}",
+        "view": "View skipped events"
+      },
+      "drawer": {
+        "title": "Skipped events",
+        "windowLabel": "Time window",
+        "window": {
+          "24h": "Last 24 hours",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days"
+        },
+        "allReasons": "All reasons",
+        "reasonLabel": "Reason",
+        "groupAttention": "Needs attention",
+        "groupGuarded": "Guarded / paused (intentional)",
+        "lastSeen": "Last seen {{when}}",
+        "columns": {
+          "received": "Received",
+          "event": "Event",
+          "reason": "Reason",
+          "message": "Message"
+        },
+        "issuesTitle": "Validation issues",
+        "issueRoot": "(payload)",
+        "openEvent": "Open event",
+        "loadError": "Failed to load skipped events.",
+        "empty": "No skipped events in this window."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2679,6 +2717,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "this workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} skipped",
+        "badgeTitle": "Events this workflow did not launch for in the last 7 days"
       }
     },
     "eventsCatalog": {
@@ -3074,5 +3116,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Search fields",
     "noMatches": "No matching fields"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Missing payload schema reference",
+      "hint": "The workflow has no payload schema reference, so the event payload cannot be validated."
+    },
+    "unknown_schema_ref": {
+      "label": "Unknown payload schema reference",
+      "hint": "The workflow's payload schema reference does not exist in the schema registry."
+    },
+    "missing_source_schema": {
+      "label": "Missing source schema",
+      "hint": "The event has no source schema to compare against the workflow's payload schema."
+    },
+    "schema_mismatch": {
+      "label": "Event payload does not match schema",
+      "hint": "The event payload does not match the workflow's payload schema and no mapping was configured."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload mapping failed",
+      "hint": "The trigger's payload mapping could not be applied to the event."
+    },
+    "payload_validation_failed": {
+      "label": "Payload validation failed",
+      "hint": "The mapped payload did not pass the workflow's payload schema."
+    },
+    "launch_failed": {
+      "label": "Launch failed",
+      "hint": "The worker accepted the event but starting the workflow run failed."
+    },
+    "paused": {
+      "label": "Workflow paused",
+      "hint": "The workflow is paused, so events are intentionally not launched."
+    },
+    "lineage_loop_guard": {
+      "label": "Loop guard (lineage)",
+      "hint": "The event originated from this workflow's own lineage; skipped to prevent a loop."
+    },
+    "self_trigger_guard": {
+      "label": "Self-trigger guard",
+      "hint": "The event was emitted by this workflow itself; skipped to prevent self-triggering."
+    },
+    "causation_depth_exceeded": {
+      "label": "Causation depth exceeded",
+      "hint": "The chain of events caused by events exceeded the maximum depth; skipped to prevent runaway loops."
+    }
   }
 }

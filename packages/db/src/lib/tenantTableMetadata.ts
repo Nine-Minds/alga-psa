@@ -606,6 +606,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   workflow_runs: { scope: 'tenant' },
   date_trigger_emissions: { scope: 'tenant' },
   workflow_runtime_events: { scope: 'tenant' },
+  workflow_event_launch_skips: { scope: 'tenant' },
   workflow_form_definitions: { scope: 'tenant' },
   workflow_form_schemas: { scope: 'tenant' },
   workflow_step_usage_periods: { scope: 'tenant' },

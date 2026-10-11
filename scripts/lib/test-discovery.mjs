@@ -21,7 +21,7 @@ export function isWorkspaceDbTest(file) {
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|services\/workflow-worker\/src)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 

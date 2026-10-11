@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Knex } from 'knex';
 
 const WORKFLOW_TABLES = [
+  'workflow_event_launch_skips',
   'workflow_runtime_events',
   'workflow_run_snapshots',
   'workflow_action_invocations',

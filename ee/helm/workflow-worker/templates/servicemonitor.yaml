@@ -1,0 +1,25 @@
+{{- if and .Values.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "workflow-worker.fullname" . }}
+  namespace: {{ include "workflow-worker.namespace" . }}
+  labels:
+    {{- include "workflow-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "workflow-worker.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: workflow-worker
+  namespaceSelector:
+    matchNames:
+      - {{ include "workflow-worker.namespace" . }}
+  endpoints:
+    - port: http
+      path: {{ .Values.metrics.serviceMonitor.path }}
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+{{- end }}
