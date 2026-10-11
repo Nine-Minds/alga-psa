@@ -1,5 +1,7 @@
 # Contract invoice adjustments — UI smoke evidence
 
+> **Latest status (2026-10-11):** the sections below are historical evidence from earlier rounds. Current-production authoring, the AUD automatic generation and saved preview, line-target fixture, PDF render failure, Open Review activation gap, cleanup instructions, and preserved QBO history are recorded in [round 3 mitigation evidence](mitigation-2026-10-11/README.md) and [readiness.json](mitigation-2026-10-11/readiness.json). Do not use older screenshots as current-production proof.
+
 ## Draft Implementation review order — reusable contract discounts first
 
 The screenshots and smoke notes below are historical evidence from earlier
