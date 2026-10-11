@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, test } from 'vitest';
-import { TimePeriodSuggester, periodContaining, cellEnd, alignedPeriodStart, isSettingEffectiveOn } from '../src/lib/timePeriodSuggester';
+import { TimePeriodSuggester, periodContaining, cellEnd, alignedPeriodStart, isSettingEffectiveOn, defaultEffectiveFrom } from '../src/lib/timePeriodSuggester';
 import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 
 function makeSettings(overrides: Partial<ITimePeriodSettings>): ITimePeriodSettings {
@@ -226,5 +226,35 @@ describe('TimePeriodSuggester grid (#3206)', () => {
       const r = suggest(monthly, '2025-05-10', [period('2025-05-01', '2025-06-01')]);
       expect([r.data?.start_date, r.data?.end_date]).toEqual(['2025-06-01', '2025-07-01']);
     });
+  });
+});
+
+describe('defaultEffectiveFrom (#3206)', () => {
+  const sundayWeekly = makeSettings({ start_day: 7, end_day: 0, frequency: 1, frequency_unit: 'week' });
+
+  test('mid-week save defaults to the most recent start day, covering the whole current week', () => {
+    const localToday = Temporal.PlainDate.from('2026-10-10'); // Saturday
+    const from = defaultEffectiveFrom(sundayWeekly, localToday);
+    expect(from.toString()).toBe('2026-10-04');
+
+    const setting = { ...sundayWeekly, effective_from: from.toString() };
+    const suggested = TimePeriodSuggester.suggestNewTimePeriod([setting], [], { today: localToday });
+    expect(suggested.success).toBe(true);
+    expect(suggested.data?.start_date).toBe('2026-10-04');
+    expect(suggested.data?.end_date).toBe('2026-10-11');
+  });
+
+  test('on the start day itself the default is today', () => {
+    expect(defaultEffectiveFrom(sundayWeekly, Temporal.PlainDate.from('2026-10-11')).toString()).toBe('2026-10-11');
+  });
+
+  test('monthly default is the month start day on or before today', () => {
+    const monthly = makeSettings({ frequency_unit: 'month', start_day: 1, end_day: 0 });
+    expect(defaultEffectiveFrom(monthly, Temporal.PlainDate.from('2026-10-10')).toString()).toBe('2026-10-01');
+  });
+
+  test('unsupported unit falls back to local today', () => {
+    const odd = makeSettings({ frequency_unit: 'fortnight' as any });
+    expect(defaultEffectiveFrom(odd, Temporal.PlainDate.from('2026-10-10')).toString()).toBe('2026-10-10');
   });
 });

@@ -103,6 +103,15 @@ export function alignedPeriodStart(setting: ITimePeriodSettings, date: Temporal.
   }
 }
 
+/**
+ * Default effective_from for a setting created without one: the start of the period that contains
+ * the creating user's local today. Falls back to local today if the unit is unsupported.
+ */
+export function defaultEffectiveFrom(setting: ITimePeriodSettings, localToday: Temporal.PlainDate): Temporal.PlainDate {
+  const candidate = { ...setting, effective_from: localToday.toString() } as ITimePeriodSettings;
+  return alignedPeriodStart(candidate, localToday) ?? localToday;
+}
+
 /** Exclusive end of the cell that starts at boundary B. */
 // LEVERAGE: pattern period-grid — see note above
 export function cellEnd(setting: ITimePeriodSettings, boundary: Temporal.PlainDate): Temporal.PlainDate {

@@ -9,8 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert'
 import { ITimePeriodSettings } from '@alga-psa/types';
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '../../../actions/time-period-settings-actions/timePeriodSettingsActions';
-import { ISO8601String } from '@alga-psa/types';
-import { formatISO, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   getErrorMessage,
@@ -81,7 +80,6 @@ const TimePeriodSettings: React.FC = () => {
     frequency: 1,
     frequency_unit: defaultFrequencyUnit,
     is_active: true,
-    effective_from: formatISO(new Date()) as ISO8601String,
   });
 
   useEffect(() => {
@@ -152,7 +150,6 @@ const TimePeriodSettings: React.FC = () => {
         frequency: 1,
         frequency_unit: defaultFrequencyUnit,
         is_active: true,
-        effective_from: formatISO(new Date()) as ISO8601String,
       });
       setShowNewSettingForm(false);
       setHasAttemptedSubmit(false);
