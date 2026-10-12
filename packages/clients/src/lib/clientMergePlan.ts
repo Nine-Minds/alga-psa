@@ -496,17 +496,17 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
   {
     table: 'co_managed_ticket_references',
     reason:
-      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   {
     table: 'co_managed_project_task_references',
     reason:
-      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   {
     table: 'co_managed_time_work_references',
     reason:
-      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship. Its billing profile is a relationship-side reference, not a client_billing_profiles row moved by the merge.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship. Its billing profile is a relationship-side reference, not a client_billing_profiles row moved by the merge.',
   },
   {
     table: 'co_management_requester_email_deliveries',
@@ -521,7 +521,7 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
   {
     table: 'co_management_workflow_ticket_emails',
     reason:
-      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
