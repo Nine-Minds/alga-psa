@@ -118,7 +118,7 @@ async function seedTenant(): Promise<{ tenantId: string; userId: string; clientI
 
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
-  for (const name of ['asset_history', 'assets', 'asset_statuses', 'clients', 'users']) {
+  for (const name of ['asset_history', 'workstation_assets', 'assets', 'asset_statuses', 'clients', 'users']) {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
@@ -256,6 +256,49 @@ describe('asset statuses', () => {
     const otherTenant: any = await createAssetStatus({ label: 'In repair', kind: 'pending' });
     expect(otherTenant.success).toBe(true);
     expect(first.tenantId).not.toBe(actionAuth.tenant);
+  });
+
+  // A status change on a workstation asset re-writes the whole extension row,
+  // including the jsonb `installed_software` list. node-pg renders a bare JS
+  // array as a Postgres array literal, which the json parser rejects with
+  // 22P02, so a synced device with real software could not be saved at all.
+  it('saves a status change on a workstation carrying installed software', async () => {
+    const { tenantId, clientId } = await seedTenant();
+    const software = [
+      { name: 'Google Chrome', version: '128.0.6613.120' },
+      { name: 'Microsoft 365 Apps', version: '16.0.17928' },
+    ];
+
+    const created: any = await createAsset({
+      ...baseAsset(clientId, 'active'),
+      asset_type: 'workstation',
+      workstation: {
+        os_type: 'Windows',
+        os_version: 'Windows 11 Pro 23H2',
+        cpu_model: 'Intel Core i5-1240P',
+        cpu_cores: 12,
+        ram_gb: 16,
+        storage_type: 'NVMe SSD',
+        storage_capacity_gb: 512,
+        installed_software: software,
+      },
+    } as any);
+    expect(assetActionErrorFrom(created)).toBeNull();
+
+    // The list round-trips as a jsonb array, not an array literal and not the
+    // `{}` an empty array used to degrade into.
+    const inserted = await table(tenantId, 'workstation_assets').where({ asset_id: created.asset_id }).first();
+    expect(inserted.installed_software).toEqual(software);
+
+    const updated: any = await updateAsset(created.asset_id, {
+      status: 'maintenance',
+      workstation: { installed_software: software },
+    } as any);
+    expect(assetActionErrorFrom(updated)).toBeNull();
+    expect(updated.status).toBe('maintenance');
+
+    const after = await table(tenantId, 'workstation_assets').where({ asset_id: created.asset_id }).first();
+    expect(after.installed_software).toEqual(software);
   });
 
   // T028: builtins are renameable, and nothing exposes a delete.

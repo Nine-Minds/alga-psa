@@ -764,6 +764,22 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     }
 }
 
+/**
+ * Every array-shaped column on the extension tables is `jsonb` (there are no
+ * native Postgres array columns), but node-pg renders a bare JS array as an
+ * array literal — `{"{\"name\":...}"}` — which Postgres then rejects for a json
+ * column with 22P02 "invalid input syntax for type json". Stringifying here is
+ * what makes a non-empty `installed_software` / `disk_usage` saveable; an empty
+ * array slipped through before only because `{}` happens to parse as JSON.
+ */
+function encodeExtensionJsonArrays(fields: Record<string, unknown>): Record<string, unknown> {
+    const encoded: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+        encoded[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return encoded;
+}
+
 // Helper function to insert/update extension table data.
 // Trusts upstream Zod validation (createAssetSchema / updateAssetSchema in the action layer).
 async function upsertExtensionData(
@@ -778,7 +794,8 @@ async function upsertExtensionData(
     const table = EXTENSION_TABLE_BY_ASSET_TYPE[asset_type.toLowerCase()];
     if (!table) return;
     // Strip tenant/asset_id — they're the Citus partition key + PK and cannot appear in an UPDATE SET clause.
-    const { tenant: _t, asset_id: _a, ...extensionFields } = data as Record<string, unknown>;
+    const { tenant: _t, asset_id: _a, ...rest } = data as Record<string, unknown>;
+    const extensionFields = encodeExtensionJsonArrays(rest);
 
     // Check if record exists
     const exists = await tenantScopedTable(knex, table, tenant)
