@@ -238,10 +238,12 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
     .join('\n');
 }
 
+// LEVERAGE: pattern rmm-provider-registration — hand-maintained provider label map
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
   levelio: 'Level',
+  unifi: 'UniFi',
   huntress: 'Huntress',
   tanium: 'Tanium',
 };

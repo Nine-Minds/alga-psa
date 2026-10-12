@@ -40,8 +40,13 @@ function normalizeAssetType(assetType: NormalizedRmmDeviceType): SupportedAssetT
   return 'unknown';
 }
 
-function pickExtensionTable(assetType: SupportedAssetType): 'workstation_assets' | 'server_assets' | null {
+type ExtensionTable = 'workstation_assets' | 'server_assets' | 'network_device_assets';
+
+const NETWORK_DEVICE_TYPES = new Set(['switch', 'router', 'firewall', 'access_point', 'load_balancer']);
+
+function pickExtensionTable(assetType: SupportedAssetType): ExtensionTable | null {
   if (assetType === 'server') return 'server_assets';
+  if (assetType === 'network_device') return 'network_device_assets';
   if (assetType === 'workstation') return 'workstation_assets';
   return null;
 }
@@ -63,12 +68,57 @@ async function resolveClientIdForScope(
   return mapping?.client_id ? String(mapping.client_id) : null;
 }
 
+/**
+ * Writes `network_device_assets`. Providers that emit `network_device` without a
+ * `networkDevice` block (NinjaOne, Tanium today) keep their existing behaviour
+ * of writing no extension row. A block that is present but has no valid
+ * `deviceType` is a provider bug: `device_type` is NOT NULL and there is no
+ * honest default, so fail fast and roll the whole snapshot back.
+ */
+async function upsertNetworkDeviceExtension(
+  trx: Knex.Transaction,
+  args: { tenant: string; assetId: string; snapshot: NormalizedRmmExternalDeviceSnapshot; }
+): Promise<void> {
+  const network = args.snapshot.extension?.networkDevice;
+  if (!network) return;
+
+  if (!network.deviceType || !NETWORK_DEVICE_TYPES.has(network.deviceType)) {
+    throw new Error(
+      `Network device snapshot ${args.snapshot.provider}:${args.snapshot.externalDeviceId} is missing a valid deviceType`
+    );
+  }
+
+  const patch: Record<string, unknown> = { device_type: network.deviceType };
+  if (typeof network.managementIp !== 'undefined') patch.management_ip = network.managementIp ?? null;
+  if (typeof network.firmwareVersion !== 'undefined') patch.firmware_version = network.firmwareVersion ?? null;
+  if (typeof network.portCount !== 'undefined') patch.port_count = network.portCount ?? null;
+  if (typeof network.supportsPoe !== 'undefined') patch.supports_poe = network.supportsPoe ?? false;
+  if (typeof network.portConfig !== 'undefined') {
+    patch.port_config = JSON.stringify(network.portConfig ?? {});
+  }
+
+  const db = tenantDb(trx, args.tenant);
+  await db.table('network_device_assets')
+    .insert({
+      tenant: args.tenant,
+      asset_id: trx.raw('?::uuid', [args.assetId]),
+      ...patch,
+    })
+    .onConflict(['tenant', 'asset_id'])
+    .merge(patch);
+}
+
 async function upsertAssetExtension(
   trx: Knex.Transaction,
   args: { tenant: string; assetId: string; assetType: SupportedAssetType; snapshot: NormalizedRmmExternalDeviceSnapshot; }
 ): Promise<void> {
   const table = pickExtensionTable(args.assetType);
   if (!table) return;
+
+  if (table === 'network_device_assets') {
+    await upsertNetworkDeviceExtension(trx, args);
+    return;
+  }
 
   const ext = args.snapshot.extension ?? {};
   const patch: Record<string, unknown> = {

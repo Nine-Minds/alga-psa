@@ -1,5 +1,6 @@
 import type { RmmProvider } from '@alga-psa/types';
 
+// LEVERAGE: pattern rmm-provider-registration — hand-maintained provider display map
 export function getRmmProviderDisplayName(provider?: RmmProvider | string): string {
   switch (provider) {
     case 'ninjaone':
@@ -12,6 +13,8 @@ export function getRmmProviderDisplayName(provider?: RmmProvider | string): stri
       return 'Datto';
     case 'levelio':
       return 'Level';
+    case 'unifi':
+      return 'UniFi';
     case 'connectwise_automate':
       return 'CW Automate';
     case 'huntress':

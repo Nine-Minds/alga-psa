@@ -32,6 +32,7 @@ const PROVIDER_ICON_STYLES: Record<RmmProviderMetadata['icon'], { className: str
   ninjaone: { className: 'bg-slate-900 text-base font-bold text-white', label: 'N' },
   tanium: { className: 'bg-red-600 text-base font-bold text-white', label: 'T' },
   levelio: { className: 'bg-blue-600 text-base font-bold text-white', label: 'L' },
+  unifi: { className: 'bg-sky-600 text-base font-bold text-white', label: 'U' },
   huntress: { className: 'bg-emerald-600 text-base font-bold text-white', label: 'H' }
 };
 

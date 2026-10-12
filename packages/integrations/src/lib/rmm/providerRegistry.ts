@@ -17,7 +17,7 @@ export interface RmmProviderMetadata {
   id: RmmProvider;
   title: string;
   description: string;
-  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio' | 'huntress';
+  icon: 'tacticalrmm' | 'ninjaone' | 'tanium' | 'levelio' | 'unifi' | 'huntress';
   badge?: RmmProviderBadge;
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
@@ -77,6 +77,21 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
     title: 'Level',
     description: 'Sync devices and groups from Level (level.io) with alert ingestion via automation webhooks.',
     icon: 'levelio',
+    badge: { label: 'Enterprise', variant: 'secondary' },
+    capabilities: {
+      connection: true,
+      scopeSync: true,
+      deviceSync: true,
+      events: true,
+      remoteActions: false
+    },
+    requiresEnterprise: true
+  },
+  {
+    id: 'unifi',
+    title: 'UniFi',
+    description: 'Sync adopted UniFi gateways, switches, and access points as assets and open tickets when devices stay offline.',
+    icon: 'unifi',
     badge: { label: 'Enterprise', variant: 'secondary' },
     capabilities: {
       connection: true,
