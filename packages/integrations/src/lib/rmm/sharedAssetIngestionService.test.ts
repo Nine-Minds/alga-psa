@@ -198,7 +198,7 @@ function buildSnapshot(overrides: Partial<NormalizedRmmExternalDeviceSnapshot> =
 }
 
 describe('sharedAssetIngestionService', () => {
-  it('T002: creates asset + extension + external mapping from normalized snapshot', async () => {
+  it('T002/T139: creates asset + extension + external mapping from the mapping\u2019s client', async () => {
     const state: DbState = {
       assets: [],
       workstation_assets: [],
@@ -291,7 +291,7 @@ describe('sharedAssetIngestionService', () => {
   // which reverted a manual client move on every run and fought the RMM
   // organization move. The update path now leaves ownership alone; re-pointing
   // an organization moves its devices through moveRmmOrganizationAssets.
-  it('leaves asset ownership and the assignee alone when a device appears under a new mapped scope', async () => {
+  it('T138: leaves asset ownership and the assignee alone when a device appears under a new mapped scope', async () => {
     const state: DbState = {
       assets: [
         {

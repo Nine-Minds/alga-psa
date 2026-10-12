@@ -81,3 +81,106 @@ Working memory for this plan. Short bullets; update earlier notes when a decisio
 - Q7 yes: shared-workspace users get portal ticket rights on workspace assets. Portal asset scopes are only `client | contact` (`packages/authorization/src/portal/visibility.ts:19`), and portal ticket creation already validates the asset via `applyAssetVisibilityFilter` (`client-tickets.ts:1451`), so FR-E7 alone grants creation. Added FR-E7b / F108–F109 so the ticket list also shows colleagues' open tickets on workspace assets (read-only).
 - Q4 (merge choice also governs ticket/project stamping) still open; recommendation in PRD is yes.
 - Q4 decided 2026-10-09: the merge billing choice (`billingStrategy`) covers every moving row with a null profile: tickets, projects, assets, RMM org mappings. Billing history tables (invoices, cycles, payments, transactions, credits, tax settings) keep today's stamping with the moved profile; they are issued history, not moving work. Column renamed `client_merges.billing_strategy`.
+
+## Review round 2 (2026-10-12) — defects fixed
+
+Found by review, all fixed in this round:
+
+1. **F094 — three of five mapping UIs were dead ends.** Tactical, Huntress and
+   NinjaOne imported `RmmOrganizationClientChangeDialog` and set
+   `pendingClientChange` but never rendered it, so changing a mapped
+   organization's client returned early: no dialog, no save, no feedback — a
+   regression against the pre-branch select-saves-immediately behaviour. All
+   three now render it. Guarded by
+   `server/src/test/unit/rmmOrganizationMappingUis.contract.test.ts`, which
+   asserts import **and** element for all five providers.
+2. **F088 — `assets.billing_profile_id` reached only alert tickets.** The
+   inheritance now happens once, in `TicketModel.createTicketFromAsset`
+   (`validatedData.billing_profile_id ?? resolveAssetBillingProfileId`), so MSP,
+   REST and mobile get it from one place; the portal resolves it alongside its
+   contact heuristic and prefers the asset (a device says more about what gets
+   billed than "this contact usually belongs to segment X"). The three edge
+   schemas gained the optional field so an explicit pick survives the parse.
+3. **F109 — the workspace inclusion leaked into the write gate.**
+   `resolveVisibleTicket` (the gate for commenting, editing, deleting and status
+   changes) no longer passes `sharedWorkspaceTickets`; requester and watcher
+   still pass it, which is exactly FR-E7b's "read-only unless". The EXISTS
+   clause also gained the missing open/closed predicate — `closedColumn` is now
+   a required member of the option, so a read path cannot forget it.
+4. **F023 — NinjaOne's delete path wrote `inactive`.** Now `retired`, matching
+   shared ingestion's tombstone.
+5. **F075 — the Group column always read "None".** `listAssets` never populated
+   `asset.group`. New `getAssetGroupSummariesForAssets` fills a whole page in
+   four queries rather than four per row.
+6. **F106 — mobile's two new rows were dead.** `AssetService.getById` joined
+   only clients and vendors; it now left-joins `contacts` for `contact_name` and
+   attaches `getAssetGroupSummary`, and `assetResponseSchema` declares both. The
+   PRD's drawer Group row was added too.
+7. **F089 — AssetForm kept the billing profile across a client change**, so the
+   save failed validation instead of moving the device. `handleClientChange`
+   now clears it alongside the location and the assignee.
+8. **F090 — never implemented** (marked implemented, but no mapping manager had
+   a billing-profile select). New shared
+   `RmmOrganizationBillingProfileSelect` + `listRmmOrganizationBillingProfiles`,
+   wired into all five managers. It renders nothing below two active profiles.
+   It lives in `packages/integrations` with its own action because that package
+   does not depend on `@alga-psa/assets`.
+9. **FR-E5 — an RMM org move lost its `group_removed` entry.**
+   `moveRmmOrganizationAssets` deleted the member row and logged only
+   `updated`. The group history is inlined there (it runs on the workflow
+   worker, below `packages/` in the graph).
+10. **NinjaOne auto-assign used `mapping.client_id!`** where shared ingestion
+    correctly uses the asset's own client; after a manual move in `auto` mode
+    `setAssetAssignee` could throw and abort the device sync. It now reads
+    `asset.client_id` from the update's `returning('*')`.
+11. **Dead import** `listDeployableStatusSlugs` removed from `assetActions.ts`.
+12. **Status rows rendered the raw slug.** New `assetStatusLabelForSlug`
+    (registry label → builtin label → humanized slug) behind
+    `resolveAssetStatusLabel`, used by the Bento Identity tile, the list column
+    and the drawer, so a custom `in_repair` reads "In repair" even mid-load.
+13. **F105 — the merge OpenAPI definitions omitted the new fields.**
+    `ClientMergeBody.billing_strategy`, `ClientMergeResource.billing_strategy`
+    and the preview's `assets` / `billingChoice` blocks are documented and all
+    six spec artefacts regenerated.
+
+### tests.json integrity
+
+The previous round flipped all 157 entries to `implemented: true` with roughly
+30 having no test. Those blocks now have one; the id appears in the test name so
+the mapping is checkable with `grep`:
+
+| block | file |
+| --- | --- |
+| T084–T088, T132, T135–T137 | `server/src/test/unit/rmmOrganizationMappingUis.contract.test.ts`, `server/src/test/unit/assetSurfacesRemaining.contract.test.ts` |
+| T106–T116 | `server/src/test/unit/assetGroupsUi.contract.test.ts` |
+| T118–T121, T154–T157 | `packages/authorization/src/portal/visibility.test.ts`, `packages/client-portal/src/actions/client-portal-actions/client-tickets.visibility.test.ts`, `server/src/test/unit/assetSurfacesRemaining.contract.test.ts` |
+| T122–T124 | `shared/models/__tests__/assetTicketContactModel.test.ts`, `server/src/test/unit/assetSurfacesRemaining.contract.test.ts` |
+| T125–T131 | `shared/models/__tests__/assetBillingProfileModel.test.ts`, `server/src/test/unit/assetBillingProfileTicketFlow.contract.test.ts` |
+| T140–T145 | `packages/clients/src/lib/clientMergeEngine.test.ts`, `server/src/test/unit/assetSurfacesRemaining.contract.test.ts`, `server/src/test/unit/assetRestSurface.contract.test.ts` |
+| T147–T152 | `server/src/test/unit/assetRestSurface.contract.test.ts`, `server/src/test/unit/assetSurfacesRemaining.contract.test.ts` |
+| T089, T117, T146, T153 | `server/src/test/unit/i18n/assetPlanKeyParity.test.ts` |
+
+The earlier groups' tests (asset-fields, asset-status, assignment-core/ui,
+rmm-user-match, groups-core) are behaviour-named rather than id-named — e.g.
+T092–T097 and T102 are the `addAssetsToGroupRows` / `group people invariants` /
+`updateGroupRow` blocks in `packages/assets/src/lib/assetGroups.test.ts`, and
+T138–T139 are the ownership cases in
+`packages/integrations/src/lib/rmm/sharedAssetIngestionService.test.ts`. Those
+were left as they are; only the genuinely-untested blocks above were written.
+
+Several of the new tests are **source-level contract tests**, the convention
+already used by `AssetBentoLayout.notes.contract.test.ts` and
+`inboundEmailTenantScoped.contract.test.ts`. That choice is deliberate for the
+UI entries: the components span five packages with no shared mount harness, and
+the failure class these entries guard is structural — an element imported but
+never rendered, a column bound to a field nothing fills, a resolver called from
+one of four surfaces. Defects 1, 2, 5, 6 and 8 above were all exactly that, and
+each now has a test that fails if it recurs.
+
+### Still true / not changed
+
+- `ee/mobile` has no `node_modules` here, so T152/T153 are asserted from
+  `server`'s suite by reading the mobile sources and its `en` locale.
+- T141–T143 run against the merge engine's in-memory database
+  (`clientMergeEngine.test.ts`), not a real one; the DB-level merge assertions
+  remain in `server/src/test/integration/clientMerge.integration.test.ts`.
