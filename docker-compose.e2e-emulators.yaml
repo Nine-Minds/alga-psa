@@ -1,5 +1,10 @@
 # Disposable provider infrastructure for the production browser stack. No
 # persistent state volume: each edition/job owns this emulator instance.
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
 x-provider-environment: &provider-environment
   # The login base is used for both browser authorization and server token
   # exchange. CI maps this name on the host; Docker resolves the network alias.
@@ -34,6 +39,7 @@ services:
     environment:
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
   worker-test-state:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     user: '0:0'
     entrypoint: ['node', '/init-worker-test-state.mjs']
@@ -58,6 +64,7 @@ services:
     networks:
       - app-network
   algasim:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     init: true
     environment:
@@ -75,6 +82,7 @@ services:
       timeout: 3s
       retries: 30
   test-ingress:
+    <<: *hardening
     image: alga-e2e-test-algasim:latest
     init: true
     entrypoint: ['node', '/provider-ingress.mjs']
@@ -155,6 +163,7 @@ services:
   # This frontend owns separate Temporal schemas in this job's disposable
   # PostgreSQL instance. It has no host ports or live provider access.
   temporal-dev:
+    <<: *hardening
     image: temporalio/auto-setup:1.24.2
     environment:
       DB: postgres12
@@ -178,6 +187,10 @@ services:
     networks:
       - app-network
     depends_on:
+      # The Temporal image runs as uid 1000 and reads the secret files, which
+      # runtime-permissions hands to uid 1000.
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
   workflow-worker:
@@ -206,6 +219,7 @@ services:
   # Explicitly started only in the EE job. Authored workflows belong to the
   # workflow-worker; this worker also adds its existing SLA queue internally.
   temporal-worker:
+    <<: *hardening
     user: '1000:1000'
     profiles: ['enterprise']
     image: alga-e2e-test-temporal-worker:latest

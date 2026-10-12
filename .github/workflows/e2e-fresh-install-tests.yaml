@@ -296,9 +296,10 @@ jobs:
           printf "placeholder-secret" > secrets/google_oauth_client_secret
 
           # These files contain only the synthetic values above. Compose mounts
-          # file secrets with host ownership; permit the non-root Temporal image
-          # to read them without changing its production user.
-          chmod 444 secrets/*
+          # file secrets with host ownership. The `runtime-permissions` init
+          # service hands them to uid 1000 (the user the application containers
+          # and the Temporal image run as), so no world-readable bit is needed.
+          chmod 600 secrets/*
 
           # Copy and configure environment file
           cp .env.example .env
@@ -476,6 +477,16 @@ jobs:
           # Only this fresh job's empty named volumes are initialized. All
           # application secret writers use UID1000; production checks stay on.
           docker-compose -p alga-e2e-test run --rm --no-deps worker-test-state
+
+      - name: Run runtime-permissions init
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          # Same one-shot init the documented installs run on every `up`: it
+          # chowns the files volume and secrets/* to uid 1000 and fails if a
+          # secret is still unreadable by that uid.
+          docker-compose -p alga-e2e-test up --no-build --no-deps --exit-code-from runtime-permissions runtime-permissions
+          [ "$(stat -c %u secrets/db_password_server)" = 1000 ]
+        shell: bash
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
@@ -763,6 +774,19 @@ jobs:
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
           echo "Server service is healthy at $HEALTH_CHECK_URL."
+        shell: bash
+
+      - name: Verify application containers run as uid 1000
+        if: steps.server_ready.outcome == 'success'
+        run: |
+          for service in server workflow-worker email-service redis; do
+            uid=$(docker-compose -p alga-e2e-test exec -T "$service" id -u)
+            echo "$service runs as uid $uid"
+            if [ "$uid" != 1000 ]; then
+              echo "Expected $service to run as uid 1000"
+              exit 1
+            fi
+          done
         shell: bash
 
       - name: Verify provider routing from running Alga processes
