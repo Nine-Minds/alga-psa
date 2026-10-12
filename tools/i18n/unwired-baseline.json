@@ -25,6 +25,7 @@
     "packages/ee/src/components/settings/integrations/HuduIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/HuntressIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/LevelIoIntegrationSettings.tsx",
+    "packages/ee/src/components/settings/integrations/UniFiIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/NinjaOneIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/TaniumIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/entra/EntraIntegrationPage.tsx",

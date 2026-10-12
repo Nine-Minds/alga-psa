@@ -27,6 +27,7 @@ type RmmIntegrationOption = {
   component: React.ComponentType;
 };
 
+// LEVERAGE: pattern rmm-provider-registration — icon style, dynamic import and component map are hand-maintained per provider
 const PROVIDER_ICON_STYLES: Record<RmmProviderMetadata['icon'], { className: string; label: string }> = {
   tacticalrmm: { className: 'bg-amber-500 text-[9px] font-bold tracking-wider text-white', label: 'TRMM' },
   ninjaone: { className: 'bg-slate-900 text-base font-bold text-white', label: 'N' },
@@ -134,6 +135,14 @@ const LevelIoIntegrationSettings = dynamic(
   }
 );
 
+const UniFiIntegrationSettings = dynamic(
+  () => import('@enterprise/components/settings/integrations/UniFiIntegrationSettings'),
+  {
+    loading: () => <ProviderLoading title="UniFi" />,
+    ssr: false
+  }
+);
+
 const HuntressIntegrationSettings = dynamic(
   () => import('@enterprise/components/settings/integrations/HuntressIntegrationSettings'),
   {
@@ -147,6 +156,7 @@ const providerSettingsComponents: Partial<Record<RmmProvider, React.ComponentTyp
   ninjaone: NinjaOneIntegrationSettings,
   tanium: TaniumIntegrationSettings,
   levelio: LevelIoIntegrationSettings,
+  unifi: UniFiIntegrationSettings,
   huntress: HuntressIntegrationSettings
 };
 

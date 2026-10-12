@@ -2765,6 +2765,90 @@
           "url": "Webhook URL"
         }
       },
+      "unifi": {
+        "actions": {
+          "saveConfiguration": "Save Configuration",
+          "testConnection": "Test Connection",
+          "disconnect": "Disconnect",
+          "discoverSites": "Discover Sites",
+          "runDeviceSync": "Run Device Sync",
+          "checkOfflineNow": "Check Offline Devices Now",
+          "saveAlerting": "Save Alerting Settings"
+        },
+        "alerting": {
+          "title": "Offline Alerting",
+          "description": "A device that stays offline longer than the grace period opens an alert, and a ticket when your alert rules say so. The alert resolves when the device comes back online.",
+          "graceMinutes": "Offline grace period (minutes)",
+          "graceHelp": "How long a device must be continuously offline before an alert is raised. Use 0 to alert immediately.",
+          "rulesNote": "Ticket creation, priorities and auto-resolve are configured in the alert rules below."
+        },
+        "connection": {
+          "title": "UniFi Connection",
+          "description": "Connect with a UniFi API key. Use Site Manager to reach every console on your account, or Local controller for a controller you can reach directly. Adopted gateways, switches and access points are synced.",
+          "syncLabel": "Sync: {{status}}",
+          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "connectedAt": "Connected: {{time}}",
+          "never": "never"
+        },
+        "errors": {
+          "loadSettings": "Failed to load UniFi settings",
+          "loadMappings": "Failed to load UniFi site mappings",
+          "loadSummary": "Failed to load UniFi connection summary",
+          "loadState": "Failed to load UniFi integration state",
+          "saveConfiguration": "Failed to save UniFi configuration",
+          "testConnectionFailed": "Connection test failed",
+          "disconnectFailed": "Failed to disconnect UniFi integration",
+          "siteSyncFailed": "Site discovery failed",
+          "deviceSyncFailed": "Device sync failed",
+          "updateMappingFailed": "Failed to update mapping",
+          "reconnectRequired": "UniFi rejected the saved API key. Paste a new key and save to resume syncing.",
+          "alertCheckFailed": "Offline check failed",
+          "saveAlertingFailed": "Failed to save alerting settings",
+          "invalidGraceMinutes": "Enter a whole number of minutes between 0 and 1440."
+        },
+        "fields": {
+          "apiKey": "API key ({{state}})",
+          "apiKeyStateSaved": "saved",
+          "apiKeyStateRequired": "required",
+          "apiKeyPlaceholderExisting": "Key saved. Enter a new key to replace it",
+          "apiKeyPlaceholderNew": "Paste your UniFi API key",
+          "connectionMode": "Connection mode",
+          "modeSiteManager": "Site Manager (cloud)",
+          "modeLocal": "Local controller",
+          "localBaseUrl": "Controller URL",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "UniFi Site",
+          "siteIdLabel": "ID: {{id}}",
+          "mappedClient": "Mapped Client",
+          "defaultContact": "Default Contact",
+          "selectContact": "Select contact",
+          "autoSync": "Auto Sync",
+          "autoSyncEnabled": "Enabled",
+          "autoSyncDisabled": "Disabled"
+        },
+        "status": {
+          "label": "Status: ",
+          "connected": "Connected",
+          "disconnected": "Not connected",
+          "reconnectRequired": "Reconnect required"
+        },
+        "success": {
+          "configurationSaved": "UniFi configuration saved",
+          "connectionTestSucceeded": "Connection to UniFi succeeded",
+          "disconnected": "UniFi integration disconnected",
+          "siteSyncCompleted": "Site discovery completed: {{processed}} processed, {{created}} created, {{updated}} updated",
+          "deviceSyncCompleted": "Device sync completed: {{processed}} processed, {{created}} created, {{updated}} updated",
+          "alertCheckCompleted": "Offline check completed",
+          "alertingSaved": "Alerting settings saved"
+        },
+        "sync": {
+          "title": "Sync & Site Mappings",
+          "description": "Discover UniFi sites and map each to a client. Devices in unmapped sites are skipped.",
+          "summary": "{{mappedSites}} mapped sites · {{devices}} devices · {{activeAlerts}} active alerts"
+        }
+      },
       "huntress": {
         "columns": {
           "organization": "Huntress Organization",

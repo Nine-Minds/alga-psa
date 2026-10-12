@@ -86,6 +86,7 @@ export const DEFAULT_OPTIONS = {
    */
   castSinks: [
     { file: 'ee/server/src/lib/integrations/levelio/sync/syncEngine.ts', eventNameAlias: 'LevelIoSyncEventName' },
+    { file: 'ee/server/src/lib/integrations/unifi/sync/syncEngine.ts', eventNameAlias: 'UniFiSyncEventName' },
   ],
   defectTicket: 'alga-2026-0002675',
   /** Extra in-memory files (self-test fixtures): { 'relative/path.ts': 'source' }. */
