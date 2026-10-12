@@ -213,7 +213,7 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
   return results;
 }
 
-interface MappedSite {
+export interface MappedSite {
   scopeKey: string;
   hostId: string;
   siteId: string;
@@ -221,7 +221,7 @@ interface MappedSite {
   clientId: string;
 }
 
-async function loadMappedSites(deps: UniFiSyncDeps, tenant: string, integrationId: string): Promise<MappedSite[]> {
+export async function loadMappedSites(deps: UniFiSyncDeps, tenant: string, integrationId: string): Promise<MappedSite[]> {
   const rows = await tenantDb(deps.knex, tenant)
     .table('rmm_organization_mappings')
     .where({ integration_id: integrationId })

@@ -47,7 +47,8 @@ export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 export const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 
-const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+// LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
+const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'unifi'];
 
 /**
  * Which providers get a recurring device sync. Deliberately NOT the alert
@@ -99,6 +100,14 @@ async function ensureFetchersRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — NinjaOne polling simply unavailable.
+  }
+  try {
+    const mod = await import('@enterprise/lib/integrations/unifi/alerts/reconciliationFetcher');
+    if (mod.unifiAlertFetcher) {
+      registerRmmAlertFetcher('unifi', mod.unifiAlertFetcher);
+    }
+  } catch {
+    // CE build without the alias target — UniFi offline alerts unavailable.
   }
   fetchersEnsured = true;
 }

@@ -22,9 +22,12 @@ import {
   saveUniFiConfiguration,
   syncUniFiSites,
   triggerUniFiFullSync,
+  saveUniFiAlertingSettings,
+  runUniFiAlertCheckNow,
   testUniFiConnection,
   updateUniFiSiteMapping,
 } from '../../../lib/actions/integrations/uniFiActions';
+import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
 import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
 
 type ConnectionMode = 'site_manager' | 'local';
@@ -72,6 +75,9 @@ export default function UniFiIntegrationSettings() {
   const [isDisconnecting, startDisconnecting] = useTransition();
   const [isSiteSyncing, startSiteSyncing] = useTransition();
   const [isDeviceSyncing, startDeviceSyncing] = useTransition();
+  const [isSavingAlerting, startSavingAlerting] = useTransition();
+  const [isCheckingAlerts, startCheckingAlerts] = useTransition();
+  const [graceMinutes, setGraceMinutes] = useState('5');
 
   const refresh = useCallback(async (background = false) => {
     if (!background) setIsLoading(true);
@@ -100,6 +106,7 @@ export default function UniFiIntegrationSettings() {
         setConnectionMode(config?.connectionMode === 'local' ? 'local' : 'site_manager');
         setLocalBaseUrl(config?.localBaseUrl || '');
         setReconnectRequired(Boolean(config?.reconnectRequired));
+        if (typeof config?.offlineGraceMinutes === 'number') setGraceMinutes(String(config.offlineGraceMinutes));
         setHasApiKey(Boolean(settingsResult.credentials?.hasApiKey));
       }
 
@@ -223,6 +230,41 @@ export default function UniFiIntegrationSettings() {
         }
       } else {
         setError(('error' in result && result.error) || t('integrations.rmm.unifi.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
+      }
+      await refresh(true);
+    });
+  };
+
+  const handleSaveAlerting = () => {
+    startSavingAlerting(async () => {
+      setError(null);
+      setSuccess(null);
+      const trimmed = graceMinutes.trim();
+      const minutes = Number(trimmed);
+      if (!trimmed || !Number.isInteger(minutes) || minutes < 0 || minutes > 1440) {
+        setError(t('integrations.rmm.unifi.errors.invalidGraceMinutes', { defaultValue: 'Enter a whole number of minutes between 0 and 1440.' }));
+        return;
+      }
+      const result = await saveUniFiAlertingSettings({ offlineGraceMinutes: minutes });
+      if (result.success) {
+        setSuccess(t('integrations.rmm.unifi.success.alertingSaved', { defaultValue: 'Alerting settings saved' }));
+      } else {
+        setError(result.error || t('integrations.rmm.unifi.errors.saveAlertingFailed', { defaultValue: 'Failed to save alerting settings' }));
+      }
+      await refresh(true);
+    });
+  };
+
+  const handleCheckAlerts = () => {
+    startCheckingAlerts(async () => {
+      setError(null);
+      setSuccess(null);
+      const result = await runUniFiAlertCheckNow();
+      if (result.success) {
+        setSuccess(t('integrations.rmm.unifi.success.alertCheckCompleted', { defaultValue: 'Offline check completed' }));
+        if ('warnings' in result && result.warnings?.length) setError(result.warnings.join('; '));
+      } else {
+        setError(('error' in result && result.error) || t('integrations.rmm.unifi.errors.alertCheckFailed', { defaultValue: 'Offline check failed' }));
       }
       await refresh(true);
     });
@@ -467,8 +509,57 @@ export default function UniFiIntegrationSettings() {
       </Card>
 
       {isActive && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('integrations.rmm.unifi.alerting.title', { defaultValue: 'Offline Alerting' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.rmm.unifi.alerting.description', {
+                defaultValue:
+                  'A device that stays offline longer than the grace period opens an alert, and a ticket when your alert rules say so. The alert resolves when the device comes back online.',
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="max-w-xs space-y-1">
+              <label htmlFor="unifi-grace-minutes" className="text-sm font-medium">
+                {t('integrations.rmm.unifi.alerting.graceMinutes', { defaultValue: 'Offline grace period (minutes)' })}
+              </label>
+              <Input
+                id="unifi-grace-minutes"
+                type="number"
+                min={0}
+                max={1440}
+                value={graceMinutes}
+                onChange={(e) => setGraceMinutes(e.target.value)}
+                disabled={isSavingAlerting}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.rmm.unifi.alerting.graceHelp', {
+                  defaultValue: 'How long a device must be continuously offline before an alert is raised. Use 0 to alert immediately.',
+                })}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('integrations.rmm.unifi.alerting.rulesNote', {
+                defaultValue: 'Ticket creation, priorities and auto-resolve are configured in the alert rules below.',
+              })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button id="unifi-save-alerting" onClick={handleSaveAlerting} disabled={isSavingAlerting || isLoading}>
+                {t('integrations.rmm.unifi.actions.saveAlerting', { defaultValue: 'Save Alerting Settings' })}
+              </Button>
+              <Button id="unifi-check-offline-now" variant="outline" onClick={handleCheckAlerts} disabled={isCheckingAlerts || isLoading}>
+                {t('integrations.rmm.unifi.actions.checkOfflineNow', { defaultValue: 'Check Offline Devices Now' })}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isActive && (
         <RmmDeviceSyncSettings provider="unifi" onSaved={() => void refresh(true)} />
       )}
+      {isActive && integrationId && <RmmAlertAutomationSettings integrationId={integrationId} provider="unifi" />}
       {renderQuickAddContact({
         isOpen: !!quickAddContactFor,
         onClose: () => setQuickAddContactFor(null),

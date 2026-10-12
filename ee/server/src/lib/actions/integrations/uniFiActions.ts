@@ -20,6 +20,7 @@ import {
   UNIFI_LOCAL_BASE_URL_SECRET,
   type UniFiConnectionMode,
 } from '../../integrations/unifi/unifiApiClient';
+import { reconcileUniFiAlertsNow } from '../../integrations/unifi/alerts/uniFiAlertReconcile';
 import { clearReconnectRequired } from '../../integrations/unifi/reconnect';
 import { runUniFiDeviceSync, runUniFiFullSync, runUniFiScopeSync } from '../../integrations/unifi/sync/syncEngine';
 import {
@@ -191,6 +192,19 @@ export const getUniFiSettings = withAdvancedAssetsAccess(async (user, { tenant }
   }
 });
 
+/**
+ * Run one offline-alert cycle right after a successful connect so the MSP sees
+ * current outages immediately. Best effort: a failure here must never fail the
+ * connect itself (the scheduled poller will retry).
+ */
+async function reconcileAlertsBestEffort(tenant: string): Promise<void> {
+  try {
+    await reconcileUniFiAlertsNow(tenant);
+  } catch {
+    // Intentionally swallowed; the scheduled reconciliation surfaces persistent failures.
+  }
+}
+
 export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
   user,
   { tenant },
@@ -231,6 +245,7 @@ export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
       syncError: null,
     });
 
+    await reconcileAlertsBestEffort(tenant);
     return { success: true, integrationId: row.integration_id as string };
   } catch (error) {
     return { success: false, error: sanitizeError(error, 'Unable to save UniFi configuration.') };
@@ -256,6 +271,7 @@ export const testUniFiConnection = withAdvancedAssetsAccess(async (user, { tenan
       syncError: null,
     });
 
+    await reconcileAlertsBestEffort(tenant);
     return { success: true };
   } catch (error) {
     const message = sanitizeError(error, 'Unable to test the UniFi connection.');
@@ -414,6 +430,53 @@ export const syncUniFiSingleDevice = withAdvancedAssetsAccess(
     }
   }
 );
+
+export const saveUniFiAlertingSettings = withAdvancedAssetsAccess(
+  async (user, { tenant }, input: { offlineGraceMinutes: number }) => {
+    const permitted = await hasPermission(user as any, 'system_settings', 'update');
+    if (!permitted) return { success: false, error: 'Forbidden' };
+
+    const minutes = Number(input?.offlineGraceMinutes);
+    if (!Number.isInteger(minutes) || minutes < 0 || minutes > 1440) {
+      return { success: false, error: 'Enter a whole number of minutes between 0 and 1440.' };
+    }
+
+    try {
+      const { knex, integration } = await getUniFiIntegration(tenant);
+      if (!integration?.integration_id) {
+        return { success: false, error: 'UniFi integration is not configured.' };
+      }
+      await knex.raw(
+        `UPDATE rmm_integrations
+            SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{offlineGraceMinutes}', to_jsonb(?::int), true),
+                updated_at = now()
+          WHERE tenant = ? AND integration_id = ?`,
+        [minutes, tenant, integration.integration_id]
+      );
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: sanitizeError(error, 'Unable to save alerting settings.') };
+    }
+  }
+);
+
+export const runUniFiAlertCheckNow = withAdvancedAssetsAccess(async (user, { tenant }) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const result = await reconcileUniFiAlertsNow(tenant);
+    return {
+      success: true,
+      remoteActive: result.remoteActive,
+      ingested: result.ingested,
+      resolved: result.resetsSynthesized,
+      warnings: result.warnings,
+    };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to check UniFi devices.') };
+  }
+});
 
 export const listUniFiSiteMappings = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');

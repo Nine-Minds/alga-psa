@@ -63,7 +63,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tact
  */
 
 const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium', 'unifi'];
-const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm', 'unifi'];
 
 function deviceSyncEligible(row: {
   is_active: boolean;
@@ -93,7 +93,7 @@ describe('device sync eligibility', () => {
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'levelio' })).toBe(true);
   });
 
-  it('is eligible for UniFi (device sync only until its alert fetcher is registered)', () => {
+  it('is eligible for UniFi (device sync and offline alert polling)', () => {
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'unifi' })).toBe(true);
   });
 
