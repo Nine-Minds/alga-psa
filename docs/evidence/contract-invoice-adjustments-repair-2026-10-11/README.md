@@ -154,7 +154,7 @@ ORDER BY record_id;
 
 ### Validation record
 
-Validation was run against repaired local HEAD `3b2dc0ec7e355fdc0ed67ad35282735dbd2f2bbe` before the follow-up repair commit. The main commands and outcomes are:
+Validation was run against repair commit `edeb8c0f2b8e16990d7e4dc35a743051320464fb`, pushed to PR #3499. The main commands and outcomes are:
 
 | Command | Result |
 | --- | --- |
@@ -167,8 +167,11 @@ Validation was run against repaired local HEAD `3b2dc0ec7e355fdc0ed67ad35282735d
 | `npm run i18n:audit` | Pass; all eight locales have 34,712 keys and zero untranslated/forbidden/missing entries. |
 | `TMPDIR="$PWD/server/.vitest-tmp-review" npm run test:i18n` | Pass, 50/50. The same command without private `TMPDIR` failed 5 cases before assertions while writing temporary files (`Unknown system error -122`); the focused Vitest suites above passed with the private directory. |
 | `npx eslint packages/billing/src/lib/billing/reconcileContractChangeAdjustments.ts packages/billing/src/services/invoiceAutomaticAdjustments.ts server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts` | 0 errors, 102 warnings (existing `any` and non-null-assertion warnings in the large test file). |
+| `cd server && NEXT_DIST_DIR=.next-pr3499-production-20261012-12g NODE_OPTIONS=--max-old-space-size=12288 npm run build` | Pass. Enterprise production build completed compilation, 74 static pages, and build trace collection. Next emitted existing warnings about Edge Runtime `process.cwd()` use and dynamic `headers()` use in `/_global-error`; the build exited 0. |
 
-At the time of the `-122` failure, `/tmp` was 25/31 GiB used with 6.1 GiB available and 42% inode use; the workspace filesystem had 32 GiB available. `quota -s` is not installed. No shared or other review artifacts were deleted. The successful reruns used the worktree-private `server/.vitest-tmp-review` directory. The production build uses a distinct `NEXT_DIST_DIR`; its result is appended after completion.
+At the time of the `-122` failure, `/tmp` was 25/31 GiB used with 6.1 GiB available and 42% inode use; the workspace filesystem had 32 GiB available. `quota -s` is not installed. No shared or other review artifacts were deleted. The successful reruns used the worktree-private `server/.vitest-tmp-review` directory. Production builds used distinct `NEXT_DIST_DIR` values so they did not overwrite the pre-existing review builds.
+
+The first production build attempt used `NEXT_DIST_DIR=.next-pr3499-production-20261012` and an 8 GiB heap. It exited 134 after about 4m20s with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory` during SWC compilation. The successful 12 GiB retry used its own output directory; both generated directories and logs were preserved.
 
 ### Cleanup boundary
 
