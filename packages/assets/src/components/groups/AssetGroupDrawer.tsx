@@ -57,16 +57,22 @@ export function AssetGroupDrawer({
   const [confirmKindChange, setConfirmKindChange] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const apply = useCallback((next: AssetGroup | unknown) => {
+  /**
+   * Takes the group a read or a write returned. Deliberately independent of
+   * `onChanged`: the first read must not announce itself as a change, or a
+   * parent that reloads its own list on every change reloads it just for
+   * opening the drawer.
+   */
+  const apply = useCallback((next: AssetGroup | unknown): AssetGroup | null => {
     if (isAssetActionError(next)) {
       toast.error(assetActionErrorMessage(next));
-      return;
+      return null;
     }
     const value = next as AssetGroup;
     setGroup(value);
     setName(value.name);
-    onChanged?.(value);
-  }, [onChanged]);
+    return value;
+  }, []);
 
   const load = useCallback(async () => {
     const result = await getAssetGroup(groupId);
@@ -128,7 +134,8 @@ export function AssetGroupDrawer({
     setSaving(true);
     try {
       const result = await work();
-      apply(result);
+      const applied = apply(result);
+      if (applied) onChanged?.(applied);
       revalidateMembers(result);
     } finally {
       setSaving(false);

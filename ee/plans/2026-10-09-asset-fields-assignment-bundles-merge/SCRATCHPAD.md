@@ -259,3 +259,25 @@ action, which is what let the defect pass round 2.
   (`suggestContactForAsset.test.ts`).
 - **F105** the OpenAPI `byRmmOrganization` item omitted `integrationId`, which
   the preview returns; added and the six spec artefacts regenerated.
+
+## Round 4 — browser-check defects
+
+### The client Assets table kept the previous assignee
+
+Changing a bundle's owner in the group drawer reassigns every member, and the
+database agreed: a reload showed the new owner. The table did not. The client
+Assets tab holds its rows in component state loaded once per
+`clientId`/`selectedType`/`currentPage`, so switching back from the Groups view
+re-rendered the rows the tab had fetched before the write.
+
+`MspClientAssets` now has a stable `refreshAfterGroupChange` (the `loadData`
+that was a bare async function is a `useCallback`, so its identity is stable)
+wired to the drawer's `onChanged`, its `onDeleted` and the dialog's `onClose`.
+Stability matters: `AssetGroupDrawer` refetches its group whenever the callback
+identity changes, so an inline arrow would have the drawer refetching on every
+parent render.
+
+The drawer's `apply` no longer calls `onChanged`. It was shared by the initial
+read and every write, which would have made opening the drawer reload the list
+behind it for nothing; `run` announces the write, and `apply` only takes the
+group.

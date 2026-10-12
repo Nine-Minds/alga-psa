@@ -72,6 +72,19 @@ describe('asset group surfaces', () => {
     expect(text).toMatch(/searchParams\?\.get\('view'\) === 'groups' \? 'groups' : 'assets'/);
   });
 
+  it('T111: a group write reloads the Assets table it just reassigned', () => {
+    const text = source('packages/msp-composition/src/clients/MspClientAssets.tsx');
+
+    // The table's rows live in state loaded per filter, so a bundle owner
+    // change made in the drawer left the old assignee on screen until a full
+    // reload. The drawer reports every write; the tab refetches both views.
+    expect(text).toMatch(/const refreshAfterGroupChange = useCallback\(\(\) => \{\s*void loadData\(\);\s*void loadGroups\(\);/);
+    expect(text).toMatch(/<AssetGroupDrawer[\s\S]{0,200}onChanged=\{refreshAfterGroupChange\}/);
+    expect(text).toMatch(/onDeleted=\{\(\) => \{ setOpenGroupId\(null\); refreshAfterGroupChange\(\); \}\}/);
+    // Stable identity, or the drawer refetches its group on every render.
+    expect(text).toMatch(/\}, \[loadData, loadGroups\]\);/);
+  });
+
   it('T112/T113: the list has bulk Add to group and a working Group filter and column', () => {
     const text = source('packages/assets/src/components/AssetDashboardClient.tsx');
 

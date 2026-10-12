@@ -23,8 +23,14 @@ describe('asset writers drop the asset cache', () => {
     const source = read('groups/AssetGroupDrawer.tsx');
     expect(source).toMatch(/matchAssetCacheKeys\(\[\.\.\.memberIds, \.\.\.after\]\)/);
     // Every write goes through `run`, and deleting the group goes its own way.
-    expect(source).toMatch(/const result = await work\(\);\s*apply\(result\);\s*revalidateMembers\(result\);/);
+    // `run` also tells the parent, so a list rendered behind the drawer
+    // reloads the rows this write just reassigned; the first read does not,
+    // or opening the drawer would reload that list for nothing.
+    expect(source).toMatch(
+      /const result = await work\(\);\s*const applied = apply\(result\);\s*if \(applied\) onChanged\?\.\(applied\);\s*revalidateMembers\(result\);/
+    );
     expect(source).toMatch(/revalidateMembers\(\);\s*onDeleted\?\.\(\)/);
+    expect(source).toMatch(/const apply = useCallback\([\s\S]{0,400}\}, \[\]\);/);
   });
 
   it('the assignee row invalidates the asset it reassigned', () => {

@@ -178,7 +178,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     }
   }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoadError(false);
       const [summaryData, assetsData] = await Promise.all([
@@ -202,20 +202,32 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clientId, selectedType, currentPage, pageSize]);
 
   useEffect(() => {
-    loadData();
-  }, [clientId, selectedType, currentPage]);
+    void loadData();
+  }, [loadData]);
 
   const handleAssetAdded = () => {
-    loadData();
+    void loadData();
   };
 
   const loadGroups = useCallback(async () => {
     const result = await listAssetGroups(clientId);
     if (Array.isArray(result)) setGroups(result);
   }, [clientId]);
+
+  /**
+   * A group write moves its members: a bundle owner assigns every member, a
+   * workspace unassigns them, the location propagates. The Assets table holds
+   * its rows in state loaded once per filter, so without this it kept showing
+   * the previous assignee until a full page reload. Stable identity — the
+   * drawer refetches the group whenever this callback changes.
+   */
+  const refreshAfterGroupChange = useCallback(() => {
+    void loadData();
+    void loadGroups();
+  }, [loadData, loadGroups]);
 
   useEffect(() => {
     if (view === 'groups') void loadGroups();
@@ -466,7 +478,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
       <Dialog
         id="client-assets-group-drawer"
         isOpen={Boolean(openGroupId)}
-        onClose={() => { setOpenGroupId(null); void loadGroups(); }}
+        onClose={() => { setOpenGroupId(null); refreshAfterGroupChange(); }}
         title={t('clientTabs.assets.groups.drawerTitle', { defaultValue: 'Asset group' })}
         className="max-w-2xl"
       >
@@ -474,7 +486,8 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
           {openGroupId ? (
             <AssetGroupDrawer
               groupId={openGroupId}
-              onDeleted={() => { setOpenGroupId(null); void loadGroups(); }}
+              onChanged={refreshAfterGroupChange}
+              onDeleted={() => { setOpenGroupId(null); refreshAfterGroupChange(); }}
             />
           ) : null}
         </DialogContent>
