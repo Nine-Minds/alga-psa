@@ -84,9 +84,10 @@ describe('fixed member base_rate_basis migration', () => {
   });
 
   it('classifies the four shapes (and seats) and enforces the constraints', async () => {
-    const [a, b, c, d, e, f, g] = await Promise.all(
-      ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((n) => seedService(`Basis ${n}`)),
-    );
+    // Sequential: concurrent createTestService calls race on the shared service type.
+    const seeded: string[] = [];
+    for (const n of ['A', 'B', 'C', 'D', 'E', 'F', 'G']) seeded.push(await seedService(`Basis ${n}`));
+    const [a, b, c, d, e, f, g] = seeded;
 
     // Shape 1: wizard share line WITH a line rate (225/675 at q1/q3, line 900).
     const wizardLine = await seedLine(900);
