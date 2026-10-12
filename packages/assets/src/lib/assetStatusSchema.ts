@@ -49,6 +49,29 @@ export function generateAssetStatusSlug(label: string): string {
     .slice(0, 60);
 }
 
+/**
+ * "in_repair" -> "In repair". The last-resort reading of a status slug, for
+ * when the registry has not loaded yet and the slug is not a builtin: a
+ * humanized slug is still better than the raw one on screen.
+ */
+export function humanizeAssetStatusSlug(slug: string): string {
+  const words = String(slug ?? '').split('_').filter(Boolean);
+  if (words.length === 0) return '';
+  return [words[0].charAt(0).toUpperCase() + words[0].slice(1), ...words.slice(1)].join(' ');
+}
+
+/** The label for a status slug: registry row, else builtin, else humanized. */
+export function assetStatusLabelForSlug(
+  slug: string,
+  statuses: ReadonlyArray<Pick<AssetStatus, 'slug' | 'label'>> | null | undefined
+): string {
+  const registered = statuses?.find((candidate) => candidate.slug === slug);
+  if (registered?.label) return registered.label;
+  const builtin = BUILTIN_ASSET_STATUSES.find((candidate) => candidate.slug === slug);
+  if (builtin) return builtin.label;
+  return humanizeAssetStatusSlug(slug);
+}
+
 /** Options for a status select, grouped by lifecycle kind in kind order. */
 export function groupAssetStatusesByKind(
   statuses: AssetStatus[]

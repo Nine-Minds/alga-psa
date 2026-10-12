@@ -371,7 +371,10 @@
       "tenant": "Locataire",
       "manufacturer": "Fabricant",
       "model": "Modèle",
-      "assignedTo": "Attribué à"
+      "assignedTo": "Attribué à",
+      "group": "Groupe",
+      "groupSharedWorkspace": "{{name}} · poste partagé",
+      "groupBundle": "{{name}} · lot"
     },
     "typeDetails": {
       "workstation": "Détails du poste de travail",

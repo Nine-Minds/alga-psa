@@ -369,7 +369,10 @@
       "tenant": "Organisation",
       "manufacturer": "Tillverkare",
       "model": "Modell",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "group": "Grupp",
+      "groupSharedWorkspace": "{{name}} · delad arbetsplats",
+      "groupBundle": "{{name}} · paket"
     },
     "typeDetails": {
       "workstation": "Arbetsstationsdetaljer",

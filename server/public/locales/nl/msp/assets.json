@@ -371,7 +371,10 @@
       "tenant": "Tenant",
       "manufacturer": "Fabrikant",
       "model": "Model",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "group": "Groep",
+      "groupSharedWorkspace": "{{name}} · gedeelde werkplek",
+      "groupBundle": "{{name}} · bundel"
     },
     "typeDetails": {
       "workstation": "Details van het werkstation",

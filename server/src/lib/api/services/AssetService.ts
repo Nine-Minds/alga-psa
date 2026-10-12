@@ -29,7 +29,7 @@ import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttri
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
-import { removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
@@ -266,13 +266,20 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
       type: 'left',
     });
+    // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
+    // off this payload, so they travel with the asset rather than needing a
+    // second round trip.
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
+      type: 'left',
+    });
 
     const asset = await query.select(
         `${this.tableName}.*`,
         'clients.client_name',
         'vendors.vendor_name',
+        'contacts.full_name as contact_name',
         knex.raw(`
-          CASE 
+          CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
@@ -282,7 +289,10 @@ export class AssetService extends BaseService<any> {
       )
       .first();
 
-    return asset || null;
+    if (!asset) return null;
+
+    asset.group = await getAssetGroupSummary(knex, context.tenant, id);
+    return asset;
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {

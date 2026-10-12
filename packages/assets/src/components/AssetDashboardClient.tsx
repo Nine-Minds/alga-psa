@@ -47,6 +47,7 @@ import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabelForSlug } from '../lib/assetStatusSchema';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
@@ -940,9 +941,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   // F021: the filter list and the bulk dialog read the tenant's
   // asset_statuses registry instead of three hardcoded slugs.
   const getAssetStatusLabel = useCallback((status: string) => {
-    const registered = assetStatuses?.find((candidate: AssetStatus) => candidate.slug === status);
     return t(`assetDashboardClient.statuses.${status}`, {
-      defaultValue: registered?.label ?? status.charAt(0).toUpperCase() + status.slice(1)
+      defaultValue: assetStatusLabelForSlug(status, assetStatuses)
     });
   }, [assetStatuses, t]);
 

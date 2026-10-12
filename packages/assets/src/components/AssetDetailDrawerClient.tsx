@@ -44,6 +44,8 @@ import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabelForSlug } from '../lib/assetStatusSchema';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -113,9 +115,13 @@ export function AssetDetailDrawerClient({
     [ASSET_DRAWER_TABS.DOCUMENTS]: t('assetDetailDrawer.tabs.documents', { defaultValue: 'Documents' }),
   } satisfies Record<AssetDrawerTab, string>), [t]);
 
+  // F021: a custom status reads as its registry label, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const translateStatus = useCallback(
-    (status: string) => t(`assetDetailDrawer.statuses.${status}`, { defaultValue: formatTitleCase(status) }),
-    [t]
+    (status: string) => t(`assetDetailDrawer.statuses.${status}`, {
+      defaultValue: assetStatusLabelForSlug(status, assetStatuses) || formatTitleCase(status),
+    }),
+    [assetStatuses, t]
   );
 
   const handleTabChange = useCallback(
@@ -665,6 +671,20 @@ function InfoGrid({
       ) : null}
       {asset.model ? (
         <InfoRow label={t('assetDetailDrawer.info.model', { defaultValue: 'Model' })} value={asset.model} />
+      ) : null}
+      {asset.group ? (
+        <InfoRow
+          label={t('assetDetailDrawer.info.group', { defaultValue: 'Group' })}
+          value={asset.group.kind === 'shared_workspace'
+            ? t('assetDetailDrawer.info.groupSharedWorkspace', {
+                defaultValue: '{{name}} · shared workspace',
+                name: asset.group.name,
+              })
+            : t('assetDetailDrawer.info.groupBundle', {
+                defaultValue: '{{name}} · bundle',
+                name: asset.group.name,
+              })}
+        />
       ) : null}
       <InfoRow label={t('assetDetailDrawer.info.created', { defaultValue: 'Created' })} value={formatDate(asset.created_at)} />
       <InfoRow label={t('assetDetailDrawer.info.updated', { defaultValue: 'Updated' })} value={formatRelative(asset.updated_at, t)} />

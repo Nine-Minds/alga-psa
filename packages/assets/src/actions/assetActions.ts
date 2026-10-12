@@ -95,9 +95,9 @@ import {
   isTypedAssetWriteError,
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
-import { listDeployableStatusSlugs, validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
-import { getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
+import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_BILLING_PROFILE_UNAVAILABLE,
     assertBillingProfileForClient,
@@ -2404,6 +2404,14 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 scanLimit: Math.max(limit, 100),
             });
 
+        // F075: the Group column reads `asset.group`, so the page's summaries
+        // are fetched in one batch rather than per row.
+        const groupSummaries = await getAssetGroupSummariesForAssets(
+            trx,
+            tenant,
+            authorizedPage.data.map((asset: any) => asset.asset_id)
+        );
+
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
             authorizedPage.data.map(async (asset: any): Promise<Asset> => {
@@ -2417,6 +2425,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         client_id: asset.client_id,
                         client_name: asset.client_name || ''
                     },
+                    group: groupSummaries.get(asset.asset_id) ?? null,
                     relationships: [],  // Initialize empty array for relationships
                     ...(extensionData ? {
                         [asset.asset_type]: extensionData

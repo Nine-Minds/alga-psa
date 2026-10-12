@@ -371,7 +371,10 @@
       "tenant": "Inquilino",
       "manufacturer": "Fabricante",
       "model": "Modelo",
-      "assignedTo": "Asignado a"
+      "assignedTo": "Asignado a",
+      "group": "Grupo",
+      "groupSharedWorkspace": "{{name}} · espacio de trabajo compartido",
+      "groupBundle": "{{name}} · paquete"
     },
     "typeDetails": {
       "workstation": "Detalles de la estación de trabajo",

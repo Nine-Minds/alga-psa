@@ -371,7 +371,10 @@
       "tenant": "Organizacja",
       "manufacturer": "Producent",
       "model": "Model",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "group": "Grupa",
+      "groupSharedWorkspace": "{{name}} · wspólne stanowisko",
+      "groupBundle": "{{name}} · zestaw"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",

@@ -8,7 +8,7 @@ import {
   getErrorMessage,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { BUILTIN_ASSET_STATUSES, groupAssetStatusesByKind } from '../../lib/assetStatusSchema';
+import { BUILTIN_ASSET_STATUSES, assetStatusLabelForSlug, groupAssetStatusesByKind } from '../../lib/assetStatusSchema';
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -72,6 +72,20 @@ export function assetStatusLabel(t: TranslateFn, status: { slug: string; label: 
   // Builtin slugs keep their existing i18n labels so a translated UI stays
   // translated; custom statuses show the label the MSP typed.
   return t(`assetStatuses.${status.slug}`, { defaultValue: status.label });
+}
+
+/**
+ * The reading of a bare slug held on an asset row (F021). Never shows the raw
+ * slug: the registry row's label wins, then the builtin label, then the
+ * humanized slug — so "in_repair" reads as "In repair" even mid-load.
+ */
+export function resolveAssetStatusLabel(
+  t: TranslateFn,
+  slug: string | null | undefined,
+  statuses: AssetStatus[] | null
+): string {
+  if (!slug) return '';
+  return assetStatusLabel(t, { slug, label: assetStatusLabelForSlug(slug, statuses) });
 }
 
 /**

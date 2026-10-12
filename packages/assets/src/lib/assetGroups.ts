@@ -670,4 +670,71 @@ export async function getAssetGroupSummary(
   };
 }
 
+/**
+ * F075: group summaries for a whole page of assets in four queries instead of
+ * four per row, so the list's Group column costs the same at 10 rows as at 100.
+ */
+export async function getAssetGroupSummariesForAssets(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  assetIds: string[]
+): Promise<Map<string, AssetGroupSummary>> {
+  const byAsset = new Map<string, AssetGroupSummary>();
+  if (assetIds.length === 0) return byAsset;
+
+  const members = await table(trx, tenant, 'asset_group_members')
+    .whereIn('asset_id', assetIds)
+    .select<{ asset_id: string; group_id: string }[]>('asset_id', 'group_id');
+  if (members.length === 0) return byAsset;
+
+  const groupIds = Array.from(new Set(members.map((row: any) => row.group_id)));
+  const [groups, memberCounts, userCounts] = await Promise.all([
+    table(trx, tenant, 'asset_groups').whereIn('group_id', groupIds).select('*'),
+    table(trx, tenant, 'asset_group_members')
+      .whereIn('group_id', groupIds)
+      .select('group_id')
+      .count<{ group_id: string; count: string }[]>('asset_id as count')
+      .groupBy('group_id'),
+    table(trx, tenant, 'asset_group_contacts')
+      .whereIn('group_id', groupIds)
+      .where({ role: 'user' })
+      .select('group_id')
+      .count<{ group_id: string; count: string }[]>('contact_name_id as count')
+      .groupBy('group_id'),
+  ]);
+
+  const locationIds = Array.from(
+    new Set(groups.map((group: any) => group.location_id).filter(Boolean))
+  ) as string[];
+  const locations = locationIds.length
+    ? await table(trx, tenant, 'client_locations')
+        .whereIn('location_id', locationIds)
+        .select<{ location_id: string; location_name: string | null }[]>('location_id', 'location_name')
+    : [];
+
+  const locationNames = new Map(locations.map((row: any) => [row.location_id, row.location_name ?? null]));
+  const memberCount = new Map(memberCounts.map((row: any) => [row.group_id, Number(row.count)]));
+  const userCount = new Map(userCounts.map((row: any) => [row.group_id, Number(row.count)]));
+  const summaries = new Map<string, AssetGroupSummary>(
+    groups.map((group: any) => [
+      group.group_id,
+      {
+        group_id: group.group_id,
+        name: group.name,
+        kind: group.kind,
+        location_id: group.location_id ?? null,
+        location_name: group.location_id ? locationNames.get(group.location_id) ?? null : null,
+        member_count: memberCount.get(group.group_id) ?? 0,
+        user_count: userCount.get(group.group_id) ?? 0,
+      } as AssetGroupSummary,
+    ])
+  );
+
+  for (const row of members as any[]) {
+    const summary = summaries.get(row.group_id);
+    if (summary) byAsset.set(row.asset_id, summary);
+  }
+  return byAsset;
+}
+
 export type { AssetGroupContactRole };

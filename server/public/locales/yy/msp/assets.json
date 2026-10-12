@@ -371,7 +371,10 @@
       "tenant": "〖Ŧḗƞȧƞŧ ···〗",
       "manufacturer": "〖Ḿȧƞŭƒȧƈŧŭřḗř ·····〗",
       "model": "〖Ḿȯḓḗŀ ··〗",
-      "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗"
+      "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗",
+      "group": "〖Ɠřȯŭƥ ······〗",
+      "groupSharedWorkspace": "〖{{name}} · şħȧřḗḓ ẇȯřķşƥȧƈḗ ······〗",
+      "groupBundle": "〖{{name}} · ƀŭƞḓŀḗ ······〗"
     },
     "typeDetails": {
       "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ḓḗŧȧīŀş ········〗",

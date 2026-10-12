@@ -176,6 +176,18 @@ export const assetResponseSchema = z.object({
 
   // Computed/joined fields
   client_name: z.string().optional(),
+  // FR-C6: the assignee's display name, joined from contacts.
+  contact_name: z.string().nullable().optional(),
+  // FR-E3: the group this asset belongs to, if any.
+  group: z.object({
+    group_id: uuidSchema,
+    name: z.string(),
+    kind: z.enum(['bundle', 'shared_workspace']),
+    location_id: uuidSchema.nullable(),
+    location_name: z.string().nullable(),
+    member_count: z.number().int(),
+    user_count: z.number().int()
+  }).nullable().optional(),
   warranty_status: z.string().optional(),
   maintenance_status: z.string().optional()
 });

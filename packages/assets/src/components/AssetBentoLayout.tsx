@@ -50,6 +50,7 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
+import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
@@ -106,6 +107,8 @@ export function AssetBentoLayout({
   // on every /msp route. Optional by design — fall back to a link if absent.
   const clientDrawer = useClientDrawer();
   const now = Date.now();
+  // F021: the Status row reads the registry's label, not the stored slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
 
   const ext = asset.workstation ?? asset.server;
   const isRmmManaged = Boolean(asset.rmm_provider || rmmData?.provider);
@@ -219,7 +222,7 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={asset.status} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={resolveAssetStatusLabel(t, asset.status, assetStatuses)} />
                 {/* FR-C6: the assignee is always shown, even when empty. */}
                 <AssetAssigneeRow
                   assetId={asset.asset_id}
