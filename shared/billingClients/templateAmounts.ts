@@ -654,3 +654,56 @@ export function slotAmountsFromEdits(
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Legacy clone paths
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve a template's amounts for the currency of an existing contract
+ * (`contracts.currency_code`; falls back to the template's own currency when the
+ * contract carries none). Used by the legacy clone paths (REST ContractLineService,
+ * packages/clients) so none of them re-derives which currency an amount is in.
+ */
+export async function resolveTemplateAmountsForContract(
+  knex: KnexLike,
+  tenant: string,
+  templateId: string,
+  contractId: string,
+): Promise<ResolvedTemplateAmounts> {
+  const contract = (await tenantDb(knex, tenant)
+    .table('contracts')
+    .where({ contract_id: contractId })
+    .first('currency_code')) as { currency_code?: string | null } | undefined;
+  return resolveTemplateAmounts(knex, tenant, templateId, contract?.currency_code ?? null);
+}
+
+/**
+ * Read-side accessors the legacy (column-copying) clones use instead of reading
+ * template amount columns. A missing amount is `null`: the legacy paths never
+ * reject an unset amount and never substitute another currency's value.
+ *
+ * LEVERAGE: pattern template-clone-substrate — the legacy clones now share this
+ * amount layer but still duplicate structure copying (services, configs, pools).
+ */
+export function legacyCloneAmountReader(amounts: ResolvedTemplateAmounts, templateLineId: string) {
+  const get = (kind: TemplateAmountSlotKind, ids: Omit<TemplateAmountSlotIds, 'template_line_id'> = {}) =>
+    amounts.amountBySlot.get(templateAmountSlotKey(kind, { template_line_id: templateLineId, ...ids })) ?? null;
+  return {
+    lineRate: () => get('line_base_rate'),
+    lineOvertimeRate: () => get('line_overtime_rate'),
+    memberRate: (serviceId: string) => get('member_rate', { service_id: serviceId }),
+    memberOvertimeRate: (serviceId: string) => get('member_overtime_rate', { service_id: serviceId }),
+    legacyBucketOverageRate: (serviceId: string) => get('legacy_bucket_overage_rate', { service_id: serviceId }),
+    /** Template pool id -> overage cents, for `cloneTemplateLinePools`. */
+    poolOverageRates: (): Map<string, number | null> => {
+      const map = new Map<string, number | null>();
+      for (const slot of amounts.slots) {
+        if (slot.template_line_id === templateLineId && slot.slot_kind === 'bucket_overage_rate' && slot.bucket_id) {
+          map.set(slot.bucket_id, amounts.amountBySlot.get(slot.slot_key) ?? null);
+        }
+      }
+      return map;
+    },
+  };
+}

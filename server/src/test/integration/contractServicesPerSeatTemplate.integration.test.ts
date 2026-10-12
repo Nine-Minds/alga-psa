@@ -25,6 +25,8 @@ let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration'
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createContractTemplateFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createContractTemplateFromWizard;
 let getServiceCatalogRatesForCurrency: typeof import('@alga-psa/billing/actions/serviceActions').getServiceCatalogRatesForCurrency;
+import { resolveTemplateAmounts } from '@alga-psa/shared/billingClients/templateAmounts';
+
 let sharedCloneTemplateContractLine: typeof import('@alga-psa/shared/billingClients/templateClone').cloneTemplateContractLine;
 let billingCloneTemplateContractLine: typeof import('@alga-psa/billing/lib/billing/utils/templateClone').cloneTemplateContractLine;
 let getContractTemplateLinesForClientWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').getContractTemplateLinesForClientWizard;
@@ -319,7 +321,7 @@ describe('contract templates: per-seat recurring services', () => {
     const view: any = ok(await getContractTemplateLinesForClientWizard(template.contract_id, client.clientId));
     const viewMembers = new Map<string, any>(view.lines[0].services.map((svc: any) => [svc.service_id, svc]));
     // The client wizard shows the seat member's unit rate, not an empty allocation.
-    expect(viewMembers.get(catalog.user.serviceId).template_rate).toBe(10000);
+    expect(viewMembers.get(catalog.user.serviceId).rate.amount).toBe(10000);
 
     const created = ok(
       await createClientContractFromWizard({
@@ -443,13 +445,14 @@ describe('contract templates: per-seat recurring services', () => {
     it('shared cloneTemplateContractLine', async () => {
       const { catalog, template } = await templateWithSeats();
       const target = await emptyContractWithLine();
-      await db.transaction((trx) =>
+      await db.transaction(async (trx) =>
         sharedCloneTemplateContractLine(trx, {
           tenant: tenantId,
           templateContractLineId: template.contract_line_id!,
           contractLineId: target.lineId,
           templateContractId: template.contract_id,
-        } as any),
+          amounts: await resolveTemplateAmounts(trx, tenantId, template.contract_id, 'USD'),
+        }),
       );
       expectSeatsPreserved(await lineFixedConfigs(target.lineId), catalog);
     }, HOOK_TIMEOUT);
@@ -457,13 +460,14 @@ describe('contract templates: per-seat recurring services', () => {
     it('billing utils cloneTemplateContractLine', async () => {
       const { catalog, template } = await templateWithSeats();
       const target = await emptyContractWithLine();
-      await db.transaction((trx) =>
+      await db.transaction(async (trx) =>
         billingCloneTemplateContractLine(trx, {
           tenant: tenantId,
           templateContractLineId: template.contract_line_id!,
           contractLineId: target.lineId,
           templateContractId: template.contract_id,
-        } as any),
+          amounts: await resolveTemplateAmounts(trx, tenantId, template.contract_id, 'USD'),
+        }),
       );
       expectSeatsPreserved(await lineFixedConfigs(target.lineId), catalog);
     }, HOOK_TIMEOUT);

@@ -14,6 +14,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import {
   enumerateTemplateAmountSlots,
+  resolveTemplateAmountsForContract,
   templateAmountSlotKey,
   writeTemplatePriceSet,
   type TemplateAmountSlot,
@@ -26,6 +27,8 @@ let listContractTemplatesForWizard: typeof import('@alga-psa/billing/actions/con
 let getContractTemplateLinesForClientWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').getContractTemplateLinesForClientWizard;
 let getDraftContractForResume: typeof import('@alga-psa/billing/actions/contractWizardActions').getDraftContractForResume;
 let addContractLine: typeof import('@alga-psa/billing/repositories/contractLineRepository').addContractLine;
+let sharedCloneTemplateContractLine: typeof import('@alga-psa/shared/billingClients/templateClone').cloneTemplateContractLine;
+let billingCloneTemplateContractLine: typeof import('@alga-psa/billing/lib/billing/utils/templateClone').cloneTemplateContractLine;
 
 const t = (table: string) => tenantDb(db, tenantId).table(table);
 
@@ -403,6 +406,8 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
       getDraftContractForResume,
     } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ addContractLine } = await import('@alga-psa/billing/repositories/contractLineRepository'));
+    ({ cloneTemplateContractLine: sharedCloneTemplateContractLine } = await import('@alga-psa/shared/billingClients/templateClone'));
+    ({ cloneTemplateContractLine: billingCloneTemplateContractLine } = await import('@alga-psa/billing/lib/billing/utils/templateClone'));
   }, 120_000);
 
   afterAll(async () => {
@@ -1436,6 +1441,152 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
         price_set_currencies: ['EUR'],
         incomplete_set_currencies: ['EUR'],
       });
+    });
+  });
+
+  describe('currency safety of the clone paths (a template amount never crosses currencies)', () => {
+    async function eurContract(name: string) {
+      const clientId = await insertClient(name, 'EUR');
+      const contractId = uuidv4();
+      await t('contracts').insert({
+        tenant: tenantId,
+        contract_id: contractId,
+        contract_name: `${name} Contract ${contractId.slice(0, 6)}`,
+        billing_frequency: 'monthly',
+        is_template: false,
+        status: 'draft',
+        currency_code: 'EUR',
+        owner_client_id: clientId,
+      });
+      created.contractIds.push(contractId);
+      return contractId;
+    }
+
+    /** Every cents value the USD fixture stores anywhere on a template line. */
+    const USD_AMOUNTS = new Set([250000, 100000, 50000, 90000, 14000, 21000, 350, 12000, 9500]);
+
+    async function landedAmounts(contractId: string) {
+      const lines = (await t('contract_lines').where({ contract_id: contractId })) as any[];
+      const amounts: number[] = [];
+      for (const line of lines) {
+        if (line.custom_rate != null) amounts.push(Number(line.custom_rate));
+        if (line.overtime_rate != null) amounts.push(Number(line.overtime_rate));
+        const { services, configs } = await memberRows(line.contract_line_id);
+        services.forEach((svc: any) => svc.custom_rate != null && amounts.push(Number(svc.custom_rate)));
+        configs.forEach((cfg: any) => cfg.custom_rate != null && amounts.push(Number(cfg.custom_rate)));
+        for (const cfg of configs) {
+          const fixed = await t('contract_line_service_fixed_config').where({ config_id: cfg.config_id }).first();
+          if (fixed?.base_rate != null) amounts.push(Number(fixed.base_rate));
+          const hourly = await t('contract_line_service_hourly_configs').where({ config_id: cfg.config_id }).first();
+          if (hourly) amounts.push(Number(hourly.hourly_rate));
+          const terms = await t('contract_line_service_hourly_config').where({ config_id: cfg.config_id }).first();
+          if (terms?.overtime_rate != null) amounts.push(Number(terms.overtime_rate));
+          const usage = await t('contract_line_service_usage_config').where({ config_id: cfg.config_id }).first();
+          if (usage?.base_rate != null) amounts.push(Number(usage.base_rate));
+        }
+        const pools = (await t('contract_line_buckets').where({ contract_line_id: line.contract_line_id })) as any[];
+        pools.forEach((pool) => amounts.push(Number(pool.overage_rate)));
+      }
+      return amounts;
+    }
+
+    async function cloneEveryLine(
+      clone: 'addContractLine' | 'shared' | 'billing',
+      seeded: Seeded,
+      contractId: string,
+    ) {
+      await db.transaction(async (trx) => {
+        for (const templateLineId of Object.values(seeded.lineIds)) {
+          if (clone === 'addContractLine') {
+            await addContractLine(trx, tenantId, contractId, templateLineId);
+            continue;
+          }
+          const lineId = uuidv4();
+          const templateLine = await trx('contract_template_lines')
+            .where({ tenant: tenantId, template_line_id: templateLineId })
+            .first();
+          await trx('contract_lines').insert({
+            tenant: tenantId,
+            contract_line_id: lineId,
+            contract_id: contractId,
+            contract_line_name: templateLine.template_line_name,
+            contract_line_type: templateLine.line_type,
+            billing_frequency: templateLine.billing_frequency,
+            cadence_owner: 'client',
+            is_custom: false,
+            is_active: true,
+          });
+          const amounts = await resolveTemplateAmountsForContract(trx, tenantId, seeded.templateId, contractId);
+          const cloneFn = clone === 'shared' ? sharedCloneTemplateContractLine : billingCloneTemplateContractLine;
+          await cloneFn(trx, {
+            tenant: tenantId,
+            templateContractLineId: templateLineId,
+            contractLineId: lineId,
+            templateContractId: seeded.templateId,
+            amounts,
+          });
+        }
+      });
+    }
+
+    for (const clone of ['addContractLine', 'shared', 'billing'] as const) {
+      it(`${clone}: a USD-only template cloned onto a EUR contract lands no USD amount`, async () => {
+        const seeded = await seedFullTemplate('USD');
+        const contractId = await eurContract(`Mismatch ${clone}`);
+        await cloneEveryLine(clone, seeded, contractId);
+
+        const lines = await liveLinesByName(contractId);
+        expect(lines.size).toBe(5);
+        const landed = await landedAmounts(contractId);
+        const leaked = landed.filter((cents) => USD_AMOUNTS.has(cents));
+        expect(leaked).toEqual([]);
+
+        // The structure still clones; unset amounts stay unset (never rejected on this path).
+        expect(lines.get('Managed Services - Core').custom_rate).toBeNull();
+        const bucketLine = lines.get('Prepaid Support Block');
+        const pools = await t('contract_line_buckets').where({ contract_line_id: bucketLine.contract_line_id });
+        expect(pools).toHaveLength(1);
+        expect(Number(pools[0].overage_rate)).toBe(0);
+        expect(Number(pools[0].total_minutes)).toBe(600);
+      });
+
+      it(`${clone}: a USD template with a EUR price set lands the EUR amounts verbatim and no USD amount`, async () => {
+        const seeded = await seedFullTemplate('USD');
+        const slots = await enumerateTemplateAmountSlots(db, tenantId, seeded.templateId);
+        const eur: Record<string, number> = {};
+        for (const slot of slots) eur[slot.slot_key] = slot.base_amount + 7;
+        await db.transaction((trx) => writeTemplatePriceSet(trx, tenantId, seeded.templateId, 'EUR', eur, null));
+
+        const contractId = await eurContract(`Set ${clone}`);
+        await cloneEveryLine(clone, seeded, contractId);
+
+        const landed = await landedAmounts(contractId);
+        expect(landed.filter((cents) => USD_AMOUNTS.has(cents))).toEqual([]);
+
+        const lines = await liveLinesByName(contractId);
+        expect(Number(lines.get('Managed Services - Core').custom_rate)).toBe(250007);
+        const hourly = lines.get('Service Desk Hourly');
+        const hourlyCfg = (await memberRows(hourly.contract_line_id)).configs[0];
+        const hourlyRate = await t('contract_line_service_hourly_configs').where({ config_id: hourlyCfg.config_id }).first();
+        expect(Number(hourlyRate.hourly_rate)).toBe(14007);
+        const usageCfg = (await memberRows(lines.get('Backup Usage').contract_line_id)).configs[0];
+        const usageRate = await t('contract_line_service_usage_config').where({ config_id: usageCfg.config_id }).first();
+        if (clone !== 'shared') expect(Number(usageRate.base_rate)).toBe(357);
+        const pools = await t('contract_line_buckets').where({
+          contract_line_id: lines.get('Prepaid Support Block').contract_line_id,
+        });
+        expect(Number(pools[0].overage_rate)).toBe(9507);
+      });
+    }
+
+    it('REST ContractLineService and the clients actions resolve through the contract currency, not the template line columns', async () => {
+      const seeded = await seedFullTemplate('USD');
+      const contractId = await eurContract('Resolver wiring');
+      const amounts = await resolveTemplateAmountsForContract(db, tenantId, seeded.templateId, contractId);
+      expect(amounts.target_currency).toBe('EUR');
+      expect(amounts.template_currency).toBe('USD');
+      expect(amounts.source).toBe('none');
+      expect(amounts.amountBySlot.size).toBe(0);
     });
   });
 

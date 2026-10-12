@@ -18,6 +18,7 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { cloneTemplateContractLine } from '@alga-psa/shared/billingClients/templateClone';
+import { resolveTemplateAmounts } from '@alga-psa/shared/billingClients/templateAmounts';
 import { ensureTemplateLineSnapshot } from '@alga-psa/billing/actions/contractLineMappingActions';
 
 
@@ -218,6 +219,7 @@ describe('template bucket pool round-trip (real DB)', () => {
         tenant,
         templateContractLineId: contractLineId,
         contractLineId: cloneLineId,
+        amounts: await resolveTemplateAmounts(trx, tenant, templateContractId, 'USD'),
       });
 
       const clonedPools = await trx('contract_line_buckets')
