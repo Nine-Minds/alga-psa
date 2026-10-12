@@ -2067,10 +2067,11 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
+        let newlyMentionedUsersQuery = tenantScopedTable(db, 'users', tenantId)
           .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .modify(query => { if (newComment?.isInternal) query.where('user_type', 'internal'); });
+          .whereIn('user_id', resolvedNewlyMentionedUserIds);
+        if (newComment?.isInternal) newlyMentionedUsersQuery = newlyMentionedUsersQuery.where('user_type', 'internal');
+        const newlyMentionedUsers = await newlyMentionedUsersQuery;
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
