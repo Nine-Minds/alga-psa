@@ -49,7 +49,7 @@ Design choice: **Site Manager key + Connector proxy is the default connection mo
 
 ### 4.1 Provider identity
 
-- Add `'unifi'` to `RmmProvider` in both union copies. Add a `// LEVERAGE: pattern rmm-provider-union` marker. The duplicated union is a missing single source, and every new provider pays for it.
+- Add `'unifi'` to all three `RmmProvider` union copies (`packages/types/src/interfaces/asset.interfaces.ts:24`, `server/src/interfaces/asset.interfaces.tsx:24`, `ee/server/src/interfaces/rmm.interfaces.ts:9`). Add a `// LEVERAGE: pattern rmm-provider-union` marker. The duplicated union is a missing single source, and every new provider pays for it.
 - Add a registry entry `{ id: 'unifi', title: 'UniFi', icon: 'unifi', capabilities: { connection, scopeSync, deviceSync, events: true, remoteActions: false }, requiresEnterprise: true }` and widen the `icon` union. Add an icon badge to `RmmIntegrationsSetup.tsx`.
 - No DB enum changes are needed: `rmm_integrations.provider` and `assets.rmm_provider` are `varchar(50)`.
 - Update the `register_rmm_alert_system_events` payload description text in a new migration only if the schema registry validates provider values. Today it's free text, so no change.
@@ -159,3 +159,61 @@ Manual smoke: connect a real Site Manager key (or a UniFi OS Server VM in local 
 2. **Product scope.** Should "offline" also cover the console/host itself (`/v1/hosts` status) and ISP/WAN degradation (`/v1/isp-metrics`)? This plan covers adopted devices only. Host-offline is cheap to add as `alertClass: 'console'`.
 3. **Tier.** Plan assumes EE plus the `ADVANCED_ASSETS` entitlement, matching Level, NinjaOne, and Tanium. Should UniFi be CE like Tactical RMM instead, since it's a network inventory and not a paid RMM?
 4. **Client devices.** Wi-Fi and wired *clients* (laptops, phones) are explicitly out of scope; only UniFi infrastructure becomes assets. Confirm.
+
+## Appendix A. Provider touchpoint checklist
+
+Every place a new RMM provider must be registered, taken from a full sweep of `levelio` occurrences outside its own module. No migration is needed: `rmm_integrations.provider` is `varchar(50)` with no CHECK constraint, and Level shipped without one.
+
+**Types and catalogue**
+- The three `RmmProvider` unions.
+- `providerRegistry.ts`: icon union at line 20, plus the registry entry.
+- `packages/types/src/interfaces/rmmProvider.typecheck.test.ts`.
+
+**Display maps**
+- `packages/assets/src/lib/rmmProviderDisplay.ts:13`
+- `packages/assets/src/actions/inboundActions.ts:9-17` (`KNOWN_RMM_PROVIDERS`)
+- `shared/rmm/alerts/ticketCreator.ts:240-246` (`PROVIDER_LABELS`)
+- `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx:3923` (icon case)
+
+**Settings UI**
+- `RmmIntegrationsSetup.tsx`: `PROVIDER_ICON_STYLES` (providers show as lettered circles, e.g. `'U'`), the `dynamic()` import, and the component map.
+- `RmmDeviceSyncSettings.tsx:29` (`DEVICE_SYNC_SUPPORTED_PROVIDERS`).
+- Embed `<RmmDeviceSyncSettings provider="unifi">` and `<RmmAlertAutomationSettings provider="unifi">` the same way `LevelIoIntegrationSettings.tsx:539,542` does.
+- CE stub component, and add it to `tools/i18n/unwired-baseline.json`.
+
+**Jobs**
+- `rmmAlertPollingHandlers.ts`: `RMM_ALERT_POLLING_PROVIDERS` (line 50), `RMM_DEVICE_SYNC_PROVIDERS` (line 63), fetcher and strategy registration, and the provider filter in `reconcileRmmPollingSchedules` (around line 676).
+- CE stubs under `packages/ee/src/lib/integrations/unifi/`.
+- After a successful connect, call the reconciler the way `ninjaoneActions.ts:501` does, so schedules exist without waiting for the maintenance tick.
+
+**Temporal**
+- Workflow and activity pair, exported from `ee/temporal-workflows/src/{workflows,activities}/non-authored-index.ts`.
+- Note that Level's `levelIoTransportOverride()` defaults to `'temporal'`, while the generic resolver defaults to `'direct'`. Pick one deliberately for UniFi. The recommendation is to match Level's per-provider override.
+
+**Webhook (phase 2 only)**
+- EE route, `server/src/app/api/webhooks/unifi/route.ts` re-export, and `packages/ee` 404 stub.
+- `server/src/middleware.ts:200-210` `exactApiKeySkipPaths`.
+- `server/src/lib/inboundWebhooks/reservedIntegrationTypes.ts`.
+- Tenant-suspension gate test (`tenantSuspensionSurfaceGates.contract.test.ts`).
+
+**Ticket-close subscriber**
+- `server/src/lib/eventBus/subscribers/rmmAlertTicketClosedSubscriber.ts:195` only special-cases `ninjaone`. Confirm UniFi falls through to "no outbound adapter" cleanly.
+
+**Disconnect event**
+- Publish `INTEGRATION_DISCONNECTED` via `buildIntegrationDisconnectedPayload`, as Level does.
+- Update `scripts/lib/workflow-event-emit-sites.mjs` and `server/src/test/unit/workflow-event-contracts/contracts/integrations.ts` for new emit sites.
+
+**i18n**
+- `integrations.rmm.unifi.{actions,connection,errors,fields,mappings,status,success,sync,alerting}` in all 11 `server/public/locales/*/msp/integrations.json`.
+
+**OpenAPI**
+- `server/src/lib/api/openapi/routes/rmmIntegrations.ts:20` description, then regenerate the route inventory, SDK OpenAPI, and MCP/chat registries. Don't hand-edit the generated files.
+
+**Optional**
+- Workflow runtime module (`ee/packages/workflows/src/runtime/actions/registerUniFiWorkflowActions.ts`, registered in `runtime/core.ts`), with `unifi.devices.find` / `unifi.devices.get`. Not in scope for v1.
+
+**Templates to read first**
+- `docs/superpowers/specs/2026-06-09-levelio-rmm-integration-design.md`
+- `docs/superpowers/plans/2026-06-09-levelio-rmm-integration.md`
+
+The number of hand-maintained provider lists above (about 15) is itself evidence for `// LEVERAGE: pattern rmm-provider-registration`. Drop the marker at each site touched. Don't consolidate in this card.
