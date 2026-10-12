@@ -462,6 +462,27 @@ describe('Catalog price resolution – fixed path', () => {
       .slice(0, 10);
   }
 
+  it('deferred revenue reads a stored member base_rate through its basis: a share as-is, a per-unit rate x quantity', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('Basis Service', 10000, JAN_START);
+    const config = await context.db('contract_line_service_configuration')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId, service_id: serviceId })
+      .first('config_id');
+    await context.db('contract_line_service_configuration')
+      .where({ tenant: context.tenantId, config_id: config.config_id })
+      .update({ quantity: 3 });
+    const key = `${contractLineId}\u0000${serviceId}`;
+    const setFixed = (base_rate: number, base_rate_basis: 'share' | 'per_unit') =>
+      context.db('contract_line_service_fixed_config')
+        .where({ tenant: context.tenantId, config_id: config.config_id })
+        .update({ base_rate, base_rate_basis, rate_provenance: 'custom' });
+
+    await setFixed(675, 'share');
+    expect((await loadFixedConfigBaseRates(context.db, context.tenantId)).get(key)).toBe(675);
+
+    await setFixed(225, 'per_unit');
+    expect((await loadFixedConfigBaseRates(context.db, context.tenantId)).get(key)).toBe(675);
+  });
+
   it('T1: an inherited line follows a catalog price change on the next period', async () => {
     const { serviceId, contractLineId } = await seedInheritedLine('T1 Service', 10000, JAN_START);
 

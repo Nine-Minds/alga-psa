@@ -243,6 +243,57 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
     expect(values.get(clientContractId)).toMatchObject({monthlyValueCents: 12000, hasVariableUsage: true});
   });
 
+  // base_rate_basis (card c150b8de): an inherited bundle line is valued as the
+  // sum of its members' CONTRIBUTIONS - a share as-is, a per-unit rate x quantity.
+  async function createInheritedBundleLine(
+    basis: 'share' | 'per_unit',
+    members: Array<{ quantity: number; baseRate: number }>,
+  ): Promise<string> {
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: `Inherited ${basis} bundle`,
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed',
+      custom_rate: null,
+      rate_provenance: 'inherited'
+    }, 'contract_line_id');
+    for (const [index, member] of members.entries()) {
+      const serviceId = await createTestService(context, {
+        service_name: `${basis} member ${index}`,
+        default_rate: 0
+      });
+      const configId = uuidv4();
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        configuration_type: 'Fixed',
+        quantity: member.quantity,
+        tenant: context.tenantId
+      });
+      await context.db('contract_line_service_fixed_config').insert({
+        config_id: configId,
+        tenant: context.tenantId,
+        base_rate: member.baseRate,
+        base_rate_basis: basis,
+        rate_provenance: 'custom',
+        pricing_basis: 'bundle'
+      });
+    }
+    return contractLineId;
+  }
+
+  it.each([
+    ['share', [{ quantity: 1, baseRate: 225 }, { quantity: 3, baseRate: 675 }]],
+    ['per_unit', [{ quantity: 1, baseRate: 225 }, { quantity: 3, baseRate: 225 }]],
+  ] as const)('values an inherited %s bundle line at the sum of its members contributions (900)', async (basis, members) => {
+    const contractLineId = await createInheritedBundleLine(basis, [...members]);
+    const { clientContractId } = await assignContractLineToClient(context, contractLineId, { startDate: '2023-01-01' });
+    const values = await getContractMonthlyValuesByAssignment(context.db, context.tenantId, [clientContractId], '2023-01-15');
+    // A share of 675 on quantity 3 must NOT be tripled (symptom 2: 2,250).
+    expect(values.get(clientContractId)!.monthlyValueCents).toBe(900);
+  });
+
   it('values the 10/9/1 recurring-seat example at 189000 minor units with no usage rows', async () => {
     const { contractLineId } = await createUnitPricedFixedLine([
       { name: 'Standard Seat', quantity: 10, unitRateCents: 10000 },

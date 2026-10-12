@@ -7,7 +7,11 @@ import type {
   ISO8601String,
 } from "@alga-psa/types";
 import { toPlainDate } from "@alga-psa/core";
-import { allocateCentsByWeights } from "@alga-psa/shared/billingClients/fixedMemberRate";
+import {
+  allocateCentsByWeights,
+  fixedMemberContributionCents,
+  fixedRateBasisOf,
+} from "@alga-psa/shared/billingClients/fixedMemberRate";
 import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
@@ -41,6 +45,11 @@ export interface FixedPlanServiceRow {
   configuration_quantity?: number | string | null;
   configuration_custom_rate?: unknown;
   service_base_rate: number | string | null;
+  /**
+   * What `service_base_rate` means ('per_unit' or 'share'; see
+   * fixedMemberRate.ts). NULL on a stored rate reads as per-unit.
+   */
+  base_rate_basis?: string | null;
   enable_proration?: boolean | null;
   quantity?: number | string | null;
   /**
@@ -267,7 +276,11 @@ export function resolveFixedPlanLevelBaseRate({
             Number(
               service.configuration_quantity ?? service.service_quantity ?? 1,
             ) || 1;
-          derivedBaseRate += parsedServiceBaseRate * quantity;
+          derivedBaseRate += fixedMemberContributionCents(
+            parsedServiceBaseRate,
+            fixedRateBasisOf(service),
+            quantity,
+          );
           hasServiceBaseRate = true;
         }
       }
@@ -401,7 +414,7 @@ function formatCents(cents: number, currencyCode: string): string {
   }).format(cents / 100);
 }
 
-export type FixedFeeAllocationBasis = "stored_shares" | "quantity" | "even_split";
+export type FixedFeeAllocationBasis = "stored_rates" | "quantity" | "even_split";
 
 export interface FixedFeeAllocation {
   basis: FixedFeeAllocationBasis;
@@ -429,8 +442,8 @@ const nonNegativeFinite = (raw: unknown): number => {
  * Allocation for a fixed fee whose members carry no catalog price (FMV total
  * of 0), so the fee cannot be apportioned by fair market value. The full fee
  * is always billed. Weight chain:
- *  1. stored per-service shares (contract_line_service_fixed_config.base_rate,
- *     already the member's share of the line total — never × quantity) when
+ *  1. stored per-service amounts (contract_line_service_fixed_config.base_rate
+ *     read through its basis: a share as-is, a per-unit rate × quantity) when
  *     they sum to more than 0;
  *  2. otherwise service quantity;
  *  3. otherwise an even split.
@@ -440,17 +453,27 @@ export function allocateFixedFeeWithoutCatalogPrice(
   services: Array<{
     service_id: string;
     service_base_rate?: number | string | null;
+    base_rate_basis?: string | null;
+    pricing_basis?: string | null;
     quantity: number;
   }>,
 ): FixedFeeAllocation {
-  const shareWeights = services.map((service) => nonNegativeFinite(service.service_base_rate));
+  // Each member's stored amount is its contribution to the line fee: a share
+  // as-is, a per-unit rate × quantity (so 225×1 and 225×3 weigh 225 : 675).
+  const shareWeights = services.map((service) =>
+    fixedMemberContributionCents(
+      nonNegativeFinite(service.service_base_rate),
+      fixedRateBasisOf(service),
+      service.quantity,
+    ),
+  );
   const quantityWeights = services.map((service) => nonNegativeFinite(service.quantity));
   const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
   let basis: FixedFeeAllocationBasis;
   let weights: number[];
   if (sum(shareWeights) > 0) {
-    basis = "stored_shares";
+    basis = "stored_rates";
     weights = shareWeights;
   } else if (sum(quantityWeights) > 0) {
     basis = "quantity";
@@ -469,8 +492,8 @@ export function allocateFixedFeeWithoutCatalogPrice(
 
 function allocationBasisLabel(basis: FixedFeeAllocationBasis): string {
   switch (basis) {
-    case "stored_shares":
-      return "Stored per-service shares";
+    case "stored_rates":
+      return "Stored per-service amounts";
     case "quantity":
       return "Service quantity";
     case "even_split":
@@ -1115,7 +1138,7 @@ export function computeFixedCharges(
           {
             label: "Allocation weight",
             value:
-              zeroFmvAllocation.basis === "stored_shares"
+              zeroFmvAllocation.basis === "stored_rates"
                 ? formatCents(weight, currencyCode)
                 : String(weight),
           },
@@ -1191,7 +1214,15 @@ export function computeFixedCharges(
           parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
             ? Math.round(parsedBaseRate)
             : preferredCatalogRate(service);
-        const total = baseRateInCents * quantity;
+        // A stored rate is read through its basis (a share is not scaled by
+        // quantity); the catalog fallback is always a unit price.
+        const total = fixedMemberContributionCents(
+          baseRateInCents,
+          parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
+            ? fixedRateBasisOf(service)
+            : "per_unit",
+          quantity,
+        );
 
         const { taxRegion: serviceTaxRegion, isTaxable } =
           taxPorts.getTaxInfoFromService(service);
