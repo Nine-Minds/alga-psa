@@ -61,38 +61,41 @@ Automatic Invoices**. Select the candidate key above and compare the preview
 with the recorded amounts before any generation. Leave it unbilled until a
 reviewer explicitly performs the walkthrough.
 
-The fixture was created using a one-off integration harness, then audited
-read-only through the same supported due-work and preview actions. Exact setup
-invocation and baseline commands are recorded below; the mutating harness is
-not committed. The retained Client B copy is billed history: `INV-000042` /
-`cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2`, before-tax subtotal 24460, tax 0
-(`pending_external`). Keep it intact. The new unbilled fixture's preview has
-the same expected subtotal (24460) and preview tax 0.
+The fixture was created through supported client creation, contract wizard,
+recurring-period materialization, due-work, and preview domain actions. The
+retained Client B copy `INV-000042` /
+`cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2` is separate billed history and must
+remain untouched. Its prior subtotal is not evidence for this fixture. The
+new unbilled candidate preview is gross 32000, discounts −3840, −1200, and
+−2500, subtotal 24460 before tax.
 
 The previously observed Automatic Invoices preview included a `−A$32` line
 discount because the old preview treated that copied term as invoice-wide.
 That screenshot is a defect reproduction only. The current-head expected
 line-scope value is `−A$12` on Cabling alone.
 
-### Setup command and read-only baseline queries
+### Repeatable read-only fixture audit and baseline queries
 
-The isolated fixture setup command was:
+The fixture already exists in the review database. This committed audit script
+does not create, update, generate, or clean up any records. It loads the
+worktree's `.env.localtest` connection settings (or accepts `DATABASE_URL`),
+and requires the exact expected database name:
 
 ```sh
-cd server
-TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts \
-  src/test/integration/pr3499FixtureSeed.once.test.ts --coverage.enabled=false \
-  --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot
+PR3499_FIXTURE_DB_NAME=server npx tsx scripts/audit-pr3499-unbilled-fixture.ts
 ```
 
-It passed 1/1 and created the domain records above without generating an
-invoice. The read-only due-work and preview audit passed 1/1 with the same
-command and `src/test/integration/pr3499FixtureAudit.once.test.ts`. The first
-audit attempt failed only while writing evidence because its relative output
-path was one directory too high; the path was corrected and the audit then
-passed. The one-off harnesses are removed from the commit. The audit evidence
-file contains the candidate, source rows, discount copies, preview and baseline
-invoice result.
+To use a separate review database, set `DATABASE_URL` and its matching
+`PR3499_FIXTURE_DB_NAME`. The audit opens a read-only transaction and asserts
+the exact client/assignment, both copied lines, all three independent discount
+copies, both still-unclaimed period rows for Sep 1–Oct 1 service and the Oct
+1–Nov 1 invoice window, and that no invoice has claimed that window. It prints
+the period rows for reviewer inspection.
+The read-only supported due-work/preview result and all source rows are retained
+in [`fixture-current-head.json`](./fixture-current-head.json). To refresh the
+preview, use Billing → Invoicing → Automatic Invoices and select the candidate
+key above; leave it unbilled. Do not re-run an unavailable seed harness or
+create a second copy of this fixture.
 
 Run these against the review DB before generation and retain the output. They
 must return the exact template, assignment, copied terms and line composition;
@@ -154,7 +157,38 @@ ORDER BY record_id;
 
 ### Validation record
 
-Validation was run against repair commit `edeb8c0f2b8e16990d7e4dc35a743051320464fb`, pushed to PR #3499. The main commands and outcomes are:
+Latest post-fix validation was run on commit
+`68ed4bfb7f5bba5cb2b3f2533599a3ba8ac36693` for the existing PR #3499 branch.
+Exact commands and results:
+
+| Command | Result |
+| --- | --- |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 121/121 pass, including source increases/decreases, repeat-generation stability, manual preservation, and validating/delivered export guards. |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts -t "carries a pending adjustment past a finalized invoice" --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 1/1 pass; preview, saved −1,548 discount, 433,936 subtotal, and repeat recalculation agree. |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 64/64 pass, including canonical 390000 + 15000 → −40500 = 364500 first-save, reload stability, tax allocations, manual scope, and discount copies. |
+| `cd packages/billing && TMPDIR="$PWD/server/.vitest-tmp-review" npx vitest run src/lib/billing/compute/invoiceAutomaticAdjustments.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 4/4 pass: expired percentage/fixed periods, disjoint coverage, deterministic repeat evaluation, and unversioned legacy compatibility. |
+| `PR3499_FIXTURE_DB_NAME=server npx tsx scripts/audit-pr3499-unbilled-fixture.ts` | Pass in database `server`; audit ran in a read-only transaction and confirmed both invoice-window rows remain unclaimed. |
+| `NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit -p server/tsconfig.json` | Pass. |
+| `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing` | Pass. |
+| `npm run build --workspace=@alga-psa/billing` | Pass (`tsup`, all eight entries). |
+| `cd server && TMPDIR="$PWD/.pr3499-build-tmp" NEXT_DIST_DIR=.next-pr3499-source-period-20261012-12g NODE_OPTIONS=--max-old-space-size=12288 npm run build` | Pass; compiled, generated 74/74 static pages, and collected traces. Existing webpack warnings include scheduling star-export conflicts, dynamic dependencies, Edge Runtime `process.cwd()`, and dynamic `headers()` in `/_global-error`. |
+| `npx eslint packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts packages/billing/src/lib/billing/compute/invoiceAutomaticAdjustments.test.ts packages/billing/src/services/invoiceAutomaticAdjustments.ts server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts scripts/audit-pr3499-unbilled-fixture.ts` | 0 errors, 98 warnings, mostly existing `any`, non-null assertion, and unused-variable warnings in the billing service and large infrastructure test. |
+
+The first full billing-settlement DB run after adding charge-level eligibility
+had 9 failed assertions (55 passed): explicit date-bounded discounts resolved
+to zero when test charges had no persisted detail periods. The repair assigns
+periodless ordinary charges their ordinary invoice coverage; if an invoice
+carries a true-up and has no ordinary detail coverage, it uses the invoice-date
+day instead of the widened min/max true-up window. The rerun above passed 64/64.
+
+The first parallel server and billing typecheck attempt exited with code 134
+under Node's default 4 GiB heap (`Reached heap limit` / `Ineffective
+mark-compacts near heap limit`). Sequential runs passed with 12 GiB for the
+server and 8 GiB for billing. The latest production build exited 0 after 12
+minutes; the earlier 8 GiB build's OOM described below is historical and was
+not repeated.
+
+Earlier verification from the preceding repair commit `edeb8c0f2b8e16990d7e4dc35a743051320464fb`:
 
 | Command | Result |
 | --- | --- |
