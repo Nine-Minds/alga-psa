@@ -49,6 +49,9 @@ interface StoredChargeRow {
   adjustment_source_kind: string | null;
   contract_line_ids?: string[];
   manual_line_metadata?: unknown;
+  adjustment_period_start?: unknown;
+  adjustment_period_end?: unknown;
+  service_periods?: Array<{ start: string; end: string }>;
 }
 
 export interface AdjustmentWindow {
@@ -122,7 +125,10 @@ export async function loadInvoiceServiceWindow(
   return { start: date, end: Temporal.PlainDate.from(date).add({ days: 1 }).toString() };
 }
 
-function toAdjustmentCharges(rows: StoredChargeRow[]): InvoiceAdjustmentCharge[] {
+function toAdjustmentCharges(
+  rows: StoredChargeRow[],
+  fallbackOrdinaryPeriods: Array<{ start: string; end: string }>,
+): InvoiceAdjustmentCharge[] {
   return rows.map((charge) => ({
     item_id: charge.item_id,
     service_id: charge.service_id,
@@ -136,6 +142,13 @@ function toAdjustmentCharges(rows: StoredChargeRow[]): InvoiceAdjustmentCharge[]
     is_taxable: Boolean(charge.is_taxable),
     adjustment_source_kind: charge.adjustment_source_kind as InvoiceAdjustmentCharge['adjustment_source_kind'],
     contract_line_ids: charge.contract_line_ids,
+    // Ordinary charges without their own detail inherit the invoice's ordinary
+    // coverage (or its date-only fallback). This keeps invoice-wide discounts
+    // inclusive of eligible unattributed/manual additions while excluding
+    // carried true-ups from expanding their dates.
+    service_periods: charge.service_periods?.length
+      ? charge.service_periods
+      : charge.adjustment_source_kind !== 'contract_change' ? fallbackOrdinaryPeriods : charge.service_periods,
   }));
 }
 
@@ -158,10 +171,28 @@ async function loadInvoiceCharges(
       'is_manual',
       'is_taxable',
       'adjustment_source_kind',
+      'adjustment_period_start',
+      'adjustment_period_end',
       'manual_line_metadata',
     );
   if (rows.length === 0) return rows;
   const lineIdsByCharge = await loadInvoiceChargeLineIds(conn, tenant, invoiceId);
+  const detailRows = await tenantDb(conn, tenant).table('invoice_charge_details as d')
+    .join('invoice_charges as c', function () {
+      this.on('c.item_id', '=', 'd.item_id').andOn('c.tenant', '=', 'd.tenant');
+    })
+    .where({ 'c.invoice_id': invoiceId, 'c.tenant': tenant })
+    .whereNotNull('d.service_period_start').whereNotNull('d.service_period_end')
+    .select('d.item_id', 'd.service_period_start', 'd.service_period_end') as Array<{ item_id: string; service_period_start: unknown; service_period_end: unknown }>;
+  const periodsByItem = new Map<string, Array<{ start: string; end: string }>>();
+  for (const detail of detailRows) {
+    const start = toDateOnly(detail.service_period_start);
+    const inclusiveEnd = toDateOnly(detail.service_period_end);
+    if (!start || !inclusiveEnd) continue;
+    const periods = periodsByItem.get(detail.item_id) ?? [];
+    periods.push({ start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() });
+    periodsByItem.set(detail.item_id, periods);
+  }
   return rows.map((row) => {
     const lineIds = lineIdsByCharge.get(row.item_id) ?? new Set<string>();
     const metadata = typeof row.manual_line_metadata === 'string'
@@ -169,7 +200,10 @@ async function loadInvoiceCharges(
       : row.manual_line_metadata;
     const partial = metadata && typeof metadata === 'object' ? (metadata as any).partialPeriod : null;
     if (typeof partial?.contract_line_id === 'string') lineIds.add(partial.contract_line_id);
-    return { ...row, contract_line_ids: [...lineIds] };
+    const start = toDateOnly(row.adjustment_period_start);
+    const end = toDateOnly(row.adjustment_period_end);
+    const sourcePeriod = row.adjustment_source_kind === 'contract_change' && start && end ? [{ start, end }] : [];
+    return { ...row, contract_line_ids: [...lineIds], service_periods: sourcePeriod.length ? sourcePeriod : (periodsByItem.get(row.item_id) ?? []) };
   });
 }
 
@@ -215,6 +249,15 @@ export function buildAutomaticDiscountPolicies(
       client_contract_id: row.assignment_client_contract_id
         ?? (row.scope != null ? row.client_contract_id ?? null : null),
       priority: row.priority ?? null,
+      // Explicitly scoped policies honor their configured active window at
+      // charge level. Old unversioned rows retain their historical invoice-wide
+      // behavior for compatibility.
+      effective_period: row.scope != null && (row.start_date != null || row.end_date != null)
+        ? {
+          start: toDateOnly(row.start_date) ?? '0001-01-01',
+          end: toDateOnly(row.end_date) ?? '9999-12-31',
+        }
+        : null,
     });
   }
   return [...policies.values()];
@@ -387,6 +430,17 @@ export async function previewAutomaticInvoiceDiscounts(
   const inputs: InvoiceAdjustmentCharge[] = [];
   charges.forEach((charge, index) => {
     const lineId = (charge.config_id && configLineIds.get(charge.config_id)) || charge.client_contract_line_id;
+    const servicePeriods = charge.contractChangeAdjustment
+      ? (() => {
+        const start = toDateOnly(charge.contractChangeAdjustment.periodStart);
+        const end = toDateOnly(charge.contractChangeAdjustment.periodEnd);
+        return start && end ? [{ start, end }] : [];
+      })()
+      : (charge.recurringDetailPeriods?.length ? charge.recurringDetailPeriods : [charge]).flatMap((period) => {
+        const start = toDateOnly(period.servicePeriodStart);
+        const inclusiveEnd = toDateOnly(period.servicePeriodEnd);
+        return start && inclusiveEnd ? [{ start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() }] : [];
+      });
     const input: InvoiceAdjustmentCharge = {
       item_id: `preview-charge-${index}`,
       service_id: charge.serviceId,
@@ -399,6 +453,7 @@ export async function previewAutomaticInvoiceDiscounts(
       is_manual: false,
       is_taxable: charge.is_taxable,
       adjustment_source_kind: charge.contractChangeAdjustment ? 'contract_change' : null,
+      service_periods: servicePeriods,
     };
     // persistFixedInvoiceCharges consolidates recurring fixed allocations into
     // one serviceless parent per assignment + line. Match that discount base,
@@ -412,6 +467,9 @@ export async function previewAutomaticInvoiceDiscounts(
         parent.net_amount += amount;
         parent.unit_price = parent.net_amount;
         parent.is_taxable ||= input.is_taxable;
+        const periods = new Map((parent.service_periods ?? []).map((period) => [`${period.start}:${period.end}`, period]));
+        for (const period of input.service_periods ?? []) periods.set(`${period.start}:${period.end}`, period);
+        parent.service_periods = [...periods.values()];
         return;
       }
       Object.assign(input, { service_id: null, quantity: 1, unit_price: amount, net_amount: amount });
@@ -654,8 +712,22 @@ export async function reconcileAutomaticInvoiceDiscounts(
     [...new Set(charges.map((charge) => charge.client_contract_id).filter((id): id is string => Boolean(id)))],
   );
   const policies = buildAutomaticDiscountPolicies(discountRows);
+  const ordinaryCoverage = charges
+    .filter((charge) => charge.adjustment_source_kind !== 'contract_change')
+    .flatMap((charge) => charge.service_periods ?? []);
+  const hasCarriedAdjustment = charges.some((charge) => charge.adjustment_source_kind === 'contract_change');
+  const invoiceDate = toDateOnly(invoice.invoice_date);
+  const invoiceDateCoverage = invoiceDate
+    ? [{ start: invoiceDate, end: Temporal.PlainDate.from(invoiceDate).add({ days: 1 }).toString() }]
+    : [window];
+  // If an invoice carries a true-up but a regular charge has no detail period,
+  // do not let the expanded min/max window imply that the charge covers the
+  // true-up's old period. The invoice date is the narrowest defensible fallback.
+  const fallbackOrdinaryPeriods = ordinaryCoverage.length
+    ? ordinaryCoverage
+    : hasCarriedAdjustment ? invoiceDateCoverage : [window];
   const result = evaluateContractInvoiceAdjustments({
-    charges: toAdjustmentCharges(charges),
+    charges: toAdjustmentCharges(charges, fallbackOrdinaryPeriods),
     automaticDiscounts: policies,
   });
 

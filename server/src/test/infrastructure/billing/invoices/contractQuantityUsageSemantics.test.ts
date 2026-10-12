@@ -2193,15 +2193,28 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         const before = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first();
         const discountId = uuidv4();
         await context.db('discounts').insert({ tenant: context.tenantId, discount_id: discountId,
-          discount_name: 'January event discount', discount_type: 'percentage', value: 0.1,
+          discount_name: 'January event discount', discount_type: 'percentage', value: 0.1, scope: 'invoice',
           start_date: '2023-01-01', end_date: '2023-02-01', is_active: true });
         await context.db('contract_line_discounts').insert({ tenant: context.tenantId, discount_id: discountId, contract_line_id: setup.contractLineId, client_id: context.clientId, client_contract_id: setup.clientContractId });
         const cycle = await setupInvoiceCycle(2023, 3, 1);
         const preview = await previewInvoice(cycle);
         expect(preview.success).toBe(true);
         const february = unwrapInvoiceResult<any>(await generateInvoice(cycle));
-        expect(Number(february.subtotal)).toBe(435484 - 43548);
+        // The discount's active interval ends at the Feb boundary. The invoice
+        // carries the Jan true-up, but the unrelated Feb recurring charge is
+        // outside the discount's eligible source coverage.
+        expect(Number(february.subtotal)).toBe(435484 - 1548);
         if (preview.success) expect(Number(preview.data!.subtotal)).toBe(Number(february.subtotal));
+        const settlement = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: february.invoice_id,
+          adjustment_source_kind: 'discount', adjustment_source_id: discountId }).first();
+        expect(Number(settlement.net_amount)).toBe(-1548);
+        const settlementItemId = settlement.item_id;
+        await new BillingEngine().recalculateInvoice(february.invoice_id);
+        const afterReload = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: february.invoice_id,
+          adjustment_source_kind: 'discount', adjustment_source_id: discountId }).first();
+        expect(afterReload.item_id).toBe(settlementItemId);
+        expect(Number(afterReload.net_amount)).toBe(-1548);
+        expect(Number((await context.db('invoices').where({ tenant: context.tenantId, invoice_id: february.invoice_id }).first()).subtotal)).toBe(433936);
         const row = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: february.invoice_id, adjustment_source_kind: 'contract_change' }).first();
         expect(dateOnly(row.adjustment_period_start)).toBe('2023-01-01');
         expect(dateOnly(row.adjustment_period_end)).toBe('2023-02-01');

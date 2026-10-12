@@ -31,6 +31,8 @@ export interface InvoiceAdjustmentCharge {
   is_taxable?: boolean;
   adjustment_source_kind?: AdjustmentSourceKind | null;
   contract_line_ids?: string[];
+  /** Half-open service coverage periods represented by this charge. */
+  service_periods?: Array<{ start: string; end: string }>;
 }
 
 export interface AutomaticDiscountPolicy {
@@ -50,6 +52,8 @@ export interface AutomaticDiscountPolicy {
   client_contract_id?: string | null;
   contract_line_id?: string | null;
   priority?: number | null;
+  /** Half-open period in which the configured discount is effective. */
+  effective_period?: { start: string; end: string } | null;
 }
 
 export interface DiscountAllocation {
@@ -260,6 +264,14 @@ function chargesInScope(
   }
 }
 
+function chargeIsEligibleForPeriod(policy: AutomaticDiscountPolicy, charge: InvoiceAdjustmentCharge): boolean {
+  const effectivePeriod = policy.effective_period;
+  if (!effectivePeriod) return true;
+  return Boolean(charge.service_periods?.some((period) =>
+    period.start < effectivePeriod.end && period.end > effectivePeriod.start,
+  ));
+}
+
 /**
  * Distributes `total` integer minor units across weighted bases using the
  * largest-remainder method. Ties break on the charge key so the result is
@@ -315,7 +327,7 @@ function evaluateDiscount(
   eligible: InvoiceAdjustmentCharge[],
   remainingByItem: Map<string, number>,
 ): AutomaticDiscountResult | null {
-  const scoped = chargesInScope(policy, eligible);
+  const scoped = chargesInScope(policy, eligible).filter((charge) => chargeIsEligibleForPeriod(policy, charge));
   if (scoped.length === 0) {
     return null;
   }
