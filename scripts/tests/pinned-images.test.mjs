@@ -17,6 +17,9 @@ const PINNED_IMAGE_PREFIX = `${['pgvector', 'pgvector'].join('/')}:`;
 
 // Plan directories document history and may name the old image.
 const PLAN_DIRS = [':!docs/plans', ':!ee/docs/plans'];
+// Recorded evidence is hash-pinned verbatim CI output (docs/evidence/**/raw-logs); logs captured while the
+// retired image was still in use legitimately name it, and editing them would invalidate their recorded hashes.
+const RECORD_DIRS = [...PLAN_DIRS, ':!docs/evidence'];
 
 function trackedFilesContaining(literal, excludes) {
   try {
@@ -62,7 +65,7 @@ test('the resolver rejects fragments that are not exactly pinned', () => {
 });
 
 test('no tracked file outside the plan directories references the retired image', () => {
-  assert.deepEqual(trackedFilesContaining(RETIRED_IMAGE, PLAN_DIRS), []);
+  assert.deepEqual(trackedFilesContaining(RETIRED_IMAGE, RECORD_DIRS), []);
 });
 
 test('only the fragment carries a literal pinned image ref', () => {
