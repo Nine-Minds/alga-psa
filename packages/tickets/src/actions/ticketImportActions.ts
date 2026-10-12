@@ -739,9 +739,11 @@ export const importTickets = withAuth(async (
         ticket_origin: 'INTERNAL',
         // The model owns historical creation: it writes entered_at and, for a
         // closed status, is_closed / closed_at / closed_by with the row.
+        // A closed row with no open date defaults entered_at to closed_at (or now
+        // when neither is given), so a supplied closed_at is never before it.
         historical: isClosed
           ? {
-              entered_at: ticket.entered_at || nowIso,
+              entered_at: ticket.entered_at || ticket.closed_at || nowIso,
               closed_at: ticket.closed_at || nowIso,
               closed_by: user.user_id,
             }

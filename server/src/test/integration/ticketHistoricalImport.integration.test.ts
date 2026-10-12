@@ -213,4 +213,38 @@ describe('historical ticket import via TicketService (integration)', () => {
       .catch((e) => e);
     expect(error).toBeInstanceOf(ValidationError);
   });
+
+  it('rejects a closed_by that is no user in the tenant, on create and on the status crossing', async () => {
+    const otherTenant = await createTenant(db, 'Other Tenant');
+    const foreignUser = await createUser(db, otherTenant, { first_name: 'Far', last_name: 'Away', user_type: 'internal' });
+    for (const closedBy of [uuidv4(), foreignUser]) {
+      const onCreate = await service
+        .create(
+          body({ status_id: closedStatusId, entered_at: '2025-03-14T09:30:00Z', closed_at: '2025-03-20T16:00:00Z', closed_by: closedBy }),
+          ctx(),
+        )
+        .catch((e) => e);
+      expect(onCreate).toBeInstanceOf(ValidationError);
+      expect(onCreate.details[0].path).toEqual(['closed_by']);
+
+      const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+      const onUpdate = await service
+        .update(ticket.ticket_id, { status_id: closedStatusId, closed_at: '2025-04-01T12:00:00Z', closed_by: closedBy } as any, ctx())
+        .catch((e) => e);
+      expect(onUpdate).toBeInstanceOf(ValidationError);
+      expect(onUpdate.details[0].path).toEqual(['closed_by']);
+      const row = await table('tickets').where({ ticket_id: ticket.ticket_id }).first();
+      expect(row.is_closed ?? false).toBe(false);
+    }
+  });
+
+  it('stores a closed_by that is a tenant user', async () => {
+    const other = await createUser(db, tenantId, { first_name: 'Cy', last_name: 'Closer', user_type: 'internal' });
+    const created = await service.create(
+      body({ status_id: closedStatusId, entered_at: '2025-03-14T09:30:00Z', closed_at: '2025-03-20T16:00:00Z', closed_by: other }),
+      ctx(),
+    );
+    const row = await table('tickets').where({ ticket_id: created.ticket_id }).first();
+    expect(row.closed_by).toBe(other);
+  });
 });

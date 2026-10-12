@@ -180,4 +180,38 @@ describe('TicketService.create historical import', () => {
       { path: ['closed_at'], message: 'closed_at is required when status_id is a closed status' },
     ]);
   });
+
+  it('rejects a closed_by that is not a user in the tenant with a 400 on closed_by, before creating', async () => {
+    const builder: any = h.fakeTenantDb.table();
+    builder.first.mockResolvedValueOnce(undefined);
+    const error = await service
+      .create(
+        requestBody({
+          entered_at: '2025-03-14T09:30:00Z',
+          closed_at: '2025-03-15T09:30:00Z',
+          closed_by: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        }),
+        internalContext,
+      )
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as any).details).toEqual([
+      { path: ['closed_by'], message: 'closed_by must be a user in this tenant' },
+    ]);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('accepts a closed_by that is a tenant user', async () => {
+    await service.create(
+      requestBody({
+        entered_at: '2025-03-14T09:30:00Z',
+        closed_at: '2025-03-15T09:30:00Z',
+        closed_by: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      }),
+      internalContext,
+    );
+    expect((createSpy.mock.calls[0][0] as CreateTicketInput).historical?.closed_by).toBe(
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    );
+  });
 });

@@ -380,6 +380,19 @@ function isPreviewableMime(mimeType: string | null | undefined): boolean {
   return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
 }
 
+/**
+ * tickets.closed_by has no foreign key, so a caller-supplied value must be checked
+ * against the tenant's users or any UUID (including another tenant's) would be stored.
+ */
+async function assertClosedByIsTenantUser(trx: Knex.Transaction, tenant: string, closedBy: string): Promise<void> {
+  const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: closedBy }).first('user_id');
+  if (!user) {
+    throw new ValidationError('Validation failed', [
+      { path: ['closed_by'], message: 'closed_by must be a user in this tenant' },
+    ]);
+  }
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -1741,6 +1754,10 @@ export class TicketService extends BaseService<ITicket> {
           ]);
         }
 
+        if (isHistorical && data.closed_by) {
+          await assertClosedByIsTenantUser(trx, context.tenant, data.closed_by);
+        }
+
         // Convert API data format to TicketModel input format
         const createTicketInput: CreateTicketInput = {
           title: data.title,
@@ -2097,6 +2114,9 @@ export class TicketService extends BaseService<ITicket> {
             throw new ValidationError('Validation failed', [
               { path: ['closed_at'], message: 'closed_at must not be before the ticket entered_at' },
             ]);
+          }
+          if (suppliedClosedBy) {
+            await assertClosedByIsTenantUser(trx, context.tenant, suppliedClosedBy);
           }
           updateData.closed_at = closedAt;
           updateData.closed_by = suppliedClosedBy ?? context.userId;
