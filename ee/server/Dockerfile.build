@@ -156,6 +156,20 @@ RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
+# One-shot ownership fix run by the compose/Helm `runtime-permissions` init
+# container (as root, with limited capabilities). Installed outside /app so the
+# ./scripts bind mount cannot shadow it.
+COPY scripts/runtime-permissions.sh /usr/local/bin/alga-runtime-permissions
+COPY scripts/repair-secret-permissions.sh /usr/local/bin/alga-repair-secret-permissions
+RUN chmod 0755 /usr/local/bin/alga-runtime-permissions /usr/local/bin/alga-repair-secret-permissions
+
+# The app runs as the unprivileged node user (uid 1000). It owns the local
+# file-storage root and the secret-store root, so tenant secrets can be written
+# below /run/secrets (the secret provider requires the root to be owned by the
+# running uid).
+RUN install -d -o 1000 -g 1000 -m 0755 /data/files && \
+    install -d -o 1000 -g 1000 -m 0700 /run/secrets
+
 # Ensure tsx is available on PATH at runtime for `npm start`
 RUN npm install -g tsx
 
@@ -178,5 +192,8 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # Can be overridden in docker-compose or deployment environments
 ENV SECRET_READ_CHAIN="env,filesystem"
 ENV SECRET_WRITE_PROVIDER="filesystem"
+
+ENV HOME=/home/node
+USER 1000:1000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
