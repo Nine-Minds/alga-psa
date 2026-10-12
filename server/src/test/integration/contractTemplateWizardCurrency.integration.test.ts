@@ -778,6 +778,35 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
       expect(gone.sets).toEqual([]);
     });
 
+    it('deleting a price set requires billing:delete (update alone is not enough); saving requires billing:update', async () => {
+      const serviceId = await seedService('Price Set Perm Service', 0);
+      const template = await makeTemplate(serviceId, 'USD', { fixed_base_rate: 5000 });
+      const actions = await import('@alga-psa/billing/actions/contractTemplatePriceSetActions');
+      const pricing: any = await actions.getContractTemplatePricing(template.contract_id);
+      const slotKey = pricing.slots.find((s: any) => s.slot_kind === 'line_base_rate').slot_key;
+      expect(await actions.saveContractTemplatePriceSet(template.contract_id, 'EUR', { [slotKey]: 4500 })).toEqual({ success: true });
+
+      const withOnly = (allowed: string) =>
+        setupCommonMocks({
+          tenantId,
+          userId: authRef.user.user_id,
+          permissionCheck: (_user, resource, action) => resource === 'billing' && action === allowed,
+        });
+      try {
+        withOnly('update');
+        const denied: any = await actions.deleteContractTemplatePriceSet(template.contract_id, 'EUR');
+        expect(denied.permissionError).toMatch(/Permission denied/);
+        expect(await tenantTable(db, tenantId, 'contract_template_price_sets').where({ template_id: template.contract_id })).toHaveLength(1);
+
+        withOnly('delete');
+        const noSave: any = await actions.saveContractTemplatePriceSet(template.contract_id, 'EUR', { [slotKey]: 1 });
+        expect(noSave.permissionError).toMatch(/Permission denied/);
+        expect(await actions.deleteContractTemplatePriceSet(template.contract_id, 'EUR')).toEqual({ success: true });
+      } finally {
+        setupCommonMocks({ tenantId, userId: authRef.user.user_id, permissionCheck: () => true });
+      }
+    });
+
     it('ensureTemplateLineSnapshot refuses a live line priced in another currency than the template base', async () => {
       const serviceId = await seedService('Snapshot Reject Service', 0);
       const template = await makeTemplate(serviceId, 'USD', { fixed_base_rate: 1000 });

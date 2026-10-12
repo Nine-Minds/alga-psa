@@ -2155,6 +2155,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
               <div className="mt-4">
                 <GenericPlanServicesList
                   contractLineId={line.contract_line_id}
+                  currencyCode={currencyCode}
                   onServicesChanged={onServicesChanged}
                   disableEditing
                 />

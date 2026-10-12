@@ -20,7 +20,7 @@ export function TemplateReviewContractStep({
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
 
-  const money = useTemplateMoney(data.currency_code || 'USD');
+  const money = useTemplateMoney(data.currency_code);
 
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,

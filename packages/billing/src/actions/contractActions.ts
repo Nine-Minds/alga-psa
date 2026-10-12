@@ -554,8 +554,8 @@ export const updateContract = withAuth(async (
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      // currency_code removed from templates - templates are now currency-neutral
-      // Currency is inherited from the client when a contract is created
+      // The base currency is not changed here: relabelling goes through
+      // updateContractTemplateCurrency, which also guards the per-currency price sets.
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }

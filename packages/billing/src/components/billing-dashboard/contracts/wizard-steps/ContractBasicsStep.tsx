@@ -35,6 +35,8 @@ import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
+import { templatePickerLabel } from './templatePickerOption';
+
 type TemplateOption = {
   contract_id: string;
   contract_name: string;
@@ -126,30 +128,13 @@ export function ContractBasicsStep({
     setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
 
-  // Templates are never hidden by currency. Each shows its base currency, and
-  // once the client's currency is known a template without a complete price set
-  // for it is flagged: its structure still clones, but amounts must be entered.
-  const templateNeedsRates = (template: TemplateOption): boolean => {
-    const base = template.currency_code;
-    if (!base || !data.client_id || !data.currency_code || base === data.currency_code) return false;
-    const hasSet = (template.price_set_currencies ?? []).includes(data.currency_code);
-    const incomplete = (template.incomplete_set_currencies ?? []).includes(data.currency_code);
-    return !hasSet || incomplete;
-  };
-  const templateOptions = templates.map((template) => {
-    const needs = templateNeedsRates(template);
-    const badge = template.currency_code ? ` · ${template.currency_code}` : '';
-    const hint = needs
-      ? ` · ${t('wizard.templatePicker.needsRates', {
-          defaultValue: 'Needs {{currency}} rates',
-          currency: data.currency_code,
-        })}`
-      : '';
-    return {
-      value: template.contract_id,
-      label: `${template.contract_name}${badge}${hint}`,
-    };
-  });
+  // Templates are never hidden by currency. Each shows its base currency and
+  // price-set currencies, and once the client's currency is known a template
+  // without a complete price set for it is flagged "Needs <cur> rates".
+  const templateOptions = templates.map((template) => ({
+    value: template.contract_id,
+    label: templatePickerLabel(t, template, data.client_id, data.currency_code),
+  }));
   const renewalModeOptions = [
     {
       value: 'none',

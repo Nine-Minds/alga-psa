@@ -987,7 +987,7 @@ export function ContractWizard({
             }));
             return false;
           }
-  if (templateView) {
+          if (templateView) {
             const missing = findMissingTemplateAmounts(
               templateView,
               wizardData.template_lines ?? [],

@@ -54,8 +54,8 @@ export interface TemplateWizardData {
     /** 'bundle' (default) allocates a share of the line total; 'unit' bills quantity × unit rate. */
     pricing_basis?: 'bundle' | 'unit';
     /**
-     * Optional default unit rate in minor units. Templates are currency-neutral, so an
-     * empty rate means "use the service's catalog price in the contract currency".
+     * Optional default unit rate in minor units of the template's base currency. An empty
+     * rate means "use the service's catalog price in the contract currency".
      */
     unit_rate?: number | null;
   }>;

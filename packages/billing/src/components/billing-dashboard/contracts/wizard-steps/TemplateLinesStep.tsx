@@ -14,6 +14,7 @@ import {
 import { useTemplateMoney } from '../useTemplateMoney';
 import { TemplateAmountInput } from '../TemplateAmountInput';
 import {
+  describeTemplateAmountField,
   editedAmount,
   effectiveAmount,
   listTemplateAmountFields,
@@ -483,6 +484,18 @@ export function TemplateLinesReview({
                   })
                   .join(', ')}
               </div>
+              {(refsByLine.get(line.template_line_id) ?? [])
+                .filter((ref) => ref.kind !== 'member_rate')
+                .map((ref) => ({ ref, amount: effectiveAmount(edits, ref) }))
+                .filter(({ amount }) => amount != null)
+                .map(({ ref, amount }) => (
+                  <div
+                    key={`${ref.kind}-${ref.service?.service_id ?? ref.poolId ?? ''}`}
+                    className="text-muted-foreground"
+                  >
+                    {describeTemplateAmountField(t, ref)}: {money(amount as number)}
+                  </div>
+                ))}
             </li>
           );
         })}
