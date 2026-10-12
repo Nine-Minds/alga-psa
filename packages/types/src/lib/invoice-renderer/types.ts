@@ -208,9 +208,18 @@ export interface WasmInvoiceViewModel {
     | null;
   clientLogoUrl?: string; // Optional client logo URL - KEEPING FOR NOW, maybe rename/remove later?
   items: WasmInvoiceLineItem[];
+  /** Net subtotal: after discounts and credits, before tax. Unchanged meaning. */
   subtotal: number;
   tax: number;
   total: number;
+  /**
+   * Total of all `isDiscount` lines as a positive magnitude, minor units (same sign
+   * convention as quote `discountTotal`). 0 when there are no discounts.
+   * Identity: `grossSubtotal - discountTotal === subtotal`.
+   */
+  discountTotal?: number;
+  /** Subtotal before discounts: `subtotal + discountTotal`. Equals `subtotal` with no discounts. */
+  grossSubtotal?: number;
   taxSource?: 'internal' | 'external' | 'pending_external';
   notes?: string;
   // Grouped item collections (derived from items, no migration needed)

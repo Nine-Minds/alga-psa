@@ -100,6 +100,15 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // Invoice discount render model (alga0002295): unformatted-field behaviour,
+      // opt-in layout + back-compat renders, the derivation helper's call sites, and
+      // the designer's catalog / Discount Row / preview-sample coverage.
+      'src/lib/invoice-template-ast/react-renderer.unformattedField.test.tsx',
+      'src/lib/invoice-template-ast/react-renderer.invoiceDiscount.test.tsx',
+      'src/components/invoice-designer/ast/workspaceAst.discountRow.test.ts',
+      'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
+      'src/components/invoice-designer/preview/previewBindings.test.ts',
+      'src/components/invoice-designer/utils/documentKind.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',

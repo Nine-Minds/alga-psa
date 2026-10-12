@@ -45,7 +45,7 @@ import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IPrepaidBlockCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
-import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
+import { applyInvoiceDiscountSummary, attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -2237,7 +2237,7 @@ async function adaptToWasmViewModel(
   const discountItems = billingResult.discounts.map((discount) => {
     const amount = Math.round(-(discount.amount || 0));
     return { id: `preview-discount-${discount.discount_id}`, description: discount.discount_name,
-      quantity: 1, unitPrice: amount, total: amount };
+      quantity: 1, unitPrice: amount, total: amount, isDiscount: true };
   });
   const discountAdjustment = discountItems.reduce((sum, item) => sum + item.total, 0);
   const previewViewModelItems = [...invoiceItems.map(buildPreviewViewModelItem), ...discountItems];
@@ -2263,6 +2263,7 @@ async function adaptToWasmViewModel(
   // Same collection builder as the persisted-invoice read path, so the
   // preview's ticket-level detail matches the generated PDF by construction.
   attachInvoiceTimeCollections(previewViewModel, invoiceItems);
+  applyInvoiceDiscountSummary(previewViewModel);
 
   return previewViewModel;
 }
