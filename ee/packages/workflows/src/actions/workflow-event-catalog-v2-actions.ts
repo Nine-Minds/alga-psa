@@ -15,7 +15,7 @@ import {
   WorkflowDefinitionVersionModelV2,
 } from '@alga-psa/workflows/persistence';
 import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from './workflow-runtime-v2-actions';
-import { getDateTriggerSourceByCatalogEvent } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import { getDateTriggerSourceByCatalogEvent } from '@alga-psa/event-schemas';
 import { buildDateTriggerForSource } from '../../../../../shared/workflow/runtime/dateTriggerBuilder';
 import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
 

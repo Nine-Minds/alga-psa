@@ -25,6 +25,10 @@ import {
   InvalidTaxRateSelectionError,
 } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  isServiceCatalogPricingError,
+  writeServiceCatalogPricing,
+} from '../lib/catalog/serviceCatalogPricing';
 
 type ServiceCatalogSearchEventType =
   | 'SERVICE_CATALOG_CREATED'
@@ -491,6 +495,7 @@ export const getServices = withAuth(async (
           ? await facade.table<IServicePrice>('service_prices')
               .whereIn('service_id', serviceIds)
               .select('*')
+              .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
           : [];
 
         // Group prices by service_id
@@ -584,6 +589,87 @@ function safeRevalidate(path: string): void {
     }
 }
 
+/**
+ * The Service form hands over numeric inputs that may carry float noise; round
+ * at this UI edge only. The REST API passes rates to the writer untouched, which
+ * rejects fractional values.
+ */
+function roundFormPrices(
+    prices: Array<{ currency_code: string; rate: number }>,
+): Array<{ currency_code: string; rate: number }> {
+    return prices.map((price) => ({
+        currency_code: price.currency_code,
+        rate: Math.round(Number(price.rate || 0)),
+    }));
+}
+
+/**
+ * Insert a catalog row inside the caller's transaction. Shared by
+ * `createService` and `createServiceWithPricing` so the two cannot drift.
+ */
+async function insertCatalogServiceInTransaction(
+    trx: Knex.Transaction,
+    userId: string,
+    tenant: string,
+    serviceData: CreateServiceInput,
+): Promise<IService> {
+    const { custom_service_type_id } = serviceData;
+
+    if (!custom_service_type_id) {
+        throw new Error('custom_service_type_id is required to create a service.');
+    }
+
+    // 1. Verify the custom service type exists
+    const customServiceType = await tenantDb(trx, tenant).table<IServiceType>('service_types')
+        .where('id', custom_service_type_id)
+        .first();
+    if (!customServiceType) {
+        throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
+    }
+
+    // 2. Ensure a billing method was provided (use the one from serviceData, not from service type)
+    if (!serviceData.billing_method) {
+        throw new Error('billing_method is required to create a service.');
+    }
+    console.log(`[serviceActions] Creating service with billing method: ${serviceData.billing_method}`);
+
+    // 3. Prepare final data
+    // Catalog create contract: omitted tax_rate_id inherits the tenant
+    // default (or NULL when unset); explicit null stays non-taxable; a UUID
+    // is an explicit override validated in this tenant.
+    const resolvedTaxRateId = await resolveCatalogTaxRateIdForCreate(
+        trx,
+        tenant,
+        serviceData.tax_rate_id,
+        undefined,
+        { lock: true },
+    );
+    const finalServiceData = {
+        ...serviceData,
+        tenant: tenant, // Explicitly add tenant to the data
+        billing_method: serviceData.billing_method, // Use the billing method from the form
+        custom_service_type_id: custom_service_type_id,
+        // Ensure default_rate is a number
+        default_rate: typeof serviceData.default_rate === 'string'
+            ? parseFloat(serviceData.default_rate) || 0
+            : serviceData.default_rate,
+        tax_rate_id: resolvedTaxRateId,
+        barcode: serviceData.item_kind === 'product'
+            ? normalizeGtin(serviceData.barcode ?? '') || null
+            : null,
+    };
+
+    // 4. Create the service using the model
+    const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, service.service_id, {
+        userId,
+        itemKind: service.item_kind,
+        changedFields: Object.keys(finalServiceData),
+    });
+    console.log('[serviceActions] Service created successfully:', service);
+    return service;
+}
+
 export const createService = withAuth(async (
     user,
     { tenant },
@@ -596,65 +682,11 @@ export const createService = withAuth(async (
 
     try {
         console.log('[serviceActions] createService called with data:', serviceData);
-        const { custom_service_type_id } = serviceData;
-
-        if (!custom_service_type_id) {
-            throw new Error('custom_service_type_id is required to create a service.');
-        }
-
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
-
-        // 1. Verify the custom service type exists
-        const customServiceType = await tenantDb(trx, tenant).table<IServiceType>('service_types')
-            .where('id', custom_service_type_id)
-            .first();
-        if (!customServiceType) {
-            throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
-        }
-
-        // 2. Ensure a billing method was provided (use the one from serviceData, not from service type)
-        if (!serviceData.billing_method) {
-            throw new Error('billing_method is required to create a service.');
-        }
-        console.log(`[serviceActions] Creating service with billing method: ${serviceData.billing_method}`);
-
-        // 3. Prepare final data
-        // Catalog create contract: omitted tax_rate_id inherits the tenant
-        // default (or NULL when unset); explicit null stays non-taxable; a UUID
-        // is an explicit override validated in this tenant.
-        const resolvedTaxRateId = await resolveCatalogTaxRateIdForCreate(
-            trx,
-            tenant,
-            serviceData.tax_rate_id,
-            undefined,
-            { lock: true },
-        );
-        const finalServiceData = {
-            ...serviceData,
-            tenant: tenant, // Explicitly add tenant to the data
-            billing_method: serviceData.billing_method, // Use the billing method from the form
-            custom_service_type_id: custom_service_type_id,
-            // Ensure default_rate is a number
-            default_rate: typeof serviceData.default_rate === 'string'
-                ? parseFloat(serviceData.default_rate) || 0
-                : serviceData.default_rate,
-            tax_rate_id: resolvedTaxRateId,
-            barcode: serviceData.item_kind === 'product'
-                ? normalizeGtin(serviceData.barcode ?? '') || null
-                : null,
-        };
-
-            // 4. Create the service using the model
-            const service = await Service.create(trx, finalServiceData as Omit<IService, 'service_id'>);
-            await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, service.service_id, {
-                userId: user.user_id,
-                itemKind: service.item_kind,
-                changedFields: Object.keys(finalServiceData),
-            });
-            console.log('[serviceActions] Service created successfully:', service);
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const service = await insertCatalogServiceInTransaction(trx, user.user_id, tenant, serviceData);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
-            return service; // Assuming Service.create returns the full IService object
+            return service;
         });
     } catch (error) {
         console.error('[serviceActions] Error creating service:', error);
@@ -663,6 +695,49 @@ export const createService = withAuth(async (
             return normalizedError;
         }
         throw error; // Re-throw the error
+    }
+});
+
+/**
+ * Create a catalog row and its price rows in one transaction, so a failed price
+ * write cannot leave behind a service with no prices (QuickAdd). `default_rate`
+ * is derived from `prices[0]` by the pricing writer's mirror rule.
+ */
+export const createServiceWithPricing = withAuth(async (
+    user,
+    { tenant },
+    serviceData: CreateServiceInput,
+    prices: Array<{ currency_code: string; rate: number }>
+): Promise<IService | ActionPermissionError | ActionMessageError> => {
+    const canCreate = await hasPermission(user, 'service', 'create');
+    if (!canCreate) {
+      return permissionError('Permission denied: Cannot create services/products', 'msp/service-catalog:errors.permissions.createServices');
+    }
+
+    try {
+        const { knex: db } = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const created = await insertCatalogServiceInTransaction(trx, user.user_id, tenant, serviceData);
+            const { servicePatch } = await writeServiceCatalogPricing(trx, tenant, created.service_id, {
+                current: roundFormPrices(prices),
+            });
+            if (servicePatch.default_rate !== undefined && servicePatch.default_rate !== created.default_rate) {
+                await Service.update(trx, created.service_id, servicePatch);
+            }
+            const complete = await Service.getById(trx, created.service_id);
+            safeRevalidate('/msp/billing');
+            return (complete ?? created) as IService;
+        });
+    } catch (error) {
+        if (isServiceCatalogPricingError(error)) {
+            return actionError(error.message);
+        }
+        console.error('[serviceActions] Error creating service with pricing:', error);
+        const normalizedError = normalizeCreateServiceError(serviceData, error);
+        if (normalizedError) {
+            return normalizedError;
+        }
+        throw error;
     }
 });
 
@@ -1329,42 +1404,15 @@ export const getServicePrice = withAuth(async (user, { tenant }, serviceId: stri
 });
 
 /**
- * Set a price for a service in a given currency (upsert)
- */
-export const setServicePrice = withAuth(async (
-  user,
-  { tenant },
-  serviceId: string,
-  currencyCode: string,
-  rate: number
-): Promise<IServicePrice | ActionPermissionError> => {
-  const canUpdate = await hasPermission(user, 'service', 'update');
-  if (!canUpdate) {
-    return permissionError('Permission denied: Cannot update service pricing', 'msp/service-catalog:errors.permissions.updatePricing');
-  }
-
-  const { knex: db } = await createTenantKnex();
-  try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const result = await Service.setPrice(trx, serviceId, currencyCode, rate);
-      safeRevalidate('/msp/billing');
-      return result;
-    });
-  } catch (error) {
-    console.error(`Error setting price for service ${serviceId} in ${currencyCode}:`, error);
-    throw error;
-  }
-});
-
-/**
- * Set multiple prices for a service at once (replaces all existing prices)
+ * Set multiple prices for a service at once (replaces the current price window;
+ * scheduled future prices are left alone). `default_rate` follows `prices[0]`.
  */
 export const setServicePrices = withAuth(async (
   user,
   { tenant },
   serviceId: string,
   prices: Array<{ currency_code: string; rate: number }>
-): Promise<IServicePrice[] | ActionPermissionError> => {
+): Promise<IServicePrice[] | ServiceActionError | ActionPermissionError> => {
   const canUpdate = await hasPermission(user, 'service', 'update');
   if (!canUpdate) {
     return permissionError('Permission denied: Cannot update service pricing', 'msp/service-catalog:errors.permissions.updatePricing');
@@ -1373,11 +1421,19 @@ export const setServicePrices = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const result = await Service.setPrices(trx, serviceId, prices);
+      const { prices: written, servicePatch } = await writeServiceCatalogPricing(trx, tenant, serviceId, {
+        current: roundFormPrices(prices),
+      });
+      if (servicePatch.default_rate !== undefined) {
+        await Service.update(trx, serviceId, servicePatch);
+      }
       safeRevalidate('/msp/billing');
-      return result;
+      return written;
     });
   } catch (error) {
+    if (isServiceCatalogPricingError(error)) {
+      return actionError(error.message);
+    }
     console.error(`Error setting prices for service ${serviceId}:`, error);
     throw error;
   }
@@ -1407,16 +1463,30 @@ export const updateServicePricing = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const normalizedPrices = prices.map((price) => ({
-        currency_code: price.currency_code,
-        rate: Math.round(Number(price.rate || 0)),
-      }));
-      const primaryRate =
-        normalizedPrices.length > 0 ? normalizedPrices[0].rate : null;
+      const notFound = () => actionError(
+        `Service with id ${serviceId} not found or couldn't be updated`,
+        'msp/service-catalog:errors.product.notFound',
+      );
+      const existing = await tenantDb(trx, tenant).table('service_catalog')
+        .where({ service_id: serviceId })
+        .first('service_id');
+      if (!existing) {
+        return notFound();
+      }
+
+      // Window replace, billing lock, validation and the default_rate mirror
+      // live in the shared writer; a bad price rolls the whole save back before
+      // the catalog row is touched.
+      const { prices: updatedPrices, servicePatch: pricingPatch } = await writeServiceCatalogPricing(
+        trx,
+        tenant,
+        serviceId,
+        { current: roundFormPrices(prices) },
+      );
 
       const normalizedServiceData: Partial<IService> = {
         ...servicePatch,
-        ...(primaryRate !== null ? { default_rate: primaryRate } : {}),
+        ...pricingPatch,
         ...(servicePatch.barcode !== undefined
           ? { barcode: normalizeGtin(servicePatch.barcode ?? '') || null }
           : {}),
@@ -1424,13 +1494,8 @@ export const updateServicePricing = withAuth(async (
 
       const updatedService = await Service.update(trx, serviceId, normalizedServiceData);
       if (updatedService === null) {
-        return actionError(
-          `Service with id ${serviceId} not found or couldn't be updated`,
-          'msp/service-catalog:errors.product.notFound',
-        );
+        return notFound();
       }
-
-      const updatedPrices = await Service.setPrices(trx, serviceId, normalizedPrices);
 
       await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, serviceId, {
         userId: user.user_id,
@@ -1444,6 +1509,9 @@ export const updateServicePricing = withAuth(async (
       return { service: updatedService as IService, prices: updatedPrices };
     });
   } catch (error) {
+    if (isServiceCatalogPricingError(error)) {
+      return actionError(error.message);
+    }
     console.error(`Error updating service pricing for ${serviceId}:`, error);
     const expected = serviceActionErrorFrom(error);
     if (expected) return expected;

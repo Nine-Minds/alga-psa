@@ -99,6 +99,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         'ticket.assigned',
         'ticket.closed',
         'ticket.comment.added',
+        'ticket.response_state_changed',
       ])
       .describe('Ticket-domain webhook events emitted by the eventBus subscriber.'),
   );
@@ -112,6 +113,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       'ticket.assigned',
       'ticket.closed',
       'ticket.comment.added',
+      'ticket.response_state_changed',
       'project.created',
       'project.updated',
       'project.status_changed',
@@ -542,6 +544,12 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       author: zOpenApi.string().nullable(),
       timestamp: zOpenApi.string().datetime(),
       is_internal: zOpenApi.boolean(),
+      author_type: zOpenApi
+        .enum(['internal', 'client', 'unknown'])
+        .optional()
+        .describe('Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown.'),
+      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
     }),
   );
 
@@ -553,6 +561,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       author: zOpenApi.string().nullable(),
       is_internal: zOpenApi.boolean(),
       is_resolution: zOpenApi.boolean(),
+      author_type: zOpenApi.enum(['internal', 'client', 'unknown']).optional(),
+      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
       created_at: zOpenApi.string().datetime(),
       updated_at: zOpenApi.string().datetime().nullable(),
     }),
@@ -570,6 +581,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       status_id: zOpenApi.string().uuid().nullable().optional(),
       status_name: zOpenApi.string().nullable().optional(),
       is_closed: zOpenApi.boolean().optional(),
+      response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Current response state of the ticket. On ticket.response_state_changed it equals new_response_state.'),
       previous_status_id: zOpenApi
         .string()
         .uuid()
@@ -581,6 +597,16 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         .nullable()
         .optional()
         .describe('Only populated on ticket.status_changed.'),
+      previous_response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.response_state_changed. null when there was no prior state.'),
+      new_response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed).'),
       priority_id: zOpenApi.string().uuid().nullable().optional(),
       priority_name: zOpenApi.string().nullable().optional(),
       client_id: zOpenApi.string().uuid().nullable().optional(),
@@ -665,6 +691,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     envelopeFor('ticket.comment.added', TicketWebhookData),
   );
 
+  const TicketResponseStateChangedEnvelope = registry.registerSchema(
+    'TicketResponseStateChangedDeliveryV1',
+    envelopeFor('ticket.response_state_changed', TicketWebhookData),
+  );
+
   const outboundDefs: Array<{ event: string; envelope: ZodTypeAny; description: string }> = [
     {
       event: 'ticket.created',
@@ -700,7 +731,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       event: 'ticket.comment.added',
       envelope: TicketCommentAddedEnvelope,
       description:
-        'Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included.',
+        'Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included.',
+    },
+    {
+      event: 'ticket.response_state_changed',
+      envelope: TicketResponseStateChangedEnvelope,
+      description:
+        'Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close).',
     },
   ];
 

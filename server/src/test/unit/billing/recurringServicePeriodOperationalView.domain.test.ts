@@ -12,7 +12,6 @@ describe('recurring service period operational view', () => {
       scheduleKey: 'schedule:client:line-1',
       sourceObligation: {
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
         tenant: 'tenant-1',
       },
@@ -38,7 +37,6 @@ describe('recurring service period operational view', () => {
       scheduleKey: 'schedule:client:line-2',
       sourceObligation: {
         obligationId: 'line-2',
-        obligationType: 'contract_line',
         chargeFamily: 'license',
         tenant: 'tenant-1',
       },

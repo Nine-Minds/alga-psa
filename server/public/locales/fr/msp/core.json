@@ -239,6 +239,19 @@
       "ariaLabel": "Demander à l’IA au sujet de ce workflow",
       "title": "Demander à l’IA",
       "shortcutHint": "Ouvrir Quick Ask pour l’aide sur le workflow"
+    },
+    "stopwatch": {
+      "untitled": "Sans titre",
+      "ariaLabelPaused": "Chronomètre en pause : {{label}} à {{clock}}",
+      "ariaLabelRunning": "Chronomètre en cours : {{label}} à {{clock}}",
+      "paused": "Chronomètre en pause",
+      "running": "Chronomètre en cours",
+      "resume": "Reprendre",
+      "pause": "Pause",
+      "stop": "Arrêter et enregistrer",
+      "discard": "Supprimer",
+      "pausedNoDrawer": "Chronomètre en pause à {{clock}}. Ouvrez l'élément de travail pour enregistrer le temps.",
+      "openTicket": "Ouvrir le ticket"
     }
   },
   "dialogs": {

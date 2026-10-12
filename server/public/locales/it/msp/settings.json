@@ -674,8 +674,8 @@
           "suppressAiHelp": "Solo componente aggiuntivo Enterprise AI Assistant. Se non disponibile, le risposte riaprono normalmente."
         },
         "liveTimer": {
-          "label": "Attiva timer ticket in tempo reale",
-          "help": "Mostra il timer in tempo reale e gli intervalli registrati sui ticket di questa bacheca. L'inserimento manuale del tempo rimane disponibile."
+          "label": "Mostra il cronometro sui ticket",
+          "help": "Mostra i controlli del cronometro sui ticket di questa bacheca. Disattivare per nascondere qui il cronometro; l'inserimento manuale del tempo rimane disponibile. Un cronometro già in esecuzione continua a funzionare."
         },
         "clientPortalVisible": {
           "label": "Visibile nel portale clienti",
@@ -852,7 +852,7 @@
           "statuses": "Priorità e stati",
           "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
           "display": "Visualizzazione e comportamento",
-          "displayHelp": "Timer dal vivo e tipo di bacheca"
+          "displayHelp": "Cronometro e tipo di bacheca"
         },
         "saveChanges": "Salva modifiche",
         "unsaved": "Non salvato",
@@ -2058,7 +2058,7 @@
       "openMenu": "Apri menu",
       "columns": {
         "startDate": "Data di inizio",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno",
         "actions": "Azioni"
       },
       "form": {
@@ -2070,7 +2070,8 @@
         "startDate": "Data di inizio",
         "startDatePlaceholder": "Seleziona la data di inizio",
         "noEndDate": "Nessuna data di fine",
-        "endDate": "Data di fine",
+        "endDate": "Ultimo giorno del periodo",
+        "endDateHelp": "Il periodo include questo giorno.",
         "endDatePlaceholder": "Seleziona la data di fine",
         "deletePeriod": "Elimina periodo",
         "confirmDeleteTitle": "Conferma eliminazione",
@@ -2084,7 +2085,7 @@
         "noSettings": "Nessuna impostazione dei periodi disponibile. Impossibile creare un nuovo periodo.",
         "settingsRequired": "Impossibile gestire un periodo senza impostazioni.",
         "startDateRequired": "È necessario indicare una data di inizio.",
-        "startBeforeEnd": "La data di inizio deve precedere la data di fine.",
+        "startBeforeEnd": "La data di fine non può essere precedente alla data di inizio.",
         "overlap": "Il periodo si sovrappone a un periodo esistente.",
         "overlapRetry": "Questo periodo si sovrappone a uno esistente. Scegli date diverse.",
         "create": "Impossibile creare il periodo.",

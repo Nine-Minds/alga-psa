@@ -569,7 +569,8 @@ vi.mock('../useQuickAddRichTextUploadSession', async () => {
   };
 });
 
-vi.mock('../../lib/ticketRichText', () => ({
+vi.mock('../../lib/ticketRichText', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/ticketRichText')>()),
   parseTicketRichTextContent: (value: string) => {
     if (!value) {
       return [];

@@ -21,6 +21,12 @@ const runWithTenantMock = vi.fn(async (_tenant: string, fn: () => Promise<any>) 
 const publishWorkflowEventMock = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (...args: unknown[]) => publishWorkflowEventMock(...args),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({

@@ -9,7 +9,7 @@ import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildContactArchivedPayload,
   buildContactCreatedPayload,
@@ -446,7 +446,7 @@ export class ContactService extends BaseService<IContact> {
 
     const occurredAt = new Date().toISOString();
     const actor = maybeUserActorFromContext(context);
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'CONTACT_DELETED',
       payload: {
         contactId: id,

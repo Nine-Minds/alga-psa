@@ -19,8 +19,9 @@ import {
 let db: Knex;
 let tenantId: string;
 let convertQuoteToDraftContract: typeof import('../../../../packages/billing/src/services/quoteConversionService').convertQuoteToDraftContract;
+let buildQuoteConversionPreview: typeof import('../../../../packages/billing/src/services/quoteConversionService').buildQuoteConversionPreview;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
-let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
+let activateClientContractForBilling: typeof import('@alga-psa/billing/actions/billingClientsActions').activateClientContractForBilling;
 let Quote: any;
 let QuoteItem: any;
 
@@ -68,6 +69,16 @@ vi.mock('@alga-psa/auth', async () => {
   const { withAuth } = await import('@alga-psa/auth/withAuth');
   return { ...createAuthModuleMock(), withAuth };
 });
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
@@ -141,11 +152,11 @@ describe('quote conversion: per-seat recurring services', () => {
     await db.migrate.latest();
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
-    ({ convertQuoteToDraftContract } = await import('../../../../packages/billing/src/services/quoteConversionService'));
+    ({ convertQuoteToDraftContract, buildQuoteConversionPreview } = await import('../../../../packages/billing/src/services/quoteConversionService'));
     Quote = (await import('../../../../packages/billing/src/models/quote')).default;
     QuoteItem = (await import('../../../../packages/billing/src/models/quoteItem')).default;
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
-    ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
+    ({ activateClientContractForBilling } = await import('@alga-psa/billing/actions/billingClientsActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -187,25 +198,15 @@ describe('quote conversion: per-seat recurring services', () => {
       expect(Number(row.base_rate)).toBe(rate);
     }
 
-    // Activate the draft (what accepting the draft contract does) and invoice.
-    await tenantTable(db, tenantId, 'contracts')
+    // The converted contract is a draft: lines enabled, assignment inactive. Set to Active
+    // (the Client Contracts action) must be all it takes to make it billable.
+    expect((lines as any[]).every((line) => line.is_active === true)).toBe(true);
+    const assignment: any = await tenantTable(db, tenantId, 'client_contracts')
       .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ status: 'active', is_active: true });
-    await tenantTable(db, tenantId, 'contract_lines')
-      .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ is_active: true });
-    await tenantTable(db, tenantId, 'client_contracts')
-      .where({ tenant: tenantId, contract_id: result.contract.contract_id })
-      .update({ start_date: '2024-12-01', is_active: true });
-    for (const line of lines as any[]) {
-      await db.transaction((trx) =>
-        syncRecurringServicePeriodsForContractLine(trx, {
-          tenant: tenantId,
-          contractLineId: line.contract_line_id,
-          sourceRunPrefix: 'per-seat-quote-test',
-        }),
-      );
-    }
+      .first();
+    expect(assignment.is_active).toBe(false);
+    const activated: any = await activateClientContractForBilling(assignment.client_contract_id);
+    expect(activated.actionError).toBeUndefined();
     const invoice: any = await generateInvoice(januaryCycle);
     expect(invoice).toBeTruthy();
     // 20 x $100 + 30 x $50 + 2 x $200
@@ -224,7 +225,7 @@ describe('quote conversion: per-seat recurring services', () => {
     expect(Number(configs[0].quantity)).toBe(1);
   }, HOOK_TIMEOUT);
 
-  it('keeps bundle pricing for products and custom items', async () => {
+  it('keeps bundle pricing for products', async () => {
     const [service, product] = await createSeatCatalog(db, tenantId, [
       { name: 'Managed Service', rateCents: 5000 },
       { name: 'Router', rateCents: 30000 },
@@ -235,18 +236,99 @@ describe('quote conversion: per-seat recurring services', () => {
     const client = await createSeatClient(db, tenantId);
     const quoteId = await acceptedQuote(client.clientId, 'USD', [
       { serviceId: product.serviceId, description: 'Hosted router', quantity: 3, unitPrice: 30000 },
-      { serviceId: null, description: 'Custom retainer', quantity: 1, unitPrice: 70000 },
     ]);
     const { lines, configs } = await convert(quoteId);
 
     const productLine: any = lines.find((line: any) => line.contract_line_name?.includes('router') || line.description === 'Hosted router');
-    const customLine: any = lines.find((line: any) => line.description === 'Custom retainer');
     // Exactly what conversion wrote before this change.
     expect(Number(productLine.custom_rate)).toBe(30000);
-    expect(Number(customLine.custom_rate)).toBe(70000);
     expect(configs).toHaveLength(1);
     expect(configs[0].pricing_basis ?? 'bundle').toBe('bundle');
     expect(Number(configs[0].base_rate)).toBe(30000);
     expect(service.serviceId).toBeTruthy();
+  }, HOOK_TIMEOUT);
+
+  it('a converted $4,200/mo quote (one location-scoped item) resumes without refusal and finalizes unchanged', async () => {
+    const { createClientContractFromWizard, getDraftContractForResume } = await import(
+      '@alga-psa/billing/actions/contractWizardActions'
+    );
+    const { getContractMonthlyFixedValuesByContract } = await import(
+      '@alga-psa/shared/billingClients/contractMonthlyValue'
+    );
+    const monthlyOf = async (contractId: string) =>
+      (await getContractMonthlyFixedValuesByContract(db, tenantId, [contractId])).get(contractId)?.monthlyValueCents ?? 0;
+
+    const [user, endpoint, location] = await createSeatCatalog(db, tenantId, [
+      { name: 'Managed User', rateCents: 10000 },
+      { name: 'Managed Endpoint', rateCents: 5000 },
+      { name: 'Managed Location', rateCents: 35000 },
+    ]);
+    const client = await createSeatClient(db, tenantId);
+    // 20 x $100 + 30 x $50 + 2 x $350 = $4,200
+    const quoteId = await acceptedQuote(client.clientId, 'USD', [
+      { serviceId: user.serviceId, description: 'Users', quantity: 20, unitPrice: 10000 },
+      { serviceId: endpoint.serviceId, description: 'Endpoints', quantity: 30, unitPrice: 5000 },
+      { serviceId: location.serviceId, description: 'Locations', quantity: 2, unitPrice: 35000 },
+    ]);
+    const clientLocation = await tenantTable(db, tenantId, 'client_locations')
+      .where({ tenant: tenantId, client_id: client.clientId })
+      .first();
+    await tenantTable(db, tenantId, 'quote_items')
+      .where({ tenant: tenantId, quote_id: quoteId, description: 'Locations' })
+      .update({ location_id: clientLocation.location_id });
+
+    const { result, lines } = await convert(quoteId);
+    const contractId = result.contract.contract_id as string;
+    expect(lines).toHaveLength(3);
+    expect(lines.some((line: any) => line.location_id)).toBe(true);
+    expect(await monthlyOf(contractId)).toBe(420000);
+
+    const resumed: any = await getDraftContractForResume(contractId);
+    expect(resumed.permissionError).toBeUndefined();
+    expect(JSON.stringify(resumed)).not.toMatch(/resumeUnsupportedShape|can't be resumed/);
+    expect(resumed.fixed_lines).toHaveLength(3);
+    expect(resumed.recurring_baseline.monthly_cents).toBe(420000);
+
+    const { is_draft, recurring_baseline, template_id, ...rest } = resumed;
+    const submission = { ...rest, contract_id: contractId } as any;
+
+    const saved: any = await createClientContractFromWizard(submission, { isDraft: true });
+    expect(saved.confirmation_required).toBeUndefined();
+    expect('contract_id' in saved).toBe(true);
+    expect(await monthlyOf(contractId)).toBe(420000);
+
+    const finished: any = await createClientContractFromWizard(submission);
+    expect(finished.confirmation_required).toBeUndefined();
+    expect('contract_id' in finished).toBe(true);
+    expect(await monthlyOf(contractId)).toBe(420000);
+    const finalLines = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId });
+    expect(finalLines).toHaveLength(3);
+  }, HOOK_TIMEOUT);
+
+  it('blocks the preview and the conversion of a service-less recurring item', async () => {
+    const [service] = await createSeatCatalog(db, tenantId, [{ name: 'Managed Seat', rateCents: 5000 }]);
+    const client = await createSeatClient(db, tenantId);
+    const quoteId = await acceptedQuote(client.clientId, 'USD', [
+      { serviceId: service.serviceId, description: 'Seats', quantity: 5, unitPrice: 5000 },
+      { serviceId: null, description: 'Custom retainer', quantity: 1, unitPrice: 70000 },
+    ]);
+
+    const quote = await Quote.getById(db, tenantId, quoteId);
+    const preview = await buildQuoteConversionPreview(quote, db, tenantId);
+    expect(preview.contract_blocked_reason).toBe(
+      'Recurring item "Custom retainer" must reference a catalog service before contract conversion',
+    );
+    expect(preview.available_actions).not.toContain('contract');
+    expect(preview.available_actions).not.toContain('both');
+    expect(preview.excluded_items.map((item: any) => item.description)).toContain('Custom retainer');
+
+    await expect(
+      db.transaction((trx) => convertQuoteToDraftContract(trx, tenantId, quoteId, null)),
+    ).rejects.toThrow('Recurring item "Custom retainer" must reference a catalog service before contract conversion');
+    const written = await tenantTable(db, tenantId, 'contracts')
+      .where({ tenant: tenantId, contract_name: quote.title })
+      .count<{ count: string }[]>('* as count');
+    expect(Number(written[0].count)).toBe(0);
   }, HOOK_TIMEOUT);
 });

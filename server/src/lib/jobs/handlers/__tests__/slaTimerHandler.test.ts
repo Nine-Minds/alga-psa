@@ -4,7 +4,7 @@ const runWithTenantMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const findCrossedThresholdsMock = vi.fn();
-const publishWorkflowEventMock = vi.fn();
+const publishNonCatalogWorkflowEventMock = vi.fn();
 const loggerInfoMock = vi.fn();
 const loggerErrorMock = vi.fn();
 
@@ -20,7 +20,13 @@ vi.mock('@alga-psa/sla', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishNonCatalogWorkflowEventMock,
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -88,7 +94,7 @@ describe('slaTimerHandler', () => {
       thresholds: [{ threshold_percent: 50 }],
       highestThreshold: 50,
     });
-    publishWorkflowEventMock.mockResolvedValue(undefined);
+    publishNonCatalogWorkflowEventMock.mockResolvedValue(undefined);
 
     const { slaTimerHandler } = await import('../slaTimerHandler');
 
@@ -104,8 +110,8 @@ describe('slaTimerHandler', () => {
       0
     );
 
-    expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
-    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
+    expect(publishNonCatalogWorkflowEventMock).toHaveBeenCalledTimes(1);
+    expect(publishNonCatalogWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_SLA_THRESHOLD_REACHED',
       payload: {
         ticketId: 'ticket-1',
@@ -163,6 +169,6 @@ describe('slaTimerHandler', () => {
     await slaTimerHandler({ tenantId: 'tenant-1' });
 
     expect(findCrossedThresholdsMock).toHaveBeenCalledTimes(1);
-    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(publishNonCatalogWorkflowEventMock).not.toHaveBeenCalled();
   });
 });

@@ -674,8 +674,8 @@
           "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal."
         },
         "liveTimer": {
-          "label": "Live tickettimer inschakelen",
-          "help": "Toont de live timer en bijgehouden intervallen op tickets in dit bord. Handmatige tijdinvoer blijft beschikbaar."
+          "label": "Stopwatch tonen bij tickets",
+          "help": "Toont de stopwatchbediening bij tickets in dit bord. Schakel dit uit om de stopwatch hier te verbergen; handmatige tijdinvoer blijft beschikbaar. Een stopwatch die al loopt, blijft lopen."
         },
         "clientPortalVisible": {
           "label": "Zichtbaar in klantportaal",
@@ -852,7 +852,7 @@
           "statuses": "Prioriteiten & statussen",
           "statusesHelp": "Standaardprioriteit en de ticketstatussen voor dit bord",
           "display": "Weergave & gedrag",
-          "displayHelp": "Live-timer en bordtype"
+          "displayHelp": "Stopwatch en bordtype"
         },
         "saveChanges": "Wijzigingen opslaan",
         "unsaved": "Niet opgeslagen",
@@ -2058,7 +2058,7 @@
       "openMenu": "Menu openen",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Einddatum",
+        "endDate": "Laatste dag",
         "actions": "Acties"
       },
       "form": {
@@ -2070,7 +2070,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Startdatum selecteren",
         "noEndDate": "Geen einddatum",
-        "endDate": "Einddatum",
+        "endDate": "Laatste dag van de periode",
+        "endDateHelp": "De periode omvat deze dag.",
         "endDatePlaceholder": "Einddatum selecteren",
         "deletePeriod": "Periode verwijderen",
         "confirmDeleteTitle": "Verwijderen bevestigen",
@@ -2084,7 +2085,7 @@
         "noSettings": "Geen periode-instellingen beschikbaar. Er kan geen nieuwe periode worden gemaakt.",
         "settingsRequired": "Zonder instellingen kan geen periode worden beheerd.",
         "startDateRequired": "Er moet een startdatum worden opgegeven.",
-        "startBeforeEnd": "De startdatum moet vóór de einddatum liggen.",
+        "startBeforeEnd": "De einddatum mag niet vóór de startdatum liggen.",
         "overlap": "De periode overlapt met een bestaande periode.",
         "overlapRetry": "Deze periode overlapt met een bestaande. Kies andere datums.",
         "create": "De periode kon niet worden gemaakt.",

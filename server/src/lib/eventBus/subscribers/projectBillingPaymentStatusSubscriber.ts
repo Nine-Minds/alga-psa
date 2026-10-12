@@ -3,6 +3,7 @@ import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getEventBus } from '../index';
 import { publishWorkflowEvent } from '../publishers';
+import { buildProjectBillingPaymentStatusChangedPayload } from '@alga-psa/workflow-streams';
 
 type ProjectPaymentState = 'outstanding' | 'satisfied' | 'replacement_needed';
 
@@ -79,7 +80,7 @@ export async function handleInvoiceStatusChanged(event: unknown): Promise<void> 
     for (const entry of entries) {
       await publishWorkflowEvent({
         eventType: 'PROJECT_BILLING_PAYMENT_STATUS_CHANGED',
-        payload: {
+        payload: buildProjectBillingPaymentStatusChangedPayload({
           projectId: entry.project_id,
           configId: entry.config_id,
           entryId: entry.entry_id,
@@ -88,9 +89,8 @@ export async function handleInvoiceStatusChanged(event: unknown): Promise<void> 
           newState,
           previousInvoiceStatus: event.payload.previousStatus,
           newInvoiceStatus: event.payload.newStatus,
-          requiresPaymentBeforeWork: true,
-          ...(actorUserId ? { userId: actorUserId } : {}),
-        },
+          userId: actorUserId,
+        }),
         ctx: {
           tenantId,
           occurredAt: event.payload.changedAt ?? event.payload.occurredAt ?? event.timestamp,

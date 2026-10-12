@@ -27,9 +27,10 @@ export const setClientLifecycleStatus = withAuth(async (
     if (current.lifecycle_status === nextStatus) return withClientSinceDateString(current);
     const changedAt = new Date().toISOString();
     const [updated] = await db.table('clients').where({ client_id: clientId }).update({ lifecycle_status: nextStatus, updated_at: changedAt }).returning('*') as IClient[];
-    const payload = buildClientStatusChangedPayload({ clientId, previousStatus: current.lifecycle_status ?? 'active', newStatus: nextStatus, changedAt });
     registerAfterCommit(trx, () => publishWorkflowEvent({
-      eventType: 'CLIENT_STATUS_CHANGED', payload, ctx: { tenantId: tenant, occurredAt: changedAt, actor: { actorType: 'USER', actorUserId: user.user_id } },
+      eventType: 'CLIENT_STATUS_CHANGED',
+      payload: buildClientStatusChangedPayload({ clientId, previousStatus: current.lifecycle_status ?? 'active', newStatus: nextStatus, changedAt }),
+      ctx: { tenantId: tenant, occurredAt: changedAt, actor: { actorType: 'USER', actorUserId: user.user_id } },
       idempotencyKey: `client_status_changed:${clientId}:${changedAt}`,
     }), `CLIENT_STATUS_CHANGED client=${clientId}`);
     return withClientSinceDateString(updated);

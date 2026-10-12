@@ -16,7 +16,7 @@ vi.mock('../../../lib/payments/StripePaymentProvider', () => ({ createStripePaym
 vi.mock('../../../lib/temporal/invoiceAutopay', () => ({ startInvoiceAutopay: vi.fn(), signalInvoiceAutopay: vi.fn(), signalProfileAutopayChanged: vi.fn() }));
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({ reconcileStripeWebhookEvents: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ getSystemEmailService: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { getConnection } from '@alga-psa/db';
 import { AutopayService } from '../../../lib/payments/AutopayService';

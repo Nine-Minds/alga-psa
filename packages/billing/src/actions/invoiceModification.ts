@@ -21,7 +21,7 @@ import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
 // import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildCreditNoteCreatedPayload,
   buildCreditNoteVoidedPayload,
@@ -2300,7 +2300,7 @@ export const hardDeleteInvoice = withAuth(async (
     };
 
     for (const itemId of deletedItemIds) {
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'INVOICE_ITEM_DELETED',
         payload: {
           invoiceId,
@@ -2314,7 +2314,7 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     for (const annotationId of deletedAnnotationIds) {
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'INVOICE_ANNOTATION_DELETED',
         payload: {
           invoiceId,
@@ -2327,7 +2327,7 @@ export const hardDeleteInvoice = withAuth(async (
       });
     }
 
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'INVOICE_DELETED',
       payload: {
         invoiceId,

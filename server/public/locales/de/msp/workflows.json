@@ -603,7 +603,12 @@
       "waitStepLine": "Schritt: {{value}}",
       "matchedRunLabel": "Zugeordnete Ausführung",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Nutzdaten"
+      "payloadLabel": "Nutzdaten",
+      "launchSkips": {
+        "title": "Nicht gestartete Workflows",
+        "unknownWorkflow": "Gelöschter Workflow",
+        "intentional": "Beabsichtigt"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Ereignisse konnten nicht geladen werden",
@@ -1506,6 +1511,39 @@
       "unsaved": "Nicht gespeicherte Änderungen",
       "savedAgo": "Gespeichert · {{ago}}",
       "saved": "Gespeichert"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} Ereignis in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "summary_other": "{{count}} Ereignisse in den letzten {{days}} Tagen übersprungen — {{reasons}}",
+        "lastSkipped": "Zuletzt übersprungen {{when}}",
+        "view": "Übersprungene Ereignisse anzeigen"
+      },
+      "drawer": {
+        "title": "Übersprungene Ereignisse",
+        "windowLabel": "Zeitraum",
+        "window": {
+          "24h": "Letzte 24 Stunden",
+          "7d": "Letzte 7 Tage",
+          "30d": "Letzte 30 Tage"
+        },
+        "allReasons": "Alle Gründe",
+        "reasonLabel": "Grund",
+        "groupAttention": "Erfordert Aufmerksamkeit",
+        "groupGuarded": "Abgesichert / pausiert (beabsichtigt)",
+        "lastSeen": "Zuletzt gesehen {{when}}",
+        "columns": {
+          "received": "Empfangen",
+          "event": "Ereignis",
+          "reason": "Grund",
+          "message": "Nachricht"
+        },
+        "issuesTitle": "Validierungsprobleme",
+        "issueRoot": "(Payload)",
+        "openEvent": "Ereignis öffnen",
+        "loadError": "Übersprungene Ereignisse konnten nicht geladen werden.",
+        "empty": "Keine übersprungenen Ereignisse in diesem Zeitraum."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -2801,6 +2839,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "diesen Workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} übersprungen",
+        "badgeTitle": "Ereignisse, für die dieser Workflow in den letzten 7 Tagen nicht gestartet wurde"
       }
     },
     "eventsCatalog": {
@@ -3196,5 +3238,51 @@
   "fieldPicker": {
     "searchPlaceholder": "Felder durchsuchen",
     "noMatches": "Keine passenden Felder"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Payload-Schema-Referenz fehlt",
+      "hint": "Der Workflow hat keine Payload-Schema-Referenz, daher kann die Ereignis-Payload nicht validiert werden."
+    },
+    "unknown_schema_ref": {
+      "label": "Unbekannte Payload-Schema-Referenz",
+      "hint": "Die Payload-Schema-Referenz des Workflows existiert nicht in der Schema-Registry."
+    },
+    "missing_source_schema": {
+      "label": "Quellschema fehlt",
+      "hint": "Das Ereignis hat kein Quellschema zum Vergleich mit dem Payload-Schema des Workflows."
+    },
+    "schema_mismatch": {
+      "label": "Ereignis-Payload passt nicht zum Schema",
+      "hint": "Die Ereignis-Payload passt nicht zum Payload-Schema des Workflows und es ist kein Mapping konfiguriert."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload-Mapping fehlgeschlagen",
+      "hint": "Das Payload-Mapping des Triggers konnte nicht auf das Ereignis angewendet werden."
+    },
+    "payload_validation_failed": {
+      "label": "Payload-Validierung fehlgeschlagen",
+      "hint": "Die gemappte Payload hat das Payload-Schema des Workflows nicht bestanden."
+    },
+    "launch_failed": {
+      "label": "Start fehlgeschlagen",
+      "hint": "Der Worker hat das Ereignis angenommen, aber der Start der Workflow-Ausführung ist fehlgeschlagen."
+    },
+    "paused": {
+      "label": "Workflow pausiert",
+      "hint": "Der Workflow ist pausiert, daher werden Ereignisse absichtlich nicht gestartet."
+    },
+    "lineage_loop_guard": {
+      "label": "Schleifenschutz (Herkunft)",
+      "hint": "Das Ereignis stammt aus der eigenen Herkunftskette dieses Workflows; übersprungen, um eine Schleife zu verhindern."
+    },
+    "self_trigger_guard": {
+      "label": "Selbstauslöse-Schutz",
+      "hint": "Das Ereignis wurde von diesem Workflow selbst ausgelöst; übersprungen, um Selbstauslösung zu verhindern."
+    },
+    "causation_depth_exceeded": {
+      "label": "Verursachungstiefe überschritten",
+      "hint": "Die Kette verursachter Ereignisse überschritt die maximale Tiefe; übersprungen, um Endlosschleifen zu verhindern."
+    }
   }
 }

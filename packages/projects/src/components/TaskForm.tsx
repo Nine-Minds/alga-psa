@@ -72,7 +72,7 @@ import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useSchedulingCallbacks } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import type { ProjectServiceSource } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
@@ -200,6 +200,7 @@ export default function TaskForm({
       : prefillData?.due_date ?? undefined
   );
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
@@ -1735,6 +1736,19 @@ export default function TaskForm({
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <label className="block text-sm font-medium text-gray-700">{taskFormT('taskNameLabel', 'Task Name *')}</label>
+                {mode === 'edit' && task?.task_id && activityCrossFeature?.renderActivityGroupControl
+                  ? activityCrossFeature.renderActivityGroupControl({
+                      id: 'task-form-activity-group',
+                      activityType: 'projectTask',
+                      activityId: task.task_id,
+                      // SAVED state: the persisted primary assignee plus additional agents
+                      // (additional agents are written immediately in edit mode); not unsaved form edits.
+                      assignmentKey: [
+                        task.assigned_to ?? '',
+                        taskResources.map((r) => r.additional_user_id).filter(Boolean).sort().join(','),
+                      ].join('|'),
+                    })
+                  : null}
                 {mode === 'create' && (
                   <Button
                     id="task-create-from-ticket"

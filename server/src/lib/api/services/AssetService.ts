@@ -23,7 +23,8 @@ import {
   MobileDeviceAssetData,
   PrinterAssetData
 } from '../schemas/asset';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
@@ -328,14 +329,21 @@ export class AssetService extends BaseService<any> {
     }
 
     // Publish event
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'ASSET_CREATED',
-      payload: {
-        tenantId: context.tenant,
+      payload: buildAssetCreatedPayload({
         assetId: asset.asset_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
+        clientId: asset.client_id || undefined,
+        createdByUserId: context.userId,
+        createdAt: asset.created_at,
+        assetType: asset.asset_type,
+        serialNumber: asset.serial_number,
+      }),
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt: asset.created_at,
+        actor: { actorType: 'USER', actorUserId: context.userId },
+      },
     });
 
     return this.getWithDetails(asset.asset_id, context);
@@ -413,25 +421,39 @@ export class AssetService extends BaseService<any> {
 
     updateData.updated_at = new Date();
 
-    const updated = await scopedTable(knex, context.tenant, this.tableName)
+    const before = await scopedTable(knex, context.tenant, this.tableName)
       .where({ [this.primaryKey]: id })
-      .update(updateData);
+      .first();
 
-    if (!updated) {
+    const [after] = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
+      .update(updateData)
+      .returning('*');
+
+    if (!after) {
       throw new NotFoundError('Asset not found');
     }
 
     // Publish event
-    await publishEvent({
-      eventType: 'ASSET_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        assetId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
-      }
+    const updatePayload = buildAssetUpdatedPayload({
+      assetId: id,
+      before: (before ?? {}) as Record<string, unknown>,
+      after: after as Record<string, unknown>,
+      updatedPaths: Object.keys(updateData).filter((key) => key !== 'updated_at'),
+      updatedByUserId: context.userId,
+      updatedAt: updateData.updated_at as Date,
     });
+    if (updatePayload.updatedFields || updatePayload.changes) {
+      await publishWorkflowEvent({
+        eventType: 'ASSET_UPDATED',
+        payload: updatePayload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: updateData.updated_at as Date,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     const asset = await this.getById(id, context);
     if (!asset) {

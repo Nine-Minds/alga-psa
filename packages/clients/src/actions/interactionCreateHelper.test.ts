@@ -30,10 +30,17 @@ vi.mock('../models/interactions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: hoisted.publishEventMock,
   publishWorkflowEvent: hoisted.publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildInteractionLoggedPayload: hoisted.buildInteractionLoggedPayloadMock,
+  buildScheduleEntryCreatedPayload: (input: Record<string, unknown>) => ({ ...input }),
 }));
 
 vi.mock('next/cache', () => ({
@@ -372,16 +379,14 @@ describe('interactionCreateHelper', () => {
         }),
         { assignedUserIds: ['user-1'], assignedByUserId: 'user-1' },
       );
-      expect(hoisted.publishEventMock).not.toHaveBeenCalled();
+      expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
 
       await result!.publishScheduleEntryCreated();
 
-      expect(hoisted.publishEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledWith(expect.objectContaining({
         eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: expect.objectContaining({
-          tenantId: 'tenant-1',
-          entryId: 'schedule-entry-1',
-        }),
+        payload: expect.objectContaining({ entryId: 'schedule-entry-1' }),
+        ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
       }));
     });
 

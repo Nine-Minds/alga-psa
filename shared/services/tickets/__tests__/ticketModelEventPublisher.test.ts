@@ -7,6 +7,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
+  publishNonCatalogWorkflowEvent: mocks.publishWorkflowEvent,
+  publishEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -34,10 +40,10 @@ describe('TicketModelEventPublisher', () => {
 
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'TICKET_CREATED',
+      // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
-        tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
+        actorType: 'SYSTEM',
         source: 'ninjaone',
       },
       ctx: {
@@ -70,10 +76,10 @@ describe('TicketModelEventPublisher', () => {
 
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'TICKET_CREATED',
+      // tenantId travels in ctx; buildWorkflowPayload puts it on the wire payload.
       payload: {
-        tenantId: 'tenant-1',
         ticketId: 'ticket-1',
-        userId: undefined,
+        actorType: 'SYSTEM',
         source: 'huntress',
       },
       ctx: {

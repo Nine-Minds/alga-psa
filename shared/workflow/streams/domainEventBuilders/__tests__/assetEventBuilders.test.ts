@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
-} from '../../../runtime/schemas/assetMediaEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildAssetAssignedPayload,
   buildAssetCreatedPayload,

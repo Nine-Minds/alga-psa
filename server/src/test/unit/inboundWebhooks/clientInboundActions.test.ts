@@ -58,9 +58,16 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: mocks.publishWorkflowEvent,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildClientCreatedPayload: (params: Record<string, unknown>) => ({ ...params, eventType: 'CLIENT_CREATED' }),
   buildClientStatusChangedPayload: (params: Record<string, unknown>) => ({
     ...params,
