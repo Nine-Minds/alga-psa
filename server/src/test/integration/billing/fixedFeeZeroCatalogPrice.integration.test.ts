@@ -474,6 +474,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Template ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -546,6 +547,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Unpriceable ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -611,6 +613,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `NoServices ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -662,6 +665,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Zero ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,

@@ -280,8 +280,7 @@ export type ContractTemplateWizardSubmission = {
   billing_frequency?: string;
   cadence_owner?: CadenceOwner;
   billing_timing?: 'arrears' | 'advance';
-  // currency_code removed - templates are now currency-neutral
-  // Currency is inherited from the client when a contract is created from this template
+  currency_code?: string; // step 6 makes currency_code required
   fixed_services: TemplateFixedServiceInput[];
   product_services?: TemplateProductServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
@@ -579,7 +578,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
-      // currency_code removed - templates are now currency-neutral
+      currency_code: submission.currency_code ?? 'USD', // step 6 makes currency_code required
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,

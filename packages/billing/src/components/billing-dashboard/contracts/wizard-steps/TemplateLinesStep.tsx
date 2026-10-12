@@ -147,7 +147,7 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
   ): number | null => {
     const override = edit.services?.find((s) => s.service_id === service.service_id)?.rate;
     if (override !== undefined) return override;
-    return service.template_rate ?? (line.line_type === 'Fixed' ? null : service.currency_rate);
+    return service.rate.amount ?? (line.line_type === 'Fixed' ? null : service.rate.catalog_amount);
   };
 
   return (
@@ -178,7 +178,7 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
       {view.lines.map((line) => {
         const edit = editFor(line.template_line_id);
         const lineId = line.template_line_id;
-        const lineRate = edit.fixed_base_rate !== undefined ? edit.fixed_base_rate : line.fixed_base_rate;
+        const lineRate = edit.fixed_base_rate !== undefined ? edit.fixed_base_rate : line.base_rate.amount;
         return (
           <section key={lineId} className="space-y-4 rounded-md border p-4">
             <div className="flex items-center justify-between gap-2">
@@ -229,8 +229,8 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
                   id={`tpl-line-rate-${lineId}`}
                   valueCents={edit.fixed_base_rate !== undefined ? edit.fixed_base_rate : undefined}
                   placeholder={
-                    line.fixed_base_rate != null
-                      ? (line.fixed_base_rate / 100).toFixed(2)
+                    line.base_rate.amount != null
+                      ? (line.base_rate.amount / 100).toFixed(2)
                       : '0.00'
                   }
                   symbol={symbol}
@@ -240,7 +240,7 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
                   {lineRate != null
                     ? t('wizardTemplateLines.fixedBaseRateHint', {
                         defaultValue: 'Template rate {{rate}}. Leave empty to keep it.',
-                        rate: formatCents(line.fixed_base_rate, symbol) || formatCents(lineRate, symbol),
+                        rate: formatCents(line.base_rate.amount, symbol) || formatCents(lineRate, symbol),
                       })
                     : t('wizardTemplateLines.fixedBaseRateNone', {
                         defaultValue: 'The template sets no line rate; services follow their catalog prices.',
@@ -301,7 +301,7 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
                 const unpriced =
                   effectiveRate == null &&
                   !(line.line_type === 'Fixed' && (lineRate != null || service.has_currency_price)) &&
-                  !(line.line_type !== 'Fixed' && service.currency_rate != null);
+                  !(line.line_type !== 'Fixed' && service.rate.catalog_amount != null);
                 const rateLabel =
                   line.line_type === 'Hourly'
                     ? t('wizardTemplateLines.hourlyRate', { defaultValue: 'Hourly rate' })
@@ -354,7 +354,7 @@ export function TemplateLinesStep({ view, isLoading, loadError, edits, onChange 
                           })}
                         </p>
                       )}
-                      {!unpriced && service.template_rate != null && memberEdit?.rate === undefined && (
+                      {!unpriced && service.rate.amount != null && memberEdit?.rate === undefined && (
                         <p className="text-xs text-muted-foreground">
                           {t('wizardTemplateLines.templateRateNote', {
                             defaultValue: 'From the template (amount is not currency-tagged).',

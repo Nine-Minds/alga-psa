@@ -137,7 +137,7 @@ async function insertClient(name: string, currency: string) {
   return clientId;
 }
 
-async function insertTemplate(status: 'draft' | 'published', name: string) {
+async function insertTemplate(status: 'draft' | 'published', name: string, currencyCode = 'USD') {
   const templateId = uuidv4();
   await t('contract_templates').insert({
     tenant: tenantId,
@@ -145,6 +145,7 @@ async function insertTemplate(status: 'draft' | 'published', name: string) {
     template_name: `${name} ${templateId.slice(0, 6)}`,
     template_description: `${name} description`,
     default_billing_frequency: 'monthly',
+    currency_code: currencyCode,
     template_status: status,
   });
   created.templateIds.push(templateId);
@@ -195,7 +196,7 @@ async function insertTemplateMember(
  * rate, min time, round-up, overtime, after-hours), a USAGE line, a BUCKET
  * (prepaid-hours) line, and template line defaults.
  */
-async function seedFullTemplate(): Promise<Seeded> {
+async function seedFullTemplate(templateCurrency = 'USD'): Promise<Seeded> {
   const serviceTypeId = uuidv4();
   await t('service_types').insert({
     id: serviceTypeId,
@@ -216,7 +217,7 @@ async function seedFullTemplate(): Promise<Seeded> {
     bucketHourly: await insertService(serviceTypeId, 'Prepaid Support', 'hourly', 666),
   };
 
-  const templateId = await insertTemplate('published', 'Full Template');
+  const templateId = await insertTemplate('published', 'Full Template', templateCurrency);
   const lineIds: Record<string, string> = {};
 
   // Fixed line A: monthly, base rate 2500.00 = 2 x 1000.00 + 1 x 500.00, proration on.
@@ -479,7 +480,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
   });
 
   it('clones every template line faithfully for a non-USD client and records template_contract_id', async () => {
-    const seeded = await seedFullTemplate();
+    const seeded = await seedFullTemplate('EUR');
     const clientId = await insertClient('EUR Client', 'EUR');
 
     const result = await createClientContractFromWizard({
@@ -615,7 +616,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
   });
 
   it('applies per-line edits keyed by template line id on top of the clone (and only to that line)', async () => {
-    const seeded = await seedFullTemplate();
+    const seeded = await seedFullTemplate('CAD');
     const clientId = await insertClient('CAD Client', 'CAD');
 
     const result = await createClientContractFromWizard({
@@ -678,7 +679,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
     created.serviceTypeIds.push(serviceTypeId);
     // Legacy default_rate (untagged, effectively USD) must NEVER be used.
     const serviceId = await insertService(serviceTypeId, 'Unrated Hourly', 'hourly', 99999);
-    const templateId = await insertTemplate('published', 'Unrated Template');
+    const templateId = await insertTemplate('published', 'Unrated Template', 'CAD');
     const lineId = await insertTemplateLine(templateId, {
       template_line_name: 'Unrated Hourly Line',
       billing_frequency: 'monthly',
@@ -782,7 +783,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
   });
 
   it('per-line view exposes template rate, client-currency rate and per-line cadence; resume rebuilds the edits', async () => {
-    const seeded = await seedFullTemplate();
+    const seeded = await seedFullTemplate('EUR');
     const clientId = await insertClient('View Client', 'EUR');
     await t('service_prices').insert({
       tenant: tenantId,
@@ -857,7 +858,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
 
   describe('addContractLine / cloneTemplateLineToContract (the shared clone path)', () => {
     it('copies hourly and usage rates and the fixed config, in the contract currency', async () => {
-      const seeded = await seedFullTemplate();
+      const seeded = await seedFullTemplate('EUR');
       const clientId = await insertClient('AddLine Client', 'EUR');
       // A plain, non-template contract to attach lines to.
       const contractId = uuidv4();
@@ -908,7 +909,7 @@ describe('create a client contract from a template (alga-2026-0002371)', () => {
     });
 
     it('an explicit customRate still overrides the template line rate (API argument preserved)', async () => {
-      const seeded = await seedFullTemplate();
+      const seeded = await seedFullTemplate('EUR');
       const contractId = uuidv4();
       await t('contracts').insert({
         tenant: tenantId,

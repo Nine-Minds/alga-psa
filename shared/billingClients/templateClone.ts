@@ -84,26 +84,74 @@ export async function cloneTemplateLinePools(
   trx: Knex | Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  contractLineId: string
+  contractLineId: string,
+  overageRateByTemplateBucketId?: Map<string, number | null>
 ): Promise<boolean> {
+  const { hasPools } = await cloneTemplateLinePoolsDetailed(
+    trx,
+    tenant,
+    templateContractLineId,
+    contractLineId,
+    overageRateByTemplateBucketId
+  );
+  return hasPools;
+}
+
+export interface ClonedTemplatePool {
+  template_bucket_id: string;
+  contract_bucket_id: string;
+  bucket_name: string | null;
+  /** The overage rate written to the contract pool (cents, 0 when unset). */
+  overage_rate: number;
+  /** True when a rate map was supplied and had no amount for this pool (stored as 0). */
+  overage_unset: boolean;
+}
+
+/**
+ * Pool clone that also reports what it wrote per pool.
+ *
+ * `overageRateByTemplateBucketId` (keyed by TEMPLATE pool id) is the currency-safe
+ * source of pool overage: a missing or null entry means "no amount in the
+ * contract currency", which is stored as 0 (the column is NOT NULL) and reported
+ * via `overage_unset`. When the map is NOT passed the template column is copied
+ * verbatim (legacy callers that have not resolved template amounts yet; they
+ * must pass the map built from `resolveTemplateAmounts` to stay currency-safe).
+ */
+export async function cloneTemplateLinePoolsDetailed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string,
+  overageRateByTemplateBucketId?: Map<string, number | null>
+): Promise<{ hasPools: boolean; pools: ClonedTemplatePool[] }> {
   const db = tenantDb(trx, tenant);
   const templatePools = await db.table('contract_template_line_buckets')
     .where('template_line_id', templateContractLineId)
     .select('*');
 
   if (!templatePools || templatePools.length === 0) {
-    return false;
+    return { hasPools: false, pools: [] };
   }
 
+  const cloned: ClonedTemplatePool[] = [];
   for (const pool of templatePools) {
     const newBucketId = uuidv4();
+    let overageRate: number;
+    let overageUnset = false;
+    if (overageRateByTemplateBucketId) {
+      const mapped = overageRateByTemplateBucketId.get(pool.bucket_id);
+      overageUnset = mapped === undefined || mapped === null;
+      overageRate = overageUnset ? 0 : Number(mapped);
+    } else {
+      overageRate = normalizeNumeric(pool.overage_rate) ?? 0;
+    }
     await db.table('contract_line_buckets').insert({
       tenant,
       bucket_id: newBucketId,
       contract_line_id: contractLineId,
       bucket_name: pool.bucket_name ?? null,
       total_minutes: pool.total_minutes,
-      overage_rate: normalizeNumeric(pool.overage_rate) ?? 0,
+      overage_rate: overageRate,
       allow_rollover: pool.allow_rollover,
       billing_period: pool.billing_period ?? 'monthly',
       after_hours_multiplier: pool.after_hours_multiplier ?? null,
@@ -111,6 +159,13 @@ export async function cloneTemplateLinePools(
       covers_all_services: pool.covers_all_services,
       created_at: trx.fn.now(),
       updated_at: trx.fn.now(),
+    });
+    cloned.push({
+      template_bucket_id: pool.bucket_id,
+      contract_bucket_id: newBucketId,
+      bucket_name: pool.bucket_name ?? null,
+      overage_rate: overageRate,
+      overage_unset: overageUnset,
     });
 
     const members = await db.table('contract_template_line_bucket_services')
@@ -130,7 +185,7 @@ export async function cloneTemplateLinePools(
     }
   }
 
-  return true;
+  return { hasPools: true, pools: cloned };
 }
 
 async function cloneServices(trx: Knex.Transaction, tenant: string, templateContractLineId: string, contractLineId: string, hasTemplatePools = false) {

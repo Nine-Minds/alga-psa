@@ -69,6 +69,7 @@ describe('template bucket pool round-trip (real DB)', () => {
           tenant,
           template_id: templateContractId,
           template_name: `Pool round-trip template ${templateContractId.slice(0, 6)}`,
+          currency_code: 'USD',
           template_description: 'Pool round-trip template',
         });
 
