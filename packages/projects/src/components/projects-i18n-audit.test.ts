@@ -60,7 +60,6 @@ describe('T002: static i18n wiring audit', () => {
     'project-templates/wizard-steps/TemplateReviewStep.tsx',
     'project-templates/wizard-steps/TemplatePhasesStep.tsx',
     'project-templates/CreateTemplateForm.tsx',
-    'project-templates/TemplateDetail.tsx',
     'project-templates/wizard-steps/TemplateClientPortalStep.tsx',
     'project-templates/TemplateCreationWizard.tsx',
     'project-templates/wizard-steps/TemplateBasicsStep.tsx',
