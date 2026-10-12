@@ -118,6 +118,11 @@ vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => db,
   withAdminTransactionRetryReadOnly: (work: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(work),
 }));
+// The nightly maintenance body resolves its tenant connection through the server's getConnection.
+vi.mock('../../../../../server/src/lib/db/db', async importOriginal => ({
+  ...(await importOriginal<any>()),
+  getConnection: async () => db,
+}));
 const require = createRequire(import.meta.url);
 const databaseName = `co_managed_bootstrap_${randomUUID().replaceAll('-', '')}`;
 let admin: Knex, source: Knex, db: Knex;
@@ -14556,6 +14561,9 @@ it('customer period settings roll changes back when the retained key expires aft
   } finally { await db.raw('DROP TRIGGER expire_period_settings_key ON time_period_settings'); await db.raw('DROP FUNCTION expire_period_settings_key()'); }
 }));
 
+// The entitlement table requires read_only_after = lapse_started_at + 720 hours EXACTLY. The triggers below
+// therefore derive both from ONE instant: two clock_timestamp() calls differ by microseconds and violated
+// that check (SQLSTATE 23514) whenever the clock ticked between them -- the old intermittent failure.
 async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
   return withTimeSheetApiFixture(async (fixture: any) => {
     const { Temporal } = await import('@js-temporal/polyfill');
@@ -14570,7 +14578,12 @@ async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
       metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId: identity.scheduledJobId }) });
     const { createNextTimePeriod } = await import('../../../../../packages/scheduling/src/lib/timePeriodAutomation');
     const run = (extra: any = {}) => createNextTimePeriod(db, { ...identity, ...extra }, 2);
-    await work({ ...fixture, identity, settings, today, boundary, run });
+    // The code production actually runs nightly: the maintenance fan-out body shared by the CE pg-boss
+    // chain and the EE Temporal fan-out. It has no queue identity; its fence is lifecycle admission plus
+    // the period write in one transaction.
+    const { createNextTimePeriodForTenant } = await import('../../../../../server/src/lib/jobs/tenantPeriodMaintenance');
+    const runProduction = () => createNextTimePeriodForTenant(context.tenant);
+    await work({ ...fixture, identity, settings, today, boundary, run, runProduction });
   });
 }
 
@@ -14619,7 +14632,7 @@ it('customer period jobs roll back generated dates when their retained job chang
 }));
 
 it('customer period jobs roll back generated dates if the sponsor becomes read-only during the run', async () => withPeriodJobFixture(async ({ run, principal, customer }: any) => {
-  await db.raw(`CREATE FUNCTION expire_period_worker_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE co_managed_entitlements SET valid_until = clock_timestamp() - interval '31 days', lapse_started_at = clock_timestamp() - interval '31 days', read_only_after = clock_timestamp() - interval '1 day' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
+  await db.raw(`CREATE FUNCTION expire_period_worker_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ DECLARE lapse timestamptz := clock_timestamp() - interval '31 days'; BEGIN UPDATE co_managed_entitlements SET valid_until = lapse, lapse_started_at = lapse, read_only_after = lapse + interval '720 hours' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
   await db.raw('CREATE TRIGGER expire_period_worker_entitlement AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_period_worker_entitlement()');
   try {
     // Bound the rejection BEFORE asserting on it. knex mutates thrown errors in
@@ -14643,9 +14656,37 @@ it('customer period jobs roll back generated dates if the sponsor becomes read-o
       }),
     );
     expect(rejection, 'the run must reject once the sponsor goes read-only mid-run').not.toBeNull();
-    expect(rejection).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(rejection, `rejection was ${JSON.stringify(rejection)}`).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
     expect(await customer.table('time_periods')).toHaveLength(1);
   } finally { await db.raw('DROP TRIGGER expire_period_worker_entitlement ON time_periods'); await db.raw('DROP FUNCTION expire_period_worker_entitlement()'); }
+}));
+
+it('the nightly maintenance run creates periods in one admitted transaction and skips a read-only sponsor', async () => withPeriodJobFixture(async ({ runProduction, principal, customer, boundary }: any) => {
+  expect(await runProduction()).toMatchObject({ status: 'completed' });
+  expect((await customer.table('time_periods').where('start_date', boundary.toString())).length).toBe(1);
+  await expireCoManagedEntitlement(principal.tenant);
+  const before = await customer.table('time_periods');
+  expect(await runProduction()).toMatchObject({ status: 'skipped', details: expect.stringContaining('read_only') });
+  expect(await customer.table('time_periods')).toHaveLength(before.length);
+}));
+
+it('the nightly maintenance run rolls back generated periods if the sponsor becomes read-only during the run', async () => withPeriodJobFixture(async ({ runProduction, principal, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_period_maintenance_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ DECLARE lapse timestamptz := clock_timestamp() - interval '31 days'; BEGIN UPDATE co_managed_entitlements SET valid_until = lapse, lapse_started_at = lapse, read_only_after = lapse + interval '720 hours' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_period_maintenance_entitlement AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_period_maintenance_entitlement()');
+  try {
+    // Finite failure output for the reason documented on the queue-job case above.
+    const rejection = await runProduction().then(
+      () => null,
+      (error: unknown) => ({
+        code: (error as { code?: unknown } | null)?.code ?? null,
+        name: (error as { name?: unknown } | null)?.name ?? null,
+        message: String((error as { message?: unknown } | null)?.message ?? error).slice(0, 500),
+      }),
+    );
+    expect(rejection, 'the maintenance run must reject once the sponsor goes read-only mid-run').not.toBeNull();
+    expect(rejection, `rejection was ${JSON.stringify(rejection)}`).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('time_periods')).toHaveLength(1);
+  } finally { await db.raw('DROP TRIGGER expire_period_maintenance_entitlement ON time_periods'); await db.raw('DROP FUNCTION expire_period_maintenance_entitlement()'); }
 }));
 
 it('customer period jobs and native generation share semi-monthly and seasonal annual boundaries', async () => {
@@ -14659,7 +14700,11 @@ it('customer period jobs and native generation share semi-monthly and seasonal a
     [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 15 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
     [[{ ...base, frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 7, end_day_of_month: 1 }, { ...base, frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 1, end_day_of_month: 1 }], '2028-01-01', [['2027-01-01', '2027-07-01'], ['2027-07-01', '2028-01-01']]],
   ] as any[]) {
-    const native = await generateTimePeriods(settings, '2027-01-01', end);
+    // Manual generateTimePeriods keeps main's exclusive spelling of a monthly end_day (main's
+    // timePeriods.test.ts pins 1..15 -> [Jan 1, Jan 15)), unlike the suggester/job's inclusive
+    // reading above, so the same boundaries are requested as end_day + 1.
+    const nativeSettings = settings.map((setting: any) => setting.frequency_unit === 'month' && setting.end_day ? { ...setting, end_day: setting.end_day + 1 } : setting);
+    const native = await generateTimePeriods(nativeSettings, '2027-01-01', end);
     expect(native.map(row => [row.start_date, row.end_date]).sort()).toEqual(expected);
     const periods: any[] = [];
     for (let index = 0; index < expected.length; index++) {

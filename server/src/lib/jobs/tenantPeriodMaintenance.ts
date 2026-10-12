@@ -1,10 +1,8 @@
 import logger from '@alga-psa/core/logger';
-import { tenantDb, withTransaction } from '@alga-psa/db';
-import { getCoManagedOperationalState } from '@alga-psa/licensing';
-import { productTimeEntryMode } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
+import { withTimePeriodWriteAdmission } from '@alga-psa/co-managed';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import { createNextTimePeriod } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
-import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
+import { createNextTimePeriodsAdmitted, NO_ACTIVE_TIME_PERIOD_SETTINGS } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 
@@ -45,31 +43,30 @@ export type NextTimePeriodOutcome =
   | { status: 'skipped'; details: string }
   | { status: 'completed'; details: string };
 
+/** Horizon (days ahead) the nightly run fills periods through. */
+const NEXT_TIME_PERIOD_HORIZON_DAYS = 5;
+
 export async function createNextTimePeriodForTenant(tenantId: string): Promise<NextTimePeriodOutcome> {
   return runWithTenant(tenantId, async () => {
     const tenantKnex = await getConnection(tenantId);
-    // A workspace without time tracking, or a co-managed workspace whose
-    // lifecycle no longer allows writes, gets no new periods.
-    const blocked = await withTransaction(tenantKnex, async (trx) => {
-      const workspace = await tenantDb(trx, tenantId).table('tenants').first('product_code');
-      if (!workspace || !productTimeEntryMode(workspace.product_code)) return 'time tracking is unavailable for this product';
-      const state = await getCoManagedOperationalState(trx, tenantId);
-      return state.canWrite ? null : `co-management ${state.state}`;
-    });
-    if (blocked) {
-      return { status: 'skipped', details: `Skipped - ${blocked}` };
+    // Lifecycle admission, the stored-settings read and the period write share
+    // ONE transaction (the same fence the queue-identity job uses): a co-managed
+    // workspace whose sponsor goes read-only mid-run is either serialized behind
+    // it or rolls every generated period back, instead of being checked and
+    // then written in separate transactions.
+    const outcome = await withTimePeriodWriteAdmission(tenantKnex, tenantId, (trx) =>
+      createNextTimePeriodsAdmitted(trx, tenantId, NEXT_TIME_PERIOD_HORIZON_DAYS));
+
+    if (outcome.status === 'skipped') {
+      return { status: 'skipped', details: `Skipped - ${outcome.reason}` };
     }
-
-    const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
-
-    if (!settings || settings.length === 0) {
+    if (outcome.result.reason === NO_ACTIVE_TIME_PERIOD_SETTINGS) {
       logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
       return { status: 'skipped', details: 'Skipped - no time period settings configured' };
     }
-
-    const result = await createNextTimePeriod(settings);
-    const details = result
-      ? `Created new time period ${result.start_date} to ${result.end_date}`
+    const { period } = outcome.result;
+    const details = period
+      ? `Created new time period ${period.start_date} to ${period.end_date}`
       : 'No new time period needed';
     logger.info(`Time period creation completed for tenant ${tenantId}: ${details}`);
     return { status: 'completed', details };

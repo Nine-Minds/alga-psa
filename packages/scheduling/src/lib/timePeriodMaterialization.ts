@@ -10,7 +10,7 @@ import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { toPlainDate } from '@alga-psa/core';
 import { validateData } from '@alga-psa/validation';
-import { createTenantKnex, getTenantContext, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, getTenantContext, tenantDb, withTransaction } from '@alga-psa/db';
 import { TimePeriod } from '../models/timePeriod';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
 import { timePeriodSchema } from '../schemas/timeSheet.schemas';
@@ -194,4 +194,30 @@ export async function createNextTimePeriod(
     logger.error('Error creating next time period:', error);
     throw error;
   }
+}
+
+export const NO_ACTIVE_TIME_PERIOD_SETTINGS = 'No active time period settings';
+
+/**
+ * The nightly body, inside a transaction the caller has already admitted: share-locks the active
+ * settings so a concurrent edit is not interleaved with generation, reads them through the same
+ * transaction, and fills periods through the horizon. Shared by the queue-identity job and the
+ * maintenance fan-out so both generate identically; admission (lifecycle, suspension, calendar
+ * lock) is the caller's, and must be taken in this same transaction.
+ */
+export async function createNextTimePeriodsAdmitted(
+  trx: Knex.Transaction,
+  tenant: string,
+  daysThreshold: number,
+  options: { today?: Temporal.PlainDate } = {}
+): Promise<{ period: ITimePeriod | null; createdCount: number; reason: string }> {
+  const owner = tenantDb(trx, tenant);
+  await owner.table('time_period_settings').where('is_active', true).orderBy('time_period_settings_id').forShare().select('time_period_settings_id');
+  const settings = await TimePeriodSettings.getActiveSettings(trx, tenant);
+  if (!settings.length) return { period: null, createdCount: 0, reason: NO_ACTIVE_TIME_PERIOD_SETTINGS };
+  const countPeriods = async () => Number((await owner.table('time_periods').count<{ count: string }[]>('* as count'))[0]?.count ?? 0);
+  const before = await countPeriods();
+  const period = await createTimePeriodsThrough(trx, tenant, settings, options.today ?? Temporal.Now.plainDateISO('UTC'), daysThreshold);
+  const createdCount = (await countPeriods()) - before;
+  return { period, createdCount, reason: createdCount ? 'Created time periods' : 'No new time period needed' };
 }

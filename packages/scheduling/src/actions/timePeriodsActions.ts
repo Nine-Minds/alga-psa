@@ -316,7 +316,16 @@ export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promi
 // Helper function to get the end of a period based on frequency unit
 // LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
-  return endOfConfiguredTimePeriod(toPlainDate(startDate), setting);
+  const start = toPlainDate(startDate);
+  // Manual range generation keeps main's long-standing reading of a monthly
+  // end_day as the stored boundary itself (1st-15th stored as [1st, 15th)); main's
+  // own infrastructure test pins it. The suggester and the nightly job read
+  // end_day as inclusive (#3206) through the shared cadence.
+  if (setting.frequency_unit === 'month' && setting.end_day && Number.isSafeInteger(setting.frequency) && setting.frequency >= 1) {
+    const month = start.add({ months: setting.frequency - 1 });
+    return month.with({ day: Math.min(setting.end_day, month.daysInMonth) });
+  }
+  return endOfConfiguredTimePeriod(start, setting);
 }
 
 // Start of the period that follows the one beginning at currentStart, for
