@@ -192,6 +192,34 @@ describe('historical ticket import via TicketService (integration)', () => {
     expect(error.details[0].path).toEqual(['created_at']);
   });
 
+  it('rejects a historical reply dated before its parent, and never moves thread activity backwards', async () => {
+    const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+    const parent = await service.addComment(
+      ticket.ticket_id,
+      { comment_text: 'parent', is_internal: false, created_at: '2025-03-20T10:00:00Z' } as any,
+      ctx(),
+    );
+    const early = await service
+      .addComment(
+        ticket.ticket_id,
+        { comment_text: 'reply too early', is_internal: false, parent_comment_id: parent.comment_id, created_at: '2025-03-18T10:00:00Z' } as any,
+        ctx(),
+      )
+      .catch((e) => e);
+    expect(early).toBeInstanceOf(ValidationError);
+    expect(early.details[0].path).toEqual(['created_at']);
+
+    const reply = await service.addComment(
+      ticket.ticket_id,
+      { comment_text: 'reply', is_internal: false, parent_comment_id: parent.comment_id, created_at: '2025-03-21T10:00:00Z' } as any,
+      ctx(),
+    );
+    expect(new Date(reply.created_at).toISOString()).toBe('2025-03-21T10:00:00.000Z');
+    const thread = await table('comment_threads').where({ thread_id: parent.thread_id }).first();
+    expect(new Date(thread.last_activity_at).toISOString()).toBe('2025-03-21T10:00:00.000Z');
+    expect(eventTypes()).not.toContain('TICKET_COMMENT_ADDED');
+  });
+
   it('status endpoint honors a supplied closed_at on an open->closed crossing, and still emits TICKET_CLOSED', async () => {
     const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
     state.published.length = 0;

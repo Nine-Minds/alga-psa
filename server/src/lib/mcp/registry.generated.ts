@@ -47919,11 +47919,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "closed_at": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before the ticket's entered_at. Events (TICKET_CLOSED) still fire; use the suppression flags to silence notifications. To import already-closed history without events, use entered_at + closed_at on ticket create."
         },
         "closed_by": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Honored with closed_at when this update closes the ticket; defaults to the API user."
         },
         "override_close_rules": {
           "type": "boolean"
@@ -49927,7 +49929,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "List time periods",
     "summary": "List time periods",
-    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50052,7 +50054,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "Create time period",
     "summary": "Create time period",
-    "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+    "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50198,7 +50200,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Get time period",
     "summary": "Get time period",
-    "description": "Gets time period UUID via getTimePeriod().",
+    "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50250,7 +50252,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Update time period",
     "summary": "Update time period",
-    "description": "Updates time period UUID via updateTimePeriod().",
+    "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
