@@ -33,7 +33,11 @@ const REQUIRED_DEVICE_KEYS = [
   'dashboard.timeAgo.minutes',
   'dashboard.timeAgo.hours',
   'dashboard.timeAgo.days',
-  'dashboard.devices.active',
+  // F021: the dashboard widget has no status vocabulary of its own any more —
+  // it reads a slug through the same labels as the list and the details panel.
+  'assets.statuses.active',
+  'assets.statuses.inactive',
+  'assets.statuses.maintenance',
 ];
 
 const REQUIRED_APPT_KEYS = [
@@ -80,6 +84,15 @@ describe('client portal devices/calendar locale coverage', () => {
   it('does not retain the old "Healthy" English label', () => {
     const data = loadJson('en', 'client-portal.json');
     expect(data.devices.statusOkTitle).not.toMatch(/healthy/i);
-    expect(data.dashboard.devices.active).toBe('Active');
+    expect(data.assets.statuses.active).toBe('Active');
+  });
+
+  it.each(REQUIRED_LOCALES)('locale %s has retired the widget-only status labels', (locale) => {
+    // The "Your devices" widget used to say Active/Inactive/Healthy on its own
+    // terms, which is how a custom status read "Aktiv" on the dashboard.
+    const devices = loadJson(locale, 'client-portal.json').dashboard.devices;
+    expect(Object.keys(devices)).not.toContain('healthy');
+    expect(Object.keys(devices)).not.toContain('active');
+    expect(Object.keys(devices)).not.toContain('inactive');
   });
 });

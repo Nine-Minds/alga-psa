@@ -140,10 +140,7 @@
       "viewAll": "Vedi tutti",
       "countLabel": "{{count}} gestiti",
       "emptyShort": "Nessun dispositivo",
-      "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui.",
-      "healthy": "In salute",
-      "inactive": "Inattivo",
-      "active": "Attivo"
+      "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui."
     },
     "timeAgo": {
       "justNow": "proprio ora",

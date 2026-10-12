@@ -140,10 +140,7 @@
       "viewAll": "Alle anzeigen",
       "countLabel": "{{count}} verwaltet",
       "emptyShort": "Noch keine Geräte",
-      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier.",
-      "healthy": "Fehlerfrei",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier."
     },
     "timeAgo": {
       "justNow": "gerade eben",

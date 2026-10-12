@@ -41,4 +41,13 @@ describe('dashboard action contract', () => {
   it('only surfaces client-meaningful quote states', () => {
     expect(source).toMatch(/whereIn\('status',\s*\[\s*'sent',\s*'accepted',\s*'rejected',\s*'expired'\s*\]\)/);
   });
+
+  it('FR-B5: counts active devices by the deployable status kind', () => {
+    // "Anything but the literal inactive" counted a device in a custom
+    // "In repair" status as active devices on the portal dashboard.
+    expect(source).toContain("import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegistry'");
+    expect(source).toContain('await listDeployableStatusSlugs(trx, tenant)');
+    expect(source).toContain(".whereIn('status', deployableSlugs)");
+    expect(source).not.toContain(".andWhere('status', '!=', 'inactive')");
+  });
 });

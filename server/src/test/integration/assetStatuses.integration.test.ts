@@ -316,4 +316,31 @@ describe('asset statuses', () => {
     const actions = await import('@alga-psa/assets/actions/assetStatusActions');
     expect(Object.keys(actions)).not.toContain('deleteAssetStatus');
   });
+
+  // FR-B5: what "deployed" means to a metric, including a tenant whose
+  // registry has not been seeded (which must not read as "nothing deployed").
+  it('lists the deployable slugs and falls back to the builtins', async () => {
+    const { tenantId } = await seedTenant();
+    const { listDeployableStatusSlugs } = await import('@alga-psa/assets/lib/assetStatusRegistry');
+
+    await table(tenantId, 'asset_statuses').insert({
+      tenant: tenantId,
+      slug: 'on_loan',
+      label: 'On loan',
+      kind: 'deployable',
+      is_builtin: false,
+      is_active: true,
+      display_order: 9,
+    });
+
+    const slugs = await listDeployableStatusSlugs(db, tenantId);
+    expect([...slugs].sort()).toEqual(['active', 'in_stock', 'on_loan']);
+    expect(slugs).not.toContain('maintenance');
+    expect(slugs).not.toContain('inactive');
+
+    // A tenant with no registry rows at all — never emptying a seeded tenant,
+    // which the builtin-seed test scans.
+    const unseeded = randomUUID();
+    expect([...(await listDeployableStatusSlugs(db, unseeded))].sort()).toEqual(['active', 'in_stock']);
+  });
 });

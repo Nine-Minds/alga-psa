@@ -175,10 +175,7 @@
       "viewAll": "Visa alla",
       "countLabel": "Antal hanterade: {{count}}",
       "emptyShort": "Inga enheter ännu",
-      "emptyBody": "Enheter som din IT-leverantör hanterar visas här.",
-      "healthy": "Fungerar normalt",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Enheter som din IT-leverantör hanterar visas här."
     },
     "quickActions": {
       "title": "Snabbåtgärder",

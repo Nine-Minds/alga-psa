@@ -59,6 +59,18 @@ describe('ClientDashboard quick-action distribution contract', () => {
     expect(source).not.toContain('dashboard-request-appointment-quick');
   });
 
+  it('F021: reads a device status through the shared portal helper', () => {
+    // The widget used to label everything that was not the literal `inactive`
+    // "Active", so a device in a tenant status read "Aktiv" on the dashboard
+    // and "In repair" in the device list.
+    expect(source).toContain("import { portalAssetStatusLabel, portalAssetStatusVariant } from '../assets/portalAssetStatus';");
+    expect(source).toContain('portalAssetStatusLabel(t, d.status)');
+    expect(source).toContain('portalAssetStatusVariant(d.status)');
+    expect(source).not.toContain("d.status !== 'inactive'");
+    expect(source).not.toContain('dashboard.devices.active');
+    expect(source).not.toContain('dashboard.devices.inactive');
+  });
+
   it('wires the PrepaidHoursCard widget below the KPI row, only for the PSA portal', () => {
     expect(source).toContain("import { PrepaidHoursCard } from './PrepaidHoursCard';");
     expect(source).toMatch(/!isAlgaDeskPortal && <PrepaidHoursCard \/>/);

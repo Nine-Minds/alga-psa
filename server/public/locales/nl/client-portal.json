@@ -140,10 +140,7 @@
       "viewAll": "Bekijk alles",
       "countLabel": "{{count}} beheerd",
       "emptyShort": "Nog geen apparaten",
-      "emptyBody": "De apparaten die uw provider beheert, verschijnen hier.",
-      "healthy": "Gezond",
-      "inactive": "Inactief",
-      "active": "Actief"
+      "emptyBody": "De apparaten die uw provider beheert, verschijnen hier."
     },
     "timeAgo": {
       "justNow": "zojuist",

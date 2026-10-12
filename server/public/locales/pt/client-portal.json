@@ -169,10 +169,7 @@
       "viewAll": "Ver tudo",
       "countLabel": "{{count}} gerenciado",
       "emptyShort": "Nenhum dispositivo ainda",
-      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui.",
-      "healthy": "Saudável",
-      "inactive": "Inativo",
-      "active": "Ativo"
+      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui."
     },
     "quickActions": {
       "title": "Ações rápidas",

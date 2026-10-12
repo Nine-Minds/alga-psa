@@ -103,7 +103,12 @@ export async function listDeployableStatusSlugs(
   conn: Knex | Knex.Transaction,
   tenant: string
 ): Promise<string[]> {
-  return statusTable(conn, tenant).where({ kind: 'deployable' }).pluck('slug');
+  const slugs: string[] = await statusTable(conn, tenant).where({ kind: 'deployable' }).pluck('slug');
+  if (slugs.length > 0) return slugs;
+  // A tenant whose registry has not been seeded would otherwise read as
+  // "nothing is deployed"; the builtin deployable slugs are the honest default,
+  // the same fallback the status selects use while the registry loads.
+  return BUILTIN_ASSET_STATUSES.filter((status) => status.kind === 'deployable').map((status) => status.slug);
 }
 
 export async function createAssetStatusRow(

@@ -43,6 +43,8 @@ import type { AppointmentSummary } from '../appointments/types';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useBranding } from '@alga-psa/tenancy/components';
 import type { PortalHeroGradient } from '@alga-psa/tenancy/actions';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { portalAssetStatusLabel, portalAssetStatusVariant } from '../assets/portalAssetStatus';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -703,7 +705,6 @@ export function ClientDashboard({
               <ul className="space-y-2">
                 {devices.slice(0, DASHBOARD_PREVIEW_DEVICES).map((d) => {
                   const Icon = deviceIcon(d.asset_type);
-                  const isActive = d.status !== 'inactive';
                   return (
                     <li
                       key={d.asset_id}
@@ -720,18 +721,14 @@ export function ClientDashboard({
                           </div>
                         )}
                       </div>
-                      <span
-                        className={[
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                          isActive
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-gray-100 text-gray-600',
-                        ].join(' ')}
-                      >
-                        {isActive
-                          ? t('dashboard.devices.active', 'Active')
-                          : t('dashboard.devices.inactive', 'Inactive')}
-                      </span>
+                      {/* F021: the widget called every slug that was not
+                          `inactive` "Active", so a device the MSP put in a
+                          custom status contradicted its own details panel. It
+                          reads the slug through the same helper as the device
+                          list now. */}
+                      <Badge variant={portalAssetStatusVariant(d.status)}>
+                        {portalAssetStatusLabel(t, d.status)}
+                      </Badge>
                     </li>
                   );
                 })}

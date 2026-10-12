@@ -175,10 +175,7 @@
       "viewAll": "View all",
       "countLabel": "{{count}} managed",
       "emptyShort": "No devices yet",
-      "emptyBody": "Devices your provider manages will appear here.",
-      "healthy": "Healthy",
-      "inactive": "Inactive",
-      "active": "Active"
+      "emptyBody": "Devices your provider manages will appear here."
     },
     "quickActions": {
       "title": "Quick Actions",

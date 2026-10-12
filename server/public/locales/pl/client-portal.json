@@ -140,10 +140,7 @@
       "viewAll": "Zobacz wszystkie",
       "countLabel": "Zarządzane: {{count}}",
       "emptyShort": "Brak urządzeń",
-      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę.",
-      "healthy": "Sprawne",
-      "inactive": "Nieaktywne",
-      "active": "Aktywne"
+      "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
     },
     "timeAgo": {
       "justNow": "przed chwilą",
