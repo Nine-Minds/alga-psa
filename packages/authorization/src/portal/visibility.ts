@@ -110,8 +110,11 @@ export interface TicketVisibilityColumns {
    * has no single requester, so a colleague's ticket about the shared PC is
    * the contact's business too — read-only unless they are requester or
    * watcher, which the surface decides from `ticketMatchesVisibility`.
+   *
+   * Pass this on read paths only. A write gate that admits workspace tickets
+   * would let a colleague comment on or close a ticket that is not theirs.
    */
-  sharedWorkspaceTickets?: { ticketIdColumn: string; tenantColumn: string };
+  sharedWorkspaceTickets?: { ticketIdColumn: string; tenantColumn: string; closedColumn: string };
 }
 
 /** The ids whose records this contact may see: always includes the contact. */
@@ -203,10 +206,12 @@ export function applyTicketVisibilityFilter(
         ]);
       }
       if (useWorkspace) {
-        const workspace = sharedWorkspaceTickets as { ticketIdColumn: string; tenantColumn: string };
+        const workspace = sharedWorkspaceTickets as { ticketIdColumn: string; tenantColumn: string; closedColumn: string };
         const placeholders = contactIds.map(() => '?').join(', ');
+        // FR-E7b says *open* tickets: a closed ticket about the hot desk is
+        // history that belongs to its requester, not to today's occupant.
         builder.orWhereRaw(
-          `EXISTS (
+          `(${workspace.closedColumn} IS NOT TRUE AND EXISTS (
              SELECT 1
              FROM asset_associations aa
              JOIN asset_group_members m ON m.tenant = aa.tenant AND m.asset_id = aa.asset_id
@@ -218,7 +223,7 @@ export function applyTicketVisibilityFilter(
                AND g.kind = 'shared_workspace'
                AND gc.role = 'user'
                AND gc.contact_name_id IN (${placeholders || 'NULL'})
-           )`,
+           ))`,
           contactIds
         );
       }
