@@ -108,6 +108,12 @@ describe('asset REST surface', () => {
     expect(Object.keys(preview.assets.properties)).toEqual(
       expect.arrayContaining(['total', 'byRmmOrganization', 'groups'])
     );
+    // Every field readMergeAssetsPreview returns, integrationId included.
+    expect(Object.keys(preview.assets.properties.byRmmOrganization.items.properties)).toEqual(
+      expect.arrayContaining([
+        'provider', 'integrationId', 'externalOrganizationId', 'externalOrganizationName', 'deviceCount',
+      ])
+    );
     expect(Object.keys(preview.billingChoice.properties)).toEqual(
       expect.arrayContaining(['unstampedTickets', 'unstampedProjects', 'unstampedAssets', 'unstampedRmmMappings'])
     );

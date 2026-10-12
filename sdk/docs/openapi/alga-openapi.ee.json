@@ -10135,6 +10135,10 @@
                     "provider": {
                       "type": "string"
                     },
+                    "integrationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "externalOrganizationId": {
                       "type": "string"
                     },
@@ -10150,6 +10154,7 @@
                   },
                   "required": [
                     "provider",
+                    "integrationId",
                     "externalOrganizationId",
                     "externalOrganizationName",
                     "deviceCount"

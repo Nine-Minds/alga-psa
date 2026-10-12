@@ -235,3 +235,27 @@ The Assigned-to column went onto `ClientDevicesPage`, the component the
 Nx split, imported by nothing — is deleted along with the seven locale keys only
 it used; the contract tests that greped it now grep the live list and the read
 action, which is what let the defect pass round 2.
+
+### Review follow-ups in the same round
+
+- **F071** the Group tile counted its siblings and people instead of naming
+  them. It now fetches the group under `['asset', assetId, 'group', groupId]`,
+  which the drawer's `matchAssetCacheKeys` revalidation already covers, and
+  lists five sibling links plus the owner or the workspace users.
+- **F071** "Add to group" linked to `?view=groups`, which `MspClientAssets`
+  never read; the view now seeds from the URL.
+- **F082** the MSP dialog used only `preselect`, so a three-person workspace
+  offered nobody. The options render in a Contact select. The portal needs
+  nothing: a portal ticket is always filed as the signed-in contact
+  (`contact_id: visibility.contactId`). Mobile's `CreateTicketModal` has no
+  contact field and no endpoint to feed one, so the resolution happens
+  server-side in `TicketService.createFromAsset` — a caller that names nobody
+  gets the asset's single person, and several people stay ambiguous.
+- **F044** `suggestContactForAsset` resolved the integration with
+  `rmm_integrations.where({ provider })`, which picks an arbitrary row when a
+  tenant runs two integrations of the same provider — and then reads the other
+  mapping's mode. It now finds the organization mapping for the asset's client
+  and keeps the one whose integration matches the asset's provider
+  (`suggestContactForAsset.test.ts`).
+- **F105** the OpenAPI `byRmmOrganization` item omitted `integrationId`, which
+  the preview returns; added and the six spec artefacts regenerated.

@@ -574,6 +574,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         total: zOpenApi.number().describe('Assets that would move to the destination client.'),
         byRmmOrganization: zOpenApi.array(zOpenApi.object({
           provider: zOpenApi.string(),
+          integrationId: zOpenApi.string().uuid(),
           externalOrganizationId: zOpenApi.string(),
           externalOrganizationName: zOpenApi.string().nullable(),
           deviceCount: zOpenApi.number(),

@@ -94,18 +94,35 @@ export async function suggestContactForAsset(
     );
   if (!asset?.rmm_provider || !asset.rmm_organization_id || !asset.client_id) return null;
 
-  const integration = await table(conn, tenant, 'rmm_integrations')
-    .where({ provider: asset.rmm_provider })
-    .first<{ integration_id: string }>('integration_id');
-  if (!integration?.integration_id) return null;
-
-  const mapping = await table(conn, tenant, 'rmm_organization_mappings')
+  /**
+   * The mapping that owns this device, found through its organization rather
+   * than by provider alone: a tenant with two integrations of the same provider
+   * would otherwise take whichever `rmm_integrations` row came back first, and
+   * read the other one's mode and explicit user mappings.
+   */
+  const candidates = await table(conn, tenant, 'rmm_organization_mappings')
     .where({
-      integration_id: integration.integration_id,
       external_organization_id: asset.rmm_organization_id,
+      client_id: asset.client_id,
     })
-    .first<{ contact_assignment_mode?: string | null }>('contact_assignment_mode');
-  if ((mapping?.contact_assignment_mode ?? 'suggest') === 'off') return null;
+    .select<Array<{ integration_id: string; contact_assignment_mode?: string | null }>>(
+      'integration_id',
+      'contact_assignment_mode'
+    );
+  if (candidates.length === 0) return null;
+
+  const integrations = await table(conn, tenant, 'rmm_integrations')
+    .whereIn('integration_id', candidates.map((candidate) => candidate.integration_id))
+    .select<Array<{ integration_id: string; provider: string }>>('integration_id', 'provider');
+  const providerById = new Map(
+    integrations.map((row) => [String(row.integration_id), String(row.provider)])
+  );
+
+  const mapping = candidates.find(
+    (candidate) => providerById.get(String(candidate.integration_id)) === asset.rmm_provider
+  );
+  if (!mapping) return null;
+  if ((mapping.contact_assignment_mode ?? 'suggest') === 'off') return null;
 
   try {
     const workspace = await table(conn, tenant, 'asset_group_members as m')
@@ -127,7 +144,7 @@ export async function suggestContactForAsset(
     conn,
     tenant,
     asset.client_id,
-    integration.integration_id,
+    mapping.integration_id,
     asset.rmm_provider,
     normalized
   );
@@ -144,7 +161,7 @@ export async function suggestContactForAsset(
     contactId: match?.contactId ?? null,
     contactName,
     method: match?.method ?? null,
-    integrationId: integration.integration_id,
+    integrationId: mapping.integration_id,
     provider: asset.rmm_provider,
   };
 }

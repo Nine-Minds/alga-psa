@@ -7190,6 +7190,9 @@ components:
                 properties:
                   provider:
                     type: string
+                  integrationId:
+                    type: string
+                    format: uuid
                   externalOrganizationId:
                     type: string
                   externalOrganizationName:
@@ -7200,6 +7203,7 @@ components:
                     type: number
                 required:
                   - provider
+                  - integrationId
                   - externalOrganizationId
                   - externalOrganizationName
                   - deviceCount
