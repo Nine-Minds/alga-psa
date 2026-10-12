@@ -79,6 +79,8 @@ export interface RmmOrganizationMapping {
   default_contact_id?: string | null;
   /** FR-D3: off | suggest | auto — what sync does with the signed-in user. */
   contact_assignment_mode?: 'off' | 'suggest' | 'auto';
+  /** F090: the profile this organization's alert tickets are attributed to. */
+  billing_profile_id?: string | null;
   auto_sync_assets: boolean;
   auto_create_tickets?: boolean;
   last_synced_at?: string;

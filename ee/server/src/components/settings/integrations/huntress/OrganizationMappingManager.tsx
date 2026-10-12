@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Card,
@@ -133,6 +134,20 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     });
   };
 
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    startTransition(async () => {
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        billing_profile_id: billingProfileId,
+      });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+      }
+      await load();
+      onMappingChanged?.();
+    });
+  };
+
   const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleAutoCreateToggle = (mappingId: string, enabled: boolean) => {
@@ -196,6 +211,20 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       ),
     },
     {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.huntress.columns.defaultContact', { defaultValue: 'Default Contact' }),
       dataIndex: 'default_contact_id',
       sortable: false,
@@ -254,6 +283,17 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) handleClientChangeConfirmed(pending.mappingId, pending.clientId);
+      }}
+    />
     <Card id="huntress-org-mappings">
       <CardHeader>
         <div className="flex items-center justify-between">

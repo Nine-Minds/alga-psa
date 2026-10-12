@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -305,6 +306,18 @@ export default function LevelIoIntegrationSettings() {
     })();
   };
 
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, billingProfileId });
+      if (!result.success) {
+        setError(result.error || t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
   const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
@@ -360,6 +373,20 @@ export default function LevelIoIntegrationSettings() {
           onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
           options={peopleModeOptions}
           className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
         />
       ),
     },

@@ -2924,7 +2924,8 @@
       },
       "billingProfile": {
         "label": "Perfil de facturación",
-        "clientDefault": "Predeterminado del cliente"
+        "clientDefault": "Predeterminado del cliente",
+        "updateFailed": "No se pudo actualizar el perfil de facturación"
       }
     },
     "sso": {

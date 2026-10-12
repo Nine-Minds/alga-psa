@@ -2947,7 +2947,8 @@
       },
       "billingProfile": {
         "label": "Faktureringsprofil",
-        "clientDefault": "Kundens standard"
+        "clientDefault": "Kundens standard",
+        "updateFailed": "Kunde inte uppdatera faktureringsprofilen"
       }
     },
     "sso": {

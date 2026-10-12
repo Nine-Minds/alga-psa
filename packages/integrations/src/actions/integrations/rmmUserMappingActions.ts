@@ -127,3 +127,30 @@ export const countRmmOrganizationAssets = withAuth(async (
   });
   return { success: true, count };
 });
+
+/**
+ * F090: the mapped client's active billing profiles, for the per-organization
+ * Billing profile select. The select hides itself when there are fewer than
+ * two, so a single-profile client is never asked a question with one answer.
+ */
+export const listRmmOrganizationBillingProfiles = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string }
+): Promise<{ success: boolean; error?: string; profiles?: Array<{ billing_profile_id: string; name: string }> }> => {
+  if (!await hasPermission(user as any, 'system_settings', 'read')) {
+    return { success: false, error: 'Forbidden' };
+  }
+  if (!input.clientId) return { success: true, profiles: [] };
+
+  const { knex } = await createTenantKnex();
+  const profiles = await withTransaction(knex, async (trx: Knex.Transaction) =>
+    tenantDb(trx, tenant).table('client_billing_profiles')
+      .where({ client_id: input.clientId, is_active: true })
+      .orderBy('is_default', 'desc')
+      .orderBy('name', 'asc')
+      .select<Array<{ billing_profile_id: string; name: string }>>('billing_profile_id', 'name')
+  );
+
+  return { success: true, profiles };
+});

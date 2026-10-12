@@ -2947,7 +2947,8 @@
       },
       "billingProfile": {
         "label": "Billing profile",
-        "clientDefault": "Client default"
+        "clientDefault": "Client default",
+        "updateFailed": "Failed to update the billing profile"
       }
     },
     "sso": {

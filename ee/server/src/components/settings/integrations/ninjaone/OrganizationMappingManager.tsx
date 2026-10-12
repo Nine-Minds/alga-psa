@@ -10,6 +10,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -198,6 +199,31 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     }
   };
 
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = async (mappingId: string, billingProfileId: string | null) => {
+    setSavingMappingId(mappingId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await updateNinjaOneOrganizationMapping(mappingId, {
+        billing_profile_id: billingProfileId,
+      });
+      if (result.success) {
+        setMappings((prev) => prev.map((m) => (
+          m.mapping_id === mappingId ? { ...m, billing_profile_id: billingProfileId } : m
+        )));
+        onMappingChanged?.();
+      } else {
+        setError(result.error ?? t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+      }
+    } catch (err) {
+      console.error('NinjaOne billing profile update failed:', err);
+      setError(t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+    } finally {
+      setSavingMappingId(null);
+    }
+  };
+
   const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleAutoSyncChange = async (mappingId: string, autoSync: boolean) => {
@@ -336,6 +362,20 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       ),
     },
     {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => void handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.ninjaone.columns.autoSync', { defaultValue: 'Auto-Sync' }),
       dataIndex: 'auto_sync_assets',
       sortable: false,
@@ -380,6 +420,17 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={companies.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) void handleCompanyChangeConfirmed(pending.mappingId, pending.clientId);
+      }}
+    />
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">

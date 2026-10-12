@@ -2924,7 +2924,8 @@
       },
       "billingProfile": {
         "label": "Factureringsprofiel",
-        "clientDefault": "Standaard van de klant"
+        "clientDefault": "Standaard van de klant",
+        "updateFailed": "Bijwerken van het factureringsprofiel is mislukt"
       }
     },
     "sso": {

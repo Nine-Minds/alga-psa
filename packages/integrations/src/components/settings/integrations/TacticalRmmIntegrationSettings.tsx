@@ -9,6 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from './RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from './RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from './RmmOrganizationBillingProfileSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -307,7 +308,7 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean; contactAssignmentMode?: string }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean; contactAssignmentMode?: string; billingProfileId?: string | null }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
@@ -315,6 +316,7 @@ export function TacticalRmmIntegrationSettings() {
       defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
       contactAssignmentMode: patch.contactAssignmentMode,
+      billingProfileId: patch.billingProfileId,
     });
     if (!res.success) {
       const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
@@ -466,6 +468,20 @@ export function TacticalRmmIntegrationSettings() {
       ),
     },
     {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, m) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={m.mapping_id}
+          clientId={m.client_id}
+          value={m.billing_profile_id}
+          onChange={(billingProfileId) => handleUpdateMapping(m.mapping_id, { billingProfileId })}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.tactical.autoSync', { defaultValue: 'Auto-sync' }),
       dataIndex: 'auto_sync_assets',
       sortable: false,
@@ -481,6 +497,17 @@ export function TacticalRmmIntegrationSettings() {
 
   return (
     <>
+    <RmmOrganizationClientChangeDialog
+      mappingId={pendingClientChange?.mappingId ?? null}
+      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      isOpen={Boolean(pendingClientChange)}
+      onCancel={() => setPendingClientChange(null)}
+      onConfirm={() => {
+        const pending = pendingClientChange;
+        setPendingClientChange(null);
+        if (pending) void handleUpdateMapping(pending.mappingId, { clientId: pending.clientId, defaultContactId: null });
+      }}
+    />
     <Card id="tacticalrmm-integration-settings-card">
       <CardHeader>
         <CardTitle>{t('integrations.rmm.tactical.title', { defaultValue: 'Tactical RMM' })}</CardTitle>
