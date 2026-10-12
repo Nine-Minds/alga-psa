@@ -38618,8 +38618,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -38689,7 +38692,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -39070,8 +39073,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -39141,7 +39147,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -39547,8 +39553,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -39618,7 +39627,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -46733,7 +46742,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. HISTORICAL IMPORT: to migrate existing ticket history, send entered_at (ISO 8601 with offset, e.g. 2025-03-14T09:30:00Z; not in the future) on create. The ticket keeps that open date and is created silently: source=api_import, no SLA clock, and no TICKET_CREATED, notifications, webhooks or workflows. For history that is already closed, use a closed status_id and also send closed_at (entered_at <= closed_at <= now; optional closed_by user UUID) so it is stored closed without firing TICKET_CLOSED. Then add each comment with POST /api/v1/tickets/{id}/comments and created_at (a comment cannot predate the ticket's entered_at, and a reply cannot predate its parent comment; create parents before replies). entered_at/closed_at are create-only and need an internal (MSP) API user.",
     "tags": [
       "Work Management v1"
     ],
@@ -46873,6 +46882,21 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           },
           "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them."
+        },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. ISO 8601 datetime with an offset (date-only is rejected), not in the future. Stores the ticket with this open date and marks it a historical record: created silently (source=api_import) with no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Internal (MSP) users only. Create-only; cannot be changed later."
+        },
+        "closed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import only (requires entered_at). Required when status_id is a closed status, and rejected for an open status. Must satisfy entered_at <= closed_at <= now. The ticket is stored closed (is_closed=true) without firing TICKET_CLOSED."
+        },
+        "closed_by": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Historical import only (requires closed_at). User recorded as the closer; defaults to the API user."
         }
       },
       "required": [
@@ -47823,6 +47847,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 20,
           "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Historical import. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         }
       },
       "required": [

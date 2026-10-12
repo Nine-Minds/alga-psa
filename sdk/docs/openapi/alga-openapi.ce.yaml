@@ -14123,8 +14123,11 @@ components:
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
+                  - previous_response_state
+                  - new_response_state
                   - priority_id
                   - priority_name
                   - client_id
@@ -17141,6 +17144,27 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        entered_at:
+          type: string
+          format: date-time
+          description: "Historical import (create-only). ISO 8601 datetime with an offset
+            (date-only is rejected), not in the future. Supplying it stores the
+            ticket with this open date and marks it a historical record: created
+            silently with source=api_import, no SLA clock, no TICKET_CREATED,
+            and no notifications, webhooks or workflows. MSP (internal) users
+            only. Cannot be changed afterwards."
+        closed_at:
+          type: string
+          format: date-time
+          description: Historical import only (requires entered_at). When the status is a
+            closed status this is required and the ticket is stored closed
+            (is_closed=true) without firing TICKET_CLOSED. Must satisfy
+            entered_at <= closed_at <= now. Rejected for an open status.
+        closed_by:
+          type: string
+          format: uuid
+          description: Historical import only (requires closed_at). User recorded as the
+            closer; defaults to the API user.
     WorkV1TicketUpdateBody:
       type: object
       properties:
@@ -17222,9 +17246,17 @@ components:
         closed_at:
           type: string
           format: date-time
+          description: "Honored when this update closes the ticket (open to closed):
+            stored as the close time instead of now. Must not be in the future
+            or before the ticket's entered_at. Events (TICKET_CLOSED) still
+            fire; use the suppression flags to silence notifications. To import
+            already-closed history without events, use entered_at + closed_at on
+            ticket create."
         closed_by:
           type: string
           format: uuid
+          description: Honored with closed_at when this update closes the ticket; defaults
+            to the API user.
         override_close_rules:
           type: boolean
         override_close_rules_reason:
@@ -17313,6 +17345,16 @@ components:
           description: One-off Bcc recipients for this comment's email only. Never
             returned to client-portal callers. Not allowed with is_internal. Max
             20 cc + bcc combined.
+        created_at:
+          type: string
+          format: date-time
+          description: "Historical import. ISO 8601 datetime with an offset (date-only is
+            rejected), not in the future and not before the ticket's entered_at
+            (a reply: not before its parent comment). The comment is stored with
+            this timestamp and is silent: no TICKET_COMMENT_ADDED, no
+            notifications, webhooks, workflows, SLA first response or
+            response-state change. Cannot be combined with scheduled_publish_at,
+            scheduled_publish_tz, cc or bcc."
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal
@@ -67424,7 +67466,9 @@ paths:
   /api/v1/time-periods:
     get:
       summary: List time periods
-      description: Lists time periods via ApiTimeSheetController.listTimePeriods().
+      description: "Lists time periods via ApiTimeSheetController.listTimePeriods().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67509,7 +67553,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time period
-      description: Creates time period via ApiTimeSheetController.createTimePeriod().
+      description: "Creates time period via ApiTimeSheetController.createTimePeriod().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67726,7 +67772,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     get:
       summary: Get time period
-      description: Gets time period UUID via getTimePeriod().
+      description: "Gets time period UUID via getTimePeriod(). end_date is exclusive:
+        the first day after the period (a period covering Aug 16–22 has end_date
+        2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67787,7 +67835,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update time period
-      description: Updates time period UUID via updateTimePeriod().
+      description: "Updates time period UUID via updateTimePeriod(). end_date is
+        exclusive: the first day after the period (a period covering Aug 16–22
+        has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:

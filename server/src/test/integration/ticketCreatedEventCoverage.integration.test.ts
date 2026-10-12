@@ -248,6 +248,26 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
   });
 
   describe('silent opt-outs are explicit', () => {
+    it('REST historical import (entered_at) creates through silentTicketCreation and skips TICKET_CREATED', () => {
+      const src = readSource('server/src/lib/api/services/TicketService.ts');
+      expect(src).toMatch(/silentTicketCreation\('API historical ticket import'\)/);
+      expect(src).toMatch(/if \(!isHistorical\) \{[\s\S]{0,200}safePublishEvent\('TICKET_CREATED'/);
+    });
+
+    it('the model refuses historical creation unless the publisher is the silent marker', async () => {
+      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const { ticketCreatedPublishedByCaller } = await import('../../../../shared/lib/tickets/ticketLifecycleEvents');
+      await expect(
+        withTransaction(testDb, async (trx) => {
+          await TicketModel.createTicket(
+            { ...baseInput('Historical, wrong publisher'), historical: { entered_at: '2025-03-14T09:30:00Z' } },
+            tenant, trx, {}, ticketCreatedPublishedByCaller('test'), undefined, actorId
+          );
+        })
+      ).rejects.toThrow(/silentTicketCreation/);
+      expect(created()).toHaveLength(0);
+    });
+
     it('ticketImportActions creates tickets with silentTicketCreation', () => {
       const src = readSource('packages/tickets/src/actions/ticketImportActions.ts');
       expect(src).toMatch(/import \{ silentTicketCreation \} from '@alga-psa\/shared\/lib\/tickets\/ticketLifecycleEvents'/);
