@@ -25,6 +25,14 @@ describe('asset group surfaces', () => {
     expect(tile).toContain('id="asset-bento-group-open"');
     // Guarded on asset.group, so an ungrouped asset shows no tile.
     expect(text).toMatch(/\{asset\.group \?[\s\S]{0,200}id="asset-bento-group"/);
+
+    // The siblings are links, and the people are named — the summary on the
+    // asset only counts them, so the tile fetches the group itself.
+    expect(text).toMatch(/\['asset', asset\.asset_id, 'group', asset\.group\.group_id\]/);
+    expect(text).toMatch(/unwrapAssetActionResult\(getAssetGroup\(groupId as string\)\)/);
+    expect(tile).toMatch(/groupSiblings\.slice\(0, 5\)/);
+    expect(tile).toMatch(/href=\{`\/msp\/assets\/\$\{member\.asset_id\}`\}/);
+    expect(tile).toMatch(/groupPeople[\s\S]{0,200}contact\.contact_name/);
   });
 
   it('T107: an ungrouped asset gets Add to group in the Related assets tile', () => {
@@ -59,6 +67,9 @@ describe('asset group surfaces', () => {
     expect(text).toContain('id="client-assets-new-group-dialog"');
     expect(text).toContain('id="client-asset-groups-table"');
     expect(text).toMatch(/createAssetGroup/);
+    // F071's "Add to group" links here with ?view=groups; the tab has to open
+    // on the view it was sent to, not on Assets.
+    expect(text).toMatch(/searchParams\?\.get\('view'\) === 'groups' \? 'groups' : 'assets'/);
   });
 
   it('T112/T113: the list has bulk Add to group and a working Group filter and column', () => {

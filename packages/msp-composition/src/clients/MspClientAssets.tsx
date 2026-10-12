@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { ClientMaintenanceSummary, Asset, AssetGroup, AssetGroupKind, AssetTypeRegistryEntry } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { BentoStat, BentoTile, BENTO_TONE_TEXT, type BentoTone } from '@alga-psa/ui/components/bento';
@@ -40,6 +41,7 @@ interface ClientAssetsProps {
 
 const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/clients');
+  const searchParams = useSearchParams();
   const assetTypeOptions: SelectOption[] = [
     { value: 'all', label: t('clientTabs.assets.types.all', { defaultValue: 'All Asset Types' }) },
     { value: 'workstation', label: t('clientTabs.assets.types.workstation', { defaultValue: 'Workstation' }) },
@@ -53,8 +55,12 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [assetTypeEntries, setAssetTypeEntries] = useState<AssetTypeRegistryEntry[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // F074: Assets | Groups — two views over the same client inventory.
-  const [view, setView] = useState<'assets' | 'groups'>('assets');
+  // F074: Assets | Groups — two views over the same client inventory. The
+  // details page's "Add to group" link lands here with ?view=groups, so the
+  // view it asked for is the one that opens.
+  const [view, setView] = useState<'assets' | 'groups'>(
+    searchParams?.get('view') === 'groups' ? 'groups' : 'assets',
+  );
   const [groups, setGroups] = useState<AssetGroup[]>([]);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);

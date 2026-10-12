@@ -35,6 +35,7 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
+import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { useClientDrawer } from '@alga-psa/ui';
 import type { Asset, AssetFact, AssetSummaryMetrics, RmmCachedData } from '@alga-psa/types';
@@ -124,6 +125,21 @@ export function AssetBentoLayout({
     asset.asset_id ? ['asset', asset.asset_id, 'maintenance'] : null,
     ([, aid]) => unwrapAssetActionResult(getAssetMaintenanceReport(aid))
   );
+  /**
+   * F071: the tile names the siblings and the people; `asset.group` only counts
+   * them. Keyed under this asset so the group drawer's member revalidation
+   * (matchAssetCacheKeys) drops it after an owner or membership change.
+   */
+  const { data: groupDetail } = useSWR(
+    asset.group?.group_id ? ['asset', asset.asset_id, 'group', asset.group.group_id] : null,
+    ([, , , groupId]) => unwrapAssetActionResult(getAssetGroup(groupId as string))
+  );
+  const groupSiblings = (groupDetail?.members ?? []).filter(
+    (member) => member.asset_id !== asset.asset_id
+  );
+  const groupPeople = asset.group?.kind === 'bundle'
+    ? (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'owner')
+    : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
   const softwareCount = Array.isArray(ext?.installed_software) ? ext.installed_software.length : null;
   const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
 
@@ -334,17 +350,46 @@ export function AssetBentoLayout({
                   {asset.group.location_name ? (
                     <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.group.location_name} />
                   ) : null}
-                  <BentoLabelValue
-                    label={t('assetGroups.fields.members', { defaultValue: 'Members' })}
-                    value={asset.group.member_count ?? 0}
-                  />
-                  {asset.group.kind === 'shared_workspace' ? (
+                  {/* The people who go with the group: a bundle's owner, a workspace's users. */}
+                  {groupPeople.length > 0 ? (
+                    <BentoLabelValue
+                      label={asset.group.kind === 'bundle'
+                        ? t('assetGroups.fields.owner', { defaultValue: 'Owner' })
+                        : t('assetGroups.fields.users', { defaultValue: 'Users' })}
+                      value={groupPeople
+                        .slice(0, 4)
+                        .map((contact) => contact.contact_name ?? '')
+                        .filter(Boolean)
+                        .join(', ')}
+                    />
+                  ) : asset.group.kind === 'shared_workspace' ? (
                     <BentoLabelValue
                       label={t('assetGroups.fields.users', { defaultValue: 'Users' })}
                       value={asset.group.user_count ?? 0}
                     />
                   ) : null}
                 </div>
+                {/* The siblings, linked: "what else is on this desk". */}
+                {groupSiblings.length > 0 ? (
+                  <BentoRowList>
+                    {groupSiblings.slice(0, 5).map((member) => (
+                      <BentoRow key={member.asset_id} align="center" meta={member.asset_tag ?? undefined}>
+                        <HardDrive className="h-3.5 w-3.5 flex-shrink-0 text-[rgb(var(--color-text-400))]" />
+                        <Link
+                          href={`/msp/assets/${member.asset_id}`}
+                          className="truncate text-sm text-[rgb(var(--color-text-700))] hover:underline min-w-0"
+                        >
+                          {member.asset_name}
+                        </Link>
+                      </BentoRow>
+                    ))}
+                  </BentoRowList>
+                ) : (
+                  <BentoLabelValue
+                    label={t('assetGroups.fields.members', { defaultValue: 'Members' })}
+                    value={asset.group.member_count ?? 0}
+                  />
+                )}
               </BentoTile>
             ) : null}
 
