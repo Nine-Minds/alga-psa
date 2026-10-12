@@ -10,7 +10,7 @@ import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { toPlainDate } from '@alga-psa/core';
 import { validateData } from '@alga-psa/validation';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, getTenantContext, withTransaction } from '@alga-psa/db';
 import { TimePeriod } from '../models/timePeriod';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
 import { timePeriodSchema } from '../schemas/timeSheet.schemas';
@@ -153,5 +153,45 @@ export async function ensureTimePeriodCoversDate(
     await withTransaction(knex, (trx) => createTimePeriodsThrough(trx, tenant, settings, date, 0));
   } catch (error) {
     logger.error(`Failed to ensure a time period covers ${date.toString()} for tenant ${tenant}:`, error);
+  }
+}
+
+/**
+ * Creates the next time period(s) based on settings, filling any gaps up to the threshold.
+ *
+ * Manages its own transaction (all-or-nothing) and takes the per-tenant time-period advisory lock.
+ * The work lives in createTimePeriodsThrough, shared with ensureTimePeriodCoversDate.
+ *
+ * Deliberately here and not in timePeriodsActions ('use server'): it takes caller-supplied
+ * settings and a tenant from ambient context, so it must not be a browser-callable action.
+ *
+ * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
+ * For background jobs, wrap calls with runWithTenant(tenantId, ...).
+ *
+ * @param settings - Time period settings to use for generation
+ * @param daysThreshold - How many days ahead to create periods (default: 5)
+ * @param options.today - The date to treat as today (default: today in UTC)
+ */
+export async function createNextTimePeriod(
+  settings: ITimePeriodSettings[],
+  daysThreshold: number = 5,
+  options: { today?: Temporal.PlainDate } = {}
+): Promise<ITimePeriod | null> {
+  const tenant = getTenantContext();
+  if (!tenant) {
+    throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  try {
+    // Use UTC for background jobs since there's no user session
+    const today = options.today ?? Temporal.Now.plainDateISO('UTC');
+    return await withTransaction(db, (trx) =>
+      createTimePeriodsThrough(trx, tenant, settings, today, daysThreshold)
+    );
+  } catch (error) {
+    logger.error('Error creating next time period:', error);
+    throw error;
   }
 }

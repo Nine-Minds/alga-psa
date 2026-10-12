@@ -3,7 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { productTimeEntryMode } from '@alga-psa/types';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
-import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createNextTimePeriod } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';

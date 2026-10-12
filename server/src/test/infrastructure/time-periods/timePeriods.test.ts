@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
-import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { createTimePeriodSettings } from '@alga-psa/scheduling/actions/time-period-settings-actions/timePeriodSettingsActions';
-import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { createNextTimePeriod, ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
 import { Temporal } from '@js-temporal/polyfill';
 import { createNextTimePeriod as createNextTimePeriodJob } from '@alga-psa/scheduling/lib/timePeriodAutomation';
 import { ISO8601String } from '../../../types/types.d';

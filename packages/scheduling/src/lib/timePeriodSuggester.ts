@@ -133,8 +133,18 @@ export function cellEnd(setting: ITimePeriodSettings, boundary: Temporal.PlainDa
       const monthOffset = endDay >= startDay ? frequency - 1 : frequency;
       return clampedMonthDay(idx + monthOffset, endDay).add({ days: 1 });
     }
-    case 'year':
-      return yearBoundary(setting, boundary.year + frequency);
+    case 'year': {
+      // A seasonal profile (e.g. Jan 1..Jul 1) ends inside the year at its configured bound;
+      // end_day_of_month is exclusive, 0 meaning the first day after end_month. Stored
+      // settings default to end_month 12 / end_day_of_month 0, which is the whole-year cell.
+      const seasonal = typeof setting.end_month === 'number' && !(setting.end_month === 12 && !setting.end_day_of_month);
+      if (!seasonal) return yearBoundary(setting, boundary.year + frequency);
+      const month = Temporal.PlainDate.from({ year: boundary.year + frequency - 1, month: setting.end_month!, day: 1 });
+      const end = setting.end_day_of_month
+        ? month.with({ day: Math.min(setting.end_day_of_month, month.daysInMonth) })
+        : month.add({ months: 1 });
+      return Temporal.PlainDate.compare(end, boundary) <= 0 ? end.add({ years: 1 }) : end;
+    }
     default:
       throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
   }
