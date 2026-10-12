@@ -76,7 +76,7 @@ This beats the hocuspocus pattern (start as root, then drop). That pattern leave
 The init container runs on every `docker compose up`:
 
 - **Image:** the server image (CE or EE, matching the stack).
-- **Privileges:** `user: "0:0"`, `restart: "no"`, `security_opt: [no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}]`, `cap_drop: [ALL]`, `cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]`.
+- **Privileges:** `user: "0:0"`, `restart: "no"`, `security_opt: [no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}]`, `cap_drop: [ALL]`, `cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID]`. (Implementation note: SETUID/SETGID were added to the first draft's list because the final readability check runs `setpriv --reuid 1000` so it sees what the app will see. The container stays one-shot and runs with `no-new-privileges`.)
 - **Script:** `/usr/local/bin/alga-runtime-permissions`, baked into both server images at a path the `./scripts` bind mount cannot shadow. Source lives at `scripts/runtime-permissions.sh`.
 
 The script is idempotent and cheap to repeat, because it only touches entries that are not already uid 1000:
@@ -106,6 +106,8 @@ Each file defines the list once in an `x-hardening` anchor. Anchors do not cross
 The setup service also gets `cap_drop: [ALL]`. It writes only under the 1000-owned `/app/server` (EE `combined-migrations`, `knexfile-ee.cjs`).
 
 The dev-stack server and setup (`Dockerfile.dev`, root) do **not** get `cap_drop`. A root process without DAC_OVERRIDE cannot read secret files owned by uid 1000.
+
+Implementation note: in the `base+ce|ee+prod` overlay the `setup` service still builds from the dev image (root), so it does not get `cap_drop` there either. Only prebuilt `setup` (production image, uid 1000) drops all capabilities.
 
 postgres, pgbouncer and hocuspocus keep their default capability set in this change. Each needs SETUID/SETGID/CHOWN to drop privileges, and minimizing that is a follow-up.
 

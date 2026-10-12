@@ -16,13 +16,14 @@ sharedTenantSecrets:
   enabled: true
   readOnly: false
 
-# alga-core creates the hostPath as root (0755 dirs, 0644 files) and fsGroup
-# does not apply to hostPath volumes, so the image's non-root `temporal` user
-# cannot write refreshed Entra tokens. Run as root on the appliance, matching
-# alga-core and email-service on the same host directory.
+# The shared tenant-secret hostPath must be owned by the running uid
+# (fsSecretCore), and alga-core's `fix-permissions` init container hands it to
+# uid 1000. Run as 1000 so all three consumers share one uid. The image's own
+# `temporal` user would not match. Open item: confirm the worker's other
+# writable paths at uid 1000 (see the compose/Helm hardening plan, question 3).
 securityContext:
-  runAsUser: 0
-  runAsGroup: 0
+  runAsUser: 1000
+  runAsGroup: 1000
 
 image:
   repository: ghcr.io/nine-minds/temporal-worker

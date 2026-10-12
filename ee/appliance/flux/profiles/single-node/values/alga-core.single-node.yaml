@@ -94,21 +94,13 @@ sharedTenantSecrets:
   enabled: true
 
 # Tenant-secret uid alignment. alga-core, email-service and temporal-worker share
-# one hostPath store that fsSecretCore requires to be owned by the running uid,
-# and fsGroup does not apply to hostPath volumes. The store is created by
-# whichever pod starts first as root (existing installs: root-owned), so all
-# three consumers stay on uid 0 here until the store is migrated to uid 1000
-# (chart option `fixPermissions`). Keep these three pins in step. Privilege
-# escalation stays blocked; capabilities are left at the runtime default so
-# root can still traverse the existing 0700 root-owned entries.
-podSecurityContext:
-  runAsUser: 0
-  runAsGroup: 0
-  fsGroup: null
-  fsGroupChangePolicy: null
-securityContext:
-  runAsNonRoot: false
-  capabilities: null
+# one hostPath store that fsSecretCore requires to be owned by the running uid
+# (1000 for all three), and fsGroup does not apply to hostPath volumes. The
+# alga-core `fix-permissions` init container hands the store and the local-path
+# files volume to uid 1000 on every start; existing installs have root-owned
+# entries. email-service and temporal-worker start after alga-core.
+fixPermissions:
+  enabled: true
 
 config:
   storage:
