@@ -37,7 +37,6 @@ async function getProtectedContractLinePeriods(trx: Knex | Knex.Transaction, ten
         return start && end ? { start, end } : null;
     };
     let claimsQuery = db.table('recurring_service_periods')
-        .whereIn('obligation_type', ['contract_line', 'client_contract_line'])
         .where('obligation_id', contractLineId)
         .select('lifecycle_state', 'service_period_start as start', 'service_period_end as end');
     if (lockRows && 'forUpdate' in claimsQuery) claimsQuery = claimsQuery.forUpdate();

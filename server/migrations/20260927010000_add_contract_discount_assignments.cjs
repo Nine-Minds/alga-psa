@@ -22,6 +22,18 @@ exports.up = async function up(knex) {
   if (hasCitus.rows?.[0]?.present) {
     // Reference-table foreign keys must share a sequential Citus transaction.
     await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+    // Earlier CE/EE schema paths leave discounts local even when contracts
+    // are distributed. The assignment FK needs its tenant-owned parent to be
+    // colocated too; distributing only the child fails on a fresh EE install.
+    const discountDistribution = await knex.raw(`
+      SELECT partmethod, repmodel FROM pg_dist_partition
+      WHERE logicalrelid = 'public.discounts'::regclass
+    `);
+    if (discountDistribution.rows.length === 0
+      || (discountDistribution.rows[0].partmethod === 'n' && discountDistribution.rows[0].repmodel !== 't')) {
+      await knex.raw("SELECT create_distributed_table('discounts', 'tenant', colocate_with => 'contracts')");
+      await knex.raw("SELECT truncate_local_data_after_distributing_table('public.discounts')");
+    }
     const alreadyDistributed = await knex.raw(`
       SELECT EXISTS (
         SELECT 1 FROM pg_dist_partition

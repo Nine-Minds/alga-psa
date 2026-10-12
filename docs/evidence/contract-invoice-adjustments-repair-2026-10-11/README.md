@@ -9,6 +9,84 @@ prove the merge result. The base conflict is resolved in this branch; portal
 output, real app-to-Xero-simulator delivery, and current-HEAD browser acceptance
 remain open.
 
+## Takeover validation (2026-10-12)
+
+Review `contractInvoiceAdjustments.ts` and `invoiceAutomaticAdjustments.ts`
+first. Consolidated fixed charges now carry their exact detail amounts with
+half-open coverage. A January-only discount on a parent containing January
+10,000 and February 20,000 uses a 10,000 base. Its fixed discount cannot consume
+February capacity. Preview and persisted reconciliation use the same portions;
+settlement allocations retain canonical parent IDs. Invalid allocation sums
+reject evaluation rather than silently allocating the full parent.
+
+The prior carried-true-up regression remains valid: January 10% discounts only
+15,484 by 1,548, excluding February's 420,000. The new percentage/fixed database
+cases additionally cover a consolidated parent spanning both periods and
+repeat reconciliation with stable settlement identity.
+
+CI repairs preserve current schema and financial semantics:
+
+- Protected-history checks use canonical `obligation_id`; the merged main
+  migration removes the old `obligation_type` column.
+- Manual-invoice tests assert signed ledger deltas and total posted principal.
+  Negative standing contract rates remain prohibited; manual credits remain
+  covered by the existing behavior suites.
+- Citus attachment creation distributes a local `discounts` parent before
+  adding its distributed child foreign key. Populated rows survive reruns.
+- The Temporal provisioning test mocks the miscellaneous-service initializer
+  that tenant creation now invokes.
+
+Fresh takeover results:
+
+| Check | Result |
+| --- | --- |
+| Billing unit suite | 369 files, 2,017 tests pass |
+| Shared billing compute tests | 134 pass, including 5 source-period tests |
+| Contract adjustment DB suite | 66 pass |
+| Companion quantity semantics + manual invoice DB suites | 137 pass |
+| Protected-history, subtotal and assignment migration DB suites | 15 pass |
+| Temporal email-settings provisioning test, `TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1` | 2 pass |
+| Billing and server typechecks | Pass |
+| Billing package build | Pass |
+| Changed-file ESLint | 0 errors; existing warnings remain |
+| Combined CE/EE Citus migration chain | All 1,172 migrations recorded in an isolated Citus 12.1 database |
+| Populated local-parent Citus regression | Pass: distribution, colocation, identity preservation, rerun and FK cascade |
+| Unbilled fixture audit | Pass; both periods remain unclaimed |
+
+The production build is running in `server/.next-pr3499-takeover-20261012`
+with a 12 GiB heap. Inspect
+`server/.vitest-tmp-review/takeover-production-build.log` for completion; it is
+not a running application. No app server was started or restarted.
+
+Run the committed fixture audit from the repository root:
+
+```sh
+PR3499_FIXTURE_DB_NAME=server node --import tsx scripts/audit-pr3499-unbilled-fixture.ts
+```
+
+Use `node --import tsx` here: the `tsx` CLI's IPC socket can exceed the Unix
+socket path limit under this worktree's private temporary directory.
+
+The committed Citus regression requires an empty disposable database named
+`pr3499_citus_discounts`, the Citus extension, and a coordinator configured to
+host shards. It refuses other database names or a nonempty public schema and
+rolls back all fixture tables and rows:
+
+```sh
+PR3499_CITUS_DATABASE_URL='postgres://USER:PASSWORD@HOST:PORT/pr3499_citus_discounts' \
+  node scripts/check-pr3499-citus-discount-migration.cjs
+```
+
+The takeover's disposable Citus container was removed after validation.
+Existing generated build artifacts and all shared review fixtures were
+preserved. The board fact command timed out; the schema and period-allocation
+facts above are retained here for the next step.
+
+Current-head browser, portal, app-to-Xero, and source-workflow acceptance remain
+BLOCKED. The existing production listener's revision stamp is still
+`add21274560c861a2d277582a518ae940a131795+da39a3ee5e6b`; its historical output
+cannot validate this repair.
+
 ## Review first
 
 1. Review the merge-resolution changes in `packages/billing/src/actions/contractWizardActions.ts`.
@@ -82,7 +160,7 @@ worktree's `.env.localtest` connection settings (or accepts `DATABASE_URL`),
 and requires the exact expected database name:
 
 ```sh
-PR3499_FIXTURE_DB_NAME=server npx tsx scripts/audit-pr3499-unbilled-fixture.ts
+PR3499_FIXTURE_DB_NAME=server node --import tsx scripts/audit-pr3499-unbilled-fixture.ts
 ```
 
 To use a separate review database, set `DATABASE_URL` and its matching
@@ -167,7 +245,7 @@ Exact commands and results:
 | `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts -t "carries a pending adjustment past a finalized invoice" --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 1/1 pass; preview, saved −1,548 discount, 433,936 subtotal, and repeat recalculation agree. |
 | `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 64/64 pass, including canonical 390000 + 15000 → −40500 = 364500 first-save, reload stability, tax allocations, manual scope, and discount copies. |
 | `cd packages/billing && TMPDIR="$PWD/server/.vitest-tmp-review" npx vitest run src/lib/billing/compute/invoiceAutomaticAdjustments.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 4/4 pass: expired percentage/fixed periods, disjoint coverage, deterministic repeat evaluation, and unversioned legacy compatibility. |
-| `PR3499_FIXTURE_DB_NAME=server npx tsx scripts/audit-pr3499-unbilled-fixture.ts` | Pass in database `server`; audit ran in a read-only transaction and confirmed both invoice-window rows remain unclaimed. |
+| `PR3499_FIXTURE_DB_NAME=server node --import tsx scripts/audit-pr3499-unbilled-fixture.ts` | Pass in database `server`; audit ran in a read-only transaction and confirmed both invoice-window rows remain unclaimed. |
 | `NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit -p server/tsconfig.json` | Pass. |
 | `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing` | Pass. |
 | `npm run build --workspace=@alga-psa/billing` | Pass (`tsup`, all eight entries). |
