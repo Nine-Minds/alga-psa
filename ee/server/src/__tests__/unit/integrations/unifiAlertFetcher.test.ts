@@ -9,6 +9,8 @@ import {
 const NOW = new Date('2026-10-12T12:00:00.000Z');
 const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();
 
+const selects: Array<{ table: string; cols: unknown }> = [];
+
 function makeKnex(rows: Record<string, any[]>) {
   const raw = vi.fn(async () => undefined);
   const knex: any = (table: string) => {
@@ -18,7 +20,10 @@ function makeKnex(rows: Record<string, any[]>) {
       whereNotNull: () => b,
       andWhere: () => b,
       whereIn: () => b,
-      select: async () => data,
+      select: async (cols: unknown) => {
+        selects.push({ table, cols });
+        return data;
+      },
       first: async () => data[0],
     };
     return b;
@@ -35,11 +40,12 @@ const dev = (over: Record<string, unknown> = {}) => ({
   features: ['switching'], uplinkDeviceId: null, stateChangedAt: null, raw: {}, ...over,
 });
 
-function setup(opts: { settings?: any; devices?: any[] | Error; open?: any[] }) {
+function setup(opts: { settings?: any; devices?: any[] | Error; open?: any[]; mappings?: any[] }) {
   const { knex, raw } = makeKnex({
     rmm_integrations: [{ settings: opts.settings ?? {} }],
     rmm_organization_mappings: [SITE],
     rmm_alerts: opts.open ?? [],
+    tenant_external_entity_mappings: opts.mappings ?? [],
   });
   const listDevices = vi.fn(async () => {
     if (opts.devices instanceof Error) throw opts.devices;
@@ -174,13 +180,59 @@ describe('unifi offline alert fetcher', () => {
     }
   });
 
-  it('throws on an empty listing for a site with open offline alerts (no resets synthesized)', async () => {
+  it('throws on an empty listing for a site with open offline alerts (metadata.scopeKey)', async () => {
     const { fetcher, raw } = setup({
       devices: [],
-      open: [{ external_device_id: 'sw-1', external_alert_id: 'unifi:offline:sw-1:X', external_organization_id: 'h:s' }],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'unifi:offline:sw-1:X', metadata: { scopeKey: 'h:s' } }],
     });
     await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);
     expect(raw).not.toHaveBeenCalled();
+  });
+
+  it('parses string metadata and never selects a non-existent rmm_alerts column', async () => {
+    selects.length = 0;
+    const { fetcher } = setup({
+      devices: [],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'x', metadata: JSON.stringify({ scopeKey: 'h:s' }) }],
+    });
+    await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);
+    const alertSelect = selects.find((c) => c.table === 'rmm_alerts')!;
+    expect(alertSelect.cols).toEqual(['external_device_id', 'external_alert_id', 'metadata']);
+    expect(JSON.stringify(selects)).not.toContain('external_organization_id,');
+    expect(JSON.stringify(alertSelect.cols)).not.toContain('external_organization_id');
+  });
+
+  it('falls back to the asset mapping realm for open rows without metadata.scopeKey', async () => {
+    const { fetcher } = setup({
+      devices: [],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'x', metadata: {} }],
+      mappings: [{ external_entity_id: 'sw-1', external_realm_id: 'h:s' }],
+    });
+    await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);
+  });
+
+  it('mapping fallback pointing at a different site does not block this site', async () => {
+    const { fetcher } = setup({
+      devices: [],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'x', metadata: {} }],
+      mappings: [{ external_entity_id: 'sw-1', external_realm_id: 'h:other' }],
+    });
+    expect(await run(fetcher)).toEqual([]);
+  });
+
+  it('fails closed when an open row has no scopeKey and no mapping: blocks any empty site', async () => {
+    const { fetcher } = setup({
+      devices: [],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'x', metadata: null }],
+      mappings: [],
+    });
+    await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);
+  });
+
+  it('stamps scopeKey into the event raw so new rows carry their site', async () => {
+    const { fetcher } = setup({ settings: { offlineGraceMinutes: 0 }, devices: [dev()] });
+    const [event] = await run(fetcher);
+    expect(event.raw).toMatchObject({ scopeKey: 'h:s' });
   });
 
   it('an empty listing with no open alerts is fine', async () => {

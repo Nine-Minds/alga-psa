@@ -97,13 +97,39 @@ export function createUniFiAlertFetcher(overrides: Partial<UniFiAlertFetcherDeps
         .table('rmm_alerts')
         .where({ integration_id: integrationId, activity_type: UNIFI_OFFLINE_ACTIVITY_TYPE })
         .whereIn('status', ACTIVE_STATUSES)
-        .select(['external_device_id', 'external_alert_id', 'external_organization_id']);
+        .select(['external_device_id', 'external_alert_id', 'metadata']);
       const openIdByDevice = new Map<string, string>();
       const openCountBySite = new Map<string, number>();
+      let openWithUnknownSite = 0;
+      const needsScope: string[] = [];
       for (const row of openRows as any[]) {
-        const orgId = row.external_organization_id ? String(row.external_organization_id) : null;
-        if (orgId) openCountBySite.set(orgId, (openCountBySite.get(orgId) ?? 0) + 1);
         if (row.external_device_id) openIdByDevice.set(String(row.external_device_id), String(row.external_alert_id));
+        // rmm_alerts has no organization column; the site rides in metadata.scopeKey.
+        const scopeKey = parseSettings(row.metadata).scopeKey;
+        if (typeof scopeKey === 'string' && scopeKey) {
+          openCountBySite.set(scopeKey, (openCountBySite.get(scopeKey) ?? 0) + 1);
+        } else if (row.external_device_id) {
+          needsScope.push(String(row.external_device_id));
+        } else {
+          openWithUnknownSite += 1;
+        }
+      }
+      // Older rows predate metadata.scopeKey: resolve their site through the asset mapping.
+      if (needsScope.length > 0) {
+        const mappingRows = await db
+          .table('tenant_external_entity_mappings')
+          .where({ integration_type: 'unifi', alga_entity_type: 'asset' })
+          .whereIn('external_entity_id', needsScope)
+          .select(['external_entity_id', 'external_realm_id']);
+        const realmByDevice = new Map<string, string>();
+        for (const m of mappingRows as any[]) {
+          if (m.external_realm_id) realmByDevice.set(String(m.external_entity_id), String(m.external_realm_id));
+        }
+        for (const deviceId of needsScope) {
+          const realm = realmByDevice.get(deviceId);
+          if (realm) openCountBySite.set(realm, (openCountBySite.get(realm) ?? 0) + 1);
+          else openWithUnknownSite += 1; // fail closed: counts against every empty site
+        }
       }
 
       const client = await deps.createClient(tenantId, mode);
@@ -117,7 +143,7 @@ export function createUniFiAlertFetcher(overrides: Partial<UniFiAlertFetcherDeps
         const devices = await client.listDevices(site);
         // An empty listing while alerts are open on this site would synthesize a
         // reset for every one of them. Treat it as "could not look", not "all back".
-        if (devices.length === 0 && (openCountBySite.get(site.scopeKey) ?? 0) > 0) {
+        if (devices.length === 0 && ((openCountBySite.get(site.scopeKey) ?? 0) + openWithUnknownSite) > 0) {
           throw new UniFiApiError(
             `UniFi returned no devices for site ${site.siteName ?? site.scopeKey} while offline alerts are open; refusing to resolve them.`,
             'invalid_response'
@@ -204,6 +230,7 @@ function buildEvent(args: {
     occurredAt: args.firstObserved,
     raw: {
       deviceId: args.deviceId,
+      scopeKey: args.site.scopeKey,
       kind: args.kind,
       state: args.device.state ?? null,
       firstObservedAt: args.firstObserved,
