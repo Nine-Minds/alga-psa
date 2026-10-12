@@ -9,6 +9,12 @@ export interface BaseColumnDefinition<T> {
    */
   id?: string;
   width?: string;
+  /**
+   * Narrowest width (px or rem) the table may give this column when space is short.
+   * Columns that declare one shrink toward it before any column is hidden.
+   * It also replaces the default 96px floor for that column.
+   */
+  minWidth?: string;
   /** Optional class for header th */
   headerClassName?: string;
   /** Optional class for body td */
