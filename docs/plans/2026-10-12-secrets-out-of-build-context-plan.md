@@ -195,3 +195,12 @@ PR title: "Docker build context hygiene for local secrets and env files".
   - **Recommendation:** check whether a sibling card from the same split covers it. If none does, raise a new card. XO decision.
 - **Q3. What should operators do about existing build caches?** Operators who already self-built still have secret-bearing layers in their BuildKit cache. Telling them to run `docker builder prune` belongs in the release notes or the advisory remediation text once the advisory is published. It should not go into the setup guide now. Captain or XO to decide where that wording lives.
 - **Q4. Is excluding `**/*.pem` acceptable?** Nothing tracked matches it today. It is cheap protection against stray TLS keys. Should `*.key` be excluded too? Nothing tracked matches that either. Not proposed by default.
+
+## 7. Verification (run on the draft commits, with fresh canaries)
+
+- Guard test: `node --test scripts/tests/docker-build-context.test.mjs` passes (6/6). With the `/secrets` line removed from `.dockerignore` it fails (2 failing tests); the line was restored.
+- §3.1 context probe of the real repo (`type=tar`): no top-level `secrets/`, no `server/.env`, `server/.env.local`, `ee/server/.env` or `.env.image`; all six source `secrets/` directories and `.env.example` present; canary grep over the context empty.
+- §3.2 `./scripts/set-image-tag.sh` built `<sha>-local`; `--target builder` inspection: `/app/secrets` holds the 16 placeholders only (no canary file, no `tenants/`); `/app/server` has `.env` (the `.env.example` copy) and `.env.e2e`; canary grep over `/app/secrets`, `/app/server/.next`, `/app/server/.env*`, `/app/.env*` found nothing.
+- §3.3 the locally built CE image ran in an isolated prebuilt compose project on ports 43000/45432/41234/46379/46432 (scratch copy of the compose files under `tmp/`, generated secrets): setup exited 0, `/api/healthz` reported healthy, and a credentials login as the seeded admin returned a session and `/msp/dashboard` 200. The login password was set in the scratch DB for the test; production-mode logs do not print one.
+- §3.4 `ee/server/Dockerfile.build` built; `ls -R /app/secrets` shows the 16 placeholders only, no canary.
+- §3.5 `Dockerfile.dev` builds to completion with `server/.env*` excluded. The dev stack was not rebooted.
