@@ -400,6 +400,50 @@ describe('contract invoice adjustments (DB-backed)', () => {
     ? value.toISOString().slice(0, 10)
     : String(value).slice(0, 10);
 
+  it.each(['percentage', 'fixed'] as const)('preserves consolidated period amounts for expired %s discounts in preview and settlement', async (discountType) => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const trx = await db.transaction();
+    try {
+      await trx('discounts').where({ tenant, discount_id: configuredDiscountId }).update({
+        scope: 'invoice', start_date: '2026-01-01', end_date: '2026-02-01',
+        discount_type: discountType, value: discountType === 'percentage' ? 0.1 : 500,
+      });
+      await trx('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({
+        service_id: null, net_amount: 30000, unit_price: 30000, total_price: 30000,
+      });
+      const configId = uuidv4();
+      await trx('contract_line_service_configuration').insert({
+        tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed',
+      });
+      const charges: import('@alga-psa/types').IBillingCharge[] = [];
+      for (const [start, end, amount] of [['2026-01-01', '2026-01-31', 10000], ['2026-02-01', '2026-02-28', 20000]] as const) {
+        const detailId = uuidv4();
+        await trx('invoice_charge_details').insert({ tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId,
+          service_id: serviceId, config_id: configId, quantity: 1, rate: amount, service_period_start: start, service_period_end: end });
+        await trx('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId,
+          base_rate: amount, enable_proration: false, fmv: amount, proportion: 1, allocated_amount: amount });
+        charges.push({ tenant, type: 'fixed', config_id: configId, serviceId, serviceName: 'Consolidated period',
+          client_contract_id: clientContractId, client_contract_line_id: contractLineId, quantity: 1, rate: amount,
+          total: amount, tax_amount: 0, tax_rate: 0, servicePeriodStart: start, servicePeriodEnd: end });
+      }
+      const expected = discountType === 'percentage' ? 1000 : 10000;
+      const preview = await previewAutomaticInvoiceDiscounts(trx, tenant, clientId, charges, '2026-03-01');
+      expect(preview.eligibleCharges).toHaveLength(1);
+      expect(preview.discounts[0]).toMatchObject({ base_amount: 10000, amount: expected });
+      let settlementId: string | undefined;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId);
+        const row = await trx('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' }).first();
+        expect(Number(row.net_amount)).toBe(-expected);
+        expect(Number(row.adjustment_base_amount)).toBe(10000);
+        if (settlementId) expect(row.item_id).toBe(settlementId);
+        settlementId = row.item_id;
+      }
+    } finally {
+      await trx.rollback();
+    }
+  });
+
   it('requires a tenant service for manual charges but accepts serviceless quantity-derived credits', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const chargeId = uuidv4();

@@ -71,3 +71,29 @@ describe('discount source-period eligibility', () => {
     expect(result.discounts[0]).toMatchObject({ base_amount: 435484, amount: 43548 });
   });
 });
+
+
+describe('consolidated charge period amounts', () => {
+  it('keeps disjoint period capacity separate while returning canonical parent allocations', () => {
+    const charge = { item_id: 'parent', description: 'Jan and Feb', quantity: 1, unit_price: 30000, net_amount: 30000,
+      period_allocations: [
+        { net_amount: 10000, service_periods: [{ start: '2023-01-01', end: '2023-02-01' }] },
+        { net_amount: 20000, service_periods: [{ start: '2023-02-01', end: '2023-03-01' }] },
+      ] };
+    const policy: AutomaticDiscountPolicy = { discount_id: 'jan', discount_name: 'January', discount_type: 'percentage',
+      value: 0.1, scope: 'item', applies_to_item_id: 'parent', effective_period: { start: '2023-01-01', end: '2023-02-01' } };
+    const result = evaluateContractInvoiceAdjustments({ charges: [charge], automaticDiscounts: [policy] });
+    expect(result.discounts[0]).toMatchObject({ base_amount: 10000, amount: 1000,
+      allocations: [{ discount_id: 'jan', item_id: 'parent', amount: 1000 }] });
+    const stacked = evaluateContractInvoiceAdjustments({ charges: [charge], automaticDiscounts: [
+      { ...policy, discount_type: 'fixed', value: 50000, priority: 0 },
+      { ...policy, discount_id: 'jan-again', priority: 1 },
+      { ...policy, discount_id: 'feb', effective_period: { start: '2023-02-01', end: '2023-03-01' }, priority: 2 },
+    ] });
+    expect(stacked.discounts.map((row) => [row.discount_id, row.amount])).toEqual([['jan', 10000], ['feb', 2000]]);
+    expect(stacked.netAmount).toBe(18000);
+    expect(evaluateContractInvoiceAdjustments({ charges: [charge], automaticDiscounts: [policy] })).toEqual(result);
+    expect(() => evaluateContractInvoiceAdjustments({ charges: [{ ...charge, net_amount: 30001 }], automaticDiscounts: [policy] }))
+      .toThrow('Service-period allocations do not match');
+  });
+});

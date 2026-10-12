@@ -52,6 +52,7 @@ interface StoredChargeRow {
   adjustment_period_start?: unknown;
   adjustment_period_end?: unknown;
   service_periods?: Array<{ start: string; end: string }>;
+  period_allocations?: InvoiceAdjustmentCharge['period_allocations'];
 }
 
 export interface AdjustmentWindow {
@@ -142,6 +143,9 @@ function toAdjustmentCharges(
     is_taxable: Boolean(charge.is_taxable),
     adjustment_source_kind: charge.adjustment_source_kind as InvoiceAdjustmentCharge['adjustment_source_kind'],
     contract_line_ids: charge.contract_line_ids,
+    period_allocations: charge.period_allocations?.map((part) => ({
+      ...part, service_periods: part.service_periods.length ? part.service_periods : fallbackOrdinaryPeriods,
+    })),
     // Ordinary charges without their own detail inherit the invoice's ordinary
     // coverage (or its date-only fallback). This keeps invoice-wide discounts
     // inclusive of eligible unattributed/manual additions while excluding
@@ -181,9 +185,24 @@ async function loadInvoiceCharges(
     .join('invoice_charges as c', function () {
       this.on('c.item_id', '=', 'd.item_id').andOn('c.tenant', '=', 'd.tenant');
     })
+    .leftJoin('invoice_charge_fixed_details as f', function () {
+      this.on('f.item_detail_id', '=', 'd.item_detail_id').andOn('f.tenant', '=', 'd.tenant');
+    })
     .where({ 'c.invoice_id': invoiceId, 'c.tenant': tenant })
-    .whereNotNull('d.service_period_start').whereNotNull('d.service_period_end')
-    .select('d.item_id', 'd.service_period_start', 'd.service_period_end') as Array<{ item_id: string; service_period_start: unknown; service_period_end: unknown }>;
+    .orderBy('d.service_period_start').orderBy('d.service_period_end').orderBy('d.item_detail_id')
+    .select('d.item_id', 'd.service_period_start', 'd.service_period_end', 'f.allocated_amount') as Array<{
+      item_id: string; service_period_start: unknown; service_period_end: unknown; allocated_amount: unknown;
+    }>;
+  const allocationsByItem = new Map<string, NonNullable<InvoiceAdjustmentCharge['period_allocations']>>();
+  for (const detail of detailRows) {
+    if (detail.allocated_amount == null) continue;
+    const start = toDateOnly(detail.service_period_start);
+    const inclusiveEnd = toDateOnly(detail.service_period_end);
+    const parts = allocationsByItem.get(detail.item_id) ?? [];
+    parts.push({ net_amount: Number(detail.allocated_amount), service_periods: start && inclusiveEnd
+      ? [{ start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() }] : [] });
+    allocationsByItem.set(detail.item_id, parts);
+  }
   const periodsByItem = new Map<string, Array<{ start: string; end: string }>>();
   for (const detail of detailRows) {
     const start = toDateOnly(detail.service_period_start);
@@ -203,7 +222,7 @@ async function loadInvoiceCharges(
     const start = toDateOnly(row.adjustment_period_start);
     const end = toDateOnly(row.adjustment_period_end);
     const sourcePeriod = row.adjustment_source_kind === 'contract_change' && start && end ? [{ start, end }] : [];
-    return { ...row, contract_line_ids: [...lineIds], service_periods: sourcePeriod.length ? sourcePeriod : (periodsByItem.get(row.item_id) ?? []) };
+    return { ...row, period_allocations: allocationsByItem.get(row.item_id), contract_line_ids: [...lineIds], service_periods: sourcePeriod.length ? sourcePeriod : (periodsByItem.get(row.item_id) ?? []) };
   });
 }
 
@@ -464,6 +483,7 @@ export async function previewAutomaticInvoiceDiscounts(
       const amount = Number((charge as IFixedPriceCharge).allocated_amount ?? charge.total);
       const parent = fixedParents.get(key);
       if (parent) {
+        parent.period_allocations!.push({ net_amount: amount, service_periods: servicePeriods });
         parent.net_amount += amount;
         parent.unit_price = parent.net_amount;
         parent.is_taxable ||= input.is_taxable;
@@ -472,7 +492,8 @@ export async function previewAutomaticInvoiceDiscounts(
         parent.service_periods = [...periods.values()];
         return;
       }
-      Object.assign(input, { service_id: null, quantity: 1, unit_price: amount, net_amount: amount });
+      Object.assign(input, { service_id: null, quantity: 1, unit_price: amount, net_amount: amount,
+        period_allocations: [{ net_amount: amount, service_periods: servicePeriods }] });
       fixedParents.set(key, input);
     }
     inputs.push(input);
@@ -502,6 +523,17 @@ export async function previewAutomaticInvoiceDiscounts(
     [...new Set(inputs.flatMap((charge) => charge.contract_line_ids ?? []))],
     [...new Set(charges.map((charge) => charge.client_contract_id).filter((id): id is string => Boolean(id)))],
   );
+  const ordinaryPeriods = inputs.filter((charge) => charge.adjustment_source_kind !== 'contract_change')
+    .flatMap((charge) => charge.service_periods ?? []);
+  const fallbackPeriods = ordinaryPeriods.length ? ordinaryPeriods
+    : [{ start: invoiceDate, end: Temporal.PlainDate.from(invoiceDate).add({ days: 1 }).toString() }];
+  for (const input of inputs) {
+    if (input.adjustment_source_kind === 'contract_change') continue;
+    if (!input.service_periods?.length) input.service_periods = fallbackPeriods;
+    for (const part of input.period_allocations ?? []) {
+      if (!part.service_periods.length) part.service_periods = fallbackPeriods;
+    }
+  }
   return evaluateContractInvoiceAdjustments({ charges: inputs, automaticDiscounts: buildAutomaticDiscountPolicies(rows) });
 }
 

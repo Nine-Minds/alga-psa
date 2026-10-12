@@ -33,6 +33,8 @@ export interface InvoiceAdjustmentCharge {
   contract_line_ids?: string[];
   /** Half-open service coverage periods represented by this charge. */
   service_periods?: Array<{ start: string; end: string }>;
+  /** Exact persisted detail amounts; never apportion a parent by period count. */
+  period_allocations?: Array<{ net_amount: number; service_periods: Array<{ start: string; end: string }> }>;
 }
 
 export interface AutomaticDiscountPolicy {
@@ -223,10 +225,14 @@ function isEligibleCharge(charge: InvoiceAdjustmentCharge): boolean {
   return !charge.is_discount && Number(charge.net_amount) > 0;
 }
 
+interface EvaluationCharge extends InvoiceAdjustmentCharge {
+  parent_item_id?: string;
+}
+
 function chargesInScope(
   policy: AutomaticDiscountPolicy,
-  eligible: InvoiceAdjustmentCharge[],
-): InvoiceAdjustmentCharge[] {
+  eligible: EvaluationCharge[],
+): EvaluationCharge[] {
   switch (policy.scope) {
     case 'invoice':
       return eligible.filter(
@@ -257,7 +263,7 @@ function chargesInScope(
       );
     case 'item':
       return eligible.filter(
-        (charge) => Boolean(policy.applies_to_item_id) && charge.item_id === policy.applies_to_item_id,
+        (charge) => Boolean(policy.applies_to_item_id) && (charge.parent_item_id ?? charge.item_id) === policy.applies_to_item_id,
       );
     default:
       return [];
@@ -324,7 +330,7 @@ export function allocateByLargestRemainder(
 
 function evaluateDiscount(
   policy: AutomaticDiscountPolicy,
-  eligible: InvoiceAdjustmentCharge[],
+  eligible: EvaluationCharge[],
   remainingByItem: Map<string, number>,
 ): AutomaticDiscountResult | null {
   const scoped = chargesInScope(policy, eligible).filter((charge) => chargeIsEligibleForPeriod(policy, charge));
@@ -395,8 +401,36 @@ export function evaluateContractInvoiceAdjustments(
   const eligibleCharges = inputs.charges.filter(isEligibleCharge);
   const grossAmount = eligibleCharges.reduce((sum, charge) => sum + Number(charge.net_amount), 0);
 
+  // Evaluate exact amount-bearing portions independently so one expired term
+  // cannot consume a later period's amount or discount capacity. Output still
+  // uses canonical parent charge IDs, not these evaluation-only keys.
+  const evaluationCharges: EvaluationCharge[] = eligibleCharges.flatMap((charge) => {
+    if (!charge.period_allocations?.length) return [charge];
+    const portions = charge.period_allocations;
+    if (portions.some((part) => !Number.isSafeInteger(part.net_amount) || part.net_amount < 0)
+      || portions.reduce((sum, part) => sum + part.net_amount, 0) !== charge.net_amount) {
+      throw new Error(`Service-period allocations do not match invoice charge ${charge.item_id}`);
+    }
+    const grouped = new Map<string, { net_amount: number; service_periods: Array<{ start: string; end: string }> }>();
+    for (const part of portions) {
+      const periods = [...part.service_periods].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+      const key = JSON.stringify(periods);
+      const group = grouped.get(key);
+      if (group) group.net_amount += part.net_amount;
+      else grouped.set(key, { net_amount: part.net_amount, service_periods: periods });
+    }
+    if (grouped.size === 1) return [{ ...charge, service_periods: [...grouped.values()][0].service_periods }];
+    return [...grouped].sort(([a], [b]) => a.localeCompare(b)).map(([, part], index) => ({
+      ...charge,
+      item_id: JSON.stringify([charge.item_id, index]),
+      parent_item_id: charge.item_id,
+      net_amount: part.net_amount,
+      service_periods: part.service_periods,
+    })).filter(isEligibleCharge);
+  });
+  const parentIds = new Map(evaluationCharges.map((charge) => [charge.item_id, charge.parent_item_id ?? charge.item_id]));
   const remainingByItem = new Map<string, number>();
-  for (const charge of eligibleCharges) {
+  for (const charge of evaluationCharges) {
     remainingByItem.set(charge.item_id, Number(charge.net_amount));
   }
 
@@ -412,8 +446,16 @@ export function evaluateContractInvoiceAdjustments(
     if (policy.scope === 'item' && !policy.applies_to_item_id) continue;
     if (policy.scope === 'service' && !policy.applies_to_service_id) continue;
     if (policy.scope === 'contract' && !policy.client_contract_id) continue;
-    const result = evaluateDiscount(policy, eligibleCharges, remainingByItem);
+    const result = evaluateDiscount(policy, evaluationCharges, remainingByItem);
     if (result) {
+      const allocationsByParent = new Map<string, number>();
+      for (const allocation of result.allocations) {
+        const parentId = parentIds.get(allocation.item_id)!;
+        allocationsByParent.set(parentId, (allocationsByParent.get(parentId) ?? 0) + allocation.amount);
+      }
+      result.allocations = [...allocationsByParent].map(([item_id, amount]) => ({
+        discount_id: result.discount_id, item_id, amount,
+      }));
       discounts.push(result);
     }
   }
