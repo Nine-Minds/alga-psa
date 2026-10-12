@@ -9,6 +9,7 @@ import type {
   AssetGroupSummary,
 } from '@alga-psa/types';
 import { setAssetAssignee } from './assetAssignment';
+import { formatClientLocation, type ClientLocationLike } from './formatClientLocation';
 
 /**
  * Bundles and shared workspaces (FR-E1 to FR-E10).
@@ -167,6 +168,29 @@ async function assertLocationOfClient(
   }
 }
 
+/**
+ * `assets.location` is a denormalized label that every read surface (the Bento
+ * Identity tile, the asset list, the drawer) renders in preference to the id, so
+ * propagating a group's location has to write both columns or the member keeps
+ * showing its previous address. Mirrors `resolveValidatedAssetLocation`.
+ */
+async function groupLocationPatch(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  locationId: string | null
+): Promise<{ location_id: string | null; location: string }> {
+  if (!locationId) return { location_id: null, location: '' };
+
+  const location = await table(trx, tenant, 'client_locations')
+    .where({ location_id: locationId })
+    .first<ClientLocationLike & { location_id: string }>();
+
+  return {
+    location_id: locationId,
+    location: location ? formatClientLocation(location) : '',
+  };
+}
+
 export async function createGroup(
   trx: Knex.Transaction,
   tenant: string,
@@ -257,7 +281,10 @@ export async function addAssetsToGroupRows(
       if (group.location_id) {
         await table(trx, tenant, 'assets')
           .where({ asset_id: assetId })
-          .update({ location_id: group.location_id, updated_at: new Date().toISOString() });
+          .update({
+            ...(await groupLocationPatch(trx, tenant, group.location_id)),
+            updated_at: new Date().toISOString(),
+          });
       }
     } else if (asset.contact_name_id) {
       // FR-E4: a workspace member has users, not an assignee.
@@ -451,10 +478,11 @@ export async function updateGroupRow(
 
   if (locationChanged) {
     const nextGroup = await requireGroup(trx, tenant, groupId);
+    const locationPatch = await groupLocationPatch(trx, tenant, input.locationId ?? null);
     for (const assetId of await listGroupMemberIds(trx, tenant, groupId)) {
       await table(trx, tenant, 'assets')
         .where({ asset_id: assetId })
-        .update({ location_id: input.locationId ?? null, updated_at: new Date().toISOString() });
+        .update({ ...locationPatch, updated_at: new Date().toISOString() });
       await groupHistory(trx, tenant, {
         assetId,
         actorUserId: input.actorUserId,

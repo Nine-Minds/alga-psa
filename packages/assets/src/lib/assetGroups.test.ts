@@ -212,12 +212,16 @@ describe('addAssetsToGroupRows', () => {
   it('assigns each new bundle member to the owner and moves it to the group location', async () => {
     makeGroup('bundle', { location_id: 'loc-1' });
     h.dbState.asset_group_contacts.push({ tenant: TENANT, group_id: 'g1', contact_name_id: 'c1', role: 'owner' });
+    h.dbState.assets[0].location = 'Stale address';
 
     await add('g1', ['a1', 'a2']);
 
     expect(h.dbState.assets.filter((row) => row.asset_id !== 'a3').map((row) => row.contact_name_id))
       .toEqual(['c1', 'c1']);
     expect(h.dbState.assets[0].location_id).toBe('loc-1');
+    // The denormalized label has to move with the id — the Identity tile and the
+    // asset list render `location`, not `location_id`.
+    expect(h.dbState.assets[0].location).toBe('Lobby');
     const bundleAssignments = h.dbState.asset_assignments.filter((row) => row.source === 'bundle');
     expect(bundleAssignments).toHaveLength(2);
     expect(bundleAssignments[0].note).toBe('Front desk 1');
@@ -289,11 +293,25 @@ describe('updateGroupRow', () => {
   it('propagates a location change to every member', async () => {
     makeGroup('bundle');
     await add('g1', ['a1', 'a2']);
+    h.dbState.assets[0].location = 'Stale address';
 
     await groups.updateGroupRow(h.knexMock, TENANT, 'g1', { locationId: 'loc-1', actorUserId: ACTOR });
 
     expect(h.dbState.assets.slice(0, 2).map((row) => row.location_id)).toEqual(['loc-1', 'loc-1']);
+    // Both columns move, so the read surfaces agree with the edit form.
+    expect(h.dbState.assets.slice(0, 2).map((row) => row.location)).toEqual(['Lobby', 'Lobby']);
     expect(h.dbState.asset_history.filter((row) => row.change_type === 'updated')).toHaveLength(2);
+  });
+
+  it('clears the denormalized label when the group location is cleared', async () => {
+    makeGroup('bundle', { location_id: 'loc-1' });
+    await add('g1', ['a1']);
+    expect(h.dbState.assets[0].location).toBe('Lobby');
+
+    await groups.updateGroupRow(h.knexMock, TENANT, 'g1', { locationId: null, actorUserId: ACTOR });
+
+    expect(h.dbState.assets[0].location_id).toBeNull();
+    expect(h.dbState.assets[0].location).toBe('');
   });
 
   it('refuses shared workspace → bundle while users exist', async () => {
