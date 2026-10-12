@@ -204,6 +204,7 @@ services:
     secrets:
       - postgres_password
       - db_password_server
+      - db_password_hocuspocus
     networks:
       - app-network
     depends_on:
@@ -393,14 +394,9 @@ services:
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
       COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://server:3000/api/internal/collab/persist}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
-    volumes:
-      - type: bind
-        source: ./secrets/db_password_server
-        target: /run/secrets/db_password_hocuspocus
-        read_only: true
     secrets:
       - postgres_password
-      - db_password_server
+      - db_password_hocuspocus
       - redis_password
     networks:
       - app-network
