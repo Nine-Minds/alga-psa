@@ -565,11 +565,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
         candidateWorkflowId: workflow.workflow_id,
       });
       if (!selfTrigger.allow) {
-        skipDiagnostics.push(
-          selfTrigger.reason === 'self_trigger'
-            ? `Skipped ${skipLabel}: event was published by a run of this same workflow (trigger loop guard)`
-            : `Skipped ${skipLabel}: event chain is deeper than the causation limit (depth ${selfTrigger.causationDepth}, trigger loop guard)`
-        );
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Skipping workflow launch: event was caused by this workflow chain', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -589,11 +584,15 @@ export class WorkflowRuntimeV2EventStreamWorker {
           message: selfTriggerReason === 'causation_depth_exceeded'
             ? 'Workflow causation depth limit exceeded'
             : 'Event was caused by this workflow chain (self-trigger guard)',
+          legacyMessage: selfTrigger.reason === 'self_trigger'
+            ? `Skipped ${skipLabel}: event was published by a run of this same workflow (trigger loop guard)`
+            : `Skipped ${skipLabel}: event chain is deeper than the causation limit (depth ${selfTrigger.causationDepth}, trigger loop guard)`,
           details: {
             guardReason: selfTrigger.reason,
             causationDepth: selfTrigger.causationDepth,
             originExecutionId: event.execution_id ?? null,
           },
+          errorMessageSection: 'diagnostic',
         });
         continue;
       }
@@ -709,26 +708,21 @@ export class WorkflowRuntimeV2EventStreamWorker {
       },
     });
 
-    // Legacy event-row error_message: validation messages first, then the other
-    // diagnostics, each in collection order (paused / self-trigger / launch
-    // failures never contributed here).
+    // Legacy event-row error_message, combined in a fixed order so no reason masks another:
+    //   delivery errors, then payload validation messages, then other skip diagnostics
+    //   (each in collection order; paused and launch-failure skips never contribute).
+    // Skip messages are stamped only when nothing launched or signaled: every skip is already
+    // persisted per workflow, and an event that matched another workflow must not read as an error.
     const validationMessages = skips.filter((s) => s.errorMessageSection === 'validation').map((s) => s.legacyMessage);
     const diagnosticMessages = skips.filter((s) => s.errorMessageSection === 'diagnostic').map((s) => s.legacyMessage);
 
     const matchedRunId = Array.from(signaledRuns)[0] ?? startedRuns[0] ?? null;
     const nothingLaunchedOrSignaled = startedRuns.length === 0 && signaledRuns.size === 0;
 
-    // One error_message per event, combined in a fixed order so no reason masks another:
-    //   delivery errors, payload validation errors, skip diagnostics.
-    // Skip diagnostics are always persisted. Payload validation errors are persisted when nothing
-    // launched/signaled (as before) or when skip diagnostics exist (a validation failure is itself
-    // a skip reason, so it travels with the others). With a started/signaled run and no skip
-    // diagnostics, validation errors stay unstamped so the event does not read as an error.
     const messageParts: string[] = [...deliveryErrors];
-    if (payloadValidationErrors.length > 0 && (nothingLaunchedOrSignaled || skipDiagnostics.length > 0)) {
-      messageParts.push(...payloadValidationErrors);
+    if (nothingLaunchedOrSignaled) {
+      messageParts.push(...validationMessages, ...diagnosticMessages);
     }
-    messageParts.push(...skipDiagnostics);
     if (messageParts.length === 0 && missingCorrelationWarning && nothingLaunchedOrSignaled) {
       messageParts.push(missingCorrelationWarning);
     }

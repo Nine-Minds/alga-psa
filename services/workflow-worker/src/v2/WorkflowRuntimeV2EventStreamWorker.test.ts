@@ -990,7 +990,9 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         workflowRunGetByIdMock.mockResolvedValue({ run_id: 'run-origin', workflow_id: workflowId, trigger_metadata_json: null });
       const finalUpdates = () => workflowRuntimeEventUpdateMock.mock.calls.filter((c) => c[1] === 'event-fan');
 
-      it('persists the self-trigger skip alongside a started run, keeping matched_run_id and processed_at', async () => {
+      const persistedSkips = () => skipInsertManyMock.mock.calls.flatMap((call: any[]) => call[2] as Array<Record<string, unknown>>);
+
+      it('persists the self-trigger skip alongside a started run without marking the event as an error', async () => {
         workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a', { key: 'a' }), pingWorkflow('workflow-b')]);
         originatedBy('workflow-a');
         launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-b', workflowVersion: 7 });
@@ -998,16 +1000,34 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         await deliverFrom('run-origin');
 
         expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+        expect(persistedSkips()).toEqual([
+          expect.objectContaining({ workflow_id: 'workflow-a', reason: 'self_trigger_guard' }),
+        ]);
         expect(finalUpdates()).toHaveLength(1);
         expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
           matched_run_id: 'run-b',
           processed_at: expect.any(String),
-          error_message: expect.stringContaining('published by a run of this same workflow'),
         }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('error_message');
         expect(finalUpdates()[0][3]).toBe('tenant-1');
       });
 
-      it('persists a lineage skip alongside a signaled wait and matches the signaled run', async () => {
+      it('stamps the self-trigger skip on the event when nothing launched', async () => {
+        workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a', { key: 'a' })]);
+        originatedBy('workflow-a');
+
+        await deliverFrom('run-origin');
+
+        expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+        expect(finalUpdates()).toHaveLength(1);
+        expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
+          processed_at: expect.any(String),
+          error_message: 'Skipped workflow a (workflow-a): event was published by a run of this same workflow (trigger loop guard)',
+        }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('matched_run_id');
+      });
+
+      it('persists a lineage skip alongside a signaled wait and matches the signaled run without an error', async () => {
         workflowDefinitionListMock.mockResolvedValue([pingWorkflow('workflow-a')]);
         originatedBy('other-workflow');
 
@@ -1030,12 +1050,15 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         });
 
         expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+        expect(persistedSkips()).toContainEqual(
+          expect.objectContaining({ workflow_id: 'workflow-a', reason: 'lineage_loop_guard' })
+        );
         expect(finalUpdates()).toHaveLength(1);
         expect(finalUpdates()[0][2]).toEqual(expect.objectContaining({
           matched_run_id: 'run-wait-1',
           processed_at: expect.any(String),
-          error_message: expect.stringContaining('trigger loop guard'),
         }));
+        expect(finalUpdates()[0][2]).not.toHaveProperty('error_message');
       });
 
       it('combines delivery errors with skip diagnostics, delivery first', async () => {
