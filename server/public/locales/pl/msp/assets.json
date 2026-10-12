@@ -960,7 +960,9 @@
       "description": "Opis",
       "board": "Tablica",
       "status": "Status",
-      "priority": "Priorytet"
+      "priority": "Priorytet",
+      "contact": "Kontakt",
+      "unnamedContact": "Kontakt bez nazwy"
     },
     "placeholders": {
       "title": "Wpisz tytuł zgłoszenia",
@@ -971,7 +973,8 @@
       "loadingStatuses": "Ładowanie statusów...",
       "selectStatus": "Wybierz stan...",
       "loadingPriorities": "Ładowanie priorytetów...",
-      "selectPriority": "Wybierz priorytet..."
+      "selectPriority": "Wybierz priorytet...",
+      "selectContact": "Wybierz kontakt..."
     },
     "errors": {
       "loadPriorities": "Nie udało się załadować priorytetów",

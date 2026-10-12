@@ -944,7 +944,9 @@
       "description": "Beskrivning",
       "board": "Tavla",
       "status": "Status",
-      "priority": "Prioritet"
+      "priority": "Prioritet",
+      "contact": "Kontakt",
+      "unnamedContact": "Namnlös kontakt"
     },
     "placeholders": {
       "title": "Ange ärendets titel",
@@ -955,7 +957,8 @@
       "loadingStatuses": "Läser in statusar…",
       "selectStatus": "Välj status…",
       "loadingPriorities": "Läser in prioriteter…",
-      "selectPriority": "Välj prioritet…"
+      "selectPriority": "Välj prioritet…",
+      "selectContact": "Välj kontakt..."
     },
     "errors": {
       "loadPriorities": "Det gick inte att läsa in prioriteter",

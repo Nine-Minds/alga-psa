@@ -960,7 +960,9 @@
       "description": "⟦Ḓḗşƈřīƥŧīȯƞ⟧",
       "board": "⟦Ɓȯȧřḓ⟧",
       "status": "⟦Şŧȧŧŭş⟧",
-      "priority": "⟦Ƥřīȯřīŧẏ⟧"
+      "priority": "⟦Ƥřīȯřīŧẏ⟧",
+      "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
+      "unnamedContact": "⟦Ŭƞƞȧḿḗḓ ƈȯƞŧȧƈŧ⟧"
     },
     "placeholders": {
       "title": "⟦Ḗƞŧḗř ŧīƈķḗŧ ŧīŧŀḗ⟧",
@@ -971,7 +973,8 @@
       "loadingStatuses": "⟦Ŀȯȧḓīƞɠ şŧȧŧŭşḗş...⟧",
       "selectStatus": "⟦Şḗŀḗƈŧ şŧȧŧŭş...⟧",
       "loadingPriorities": "⟦Ŀȯȧḓīƞɠ ƥřīȯřīŧīḗş...⟧",
-      "selectPriority": "⟦Şḗŀḗƈŧ ƥřīȯřīŧẏ...⟧"
+      "selectPriority": "⟦Şḗŀḗƈŧ ƥřīȯřīŧẏ...⟧",
+      "selectContact": "⟦Şḗŀḗƈŧ ƈȯƞŧȧƈŧ...⟧"
     },
     "errors": {
       "loadPriorities": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřīȯřīŧīḗş⟧",

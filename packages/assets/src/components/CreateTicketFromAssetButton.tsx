@@ -40,6 +40,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         options: Array<{ contact_name_id: string; contact_name: string | null }>;
         preselect: string | null;
     }>({ options: [], preselect: null });
+    const [contact, setContact] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [title, setTitle] = useState(() => t('createTicketFromAssetButton.defaultTitle', {
         defaultValue: 'Issue with {{name}}',
@@ -65,7 +66,11 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         let mounted = true;
         void (async () => {
             const result = await getAssetTicketContactOptions(asset.asset_id);
-            if (mounted && result && 'options' in result) setContactOptions(result);
+            if (!mounted || !result || !('options' in result)) return;
+            setContactOptions(result);
+            // Preselected when the asset names exactly one person; otherwise the
+            // operator picks from the workspace's users.
+            setContact((current) => current || result.preselect || '');
         })();
         return () => { mounted = false; };
     }, [isDialogOpen, asset.asset_id]);
@@ -180,6 +185,14 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
         label: s.name
     }));
 
+    // FR-E8: who the ticket is for. A shared workspace's users all qualify, so
+    // the dialog offers them rather than silently filing for nobody.
+    const contactSelectOptions: SelectOption[] = contactOptions.options.map((option) => ({
+        value: option.contact_name_id,
+        label: option.contact_name
+            ?? t('createTicketFromAssetButton.fields.unnamedContact', { defaultValue: 'Unnamed contact' }),
+    }));
+
     const boardOptions: SelectOption[] = boards
         .filter((b): b is IBoard & { board_id: string; board_name: string } => Boolean(b.board_id && b.board_name))
         .map((b) => ({
@@ -211,9 +224,9 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 board_id: board,
                 asset_id: asset.asset_id,
                 client_id: asset.client_id,
-                // FR-E8: offered as the requester when the asset names exactly
-                // one person (its assignee, or a workspace with one user).
-                contact_name_id: contactOptions.preselect ?? undefined,
+                // FR-E8: the person chosen from the asset's people — its
+                // assignee, or one of its shared workspace's users.
+                contact_name_id: contact || contactOptions.preselect || undefined,
             });
             if (isReturnedActionError(ticket)) {
                 handleError(ticket, t('createTicketFromAssetButton.errors.createFailed', {
@@ -297,6 +310,19 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         })}
                         rows={4}
                     />
+
+                    {contactSelectOptions.length > 0 ? (
+                        <CustomSelect
+                            {...withDataAutomationId({ id: 'ticket-contact-select' })}
+                            label={t('createTicketFromAssetButton.fields.contact', { defaultValue: 'Contact' })}
+                            options={contactSelectOptions}
+                            value={contact}
+                            onValueChange={setContact}
+                            placeholder={t('createTicketFromAssetButton.placeholders.selectContact', {
+                                defaultValue: 'Select contact...'
+                            })}
+                        />
+                    ) : null}
 
                     <CustomSelect
                         {...withDataAutomationId({ id: 'ticket-board-select' })}

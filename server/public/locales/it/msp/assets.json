@@ -960,7 +960,9 @@
       "description": "Descrizione",
       "board": "Bacheca",
       "status": "Stato",
-      "priority": "Priorità"
+      "priority": "Priorità",
+      "contact": "Contatto",
+      "unnamedContact": "Contatto senza nome"
     },
     "placeholders": {
       "title": "Inserisci il titolo del ticket",
@@ -971,7 +973,8 @@
       "loadingStatuses": "Caricamento stati...",
       "selectStatus": "Seleziona lo stato...",
       "loadingPriorities": "Caricamento priorità...",
-      "selectPriority": "Seleziona priorità..."
+      "selectPriority": "Seleziona priorità...",
+      "selectContact": "Seleziona contatto..."
     },
     "errors": {
       "loadPriorities": "Impossibile caricare le priorità",

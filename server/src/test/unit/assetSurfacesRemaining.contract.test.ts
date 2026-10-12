@@ -91,7 +91,22 @@ describe('ticket-from-asset requester (FR-E8)', () => {
 
     const button = source('packages/assets/src/components/CreateTicketFromAssetButton.tsx');
     expect(button).toMatch(/getAssetTicketContactOptions\(asset\.asset_id\)/);
-    expect(button).toContain('contact_name_id: contactOptions.preselect ?? undefined,');
+    // The options have to be on screen, not only the preselect: a three-person
+    // workspace offers three names.
+    expect(button).toMatch(/contactOptions\.options\.map\(/);
+    expect(button).toContain("id: 'ticket-contact-select'");
+    expect(button).toMatch(/\{contactSelectOptions\.length > 0 \?/);
+    expect(button).toContain('contact_name_id: contact || contactOptions.preselect || undefined,');
+  });
+
+  it('T123: the API path preselects the single option for callers that name nobody', () => {
+    // Mobile's ticket modal has no contact field, so the asset's one person is
+    // resolved server-side rather than lost.
+    const text = source('server/src/lib/api/services/TicketService.ts');
+
+    expect(text).toContain("import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';");
+    expect(text).toMatch(/if \(!contactNameId\) \{[\s\S]{0,260}if \(options\.length === 1\) contactNameId = options\[0\]\.contact_name_id;/);
+    expect(text).toContain('contact_name_id: contactNameId,');
   });
 
   it('T124: the alert creator prefers the mapping default, then a single workspace user', () => {

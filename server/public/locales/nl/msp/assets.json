@@ -960,7 +960,9 @@
       "description": "Beschrijving",
       "board": "Bord",
       "status": "Status",
-      "priority": "Prioriteit"
+      "priority": "Prioriteit",
+      "contact": "Contact",
+      "unnamedContact": "Naamloos contact"
     },
     "placeholders": {
       "title": "Voer de tickettitel in",
@@ -971,7 +973,8 @@
       "loadingStatuses": "Statussen laden...",
       "selectStatus": "Status selecteren...",
       "loadingPriorities": "Prioriteiten laden...",
-      "selectPriority": "Prioriteit selecteren..."
+      "selectPriority": "Prioriteit selecteren...",
+      "selectContact": "Contact selecteren..."
     },
     "errors": {
       "loadPriorities": "Kan prioriteiten niet laden",

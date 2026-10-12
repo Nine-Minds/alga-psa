@@ -960,7 +960,9 @@
       "description": "Beschreibung",
       "board": "Board",
       "status": "Status",
-      "priority": "Priorität"
+      "priority": "Priorität",
+      "contact": "Kontakt",
+      "unnamedContact": "Unbenannter Kontakt"
     },
     "placeholders": {
       "title": "Geben Sie den Tickettitel ein",
@@ -971,7 +973,8 @@
       "loadingStatuses": "Status wird geladen...",
       "selectStatus": "Status auswählen...",
       "loadingPriorities": "Prioritäten werden geladen...",
-      "selectPriority": "Priorität auswählen..."
+      "selectPriority": "Priorität auswählen...",
+      "selectContact": "Kontakt auswählen..."
     },
     "errors": {
       "loadPriorities": "Die Prioritäten konnten nicht geladen werden",
