@@ -821,6 +821,9 @@ export async function convertQuoteToDraftContract(
         // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
         // Bundle rows: the member's share of the line total (the whole of it, one member per line).
         base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
+        // Unit rows and products are per unit; a bundle row is the whole line total (its share).
+        base_rate_basis:
+          isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,

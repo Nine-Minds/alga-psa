@@ -110,6 +110,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
         config_id: configId,
         tenant: context.tenantId,
         base_rate: seat.unitRateCents,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit'
       });
       members.push({ serviceId, configId });
@@ -204,6 +205,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
         config_id: configId,
         tenant: context.tenantId,
         base_rate: 0,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'bundle',
       });
       members.push({ serviceId, configId });
@@ -230,7 +232,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
       {name: 'Catalog-priced seats', quantity: 2, unitRateCents: 1500},
       {name: 'Legacy bundle allocation', quantity: 4, unitRateCents: 500},
     ]);
-    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[0].configId}).update({base_rate: null});
+    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[0].configId}).update({base_rate: null, base_rate_basis: null});
     await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[1].configId}).update({pricing_basis: null});
     await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: contractLineId}).update({custom_rate: 9000});
     const usageService = await createTestService(context, {service_name: 'Variable storage', billing_method: 'usage', default_rate: 500});

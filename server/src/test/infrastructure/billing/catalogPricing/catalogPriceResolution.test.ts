@@ -117,7 +117,7 @@ describe('Catalog price resolution – fixed path', () => {
   async function linkMemberToCatalog(contractLineId: string): Promise<void> {
     await context.db.raw(
       `UPDATE contract_line_service_fixed_config AS clsfc
-       SET base_rate = NULL, rate_provenance = 'inherited'
+       SET base_rate = NULL, base_rate_basis = NULL, rate_provenance = 'inherited'
        FROM contract_line_service_configuration AS clsc
        WHERE clsc.config_id = clsfc.config_id
          AND clsc.tenant = clsfc.tenant
@@ -295,7 +295,7 @@ describe('Catalog price resolution – fixed path', () => {
         .update({ custom_rate: 10000, rate_provenance: null });
       await context.db.raw(
         `UPDATE contract_line_service_fixed_config AS clsfc
-         SET base_rate = 10000, rate_provenance = NULL
+         SET base_rate = 10000, base_rate_basis = 'share', rate_provenance = NULL
          FROM contract_line_service_configuration AS clsc
          WHERE clsc.config_id = clsfc.config_id
            AND clsc.tenant = clsfc.tenant
@@ -575,7 +575,7 @@ describe('Catalog price resolution – fixed path', () => {
     // is cleared and the line reports Standard while billing the old number.
     await context.db.raw(
       `UPDATE contract_line_service_fixed_config AS clsfc
-       SET base_rate = 4500, rate_provenance = 'custom'
+       SET base_rate = 4500, base_rate_basis = 'share', rate_provenance = 'custom'
        FROM contract_line_service_configuration AS clsc
        WHERE clsc.config_id = clsfc.config_id
          AND clsc.tenant = clsfc.tenant
