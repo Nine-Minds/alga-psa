@@ -9,6 +9,8 @@ import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { listUsers, getUserDisplayName } from "../api/users";
+import { listContacts } from "../api/contacts";
+import type { CommentRecipientSuggestion } from "../features/ticketDetail/components/CommentEmailRecipients";
 import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 import { ErrorState, LoadingState } from "../ui/states";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -206,6 +208,28 @@ export function TicketDetailBody({
   const { ticket, initialLoading, error, comments, commentsError, refreshing, refresh, fetchTicket, fetchComments, setComments } = ticketData;
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
+
+  // Cc/Bcc suggestions: the ticket client's contacts, matched server-side on
+  // the typed name or address. Contacts without an email can't be copied.
+  const handleRecipientSearch = useCallback(async (
+    query: string,
+    signal: AbortSignal,
+  ): Promise<CommentRecipientSuggestion[]> => {
+    const clientId = (ticket as Record<string, unknown> | null)?.client_id as string | undefined;
+    if (!client || !session || !clientId) return [];
+    const res = await listContacts(client, {
+      apiKey: session.accessToken,
+      page: 1,
+      limit: 10,
+      search: query,
+      client_id: clientId,
+      signal,
+    });
+    if (!res.ok) return [];
+    return res.data.data
+      .filter((contact) => Boolean(contact.email))
+      .map((contact) => ({ email: contact.email as string, name: contact.full_name }));
+  }, [client, session, ticket]);
   const descEditor = useDescriptionEditor({ ...deps, ticket, setTicket: ticketData.setTicket });
   const checklistHook = useTicketChecklist(deps);
   const boardId = ticket?.board_id as string | undefined;
@@ -587,6 +611,11 @@ export function TicketDetailBody({
             closeStatusId={commentDraftHook.commentCloseStatusId}
             scheduleAt={commentDraftHook.commentScheduleAt}
             onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
+            cc={commentDraftHook.commentCc}
+            bcc={commentDraftHook.commentBcc}
+            onChangeCc={commentDraftHook.setCommentCc}
+            onChangeBcc={commentDraftHook.setCommentBcc}
+            onSearchRecipients={handleRecipientSearch}
             onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
             sending={commentDraftHook.commentSending}

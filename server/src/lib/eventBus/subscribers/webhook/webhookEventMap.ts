@@ -6,7 +6,8 @@ export type TicketWebhookPublicEvent =
   | 'ticket.status_changed'
   | 'ticket.assigned'
   | 'ticket.closed'
-  | 'ticket.comment.added';
+  | 'ticket.comment.added'
+  | 'ticket.response_state_changed';
 
 export type TicketWebhookInternalEvent =
   | 'TICKET_CREATED'
@@ -14,7 +15,8 @@ export type TicketWebhookInternalEvent =
   | 'TICKET_STATUS_CHANGED'
   | 'TICKET_ASSIGNED'
   | 'TICKET_CLOSED'
-  | 'TICKET_COMMENT_ADDED';
+  | 'TICKET_COMMENT_ADDED'
+  | 'TICKET_RESPONSE_STATE_CHANGED';
 
 export const TICKET_INTERNAL_TO_PUBLIC = {
   TICKET_CREATED: ['ticket.created'],
@@ -23,6 +25,7 @@ export const TICKET_INTERNAL_TO_PUBLIC = {
   TICKET_ASSIGNED: ['ticket.assigned'],
   TICKET_CLOSED: ['ticket.closed'],
   TICKET_COMMENT_ADDED: ['ticket.comment.added'],
+  TICKET_RESPONSE_STATE_CHANGED: ['ticket.response_state_changed'],
 } as const satisfies Partial<Record<EventType, readonly TicketWebhookPublicEvent[]>>;
 
 export function publicEventsFor(eventType: EventType | string): TicketWebhookPublicEvent[] {

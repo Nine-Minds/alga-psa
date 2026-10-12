@@ -1,7 +1,10 @@
 import { SERVICE_REQUEST_EXECUTION_MODES } from '../../domain';
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import type { ServiceRequestExecutionProvider } from '../contracts';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@shared/models/ticketModel';
+import { ticketCreatedPublishedByCaller } from '@shared/lib/tickets/ticketLifecycleEvents';
+import type { Knex } from 'knex';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
@@ -119,7 +122,25 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
   validateConfig: validateTicketOnlyExecutionConfig,
   async execute(context) {
     try {
-      return await context.knex.transaction(async (trx) => {
+      // `context.knex` is normally the portal submission's open transaction. The ticket work
+      // runs in a savepoint so a ticket failure (e.g. a ticket-number unique violation) rolls
+      // back only the ticket and the caller can still record the 'failed' outcome. After-commit
+      // hooks are only run by the transaction-owning frame, never for a savepoint, so
+      // TICKET_CREATED is registered on the outer transaction once the savepoint has succeeded.
+      // With a plain Knex there is no outer transaction: withTransaction owns the commit.
+      const outerIsTransaction = typeof (context.knex as unknown as { commit?: unknown }).commit === 'function';
+      let outerTrx: Knex.Transaction | undefined = outerIsTransaction
+        ? (context.knex as unknown as Knex.Transaction)
+        : undefined;
+      const runInTicketFrame = <T,>(work: (trx: Knex.Transaction) => Promise<T>): Promise<T> =>
+        outerIsTransaction
+          ? (context.knex as unknown as Knex.Transaction).transaction(work)
+          : withTransaction(context.knex, async (trx) => {
+              outerTrx = trx;
+              return work(trx);
+            });
+
+      return await runInTicketFrame(async (trx) => {
         const db = tenantDb(trx, context.tenant);
         const configuredBoardId = getStringConfig(context.config, 'boardId');
         const configuredStatusId = getStringConfig(context.config, 'statusId');
@@ -207,11 +228,26 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           context.tenant,
           trx,
           {},
-          undefined,
+          ticketCreatedPublishedByCaller('published on the owning transaction after the savepoint succeeds'),
           undefined,
           context.requesterUserId,
           1
         );
+
+        await new WorkflowEventPublisher({ transaction: outerTrx! }).publishTicketCreated({
+          tenantId: context.tenant,
+          ticketId: ticket.ticket_id,
+          userId: context.requesterUserId,
+          metadata: {
+            source: 'client_portal',
+            board_id: boardId,
+            priority_id: priorityId,
+            client_id: context.clientId,
+            // Ticket-only service requests never sent a client new-ticket notification
+            // before TICKET_CREATED became mandatory; keep that (see contactSuppressedTicketCreation).
+            suppressContactNotifications: true,
+          },
+        });
 
         return {
           status: 'succeeded',

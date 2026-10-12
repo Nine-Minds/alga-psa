@@ -186,6 +186,10 @@
         "updateComments": "Niewystarczające uprawnienia do aktualizacji komentarzy",
         "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy",
         "viewDocuments": "Niewystarczające uprawnienia do wyświetlania dokumentów zgłoszenia"
+      },
+      "projects": {
+        "read": "Niewystarczające uprawnienia do przeglądania projektów",
+        "readDetails": "Niewystarczające uprawnienia do przeglądania szczegółów projektu"
       }
     },
     "tags": {
@@ -1378,9 +1382,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Wybierz strefę czasową...",
-    "searchPlaceholder": "Wyszukaj strefy czasowe lub skróty (np. EST)...",
+    "searchPlaceholder": "Szukaj według miasta, nazwy lub skrótu (np. New York, EST)...",
     "noResults": "Nie znaleziono stref czasowych",
     "matchingGroup": "Wyniki dla \"{{query}}\"",
+    "noDst": "Bez czasu letniego",
+    "noDaylightSavingHint": "Brak czasu letniego. Zegary przez cały rok pokazują {{offset}}.",
     "regions": {
       "Africa": "Afryka",
       "America": "Ameryka",
@@ -1651,6 +1657,12 @@
     "threecxDialing": "Wybieranie numeru z Twojego numeru wewnętrznego 3CX",
     "threecxFailed": "Centrala nie mogła nawiązać połączenia"
   },
+  "unsavedChangesGuard": {
+    "title": "Odrzucić niezapisane zmiany?",
+    "message": "Masz niezapisane zmiany, które zostaną utracone po zamknięciu. Czy chcesz je odrzucić?",
+    "discard": "Odrzuć zmiany",
+    "keepEditing": "Kontynuuj edycję"
+  },
   "editor": {
     "attachFiles": "Załącz pliki",
     "uploadingFiles": "Przesyłanie plików…",
@@ -1772,5 +1784,9 @@
     "customPlaceholder": "Nazwij tę jednostkę",
     "register": "Dodaj",
     "selectPlaceholder": "Wybierz jednostkę"
+  },
+  "emailRecipients": {
+    "remove": "Usuń {{email}}",
+    "placeholder": "Wpisz adres i naciśnij Enter"
   }
 }

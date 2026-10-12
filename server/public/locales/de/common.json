@@ -172,6 +172,10 @@
         "updateComments": "Unzureichende Berechtigungen zum Aktualisieren von Kommentaren",
         "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren",
         "viewDocuments": "Unzureichende Berechtigungen zum Anzeigen von Ticket-Dokumenten"
+      },
+      "projects": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen von Projekten",
+        "readDetails": "Unzureichende Berechtigungen zum Anzeigen von Projektdetails"
       }
     },
     "tags": {
@@ -1346,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Zeitzone auswählen...",
-    "searchPlaceholder": "Zeitzonen oder Abkürzungen suchen (z. B. EST)...",
+    "searchPlaceholder": "Nach Stadt, Name oder Abkürzung suchen (z. B. New York, EST)...",
     "noResults": "Keine Zeitzonen gefunden",
     "matchingGroup": "Treffer für „{{query}}\"",
+    "noDst": "Keine Sommerzeit",
+    "noDaylightSavingHint": "Keine Sommerzeit. Die Uhren bleiben das ganze Jahr bei {{offset}}.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",
@@ -1617,6 +1623,12 @@
     "threecxDialing": "Wählvorgang von Ihrer 3CX-Nebenstelle",
     "threecxFailed": "Die PBX konnte den Anruf nicht aufbauen"
   },
+  "unsavedChangesGuard": {
+    "title": "Nicht gespeicherte Änderungen verwerfen?",
+    "message": "Sie haben nicht gespeicherte Änderungen, die beim Schließen verloren gehen. Möchten Sie sie verwerfen?",
+    "discard": "Änderungen verwerfen",
+    "keepEditing": "Weiter bearbeiten"
+  },
   "editor": {
     "attachFiles": "Dateien anhängen",
     "uploadingFiles": "Dateien werden hochgeladen…",
@@ -1738,5 +1750,9 @@
     "customPlaceholder": "Einheit benennen",
     "register": "Hinzufügen",
     "selectPlaceholder": "Einheit auswählen"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} entfernen",
+    "placeholder": "Adresse eingeben und Eingabetaste drücken"
   }
 }

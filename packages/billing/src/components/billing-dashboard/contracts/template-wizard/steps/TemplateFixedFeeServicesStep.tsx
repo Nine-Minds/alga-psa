@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Input } from '@alga-psa/ui/components/Input';
+import { QuantityInput } from '../../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -353,18 +353,16 @@ export function TemplateFixedFeeServicesStep({
                           defaultValue: 'Quantity (Optional)',
                         })}
                   </Label>
-                  <Input
+                  <QuantityInput
                     id={`template-fixed-quantity-${index}`}
-                    type="number"
-                    min={isUnitFixedService(service) ? '0' : '1'}
-                    step="1"
+                    min={isUnitFixedService(service) ? 0 : 1}
                     value={service.quantity ?? (isUnitFixedService(service) ? 0 : 1)}
-                    onChange={(event) =>
+                    onCommit={(value) =>
                       handleQuantityChange(
                         index,
                         isUnitFixedService(service)
-                          ? Math.max(0, Math.floor(Number(event.target.value) || 0))
-                          : Math.max(1, Number(event.target.value) || 1)
+                          ? Math.max(0, Math.floor(value))
+                          : Math.max(1, value)
                       )
                     }
                     className="w-24"

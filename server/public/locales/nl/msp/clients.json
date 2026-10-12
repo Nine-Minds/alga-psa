@@ -738,6 +738,7 @@
     "status": "Status",
     "actions": "Acties",
     "openMenu": "Menu openen",
+    "viewDetails": "Details bekijken",
     "unassign": "Toewijzing ongedaan maken",
     "loading": "Contracten laden...",
     "empty": "Er zijn nog geen contracten toegewezen aan deze klant.",
@@ -1913,6 +1914,15 @@
       "duplicateManager": "Een facturatieprofiel kan maar één beheerder hebben.",
       "notThisClient": "Een van de geselecteerde contactpersonen hoort niet bij de klant van dit facturatieprofiel."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standaarddienst voor tijdregistraties",
+    "label": "Standaarddienst voor tijdregistraties",
+    "placeholder": "Standaard van de organisatie gebruiken",
+    "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets van deze klant. Wis de selectie om de standaard van de organisatie te gebruiken.",
+    "updatedSuccess": "Standaarddienst voor tijdregistraties bijgewerkt.",
+    "saveError": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen",
+    "loadError": "Standaarddienst voor tijdregistraties kan niet worden geladen"
   },
   "clientAutopay": {
     "setupLinkTitle": "Link voor kaartinstelling",

@@ -181,6 +181,13 @@
             "schema": { "type": "boolean" }
           },
           {
+            "name": "response_state",
+            "in": "query",
+            "required": false,
+            "description": "Only tickets whose turn it is: awaiting_client (we replied, waiting on the client) or awaiting_internal (the client replied, waiting on us).",
+            "schema": { "type": "string", "enum": ["awaiting_client", "awaiting_internal"] }
+          },
+          {
             "name": "entered_from",
             "in": "query",
             "required": false,
@@ -715,6 +722,18 @@
             "suppressInternalNotifications": {
               "type": "boolean",
               "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
+            },
+            "cc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Cc recipients for this comment's email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined."
+            },
+            "bcc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
             }
           },
           "required": ["comment_text"]

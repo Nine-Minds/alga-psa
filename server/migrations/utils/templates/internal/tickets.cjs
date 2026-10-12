@@ -304,6 +304,42 @@ const TEMPLATES = [
       sv: { title: 'Ditt ärende hanteras', message: '{{assignedToName}} har tilldelats ditt ärende #{{ticketId}} ”{{ticketTitle}}”' },
     },
   },
+
+  // ── ticket-board-created ─────────────────────────────────────────────
+  // Sent to users selected by a board notification rule (create trigger).
+  {
+    templateName: 'ticket-board-created',
+    subtypeName: 'ticket-board-created',
+    translations: {
+      en: { title: 'New ticket on {{boardName}}', message: 'New ticket #{{ticketId}} "{{ticketTitle}}" for {{clientName}} on board {{boardName}}' },
+      fr: { title: 'Nouveau ticket sur {{boardName}}', message: 'Nouveau ticket #{{ticketId}} "{{ticketTitle}}" pour {{clientName}} sur le tableau {{boardName}}' },
+      es: { title: 'Nuevo ticket en {{boardName}}', message: 'Nuevo ticket #{{ticketId}} "{{ticketTitle}}" para {{clientName}} en el tablero {{boardName}}' },
+      de: { title: 'Neues Ticket auf {{boardName}}', message: 'Neues Ticket #{{ticketId}} "{{ticketTitle}}" für {{clientName}} auf dem Board {{boardName}}' },
+      nl: { title: 'Nieuw ticket op {{boardName}}', message: 'Nieuw ticket #{{ticketId}} "{{ticketTitle}}" voor {{clientName}} op bord {{boardName}}' },
+      it: { title: 'Nuovo ticket su {{boardName}}', message: 'Nuovo ticket #{{ticketId}} "{{ticketTitle}}" per {{clientName}} sulla bacheca {{boardName}}' },
+      pl: { title: 'Nowe zgłoszenie na tablicy {{boardName}}', message: 'Nowe zgłoszenie #{{ticketId}} "{{ticketTitle}}" dla {{clientName}} na tablicy {{boardName}}' },
+      pt: { title: 'Novo ticket em {{boardName}}', message: 'Novo ticket #{{ticketId}} "{{ticketTitle}}" para {{clientName}} no quadro {{boardName}}' },
+      sv: { title: 'Nytt ärende på {{boardName}}', message: 'Nytt ärende #{{ticketId}} ”{{ticketTitle}}” för {{clientName}} på tavlan {{boardName}}' },
+    },
+  },
+
+  // ── ticket-board-status-entered ──────────────────────────────────────
+  // Sent to users selected by a board notification rule (status-entered trigger).
+  {
+    templateName: 'ticket-board-status-entered',
+    subtypeName: 'ticket-board-status-entered',
+    translations: {
+      en: { title: 'Ticket entered {{statusName}} on {{boardName}}', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" for {{clientName}} entered status {{statusName}} on board {{boardName}}' },
+      fr: { title: 'Ticket passé à {{statusName}} sur {{boardName}}', message: 'Le ticket #{{ticketId}} "{{ticketTitle}}" pour {{clientName}} est passé au statut {{statusName}} sur le tableau {{boardName}}' },
+      es: { title: 'Ticket pasó a {{statusName}} en {{boardName}}', message: 'El ticket #{{ticketId}} "{{ticketTitle}}" de {{clientName}} pasó al estado {{statusName}} en el tablero {{boardName}}' },
+      de: { title: 'Ticket ist nun {{statusName}} auf {{boardName}}', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" für {{clientName}} hat auf dem Board {{boardName}} den Status {{statusName}} erreicht' },
+      nl: { title: 'Ticket is nu {{statusName}} op {{boardName}}', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" voor {{clientName}} heeft op bord {{boardName}} de status {{statusName}} bereikt' },
+      it: { title: 'Ticket passato a {{statusName}} su {{boardName}}', message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" per {{clientName}} è passato allo stato {{statusName}} sulla bacheca {{boardName}}' },
+      pl: { title: 'Zgłoszenie w statusie {{statusName}} na tablicy {{boardName}}', message: 'Zgłoszenie #{{ticketId}} "{{ticketTitle}}" dla {{clientName}} weszło w status {{statusName}} na tablicy {{boardName}}' },
+      pt: { title: 'Ticket entrou em {{statusName}} em {{boardName}}', message: 'O ticket #{{ticketId}} "{{ticketTitle}}" de {{clientName}} entrou no status {{statusName}} no quadro {{boardName}}' },
+      sv: { title: 'Ärende har fått status {{statusName}} på {{boardName}}', message: 'Ärende #{{ticketId}} ”{{ticketTitle}}” för {{clientName}} har fått status {{statusName}} på tavlan {{boardName}}' },
+    },
+  },
 ];
 
 module.exports = { TEMPLATES };

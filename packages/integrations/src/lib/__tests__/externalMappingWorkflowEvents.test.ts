@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { externalMappingChangedEventPayloadSchema } from '@alga-psa/shared/workflow/runtime/schemas/integrationEventSchemas';
-import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { externalMappingChangedEventPayloadSchema } from '@alga-psa/event-schemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildExternalMappingChangedPublishParams,
   type TenantExternalEntityMappingRow,

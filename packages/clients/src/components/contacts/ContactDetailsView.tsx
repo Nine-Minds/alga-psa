@@ -19,7 +19,7 @@ import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { getClientById } from '@alga-psa/clients/actions';
-import { updateContact } from '@alga-psa/clients/actions';
+import { updateContact, getContactsByClient } from '@alga-psa/clients/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import type { IDocument } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -98,6 +98,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [managerName, setManagerName] = useState<string | null>(null);
   const [isEditingClient, setIsEditingClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -228,6 +229,26 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     );
   };
 
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!contact.manager_contact_id || !contact.client_id) {
+      setManagerName(null);
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await getContactsByClient(contact.client_id as string, 'all');
+        if (cancelled || !Array.isArray(rows)) return;
+        setManagerName(rows.find((row) => row.contact_name_id === contact.manager_contact_id)?.full_name ?? null);
+      } catch (err) {
+        if (!cancelled) setManagerName(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contact.manager_contact_id, contact.client_id]);
 
   const getClientName = (clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
@@ -490,6 +511,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 )}
               </td>
             </tr>
+            <TableRow label={t('contactDetailsView.fields.reportsTo', { defaultValue: 'Reports to' })} value={contact.manager_contact_id ? (managerName ?? '…') : t('contactDetailsView.empty.noManager', { defaultValue: 'No manager' })} />
             <TableRow label={t('contactDetailsView.fields.role', { defaultValue: 'Role' })} value={contact.role || t('contactDetailsView.empty.notSet', { defaultValue: 'Not set' })} />
             <TableRow label={t('contactDetailsView.fields.status', { defaultValue: 'Status' })} value={contact.is_inactive ? t('contactDetailsView.status.inactive', { defaultValue: 'Inactive' }) : t('contactDetailsView.status.active', { defaultValue: 'Active' })} />
             <TableRow label={t('contactDetailsView.fields.createdAt', { defaultValue: 'Created At' })} value={new Date(contact.created_at).toLocaleString()} />

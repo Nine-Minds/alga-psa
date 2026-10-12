@@ -756,6 +756,7 @@ describe('processInboundEmailInApp', () => {
         throw new Error(`Unexpected table in unit test: ${table}`);
       });
 
+      (trx as any).fn = { now: () => 'DB_NOW' };
       return callback(trx);
     });
 

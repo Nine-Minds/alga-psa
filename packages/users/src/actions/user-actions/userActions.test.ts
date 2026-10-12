@@ -65,7 +65,13 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({
@@ -464,6 +470,8 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'calendars', 'calendar_shares',
   // named list views: private deleted, shared handed to the actor
   'list_views',
+  // board notification rules / default watchers (user rows deleted)
+  'board_notification_rule_recipients', 'board_default_watchers',
   // Always present in both editions:
   'users', 'clients',
 ]);

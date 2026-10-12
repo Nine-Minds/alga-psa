@@ -35,35 +35,50 @@ vi.mock("next/dynamic", () => ({
     function MockTextEditor({
       initialContent,
       onContentChange,
+      footerActions,
     }: {
       initialContent: typeof DEFAULT_BLOCK;
       onContentChange: (blocks: typeof DEFAULT_BLOCK) => void;
+      footerActions?: React.ReactNode;
     }) {
       const [value, setValue] = React.useState(
         initialContent[0]?.content[0]?.text ?? "",
       );
 
       return (
-        <textarea
-          aria-label="Resolution"
-          value={value}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setValue(nextValue);
-            onContentChange(
-              nextValue
-                ? [
-                    {
-                      ...DEFAULT_BLOCK[0],
-                      content: [{ type: "text", text: nextValue, styles: {} }],
-                    },
-                  ]
-                : DEFAULT_BLOCK,
-            );
-          }}
-        />
+        <div>
+          <textarea
+            aria-label="Resolution"
+            value={value}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setValue(nextValue);
+              onContentChange(
+                nextValue
+                  ? [
+                      {
+                        ...DEFAULT_BLOCK[0],
+                        content: [{ type: "text", text: nextValue, styles: {} }],
+                      },
+                    ]
+                  : DEFAULT_BLOCK,
+              );
+            }}
+          />
+          {/* The real editor renders this slot next to Attach files; the
+              Cc/Bcc toggle lives there. */}
+          {footerActions}
+        </div>
       );
     },
+}));
+
+vi.mock("../../actions/clientLookupActions", () => ({
+  getContactsByClient: vi.fn(async () => []),
+}));
+
+vi.mock("@alga-psa/user-composition/actions/userQueryActions", () => ({
+  getAllUsers: vi.fn(async () => []),
 }));
 
 vi.mock("@alga-psa/ui/editor", () => ({ TextEditor: vi.fn() }));
@@ -213,6 +228,7 @@ describe("TicketResolutionDialog", () => {
         suppressInternalNotifications: false,
       },
       false,
+      undefined,
     );
     await waitFor(() => {
       expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
@@ -368,6 +384,7 @@ describe("TicketResolutionDialog", () => {
         suppressInternalNotifications: true,
       },
       false,
+      undefined,
     );
   });
 
@@ -402,7 +419,145 @@ describe("TicketResolutionDialog", () => {
         suppressInternalNotifications: false,
       },
       true,
+      undefined,
     );
+  });
+
+  describe("one-off Cc/Bcc", () => {
+    const ccBccProps = {
+      id: "ticket-resolution-close",
+      ticketId: "ticket-1",
+      clientId: "client-1",
+      allowEmailRecipients: true,
+      statusOptions: [{ value: "closed", label: "Closed" }],
+      onClose: vi.fn(),
+    };
+    const toggle = () =>
+      document.getElementById(
+        "ticket-resolution-close-ticket-comment-cc-bcc-toggle",
+      )!;
+    const ccInput = () =>
+      document.getElementById(
+        "ticket-resolution-close-ticket-comment-cc-input-input",
+      ) as HTMLInputElement;
+    const bccInput = () =>
+      document.getElementById(
+        "ticket-resolution-close-ticket-comment-bcc-input-input",
+      ) as HTMLInputElement;
+
+    it("T073: sends the Cc and Bcc entered on the resolution", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(<TicketResolutionDialog {...ccBccProps} isOpen onConfirm={onConfirm} />);
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      fireEvent.change(bccInput(), { target: { value: "boss@msp.test" } });
+      fireEvent.keyDown(bccInput(), { key: "Enter" });
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Replaced the switch." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        "closed",
+        expect.any(Array),
+        expect.any(Object),
+        false,
+        { cc: ["vendor@acme.test"], bcc: ["boss@msp.test"] },
+      );
+    });
+
+    it("T074: an internal resolution never carries the entered recipients", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(<TicketResolutionDialog {...ccBccProps} isOpen onConfirm={onConfirm} />);
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      fireEvent.click(screen.getByRole("switch", { name: "Mark as Internal" }));
+      // Hidden, not discarded: turning Internal off brings the row back.
+      expect(ccInput()).toBeNull();
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Swapped the PSU." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        "closed",
+        expect.any(Array),
+        expect.any(Object),
+        true,
+        undefined,
+      );
+    });
+
+    it("T075: an invalid address blocks the close until it is fixed", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(<TicketResolutionDialog {...ccBccProps} isOpen onConfirm={onConfirm} />);
+
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Replaced the switch." },
+      });
+      const confirm = screen.getByRole("button", { name: "Resolve and close" });
+      expect(confirm).toBeEnabled();
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "not-an-address" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      expect(confirm).toBeDisabled();
+
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      expect(confirm).toBeEnabled();
+    });
+
+    it("T076: reopening the dialog clears the recipients from the last close", () => {
+      const props = { ...ccBccProps, onConfirm: vi.fn().mockResolvedValue(true) };
+      const { rerender } = render(<TicketResolutionDialog {...props} isOpen />);
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+
+      rerender(<TicketResolutionDialog {...props} isOpen={false} />);
+      rerender(<TicketResolutionDialog {...props} isOpen />);
+
+      // Collapsed again, so no stale count badge and no stale chips.
+      expect(ccInput()).toBeNull();
+      fireEvent.click(toggle());
+      expect(ccInput().value).toBe("");
+      expect(
+        document.getElementById("ticket-resolution-close-email-recipients")!
+          .textContent,
+      ).not.toContain("vendor@acme.test");
+    });
+
+    it("leaves the recipients out when the host does not allow them", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(
+        <TicketResolutionDialog
+          {...ccBccProps}
+          allowEmailRecipients={false}
+          isOpen
+          onConfirm={onConfirm}
+        />,
+      );
+
+      expect(toggle()).toBeNull();
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Replaced the switch." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        "closed",
+        expect.any(Array),
+        expect.any(Object),
+        false,
+        undefined,
+      );
+    });
   });
 
   it("resets the internal toggle whenever the dialog is opened again", () => {

@@ -123,6 +123,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
 
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
+  // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
+  withUIReflectionId: (Component: unknown) => Component,
 }));
 
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
@@ -261,7 +263,7 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await vi.waitFor(() => {
-      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, true, null, undefined, null);
+      expect(onAddNewComment).toHaveBeenCalledWith(isInternal, true, null, undefined, null, undefined);
     });
   });
 
@@ -303,6 +305,8 @@ describe('BentoTimelineTile composer heading', () => {
         null,
         undefined,
         { publishAt: '2026-08-23T13:30:00.000Z', timeZone: 'America/New_York' },
+        // The Cc/Bcc payload: undefined while the control is not enabled.
+        undefined,
       );
       expect(document.getElementById('ticket-timeline-composer')).toBeNull();
     });
@@ -329,7 +333,7 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(send);
 
     await vi.waitFor(() => {
-      expect(onAddNewComment).toHaveBeenCalledWith(true, false, null, undefined, null);
+      expect(onAddNewComment).toHaveBeenCalledWith(true, false, null, undefined, null, undefined);
     });
   });
 

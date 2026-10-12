@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Voeg contractregels toe aan dit sjabloon voordat u services beheert.",
       "additionalPlans": "Aanvullende plannen",
-      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding ${{overage}}",
+      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding {{overage}}",
       "closeManager": "Beheerder sluiten",
       "editRate": "Tarief bewerken",
       "fixedFeeBundles": "Vaste-vergoedingsbundels",
@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Sjabloon laden...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Valuta van de klant"
+    },
     "templateBadge": "Sjabloon",
     "templateNotFound": "Contractsjabloon niet gevonden",
     "templateSnapshotTitle": "Sjabloonmomentopname",
@@ -1423,6 +1426,7 @@
       "hourlyServices": "Uurservices",
       "products": "Producten",
       "reviewCreate": "Controleren en aanmaken",
+      "templateLines": "Sjabloonregels",
       "usageBasedServices": "Verbruiksgebaseerde services"
     },
     "title": {
@@ -1461,7 +1465,8 @@
       "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema.",
       "recurringUnitRateRequired": "Voer een eenheidstarief in voor elke terugkerende dienst.",
       "recurringQuantityWholeNumber": "De terugkerende hoeveelheid moet een geheel getal zijn.",
-      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn."
+      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn.",
+      "fixedLineNoService": "Vaste regel \"{{lineName}}\" heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt."
     },
     "nav": {
       "back": "Terug",
@@ -1475,6 +1480,19 @@
     "simulation": {
       "description": "Test dit niet-opgeslagen concept met verwachte activiteit. De simulatie slaat niets op en geeft niets uit.",
       "title": "Simuleren vóór het aanmaken"
+    },
+    "fixedLines": {
+      "addLine": "Vaste regel toevoegen",
+      "nameLabel": "Regelnaam (optioneel)",
+      "namePlaceholder": "Vaste regel {{number}}",
+      "removeLine": "Vaste regel verwijderen",
+      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan."
+    },
+    "recurringChange": {
+      "title": "Wijziging van het terugkerende totaal bevestigen",
+      "message": "Hierdoor verandert de geschatte maandelijkse terugkerende waarde van het contract van {{before}} naar {{after}}.",
+      "confirm": "Bevestigen en doorgaan",
+      "cancel": "Terug"
     }
   },
   "wizardBasics": {
@@ -1651,9 +1669,14 @@
       "quantityLabel": "Hoeveelheid",
       "selectServicePlaceholder": "Selecteer een service",
       "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt.",
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
+    },
+    "advanceSuggestion": {
+      "message": "Bij facturering achteraf kan deze regel pas worden gefactureerd na afloop van de eerste serviceperiode. Bij facturering vooraf volgens het contractritme wordt hij op de startdatum gefactureerd.",
+      "action": "Vooraf factureren volgens het contractritme"
     }
   },
   "wizardProducts": {
@@ -1701,7 +1724,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Urenbundel instellen",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een uurtarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "minimumBillableTime": {
       "hint": "bijv. 15 minuten - elke tijdregistratie korter dan dit wordt naar boven afgerond",
@@ -1761,7 +1785,8 @@
       "unitOfMeasureHint": "Kies de eenheid waarop deze service wordt gefactureerd.",
       "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidstarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "summary": {
       "labels": {
@@ -1781,7 +1806,8 @@
       "fixedFeeServices": "Vaste-vergoedingsservices",
       "products": "Producten",
       "hourlyServices": "Uurservices",
-      "usageBasedServices": "Verbruiksgebaseerde services"
+      "usageBasedServices": "Verbruiksgebaseerde services",
+      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})"
     },
     "fields": {
       "client": "Klant",
@@ -1859,16 +1885,6 @@
         "contractAnniversary": "Contractverjaardag",
         "clientBillingSchedule": "Factureerschema klant"
       },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Eerste factuur: factureren op het contractverjaardagsvenster dat de eerste gedekte serviceperiode opent.",
-          "arrears": "Eerste factuur: factureren op het volgende contractverjaardagsvenster nadat de eerste gedekte serviceperiode is gesloten."
-        },
-        "client": {
-          "advance": "Eerste factuur: factureren op het eerste venster van het klantfactureerschema dat de serviceperiode dekt.",
-          "arrears": "Eerste factuur: factureren op het volgende venster van het klantfactureerschema nadat de eerste gedekte serviceperiode is gesloten."
-        }
-      },
       "partialPeriod": {
         "enabled": "Gedeeltelijke perioden passen het terugkerende tarief aan op het gedekte deel van de serviceperiode.",
         "disabled": "Gedeeltelijke perioden behouden het volledige terugkerende tarief, ook wanneer contractdatums binnen een serviceperiode vallen."
@@ -1911,7 +1927,8 @@
     "total": {
       "title": "Geschat maandtotaal",
       "description": "Alleen vaste kosten. Uur- en verbruiksservices factureren apart op basis van het werkelijke verbruik.",
-      "perMonth": "per maand"
+      "perMonth": "per maand",
+      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
     },
     "finalChecklist": {
       "title": "Voor u afrondt:",
@@ -1920,6 +1937,29 @@
       "itemDates": "Verifieer de start- en einddatums",
       "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Sjabloonregels",
+    "description": "Elke regel van het sjabloon wordt op het contract aangemaakt met een eigen naam, factureerfrequentie, services en tarieven. Wijzig hieronder een waarde om deze alleen voor dit contract te overschrijven; ongewijzigde waarden worden uit het sjabloon overgenomen. Tarieven zijn in {{currency}}.",
+    "loading": "Sjabloonregels laden...",
+    "noTemplate": "Selecteer een sjabloon in de eerste stap.",
+    "emptyTemplate": "Dit sjabloon heeft geen regels, dus er valt niets aan te maken.",
+    "bucketPools_one": "{{count}} urenbundel overgenomen uit het sjabloon",
+    "bucketPools_other": "{{count}} urenbundels overgenomen uit het sjabloon",
+    "lineName": "Naam van de regel",
+    "billingFrequency": "Factureerfrequentie",
+    "fixedBaseRate": "Vast basistarief",
+    "fixedBaseRateHint": "Sjabloontarief {{rate}}. Laat leeg om het te behouden.",
+    "fixedBaseRateNone": "Het sjabloon stelt geen regeltarief in; services volgen hun catalogusprijzen.",
+    "minimumBillableTime": "Minimum factureerbare tijd (minuten)",
+    "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
+    "quantity": "Hoeveelheid",
+    "hourlyRate": "Uurtarief",
+    "unitRate": "Tarief per eenheid",
+    "serviceRate": "Servicetarief",
+    "noCurrencyPrice": "Geen prijs in {{currency}} voor deze service. Voer een tarief in, anders kan het contract niet worden aangemaakt.",
+    "templateRateNote": "Uit het sjabloon (het bedrag heeft geen valutatag).",
+    "reviewTitle": "Regels aangemaakt op basis van het sjabloon"
   },
   "templateWizard": {
     "title": {
@@ -2552,7 +2592,8 @@
       "conflict": "Deze contractwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
       "notAllowed": "Een van de contractwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht contractveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht contractveld: {{field}}.",
+      "deleteFailed": "Er is iets misgegaan bij het verwijderen van dit contract. Vermeld referentie {{ref}} als u contact opneemt met support."
     },
     "wizard": {
       "permissions": {
@@ -2568,7 +2609,9 @@
       "missingClient": "Bij het conceptcontract ontbreekt de klanttoewijzing",
       "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
       "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard."
+      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
+      "resumeUnsupportedShape": "Dit concept kan niet in de wizard worden hervat zonder de prijzen te wijzigen: {{lines}}",
+      "fixedLineNoService": "Vaste regel \"{{lineName}}\" heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt."
     },
     "pricingSchedule": {
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",
@@ -2594,5 +2637,31 @@
       "contractNotActive": "Het geactiveerde verlengingscontract is niet meer actief. Vernieuw de pagina en probeer het opnieuw.",
       "manualRetryDueOnly": "Handmatig opnieuw proberen is alleen mogelijk voor vervallen verlengingscycli."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Factureringsschema van de klant controleren…",
+    "arrearsPreviewNote": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regel.",
+    "unavailable": {
+      "missingStartDate": "Kies een startdatum om te zien wanneer dit contract voor het eerst wordt gefactureerd.",
+      "unsupportedFrequency": "Er wordt geen datum voor de eerste factuur getoond omdat facturering volgens het contractritme deze frequentie niet ondersteunt. Kies een ondersteunde frequentie of factureer volgens het schema van de klant.",
+      "clientSchedule": "Deze regel wordt gefactureerd volgens het factureringsschema van de klant. Dat schema kon niet worden geladen, dus er wordt geen datum getoond."
+    },
+    "contract": {
+      "arrears": "Achteraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar op {{date}}, wanneer de eerste serviceperiode eindigt.",
+      "advance": "Vooraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar vanaf {{date}}, de startdatum van het contract."
+    },
+    "client": {
+      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de huidige factureringsperiode van de klant eindigt.",
+      "advance": "Vooraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar vanaf {{date}}, het begin van de factureringsperiode van de klant waarin de contractstartdatum valt."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contract aangemaakt",
+    "heading": "{{contractName}} is aangemaakt",
+    "firstInvoiceHeading": "Eerste factuur",
+    "done": "Klaar"
+  },
+  "sellHourBlockNote": {
+    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
   }
 }

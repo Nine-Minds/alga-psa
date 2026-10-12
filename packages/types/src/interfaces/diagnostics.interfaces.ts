@@ -33,28 +33,48 @@ export interface DiagnosticsErrorMeta {
   responseBody?: unknown;
 }
 
+/** Extensible per-step data payload shared by every diagnostics consumer. */
+export type DiagnosticsStepData = Record<string, unknown>;
+
 /**
  * A single diagnostics step. `id` and `title` are assigned by the runner; the
  * callable returns the partial fields a step is responsible for.
  */
-export interface DiagnosticsStep {
+export interface DiagnosticsStep<TData extends DiagnosticsStepData = DiagnosticsStepData> {
   id: string;
   title: string;
   status: DiagnosticsStepStatus;
   startedAt: string;
   durationMs: number;
+  /** Optional human summary. Teams projects this as its required `detail`. */
+  detail?: string;
   http?: DiagnosticsHttpMeta;
-  data?: Record<string, unknown>;
+  data?: TData;
   error?: DiagnosticsErrorMeta;
   /** Stable id of the prerequisite whose failure caused this step to skip. */
   blockedBy?: string;
 }
 
 /** The subset of a step a step function may return. */
-export type DiagnosticsStepResult = Pick<
-  DiagnosticsStep,
-  'status' | 'http' | 'data' | 'error'
+export type DiagnosticsStepResult<TData extends DiagnosticsStepData = DiagnosticsStepData> = Pick<
+  DiagnosticsStep<TData>,
+  'status' | 'detail' | 'http' | 'data' | 'error'
 >;
+
+/**
+ * Canonical report envelope. Consumers project domain summaries into
+ * `TSummary` and step data into `TData`; the execution kernel owns the rest.
+ */
+export interface DiagnosticsReport<
+  TSummary = Record<string, unknown>,
+  TData extends DiagnosticsStepData = DiagnosticsStepData,
+> {
+  createdAt: string;
+  summary: TSummary;
+  steps: DiagnosticsStep<TData>[];
+  recommendations: string[];
+  supportBundle: Record<string, unknown>;
+}
 
 /**
  * Result of classifying an arbitrary thrown error into safe diagnostics

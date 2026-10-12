@@ -2,6 +2,9 @@ import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
 import type { SuccessResponse } from "./tickets";
 
+/** Hierarchy level a task's default time-entry service came from. */
+export type ProjectTaskServiceSource = "task" | "phase" | "project";
+
 /** A project task as GET /api/v1/projects/tasks/{taskId} returns it; hours fields hold minutes. */
 export type ProjectTaskDetail = {
   task_id: string;
@@ -19,8 +22,15 @@ export type ProjectTaskDetail = {
   assigned_user_name?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
+  start_date?: string | null;
   due_date?: string | null;
   service_id?: string | null;
+  /** The task's own service, else its phase's default, else its project's. */
+  effective_service_id?: string | null;
+  /** Which level `effective_service_id` came from; null when no level sets one. */
+  service_source?: ProjectTaskServiceSource | null;
+  /** Name of the service `effective_service_id` points at. */
+  service_name?: string | null;
   wbs_code?: string | null;
   updated_at?: string | null;
 };

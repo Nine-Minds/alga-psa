@@ -230,7 +230,7 @@ test.describe('Workflow Designer UI - E2E flows', () => {
       await workflowPage.saveDraft();
       await expect(page.getByRole('button', { name: workflowName })).toBeVisible({ timeout: 10_000 });
 
-      await workflowPage.publishButton.click();
+      await workflowPage.publish();
       await expect(page.getByText('Workflow published')).toBeVisible();
     } finally {
       await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);

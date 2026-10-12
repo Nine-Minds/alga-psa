@@ -496,6 +496,32 @@ function deriveReadiness(installState, nodes, pods, jobs, releases, helmIssues, 
   };
 }
 
+// LEVERAGE: pattern appliance-status-triplicate — the email-service /status
+// interpretation below is duplicated in operator/lib/status.mjs and in the
+// embedded pod script in flux/base/platform/appliance-status.yaml. The three
+// status implementations are deliberately not merged here.
+//
+// Reads the email-service `/status` summary (version 1) obtained through the
+// API-server service proxy. A 404 (older image), an unreachable pod or invalid
+// JSON is "unavailable" and must never degrade the appliance status.
+function interpretEmailServiceStatus(result) {
+  const unavailable = { state: 'unavailable', reasons: [] };
+  if (!result?.ok) return unavailable;
+  let body;
+  try {
+    body = JSON.parse(result.text);
+  } catch {
+    return unavailable;
+  }
+  if (!body || body.version !== 1 || !['ok', 'degraded', 'down'].includes(body.status)) return unavailable;
+  const reasons = (Array.isArray(body.reasons) ? body.reasons : [])
+    .filter((reason) => reason && reason.severity !== 'info')
+    .map((reason) => String(reason.message || reason.code || '').slice(0, 200))
+    .filter(Boolean)
+    .slice(0, 5);
+  return { state: body.status, reasons };
+}
+
 function tierStatus(ready, waitingStatus = 'waiting') {
   return ready ? 'ready' : waitingStatus;
 }
@@ -639,6 +665,7 @@ function buildStatusSnapshot({
   jobResult,
   helmResult,
   eventsResult,
+  emailServiceResult,
   diagnostics
 }) {
   const installState = readJsonFile(stateFile);
@@ -708,6 +735,25 @@ function buildStatusSnapshot({
   const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
   const tiers = deriveReadiness(failureState, nodes, pods, jobs, releases, helmIssues, readinessWarnings);
   const derivedFailures = deriveFailureSummary(failureState, pods, blockingHelmIssues, warnings);
+
+  // Inbound email health (email-service /status). Degraded or down makes the
+  // background tier unhealthy with a background-severity blocker; login is
+  // never blocked. An unavailable result leaves everything unchanged.
+  const emailHealth = interpretEmailServiceStatus(emailServiceResult);
+  if (emailHealth.state === 'degraded' || emailHealth.state === 'down') {
+    tiers.backgroundReady = false;
+    tiers.fullyHealthy = false;
+    derivedFailures.push({
+      category: 'background-services',
+      phase: 'background-services',
+      step: 'email-service-health',
+      lastAction: 'Inbound email health is reduced.',
+      suspectedCause: `Inbound email is ${emailHealth.state}${emailHealth.reasons.length ? `: ${emailHealth.reasons.join('; ')}` : '.'}`,
+      suggestedNextStep: 'Review email-service health (`/status`) and its pod logs; login remains available.',
+      retrySafe: true,
+      logs: ['kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml -n msp logs deploy/email-service --tail=200']
+    });
+  }
   const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
 
   // During a retry the engine writes running states whose phase may momentarily
@@ -852,6 +898,7 @@ function buildStatusSnapshot({
       statusUrl: null
     },
     release: releaseSelection,
+    emailService: { health: emailHealth.state, reasons: emailHealth.reasons },
     kubernetes: {
       nodes,
       podCount: pods.length,
@@ -914,11 +961,13 @@ export async function collectStatusSnapshotAsync(options = {}) {
     reader.listPods({ timeoutMs }),
     reader.listJobs({ namespace: 'msp', timeoutMs }),
     reader.listHelmReleases({ namespace: 'alga-system', timeoutMs }),
-    reader.listEvents({ timeoutMs })
+    reader.listEvents({ timeoutMs }),
+    // Inbound email health via the API-server service proxy (alga0002256).
+    reader.readServiceProxy({ namespace: 'msp', service: 'http:email-service:http', path: 'status', timeoutMs })
   ]);
   // When the API itself is down, report that once (on the node query) rather
-  // than as five identical warnings.
-  const [podResult, jobResult, helmResult, eventsResult] = isKubernetesQueryUnavailable(nodeResult)
+  // than as six identical warnings.
+  const [podResult, jobResult, helmResult, eventsResult, emailServiceResult] = isKubernetesQueryUnavailable(nodeResult)
     ? rest.map(() => skippedKubernetesQuery('node query failed or timed out'))
     : rest;
   const diagnostics = options.includeDiagnostics === true ? await collectDiagnosticsAsync(context.kubectlPrefix, runner) : [];
@@ -941,6 +990,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
     jobResult,
     helmResult,
     eventsResult,
+    emailServiceResult,
     diagnostics
   });
 }

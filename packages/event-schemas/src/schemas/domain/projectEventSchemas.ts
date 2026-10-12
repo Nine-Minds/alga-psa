@@ -1,13 +1,12 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
-const projectIdSchema = uuidSchema('Project ID');
+const projectIdSchema = entityIdSchema('Project ID', 'project');
 const taskIdSchema = uuidSchema('Task ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
+const taskCommentIdSchema = uuidSchema('Task Comment ID');
 
 const assignedToTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
-const projectBillingStatusSchema = z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']);
-const projectBillingPaymentStateSchema = z.enum(['outstanding', 'satisfied', 'replacement_needed']);
 
 export const projectCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   projectId: projectIdSchema,
@@ -46,6 +45,16 @@ export const projectTaskCreatedEventPayloadSchema = BaseDomainEventPayloadSchema
 }).describe('Payload for PROJECT_TASK_CREATED');
 
 export type ProjectTaskCreatedEventPayload = z.infer<typeof projectTaskCreatedEventPayloadSchema>;
+
+export const projectTaskUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  taskId: taskIdSchema,
+  projectId: projectIdSchema,
+  updatedAt: z.string().datetime().optional(),
+  updatedFields: updatedFieldsSchema,
+  changes: changesSchema,
+}).describe('Payload for PROJECT_TASK_UPDATED');
+
+export type ProjectTaskUpdatedEventPayload = z.infer<typeof projectTaskUpdatedEventPayloadSchema>;
 
 export const projectTaskAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   taskId: taskIdSchema,
@@ -132,6 +141,69 @@ export const projectApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadS
 }).describe('Payload for PROJECT_APPROVAL_REJECTED');
 
 export type ProjectApprovalRejectedEventPayload = z.infer<typeof projectApprovalRejectedEventPayloadSchema>;
+
+// ---------------------------------------------------------------------------
+// Legacy project events (still used in harness fixtures)
+// ---------------------------------------------------------------------------
+
+export const projectAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  assignedToId: z.string().uuid().optional(),
+  assignedToType: assignedToTypeSchema.optional(),
+  assignedByUserId: userIdSchema.optional(),
+  assignedAt: z.string().datetime().optional(),
+}).describe('Payload for PROJECT_ASSIGNED');
+
+export type ProjectAssignedEventPayload = z.infer<typeof projectAssignedEventPayloadSchema>;
+
+export const projectClosedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  closedByUserId: userIdSchema.optional(),
+  closedAt: z.string().datetime().optional(),
+  reason: z.string().optional(),
+}).describe('Payload for PROJECT_CLOSED');
+
+export type ProjectClosedEventPayload = z.infer<typeof projectClosedEventPayloadSchema>;
+
+export const projectTaskAdditionalAgentAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  taskId: taskIdSchema,
+  projectId: projectIdSchema,
+  primaryAgentId: userIdSchema,
+  additionalAgentId: userIdSchema,
+  assignedByUserId: userIdSchema.optional(),
+  assignedAt: z.string().datetime().optional(),
+}).describe('Payload for PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED');
+
+export type ProjectTaskAdditionalAgentAssignedEventPayload = z.infer<
+  typeof projectTaskAdditionalAgentAssignedEventPayloadSchema
+>;
+
+export const taskCommentAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  taskId: taskIdSchema,
+  projectId: projectIdSchema,
+  taskCommentId: taskCommentIdSchema,
+  commentContent: z.string().min(1),
+  createdByUserId: userIdSchema.optional(),
+  taskName: z.string().optional(),
+}).describe('Payload for TASK_COMMENT_ADDED');
+
+export type TaskCommentAddedEventPayload = z.infer<typeof taskCommentAddedEventPayloadSchema>;
+
+export const taskCommentUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  taskId: taskIdSchema,
+  projectId: projectIdSchema,
+  taskCommentId: taskCommentIdSchema,
+  oldCommentContent: z.string().min(1).optional(),
+  newCommentContent: z.string().min(1),
+  updatedByUserId: userIdSchema.optional(),
+  taskName: z.string().optional(),
+}).describe('Payload for TASK_COMMENT_UPDATED');
+
+export type TaskCommentUpdatedEventPayload = z.infer<typeof taskCommentUpdatedEventPayloadSchema>;
+
+const projectBillingStatusSchema = z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']);
+
+const projectBillingPaymentStateSchema = z.enum(['outstanding', 'satisfied', 'replacement_needed']);
 
 export const projectMilestoneReadyEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   projectId: projectIdSchema,

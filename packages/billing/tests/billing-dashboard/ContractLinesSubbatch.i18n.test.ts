@@ -214,7 +214,10 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
 
   it('T017: UsageContractLinePresetConfiguration translated save/validation error messages exist', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/UsageContractLinePresetConfiguration.tsx');
-    expectSourceHasKeys(source, ['preset.usage.errors.noChangesDetected', 'preset.usage.errors.validationErrorsInModifiedServices']);
+    expectSourceHasKeys(source, [
+      'preset.usage.errors.failedToSaveContractLinePreset',
+      'preset.usage.errors.invalidPlanTypeOrNotFound',
+    ]);
   });
 
   it('T018: HourlyContractLinePresetConfiguration basics section fields are translated', () => {

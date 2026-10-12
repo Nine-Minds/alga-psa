@@ -20,6 +20,7 @@ export const TICKET_LIST_SORT_KEYS = [
   'board_name',
   'category_name',
   'client_name',
+  'contact_name',
   'entered_at',
   'entered_by_name',
   'due_date',

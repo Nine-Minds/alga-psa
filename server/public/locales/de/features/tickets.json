@@ -136,6 +136,7 @@
     "assignedTo": "Zugewiesen an",
     "requester": "Anfragende Person",
     "client": "Unternehmen",
+    "contact": "Kontakt",
     "dueDate": "Fälligkeitsdatum",
     "resolution": "Lösung",
     "timeSpent": "Aufgewendete Zeit",
@@ -177,9 +178,14 @@
     "tags": "Tags",
     "sla": "SLA",
     "updated": "Aktualisiert",
+    "updatedAtBy": "Aktualisiert {{time}} von {{name}}",
+    "byName": "von {{name}}",
     "openInNewTab": "In neuem Tab öffnen",
     "actions": "Aktionen",
-    "linkedAssets": "Verknüpfte Assets"
+    "linkedAssets": "Verknüpfte Assets",
+    "assetName": "Name",
+    "assetTag": "Asset-Tag",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Anzeigen",
@@ -373,7 +379,13 @@
     "schedule": "Planen",
     "scheduled": "Geplant",
     "showMore": "Mehr anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Korrigieren Sie die markierten Adressen, bevor Sie senden.",
+    "ccBccTooMany": "Es können höchstens {{max}} Cc- und Bcc-Empfänger pro Kommentar kopiert werden.",
+    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden."
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -438,7 +450,8 @@
       "loading": "Wird geladen...",
       "clientNotFound": "Kunde nicht gefunden.",
       "clientRendererMissing": "Kundendetails sind in diesem Kontext nicht verfügbar.",
-      "clientLoadFailed": "Kunde konnte nicht geladen werden."
+      "clientLoadFailed": "Kunde konnte nicht geladen werden.",
+      "contactRendererMissing": "Kontaktdetails sind in diesem Kontext nicht verfügbar."
     },
     "filters": {
       "allAssignees": "Alle Zuständigen",
@@ -748,6 +761,8 @@
       "failure": "Fehler beim Aktualisieren des Status",
       "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:",
       "resolutionLabel": "Lösungskommentar (optional)",
+      "resolutionLabelRequired": "Lösungskommentar",
+      "resolutionRequiredHint": "Für dieses Board ist ein Lösungskommentar erforderlich, bevor Tickets geschlossen werden können.",
       "resolutionPlaceholder": "Beschreiben Sie, wie diese Tickets gelöst wurden",
       "resolutionHelper": "Wird als Lösung in jedem ausgewählten Ticket gespeichert und erfüllt Boards, die vor dem Schließen eine Lösung verlangen."
     },
@@ -965,9 +980,6 @@
     "closeTicketNowTitle": "Ticket jetzt schließen?",
     "closeTicketNowPrompt": "Dieser Kommentar ist nun die Lösung. Wählen Sie einen Schließstatus, um das Ticket zu schließen, oder lassen Sie es offen.",
     "leaveTicketOpen": "Offen lassen",
-    "timerActiveElsewhereTitle": "Timer an anderer Stelle aktiv",
-    "timerTakeoverMessage": "Der Timer dieses Tickets ist in einem anderen Fenster aktiv. Möchten Sie ihn übernehmen und hier ersetzen?",
-    "replaceHere": "Hier ersetzen",
     "noActiveTimePeriodTitle": "Kein aktiver Zeitraum",
     "noActiveTimePeriodMessage": "Kein aktiver Zeitraum gefunden. Zeiträume müssen im Abrechnungs-Dashboard eingerichtet werden, bevor Zeiteinträge hinzugefügt werden können.",
     "goToTimePeriodsSetup": "Zur Einrichtung der Zeiträume",
@@ -983,15 +995,7 @@
   },
   "properties": {
     "timeEntry": "Zeiteintrag",
-    "ticketTimer": "Ticket-Timer - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer ist in einem anderen Fenster aktiv",
-    "start": "Starten",
-    "pause": "Pausieren",
-    "reset": "Zurücksetzen",
-    "enterWorkDescription": "Arbeitsbeschreibung eingeben",
-    "liveTimerDisabled": "Der Live-Ticket-Timer ist für dieses Board deaktiviert.",
     "addTimeEntry": "Zeiteintrag hinzufügen",
-    "trackedIntervals": "Erfasste Intervalle",
     "contactInfo": "Kontaktinformationen",
     "noContactSelected": "Kein Kontakt ausgewählt",
     "selectOrChangeContact": "Kontakt auswählen oder ändern",
@@ -1736,9 +1740,7 @@
       "viewAll": "Alle anzeigen",
       "viewAllCount": "Alle {{count}} anzeigen",
       "timeLogged": "Erfasste Zeit",
-      "workDescription": "Arbeitsbeschreibung",
       "addTimeEntry": "Zeiteintrag hinzufügen",
-      "trackedIntervals": "Erfasste Intervalle",
       "teamAndWatchers": "Team und Beobachter",
       "addAgent": "Agent hinzufügen…",
       "timeline": "Zeitleiste",
@@ -1749,7 +1751,6 @@
       "opened": "Geöffnet",
       "viaSource": "über {{source}}",
       "noContactOnTicket": "Kein Kontakt für dieses Ticket",
-      "whatAreYouWorkingOn": "Woran arbeiten Sie?",
       "agentFallback": "Techniker",
       "removeAgent": "{{name}} entfernen",
       "noAdditionalAgents": "Keine zusätzlichen Agents",
@@ -1776,8 +1777,6 @@
       "acrossEntries_one": "über {{count}} Eintrag",
       "acrossEntries_other": "über {{count}} Einträge",
       "team": "Team",
-      "startTimer": "Timer starten",
-      "timerLockedHint": "Es läuft bereits ein anderer Timer",
       "billable": "Abrechenbar",
       "nothingBillable": "Noch nichts Abrechenbares",
       "editContact": "Kontakt bearbeiten",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "{{every}} am {{ordinal}} {{weekday}}",
       "yearly": "Jedes Jahr am {{day}}. {{month}}"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "Die Stoppuhr ist für dieses Board deaktiviert.",
+    "pausedElsewhereTicket": "Pausiert bei einem anderen Ticket: {{label}}",
+    "runningElsewhereTicket": "Läuft bei einem anderen Ticket: {{label}}",
+    "pausedElsewhereTask": "Pausiert bei einer anderen Aufgabe: {{label}}",
+    "runningElsewhereTask": "Läuft bei einer anderen Aufgabe: {{label}}",
+    "switch": "Hierher wechseln",
+    "start": "Stoppuhr starten",
+    "resume": "Stoppuhr fortsetzen",
+    "pause": "Stoppuhr pausieren",
+    "stop": "Stoppen und Zeit erfassen",
+    "discard": "Stoppuhr verwerfen",
+    "pausedHint": "Pausiert. Setzen Sie fort, um weiter zu erfassen, oder stoppen Sie, um die Zeit zu buchen.",
+    "workDescription": "Arbeitsbeschreibung",
+    "whatAreYouWorkingOn": "Woran arbeiten Sie?"
   }
 }

@@ -64,6 +64,10 @@ vi.mock('@alga-psa/billing/components', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
+  getResolvedInvoiceTemplateId: vi.fn(async () => 'tpl-1'),
+}));
+
 vi.mock('@alga-psa/ui/components/Skeleton', () => ({
   Skeleton: () => <div>Loading...</div>,
 }));

@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { buildInventoryPoReceivedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import {
   IPurchaseOrder,
   IPurchaseOrderLine,
@@ -262,14 +263,8 @@ export interface ReceivePoLineInput {
   }>;
 }
 
-export interface PoReceivedEventPayload {
-  tenant: string;
-  po_id: string;
-  po_number: string;
-  vendor_id: string | null;
-  vendor_name: string | null;
-  received_line_count: number;
-}
+/** INVENTORY_PO_RECEIVED payload, already built (publish after commit). */
+export type PoReceivedEventPayload = ReturnType<typeof buildInventoryPoReceivedPayload>;
 
 export interface ReceivePoLineCoreResult {
   po_line: IPurchaseOrderLine;
@@ -433,13 +428,13 @@ export async function receivePoLineCore(
     po_status: poStatus,
     units,
     over_receipt: overReceipt,
-    po_received_event: {
+    po_received_event: buildInventoryPoReceivedPayload({
       tenant,
-      po_id: po.po_id,
-      po_number: po.po_number,
-      vendor_id: po.vendor_id ?? null,
-      vendor_name: vendor?.vendor_name ?? null,
-      received_line_count: Number(receivedLineCount?.c ?? 0),
-    },
+      poId: po.po_id,
+      poNumber: po.po_number,
+      vendorId: po.vendor_id ?? null,
+      vendorName: vendor?.vendor_name ?? null,
+      receivedLineCount: Number(receivedLineCount?.c ?? 0),
+    }),
   };
 }

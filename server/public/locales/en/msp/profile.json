@@ -53,6 +53,7 @@
         "fillRequiredFields": "Please fill in all required fields",
         "loadFailed": "Failed to load profile",
         "saveFailed": "Failed to save profile",
+        "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
         "errorPrefix": "Error: {{error}}"
       }
     },
@@ -726,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "SSO link failed.",
+      "no_matching_user": "The account you signed in with is {{providerEmail}}, but your AlgaPSA login is {{accountEmail}}. Link an account that uses {{accountEmail}}, or ask your identity provider administrator to make {{accountEmail}} that account's primary email address.",
+      "missing_email": "Your identity provider did not return an email address for that account, so it cannot be matched to your AlgaPSA login {{accountEmail}}. Ask your identity provider administrator to publish an email address for the account, then try again.",
+      "inactive_user": "The AlgaPSA user for {{providerEmail}} is inactive, so it cannot be linked. Ask your administrator to reactivate it and try again.",
+      "user_type_mismatch": "{{providerEmail}} matches a client portal user, not an internal AlgaPSA user. Link an account that uses {{accountEmail}} instead.",
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization than {{accountEmail}}. Link an account from your own organization.",
+      "generic": "We could not link that account to {{accountEmail}}. Please try again, or contact your administrator.",
+      "unknownProviderEmail": "an account with no email address"
+    },
     "verify": {
       "title": "Secure your account with SSO",
       "description": "Link Azure AD or Google Workspace to reuse organizational policies and skip local two-factor prompts.",

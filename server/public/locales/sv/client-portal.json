@@ -377,7 +377,17 @@
         "verifiedContact": "Verifierad e-postadress för kontakten",
         "validPassword": "Giltigt lösenord"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-inloggningen misslyckades",
+    "ssoNoMatch": {
+      "no_matching_user": "Inget kundportalskonto matchar {{providerEmail}}. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "missing_email": "Din identitetsleverantör returnerade ingen e-postadress, så inget kundportalskonto kunde matchas. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "inactive_user": "Kundportalskontot för {{providerEmail}} är inaktivt. Kontakta din tjänsteleverantör för att aktivera det igen.",
+      "user_type_mismatch": "{{providerEmail}} är inget kundportalskonto. Kontakta din tjänsteleverantör.",
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
+    },
+    "configurationTitle": "Inloggningen misslyckades",
+    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör."
   },
   "account": {
     "title": "Konto",
@@ -478,7 +488,8 @@
         "consent": "Jag godkänner återkommande debiteringar på det här kortet för fastställda fakturor.",
         "enable": "Aktivera automatisk betalning",
         "noCards": "Lägg till ett kort för att aktivera automatisk betalning.",
-        "changeCard": "Använd det här kortet för automatisk betalning"
+        "changeCard": "Använd det här kortet för automatisk betalning",
+        "updateError": "Det gick inte att uppdatera den automatiska betalningen. Försök igen."
       },
       "publicCardSetup": {
         "saved": "Kortet har sparats",
@@ -617,6 +628,7 @@
       "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen",
       "reportsToSelf": "En användare kan inte ha sig själv som chef",
       "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
+      "invalidTimezone": "Välj en tidszon baserad på en stad, till exempel America/New_York.",
       "photoUploaded": "Fotot har laddats upp",
       "photoRemoved": "Fotot har tagits bort",
       "userNotFound": "Användaren hittades inte",
@@ -738,7 +750,10 @@
       "reportsToSelf": "En användare kan inte ha sig själv som chef",
       "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
       "createError": "Det gick inte att skapa användaren",
-      "deleteError": "Det gick inte att radera användaren"
+      "deleteError": "Det gick inte att radera användaren",
+      "reportsTo": "Rapporterar till",
+      "noManager": "Ingen chef",
+      "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster."
     },
     "messages": {
       "saveChanges": "Spara ändringar",
@@ -790,9 +805,22 @@
       "scopeClient": "Alla den här kundens ärenden",
       "scopeContact": "Endast egna ärenden",
       "scopeClientDescription": "Medlemmar ser alla den här kundens ärenden på de valda tavlorna.",
-      "scopeContactDescription": "Medlemmar ser endast ärenden där de är angivna som kontakt. Kundadministratörer ser alla ärenden på de valda tavlorna, även ärenden utan kontakt.",
-      "assignmentHelp": "Tilldela en grupp för att begränsa åtkomst till tavlor och ärenden, eller behåll full kundåtkomst.",
-      "boardHiddenFromPortal": "Dold i kundportalen"
+      "scopeContactDescription": "Medlemmar ser ärenden där de är kontakt, ärenden för personer som rapporterar till dem och ärenden de bevakar. Kundadministratörer ser alltid allt på de valda tavlorna, även ärenden utan kontakt.",
+      "assignmentHelp": "Tilldela en grupp för att begränsa tavlor och vad personen ser av ärenden, enheter och projekt, eller behåll full kundåtkomst.",
+      "boardHiddenFromPortal": "Dold i kundportalen",
+      "assetScopeLabel": "Synlighet för enheter",
+      "assetScopeClient": "Alla den här kundens enheter",
+      "assetScopeContact": "Endast egna enheter",
+      "assetScopeClientDescription": "Medlemmar ser alla enheter för den här kunden, även icke tilldelade.",
+      "assetScopeContactDescription": "Medlemmar ser bara enheter som är tilldelade dem eller personer som rapporterar till dem. Icke tilldelade enheter är dolda. Kundadministratörer ser alltid allt.",
+      "projectScopeLabel": "Synlighet för projekt",
+      "projectScopeClient": "Alla den här kundens projekt",
+      "projectScopeContact": "Endast egna projekt",
+      "projectScopeClientDescription": "Medlemmar ser alla projekt för den här kunden.",
+      "projectScopeContactDescription": "Medlemmar ser bara projekt där kontakten är de själva eller någon som rapporterar till dem. Projekt utan kontakt är dolda. Kundadministratörer ser alltid allt.",
+      "scopeSummary": "Ärenden: {{tickets}} · Enheter: {{devices}} · Projekt: {{projects}}",
+      "scopeSummaryAll": "Alla",
+      "scopeSummaryOwn": "Egna"
     },
     "domain": {
       "title": "Anpassad domän",

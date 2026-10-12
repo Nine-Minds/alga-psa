@@ -136,6 +136,7 @@
     "assignedTo": "Toegewezen aan",
     "requester": "Aanvrager",
     "client": "Bedrijf",
+    "contact": "Contactpersoon",
     "dueDate": "Vervaldatum",
     "resolution": "Oplossing",
     "timeSpent": "Bestede tijd",
@@ -177,9 +178,14 @@
     "tags": "Labels",
     "sla": "SLA",
     "updated": "Bijgewerkt",
+    "updatedAtBy": "Bijgewerkt {{time}} door {{name}}",
+    "byName": "door {{name}}",
     "openInNewTab": "Openen in nieuw tabblad",
     "actions": "Acties",
-    "linkedAssets": "Gekoppelde apparaten"
+    "linkedAssets": "Gekoppelde apparaten",
+    "assetName": "Naam",
+    "assetTag": "Assettag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "Bekijken",
@@ -373,7 +379,13 @@
     "schedule": "Plannen",
     "scheduled": "Gepland",
     "showMore": "Meer tonen",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Corrigeer de gemarkeerde adressen voordat u verzendt.",
+    "ccBccTooMany": "Er kunnen maximaal {{max}} Cc- en Bcc-ontvangers op één opmerking worden gekopieerd.",
+    "ccBccNotSentOnInternal": "Cc en Bcc worden niet verzonden bij een interne notitie. Zet Intern uit om ze te gebruiken."
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",
@@ -438,7 +450,8 @@
       "loading": "Laden...",
       "clientNotFound": "Klant niet gevonden.",
       "clientRendererMissing": "Klantgegevens zijn niet beschikbaar in deze context.",
-      "clientLoadFailed": "Kan klant niet laden."
+      "clientLoadFailed": "Kan klant niet laden.",
+      "contactRendererMissing": "Contactgegevens zijn niet beschikbaar in deze context."
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
@@ -748,6 +761,8 @@
       "failure": "Bijwerken van status is mislukt",
       "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:",
       "resolutionLabel": "Oplossingscommentaar (optioneel)",
+      "resolutionLabelRequired": "Oplossingscommentaar",
+      "resolutionRequiredHint": "Dit bord vereist een oplossingscommentaar voordat tickets kunnen worden gesloten.",
       "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
       "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten."
     },
@@ -965,9 +980,6 @@
     "closeTicketNowTitle": "Ticket nu sluiten?",
     "closeTicketNowPrompt": "Deze opmerking is nu de oplossing. Kies een afsluitstatus om het ticket te sluiten, of laat het open.",
     "leaveTicketOpen": "Open laten",
-    "timerActiveElsewhereTitle": "Timer actief op een andere plek",
-    "timerTakeoverMessage": "De timer van dit ticket is actief in een ander venster. Wilt u deze overnemen en hier vervangen?",
-    "replaceHere": "Hier vervangen",
     "noActiveTimePeriodTitle": "Geen actieve periode",
     "noActiveTimePeriodMessage": "Geen actieve periode gevonden. Perioden moeten in het facturatiedashboard worden ingesteld voordat u tijd kunt invoeren.",
     "goToTimePeriodsSetup": "Naar instellingen voor periodes",
@@ -983,15 +995,7 @@
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
-    "ticketTimer": "Tickettimer - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer actief in een ander venster",
-    "start": "Starten",
-    "pause": "Pauzeren",
-    "reset": "Resetten",
-    "enterWorkDescription": "Werkbeschrijving invoeren",
-    "liveTimerDisabled": "Live ticket-timer is uitgeschakeld voor dit bord.",
     "addTimeEntry": "Tijdregistratie toevoegen",
-    "trackedIntervals": "Bijgehouden intervallen",
     "contactInfo": "Contactinformatie",
     "noContactSelected": "Geen contact geselecteerd",
     "selectOrChangeContact": "Contact selecteren of wijzigen",
@@ -1736,9 +1740,7 @@
       "viewAll": "Alles weergeven",
       "viewAllCount": "Alle {{count}} weergeven",
       "timeLogged": "Geregistreerde tijd",
-      "workDescription": "Werkomschrijving",
       "addTimeEntry": "Tijdregistratie toevoegen",
-      "trackedIntervals": "Bijgehouden intervallen",
       "teamAndWatchers": "Team en volgers",
       "addAgent": "Medewerker toevoegen…",
       "timeline": "Tijdlijn",
@@ -1749,7 +1751,6 @@
       "opened": "Geopend",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "Geen contact op dit ticket",
-      "whatAreYouWorkingOn": "Waaraan werkt u?",
       "agentFallback": "Medewerker",
       "removeAgent": "{{name}} verwijderen",
       "noAdditionalAgents": "Geen extra medewerkers",
@@ -1776,8 +1777,6 @@
       "acrossEntries_one": "over {{count}} registratie",
       "acrossEntries_other": "over {{count}} registraties",
       "team": "Team",
-      "startTimer": "Timer starten",
-      "timerLockedHint": "Er loopt al een andere timer",
       "billable": "Factureerbaar",
       "nothingBillable": "Nog niets factureerbaar",
       "editContact": "Contact bewerken",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "{{every}} op de {{ordinal}} {{weekday}}",
       "yearly": "Elk jaar op {{day}} {{month}}"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "De stopwatch is uitgeschakeld voor dit bord.",
+    "pausedElsewhereTicket": "Gepauzeerd op een ander ticket: {{label}}",
+    "runningElsewhereTicket": "Loopt op een ander ticket: {{label}}",
+    "pausedElsewhereTask": "Gepauzeerd op een andere taak: {{label}}",
+    "runningElsewhereTask": "Loopt op een andere taak: {{label}}",
+    "switch": "Hier naartoe wisselen",
+    "start": "Stopwatch starten",
+    "resume": "Stopwatch hervatten",
+    "pause": "Stopwatch pauzeren",
+    "stop": "Stoppen en tijd registreren",
+    "discard": "Stopwatch verwijderen",
+    "pausedHint": "Gepauzeerd. Hervat om door te gaan, of stop om de tijd te registreren.",
+    "workDescription": "Werkbeschrijving",
+    "whatAreYouWorkingOn": "Waar werkt u aan?"
   }
 }

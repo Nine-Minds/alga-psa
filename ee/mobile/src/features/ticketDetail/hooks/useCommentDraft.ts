@@ -37,6 +37,10 @@ export function useCommentDraft(
   const [commentIsResolution, setCommentIsResolution] = useState(false);
   const [commentCloseStatusId, setCommentCloseStatusId] = useState<string | null>(null);
   const [commentScheduleAt, setCommentScheduleAt] = useState<Date | null>(null);
+  // One-off Cc/Bcc for this comment's email. Never persisted with the draft and
+  // never sent with an internal note.
+  const [commentCc, setCommentCc] = useState<string[]>([]);
+  const [commentBcc, setCommentBcc] = useState<string[]>([]);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -100,6 +104,8 @@ export function useCommentDraft(
       closeStatusId,
       notificationSuppression,
       scheduleAt,
+      cc,
+      bcc,
     }: {
       serializedDraft: string;
       text: string;
@@ -110,6 +116,8 @@ export function useCommentDraft(
       closeStatusId?: string | null;
       notificationSuppression?: TicketNotificationSuppressionOptions;
       scheduleAt?: Date | null;
+      cc?: string[];
+      bcc?: string[];
     }): Promise<boolean> => {
       if (!client || !session) return false;
       if (commentSendInFlightRef.current || commentSending) return false;
@@ -163,6 +171,10 @@ export function useCommentDraft(
                 scheduled_publish_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
               }
             : {}),
+          // The API rejects cc/bcc on an internal note, so only a public
+          // comment carries them.
+          ...(isTicket && !originalIsInternal && cc?.length ? { cc } : {}),
+          ...(isTicket && !originalIsInternal && bcc?.length ? { bcc } : {}),
           auditHeaders,
         });
         if (!result.ok) {
@@ -341,11 +353,15 @@ export function useCommentDraft(
       closeStatusId: commentCloseStatusId,
       notificationSuppression,
       scheduleAt: commentScheduleAt,
+      cc: commentCc,
+      bcc: commentBcc,
     });
     if (sent) {
       setCommentIsResolution(false);
       setCommentCloseStatusId(null);
       setCommentScheduleAt(null);
+      setCommentCc([]);
+      setCommentBcc([]);
     }
   };
 
@@ -364,6 +380,10 @@ export function useCommentDraft(
     setCommentCloseStatusId,
     commentScheduleAt,
     setCommentScheduleAt,
+    commentCc,
+    setCommentCc,
+    commentBcc,
+    setCommentBcc,
     commentSendError,
     commentSending,
     draftLoaded,

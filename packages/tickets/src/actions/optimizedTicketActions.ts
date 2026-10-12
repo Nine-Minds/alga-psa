@@ -1,9 +1,14 @@
 'use server';
 
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import type {
   ITicket,
   ITicketListItem,
@@ -24,6 +29,7 @@ import {
   withTransaction,
   registerAfterCommit,
   createTenantKnex,
+  getConnection,
   tenantDb,
   resolveUserTimeZone,
   normalizeIanaTimeZone,
@@ -34,8 +40,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
@@ -50,6 +55,9 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -78,9 +86,16 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildTicketAssignedPayload,
+  buildTicketClosedPayload,
+  buildTicketResponseStateChangedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { buildTicketResolutionSlaStageCompletionEvent, publishWorkflowTicketSlaStageEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   propagateBundleMasterStatus,
@@ -99,6 +114,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
@@ -124,13 +140,6 @@ function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   }
 
   return ticketActionErrorFrom(error);
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -226,6 +235,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
@@ -364,6 +376,7 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
+// LEVERAGE: pattern response-state-from-comment — duplicate of applyCommentResponseState (shared/lib/tickets/responseState.ts) minus the tracking-setting check; not swapped because the contract/live-update tests pin this local function and the swap adds the tracking check.
 async function updateTicketResponseStateFromComment(
   trx: Knex.Transaction,
   tenant: string,
@@ -396,18 +409,19 @@ async function updateTicketResponseStateFromComment(
       .update({ response_state: newState });
 
     registerAfterCommit(trx, () =>
-      publishEvent({
+      publishWorkflowEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
+        payload: buildTicketResponseStateChangedPayload({
           ticketId,
           userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment',
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
         },
       }),
       `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
@@ -426,18 +440,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
     due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 /**
@@ -745,6 +747,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         })
         .first() : null;
 
+    // Fetch last updated by user
+    const updatedByUser = ticket.updated_by ?
+      await tenantScopedTable(trx, 'users', tenant)
+        .where({
+          user_id: ticket.updated_by
+        })
+        .first() : null;
+
     // Fetch board
     const board = ticket.board_id ?
       await tenantScopedTable(trx, 'boards', tenant)
@@ -752,8 +762,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           board_id: ticket.board_id
         })
         .first() : null;
-    if (board && (board.enable_live_ticket_timer === null || board.enable_live_ticket_timer === undefined)) {
-      board.enable_live_ticket_timer = true;
+    if (board) {
+      board.enable_live_ticket_timer = resolveBoardStopwatchEnabled(board.enable_live_ticket_timer);
     }
 
     // The `users` fetch above is deliberately narrowed to internal active users so
@@ -994,7 +1004,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.entered_by',
         'ct.assigned_to',
         'ct.board_id',
-        'ct.assigned_team_id'
+        'ct.assigned_team_id',
+        'ct.billing_profile_id',
+        'ct.attributes'
       );
     tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
     const rawBundleChildren = await rawBundleChildrenQuery
@@ -1017,7 +1029,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.entered_by',
           'mt.assigned_to',
           'mt.board_id',
-          'mt.assigned_team_id'
+          'mt.assigned_team_id',
+          'mt.billing_profile_id',
+          'mt.attributes'
         );
         tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
         return masterQuery
@@ -1026,9 +1040,20 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
       : null;
 
-    const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
+    // `billing_profile_id` and `attributes` (the watch list) are selected only
+    // so the visibility predicate can see them; they are not part of the bundle
+    // payload and must not reach the client.
+    const withoutAuthorizationOnlyColumns = <T extends { attributes?: unknown; billing_profile_id?: unknown }>(
+      row: T
+    ): Omit<T, 'attributes' | 'billing_profile_id'> => {
+      const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
+      return rest;
+    };
+    const bundleChildren = (await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren))
+      .map(withoutAuthorizationOnlyColumns);
     const [bundleMaster] = rawBundleMaster
-      ? await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster])
+      ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
+          .map(withoutAuthorizationOnlyColumns)
       : [null];
 
     const isBundleChild = Boolean(masterTicketId);
@@ -1110,6 +1135,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       contacts,
       contactInfo,
       createdByUser,
+      updatedByUser,
       board,
       additionalAgents: resources,
       availableAgents: users,
@@ -1167,6 +1193,7 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'boards as c', 't.board_id', 'c.board_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -1872,7 +1899,7 @@ function buildTicketListItemsQuery(
       't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
       't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
       't.entered_by', 't.updated_by', 't.closed_by',
-      't.assigned_to', 't.assigned_team_id',
+      't.assigned_to', 't.assigned_team_id', 't.billing_profile_id',
       't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
       't.is_closed', 't.attributes',
       't.master_ticket_id', 't.tenant',
@@ -1899,6 +1926,7 @@ function buildTicketListItemsQuery(
       'c.board_name',
       'cat.category_name',
       'comp.client_name',
+      'cn.full_name as contact_name',
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
       trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
       'tm.team_name as assigned_team_name',
@@ -1925,6 +1953,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       board_name,
       category_name,
       client_name,
+      contact_name,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -1966,6 +1995,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       board_name: board_name || 'Unknown',
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
+      contact_name: contact_name || null,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,
@@ -1995,6 +2025,86 @@ export interface TicketListRowsWithMetadata {
     teamAvatarUrls: Record<string, string | null>;
     ticketTags: Record<string, ITag[]>;
   };
+}
+
+/**
+ * Resolve `latest_activity_actor` for a page of list rows. Two batched lookups
+ * keyed on the page's ticket ids (bounded by page size, not the filtered set):
+ * the newest published comment per ticket, and display names for every user and
+ * contact that could be the actor. The list SQL, sort and count are untouched.
+ */
+async function attachLatestActivityActors(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketListItems: ITicketListItem[],
+  ticketIds: string[]
+): Promise<void> {
+  if (ticketIds.length === 0) {
+    return;
+  }
+
+  // Same visibility filter as TICKET_LATEST_ACTIVITY_SQL.
+  const commentRows: Array<{
+    ticket_id: string;
+    created_at: Date | string;
+    user_id: string | null;
+    contact_id: string | null;
+    is_system_generated: boolean | null;
+    email: unknown;
+  }> = (await trx.raw(
+    `SELECT DISTINCT ON (ticket_id) ticket_id, created_at, user_id, contact_id,
+            is_system_generated, metadata->'email' AS email
+       FROM comments
+      WHERE tenant = ? AND ticket_id = ANY(?)
+        AND deleted_at IS NULL AND publish_state = 'published'
+      ORDER BY ticket_id, created_at DESC`,
+    [tenant, ticketIds]
+  )).rows;
+
+  const latestCommentByTicket = new Map<string, (typeof commentRows)[number]>();
+  const userIds = new Set<string>();
+  const contactIds = new Set<string>();
+  for (const comment of commentRows) {
+    latestCommentByTicket.set(comment.ticket_id, comment);
+    if (comment.user_id) userIds.add(comment.user_id);
+    if (comment.contact_id) contactIds.add(comment.contact_id);
+  }
+  for (const ticket of ticketListItems) {
+    if (ticket.updated_by) userIds.add(ticket.updated_by);
+    if (ticket.entered_by) userIds.add(ticket.entered_by);
+  }
+
+  const [userRows, contactRows] = await Promise.all([
+    userIds.size > 0
+      ? tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', Array.from(userIds))
+          .select('user_id', 'first_name', 'last_name', 'user_type')
+      : Promise.resolve([]),
+    contactIds.size > 0
+      ? tenantScopedTable(trx, 'contacts', tenant)
+          .whereIn('contact_name_id', Array.from(contactIds))
+          .select('contact_name_id', 'full_name')
+      : Promise.resolve([]),
+  ]);
+
+  const names: LatestActivityNames = { users: {}, contacts: {} };
+  for (const user of userRows as any[]) {
+    names.users[user.user_id] = {
+      name: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim(),
+      userType: user.user_type,
+    };
+  }
+  for (const contact of contactRows as any[]) {
+    names.contacts[contact.contact_name_id] = contact.full_name;
+  }
+
+  for (const ticket of ticketListItems) {
+    ticket.latest_activity_actor = resolveLatestActivityActor(
+      ticket,
+      latestCommentByTicket.get(ticket.ticket_id as string) ?? null,
+      names
+    );
+  }
 }
 
 async function enrichTicketListItems(
@@ -2031,7 +2141,14 @@ async function enrichTicketListItems(
     }
   });
 
-  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
+  const contactIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.contact_name_id) {
+      contactIds.add(ticket.contact_name_id);
+    }
+  });
+
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap] = await Promise.all([
     agentUserIds.size > 0
       ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
@@ -2062,12 +2179,20 @@ async function enrichTicketListItems(
     clientIds.size > 0
       ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
+    contactIds.size > 0
+      ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
   ]);
 
-  // Attach batched client logo URLs to each row (single query, no N+1).
+  // Attach batched client logo and contact avatar URLs to each row (single query each, no N+1).
   ticketListItems.forEach((ticket: ITicketListItem) => {
     ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+    ticket.contact_avatar_url = ticket.contact_name_id
+      ? (contactAvatarUrlsMap.get(ticket.contact_name_id) ?? null)
+      : null;
   });
+
+  await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
 
   // Convert Maps to Records for serialization
   const agentAvatarUrls: Record<string, string | null> = {};
@@ -2235,7 +2360,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2370,7 +2495,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       return rows
@@ -2708,6 +2833,9 @@ export async function updateTicketInTransaction(
     const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
     const isSystemActor = options?.systemActor === true;
+    // Server-owned audit stamp; system actors (auto-close) write NULL explicitly.
+    // Kept out of updateData so it does not show up in the audit field diff.
+    const ticketStamp = ticketUpdateStamp(trx, isSystemActor ? null : user.user_id);
 
     // Pre-close validation gates: when this update flips the ticket from an
     // open to a closed status, enforce the board's close rules before any
@@ -2818,9 +2946,10 @@ export async function updateTicketInTransaction(
         }
         
         // Step 5: Update the ticket with the new assigned_to
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
-          .update(updateData)
+          .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketStamp })
           .returning('*');
           
         // Step 6: Re-create the resources with the new assigned_to
@@ -2834,9 +2963,10 @@ export async function updateTicketInTransaction(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketStamp })
         .returning('*');
     }
 
@@ -2854,7 +2984,8 @@ export async function updateTicketInTransaction(
       occurredAt,
     };
 
-    const transitionEvents = buildTicketTransitionWorkflowEvents({
+    await publishTicketTransitionsAfterCommit(trx, {
+      tenant,
       before: {
         ticketId: id,
         statusId: currentTicket.status_id,
@@ -2871,24 +3002,8 @@ export async function updateTicketInTransaction(
         boardId: updatedTicket.board_id,
         escalated: updatedTicket.escalated,
       },
-      ctx: {
-        occurredAt,
-        actorUserId: user.user_id,
-        previousStatusIsClosed: !!oldStatus?.is_closed,
-        newStatusIsClosed: !!newStatus?.is_closed,
-      },
+      actorUserId: isSystemActor ? undefined : user.user_id,
     });
-
-    for (const ev of transitionEvents) {
-      await publishWorkflowEvent({
-        eventType: ev.eventType,
-        payload: ev.payload,
-        ctx: workflowCtx,
-        eventName: ev.workflow?.eventName,
-        fromState: ev.workflow?.fromState,
-        toState: ev.workflow?.toState,
-      });
-    }
 
     // Build structured changes object with old/new values
     const structuredChanges: Record<string, any> = {};
@@ -3015,7 +3130,7 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: id,
             ...(isSystemActor
               ? {}
@@ -3024,7 +3139,7 @@ export async function updateTicketInTransaction(
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
@@ -3042,33 +3157,29 @@ export async function updateTicketInTransaction(
       });
       if (slaCompletionEvent) {
         registerAfterCommit(trx, () =>
-          publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          }),
+          publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx),
           `${slaCompletionEvent.eventType} ticket=${id}`
         );
       }
     } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
       // Ticket was assigned - userId should be the user being assigned, not the one making the update
+      const newAssigneeId = updateData.assigned_to;
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
+          payload: buildTicketAssignedPayload({
             ticketId: id,
-            userId: updateData.assigned_to, // Legacy: assigned user
+            userId: newAssigneeId, // Legacy: assigned user
             assignedByUserId: user.user_id,
             previousAssigneeId: currentTicket.assigned_to ?? undefined,
             previousAssigneeType: currentTicket.assigned_to ? 'user' : undefined,
-            newAssigneeId: updateData.assigned_to,
+            newAssigneeId,
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
         }),
@@ -3079,14 +3190,14 @@ export async function updateTicketInTransaction(
       registerAfterCommit(trx, () =>
         publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
+          payload: buildTicketUpdatedPayload({
             ticketId: id,
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
         }),
@@ -3180,18 +3291,19 @@ export async function updateTicketInTransaction(
     // open-to-closed reset.
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       registerAfterCommit(trx, () =>
-        publishEvent({
+        publishWorkflowEvent({
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-          payload: {
-            tenantId: tenant,
-            occurredAt,
+          payload: buildTicketResponseStateChangedPayload({
             ticketId: id,
             userId: user.user_id,
-            previousResponseState: currentTicket.response_state || null,
-            newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
             trigger: clearsResponseStateOnClose ? 'close' : 'manual',
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
@@ -3287,6 +3399,356 @@ export async function updateTicketWithCacheForCurrentUser(id: string, data: Part
 }
 
 /**
+ * Input for {@link addTicketCommentInTransaction}.
+ */
+export interface AddTicketCommentInput {
+  ticketId: string;
+  content: string;
+  isInternal: boolean;
+  isResolution: boolean;
+  closesTicket?: boolean;
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >;
+  schedule?: ScheduledCommentPublication | null;
+  emailRecipients?: CommentEmailRecipientsInput | null;
+}
+
+/**
+ * Transaction-scoped comment write. Runs on the caller's transaction so the
+ * comment and every after-commit hook it registers commit (or roll back) with
+ * the caller's work. Throws on failure (never returns a TicketActionError) and
+ * does not check permissions: callers authorize, like updateTicketInTransaction.
+ */
+export async function addTicketCommentInTransaction(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  input: AddTicketCommentInput,
+): Promise<IComment> {
+  const {
+    ticketId,
+    content,
+    isInternal,
+    isResolution,
+    closesTicket = false,
+    notificationSuppression,
+    schedule,
+    emailRecipients,
+  } = input;
+
+  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
+  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+  }
+
+  const authorType: 'internal' | 'client' | 'unknown' =
+    user.user_type === 'client' ? 'client' : 'internal';
+
+  if (isInternal && authorType !== 'internal') {
+    throw new Error('Only MSP users can create internal comments');
+  }
+
+  let scheduledPublishAt: Date | null = null;
+  if (schedule) {
+    scheduledPublishAt = new Date(schedule.publishAt);
+    if (
+      authorType !== 'internal' ||
+      isInternal ||
+      Number.isNaN(scheduledPublishAt.getTime()) ||
+      scheduledPublishAt.getTime() <= Date.now() ||
+      !schedule.timeZone ||
+      schedule.timeZone.length > 64
+    ) {
+      throw new Error('Only internal MSP users may schedule client-visible comments for a valid future time');
+    }
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: schedule.timeZone });
+    } catch {
+      throw new Error('A valid IANA time zone is required for scheduled comments');
+    }
+  }
+  const scheduledPublishAtIso = scheduledPublishAt?.toISOString() ?? null;
+  const isScheduled = scheduledPublishAtIso !== null;
+  // A scheduled resolution must not close (or suppress the normal comment
+  // notification for) a ticket before it is actually published.
+  const effectiveClosesTicket = closesTicket && !isScheduled;
+
+  // Verify ticket exists
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+    .where({
+      ticket_id: ticketId
+    })
+    .first();
+
+  if (!ticket) {
+    throw new Error('Ticket not found');
+  }
+
+  // Use the centralized utility to convert BlockNote JSON to markdown
+  let markdownContent = "";
+  try {
+    markdownContent = await convertBlockNoteToMarkdown(content);
+    console.log("Converted markdown content for optimized comment:", markdownContent);
+  } catch (e) {
+    console.error("Error converting content to markdown:", e);
+    // If conversion fails, use a fallback message
+    markdownContent = "[Error converting content to markdown]";
+  }
+    
+  // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
+  // create the thread row first using IDs generated up-front.
+  const idsResult = await trx.raw(
+    'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+  );
+  const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
+  if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+    throw new Error('Database UUID generation did not return comment/thread identifiers.');
+  }
+  const newCommentId = generatedIds.comment_id;
+  const threadId = generatedIds.thread_id;
+  const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
+  const nowIso = new Date().toISOString();
+
+  // One-off Cc/Bcc for this comment only. Validation rejects internal notes,
+  // so the check runs against the effective visibility, not the raw flag.
+  const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+    cc: emailRecipients?.cc,
+    bcc: emailRecipients?.bcc,
+    isInternal: effectiveIsInternal,
+  });
+
+  await tenantDb(trx, tenant).table('comment_threads').insert({
+    tenant,
+    thread_id: threadId,
+    ticket_id: ticketId,
+    project_task_id: null,
+    root_comment_id: newCommentId,
+    is_internal: effectiveIsInternal,
+    reply_count: 0,
+    last_activity_at: nowIso,
+    created_at: nowIso,
+    created_by: user.user_id || null,
+  });
+
+  const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
+    tenant,
+    comment_id: newCommentId,
+    thread_id: threadId,
+    ticket_id: ticketId,
+    user_id: user.user_id,
+    // Record the author's linked contact when present so the row is a
+    // faithful source for downstream copies (bundle mirrors) and author
+    // resolution can fall back to the contact map.
+    contact_id: user.contact_id ?? null,
+    author_type: authorType,
+    note: content,
+    is_internal: effectiveIsInternal,
+    is_resolution: isResolution,
+    markdown_content: markdownContent,
+    created_at: nowIso,
+    ...(isScheduled ? {
+      publish_state: 'scheduled',
+      scheduled_publish_at: scheduledPublishAtIso,
+      scheduled_publish_tz: schedule!.timeZone,
+    } : {}),
+    // The email subscriber reads metadata.closes_ticket and skips the
+    // comment-added email so the close email is the single source of
+    // truth when the UI is closing the ticket immediately after.
+    ...(effectiveClosesTicket || resolvedEmailRecipients
+      ? {
+          metadata: {
+            ...(effectiveClosesTicket ? { closes_ticket: true } : {}),
+            ...(resolvedEmailRecipients ? { email_recipients: resolvedEmailRecipients } : {}),
+          },
+        }
+      : {}),
+  }).returning('*');
+
+    await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
+
+  // Update ticket response state based on comment visibility and author (F005-F008)
+  if (!isScheduled) {
+    await updateTicketResponseStateFromComment(
+      trx,
+      tenant,
+      ticketId,
+      authorType,
+      authorType === 'internal' ? isInternal : false,
+      user.user_id ?? null
+    );
+  }
+
+  // Bundle child→master reopen: a public reply on a bundled child can
+  // reopen the closed master when reopen_on_child_reply is set. This
+  // mirrors the wiring in commentActions.createComment so the optimized
+  // MSP-side comment path doesn't silently skip the reopen.
+  if (!isInternal && !isScheduled) {
+    await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
+  }
+
+  // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
+  if (!isInternal && !isScheduled) {
+    const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: ticketId })
+      .first();
+
+    if (bundleSettings?.mode === 'sync_updates') {
+      const children = await tenantScopedTable(trx, 'tickets', tenant)
+        .select('ticket_id')
+        .where({ master_ticket_id: ticketId });
+
+      for (const child of children) {
+        // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
+        // the sync_updates shape is defined once. Carry the source author
+        // (user, contact, author_type) so the mirrored child comment resolves
+        // to the real author instead of showing as unknown.
+        await mirrorCommentToChild(trx, tenant, {
+          sourceComment: {
+            comment_id: newCommentId,
+            note: content,
+            markdown_content: markdownContent,
+            user_id: newComment.user_id ?? null,
+            contact_id: newComment.contact_id ?? null,
+            author_type: newComment.author_type,
+          },
+          childTicketId: child.ticket_id,
+          isResolution,
+        });
+      }
+    }
+  }
+
+  // Publish comment added event after the comment transaction commits.
+  if (!isScheduled) await persistCommentPublication(trx, {
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: buildTicketCommentAddedPayload({
+        tenantId: tenant,
+        occurredAt: newComment.created_at ?? new Date().toISOString(),
+        ticketId: ticketId,
+        commentId: newComment.comment_id!,
+        userId: user.user_id!,
+        comment: {
+          content: content,
+          author: `${user.first_name} ${user.last_name}`,
+          isInternal,
+          authorType,
+        },
+        suppressContactNotifications,
+        suppressInternalNotifications,
+      }),
+    }, publishStoredWorkflowEvent);
+
+  // Publish workflow v2 ticket message events (additive).
+  if (!isScheduled) try {
+    const occurredAt = newComment.created_at ?? new Date().toISOString();
+    const workflowCtx = {
+      tenantId: tenant,
+      actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+      occurredAt,
+      correlationId: newComment.comment_id,
+    };
+
+    const events = buildTicketCommunicationWorkflowEvents({
+      ticketId,
+      messageId: newCommentId,
+      visibility: isInternal ? 'internal' : 'public',
+      author: { authorType: 'user', authorId: user.user_id },
+      channel: 'ui',
+      createdAt: occurredAt,
+    });
+
+    for (const ev of events) {
+      registerAfterCommit(
+        trx,
+        () => publishTicketCommunicationWorkflowEvent(ev, workflowCtx),
+        `${ev.eventType} ticket=${ticketId}`
+      );
+    }
+  } catch (eventError) {
+    console.error('[addTicketCommentInTransaction] Failed to build workflow ticket message events:', eventError);
+  }
+
+  registerAfterCommit(trx, () =>
+    publishTicketUpdate({
+      tenantId: tenant,
+      ticketId,
+      updatedFields: ['comments'],
+      updatedBy: {
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+    }),
+    `ticket-live-update ticket=${ticketId}`
+  );
+
+  // Activity-timeline row for the MSP-side "add comment" flow. This path
+  // is hit by the ticket detail UI, so source is always 'ui'. Internal
+  // notes get a distinct event type for clearer rendering.
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId,
+    eventType: isScheduled
+      ? 'TICKET_COMMENT_SCHEDULED'
+      : isInternal
+      ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
+      : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
+    entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+    entityId: newComment.comment_id,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: user.user_id,
+      displayName: formatLiveUpdateDisplayName(user),
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+    details: {
+      is_internal: !!isInternal,
+      is_resolution: !!isResolution,
+      ...(isScheduled ? {
+        scheduled_publish_at: scheduledPublishAtIso,
+        scheduled_publish_tz: schedule!.timeZone,
+      } : {}),
+    },
+  });
+
+  if (scheduledPublishAt && scheduledPublishAtIso && schedule) {
+    // Arm only after commit: a worker must never observe a schedule before
+    // its comment row is durable. Startup reconciliation repairs an arming
+    // failure after the transaction has committed.
+    registerAfterCommit(trx, async () => {
+      const job = await scheduleBackgroundJobAt(
+        SCHEDULED_COMMENT_JOB,
+        { tenantId: tenant, ticketId, commentId: newComment.comment_id },
+        scheduledPublishAt,
+        { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
+      );
+      await tenantDb(await getConnection(tenant), tenant).table('comments')
+        .where({ comment_id: newComment.comment_id, publish_state: 'scheduled' })
+        .update({ schedule_job_id: job.jobId });
+    }, `schedule comment publication ${newComment.comment_id}`);
+  }
+
+  // Track comment analytics after commit so a rolled-back comment is not counted.
+  registerAfterCommit(trx, () => {
+    captureAnalytics(isScheduled ? 'ticket_comment_scheduled' : 'ticket_comment_added', {
+      is_internal: isInternal,
+      is_resolution: isResolution,
+      content_length: markdownContent.length,
+      has_formatting: content.includes('"type"'), // BlockNote content has type field
+    }, user.user_id);
+  }, `ticket-comment-analytics ticket=${ticketId}`);
+
+  // Revalidate paths to update UI
+  revalidatePath(`/msp/tickets/${ticketId}`);
+
+  return newComment;
+}
+
+/**
  * Add comment to ticket with proper caching
  */
 export const addTicketCommentWithCache = withAuth(async (
@@ -3302,316 +3764,37 @@ export const addTicketCommentWithCache = withAuth(async (
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
   schedule?: ScheduledCommentPublication | null,
+  emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<IComment | TicketActionError> => {
-  const {knex: db} = await createTenantKnex();
+  // The catch sits outside the transaction on purpose: an expected error must
+  // roll back anything already written instead of committing a half-written comment.
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
-  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
-  if (suppressInternalNotifications && !suppressContactNotifications) {
-    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
-  }
-
-  return withTransaction(db, async (trx): Promise<IComment | TicketActionError> => {
-    try {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot add comment');
-    }
-
-    const authorType: 'internal' | 'client' | 'unknown' =
-      user.user_type === 'client' ? 'client' : 'internal';
-
-    if (isInternal && authorType !== 'internal') {
-      throw new Error('Only MSP users can create internal comments');
-    }
-
-    let scheduledPublishAt: Date | null = null;
-    if (schedule) {
-      scheduledPublishAt = new Date(schedule.publishAt);
-      if (
-        authorType !== 'internal' ||
-        isInternal ||
-        Number.isNaN(scheduledPublishAt.getTime()) ||
-        scheduledPublishAt.getTime() <= Date.now() ||
-        !schedule.timeZone ||
-        schedule.timeZone.length > 64
-      ) {
-        throw new Error('Only internal MSP users may schedule client-visible comments for a valid future time');
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot add comment');
       }
-      try {
-        Intl.DateTimeFormat(undefined, { timeZone: schedule.timeZone });
-      } catch {
-        throw new Error('A valid IANA time zone is required for scheduled comments');
-      }
-    }
-    const scheduledPublishAtIso = scheduledPublishAt?.toISOString() ?? null;
-    const isScheduled = scheduledPublishAtIso !== null;
-    // A scheduled resolution must not close (or suppress the normal comment
-    // notification for) a ticket before it is actually published.
-    const effectiveClosesTicket = closesTicket && !isScheduled;
 
-    // Verify ticket exists
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-    // Use the centralized utility to convert BlockNote JSON to markdown
-    let markdownContent = "";
-    try {
-      markdownContent = await convertBlockNoteToMarkdown(content);
-      console.log("Converted markdown content for optimized comment:", markdownContent);
-    } catch (e) {
-      console.error("Error converting content to markdown:", e);
-      // If conversion fails, use a fallback message
-      markdownContent = "[Error converting content to markdown]";
-    }
-    
-    // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
-    // create the thread row first using IDs generated up-front.
-    const idsResult = await trx.raw(
-      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-    );
-    const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
-    if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-      throw new Error('Database UUID generation did not return comment/thread identifiers.');
-    }
-    const newCommentId = generatedIds.comment_id;
-    const threadId = generatedIds.thread_id;
-    const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
-    const nowIso = new Date().toISOString();
-
-    await tenantDb(trx, tenant).table('comment_threads').insert({
-      tenant,
-      thread_id: threadId,
-      ticket_id: ticketId,
-      project_task_id: null,
-      root_comment_id: newCommentId,
-      is_internal: effectiveIsInternal,
-      reply_count: 0,
-      last_activity_at: nowIso,
-      created_at: nowIso,
-      created_by: user.user_id || null,
-    });
-
-    const [newComment] = await tenantDb(trx, tenant).table<IComment>('comments').insert({
-      tenant,
-      comment_id: newCommentId,
-      thread_id: threadId,
-      ticket_id: ticketId,
-      user_id: user.user_id,
-      // Record the author's linked contact when present so the row is a
-      // faithful source for downstream copies (bundle mirrors) and author
-      // resolution can fall back to the contact map.
-      contact_id: user.contact_id ?? null,
-      author_type: authorType,
-      note: content,
-      is_internal: effectiveIsInternal,
-      is_resolution: isResolution,
-      markdown_content: markdownContent,
-      created_at: nowIso,
-      ...(isScheduled ? {
-        publish_state: 'scheduled',
-        scheduled_publish_at: scheduledPublishAtIso,
-        scheduled_publish_tz: schedule!.timeZone,
-      } : {}),
-      // The email subscriber reads metadata.closes_ticket and skips the
-      // comment-added email so the close email is the single source of
-      // truth when the UI is closing the ticket immediately after.
-      ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
-    }).returning('*');
-
-      await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
-
-    // Update ticket response state based on comment visibility and author (F005-F008)
-    if (!isScheduled) {
-      await updateTicketResponseStateFromComment(
-        trx,
-        tenant,
+      return addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
         ticketId,
-        authorType,
-        authorType === 'internal' ? isInternal : false,
-        user.user_id ?? null
-      );
-    }
-
-    // Bundle child→master reopen: a public reply on a bundled child can
-    // reopen the closed master when reopen_on_child_reply is set. This
-    // mirrors the wiring in commentActions.createComment so the optimized
-    // MSP-side comment path doesn't silently skip the reopen.
-    if (!isInternal && !isScheduled) {
-      await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
-    }
-
-    // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
-    if (!isInternal && !isScheduled) {
-      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-        .where({ master_ticket_id: ticketId })
-        .first();
-
-      if (bundleSettings?.mode === 'sync_updates') {
-        const children = await tenantScopedTable(trx, 'tickets', tenant)
-          .select('ticket_id')
-          .where({ master_ticket_id: ticketId });
-
-        for (const child of children) {
-          // The mirror write lives in ticketBundleUtils.mirrorCommentToChild so
-          // the sync_updates shape is defined once. Carry the source author
-          // (user, contact, author_type) so the mirrored child comment resolves
-          // to the real author instead of showing as unknown.
-          await mirrorCommentToChild(trx, tenant, {
-            sourceComment: {
-              comment_id: newCommentId,
-              note: content,
-              markdown_content: markdownContent,
-              user_id: newComment.user_id ?? null,
-              contact_id: newComment.contact_id ?? null,
-              author_type: newComment.author_type,
-            },
-            childTicketId: child.ticket_id,
-            isResolution,
-          });
-        }
-      }
-    }
-
-    // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) await persistCommentPublication(trx, {
-        eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: newComment.created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId: user.user_id,
-          comment: {
-            id: newComment.comment_id,
-            content: content,
-            author: `${user.first_name} ${user.last_name}`,
-            isInternal,
-            authorType,
-          },
-          suppressContactNotifications,
-          suppressInternalNotifications,
-        }
-      }, publishEvent);
-
-    // Publish workflow v2 ticket message events (additive).
-    if (!isScheduled) try {
-      const occurredAt = newComment.created_at ?? new Date().toISOString();
-      const workflowCtx = {
-        tenantId: tenant,
-        actor: { actorType: 'USER' as const, actorUserId: user.user_id },
-        occurredAt,
-        correlationId: newComment.comment_id,
-      };
-
-      const events = buildTicketCommunicationWorkflowEvents({
-        ticketId,
-        messageId: newCommentId,
-        visibility: isInternal ? 'internal' : 'public',
-        author: { authorType: 'user', authorId: user.user_id },
-        channel: 'ui',
-        createdAt: occurredAt,
+        content,
+        isInternal,
+        isResolution,
+        closesTicket,
+        notificationSuppression,
+        schedule,
+        emailRecipients,
       });
-
-      for (const ev of events) {
-        registerAfterCommit(
-          trx,
-          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
-          `${ev.eventType} ticket=${ticketId}`
-        );
-      }
-    } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
-    }
-
-    registerAfterCommit(trx, () =>
-      publishTicketUpdate({
-        tenantId: tenant,
-        ticketId,
-        updatedFields: ['comments'],
-        updatedBy: {
-          userId: user.user_id,
-          displayName: formatLiveUpdateDisplayName(user),
-        },
-        updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-      }),
-      `ticket-live-update ticket=${ticketId}`
-    );
-
-    // Activity-timeline row for the MSP-side "add comment" flow. This path
-    // is hit by the ticket detail UI, so source is always 'ui'. Internal
-    // notes get a distinct event type for clearer rendering.
-    await writeTicketActivity(trx, {
-      tenant,
-      ticketId,
-      eventType: isScheduled
-        ? 'TICKET_COMMENT_SCHEDULED'
-        : isInternal
-        ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
-        : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
-      entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
-      entityId: newComment.comment_id,
-      actor: {
-        actorType: TICKET_ACTIVITY_ACTOR.USER,
-        userId: user.user_id,
-        displayName: formatLiveUpdateDisplayName(user),
-      },
-      source: TICKET_ACTIVITY_SOURCE.UI,
-      occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
-      details: {
-        is_internal: !!isInternal,
-        is_resolution: !!isResolution,
-        ...(isScheduled ? {
-          scheduled_publish_at: scheduledPublishAtIso,
-          scheduled_publish_tz: schedule!.timeZone,
-        } : {}),
-      },
     });
-
-    if (scheduledPublishAt && scheduledPublishAtIso && schedule) {
-      // Arm only after commit: a worker must never observe a schedule before
-      // its comment row is durable. Startup reconciliation repairs an arming
-      // failure after the transaction has committed.
-      registerAfterCommit(trx, async () => {
-        const job = await scheduleBackgroundJobAt(
-          SCHEDULED_COMMENT_JOB,
-          { tenantId: tenant, ticketId, commentId: newComment.comment_id },
-          scheduledPublishAt,
-          { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
-        );
-        await tenantDb(db, tenant).table('comments')
-          .where({ comment_id: newComment.comment_id, publish_state: 'scheduled' })
-          .update({ schedule_job_id: job.jobId });
-      }, `schedule comment publication ${newComment.comment_id}`);
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    // Track comment analytics
-    captureAnalytics(isScheduled ? 'ticket_comment_scheduled' : 'ticket_comment_added', {
-      is_internal: isInternal,
-      is_resolution: isResolution,
-      content_length: markdownContent.length,
-      has_formatting: content.includes('"type"'), // BlockNote content has type field
-    }, user.user_id);
-
-    // Revalidate paths to update UI
-    revalidatePath(`/msp/tickets/${ticketId}`);
-
-    return newComment;
-    } catch (error) {
-      const expected = ticketActionErrorFrom(error);
-      if (expected) {
-        return expected;
-      }
-      console.error('Failed to add ticket comment:', error);
-      throw error;
-    }
-  });
+    console.error('Failed to add ticket comment:', error);
+    throw error;
+  }
 });
 
 /**
@@ -3630,6 +3813,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
   schedule?: ScheduledCommentPublication | null,
+  emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(
     ticketId,
@@ -3639,6 +3823,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     closesTicket,
     notificationSuppression,
     schedule,
+    emailRecipients,
   );
 }
 
@@ -3961,7 +4146,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);

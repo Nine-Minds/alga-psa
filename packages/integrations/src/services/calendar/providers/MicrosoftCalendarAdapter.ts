@@ -13,14 +13,25 @@ import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
  * Microsoft Graph API adapter for calendar synchronization
  * Handles OAuth authentication, webhook subscriptions, and event management
  */
+// Graph requires an explicit ID filter when expanding legacy properties.
+const ALGA_PROPERTY_PREFIX = 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name ';
+const ALGA_PROPERTY_NAMES = [
+  'AlgaRRULE', 'alga-entry-id', 'alga-assigned-user-ids', 'alga-tenant',
+  'alga-work-item-id', 'alga-work-item-type', 'alga-calendar-marker-name',
+  'alga-calendar-marker-note-count', 'alga-calendar-marker-notes-format',
+];
+const ALGA_PROPERTIES_EXPAND = `singleValueExtendedProperties($filter=${ALGA_PROPERTY_NAMES.map(name => `id eq '${ALGA_PROPERTY_PREFIX}${name}'`).join(' or ')})`;
+
 export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined;
   private calendarId: string;
+  private categoryConsentWarning?: string;
 
   constructor(config: CalendarProviderConfig) {
     super(config);
+    if (config.error_message?.startsWith('Outlook calendar categories are unavailable.')) this.categoryConsentWarning = config.error_message;
 
     // Get calendar ID from config
     this.calendarId = config.calendar_id || 'calendar';
@@ -139,12 +150,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       // Always use 'common' for multi-tenant Azure AD apps
       const tokenUrl = getMicrosoftTokenUrl('common');
 
+      // Omit scope on refresh: this preserves each refresh token's granted scopes.
+      // Older connections can still sync event bodies and get a category-specific reconnect warning.
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
-        grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite offline_access'
+        grant_type: 'refresh_token'
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -224,6 +236,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
+      if (event.categories?.length) event.categories = await this.ensureMasterCategories(event.categories);
       const eventData: any = {
         subject: event.title,
         body: {
@@ -237,7 +250,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         } : undefined,
         isAllDay: !event.start.dateTime && !!event.start.date,
         showAs: event.status === 'cancelled' ? 'free' : 'busy',
-        sensitivity: event.visibility === 'private' ? 'private' : 'normal'
+        sensitivity: event.visibility === 'private' ? 'private' : 'normal',
+        categories: event.categories
       };
 
       // Add attendees if provided
@@ -307,6 +321,24 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       const calendarBase = this.getCalendarBasePath();
       const updateData: any = {};
+      if (Object.prototype.hasOwnProperty.call(event, 'categories')) {
+        const desiredCategories = event.categories?.length
+          ? await this.ensureMasterCategories(event.categories)
+          : [];
+        const markerNamePropertyId = "String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-name";
+        const current = await this.httpClient.get(`${calendarBase}/events/${eventId}`, {
+          params: {
+            $select: 'categories,singleValueExtendedProperties',
+            $expand: `singleValueExtendedProperties($filter=id eq '${markerNamePropertyId}')`,
+          },
+        });
+        const ownedMarkerName = current.data.singleValueExtendedProperties?.find(
+          (property: { id?: string }) => property.id?.toLowerCase() === markerNamePropertyId.toLowerCase(),
+        )?.value;
+        const ownedCategory = typeof ownedMarkerName === 'string' ? `Alga calendar: ${ownedMarkerName}` : undefined;
+        const unrelated = (current.data.categories || []).filter((category: string) => category !== ownedCategory);
+        updateData.categories = [...new Set([...unrelated, ...desiredCategories])];
+      }
 
       if (event.title !== undefined) updateData.subject = event.title;
       if (event.description !== undefined) {
@@ -355,6 +387,16 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         }];
       }
 
+      if (event.extendedProperties?.private) {
+        updateData.singleValueExtendedProperties = [
+          ...(updateData.singleValueExtendedProperties || []),
+          ...Object.entries(event.extendedProperties.private).map(([key, value]) => ({
+            id: `String {66f5a359-4659-4830-9070-00047ec6ac6e} Name ${key}`,
+            value
+          }))
+        ];
+      }
+
       const response = await this.httpClient.patch(`${calendarBase}/events/${eventId}`, updateData);
 
       return this.mapMicrosoftEventToExternal(response.data);
@@ -387,7 +429,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
-      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
+      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { '$expand': ALGA_PROPERTIES_EXPAND } });
 
       return this.mapMicrosoftEventToExternal(response.data);
     } catch (error: any) {
@@ -416,7 +458,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         params: {
           $filter: `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`,
           $orderby: 'start/dateTime',
-          $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity'
+          $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity',
+          $expand: ALGA_PROPERTIES_EXPAND
         }
       });
 
@@ -725,10 +768,54 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     }
   }
 
+  getProviderStatusWarning(): string | undefined {
+    return this.categoryConsentWarning;
+  }
+
+  private async ensureMasterCategories(categories: string[]): Promise<string[]> {
+    const available: string[] = [];
+    for (const displayName of categories) {
+      try {
+        const response = await this.httpClient.get('/me/outlook/masterCategories', {
+          params: { '$filter': `displayName eq '${displayName.replace(/'/g, "''")}'` }
+        });
+        if ((response.data.value || []).some((category: any) => category.displayName?.toLowerCase() === displayName.toLowerCase())) { this.categoryConsentWarning = undefined; available.push(displayName); continue; }
+        await this.httpClient.post('/me/outlook/masterCategories', { displayName, color: 'preset0' });
+        this.categoryConsentWarning = undefined;
+        available.push(displayName);
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const code = error?.response?.data?.error?.code;
+        if (status === 403 && ['ErrorAccessDenied', 'Authorization_RequestDenied'].includes(code)) {
+          const warning = `Outlook calendar categories are unavailable. Reconnect this Microsoft calendar and grant MailboxSettings.ReadWrite permission to show the owning Alga calendar as a category. Event notes will still show the calendar name.`;
+          this.categoryConsentWarning = warning;
+          this.config.error_message = warning;
+          console.warn(`[MicrosoftCalendarAdapter] ${warning}`);
+          try {
+            const providerService = new CalendarProviderService();
+            await providerService.updateProviderStatus(this.config.id, this.config.tenant, { status: 'connected', errorMessage: warning });
+          } catch (statusError) {
+            console.warn('[MicrosoftCalendarAdapter] Could not publish category consent warning to provider status', statusError);
+          }
+          continue;
+        }
+        throw error;
+      }
+    }
+    return available;
+  }
+
   /**
    * Map Microsoft Calendar event to ExternalCalendarEvent format
    */
   private mapMicrosoftEventToExternal(event: any): ExternalCalendarEvent {
+    const privateProperties: Record<string, string> = {};
+    for (const property of event.singleValueExtendedProperties || []) {
+      const propertyId = String(property.id || '');
+      const propertyName = propertyId.startsWith(ALGA_PROPERTY_PREFIX) ? propertyId.slice(ALGA_PROPERTY_PREFIX.length) : undefined;
+      if (propertyName && property.value !== undefined) privateProperties[propertyName] = String(property.value);
+    }
+
     // Extract RRULE from extended properties if present
     let recurrence: string[] | undefined;
     if (event.singleValueExtendedProperties) {
@@ -745,6 +832,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       provider: 'microsoft',
       title: event.subject || '',
       description: event.body?.content || '',
+      categories: event.categories || [],
       start: this.fromGraphDateTime(event.start, event.isAllDay),
       end: this.fromGraphDateTime(event.end, event.isAllDay),
       location: event.location?.displayName || '',
@@ -764,7 +852,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         email: event.organizer.emailAddress?.address || '',
         name: event.organizer.emailAddress?.name
       } : undefined,
-      visibility: event.sensitivity === 'private' ? 'private' : 'default'
+      visibility: event.sensitivity === 'private' ? 'private' : 'default',
+      extendedProperties: Object.keys(privateProperties).length ? { private: privateProperties } : undefined
     };
   }
 

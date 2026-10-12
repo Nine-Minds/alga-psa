@@ -151,3 +151,21 @@ describe('ticket lifecycle notification suppression event schemas', () => {
     });
   });
 });
+
+describe('TICKET_CREATED requester identity', () => {
+  it('keeps clientName/contactName/senderEmail/requesterName through both union branches', () => {
+    const requester = { senderEmail: 'who@example.test', requesterName: 'who@example.test' };
+    const legacy = EventSchemas.TICKET_CREATED.parse({
+      id: '11111111-1111-4111-8111-111111111111',
+      eventType: 'TICKET_CREATED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId: '22222222-2222-4222-8222-222222222222',
+        ticketId: '33333333-3333-4333-8333-333333333333',
+        userId: '33333333-3333-4333-8333-333333333333',
+        ...requester,
+      },
+    });
+    expect(legacy.payload).toMatchObject(requester);
+  });
+});

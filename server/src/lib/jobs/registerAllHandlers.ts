@@ -141,6 +141,8 @@ import {
   RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import { MAINTENANCE_FANOUT_JOB } from './serverMaintenanceJobNames';
+import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from './runMaintenanceJobExclusive';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import {
   workflowQuotaResumeScanHandler,
@@ -827,6 +829,22 @@ export async function registerAllJobHandlers(
         },
         retry: { maxAttempts: 2 },
         timeoutMs: 300000, // 5 minutes
+      },
+      registerOpts
+    );
+
+    // CE maintenance fan-out: the global `maintenance-fanout:<jobName>` pg-boss
+    // schedules (convergeCeMaintenanceSchedules) all deliver to this handler. EE
+    // runs the same fan-out from its Temporal schedules and must not register it.
+    JobHandlerRegistry.register<BaseJobData & { jobName: string }>(
+      {
+        name: MAINTENANCE_FANOUT_JOB,
+        handler: async (_jobId, data) => {
+          await prepareMaintenanceRegistry();
+          await runMaintenanceJobExclusive(String(data.jobName));
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 3_600_000, // 1 hour, matches the schedules' expireInSeconds
       },
       registerOpts
     );

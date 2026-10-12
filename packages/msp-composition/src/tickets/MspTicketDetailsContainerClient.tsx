@@ -8,7 +8,6 @@ import type { IClient, IContact, ITicketLinkedTask, SurveyTicketSatisfactionSumm
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import TicketLinkedTasksBadge from '@alga-psa/projects/components/TicketLinkedTasksBadge';
-import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import QuickInvoiceTicketDialog from '@alga-psa/billing/components/ticket/QuickInvoiceTicketDialog';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
@@ -22,7 +21,7 @@ import { resolveTicketAttachmentViewUrl } from './ticketAttachmentViewUrl';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
-  'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement' | 'surveySummaryCard' | 'renderQuickInvoice'
+  'renderContactDetails' | 'renderClientDetails' | 'surveySummaryCard' | 'renderQuickInvoice'
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
@@ -88,13 +87,6 @@ export default function MspTicketDetailsContainerClient({
     []
   );
 
-  const renderIntervalManagement = useCallback(
-    ({ ticketId, userId }: { ticketId: string; userId: string }) => (
-      <IntervalManagement ticketId={ticketId} userId={userId} />
-    ),
-    []
-  );
-
   return (
     <TicketIntegrationProvider value={ticketIntegrationValue}>
       <TicketDetailsContainer
@@ -108,7 +100,6 @@ export default function MspTicketDetailsContainerClient({
         renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}
         renderQuickInvoice={isAlgaDeskMode ? undefined : renderQuickInvoice}
         renderClientDetails={renderClientDetails}
-        renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
         isAlgaDeskMode={isAlgaDeskMode}
         hideSlaStatus={isAlgaDeskMode}
         hideBilling={isAlgaDeskMode}

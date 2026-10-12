@@ -8,13 +8,19 @@ permissions:
   contents: read
 
 jobs:
+  images:
+    name: Pinned images
+    uses: ./.github/workflows/pinned-images.yml
+
   enterprise-integration:
     name: Enterprise integration execution complete
+    needs: images
+    if: needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password

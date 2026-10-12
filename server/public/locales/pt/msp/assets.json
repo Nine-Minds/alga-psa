@@ -126,7 +126,8 @@
       "location": "Localização",
       "actions": "Ações",
       "patching": "Patches",
-      "coverage": "Cobertura"
+      "coverage": "Cobertura",
+      "assignedTo": "Atribuído a"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Localização"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documentos indisponíveis",
+      "loadFailed": "Não foi possível carregar os documentos vinculados. Recarregue a página ou tente novamente mais tarde."
+    }
+  },
   "assetDetails": {
     "title": "Detalhes do ativo",
     "description": "Página completa de detalhes do ativo com cartões de resumo, associações, documentos e ações operacionais",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Não foi possível carregar clientes",
       "locationsLoadFailed": "Não foi possível carregar locais para este cliente",
       "updateFailed": "Falha ao atualizar o recurso",
-      "validation": "Corrija os campos destacados antes de salvar."
+      "validation": "Corrija os campos destacados antes de salvar.",
+      "contactsLoadFailed": "Não foi possível carregar os contatos deste cliente"
     },
     "actions": {
       "viewClient": "Ver cliente",
@@ -618,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Data de compra",
       "warrantyEndDate": "Data de término da garantia",
-      "assetType": "Tipo"
+      "assetType": "Tipo",
+      "assignedTo": "Atribuído a"
     },
     "placeholders": {
       "loadingClients": "Carregando clientes…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Selecione um cliente primeiro",
       "customLocation": "Insira um local ou área personalizada",
       "selectPurchaseDate": "Selecione a data de compra",
-      "selectWarrantyEndDate": "Selecione a data de término da garantia"
+      "selectWarrantyEndDate": "Selecione a data de término da garantia",
+      "loadingContacts": "Carregando contatos…",
+      "selectContact": "Selecione um contato"
     },
     "statusOptions": {
       "active": "Ativo",
@@ -664,7 +675,10 @@
       "printer": "Detalhes da impressora",
       "custom": "Detalhes {{typeName}}"
     },
-    "additionalFields": "Campos adicionais"
+    "additionalFields": "Campos adicionais",
+    "help": {
+      "assignedTo": "No portal do cliente, as pessoas com visibilidade limitada só veem este dispositivo se estiver atribuído a elas ou a alguém que se reporta a elas."
+    }
   },
   "assetFormClient": {
     "title": "Cliente de formulário de ativos",
@@ -978,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Número de série",
       "customLocationOption": "Localização personalizada",
-      "location": "Localização"
+      "location": "Localização",
+      "assignedTo": "Atribuído a"
     },
     "placeholders": {
       "workstationOsType": "por exemplo, Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Insira um local ou área personalizada",
       "loadingLocations": "Carregando locais...",
       "selectClientFirst": "Selecione um cliente primeiro",
-      "selectLocation": "Selecione o local"
+      "selectLocation": "Selecione o local",
+      "loadingContacts": "Carregando contatos...",
+      "selectContact": "Selecionar contato"
     },
     "sections": {
       "typeSpecificDetails": "Detalhes específicos do tipo"
@@ -1060,7 +1077,8 @@
       "model": "Modelo",
       "serialNumber": "Número de série",
       "purchaseDate": "Data de compra",
-      "warrantyEnd": "Fim da garantia"
+      "warrantyEnd": "Fim da garantia",
+      "assignedTo": "Atribuído a"
     },
     "values": {
       "unknownClient": "Cliente desconhecido",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
       "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
       "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
-      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
-      "updateDocumentNotes": "Permissão negada: não é possível atualizar as notas dos documentos do ativo"
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos"
     },
     "asset": {
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -1601,7 +1618,8 @@
       "conflict": "Esta alteração do ativo conflita com um registro existente. Atualize a página e tente novamente.",
       "notAllowed": "Um dos valores do ativo não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório do ativo.",
-      "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}.",
+      "contactUnavailable": "O contato selecionado não está disponível para este cliente."
     }
   },
   "clientAssetMultiSelect": {

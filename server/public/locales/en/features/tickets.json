@@ -144,6 +144,7 @@
     "assignedTo": "Assigned To",
     "requester": "Requester",
     "client": "Client",
+    "contact": "Contact",
     "dueDate": "Due Date",
     "resolution": "Resolution",
     "timeSpent": "Time Spent",
@@ -185,9 +186,14 @@
     "tags": "Tags",
     "sla": "SLA",
     "updated": "Updated",
+    "updatedAtBy": "Updated {{time}} by {{name}}",
+    "byName": "by {{name}}",
     "openInNewTab": "Open in new tab",
     "actions": "Actions",
-    "linkedAssets": "Linked assets"
+    "linkedAssets": "Linked assets",
+    "assetName": "Name",
+    "assetTag": "Asset tag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "View",
@@ -381,7 +387,13 @@
     "schedule": "Schedule",
     "scheduled": "Scheduled",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Fix the highlighted addresses before sending.",
+    "ccBccTooMany": "At most {{max}} Cc and Bcc recipients can be copied on one comment.",
+    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -446,7 +458,8 @@
       "loading": "Loading...",
       "clientNotFound": "Client not found.",
       "clientRendererMissing": "Client details are unavailable in this context.",
-      "clientLoadFailed": "Failed to load client."
+      "clientLoadFailed": "Failed to load client.",
+      "contactRendererMissing": "Contact details are unavailable in this context."
     },
     "filters": {
       "allAssignees": "All Assignees",
@@ -756,6 +769,8 @@
       "failure": "Failed to update status on selected tickets",
       "failedHeading": "Status could not be updated on the following tickets:",
       "resolutionLabel": "Resolution comment (optional)",
+      "resolutionLabelRequired": "Resolution comment",
+      "resolutionRequiredHint": "This board requires a resolution comment before tickets can be closed.",
       "resolutionPlaceholder": "Describe how these tickets were resolved",
       "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing."
     },
@@ -973,9 +988,6 @@
     "closeTicketNowTitle": "Close the ticket now?",
     "closeTicketNowPrompt": "This comment is now the resolution. Pick a close status to close the ticket, or leave it open.",
     "leaveTicketOpen": "Leave open",
-    "timerActiveElsewhereTitle": "Timer Active Elsewhere",
-    "timerTakeoverMessage": "This ticket's timer is active in another window. Do you want to take over and replace it here?",
-    "replaceHere": "Replace Here",
     "noActiveTimePeriodTitle": "No Active Time Period",
     "noActiveTimePeriodMessage": "No active time period found. Time periods need to be set up in the billing dashboard before adding time entries.",
     "goToTimePeriodsSetup": "Go to Time Periods Setup",
@@ -991,15 +1003,7 @@
   },
   "properties": {
     "timeEntry": "Time Entry",
-    "ticketTimer": "Ticket Timer - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer active in another window",
-    "start": "Start",
-    "pause": "Pause",
-    "reset": "Reset",
-    "enterWorkDescription": "Enter work description",
-    "liveTimerDisabled": "Live ticket timer is disabled for this board.",
     "addTimeEntry": "Add Time Entry",
-    "trackedIntervals": "Tracked Intervals",
     "contactInfo": "Contact Info",
     "noContactSelected": "No contact selected",
     "selectOrChangeContact": "Select or change contact",
@@ -1746,9 +1750,7 @@
       "timeLogged": "Time logged",
       "acrossEntries_one": "across {{count}} entry",
       "acrossEntries_other": "across {{count}} entries",
-      "workDescription": "Work description",
       "addTimeEntry": "Add time entry",
-      "trackedIntervals": "Tracked intervals",
       "teamAndWatchers": "Team and watchers",
       "addAgent": "Add an agent…",
       "timeline": "Timeline",
@@ -1759,7 +1761,6 @@
       "opened": "Opened",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "No contact on this ticket",
-      "whatAreYouWorkingOn": "What are you working on?",
       "agentFallback": "Agent",
       "removeAgent": "Remove {{name}}",
       "noAdditionalAgents": "No additional agents",
@@ -1784,8 +1785,6 @@
       "addDocument": "Add a document",
       "timeLoggedPerDay": "Time logged per day: {{details}}",
       "team": "Team",
-      "startTimer": "Start timer",
-      "timerLockedHint": "Another timer is already running",
       "billable": "Billable",
       "nothingBillable": "Nothing billable yet",
       "editContact": "Edit contact",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "{{every}} on the {{ordinal}} {{weekday}}",
       "yearly": "Every year on {{month}} {{day}}"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "The stopwatch is turned off for this board.",
+    "pausedElsewhereTicket": "Paused on another ticket: {{label}}",
+    "runningElsewhereTicket": "Running on another ticket: {{label}}",
+    "pausedElsewhereTask": "Paused on another task: {{label}}",
+    "runningElsewhereTask": "Running on another task: {{label}}",
+    "switch": "Switch here",
+    "start": "Start stopwatch",
+    "resume": "Resume stopwatch",
+    "pause": "Pause stopwatch",
+    "stop": "Stop and log time",
+    "discard": "Discard stopwatch",
+    "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
+    "workDescription": "Work description",
+    "whatAreYouWorkingOn": "What are you working on?"
   }
 }

@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Asignación masiva",
+        "columns": {
+          "ignore": "Ignorar",
+          "select": "Guardar",
+          "status": "Estado"
+        },
+        "exit": "Volver a las asignaciones",
+        "filter": {
+          "all": "Todos",
+          "mapped": "Asignado",
+          "unmapped": "Sin asignar"
+        },
+        "ignoreAll": "Ignorar todo",
+        "noRows": "Ninguna fila coincide con el filtro actual.",
+        "possibleMatch": "Posible coincidencia",
+        "rowIgnoreAria": "Ignorar {{name}}",
+        "rowSelectAria": "Incluir {{name}} al guardar",
+        "saveAll": "Guardar todo",
+        "searchPlaceholder": "Buscar servicios y destinos...",
+        "selectAll": "Seleccionar todo",
+        "status": {
+          "ignored": "Ignorado",
+          "mapped": "Asignado",
+          "noResult": "No se devolvió ningún resultado para esta fila.",
+          "pending": "Pendiente",
+          "saved": "Guardado"
+        },
+        "suggested": "Sugerido",
+        "toSave": "{{total}} por guardar"
+      },
       "dialog": {
         "cancel": "Cancelar",
         "enterPlaceholder": "Introducir {{field}}...",
@@ -90,7 +121,8 @@
           "clients": "Clientes",
           "itemsServices": "Artículos / Servicios",
           "taxCodes": "Códigos fiscales",
-          "paymentTerms": "Condiciones de pago"
+          "paymentTerms": "Condiciones de pago",
+          "discounts": "Descuentos"
         }
       }
     },
@@ -111,6 +143,7 @@
           "failed": "Error en la exportación",
           "missingItemMapping": "Falta asignación de artículo",
           "missingItemMappingId": "Falta asignación de artículo ({{serviceId}})",
+          "missingDiscountMapping": "Falta la asignación de descuentos (pestaña Descuentos)",
           "missingItemMappingNamed": "Falta asignación de artículo: {{serviceName}}"
         },
         "fields": {

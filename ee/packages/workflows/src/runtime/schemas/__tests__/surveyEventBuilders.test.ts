@@ -6,7 +6,7 @@ import {
   surveyReminderSentEventPayloadSchema,
   surveyResponseReceivedEventPayloadSchema,
   surveySentEventPayloadSchema,
-} from '../communicationsEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildCsatAlertTriggeredPayload,
   buildSurveyExpiredPayload,

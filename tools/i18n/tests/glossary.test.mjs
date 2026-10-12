@@ -121,3 +121,14 @@ for (const [locale, config] of Object.entries(registry)) {
     assert.equal(allowlist.isAllowed('{{count}} × catalog price'), false, `${locale}: prose must not be allowlisted`);
   });
 }
+
+test('nl allowlist accepts the Dutch copula "is" without admitting English sentences', () => {
+  const config = registry.nl;
+  const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+  const allowlist = allowlistMatchers(glossary, config.dialect);
+
+  // The condition builder's "equals" operator reads "is" in both English and Dutch.
+  assert.equal(allowlist.isAllowed('is'), true);
+  assert.equal(allowlist.isAllowed('is not'), false);
+  assert.equal(allowlist.isAllowed('Builder'), false);
+});

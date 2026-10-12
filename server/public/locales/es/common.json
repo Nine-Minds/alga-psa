@@ -263,6 +263,10 @@
         "updateComments": "Permisos insuficientes para actualizar comentarios",
         "deleteComments": "Permisos insuficientes para eliminar comentarios",
         "viewDocuments": "Permisos insuficientes para ver los documentos del ticket"
+      },
+      "projects": {
+        "read": "Permisos insuficientes para ver los proyectos",
+        "readDetails": "Permisos insuficientes para ver los detalles del proyecto"
       }
     },
     "tags": {
@@ -1346,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleccione zona horaria...",
-    "searchPlaceholder": "Buscar zonas horarias o abreviaturas (p. ej. EST)...",
+    "searchPlaceholder": "Buscar por ciudad, nombre o abreviatura (p. ej., New York, EST)...",
     "noResults": "No se encontraron zonas horarias",
     "matchingGroup": "Coincidencias con «{{query}}»",
+    "noDst": "Sin horario de verano",
+    "noDaylightSavingHint": "Sin horario de verano. Los relojes se mantienen en {{offset}} todo el año.",
     "regions": {
       "Africa": "África",
       "America": "América",
@@ -1617,6 +1623,12 @@
     "threecxDialing": "Marcando desde su extensión de 3CX",
     "threecxFailed": "La centralita no pudo realizar la llamada"
   },
+  "unsavedChangesGuard": {
+    "title": "¿Descartar los cambios sin guardar?",
+    "message": "Tiene cambios sin guardar que se perderán si cierra esto. ¿Desea descartarlos?",
+    "discard": "Descartar cambios",
+    "keepEditing": "Seguir editando"
+  },
   "editor": {
     "attachFiles": "Adjuntar archivos",
     "uploadingFiles": "Subiendo archivos…",
@@ -1738,5 +1750,9 @@
     "customPlaceholder": "Asigne un nombre a esta unidad",
     "register": "Agregar",
     "selectPlaceholder": "Seleccione una unidad"
+  },
+  "emailRecipients": {
+    "remove": "Quitar {{email}}",
+    "placeholder": "Escribe una dirección y pulsa Enter"
   }
 }

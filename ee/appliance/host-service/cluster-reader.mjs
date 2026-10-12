@@ -147,6 +147,17 @@ export function createClusterReader({
       namespace,
       plural: 'helmreleases'
     }, o), options),
+    // GET through the API-server service proxy (/api/v1/namespaces/{ns}/services/{service}/proxy/{path}).
+    // `service` uses the proxy name form, e.g. 'http:email-service:http'.
+    async readServiceProxy({ namespace, service, path, ...options }) {
+      const result = await read((api, o) => api.core.connectGetNamespacedServiceProxyWithPath({
+        namespace,
+        name: service,
+        path
+      }, o), options);
+      if (!result.ok) return result;
+      return { ok: true, text: typeof result.value === 'string' ? result.value : JSON.stringify(result.value ?? null) };
+    },
     async readPodLog({ namespace, pod, container, tailLines, previous, ...options }) {
       const result = await read((api, o) => api.core.readNamespacedPodLog({
         namespace,

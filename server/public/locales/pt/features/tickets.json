@@ -136,6 +136,7 @@
     "assignedTo": "Atribuído a",
     "requester": "Solicitante",
     "client": "Cliente",
+    "contact": "Contato",
     "dueDate": "Data de vencimento",
     "resolution": "Resolução",
     "timeSpent": "Tempo gasto",
@@ -177,9 +178,14 @@
     "tags": "Etiquetas",
     "sla": "SLA",
     "updated": "Atualizado",
+    "updatedAtBy": "Atualizado {{time}} por {{name}}",
+    "byName": "por {{name}}",
     "openInNewTab": "Abrir em nova aba",
     "actions": "Ações",
-    "linkedAssets": "Ativos vinculados"
+    "linkedAssets": "Ativos vinculados",
+    "assetName": "Nome",
+    "assetTag": "Etiqueta do ativo",
+    "assetType": "Tipo"
   },
   "actions": {
     "view": "Visualizar",
@@ -373,7 +379,13 @@
     "schedule": "Agendar",
     "scheduled": "Agendado",
     "showMore": "Mostrar mais",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "ccBcc": "Cc/Cco",
+    "cc": "Cc",
+    "bcc": "Cco",
+    "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
+    "ccBccTooMany": "No máximo {{max}} destinatários Cc e Cco podem ser copiados em um comentário.",
+    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
   },
   "responseState": {
     "awaitingYourResponse": "Aguardando sua resposta",
@@ -438,7 +450,8 @@
       "loading": "Carregando...",
       "clientNotFound": "Cliente não encontrado.",
       "clientRendererMissing": "Os detalhes do cliente não estão disponíveis neste contexto.",
-      "clientLoadFailed": "Falha ao carregar o cliente."
+      "clientLoadFailed": "Falha ao carregar o cliente.",
+      "contactRendererMissing": "Os detalhes do contato não estão disponíveis neste contexto."
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",
@@ -748,6 +761,8 @@
       "failure": "Falha ao atualizar o status dos tickets selecionados",
       "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:",
       "resolutionLabel": "Comentário de resolução (opcional)",
+      "resolutionLabelRequired": "Comentário de resolução",
+      "resolutionRequiredHint": "Este quadro exige um comentário de resolução antes de os tickets poderem ser fechados.",
       "resolutionPlaceholder": "Descreva como esses tickets foram resolvidos",
       "resolutionHelper": "Salvo como a resolução em cada ticket selecionado e atende aos quadros que exigem uma antes do fechamento."
     },
@@ -965,9 +980,6 @@
     "closeTicketNowTitle": "Fechar o ticket agora?",
     "closeTicketNowPrompt": "Este comentário agora é a resolução. Escolha um status de fechamento para fechar o ticket ou deixe-o aberto.",
     "leaveTicketOpen": "Deixar aberto",
-    "timerActiveElsewhereTitle": "Timer ativo em outra janela",
-    "timerTakeoverMessage": "O timer deste ticket está ativo em outra janela. Deseja assumir e substituí-lo aqui?",
-    "replaceHere": "Substituir aqui",
     "noActiveTimePeriodTitle": "Nenhum período de tempo ativo",
     "noActiveTimePeriodMessage": "Nenhum período de tempo ativo encontrado. Os períodos de tempo precisam ser configurados no painel de cobrança antes de adicionar entradas de tempo.",
     "goToTimePeriodsSetup": "Ir para a configuração de períodos de tempo",
@@ -983,15 +995,7 @@
   },
   "properties": {
     "timeEntry": "Entrada de tempo",
-    "ticketTimer": "Temporizador de tickets - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer ativo em outra janela",
-    "start": "Começar",
-    "pause": "Pausa",
-    "reset": "Reiniciar",
-    "enterWorkDescription": "Insira a descrição do trabalho",
-    "liveTimerDisabled": "O cronômetro do ticket ao vivo está desativado para este quadro.",
     "addTimeEntry": "Adicionar entrada de tempo",
-    "trackedIntervals": "Intervalos rastreados",
     "contactInfo": "Informações de contato",
     "noContactSelected": "Nenhum contato selecionado",
     "selectOrChangeContact": "Selecione ou altere o contato",
@@ -1736,9 +1740,7 @@
       "viewAll": "Ver todos",
       "viewAllCount": "Ver todos os {{count}}",
       "timeLogged": "Tempo registrado",
-      "workDescription": "Descrição do trabalho",
       "addTimeEntry": "Adicionar entrada de tempo",
-      "trackedIntervals": "Intervalos rastreados",
       "teamAndWatchers": "Equipe e observadores",
       "addAgent": "Adicionar um agente…",
       "timeline": "Linha do tempo",
@@ -1749,7 +1751,6 @@
       "opened": "Aberto",
       "viaSource": "via {{source}}",
       "noContactOnTicket": "Nenhum contato neste ticket",
-      "whatAreYouWorkingOn": "No que você está trabalhando?",
       "agentFallback": "Agente",
       "removeAgent": "Remover {{name}}",
       "noAdditionalAgents": "Nenhum agente adicional",
@@ -1776,8 +1777,6 @@
       "acrossEntries_one": "em {{count}} entrada",
       "acrossEntries_other": "em {{count}} entradas",
       "team": "Equipe",
-      "startTimer": "Iniciar cronômetro",
-      "timerLockedHint": "Outro cronômetro já está em execução",
       "billable": "Faturável",
       "nothingBillable": "Nada faturável ainda",
       "editContact": "Editar contato",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}}: {{weekday}}",
       "yearly": "Todo ano em {{day}} de {{month}}"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "O cronômetro está desativado para este quadro.",
+    "pausedElsewhereTicket": "Pausado em outro ticket: {{label}}",
+    "runningElsewhereTicket": "Em andamento em outro ticket: {{label}}",
+    "pausedElsewhereTask": "Pausado em outra tarefa: {{label}}",
+    "runningElsewhereTask": "Em andamento em outra tarefa: {{label}}",
+    "switch": "Mudar para cá",
+    "start": "Iniciar cronômetro",
+    "resume": "Retomar cronômetro",
+    "pause": "Pausar cronômetro",
+    "stop": "Parar e registrar o tempo",
+    "discard": "Descartar cronômetro",
+    "pausedHint": "Pausado. Retome para continuar registrando ou pare para registrar o tempo.",
+    "workDescription": "Descrição do trabalho",
+    "whatAreYouWorkingOn": "No que você está trabalhando?"
   }
 }

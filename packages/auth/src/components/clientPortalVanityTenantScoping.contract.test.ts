@@ -19,7 +19,7 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
     // Unresolvable vanity host falls into the same branch as "no tenant at all":
     // the login-links discovery form, not a credentials form without a tenant.
     expect(source).toContain('if (!tenantSlug) {');
-    expect(source).toContain('<ClientPortalTenantDiscovery callbackUrl={callbackUrl} />');
+    expect(source).toContain('<ClientPortalTenantDiscovery callbackUrl={callbackUrl}');
     expect(source).toContain('tenantSlug={tenantSlug}');
   });
 

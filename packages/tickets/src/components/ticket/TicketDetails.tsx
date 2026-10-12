@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -38,6 +38,7 @@ import { TicketCredentialsSection } from "./TicketCredentialsSection";
 import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
+import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -90,8 +91,6 @@ import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
-import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -106,7 +105,7 @@ import {
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
-import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
 import type { RecurringTicketSource } from '../../lib/recurring/types';
@@ -180,6 +179,7 @@ interface TicketDetailsProps {
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
+    initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
@@ -207,7 +207,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -260,11 +260,6 @@ interface TicketDetailsProps {
         client: IClient;
     }) => React.ReactNode;
 
-    /**
-     * Optional injected UI for interval management (e.g. @alga-psa/scheduling IntervalManagement).
-     * Shows auto-tracked time intervals below the ticket timer.
-     */
-    renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     /** AlgaDesk product mode: Duplicate opens the AlgaDesk create form variant. */
     isAlgaDeskMode?: boolean;
     hideSlaStatus?: boolean;
@@ -303,6 +298,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
+    initialUpdatedByUser = null,
     initialBoard = null,
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
@@ -331,7 +327,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderCreateProjectTask,
     renderQuickInvoice,
     renderClientDetails,
-    renderIntervalManagement,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
     hideBilling = false,
@@ -590,6 +585,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+    const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
     const closedStatusOptions = useMemo(() => {
         const boardId = ticket.board_id;
@@ -613,6 +609,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         resolution: string,
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -630,6 +627,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         true,
                         true,
                         suppression,
+                        null,
+                        // The close email carries these; see the email
+                        // subscriber's closes_ticket handling.
+                        emailRecipients,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -978,7 +979,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         highlightLiveFields([field]);
     }, [clearLiveFieldConflict, highlightLiveFields]);
 
-    const refreshTicketSnapshot = useCallback(async (updatedFields: string[] = []) => {
+    const refreshTicketSnapshot = useCallback(async (
+        updatedFields: string[] = [],
+        remoteUpdatedBy?: { userId: string; displayName: string }
+    ) => {
         if (!ticket.ticket_id) {
             return { refreshed: false as const };
         }
@@ -991,6 +995,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
 
             setTicket(latestTicket);
+            // Resolve who made the latest write. The live-update payload carries the
+            // actor's display name; without it keep the name only if it still matches.
+            setUpdatedByUser((previous) => {
+                const latestUpdatedBy = latestTicket.updated_by ?? null;
+                if (!latestUpdatedBy) return null;
+                if (previous?.user_id === latestUpdatedBy) return previous;
+                if (remoteUpdatedBy?.userId === latestUpdatedBy) {
+                    return { user_id: latestUpdatedBy, first_name: remoteUpdatedBy.displayName, last_name: '' } as IUser;
+                }
+                return null;
+            });
             setItilImpact(latestTicket.itil_impact || undefined);
             setItilUrgency(latestTicket.itil_urgency || undefined);
             setSavedBoardId(latestTicket.board_id ?? null);
@@ -1099,7 +1114,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const overlappingFields = updatedFields.filter((field) => dirtyFields.has(field));
         const nonOverlappingFields = updatedFields.filter((field) => !dirtyFields.has(field));
 
-        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields);
+        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields, pendingUpdate.updatedBy);
         if (!refreshResult.refreshed) {
             return;
         }
@@ -1252,6 +1267,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+
+    // Identity stamped into the "Updated … by" header after a local save. The drawer passes a
+    // full currentUser; full-page callers do not, so derive one from the session (resolving the
+    // name from userMap like TicketDetailsContainer's liveCurrentUser). Null only when signed out.
+    const localActor = useMemo<IUser | null>(() => {
+        if (currentUser) return currentUser;
+        const sessionUserId = session?.user?.id;
+        if (!sessionUserId) return null;
+        const mapped = userMap?.[sessionUserId];
+        const sessionName = (session?.user?.name ?? '').trim();
+        const [sessionFirst, ...sessionRest] = sessionName.split(/\s+/).filter(Boolean);
+        return {
+            user_id: sessionUserId,
+            first_name: mapped ? mapped.first_name : (sessionFirst ?? ''),
+            last_name: mapped ? mapped.last_name : sessionRest.join(' '),
+            email: mapped?.email ?? session?.user?.email ?? '',
+            user_type: mapped?.user_type ?? 'internal',
+        } as unknown as IUser;
+    }, [currentUser, session?.user?.id, session?.user?.name, session?.user?.email, userMap]);
     const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
@@ -1285,8 +1319,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
     const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
@@ -1307,6 +1339,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
     const [pendingDeleteTimeEntry, setPendingDeleteTimeEntry] = useState<{ entry_id: string; user_name: string | null } | null>(null);
     const [isDeletingTimeEntry, setIsDeletingTimeEntry] = useState(false);
+    // Synchronous ref mirrors the state so rapid repeat clicks land before React
+    // re-renders and can be dropped instead of starting a second launch chain.
+    const isLaunchingTimeEntryRef = useRef(false);
+    const [isLaunchingTimeEntry, setIsLaunchingTimeEntry] = useState(false);
 
     // Debounced search for child tickets
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1409,9 +1445,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
 
-    // Create a single instance of the service
-    const intervalService = useMemo(() => new IntervalTrackingService(), []);
-
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
             bootstrapSkips.current.teams = false;
@@ -1461,25 +1494,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         loadTeam();
     }, [ticket.assigned_team_id, teams]);
-
-    // Timer logic
-    const tick = useCallback(() => {
-        setElapsedTime(prevTime => {
-            return prevTime + 1;
-        });
-    }, [isRunning]);
-
-    useEffect(() => {
-        let intervalId: NodeJS.Timeout | undefined;
-        if (isRunning) {
-            intervalId = setInterval(tick, 1000);
-        }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [isRunning, tick]);
 
     // Load ticketing display settings
     useEffect(() => {
@@ -1539,208 +1553,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         fetchTags();
     }, [ticket.ticket_id]);
-
-    // Add automatic interval tracking using the custom hook
-    // Unique holder ID per tab for lock ownership
-    const [holderId] = useState<string>(() => {
-        if (typeof window !== 'undefined') {
-            const existing = sessionStorage.getItem('tabHolderId');
-            if (existing) return existing;
-            const id = generateUUID();
-            sessionStorage.setItem('tabHolderId', id);
-            return id;
-        }
-        return Math.random().toString(36).slice(2);
-    });
-
-    const {
-        isTracking,
-        currentIntervalId,
-        isLockedByOther,
-        startTracking,
-        stopTracking,
-        refreshLockState,
-    } = useTicketTimeTracking(
-        initialTicket.ticket_id || '',
-        initialTicket.ticket_number || '',
-        initialTicket.title || '',
-        userId || '',
-        { autoStart: false, holderId }
-    );
-
-    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
-    const startTrackingRef = React.useRef(startTracking);
-    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
-
-    // Reflect tracking state into local stopwatch state
-    useEffect(() => {
-        console.log('[TicketDetails] isTracking changed ->', isTracking);
-        setIsRunning(!!isTracking);
-    }, [isTracking]);
-
-    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
-    const autoStartedRef = React.useRef(false);
-    useEffect(() => {
-        const auto = async () => {
-            if (autoStartedRef.current) return;
-            if (!initialTicket.ticket_id || !userId) return;
-            if (isTracking) return;
-            if (!isLiveTicketTimerEnabled) return;
-            console.log('[TicketDetails] auto-start attempt');
-            try {
-                const started = await startTrackingRef.current(false);
-                console.log('[TicketDetails] auto-start result ->', started);
-                if (started) {
-                    setElapsedTime(0);
-                    autoStartedRef.current = true;
-                }
-            } catch (e) {
-                // Ignore auto-start failures; time tracking is best-effort here.
-            }
-        };
-        auto();
-        // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
-
-    // New screens start from zero; no seeding from existing intervals
-
-    useEffect(() => {
-        const disableLiveTimerInView = async () => {
-            if (isLiveTicketTimerEnabled) {
-                return;
-            }
-
-            try {
-                await stopTracking();
-            } catch {
-                // Ignore stop errors while enforcing board policy.
-            }
-
-            setIsRunning(false);
-            setElapsedTime(0);
-        };
-
-        disableLiveTimerInView();
-    }, [isLiveTicketTimerEnabled, stopTracking]);
-
-    // Poll lock state periodically to update UI lock indicator
-    useEffect(() => {
-        let id: any;
-        const poll = async () => {
-            try { await refreshLockState(); } catch {}
-        };
-        id = setInterval(poll, 5000);
-        poll();
-        return () => clearInterval(id);
-    }, [refreshLockState]);
-    
-    // Function to close the current interval before navigation
-    // Enhanced function to close the interval - will find and close any open interval for this ticket
-    const closeCurrentInterval = useCallback(async () => {
-        try {
-            // If we have a currentIntervalId, use it
-            if (currentIntervalId) {
-                console.debug('Closing known interval before navigation:', currentIntervalId);
-                await intervalService.endInterval(currentIntervalId);
-                return;
-            }
-            
-            // If currentIntervalId is null, try to find any open interval for this ticket
-            console.debug('No currentIntervalId available, checking for open intervals');
-            if (userId && initialTicket.ticket_id) {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id, userId);
-                if (openInterval) {
-                    console.debug('Found open interval to close:', openInterval.id);
-                    await intervalService.endInterval(openInterval.id);
-                } else {
-                    console.debug('No open intervals found for this ticket');
-                }
-            }
-        } catch (error: any) {
-            console.error('Error closing interval:', error);
-        }
-    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
-    
-    // Fixed navigation function - wait for interval to close before navigating
-    const handleBackToTickets = useCallback(async () => {
-        try {
-            // Stop tracking and release lock before leaving
-            await stopTracking();
-            // Wait for the interval to close
-            await closeCurrentInterval();
-            
-            // Navigate after interval is closed
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        } catch (error) {
-            console.error('Error closing interval before navigation:', error);
-            // Navigate anyway to prevent user from being stuck
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        }
-    }, [closeCurrentInterval, onClose, router, stopTracking]);
-
-    // Handle timer control actions with locking
-    const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
-
-    const doStart = useCallback(async (force = false) => {
-        if (!initialTicket.ticket_id || !userId) return;
-        try {
-            const started = await startTracking(force);
-            if (started) {
-                setElapsedTime(0);
-                setIsRunning(true);
-            } else if (!force) {
-                // Locked elsewhere
-                setIsReplaceDialogOpen(true);
-            }
-        } catch (e) {
-            console.error('Failed to start tracking:', e);
-        }
-    }, [initialTicket.ticket_id, userId, startTracking]);
-
-    const handleStartClick = useCallback(() => {
-        doStart(false);
-    }, [doStart]);
-
-    const handleConfirmReplace = useCallback(async () => {
-        setIsReplaceDialogOpen(false);
-        await doStart(true);
-    }, [doStart]);
-
-    const handlePauseClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-    }, [stopTracking]);
-
-    const handleStopClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-        setElapsedTime(0);
-    }, [stopTracking]);
-
-    // Ensure we stop tracking only when component unmounts (not on re-renders)
-    const stopTrackingRef = React.useRef(stopTracking);
-    useEffect(() => {
-        stopTrackingRef.current = stopTracking;
-    }, [stopTracking]);
-    useEffect(() => {
-        return () => {
-            stopTrackingRef.current?.().catch(() => {});
-        };
-    }, []);
 
     const handleClientClick = async () => {
         if (!client?.client_id) return;
@@ -1983,6 +1795,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             // error/revert).
             if (updateSucceeded) {
                 setActivityLogRefreshKey((value) => value + 1);
+                // Header "Updated <time> by <name>": local UI state only. The server
+                // stamps updated_at/updated_by itself; browsers never send them.
+                setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+                setUpdatedByUser(localActor);
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -2113,6 +1929,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         closeStatusId: string | null = null,
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2162,6 +1979,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     isResolution,
                     willCloseTicket,
                     schedule,
+                    emailRecipients,
                 );
                 await refreshTicketDocuments();
 
@@ -2231,7 +2049,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
-                    });
+                    }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
                         return false;
@@ -2293,7 +2111,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddReplyComment = async (
         content: PartialBlock[],
         parentCommentId: string,
-        isInternal: boolean
+        isInternal: boolean,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const contentStr = JSON.stringify(content);
         const hasContent = contentStr !== JSON.stringify([{
@@ -2323,7 +2142,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 user_id: userId,
                 author_type: 'internal',
                 parent_comment_id: parentCommentId
-            });
+            }, emailRecipients);
             if (isReturnedActionError(result)) {
                 throw result;
             }
@@ -2503,6 +2322,7 @@ const handleClose = () => {
                         attributes: updatedAttributes,
                         updated_at: new Date().toISOString()
                     }));
+                    setUpdatedByUser(localActor);
                 }
                 
                 return success;
@@ -2522,8 +2342,7 @@ const handleClose = () => {
 
                 // Update the ticket
                 const result = await updateTicket(ticket.ticket_id, {
-                    attributes: updatedAttributes,
-                    updated_at: new Date().toISOString()
+                    attributes: updatedAttributes
                 });
                 if (isReturnedActionError(result)) {
                     throw result;
@@ -2535,6 +2354,7 @@ const handleClose = () => {
                     attributes: updatedAttributes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(localActor);
 
 
                 toast.success(t('messages.descriptionUpdated'));
@@ -2546,35 +2366,41 @@ const handleClose = () => {
         }
     };
 
+    // A stopwatch Stop saved its entry (the session is logged server-side): refresh the time list.
+    const handleStopwatchEntryLogged = useCallback(() => {
+        setTimeEntriesRefreshKey((value) => value + 1);
+    }, []);
+
     const handleAddTimeEntry = async () => {
+        if (isLaunchingTimeEntryRef.current) {
+            return;
+        }
+        isLaunchingTimeEntryRef.current = true;
+        setIsLaunchingTimeEntry(true);
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
                 return;
             }
 
-            const baseOnComplete = createTicketTimeEntryOnComplete({
-                stopTracking,
-                setElapsedTime,
-                setIsRunning,
-            });
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime,
                     timeDescription,
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
-                    baseOnComplete();
                     setTimeEntriesRefreshKey((value) => value + 1);
                 },
             });
         } catch (error) {
             handleTicketActionError(error, t('messages.prepareTimeEntryFailed'));
+        } finally {
+            isLaunchingTimeEntryRef.current = false;
+            setIsLaunchingTimeEntry(false);
         }
     };
 
@@ -2613,7 +2439,6 @@ const handleClose = () => {
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime: 0,
                     timeDescription: '',
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
@@ -2672,6 +2497,7 @@ const handleClose = () => {
                 attributes: updatedAttributes ?? null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(localActor);
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2744,7 +2570,11 @@ const handleClose = () => {
                 }
                 return result;
             });
-            
+
+            // Header "Updated … by …": local UI state only; the server stamps the row.
+            setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(localActor);
+
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
@@ -2812,8 +2642,10 @@ const handleClose = () => {
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
                 ...prevTicket,
-                ...updateData
+                ...updateData,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2877,6 +2709,7 @@ const handleClose = () => {
                     ...changes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(localActor);
                 // Refetch the grid timeline so the "changed <field>" system rows
                 // from this local batch appear live (single bump per batch). The
                 // individual-save fallback below relies on handleSelectChange,
@@ -2903,7 +2736,12 @@ const handleClose = () => {
                 if (result !== 'success') {
                     return false;
                 }
-                setTicket(prevTicket => ({ ...prevTicket, ...ticketChanges }));
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    ...ticketChanges,
+                    updated_at: new Date().toISOString()
+                }));
+                setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);
@@ -2927,6 +2765,7 @@ const handleClose = () => {
         confirmBundlePropagation,
         handleItilFieldChange,
         handleSelectChange,
+        localActor,
         onBatchTicketUpdate,
         runWithPendingLiveFields,
         ticket.ticket_id,
@@ -2981,6 +2820,7 @@ const handleClose = () => {
         contentBlocks: PartialBlock[],
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -2990,7 +2830,12 @@ const handleClose = () => {
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression, isInternal);
+            const resolutionAdded = await addResolutionComment(
+                JSON.stringify(contentBlocks),
+                suppression,
+                isInternal,
+                emailRecipients,
+            );
             if (!resolutionAdded) {
                 return false;
             }
@@ -3049,6 +2894,7 @@ const handleClose = () => {
                 response_state: null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(localActor);
             setActivityLogRefreshKey((value) => value + 1);
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
             return true;
@@ -3059,7 +2905,7 @@ const handleClose = () => {
             setIsSubmittingResolutionClose(false);
             setIsSubmittingBundlePropagation(false);
         }
-    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, runWithPendingLiveFields, t, ticket.ticket_id]);
+    }, [addResolutionComment, closedStatusOptions, confirmBundlePropagation, localActor, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3081,6 +2927,8 @@ const handleClose = () => {
                 getClientLocations(newClientId),
             ]);
             
+            setTicket(prevTicket => ({ ...prevTicket, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(localActor);
             setClient(clientData);
             setContacts(contactsData || []);
             setLocations(locationData || []);
@@ -3109,8 +2957,10 @@ const handleClose = () => {
             setTicket(prevTicket => ({
                 ...prevTicket,
                 location_id: newLocationId,
-                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
+                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -3129,8 +2979,10 @@ const handleClose = () => {
 
             setTicket(prevTicket => ({
                 ...prevTicket,
-                billing_profile_id: newBillingProfileId
+                billing_profile_id: newBillingProfileId,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -3838,14 +3690,26 @@ const handleClose = () => {
                             })()}
                         </p>
                     )}
-                    {ticket.updated_at && (
-                        <p>
-                            {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
-                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
-                            })()}
-                        </p>
-                    )}
+                    {ticket.updated_at && (() => {
+                        const updatedTime = updatedRelativeTime || (() => {
+                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
+                        })();
+                        const updatedByName = updatedByUser
+                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                            : '';
+                        return (
+                            <p data-testid="ticket-updated-at">
+                                {updatedByName
+                                    ? t('fields.updatedAtBy', {
+                                        defaultValue: 'Updated {{time}} by {{name}}',
+                                        time: updatedTime,
+                                        name: updatedByName,
+                                    })
+                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
+                            </p>
+                        );
+                    })()}
                 </div>
                 {/* Delete Ticket Dialog (with dependency validation) */}
                 <DeleteEntityDialog
@@ -3881,6 +3745,8 @@ const handleClose = () => {
                     currentUserId={userId}
                     statusOptions={closedStatusOptions}
                     isSubmitting={isSubmittingResolutionClose}
+                    clientId={ticket.client_id ?? null}
+                    allowEmailRecipients
                     onClose={() => {
                         if (!isSubmittingResolutionClose) {
                             setIsResolutionCloseDialogOpen(false);
@@ -4118,18 +3984,6 @@ const handleClose = () => {
                     </DialogContent>
                 </Dialog>
 
-                {/* Timer Replace Confirmation */}
-                <ConfirmationDialog
-                    id={`${id}-replace-timer-dialog`}
-                    isOpen={isReplaceDialogOpen}
-                    onClose={() => setIsReplaceDialogOpen(false)}
-                    onConfirm={handleConfirmReplace}
-                    title={t('info.timerActiveElsewhereTitle', 'Timer Active Elsewhere')}
-                    message={t('info.timerTakeoverMessage', "This ticket's timer is active in another window. Do you want to take over and replace it here?")}
-                    confirmLabel={t('info.replaceHere', 'Replace Here')}
-                    cancelLabel={t('actions.cancel', 'Cancel')}
-                />
-
                 <ConfirmationDialog
                     id={`${id}-bundle-add-child-multi-client-confirm`}
                     isOpen={isAddChildMultiClientConfirmOpen}
@@ -4331,15 +4185,11 @@ const handleClose = () => {
                     onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
-                    elapsedTime={elapsedTime}
-                    isRunning={isRunning}
-                    isTimerLocked={isLockedByOther}
                     timeDescription={timeDescription}
                     onTimeDescriptionChange={setTimeDescription}
-                    onStart={handleStartClick}
-                    onPause={handlePauseClick}
-                    onStop={handleStopClick}
+                    onTimeEntryLogged={handleStopwatchEntryLogged}
                     onAddTimeEntry={handleAddTimeEntry}
+                    isLaunchingTimeEntry={isLaunchingTimeEntry}
                     onScheduleWork={handleScheduleWork}
                     onOpenScheduleEntry={handleOpenScheduleEntry}
                     scheduleRefreshKey={scheduleRefreshKey}
@@ -4348,7 +4198,6 @@ const handleClose = () => {
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
-                    renderIntervalManagement={renderIntervalManagement}
                     additionalAgents={additionalAgents}
                     availableAgents={availableAgents}
                     onAddAgent={handleAddAgent}
@@ -4476,6 +4325,7 @@ const handleClose = () => {
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
                                     externalLinksByCommentId={externalLinksByCommentId}
+                                    allowEmailRecipients
                                 />
                             </div>
                         </Suspense>
@@ -4528,15 +4378,11 @@ const handleClose = () => {
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
                                 board={board}
-                                elapsedTime={elapsedTime}
-                                isRunning={isRunning}
                                 timeDescription={timeDescription}
-                                isTimerLocked={isLockedByOther}
-                                onStart={handleStartClick}
-                                onPause={handlePauseClick}
-                                onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
+                                onTimeEntryLogged={handleStopwatchEntryLogged}
                                 onAddTimeEntry={handleAddTimeEntry}
+                                isLaunchingTimeEntry={isLaunchingTimeEntry}
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
@@ -4574,8 +4420,7 @@ const handleClose = () => {
                                 surveySummaryCard={surveySummaryCard}
                                     hideTimeEntry={hideTimeEntry}
                                     hideMaterials={hideMaterials}
-                                    renderIntervalManagement={renderIntervalManagement}
-                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}

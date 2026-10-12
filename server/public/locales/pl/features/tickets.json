@@ -168,6 +168,7 @@
     "assignedTo": "Przypisane do",
     "requester": "Zgłaszający",
     "client": "Klient",
+    "contact": "Kontakt",
     "dueDate": "Termin",
     "resolution": "Rozwiązanie",
     "timeSpent": "Poświęcony czas",
@@ -209,9 +210,14 @@
     "tags": "Tagi",
     "sla": "SLA",
     "updated": "Zaktualizowano",
+    "updatedAtBy": "Zaktualizowano {{time}} przez {{name}}",
+    "byName": "przez {{name}}",
     "openInNewTab": "Otwórz w nowej karcie",
     "actions": "Akcje",
-    "linkedAssets": "Powiązane zasoby"
+    "linkedAssets": "Powiązane zasoby",
+    "assetName": "Nazwa",
+    "assetTag": "Tag zasobu",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Wyświetl",
@@ -415,7 +421,13 @@
     "schedule": "Zaplanuj",
     "scheduled": "Zaplanowano",
     "showMore": "Pokaż więcej",
-    "showLess": "Pokaż mniej"
+    "showLess": "Pokaż mniej",
+    "ccBcc": "Dw/Udw",
+    "cc": "Dw",
+    "bcc": "Udw",
+    "ccBccInvalid": "Popraw wyróżnione adresy przed wysłaniem.",
+    "ccBccTooMany": "W jednym komentarzu można skopiować maksymalnie {{max}} odbiorców Dw i Udw.",
+    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć."
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -480,7 +492,8 @@
       "loading": "Ładowanie...",
       "clientNotFound": "Nie znaleziono klienta.",
       "clientRendererMissing": "Szczegóły klienta są niedostępne w tym kontekście.",
-      "clientLoadFailed": "Nie udało się załadować klienta."
+      "clientLoadFailed": "Nie udało się załadować klienta.",
+      "contactRendererMissing": "Szczegóły kontaktu są niedostępne w tym kontekście."
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
@@ -836,6 +849,8 @@
       "failure": "Nie udało się zaktualizować statusu",
       "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
       "resolutionLabel": "Komentarz rozwiązania (opcjonalnie)",
+      "resolutionLabelRequired": "Komentarz rozwiązania",
+      "resolutionRequiredHint": "Ta tablica wymaga komentarza rozwiązania przed zamknięciem zgłoszeń.",
       "resolutionPlaceholder": "Opisz, jak rozwiązano te zgłoszenia",
       "resolutionHelper": "Zapisywany jako rozwiązanie w każdym wybranym zgłoszeniu i spełnia wymagania tablic, które wymagają go przed zamknięciem.",
       "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
@@ -1077,9 +1092,6 @@
     "closeTicketNowTitle": "Zamknąć zgłoszenie teraz?",
     "closeTicketNowPrompt": "Ten komentarz jest teraz rozwiązaniem. Wybierz status zamknięcia, aby zamknąć zgłoszenie, albo pozostaw je otwarte.",
     "leaveTicketOpen": "Pozostaw otwarte",
-    "timerActiveElsewhereTitle": "Licznik aktywny w innym miejscu",
-    "timerTakeoverMessage": "Licznik tego zgłoszenia jest aktywny w innym oknie. Czy chcesz go przejąć i zastąpić tutaj?",
-    "replaceHere": "Zastąp tutaj",
     "noActiveTimePeriodTitle": "Brak aktywnego okresu rozliczeniowego",
     "noActiveTimePeriodMessage": "Nie znaleziono aktywnego okresu rozliczeniowego. Okresy rozliczeniowe muszą zostać skonfigurowane w panelu rozliczeń przed dodaniem wpisów czasu.",
     "goToTimePeriodsSetup": "Przejdź do konfiguracji okresów rozliczeniowych",
@@ -1095,15 +1107,7 @@
   },
   "properties": {
     "timeEntry": "Wpis czasu",
-    "ticketTimer": "Timer zgłoszenia - nr {{ticketNumber}}",
-    "timerActiveElsewhere": "Minutnik jest aktywny w innym oknie",
-    "start": "Rozpocznij",
-    "pause": "Pauza",
-    "reset": "Resetuj",
-    "enterWorkDescription": "Wpisz opis pracy",
-    "liveTimerDisabled": "Minutnik zgłoszeń na żywo jest wyłączony dla tej tablicy.",
     "addTimeEntry": "Dodaj wpis czasu",
-    "trackedIntervals": "Śledzone interwały",
     "contactInfo": "Informacje kontaktowe",
     "noContactSelected": "Nie wybrano kontaktu",
     "selectOrChangeContact": "Wybierz lub zmień kontakt",
@@ -1880,9 +1884,7 @@
       "viewAll": "Zobacz wszystkie",
       "viewAllCount": "Zobacz wszystkie {{count}}",
       "timeLogged": "Zarejestrowany czas",
-      "workDescription": "Opis pracy",
       "addTimeEntry": "Dodaj wpis czasu",
-      "trackedIntervals": "Śledzone interwały",
       "teamAndWatchers": "Zespół i obserwujący",
       "addAgent": "Dodaj agenta…",
       "timeline": "Oś czasu",
@@ -1893,7 +1895,6 @@
       "opened": "Otwarto",
       "viaSource": "przez {{source}}",
       "noContactOnTicket": "Brak kontaktu w tym zgłoszeniu",
-      "whatAreYouWorkingOn": "Nad czym pracujesz?",
       "agentFallback": "Agent",
       "removeAgent": "Usuń {{name}}",
       "noAdditionalAgents": "Brak dodatkowych agentów",
@@ -1922,8 +1923,6 @@
       "acrossEntries_many": "w {{count}} wpisach",
       "acrossEntries_other": "w {{count}} wpisach",
       "team": "Zespół",
-      "startTimer": "Uruchom licznik czasu",
-      "timerLockedHint": "Inny licznik czasu jest już uruchomiony",
       "billable": "Rozliczalne",
       "nothingBillable": "Brak pozycji do rozliczenia",
       "editContact": "Edytuj kontakt",
@@ -2442,5 +2441,21 @@
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Co rok (miesiąc: {{month}}, dzień: {{day}})"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "Stoper jest wyłączony dla tej tablicy.",
+    "pausedElsewhereTicket": "Wstrzymany przy innym zgłoszeniu: {{label}}",
+    "runningElsewhereTicket": "Działa przy innym zgłoszeniu: {{label}}",
+    "pausedElsewhereTask": "Wstrzymany przy innym zadaniu: {{label}}",
+    "runningElsewhereTask": "Działa przy innym zadaniu: {{label}}",
+    "switch": "Przełącz tutaj",
+    "start": "Uruchom stoper",
+    "resume": "Wznów stoper",
+    "pause": "Wstrzymaj stoper",
+    "stop": "Zatrzymaj i zapisz czas",
+    "discard": "Odrzuć stoper",
+    "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
+    "workDescription": "Opis pracy",
+    "whatAreYouWorkingOn": "Nad czym pracujesz?"
   }
 }

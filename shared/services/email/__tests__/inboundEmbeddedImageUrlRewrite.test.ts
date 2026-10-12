@@ -77,7 +77,7 @@ describe('inboundEmbeddedImageUrlRewrite', () => {
     db = createFakeDb();
     withTenantAdminTransactionMock.mockImplementation(
       async (_tenantId: string, callback: (trx: any, db: any) => Promise<any>) =>
-        callback({}, db)
+        callback({ fn: { now: () => 'DB_NOW' } }, db)
     );
   });
 

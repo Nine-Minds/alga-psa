@@ -23,7 +23,6 @@ export type RecurringChargeFamily =
   | 'bucket'
   | 'hourly'
   | 'usage';
-export type RecurringObligationType = 'contract_line' | 'client_contract_line' | 'template_line' | 'preset_line';
 export type RecurringTimingMetadataValue = string | number | boolean | null;
 export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;
 
@@ -263,7 +262,6 @@ export type RecurringServicePeriodProvenanceReasonCode =
 export interface IRecurringObligationRef {
   tenant?: string;
   obligationId: string;
-  obligationType: RecurringObligationType;
   chargeFamily: RecurringChargeFamily;
 }
 

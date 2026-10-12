@@ -14,6 +14,7 @@ import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimized
 import { XCircle } from 'lucide-react';
 import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
@@ -218,7 +219,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
+          {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}

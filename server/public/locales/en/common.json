@@ -214,6 +214,10 @@
         "updateComments": "Insufficient permissions to update comments",
         "deleteComments": "Insufficient permissions to delete comments",
         "viewDocuments": "Insufficient permissions to view ticket documents"
+      },
+      "projects": {
+        "read": "Insufficient permissions to view projects",
+        "readDetails": "Insufficient permissions to view project details"
       }
     },
     "tags": {
@@ -1346,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Select timezone...",
-    "searchPlaceholder": "Search timezones or abbreviations (e.g. EST)...",
+    "searchPlaceholder": "Search by city, name, or abbreviation (e.g. New York, EST)...",
     "noResults": "No timezones found",
     "matchingGroup": "Matching \"{{query}}\"",
+    "noDst": "No DST",
+    "noDaylightSavingHint": "No daylight saving time. Clocks stay at {{offset}} all year.",
     "regions": {
       "Africa": "Africa",
       "America": "America",
@@ -1617,6 +1623,12 @@
     "threecxDialing": "Dialing from your 3CX extension",
     "threecxFailed": "The PBX could not place the call"
   },
+  "unsavedChangesGuard": {
+    "title": "Discard unsaved changes?",
+    "message": "You have unsaved changes that will be lost if you close this. Do you want to discard them?",
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing"
+  },
   "editor": {
     "attachFiles": "Attach files",
     "uploadingFiles": "Uploading files…",
@@ -1738,5 +1750,9 @@
     "customPlaceholder": "Name this unit",
     "register": "Add",
     "selectPlaceholder": "Select a unit"
+  },
+  "emailRecipients": {
+    "remove": "Remove {{email}}",
+    "placeholder": "Type an address and press Enter"
   }
 }

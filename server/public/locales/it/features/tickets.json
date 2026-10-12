@@ -136,6 +136,7 @@
     "assignedTo": "Assegnato a",
     "requester": "Richiedente",
     "client": "Azienda",
+    "contact": "Contatto",
     "dueDate": "Scadenza",
     "resolution": "Risoluzione",
     "timeSpent": "Tempo impiegato",
@@ -177,9 +178,14 @@
     "tags": "Tag",
     "sla": "SLA",
     "updated": "Aggiornato",
+    "updatedAtBy": "Aggiornato {{time}} da {{name}}",
+    "byName": "da {{name}}",
     "openInNewTab": "Apri in una nuova scheda",
     "actions": "Azioni",
-    "linkedAssets": "Asset collegati"
+    "linkedAssets": "Asset collegati",
+    "assetName": "Nome",
+    "assetTag": "Tag dell’asset",
+    "assetType": "Tipo"
   },
   "actions": {
     "view": "Visualizza",
@@ -373,7 +379,13 @@
     "schedule": "Pianifica",
     "scheduled": "Pianificato",
     "showMore": "Mostra di più",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "ccBcc": "Cc/Ccn",
+    "cc": "Cc",
+    "bcc": "Ccn",
+    "ccBccInvalid": "Correggi gli indirizzi evidenziati prima di inviare.",
+    "ccBccTooMany": "È possibile copiare al massimo {{max}} destinatari Cc e Ccn in un commento.",
+    "ccBccNotSentOnInternal": "Cc e Ccn non vengono inviati con una nota interna. Disattiva Interna per usarli."
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -438,7 +450,8 @@
       "loading": "Caricamento...",
       "clientNotFound": "Cliente non trovato.",
       "clientRendererMissing": "I dettagli del cliente non sono disponibili in questo contesto.",
-      "clientLoadFailed": "Impossibile caricare il cliente."
+      "clientLoadFailed": "Impossibile caricare il cliente.",
+      "contactRendererMissing": "I dettagli del contatto non sono disponibili in questo contesto."
     },
     "filters": {
       "allAssignees": "Tutti gli assegnatari",
@@ -748,6 +761,8 @@
       "failure": "Impossibile aggiornare lo stato",
       "failedHeading": "Stato non aggiornato sui seguenti ticket:",
       "resolutionLabel": "Commento di risoluzione (facoltativo)",
+      "resolutionLabelRequired": "Commento di risoluzione",
+      "resolutionRequiredHint": "Questa bacheca richiede un commento di risoluzione prima di poter chiudere i ticket.",
       "resolutionPlaceholder": "Descrivi come sono stati risolti questi ticket",
       "resolutionHelper": "Viene salvato come risoluzione su ogni ticket selezionato e soddisfa le bacheche che ne richiedono una prima della chiusura."
     },
@@ -965,9 +980,6 @@
     "closeTicketNowTitle": "Chiudere il ticket adesso?",
     "closeTicketNowPrompt": "Questo commento è ora la risoluzione. Scegli uno stato di chiusura per chiudere il ticket oppure lascialo aperto.",
     "leaveTicketOpen": "Lascia aperto",
-    "timerActiveElsewhereTitle": "Timer attivo altrove",
-    "timerTakeoverMessage": "Il timer di questo ticket è attivo in un'altra finestra. Vuoi assumerne il controllo e sostituirlo qui?",
-    "replaceHere": "Sostituisci qui",
     "noActiveTimePeriodTitle": "Nessun periodo di tempo attivo",
     "noActiveTimePeriodMessage": "Nessun periodo di tempo attivo trovato. È necessario configurare i periodi di tempo nella dashboard di fatturazione prima di aggiungere inserimenti ore.",
     "goToTimePeriodsSetup": "Vai alla configurazione dei periodi di tempo",
@@ -983,15 +995,7 @@
   },
   "properties": {
     "timeEntry": "Inserimento ore",
-    "ticketTimer": "Timer ticket - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer attivo in un'altra finestra",
-    "start": "Avvia",
-    "pause": "Pausa",
-    "reset": "Reimposta",
-    "enterWorkDescription": "Inserisci la descrizione del lavoro",
-    "liveTimerDisabled": "Il timer live dei ticket è disattivato per questa bacheca.",
     "addTimeEntry": "Aggiungi inserimento ore",
-    "trackedIntervals": "Intervalli tracciati",
     "contactInfo": "Informazioni contatto",
     "noContactSelected": "Nessun contatto selezionato",
     "selectOrChangeContact": "Seleziona o cambia contatto",
@@ -1736,9 +1740,7 @@
       "viewAll": "Vedi tutto",
       "viewAllCount": "Vedi tutti {{count}}",
       "timeLogged": "Tempo registrato",
-      "workDescription": "Descrizione del lavoro",
       "addTimeEntry": "Aggiungi inserimento ore",
-      "trackedIntervals": "Intervalli registrati",
       "teamAndWatchers": "Team e osservatori",
       "addAgent": "Aggiungi un agente…",
       "timeline": "Cronologia",
@@ -1749,7 +1751,6 @@
       "opened": "Aperto",
       "viaSource": "tramite {{source}}",
       "noContactOnTicket": "Nessun contatto su questo ticket",
-      "whatAreYouWorkingOn": "A cosa stai lavorando?",
       "agentFallback": "Agente",
       "removeAgent": "Rimuovi {{name}}",
       "noAdditionalAgents": "Nessun agente aggiuntivo",
@@ -1776,8 +1777,6 @@
       "acrossEntries_one": "su {{count}} voce",
       "acrossEntries_other": "su {{count}} voci",
       "team": "Team",
-      "startTimer": "Avvia timer",
-      "timerLockedHint": "Un altro timer è già in esecuzione",
       "billable": "Fatturabile",
       "nothingBillable": "Ancora nulla di fatturabile",
       "editContact": "Modifica contatto",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Ogni anno il {{day}} {{month}}"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "Il cronometro è disattivato per questa bacheca.",
+    "pausedElsewhereTicket": "In pausa su un altro ticket: {{label}}",
+    "runningElsewhereTicket": "In corso su un altro ticket: {{label}}",
+    "pausedElsewhereTask": "In pausa su un'altra attività: {{label}}",
+    "runningElsewhereTask": "In corso su un'altra attività: {{label}}",
+    "switch": "Passa qui",
+    "start": "Avvia cronometro",
+    "resume": "Riprendi cronometro",
+    "pause": "Metti in pausa il cronometro",
+    "stop": "Ferma e registra il tempo",
+    "discard": "Scarta cronometro",
+    "pausedHint": "In pausa. Riprendi per continuare a tracciare, oppure ferma per registrare il tempo.",
+    "workDescription": "Descrizione del lavoro",
+    "whatAreYouWorkingOn": "Su cosa stai lavorando?"
   }
 }

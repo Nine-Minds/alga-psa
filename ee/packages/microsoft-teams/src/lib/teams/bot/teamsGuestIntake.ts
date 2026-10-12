@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '@shared/lib/tickets/ticketLifecycleEvents';
 import logger from '@alga-psa/core/logger';
 import { getSSORegistry } from '@alga-psa/auth';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
@@ -294,6 +296,11 @@ export async function createTeamsGuestTicket(params: {
         },
         tenantId,
         trx,
+        {},
+        contactSuppressedTicketCreation(
+          new WorkflowEventPublisher({ transaction: trx }),
+          'Teams guest intake tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+        ),
       );
     });
 

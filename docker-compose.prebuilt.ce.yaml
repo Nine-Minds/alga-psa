@@ -166,6 +166,8 @@ services:
     depends_on:
       postgres:
         condition: service_started
+      postgres-extension-update:
+        condition: service_completed_successfully
     entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:
@@ -350,7 +352,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: server
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_HOST_AUTH_METHOD: md5
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
       APP_ENV: ${APP_ENV:-development}

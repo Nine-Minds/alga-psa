@@ -66,9 +66,12 @@ setup:
   waitForBootstrap:
     image:
       # Optional lightweight image with psql used by the app initContainer while
-      # the bootstrap job owns migrations/seeds. Empty values fall back to setup.image.
+      # the bootstrap job owns migrations/seeds. When name and tag are empty the
+      # image is the bundled database image if db.enabled, otherwise setup.image.
+      # digest is optional (sha256:<64 hex>).
       name: ""
       tag: ""
+      digest: ""
     pullPolicy: IfNotPresent
 
 server:
@@ -306,9 +309,13 @@ redis:
 
 db:
   enabled: true
+  # LEVERAGE: friction pinned-third-party-images — Helm values cannot read docker-compose.images.yaml; scripts/tests/pinned-images.test.mjs enforces equality
   image:
-    repository: ankane/pgvector
-    tag: "latest"
+    repository: pgvector/pgvector
+    tag: "0.8.7-pg15-bookworm"
+    digest: "sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9"
+    # Safe because the reference is digest-pinned: bumping the pin changes the digest.
+    pullPolicy: IfNotPresent
   service:
     port: 5432
   persistence:

@@ -326,7 +326,9 @@ function ExtensionsTable({
     },
     {
       title: t('list.colActions'),
+      id: 'extension_actions',
       dataIndex: 'id',
+      sortable: false,
       width: '380px',
       headerClassName: 'text-right sticky right-0 bg-card z-20',
       cellClassName: 'sticky right-0 bg-card z-10',

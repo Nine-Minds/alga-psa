@@ -3,6 +3,7 @@
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
+import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -407,13 +408,25 @@ export const getTenantTimezoneAuth = withAuth(async (
 export async function setTenantTimezone(
   timezone: string
 ): Promise<void | TenantSettingsActionError> {
-  // Validate the timezone is a valid IANA timezone
-  try {
-    Intl.DateTimeFormat(undefined, { timeZone: timezone });
-  } catch {
+  // Tenant timezone saves are always explicit, so always validate. UTC aliases
+  // come back mapped to "UTC"; non-city IDs (EST, Etc/GMT+5, US/Eastern) are rejected.
+  // Both failures are returned as action errors with a messageKey, so they never
+  // reach the thrown-error 'Invalid timezone:' prefix mapping in tenantSettingsActionErrorFrom.
+  const validation = validateStorableTimeZone(timezone);
+  if (validation.ok === false) {
+    return validation.reason === 'not_location'
+      ? actionError(
+          `${timezone} isn't a city-based time zone. Choose a zone such as America/New_York.`,
+          'msp/settings:errors.tenantSettings.nonLocationTimezone',
+          { timezone },
+        )
+      : actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
+  }
+  if (!validation.timeZone) {
+    // An empty value is not a timezone to store at the tenant level.
     return actionError(`Invalid timezone: ${timezone}`, 'msp/settings:errors.tenantSettings.invalidTimezone', { timezone });
   }
-  return updateTenantSettings({ timezone });
+  return updateTenantSettings({ timezone: validation.timeZone });
 }
 
 export async function initializeTenantSettings(tenantId: string): Promise<void> {

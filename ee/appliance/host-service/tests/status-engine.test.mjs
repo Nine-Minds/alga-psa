@@ -29,20 +29,24 @@ function helmRelease(name, ready, message) {
   return { metadata: { name }, status: { conditions: [{ type: 'Ready', status: ready, reason: ready === 'True' ? 'Succeeded' : 'Progressing', message }] } };
 }
 
-function fakeCluster({ nodes = [readyNode], pods = [], jobs = [], helmReleases = [], events = [], failures = {} } = {}) {
+// An email-service image without /status answers 404 through the proxy.
+const emailStatusNotFound = { ok: false, reason: 'not-found', status: 404, error: 'Kubernetes API returned HTTP 404: the server could not find the requested resource' };
+
+function fakeCluster({ nodes = [readyNode], pods = [], jobs = [], helmReleases = [], events = [], emailStatus = emailStatusNotFound, failures = {} } = {}) {
   const respond = (method, items) => async () => failures[method] || { ok: true, items };
   return {
     listNodes: respond('listNodes', nodes),
     listPods: respond('listPods', pods),
     listJobs: respond('listJobs', jobs),
     listHelmReleases: respond('listHelmReleases', helmReleases),
-    listEvents: respond('listEvents', events)
+    listEvents: respond('listEvents', events),
+    readServiceProxy: typeof emailStatus === 'function' ? emailStatus : async () => failures.readServiceProxy || emailStatus
   };
 }
 
 function failingReader(reason, error) {
   const result = { ok: false, reason, status: null, error };
-  return fakeCluster({ failures: { listNodes: result, listPods: result, listJobs: result, listHelmReleases: result, listEvents: result } });
+  return fakeCluster({ failures: { listNodes: result, listPods: result, listJobs: result, listHelmReleases: result, listEvents: result, readServiceProxy: result } });
 }
 
 // The API is not reachable yet (no kubeconfig / k3s still starting).
@@ -569,4 +573,107 @@ test('collectStatusSnapshotAsync maps failure phases to expected categories', as
     const snapshot = await collectStatusSnapshotAsync({ stateFile, kubeconfigPath: '/tmp/k3s.yaml', clusterReader: failingReader('error', 'boom') });
     assert.equal(snapshot.failures[0].category, expectedCategory);
   }
+});
+
+// ---- email-service /status (alga0002256) -----------------------------------
+
+function healthyEmailCluster(emailStatus) {
+  return fakeCluster({
+    pods: [pod('msp', 'alga-core-abc', 'Running'), pod('msp', 'email-service-abc', 'Running')],
+    jobs: [job('alga-core-bootstrap', 1)],
+    helmReleases: ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'].map((n) => helmRelease(n, 'True', 'ok')),
+    emailStatus
+  });
+}
+
+const emailStatusOk = (body) => ({ ok: true, text: JSON.stringify(body) });
+
+async function emailSnapshot(emailStatus) {
+  return collectStatusSnapshotAsync({
+    stateFile: writeStateFile({ phase: 'app-readiness', status: 'complete' }),
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: healthyEmailCluster(emailStatus)
+  });
+}
+
+test('a degraded email-service /status adds a background blocker and clears backgroundReady', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({
+    version: 1,
+    status: 'degraded',
+    reasons: [
+      { code: 'microsoft_subscriptions_expired', severity: 'degraded', message: '2 Microsoft subscriptions have expired', count: 2 },
+      { code: 'dlq_nonzero', severity: 'info', message: 'info only' }
+    ]
+  }));
+
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.tiers.fullyHealthy, false);
+  assert.equal(snapshot.rollup.state, 'ready_with_background_issues');
+  assert.equal(snapshot.emailService.health, 'degraded');
+  const blocker = snapshot.topBlockers.find((b) => b.step === 'email-service-health');
+  assert.ok(blocker);
+  assert.equal(blocker.severity, 'background');
+  assert.equal(blocker.loginBlocking, false);
+  assert.match(blocker.reason, /2 Microsoft subscriptions have expired/);
+  assert.doesNotMatch(blocker.reason, /info only/);
+});
+
+test('a down email-service /status is treated like degraded and never blocks login', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({
+    version: 1,
+    status: 'down',
+    reasons: [{ code: 'redis_unreachable', severity: 'down', message: 'Redis is unreachable' }]
+  }));
+  assert.equal(snapshot.tiers.loginReady, true);
+  assert.equal(snapshot.tiers.backgroundReady, false);
+  assert.equal(snapshot.emailService.health, 'down');
+});
+
+test('an ok email-service /status leaves the snapshot fully healthy', async () => {
+  const snapshot = await emailSnapshot(emailStatusOk({ version: 1, status: 'ok', reasons: [] }));
+  assert.equal(snapshot.tiers.backgroundReady, true);
+  assert.equal(snapshot.tiers.fullyHealthy, true);
+  assert.equal(snapshot.rollup.state, 'fully_healthy');
+  assert.equal(snapshot.emailService.health, 'ok');
+});
+
+test('a 404, failed read or invalid JSON from /status never degrades the snapshot', async () => {
+  const responses = [
+    emailStatusNotFound,
+    { ok: false, reason: 'timeout', status: 124, error: 'Kubernetes API request timed out: aborted' },
+    { ok: true, text: 'not json' },
+    emailStatusOk({ version: 2, status: 'down', reasons: [] })
+  ];
+  for (const response of responses) {
+    const snapshot = await emailSnapshot(response);
+    assert.equal(snapshot.tiers.backgroundReady, true);
+    assert.equal(snapshot.tiers.fullyHealthy, true);
+    assert.equal(snapshot.emailService.health, 'unavailable');
+    assert.equal(snapshot.topBlockers.some((b) => b.step === 'email-service-health'), false);
+  }
+});
+
+test('the email-service status read goes through the API-server service proxy', async () => {
+  const seen = [];
+  await emailSnapshot(async (request) => {
+    seen.push(request);
+    return { ok: true, text: '{}' };
+  });
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].namespace, 'msp');
+  assert.equal(seen[0].service, 'http:email-service:http');
+  assert.equal(seen[0].path, 'status');
+});
+
+test('the email-service status result is discarded when the Kubernetes API is down', async () => {
+  const reader = failingReader('unavailable', 'Kubernetes client configuration is not available: ENOENT kubeconfig');
+  reader.readServiceProxy = async () => emailStatusOk({ version: 1, status: 'down', reasons: [] });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile: writeStateFile({ phase: 'app-readiness', status: 'complete' }),
+    kubeconfigPath: '/tmp/k3s.yaml',
+    clusterReader: reader
+  });
+  assert.equal(snapshot.emailService.health, 'unavailable');
+  assert.equal(snapshot.topBlockers.some((b) => b.step === 'email-service-health'), false);
 });

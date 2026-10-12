@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isAdditionalWorkspaceTest, isWorkspaceDbTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
+import { fileURLToPath } from 'node:url';
+import { isAdditionalWorkspaceTest, isNodeToolingTest, isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
 
 function inspect(overrides = {}) {
   return reconcileDiscovery({
@@ -57,12 +58,14 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
     'shared/workflow/tests/identity.db.test.ts',
     'ee/packages/calendar/tests/provider.db.test.tsx',
     'ee/server/src/__tests__/unit/huduAssetMappingActions.db.test.ts',
+    'services/workflow-worker/src/v2/launchSkips.db.test.ts',
   ]) assert.equal(isWorkspaceDbTest(file), true, file);
   for (const file of [
     'server/src/test/integration/rollback.db.test.ts',
     'server/src/test/infrastructure/fixture.db.test.ts',
     'packages/billing/tests/eligibility.test.ts',
     'tools/fixture.db.test.ts',
+    'services/workflow-worker/dist/v2/launchSkips.db.test.js',
   ]) assert.equal(isWorkspaceDbTest(file), false, file);
 });
 
@@ -111,6 +114,16 @@ test('HTTP locale rendering and fixture readback join API execution without abso
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/utils/utilities.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/api/clients.e2e.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/document-system.playwright.test.ts', 'api-e2e'), false);
+});
+
+test('the mutation sandbox guard executes in the required Node tooling suite', () => {
+  const file = 'tools/mutation/sandbox.test.mjs';
+  assert.equal(isNodeToolingTest(file), true);
+  assert.equal(isNodeToolingTest('tools/mutation/vitest.config.ts'), false);
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const mutationTests = repositoryTestFiles(root).filter(candidate => candidate.startsWith('tools/mutation/'));
+  assert.ok(mutationTests.includes(file));
+  assert.deepEqual(mutationTests.filter(candidate => !isNodeToolingTest(candidate)), []);
 });
 
 

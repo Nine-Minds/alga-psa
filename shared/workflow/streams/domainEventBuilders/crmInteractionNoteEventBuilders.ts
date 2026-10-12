@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function normalizeDate(value?: Date | string): string | undefined {
   if (!value) return undefined;
   if (value instanceof Date) return value.toISOString();
@@ -49,11 +51,11 @@ export function buildInteractionLoggedPayload(params: {
   loggedByUserId?: string;
   subject?: string;
   outcome?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'INTERACTION_LOGGED'> {
   const interactionType = normalizeString(params.interactionType) ?? 'interaction';
   const channel = normalizeString(params.channel) ?? deriveInteractionChannel(interactionType);
 
-  return {
+  return builtWorkflowPayload('INTERACTION_LOGGED', {
     interactionId: params.interactionId,
     clientId: params.clientId,
     ...(params.contactId ? { contactId: params.contactId } : {}),
@@ -63,7 +65,7 @@ export function buildInteractionLoggedPayload(params: {
     ...(params.loggedByUserId ? { loggedByUserId: params.loggedByUserId } : {}),
     ...(normalizeString(params.subject) ? { subject: normalizeString(params.subject) } : {}),
     ...(normalizeString(params.outcome) ? { outcome: normalizeString(params.outcome) } : {}),
-  };
+  });
 }
 
 export function buildNoteCreatedPayload(params: {
@@ -74,8 +76,8 @@ export function buildNoteCreatedPayload(params: {
   createdAt?: Date | string;
   visibility?: 'public' | 'internal';
   bodyPreview?: unknown;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'NOTE_CREATED'> {
+  return builtWorkflowPayload('NOTE_CREATED', {
     noteId: params.noteId,
     entityType: params.entityType,
     entityId: params.entityId,
@@ -83,5 +85,5 @@ export function buildNoteCreatedPayload(params: {
     ...(params.createdAt ? { createdAt: normalizeDate(params.createdAt) } : {}),
     ...(params.visibility ? { visibility: params.visibility } : {}),
     ...(params.bodyPreview !== undefined ? { bodyPreview: buildBodyPreview(params.bodyPreview, 200) } : {}),
-  };
+  });
 }

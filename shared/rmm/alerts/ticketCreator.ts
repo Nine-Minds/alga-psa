@@ -10,6 +10,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
+import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -68,6 +69,12 @@ export async function createTicketForAlert(
   const now = new Date().toISOString();
   const db = tenantDb(trx, tenantId);
 
+  // LEVERAGE: pattern ticket-create-composition — raw ticket insert bypasses TicketModel.createTicket, so board default watchers must be seeded by hand
+  const attributes = await applyBoardDefaultWatchers(trx, tenantId, boardId, {
+    description,
+    source_reference: event.externalAlertId,
+  });
+
   const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
@@ -79,10 +86,7 @@ export async function createTicketForAlert(
       priority_id: priorityId ?? null,
       board_id: boardId,
       assigned_to: actions.assignToUserId ?? null,
-      attributes: JSON.stringify({
-        description,
-        source_reference: event.externalAlertId,
-      }),
+      attributes: JSON.stringify(attributes),
       source: event.provider,
       entered_at: now,
       updated_at: now,

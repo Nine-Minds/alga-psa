@@ -217,6 +217,16 @@ const CustomSelect = ({
   const isModal = modal !== undefined ? modal : parentModal;
 
   const selectTriggerRef = useRef<HTMLButtonElement>(null);
+  const justClosedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Never leave the just-closed marker or its timer behind once the select unmounts.
+  useEffect(() => () => {
+    if (justClosedTimerRef.current !== null) {
+      clearTimeout(justClosedTimerRef.current);
+      justClosedTimerRef.current = null;
+      document.body.removeAttribute('data-radix-select-just-closed');
+    }
+  }, []);
 
   const containerId = finalAutomationProps.id ? `${finalAutomationProps.id}-container` : undefined;
 
@@ -254,7 +264,11 @@ const CustomSelect = ({
           // This helps with the portal timing issue
           if (!open) {
             document.body.setAttribute('data-radix-select-just-closed', 'true');
-            setTimeout(() => {
+            if (justClosedTimerRef.current !== null) {
+              clearTimeout(justClosedTimerRef.current);
+            }
+            justClosedTimerRef.current = setTimeout(() => {
+              justClosedTimerRef.current = null;
               document.body.removeAttribute('data-radix-select-just-closed');
             }, 100);
           }
@@ -313,11 +327,26 @@ const CustomSelect = ({
             onCloseAutoFocus={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.stopPropagation()}
           >
-            <RadixSelect.ScrollUpButton className="flex items-center justify-center h-6 bg-background dark:bg-[rgb(var(--color-card))] text-foreground cursor-default">
-              <ChevronDown className="w-4 h-4 rotate-180" />
-            </RadixSelect.ScrollUpButton>
-            
-            <RadixSelect.Viewport className="p-1 max-h-[300px] overflow-y-auto">
+            {/*
+              No Radix ScrollUp/ScrollDownButton here. Those buttons mount and
+              unmount in the content's flex flow whenever the viewport's scroll
+              position crosses the top/bottom edge, which moves every option by
+              the button's height. When that happens between pointerdown and
+              pointerup (focus moving on press scrolls the viewport), the
+              release lands on a different option, Radix drops the selection,
+              and the user has to pick again. The viewport scrolls natively
+              instead, with its scrollbar shown (Radix hides it by default).
+            */}
+            <RadixSelect.Viewport
+              data-testid="custom-select-viewport"
+              className={`
+                p-1 max-h-[300px] overflow-y-auto
+                ![scrollbar-width:thin] ![scrollbar-color:rgb(var(--color-border-300))_transparent]
+                [&::-webkit-scrollbar]:!block [&::-webkit-scrollbar]:w-2
+                [&::-webkit-scrollbar-track]:bg-transparent
+                [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)]
+              `}
+            >
               {/* Add a placeholder option if needed */}
               {showPlaceholderInDropdown && (
                 <RadixSelect.Item
@@ -379,9 +408,6 @@ const CustomSelect = ({
               ))}
             </RadixSelect.Viewport>
 
-            <RadixSelect.ScrollDownButton className="flex items-center justify-center h-6 bg-background dark:bg-[rgb(var(--color-card))] text-foreground cursor-default">
-              <ChevronDown className="w-4 h-4" />
-            </RadixSelect.ScrollDownButton>
             {onAddNew && (
               <>
                 <div className="border-t border-border" />

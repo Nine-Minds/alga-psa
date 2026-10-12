@@ -54,14 +54,22 @@ function createFakeKnex(state: FakeDbState) {
   const knex: any = (table: string) => {
     const calls: Call[] = [];
     const builder: any = {};
+    let counting = false;
     for (const method of ['where', 'whereNot', 'whereIn', 'whereRaw', 'orderByRaw', 'orderBy', 'select']) {
       builder[method] = (...args: any[]) => {
         calls.push({ method, args });
         return builder;
       };
     }
-    builder.first = async (..._columns: any[]) =>
-      applyFilters(state.rows[table] ?? [], calls)[0] ?? null;
+    builder.count = (...args: any[]) => {
+      calls.push({ method: 'count', args });
+      counting = true;
+      return builder;
+    };
+    builder.first = async (..._columns: any[]) => {
+      const rows = applyFilters(state.rows[table] ?? [], calls);
+      return counting ? { count: String(rows.length) } : rows[0] ?? null;
+    };
     builder.update = async (values: Record<string, any>) => {
       state.updates.push({ table, calls, values });
       return 1;
@@ -150,6 +158,7 @@ function createState(subscriptions: Record<string, any>[]): FakeDbState {
     rows: {
       tenants: [{ tenant: TENANT, plan: 'pro', billing_source: 'stripe' }],
       stripe_subscriptions: subscriptions,
+      users: [],
     },
     updates: [],
   };
@@ -232,6 +241,130 @@ describe('StripeService license subscription lifecycle', () => {
       expect(result.type).toBe('checkout');
       expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
       expect(service.stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('decreases a trialing subscription in place with no schedule and no charge', async () => {
+      const state = createState([trialSubscription({ quantity: 3 })]);
+      state.rows.users = [
+        { tenant: TENANT, user_id: 'u1', user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: 'u2', user_type: 'internal', is_inactive: false },
+      ];
+      const { service } = createService(state);
+
+      const result = await service.updateOrCreateLicenseSubscription(TENANT, 2);
+
+      expect(result).toEqual(
+        expect.objectContaining({ type: 'updated', scheduledChange: false }),
+      );
+      expect(service.stripe.subscriptionSchedules).toBeUndefined();
+      const [subscriptionId, params] = service.stripe.subscriptions.update.mock.calls[0];
+      expect(subscriptionId).toBe('sub_ext_trial');
+      expect(params.items).toEqual([{ id: 'si_trial', quantity: 2 }]);
+      expect(params.proration_behavior).toBe('none');
+
+      expect(state.updates.find((u) => u.table === 'stripe_subscriptions')?.values.quantity).toBe(2);
+      expect(state.updates.find((u) => u.table === 'tenants')?.values.licensed_user_count).toBe(2);
+    });
+
+    it('refuses any decrease below the active internal user count', async () => {
+      const state = createState([trialSubscription({ quantity: 3 })]);
+      state.rows.users = [
+        { tenant: TENANT, user_id: 'u1', user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: 'u2', user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: 'u3', user_type: 'internal', is_inactive: false },
+        { tenant: TENANT, user_id: 'u4', user_type: 'internal', is_inactive: true },
+        { tenant: TENANT, user_id: 'c1', user_type: 'client', is_inactive: false },
+      ];
+      const { service } = createService(state);
+
+      await expect(service.updateOrCreateLicenseSubscription(TENANT, 1)).rejects.toThrow(
+        /3 active users/,
+      );
+      expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+      expect(state.updates).toHaveLength(0);
+    });
+
+    it('schedules a decrease on an active subscription for period end', async () => {
+      const periodEnd = new Date('2026-08-01T00:00:00.000Z');
+      const state = createState([activeSubscription({ quantity: 3, current_period_end: periodEnd })]);
+      state.rows.users = [
+        { tenant: TENANT, user_id: 'u1', user_type: 'internal', is_inactive: false },
+      ];
+      const { service } = createService(state);
+      service.stripe.subscriptions.retrieve = vi.fn().mockResolvedValue({ schedule: null });
+      service.stripe.subscriptionSchedules = {
+        create: vi.fn().mockResolvedValue({ id: 'sched_1', phases: [{ start_date: 1_750_000_000 }] }),
+        update: vi.fn().mockResolvedValue({}),
+      };
+
+      const result = await service.updateOrCreateLicenseSubscription(TENANT, 2);
+
+      expect(result).toEqual(expect.objectContaining({ type: 'updated', scheduledChange: true }));
+      expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
+      const [, scheduleParams] = service.stripe.subscriptionSchedules.update.mock.calls[0];
+      expect(scheduleParams.phases[0].items).toEqual([{ price: 'price_pro_seat', quantity: 3 }]);
+      expect(scheduleParams.phases[0].end_date).toBe(Math.floor(periodEnd.getTime() / 1000));
+      expect(scheduleParams.phases[1].items).toEqual([{ price: 'price_pro_seat', quantity: 2 }]);
+
+      const subscriptionUpdate = state.updates.find((u) => u.table === 'stripe_subscriptions');
+      expect(subscriptionUpdate?.values.metadata).toEqual(
+        expect.objectContaining({ scheduled_quantity: 2, schedule_id: 'sched_1' }),
+      );
+      expect(state.updates.find((u) => u.table === 'tenants')).toBeUndefined();
+    });
+  });
+
+  describe('getUpcomingInvoicePreview', () => {
+    it('previews a trialing subscription with no charge now', async () => {
+      const trialEnd = new Date('2026-07-24T00:00:00.000Z');
+      const state = createState([trialSubscription({ quantity: 1, current_period_end: trialEnd })]);
+      const { service } = createService(state);
+      service.stripe.invoices = {
+        createPreview: vi.fn().mockResolvedValue({
+          amount_due: 2998,
+          amount_remaining: 2998,
+          currency: 'usd',
+          lines: { data: [] },
+        }),
+      };
+
+      const preview = await service.getUpcomingInvoicePreview(TENANT, 2);
+
+      expect(preview).toEqual(
+        expect.objectContaining({
+          currentQuantity: 1,
+          newQuantity: 2,
+          isIncrease: true,
+          isTrialing: true,
+          amountDue: 0,
+          prorationAmount: 0,
+          trialEnd,
+        }),
+      );
+      const [params] = service.stripe.invoices.createPreview.mock.calls[0];
+      expect(params.subscription_details.proration_behavior).toBe('none');
+    });
+
+    it('prefers the active subscription and bills the proration now', async () => {
+      const state = createState([trialSubscription(), activeSubscription({ quantity: 2 })]);
+      const { service } = createService(state);
+      service.stripe.invoices = {
+        createPreview: vi.fn().mockResolvedValue({
+          amount_due: 750,
+          amount_remaining: 750,
+          currency: 'usd',
+          lines: { data: [{ proration: true, amount: 750 }] },
+        }),
+      };
+
+      const preview = await service.getUpcomingInvoicePreview(TENANT, 3);
+
+      expect(preview).toEqual(
+        expect.objectContaining({ currentQuantity: 2, isTrialing: false, amountDue: 7.5, prorationAmount: 7.5, trialEnd: null }),
+      );
+      const [params] = service.stripe.invoices.createPreview.mock.calls[0];
+      expect(params.subscription).toBe('sub_ext_active');
+      expect(params.subscription_details.proration_behavior).toBe('always_invoice');
     });
   });
 
@@ -348,6 +481,78 @@ describe('StripeService license subscription lifecycle', () => {
         retired_premium_schedule_id: 'sub_sched_premium_trial',
         retired_premium_schedule_source: 'confirmed_premium_trial',
       });
+    });
+
+    it('keeps a pending scheduled reduction while the schedule is still attached', async () => {
+      const state = createState([
+        trialSubscription({ quantity: 3, metadata: { scheduled_quantity: 2, schedule_id: 'sched_1' } }),
+      ]);
+      const { service, knex } = createService(state);
+      prepareUpdateHandler(service);
+
+      await service.handleSubscriptionUpdated(
+        subscriptionUpdatedEvent({
+          schedule: 'sched_1',
+          items: {
+            data: [
+              { id: 'si_trial', quantity: 3, price: { id: 'price_pro_seat', recurring: { interval: 'month' }, product: 'prod_1' } },
+            ],
+          },
+        }),
+        TENANT,
+        knex,
+      );
+
+      const subscriptionUpdate = state.updates.find((u) => u.table === 'stripe_subscriptions');
+      expect(subscriptionUpdate?.values.metadata).toEqual({ scheduled_quantity: 2, schedule_id: 'sched_1' });
+    });
+
+    it('clears the pending reduction once the scheduled quantity is reached', async () => {
+      const state = createState([
+        trialSubscription({ quantity: 3, metadata: { scheduled_quantity: 2, schedule_id: 'sched_1' } }),
+      ]);
+      const { service, knex } = createService(state);
+      prepareUpdateHandler(service);
+
+      await service.handleSubscriptionUpdated(
+        subscriptionUpdatedEvent({
+          schedule: 'sched_1',
+          items: {
+            data: [
+              { id: 'si_trial', quantity: 2, price: { id: 'price_pro_seat', recurring: { interval: 'month' }, product: 'prod_1' } },
+            ],
+          },
+        }),
+        TENANT,
+        knex,
+      );
+
+      const subscriptionUpdate = state.updates.find((u) => u.table === 'stripe_subscriptions');
+      expect(subscriptionUpdate?.values.metadata).toEqual({});
+    });
+
+    it('clears the pending reduction when the schedule was released', async () => {
+      const state = createState([
+        trialSubscription({ quantity: 3, metadata: { scheduled_quantity: 2, schedule_id: 'sched_1' } }),
+      ]);
+      const { service, knex } = createService(state);
+      prepareUpdateHandler(service);
+
+      await service.handleSubscriptionUpdated(
+        subscriptionUpdatedEvent({
+          schedule: null,
+          items: {
+            data: [
+              { id: 'si_trial', quantity: 3, price: { id: 'price_pro_seat', recurring: { interval: 'month' }, product: 'prod_1' } },
+            ],
+          },
+        }),
+        TENANT,
+        knex,
+      );
+
+      const subscriptionUpdate = state.updates.find((u) => u.table === 'stripe_subscriptions');
+      expect(subscriptionUpdate?.values.metadata).toEqual({});
     });
   });
 

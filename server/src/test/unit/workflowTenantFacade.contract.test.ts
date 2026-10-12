@@ -137,7 +137,8 @@ describe('workflow tenant facade roots', () => {
     expect(metadataSource).toContain("event_catalog: { scope: 'tenant' }");
 
     const runtimeSource = read('ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts');
-    expect(runtimeSource).toContain('db.tenantJoinSubquery(itemsQuery, versionsSubquery');
+    expect(runtimeSource).toContain("db.tenantJoinFirstMatching(itemsQuery, 'workflow_definition_versions', 'pv', 'wd.workflow_id', 'workflow_id'");
+    expect(runtimeSource).toContain("rootTenantColumn: 'wd.tenant'");
     expect(runtimeSource).toContain("db.tenantWhereColumn(waitSearch, 'workflow_run_waits.tenant', 'workflow_runs.tenant')");
     expect(runtimeSource).toContain("db.tenantJoin(query, 'workflow_definitions', 'workflow_runs.workflow_id', 'workflow_definitions.workflow_id'");
     expect(runtimeSource).toContain("db.tenantJoin(query, 'workflow_run_steps as steps', 'runs.run_id', 'steps.run_id'");

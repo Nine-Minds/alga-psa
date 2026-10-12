@@ -1,9 +1,15 @@
 'use server';
 
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import type {
   ITicket,
   ITicketListItem,
@@ -38,8 +44,7 @@ import {
 } from '../schemas/ticket.schema';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -47,6 +52,7 @@ import {
   TicketResponseStateChangedEvent
 } from '@alga-psa/event-bus/events';
 
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -55,7 +61,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
+import { TicketModelEventPublisher } from '@alga-psa/shared/services/tickets/ticketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
@@ -71,8 +77,14 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import {
+  buildTicketAssignedPayload,
+  buildTicketClosedPayload,
+  buildTicketResponseStateChangedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
   copyChecklistFromSource,
@@ -81,8 +93,9 @@ import {
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
-  addTicketCommentWithCache,
+  addTicketCommentInTransaction,
   updateTicketWithCache,
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
@@ -92,7 +105,8 @@ import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
-} from '../lib/workflowTicketSlaStageEvents';
+  publishWorkflowTicketSlaStageEvent,
+} from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -137,13 +151,6 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 
 function ticketBulkFailuresForAll(ticketIds: string[], message: string): Array<{ ticketId: string; message: string }> {
   return ticketIds.map((ticketId) => ({ ticketId, message }));
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 export type TicketNotificationSuppressionOptions = Pick<
@@ -260,6 +267,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
@@ -373,18 +383,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
   };
 }
 
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
-}
-
 // Helper function to publish response state change events
 async function publishResponseStateChangedEvent(
   tenantId: string,
@@ -400,19 +398,20 @@ async function publishResponseStateChangedEvent(
   }
 
   try {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
-        tenantId,
-        occurredAt: new Date().toISOString(),
+      payload: buildTicketResponseStateChangedPayload({
         ticketId,
         userId,
-        previousResponseState: previousState,
-        newResponseState: newState,
         previousState,
         newState,
-        trigger
-      }
+        trigger,
+      }),
+      ctx: {
+        tenantId,
+        occurredAt: new Date().toISOString(),
+        actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+      },
     });
     console.log(`[publishResponseStateChangedEvent] Published event: ${previousState} -> ${newState} (trigger: ${trigger})`);
   } catch (error) {
@@ -619,7 +618,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
+      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -647,14 +646,17 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {
         registerAfterCommit(trx, () =>
-          publishEvent({
+          publishWorkflowEvent({
             eventType: 'TICKET_ASSIGNED',
-            payload: {
-              tenantId: tenant,
+            payload: buildTicketAssignedPayload({
               ticketId: ticketResult.ticket_id,
               userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
               assignedByUserId: user.user_id  // The user who created and assigned the ticket
-            }
+            }),
+            ctx: {
+              tenantId: tenant,
+              actor: { actorType: 'USER', actorUserId: user.user_id },
+            },
           }),
           `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
         );
@@ -970,7 +972,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     const {knex: db} = await createTenantKnex();
 
-    const result = await db.transaction(async (trx) => {
+    const result = await withTransaction(db, async (trx) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot update ticket');
       }
@@ -1164,9 +1166,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         )
         : null;
 
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketUpdateStamp(trx, user.user_id) })
         .returning('*');
 
       if (finalizeResourceReassignment) {
@@ -1195,7 +1198,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         occurredAt,
       };
 
-      const transitionEvents = buildTicketTransitionWorkflowEvents({
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant,
         before: {
           ticketId: id,
           statusId: currentTicket.status_id,
@@ -1212,24 +1216,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           boardId: updatedTicket.board_id,
           escalated: updatedTicket.escalated,
         },
-        ctx: {
-          occurredAt,
-          actorUserId: user.user_id,
-          previousStatusIsClosed: !!oldStatus?.is_closed,
-          newStatusIsClosed: !!newStatus?.is_closed,
-        },
+        actorUserId: user.user_id,
       });
-
-      for (const ev of transitionEvents) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType,
-          payload: ev.payload,
-          ctx: workflowCtx,
-          eventName: ev.workflow?.eventName,
-          fromState: ev.workflow?.fromState,
-          toState: ev.workflow?.toState,
-        });
-      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
@@ -1394,7 +1382,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Ticket was closed
         await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: id,
             userId: user.user_id,
             closedByUserId: user.user_id,
@@ -1402,7 +1390,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
@@ -1417,12 +1405,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           closedAt: occurredAt,
         });
         if (slaCompletionEvent) {
-          await publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          });
+          await publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx);
         }
 
         // Track ticket resolved analytics
@@ -1437,7 +1420,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
         await publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
+          payload: buildTicketAssignedPayload({
             ticketId: id,
             userId: updateData.assigned_to, // Legacy: assigned user
             assignedByUserId: user.user_id,
@@ -1449,7 +1432,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
         });
@@ -1464,14 +1447,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Regular update
         await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
+          payload: buildTicketUpdatedPayload({
             ticketId: id,
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
         });
@@ -1790,7 +1773,14 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
   }
 });
 
-export const addTicketComment = withAuth(async (user, { tenant }, ticketId: string, comment: string, isInternal: boolean): Promise<void | TicketActionError> => {
+export const addTicketComment = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  comment: string,
+  isInternal: boolean,
+  emailRecipients?: CommentEmailRecipientsInput | null,
+): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -1822,6 +1812,13 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }
       const nowIso = new Date().toISOString();
 
+      // One-off Cc/Bcc for this comment only; rejected on internal notes.
+      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+        cc: emailRecipients?.cc,
+        bcc: emailRecipients?.bcc,
+        isInternal,
+      });
+
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: generatedIds.thread_id,
@@ -1846,6 +1843,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         is_internal: isInternal,
         is_resolution: false,
         created_at: nowIso,
+        ...(resolvedEmailRecipients ? { metadata: { email_recipients: resolvedEmailRecipients } } : {}),
       }).returning('*');
 
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
@@ -1853,20 +1851,19 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       // Publish comment added event
       await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+        payload: buildTicketCommentAddedPayload({
           tenantId: tenant,
           occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
           ticketId: ticketId,
           commentId: (newComment as any).comment_id ?? (newComment as any).id,
           userId: user.user_id,
           comment: {
-            id: (newComment as any).comment_id ?? (newComment as any).id,
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
-        }
-      }, publishEvent);
+        })
+      }, publishStoredWorkflowEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {
@@ -1891,7 +1888,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         });
 
         for (const ev of events) {
-          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+          await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
         }
       } catch (eventError) {
         console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
@@ -2394,40 +2391,41 @@ export const bulkUpdateTicketStatus = withAuth(async (
   }
 
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  // The resolution comment and the status change share that one transaction, so a
+  // failed close rolls the comment (and its after-commit notifications/events) back
+  // and a retry does not stack a second resolution comment.
   for (const ticketId of uniqueIds) {
+    let phase = 'status' as 'resolution' | 'status';
     try {
-      if (resolutionContent) {
-        const commentResult = await addTicketCommentWithCache(
-          ticketId,
-          resolutionContent,
-          resolutionComment?.isInternal === true,
-          true,
-          true,
-          {
-            suppressContactNotifications: statusOptions.suppressContactNotifications,
-            suppressInternalNotifications: statusOptions.suppressInternalNotifications,
-          },
-        );
-        if (isTicketActionError(commentResult)) {
-          const payload = commentResult as { actionError?: string; permissionError?: string };
-          failed.push({
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (resolutionContent) {
+          phase = 'resolution';
+          await addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
             ticketId,
-            message: payload.actionError ?? payload.permissionError ?? 'Failed to add resolution comment',
+            content: resolutionContent,
+            isInternal: resolutionComment?.isInternal === true,
+            isResolution: true,
+            closesTicket: true,
+            notificationSuppression: {
+              suppressContactNotifications: statusOptions.suppressContactNotifications,
+              suppressInternalNotifications: statusOptions.suppressInternalNotifications,
+            },
           });
-          continue;
+          phase = 'status';
         }
-      }
 
-      await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions),
-      );
+        await updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions);
+      });
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({
         ticketId,
         message: error instanceof TicketCloseValidationError
           ? error.message
-          : await ticketBulkFailureMessage(error, 'Failed to update status'),
+          : await ticketBulkFailureMessage(
+              error,
+              phase === 'resolution' ? 'Failed to add resolution comment' : 'Failed to update status',
+            ),
         closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }

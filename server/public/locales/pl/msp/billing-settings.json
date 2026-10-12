@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Domyślna waluta została zaktualizowana."
+        "updated": "Domyślna waluta została zaktualizowana.",
+        "propagated": "Zmieniono domyślną walutę na {{currency}}. Zaktualizowano {{updated}} ustawień domyślnych klientów; zachowano {{preserved}} nadpisań klientów."
       },
       "errors": {
         "load": "Nie udało się załadować ustawień",
         "save": "Nie udało się zapisać ustawień"
-      }
+      },
+      "propagationNote": "Zmiana ta aktualizuje klientów, którzy nadal używają poprzedniej domyślnej waluty. Klienci z inną walutą pozostają bez zmian, a istniejące dokumenty i szablony nie zmieniają się."
     },
     "invoiceNumbering": {
       "title": "Numeracja faktur",
@@ -164,6 +166,20 @@
         "load": "Nie udało się wczytać ustawień automatyzacji odnawiania",
         "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
+      }
+    },
+    "timeEntryService": {
+      "title": "Domyślna usługa dla wpisów czasu",
+      "description": "Usługa zastępcza dla nowych wpisów czasu w zgłoszeniach. Ustawienia klienta mają pierwszeństwo.",
+      "label": "Domyślna usługa dla wpisów czasu",
+      "placeholder": "Brak domyślnej usługi",
+      "help": "Używana dla nowych wpisów czasu w zgłoszeniach, gdy klient nie ma własnej usługi domyślnej. Usługa musi być aktywna i objęta umową z klientem.",
+      "toast": {
+        "updated": "Zaktualizowano domyślną usługę dla wpisów czasu."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać domyślnej usługi dla wpisów czasu",
+        "save": "Nie udało się zapisać domyślnej usługi dla wpisów czasu"
       }
     },
     "quotes": {

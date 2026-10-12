@@ -308,6 +308,12 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
+      // Promoting a user to lead and removing them in the same save would leave
+      // manager_id pointing at a non-member.
+      if (changes.managerId && changes.removeUserIds.includes(changes.managerId)) {
+        throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
+      }
+
       // Assign manager if changed
       if (changes.managerId) {
         await Team.update(trx, tenant, teamId, { manager_id: changes.managerId });

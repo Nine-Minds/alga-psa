@@ -136,6 +136,7 @@ describe("BillingEngine", () => {
       whereBetween: vi.fn().mockReturnThis(),
       join: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
+      joinRaw: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue(null),
       raw: vi.fn().mockReturnThis(),
@@ -303,6 +304,7 @@ describe("BillingEngine", () => {
 
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
+    builder.joinRaw = vi.fn().mockImplementation(() => builder);
     builder.where = vi.fn().mockImplementation(handleWhere);
     builder.andWhere = vi.fn().mockImplementation(handleWhere);
     builder.orWhere = vi.fn().mockImplementation(handleWhere);
@@ -1348,17 +1350,20 @@ describe("BillingEngine", () => {
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": preservedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": clonedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
+      // Liveness (assignment, contract header and line all active) is applied by the
+      // shared scope helper rather than inline in the client/tenant predicate.
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cc.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("c.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cl.is_active", true);
     });
   });
 

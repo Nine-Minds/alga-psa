@@ -837,10 +837,12 @@ async function buildScenarioServiceConfig(
     case "Fixed": {
       const fixed = configDetails.typeConfig as {
         base_rate?: number | null;
+        pricing_basis?: "unit" | "bundle" | null;
       } | null;
       return {
         configuration_type: "Fixed",
         base_rate: toCents(fixed?.base_rate ?? null),
+        pricing_basis: fixed?.pricing_basis ?? null,
       };
     }
     case "Hourly": {

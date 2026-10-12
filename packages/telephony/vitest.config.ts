@@ -10,6 +10,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },

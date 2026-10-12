@@ -19,10 +19,11 @@ import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
 import { HealthServer } from './healthServer.js';
+import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
 async function startServices() {
-  const healthServer = new HealthServer();
+  const healthServer = new HealthServer(undefined, getWorkflowWorkerMetrics().registry);
   try {
     // Start the health HTTP server before anything else so kubelet probes
     // (rewritten by the Istio sidecar to hit localhost:PORT/health) get a
@@ -62,7 +63,7 @@ async function startServices() {
     const runtimeV2EventWorkerId = `runtime-v2-events-${Date.now()}`;
     const runtimeV2TemporalWorkerId = `runtime-v2-temporal-${Date.now()}`;
     const dataStoreSweepWorkerId = `data-store-sweep-${Date.now()}`;
-    const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId);
+    const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId, getWorkflowWorkerMetrics());
     const runtimeV2TemporalWorker = new WorkflowRuntimeV2TemporalWorker(runtimeV2TemporalWorkerId);
     const dataStoreSweepWorker = new WorkflowDataStoreSweepWorker(dataStoreSweepWorkerId);
     logger.info('[WorkflowWorker] Starting runtime v2 workers', {

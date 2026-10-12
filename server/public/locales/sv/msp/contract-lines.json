@@ -732,7 +732,8 @@
         "enterRatePlaceholder": "Ange taxa",
         "metadata": "Tjänstetyp: {{type}} | Metod: {{method}}",
         "noCurrencyPrice": "Inget pris i {{currency}}",
-        "rateDetail": "Taxa: {{amount}} {{symbol}}"
+        "rateDetail": "Taxa: {{amount}} {{symbol}}",
+        "catalogDefaultRateDetail": "Katalogstandard: {{symbol}}{{amount}}"
       },
       "unknownService": "Okänd tjänst"
     },

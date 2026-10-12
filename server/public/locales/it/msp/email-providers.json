@@ -803,7 +803,8 @@
           "recipientPlaceholder": "tu@esempio.com",
           "testingButton": "Prova in corso...",
           "runButton": "Prova connessione"
-        }
+        },
+        "ticketIdentityRequired": "Scegli un’identità email per i ticket qui sotto per impostare il dominio di invio."
       },
       "ticketingFrom": {
         "title": "Indirizzo mittente per ticketing",
@@ -842,7 +843,18 @@
         "description": "I messaggi vengono inviati dalla casella selezionata tramite Microsoft Graph e salvati in Posta inviata.",
         "loadFailed": "Impossibile caricare le caselle Microsoft 365.",
         "saved": "Casella di invio aggiornata."
-      }
+      },
+      "diagnosticsButton": "Esegui diagnostica email in uscita",
+      "saveSettings": "Salva impostazioni in uscita",
+      "discardChanges": "Scarta modifiche",
+      "unsaved": "Modifiche non salvate",
+      "noPendingChanges": "Nessuna modifica non salvata",
+      "saving": "Salvataggio delle impostazioni in uscita…",
+      "saved": "Impostazioni in uscita salvate.",
+      "saveFailed": "Impossibile salvare le impostazioni in uscita. Le modifiche sono ancora presenti. Riprova.",
+      "diagnosticsSaveHelp": "Salva o scarta le modifiche prima di verificare le impostazioni in uscita.",
+      "saveBeforeDomainRemoval": "Salva o scarta le modifiche in uscita prima di rimuovere un dominio.",
+      "senderAddressAfterSave": "Visualizzato dopo il salvataggio."
     },
     "inbound": {
       "intro": "Configura il routing delle email in entrata e l'automazione specifica del provider."

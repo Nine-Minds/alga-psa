@@ -34,7 +34,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
-import { runWithTenant } from '@alga-psa/db';
+import { runWithTenant, runWithoutTenant } from '@alga-psa/db';
 import Message from '@ee/models/message';
 import Chat from '@ee/models/chat';
 import { getChatMessagesAction, updateMessageAction } from '@ee/lib/chat-actions/chatActions';
@@ -310,11 +310,19 @@ describe('EE chat message authorization (disposable database, real tenant contex
   });
 
   it('fails model operations closed without tenant context', async () => {
-    await expect(Message.getByChatId(DUP_CHAT)).rejects.toThrow('Missing tenant for message model');
-    await expect(Message.update(DUP_MESSAGE, { content: 'x' }, SHARED_USER)).rejects.toThrow(
-      'Missing tenant for message model',
+    // The tenant context is process-global and integration files share one
+    // worker, so the ambient context is not guaranteed empty. Clear it
+    // explicitly, under a real tenant so the inherited case is always covered.
+    await runWithTenant(TENANT_A, () =>
+      runWithoutTenant(async () => {
+        await expect(Message.getByChatId(DUP_CHAT)).rejects.toThrow('Missing tenant for message model');
+        await expect(Message.update(DUP_MESSAGE, { content: 'x' }, SHARED_USER)).rejects.toThrow(
+          'Missing tenant for message model',
+        );
+        await expect(Chat.getRecentByUser(SHARED_USER, 20)).rejects.toThrow('Missing tenant for chat model');
+      }),
     );
-    await expect(Chat.getRecentByUser(SHARED_USER, 20)).rejects.toThrow('Missing tenant for chat model');
+    expect(await messageContent(DUP_MESSAGE, TENANT_A)).toBe('tenant-a');
   });
 
   it('enforces the composite message-to-chat foreign key', async () => {

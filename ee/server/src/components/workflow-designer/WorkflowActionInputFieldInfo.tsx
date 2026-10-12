@@ -4,6 +4,7 @@ import React from 'react';
 
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
+import { humanizeWorkflowFieldName } from './workflowFieldNames';
 import type { ActionInputField } from './mapping';
 
 const buildConstraintHints = (
@@ -30,12 +31,18 @@ const buildConstraintHints = (
     }));
   }
 
-  if (typeof constraints.minimum === 'number' || typeof constraints.maximum === 'number') {
+  const hasMin = typeof constraints.minimum === 'number';
+  const hasMax = typeof constraints.maximum === 'number';
+  if (hasMin && hasMax) {
     hints.push(t('actionInputFieldInfo.range', {
       defaultValue: 'Range: {{min}} - {{max}}',
-      min: constraints.minimum ?? '-∞',
-      max: constraints.maximum ?? '∞',
+      min: constraints.minimum,
+      max: constraints.maximum,
     }));
+  } else if (hasMax) {
+    hints.push(t('actionInputFieldInfo.atMost', { defaultValue: 'At most {{max}}', max: constraints.maximum }));
+  } else if (hasMin) {
+    hints.push(t('actionInputFieldInfo.atLeast', { defaultValue: 'At least {{min}}', min: constraints.minimum }));
   }
 
   return hints;
@@ -53,7 +60,9 @@ export const WorkflowActionInputFieldInfo: React.FC<{
   return (
     <div className="min-w-0 w-full">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        <span className="text-sm text-gray-700">{field.name}</span>
+        {/* A plain-language name first, the input's own name after it for people who know it. */}
+        <span className="text-sm text-gray-700">{humanizeWorkflowFieldName(field.name)}</span>
+        <code className="text-[11px] text-gray-400">{field.name}</code>
         {field.required && (
           <span
             className={`text-[11px] font-medium uppercase tracking-wide ${

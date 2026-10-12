@@ -147,7 +147,8 @@ test('the runner resets healthy stalled releases, records why, and later notes t
     listJobs: ok([]),
     listNodes: ok([{ metadata: { name: 'alga-psa' }, status: { conditions: [{ type: 'Ready', status: 'True' }] } }]),
     listPods: ok([]),
-    listEvents: ok([])
+    listEvents: ok([]),
+    readServiceProxy: async () => ({ ok: false, reason: 'not-found', status: 404, error: 'not found' })
   };
   const kubectl = [];
   let clock = Date.parse('2026-10-05T22:30:00.000Z');

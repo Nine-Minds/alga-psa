@@ -142,18 +142,20 @@ export class EmailProcessor {
     
     try {
       // Import EventBus dynamically to avoid module resolution issues
-      const { getEventBus } = await import('../../lib/eventBus');
-      const eventBus = getEventBus();
-      
+      const { publishWorkflowEvent } = await import('../../lib/eventBus/publishers');
+      const { buildInboundEmailReceivedPayload } = await import(
+        '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders'
+      );
+
       // Publish the event to the workflow system
-      await eventBus.publish({
+      await publishWorkflowEvent({
         eventType: 'INBOUND_EMAIL_RECEIVED',
-        payload: {
-          tenantId: eventData.tenant,
+        payload: buildInboundEmailReceivedPayload({
           tenant: eventData.tenant,
           providerId: eventData.providerId,
-          emailData: eventData.emailData
-        }
+          emailData: eventData.emailData,
+        }),
+        ctx: { tenantId: eventData.tenant, actor: { actorType: 'SYSTEM' } },
       });
       
       console.log(`✅ INBOUND_EMAIL_RECEIVED event published for email ${eventData.emailId}`);

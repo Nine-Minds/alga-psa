@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Agregue líneas de contrato a esta plantilla antes de gestionar los servicios.",
       "additionalPlans": "Planes adicionales",
-      "bucketSummary": "Bloque: {{minutes}} min • Exceso ${{overage}}",
+      "bucketSummary": "Bloque: {{minutes}} min • Exceso {{overage}}",
       "closeManager": "Cerrar gestor",
       "editRate": "Editar tarifa",
       "fixedFeeBundles": "Paquetes de tarifa fija",
@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Cargando plantilla...",
     "servicesLabel": "Servicios",
+    "summary": {
+      "clientCurrency": "Moneda del cliente"
+    },
     "templateBadge": "Plantilla",
     "templateNotFound": "Plantilla de contrato no encontrada",
     "templateSnapshotTitle": "Captura de la plantilla",
@@ -1423,6 +1426,7 @@
       "hourlyServices": "Servicios por hora",
       "products": "Productos",
       "reviewCreate": "Revisar y crear",
+      "templateLines": "Líneas de la plantilla",
       "usageBasedServices": "Servicios basados en uso"
     },
     "title": {
@@ -1461,7 +1465,8 @@
       "unsupportedRecurringAuthoringCombination": "Combinación de creación recurrente no admitida para servicios de {{lineType}}: la cadencia de aniversario de contrato actualmente admite las frecuencias de facturación {{supportedFrequencies}}. {{billingFrequency}} aún no es compatible. Use una de las frecuencias admitidas o facture según el calendario de facturación del cliente en su lugar.",
       "recurringUnitRateRequired": "Introduzca una tarifa unitaria para cada servicio recurrente.",
       "recurringQuantityWholeNumber": "La cantidad recurrente debe ser un número entero.",
-      "fixedQuantityInvalid": "La cantidad debe ser cero o mayor."
+      "fixedQuantityInvalid": "La cantidad debe ser cero o mayor.",
+      "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar."
     },
     "nav": {
       "back": "Atrás",
@@ -1475,6 +1480,19 @@
     "simulation": {
       "description": "Pruebe este borrador sin guardar con actividad prevista. La simulación no guarda ni emite nada.",
       "title": "Simular antes de crear"
+    },
+    "fixedLines": {
+      "addLine": "Añadir línea fija",
+      "nameLabel": "Nombre de la línea (opcional)",
+      "namePlaceholder": "Línea fija {{number}}",
+      "removeLine": "Quitar línea fija",
+      "noServiceWarning": "Esta línea tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar; aún puede guardarla como borrador."
+    },
+    "recurringChange": {
+      "title": "Confirmar el cambio del total recurrente",
+      "message": "Esto cambia el valor recurrente mensual estimado del contrato de {{before}} a {{after}}.",
+      "confirm": "Confirmar y continuar",
+      "cancel": "Volver"
     }
   },
   "wizardBasics": {
@@ -1651,9 +1669,14 @@
       "quantityLabel": "Cantidad",
       "selectServicePlaceholder": "Seleccione un servicio",
       "serviceItemLabel": "Servicio {{index}}",
+      "catalogDefaultHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo.",
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
+    },
+    "advanceSuggestion": {
+      "message": "Con facturación a plazo vencido, esta línea no se puede facturar hasta que termine su primer período de servicio. Con facturación anticipada según el ciclo del contrato, se factura en la fecha de inicio.",
+      "action": "Facturar por anticipado según el ciclo del contrato"
     }
   },
   "wizardProducts": {
@@ -1701,7 +1724,8 @@
       "serviceItem": "Servicio {{index}}",
       "setBucketOfHours": "Establecer bloque de horas",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa por hora.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "minimumBillableTime": {
       "hint": "p. ej., 15 minutos: cualquier entrada de tiempo inferior a esto se redondeará hacia arriba",
@@ -1761,7 +1785,8 @@
       "unitOfMeasureHint": "Elija la unidad en la que se factura este servicio.",
       "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "summary": {
       "labels": {
@@ -1781,7 +1806,8 @@
       "fixedFeeServices": "Servicios de tarifa fija",
       "products": "Productos",
       "hourlyServices": "Servicios por hora",
-      "usageBasedServices": "Servicios basados en uso"
+      "usageBasedServices": "Servicios basados en uso",
+      "fixedFeeServicesNumbered": "Servicios de tarifa fija ({{number}})"
     },
     "fields": {
       "client": "Cliente",
@@ -1859,16 +1885,6 @@
         "contractAnniversary": "Aniversario del contrato",
         "clientBillingSchedule": "Calendario de facturación del cliente"
       },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Primera factura: facturar en la ventana de aniversario del contrato que abre el primer período de servicio cubierto.",
-          "arrears": "Primera factura: facturar en la siguiente ventana de aniversario del contrato después del cierre del primer período de servicio cubierto."
-        },
-        "client": {
-          "advance": "Primera factura: facturar en la primera ventana del calendario de facturación del cliente que cubre el período de servicio.",
-          "arrears": "Primera factura: facturar en la siguiente ventana del calendario de facturación del cliente después del cierre del primer período de servicio cubierto."
-        }
-      },
       "partialPeriod": {
         "enabled": "Los períodos parciales ajustan la tarifa recurrente a la porción cubierta del período de servicio.",
         "disabled": "Los períodos parciales mantienen la tarifa recurrente completa incluso cuando las fechas del contrato caen dentro de un período de servicio."
@@ -1911,7 +1927,8 @@
     "total": {
       "title": "Total mensual estimado",
       "description": "Solo cargos fijos. Los servicios por hora y de uso se facturan por separado según el uso real.",
-      "perMonth": "por mes"
+      "perMonth": "por mes",
+      "savedDraftValue": "Valor del borrador guardado: {{amount}}"
     },
     "finalChecklist": {
       "title": "Antes de finalizar:",
@@ -1920,6 +1937,29 @@
       "itemDates": "Verifique las fechas de inicio y finalización",
       "itemEditLater": "Recuerde: puede editar el contrato más tarde si es necesario"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Líneas de la plantilla",
+    "description": "Cada línea de la plantilla se crea en el contrato con su propio nombre, frecuencia de facturación, servicios y tarifas. Cambie cualquier valor a continuación para anularlo solo en este contrato; los valores sin modificar se copian de la plantilla. Las tarifas están en {{currency}}.",
+    "loading": "Cargando líneas de la plantilla...",
+    "noTemplate": "Seleccione una plantilla en el primer paso.",
+    "emptyTemplate": "Esta plantilla no tiene líneas, por lo que no hay nada que crear.",
+    "bucketPools_one": "{{count}} bolsa de horas copiada de la plantilla",
+    "bucketPools_other": "{{count}} bolsas de horas copiadas de la plantilla",
+    "lineName": "Nombre de la línea",
+    "billingFrequency": "Frecuencia de facturación",
+    "fixedBaseRate": "Tarifa base fija",
+    "fixedBaseRateHint": "Tarifa de la plantilla {{rate}}. Déjelo vacío para conservarla.",
+    "fixedBaseRateNone": "La plantilla no establece una tarifa de línea; los servicios siguen los precios de su catálogo.",
+    "minimumBillableTime": "Tiempo mínimo facturable (minutos)",
+    "roundUpToNearest": "Redondear al más cercano (minutos)",
+    "quantity": "Cantidad",
+    "hourlyRate": "Tarifa por hora",
+    "unitRate": "Tarifa unitaria",
+    "serviceRate": "Tarifa del servicio",
+    "noCurrencyPrice": "No hay precio en {{currency}} para este servicio. Introduzca una tarifa o no se podrá crear el contrato.",
+    "templateRateNote": "De la plantilla (el importe no tiene moneda asociada).",
+    "reviewTitle": "Líneas creadas a partir de la plantilla"
   },
   "templateWizard": {
     "title": {
@@ -2552,7 +2592,8 @@
       "conflict": "Este cambio del contrato entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
       "notAllowed": "Uno de los valores del contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del contrato.",
-      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del contrato: {{field}}.",
+      "deleteFailed": "Algo salió mal al eliminar este contrato. Indique la referencia {{ref}} al contactar con soporte."
     },
     "wizard": {
       "permissions": {
@@ -2568,7 +2609,9 @@
       "missingClient": "Al contrato en borrador le falta la asignación de cliente",
       "invalidStartDate": "El contrato en borrador tiene una fecha de inicio no válida",
       "recordInvalid": "Uno de los registros seleccionados del asistente de contratos ya no es válido. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe un registro coincidente del asistente de contratos."
+      "duplicate": "Ya existe un registro coincidente del asistente de contratos.",
+      "resumeUnsupportedShape": "Este borrador no se puede reanudar en el asistente sin cambiar sus precios: {{lines}}",
+      "fixedLineNoService": "La línea fija \"{{lineName}}\" tiene un importe recurrente pero ningún servicio sobre el que facturarlo. Añada un servicio antes de finalizar."
     },
     "pricingSchedule": {
       "endAfterEffective": "La fecha de fin debe ser posterior a la fecha de entrada en vigor",
@@ -2594,5 +2637,31 @@
       "contractNotActive": "El contrato de renovación activado ya no está activo. Actualice la página e inténtelo de nuevo.",
       "manualRetryDueOnly": "El reintento manual solo está disponible para los ciclos de renovación vencidos."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Comprobando el calendario de facturación del cliente…",
+    "arrearsPreviewNote": "Hasta entonces, una vista previa de facturas de este cliente no tiene nada que facturar para esta línea.",
+    "unavailable": {
+      "missingStartDate": "Elija una fecha de inicio para ver cuándo se factura por primera vez este contrato.",
+      "unsupportedFrequency": "No se muestra la fecha de la primera factura porque la facturación según el ciclo del contrato no admite esta frecuencia. Elija una frecuencia admitida o facture según el calendario del cliente.",
+      "clientSchedule": "Esta línea se factura según el calendario de facturación del cliente. No se pudo cargar ese calendario, por lo que no se muestra ninguna fecha."
+    },
+    "contract": {
+      "arrears": "Facturada a plazo vencido según el ciclo del contrato: la primera factura estará disponible el {{date}}, cuando termine el primer período de servicio.",
+      "advance": "Facturada por anticipado según el ciclo del contrato: la primera factura está disponible desde el {{date}}, la fecha de inicio del contrato."
+    },
+    "client": {
+      "arrears": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación actual del cliente.",
+      "advance": "Facturada por anticipado según el calendario de facturación del cliente: la primera factura está disponible desde el {{date}}, el inicio del período de facturación del cliente que incluye la fecha de inicio del contrato."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contrato creado",
+    "heading": "Se creó {{contractName}}",
+    "firstInvoiceHeading": "Primera factura",
+    "done": "Listo"
+  },
+  "sellHourBlockNote": {
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, use Vender bloque en Bloques de horas, en la pestaña Panel de facturación del cliente."
   }
 }

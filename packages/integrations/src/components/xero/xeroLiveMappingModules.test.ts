@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionsMock = vi.hoisted(() => ({
   createExternalEntityMapping: vi.fn(),
+  createExternalEntityMappings: vi.fn(),
   deleteExternalEntityMapping: vi.fn(),
   getExternalEntityMappings: vi.fn(),
   getServices: vi.fn(),
@@ -72,13 +73,27 @@ describe('service module external catalog', () => {
     const result = await serviceModule().load(context);
 
     expect(result.externalEntities).toEqual([
-      { id: 'item:CONSULT', name: 'Item · Consulting (CONSULT)', kind: 'item' },
+      {
+        id: 'item:CONSULT',
+        name: 'Item · Consulting (CONSULT)',
+        kind: 'item',
+        code: 'CONSULT',
+        baseName: 'Consulting',
+      },
       {
         id: 'account:200',
         name: 'Revenue account · Sales - IT Professional Services (200)',
         kind: 'account',
+        code: '200',
+        baseName: 'Sales - IT Professional Services',
       },
-      { id: 'account:400', name: 'Revenue account · Global Sales (400)', kind: 'account' },
+      {
+        id: 'account:400',
+        name: 'Revenue account · Global Sales (400)',
+        kind: 'account',
+        code: '400',
+        baseName: 'Global Sales',
+      },
     ]);
   });
 
@@ -168,5 +183,67 @@ describe('service module target-kind resolution for stored rows', () => {
     // Legacy row: same code, no kind — stays item, even though account 200 exists.
     expect(target.kindForMapping(mapping({ metadata: null }))).toBe('item');
     expect(target.optionIdForMapping(mapping({ metadata: null }))).toBe('item:200');
+  });
+});
+
+describe('service module createMany', () => {
+  it('persists item:200 and account:200 in one batch as code 200 with distinct kinds', async () => {
+    actionsMock.createExternalEntityMappings.mockImplementation(async (rows: any[]) =>
+      rows.map((row) => ({ alga_entity_id: row.alga_entity_id, ok: true, mapping: mapping() }))
+    );
+
+    const results = await serviceModule().createMany!(context, [
+      { algaEntityId: 'svc-a', externalEntityId: 'item:200', metadata: { externalDisplayName: 'A' } },
+      { algaEntityId: 'svc-b', externalEntityId: 'account:200' },
+    ]);
+
+    expect(actionsMock.createExternalEntityMappings).toHaveBeenCalledTimes(1);
+    expect(actionsMock.createExternalEntityMappings).toHaveBeenCalledWith([
+      expect.objectContaining({
+        integration_type: 'xero',
+        alga_entity_type: 'service',
+        alga_entity_id: 'svc-a',
+        external_entity_id: '200',
+        external_realm_id: 'xero-tenant-1',
+        metadata: { externalDisplayName: 'A', xeroTargetKind: 'item' },
+      }),
+      expect.objectContaining({
+        alga_entity_id: 'svc-b',
+        external_entity_id: '200',
+        metadata: { xeroTargetKind: 'account' },
+      }),
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([true, true]);
+  });
+
+  it('fails only the row with an unprefixed id and never sends it', async () => {
+    actionsMock.createExternalEntityMappings.mockImplementation(async (rows: any[]) =>
+      rows.map((row) => ({ alga_entity_id: row.alga_entity_id, ok: true, mapping: mapping() }))
+    );
+
+    const results = await serviceModule().createMany!(context, [
+      { algaEntityId: 'svc-a', externalEntityId: '200' },
+      { algaEntityId: 'svc-b', externalEntityId: 'item:ABC' },
+    ]);
+
+    const sent = actionsMock.createExternalEntityMappings.mock.calls[0][0];
+    expect(sent).toHaveLength(1);
+    expect(sent[0].alga_entity_id).toBe('svc-b');
+    expect(results[0]).toMatchObject({ algaEntityId: 'svc-a', ok: false });
+    expect(results[0].error).toMatch(/missing its item\/account kind/);
+    expect(results[1]).toMatchObject({ algaEntityId: 'svc-b', ok: true });
+  });
+
+  it('surfaces server per-row failures without failing the batch', async () => {
+    actionsMock.createExternalEntityMappings.mockResolvedValue([
+      { alga_entity_id: 'svc-a', ok: false, error: 'A mapping for this entity already exists' },
+      { alga_entity_id: 'svc-b', ok: true, mapping: mapping() },
+    ]);
+    const results = await serviceModule().createMany!(context, [
+      { algaEntityId: 'svc-a', externalEntityId: 'item:X' },
+      { algaEntityId: 'svc-b', externalEntityId: 'item:Y' },
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([false, true]);
+    expect(results[0].error).toMatch(/already exists/);
   });
 });

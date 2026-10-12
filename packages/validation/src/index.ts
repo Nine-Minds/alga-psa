@@ -11,6 +11,7 @@ export {
   validateData,
   validateArray,
   isValidUUID,
+  isUuidShaped,
   validateTenantAccess
 } from './lib/utils';
 

@@ -16,8 +16,8 @@ describe('RMM ticket-created event usage', () => {
     expect(helper).not.toContain("from '@alga-psa/tickets");
     expect(helper).toContain("import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers'");
     expect(helper).toContain("import { registerAfterCommit } from '@alga-psa/db'");
-    expect(helper).toContain("eventType: 'TICKET_CREATED' as any");
-    expect(helper).toContain('payload: { tenantId, ticketId, source }');
+    expect(helper).toContain("eventType: 'TICKET_CREATED'");
+    expect(helper).toContain('payload: buildRmmTicketCreatedPayload({ ticketId, source })');
     expect(helper).toContain('registerAfterCommit(trx, publish');
   });
 

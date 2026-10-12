@@ -100,6 +100,33 @@ test('cluster reader returns kubectl-shaped objects and classifies failures', as
   assert.ok(Date.now() - started < 800, `concurrent reads took ${Date.now() - started}ms`);
 });
 
+test('cluster reader reads a service through the API-server proxy', async (t) => {
+  delete process.env.KUBERNETES_SERVICE_HOST;
+  const body = { version: 1, status: 'degraded', reasons: [{ code: 'x', severity: 'degraded', message: 'y' }] };
+  const proxyPath = '/api/v1/namespaces/msp/services/http:email-service:http/proxy/status';
+  const { server, seen, port } = await startFakeApi({});
+  // Route on the decoded path: the client may percent-encode the ':' separators.
+  server.removeAllListeners('request');
+  server.on('request', (req, res) => {
+    const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    seen.push(pathname);
+    if (pathname === proxyPath) return sendJson(body)(req, res);
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ kind: 'Status', status: 'Failure', message: 'the server could not find the requested resource', code: 404 }));
+  });
+  t.after(() => server.close());
+  const reader = createClusterReader({ kubeconfigPath: writeKubeconfig(port) });
+
+  const result = await reader.readServiceProxy({ namespace: 'msp', service: 'http:email-service:http', path: 'status' });
+  assert.equal(result.ok, true);
+  assert.deepEqual(JSON.parse(result.text), body);
+  assert.ok(seen.includes(proxyPath));
+
+  const missing = await reader.readServiceProxy({ namespace: 'msp', service: 'http:missing:http', path: 'status' });
+  assert.equal(missing.ok, false);
+  assert.equal(missing.reason, 'not-found');
+});
+
 test('cluster reader reports an API server that is not listening as unreachable', async () => {
   delete process.env.KUBERNETES_SERVICE_HOST;
   const { server, port } = await startFakeApi({});

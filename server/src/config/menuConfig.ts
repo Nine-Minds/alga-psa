@@ -75,6 +75,11 @@ export interface MenuItem {
   icon: ElementType;
   translationKey?: string;
   href?: string;
+  /**
+   * Route prefixes that belong to this item although they live outside `href`
+   * (detail pages such as a workflow run). Used to label the header breadcrumb.
+   */
+  relatedPaths?: readonly string[];
   subItems?: MenuItem[];
   requiredFeature?: TIER_FEATURES;
   availableEditions?: readonly MenuEdition[];
@@ -242,6 +247,9 @@ export const navigationSections: NavigationSection[] = [
         name: 'Workflows',
         translationKey: 'nav.workflows',
         icon: Rocket,
+        // Run Studio pages belong to workflows as a whole, not to the Control Panel tab; the page
+        // shows its own Workflows › Runs › run breadcrumb under this header label.
+        relatedPaths: ['/msp/workflows/runs'],
         subItems: [
           {
             name: 'Control Panel',

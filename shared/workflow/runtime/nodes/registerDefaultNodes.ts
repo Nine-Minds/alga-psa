@@ -251,9 +251,9 @@ export function registerDefaultNodes(): void {
       return env;
     },
     ui: {
-      label: 'Assign',
+      label: 'Set variables',
       category: 'Transform',
-      description: 'Assign values into payload or vars'
+      description: 'Set values in the payload or workflow variables'
     }
   });
 

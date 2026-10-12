@@ -39,6 +39,7 @@ const EXPORT_FIELDS = [
   { key: 'priority', label: 'Priority' },
   { key: 'assigned_to', label: 'Assigned To' },
   { key: 'assigned_team', label: 'Assigned Team' },
+  { key: 'start_date', label: 'Start Date' },
   { key: 'due_date', label: 'Due Date' },
   { key: 'estimated_hours', label: 'Estimated Hours' },
   { key: 'actual_hours', label: 'Actual Hours' },
@@ -297,6 +298,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                         : field.key === 'task_type' ? 'taskType'
                         : field.key === 'assigned_to' ? 'assignedTo'
                         : field.key === 'assigned_team' ? 'assignedTeam'
+                        : field.key === 'start_date' ? 'startDate'
                         : field.key === 'due_date' ? 'dueDate'
                         : field.key === 'estimated_hours' ? 'estimatedHours'
                         : field.key === 'actual_hours' ? 'actualHours'

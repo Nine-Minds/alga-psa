@@ -144,6 +144,7 @@
     "assignedTo": "⟦Ȧşşīɠƞḗḓ Ŧȯ⟧",
     "requester": "⟦Řḗʠŭḗşŧḗř⟧",
     "client": "⟦Ƈŀīḗƞŧ⟧",
+    "contact": "⟦Ƈȯƞŧȧƈŧ⟧",
     "dueDate": "⟦Ḓŭḗ Ḓȧŧḗ⟧",
     "resolution": "⟦Řḗşȯŀŭŧīȯƞ⟧",
     "timeSpent": "⟦Ŧīḿḗ Şƥḗƞŧ⟧",
@@ -185,9 +186,14 @@
     "tags": "⟦Ŧȧɠş⟧",
     "sla": "⟦ŞĿȦ⟧",
     "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
+    "updatedAtBy": "⟦Ŭƥḓȧŧḗḓ {{time}} ƀẏ {{name}}⟧",
+    "byName": "⟦ƀẏ {{name}}⟧",
     "openInNewTab": "⟦Ȯƥḗƞ īƞ ƞḗẇ ŧȧƀ⟧",
     "actions": "⟦Ȧƈŧīȯƞş⟧",
-    "linkedAssets": "⟦Ŀīƞķḗḓ ȧşşḗŧş⟧"
+    "linkedAssets": "⟦Ŀīƞķḗḓ ȧşşḗŧş⟧",
+    "assetName": "⟦Ƞȧḿḗ⟧",
+    "assetTag": "⟦Ȧşşḗŧ ŧȧɠ⟧",
+    "assetType": "⟦Ŧẏƥḗ⟧"
   },
   "actions": {
     "view": "⟦Ṽīḗẇ⟧",
@@ -381,7 +387,13 @@
     "schedule": "⟦Şƈħḗḓŭŀḗ⟧",
     "scheduled": "⟦Şƈħḗḓŭŀḗḓ⟧",
     "showMore": "⟦Şħȯẇ ḿȯřḗ⟧",
-    "showLess": "⟦Şħȯẇ ŀḗşş⟧"
+    "showLess": "⟦Şħȯẇ ŀḗşş⟧",
+    "ccBcc": "⟦Ƈƈ/Ɓƈƈ⟧",
+    "cc": "⟦Ƈƈ⟧",
+    "bcc": "⟦Ɓƈƈ⟧",
+    "ccBccInvalid": "⟦Ƒīẋ ŧħḗ ħīɠħŀīɠħŧḗḓ ȧḓḓřḗşşḗş ƀḗƒȯřḗ şḗƞḓīƞɠ.⟧",
+    "ccBccTooMany": "⟦Ȧŧ ḿȯşŧ {{max}} Ƈƈ ȧƞḓ Ɓƈƈ řḗƈīƥīḗƞŧş ƈȧƞ ƀḗ ƈȯƥīḗḓ ȯƞ ȯƞḗ ƈȯḿḿḗƞŧ.⟧",
+    "ccBccNotSentOnInternal": "⟦Ƈƈ ȧƞḓ Ɓƈƈ ȧřḗ ƞȯŧ şḗƞŧ ẇīŧħ ȧƞ īƞŧḗřƞȧŀ ƞȯŧḗ. Ŧŭřƞ Īƞŧḗřƞȧŀ ȯƒƒ ŧȯ ŭşḗ ŧħḗḿ.⟧"
   },
   "responseState": {
     "awaitingYourResponse": "⟦Ȧẇȧīŧīƞɠ Ẏȯŭř Řḗşƥȯƞşḗ⟧",
@@ -446,7 +458,8 @@
       "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
       "clientNotFound": "⟦Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ.⟧",
       "clientRendererMissing": "⟦Ƈŀīḗƞŧ ḓḗŧȧīŀş ȧřḗ ŭƞȧṽȧīŀȧƀŀḗ īƞ ŧħīş ƈȯƞŧḗẋŧ.⟧",
-      "clientLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ.⟧"
+      "clientLoadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ.⟧",
+      "contactRendererMissing": "⟦Ƈȯƞŧȧƈŧ ḓḗŧȧīŀş ȧřḗ ŭƞȧṽȧīŀȧƀŀḗ īƞ ŧħīş ƈȯƞŧḗẋŧ.⟧"
     },
     "filters": {
       "allAssignees": "⟦Ȧŀŀ Ȧşşīɠƞḗḗş⟧",
@@ -756,6 +769,8 @@
       "failure": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şŧȧŧŭş ȯƞ şḗŀḗƈŧḗḓ ŧīƈķḗŧş⟧",
       "failedHeading": "⟦Şŧȧŧŭş ƈȯŭŀḓ ƞȯŧ ƀḗ ŭƥḓȧŧḗḓ ȯƞ ŧħḗ ƒȯŀŀȯẇīƞɠ ŧīƈķḗŧş:⟧",
       "resolutionLabel": "⟦Řḗşȯŀŭŧīȯƞ ƈȯḿḿḗƞŧ (ȯƥŧīȯƞȧŀ)⟧",
+      "resolutionLabelRequired": "⟦Řḗşȯŀŭŧīȯƞ ƈȯḿḿḗƞŧ⟧",
+      "resolutionRequiredHint": "⟦Ŧħīş ƀȯȧřḓ řḗʠŭīřḗş ȧ řḗşȯŀŭŧīȯƞ ƈȯḿḿḗƞŧ ƀḗƒȯřḗ ŧīƈķḗŧş ƈȧƞ ƀḗ ƈŀȯşḗḓ.⟧",
       "resolutionPlaceholder": "⟦Ḓḗşƈřīƀḗ ħȯẇ ŧħḗşḗ ŧīƈķḗŧş ẇḗřḗ řḗşȯŀṽḗḓ⟧",
       "resolutionHelper": "⟦Şȧṽḗḓ ȧş ŧħḗ řḗşȯŀŭŧīȯƞ ȯƞ ḗȧƈħ şḗŀḗƈŧḗḓ ŧīƈķḗŧ, şȧŧīşƒẏīƞɠ ƀȯȧřḓş ŧħȧŧ řḗʠŭīřḗ ȯƞḗ ƀḗƒȯřḗ ƈŀȯşīƞɠ.⟧"
     },
@@ -973,9 +988,6 @@
     "closeTicketNowTitle": "⟦Ƈŀȯşḗ ŧħḗ ŧīƈķḗŧ ƞȯẇ?⟧",
     "closeTicketNowPrompt": "⟦Ŧħīş ƈȯḿḿḗƞŧ īş ƞȯẇ ŧħḗ řḗşȯŀŭŧīȯƞ. Ƥīƈķ ȧ ƈŀȯşḗ şŧȧŧŭş ŧȯ ƈŀȯşḗ ŧħḗ ŧīƈķḗŧ, ȯř ŀḗȧṽḗ īŧ ȯƥḗƞ.⟧",
     "leaveTicketOpen": "⟦Ŀḗȧṽḗ ȯƥḗƞ⟧",
-    "timerActiveElsewhereTitle": "⟦Ŧīḿḗř Ȧƈŧīṽḗ Ḗŀşḗẇħḗřḗ⟧",
-    "timerTakeoverMessage": "⟦Ŧħīş ŧīƈķḗŧ'ş ŧīḿḗř īş ȧƈŧīṽḗ īƞ ȧƞȯŧħḗř ẇīƞḓȯẇ. Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ ŧȧķḗ ȯṽḗř ȧƞḓ řḗƥŀȧƈḗ īŧ ħḗřḗ?⟧",
-    "replaceHere": "⟦Řḗƥŀȧƈḗ Ħḗřḗ⟧",
     "noActiveTimePeriodTitle": "⟦Ƞȯ Ȧƈŧīṽḗ Ŧīḿḗ Ƥḗřīȯḓ⟧",
     "noActiveTimePeriodMessage": "⟦Ƞȯ ȧƈŧīṽḗ ŧīḿḗ ƥḗřīȯḓ ƒȯŭƞḓ. Ŧīḿḗ ƥḗřīȯḓş ƞḗḗḓ ŧȯ ƀḗ şḗŧ ŭƥ īƞ ŧħḗ ƀīŀŀīƞɠ ḓȧşħƀȯȧřḓ ƀḗƒȯřḗ ȧḓḓīƞɠ ŧīḿḗ ḗƞŧřīḗş.⟧",
     "goToTimePeriodsSetup": "⟦Ɠȯ ŧȯ Ŧīḿḗ Ƥḗřīȯḓş Şḗŧŭƥ⟧",
@@ -991,15 +1003,7 @@
   },
   "properties": {
     "timeEntry": "⟦Ŧīḿḗ Ḗƞŧřẏ⟧",
-    "ticketTimer": "⟦Ŧīƈķḗŧ Ŧīḿḗř - #{{ticketNumber}}⟧",
-    "timerActiveElsewhere": "⟦Ŧīḿḗř ȧƈŧīṽḗ īƞ ȧƞȯŧħḗř ẇīƞḓȯẇ⟧",
-    "start": "⟦Şŧȧřŧ⟧",
-    "pause": "⟦Ƥȧŭşḗ⟧",
-    "reset": "⟦Řḗşḗŧ⟧",
-    "enterWorkDescription": "⟦Ḗƞŧḗř ẇȯřķ ḓḗşƈřīƥŧīȯƞ⟧",
-    "liveTimerDisabled": "⟦Ŀīṽḗ ŧīƈķḗŧ ŧīḿḗř īş ḓīşȧƀŀḗḓ ƒȯř ŧħīş ƀȯȧřḓ.⟧",
     "addTimeEntry": "⟦Ȧḓḓ Ŧīḿḗ Ḗƞŧřẏ⟧",
-    "trackedIntervals": "⟦Ŧřȧƈķḗḓ Īƞŧḗřṽȧŀş⟧",
     "contactInfo": "⟦Ƈȯƞŧȧƈŧ Īƞƒȯ⟧",
     "noContactSelected": "⟦Ƞȯ ƈȯƞŧȧƈŧ şḗŀḗƈŧḗḓ⟧",
     "selectOrChangeContact": "⟦Şḗŀḗƈŧ ȯř ƈħȧƞɠḗ ƈȯƞŧȧƈŧ⟧",
@@ -1746,9 +1750,7 @@
       "timeLogged": "⟦Ŧīḿḗ ŀȯɠɠḗḓ⟧",
       "acrossEntries_one": "⟦ȧƈřȯşş {{count}} ḗƞŧřẏ⟧",
       "acrossEntries_other": "⟦ȧƈřȯşş {{count}} ḗƞŧřīḗş⟧",
-      "workDescription": "⟦Ẇȯřķ ḓḗşƈřīƥŧīȯƞ⟧",
       "addTimeEntry": "⟦Ȧḓḓ ŧīḿḗ ḗƞŧřẏ⟧",
-      "trackedIntervals": "⟦Ŧřȧƈķḗḓ īƞŧḗřṽȧŀş⟧",
       "teamAndWatchers": "⟦Ŧḗȧḿ ȧƞḓ ẇȧŧƈħḗřş⟧",
       "addAgent": "⟦Ȧḓḓ ȧƞ ȧɠḗƞŧ…⟧",
       "timeline": "⟦Ŧīḿḗŀīƞḗ⟧",
@@ -1759,7 +1761,6 @@
       "opened": "⟦Ȯƥḗƞḗḓ⟧",
       "viaSource": "⟦ṽīȧ {{source}}⟧",
       "noContactOnTicket": "⟦Ƞȯ ƈȯƞŧȧƈŧ ȯƞ ŧħīş ŧīƈķḗŧ⟧",
-      "whatAreYouWorkingOn": "⟦Ẇħȧŧ ȧřḗ ẏȯŭ ẇȯřķīƞɠ ȯƞ?⟧",
       "agentFallback": "⟦Ȧɠḗƞŧ⟧",
       "removeAgent": "⟦Řḗḿȯṽḗ {{name}}⟧",
       "noAdditionalAgents": "⟦Ƞȯ ȧḓḓīŧīȯƞȧŀ ȧɠḗƞŧş⟧",
@@ -1784,8 +1785,6 @@
       "addDocument": "⟦Ȧḓḓ ȧ ḓȯƈŭḿḗƞŧ⟧",
       "timeLoggedPerDay": "⟦Ŧīḿḗ ŀȯɠɠḗḓ ƥḗř ḓȧẏ: {{details}}⟧",
       "team": "⟦Ŧḗȧḿ⟧",
-      "startTimer": "⟦Şŧȧřŧ ŧīḿḗř⟧",
-      "timerLockedHint": "⟦Ȧƞȯŧħḗř ŧīḿḗř īş ȧŀřḗȧḓẏ řŭƞƞīƞɠ⟧",
       "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
       "nothingBillable": "⟦Ƞȯŧħīƞɠ ƀīŀŀȧƀŀḗ ẏḗŧ⟧",
       "editContact": "⟦Ḗḓīŧ ƈȯƞŧȧƈŧ⟧",
@@ -2296,5 +2295,21 @@
       "monthlyOnNthWeekday": "⟦{{every}} ȯƞ ŧħḗ {{ordinal}} {{weekday}}⟧",
       "yearly": "⟦Ḗṽḗřẏ ẏḗȧř ȯƞ {{month}} {{day}}⟧"
     }
+  },
+  "stopwatch": {
+    "boardDisabled": "⟦Ŧħḗ şŧȯƥẇȧŧƈħ īş ŧŭřƞḗḓ ȯƒƒ ƒȯř ŧħīş ƀȯȧřḓ.⟧",
+    "pausedElsewhereTicket": "⟦Ƥȧŭşḗḓ ȯƞ ȧƞȯŧħḗř ŧīƈķḗŧ: {{label}}⟧",
+    "runningElsewhereTicket": "⟦Řŭƞƞīƞɠ ȯƞ ȧƞȯŧħḗř ŧīƈķḗŧ: {{label}}⟧",
+    "pausedElsewhereTask": "⟦Ƥȧŭşḗḓ ȯƞ ȧƞȯŧħḗř ŧȧşķ: {{label}}⟧",
+    "runningElsewhereTask": "⟦Řŭƞƞīƞɠ ȯƞ ȧƞȯŧħḗř ŧȧşķ: {{label}}⟧",
+    "switch": "⟦Şẇīŧƈħ ħḗřḗ⟧",
+    "start": "⟦Şŧȧřŧ şŧȯƥẇȧŧƈħ⟧",
+    "resume": "⟦Řḗşŭḿḗ şŧȯƥẇȧŧƈħ⟧",
+    "pause": "⟦Ƥȧŭşḗ şŧȯƥẇȧŧƈħ⟧",
+    "stop": "⟦Şŧȯƥ ȧƞḓ ŀȯɠ ŧīḿḗ⟧",
+    "discard": "⟦Ḓīşƈȧřḓ şŧȯƥẇȧŧƈħ⟧",
+    "pausedHint": "⟦Ƥȧŭşḗḓ. Řḗşŭḿḗ ŧȯ ķḗḗƥ ŧřȧƈķīƞɠ, ȯř şŧȯƥ ŧȯ ŀȯɠ ŧħḗ ŧīḿḗ.⟧",
+    "workDescription": "⟦Ẇȯřķ ḓḗşƈřīƥŧīȯƞ⟧",
+    "whatAreYouWorkingOn": "⟦Ẇħȧŧ ȧřḗ ẏȯŭ ẇȯřķīƞɠ ȯƞ?⟧"
   }
 }

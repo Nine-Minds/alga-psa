@@ -76,6 +76,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Who produced the activity shown in latest_activity_at; null when nobody can be named.
+  latest_activity_actor?: { kind: 'user' | 'client_user' | 'contact' | 'email_sender' | 'system'; name: string | null } | null;
 }
 
 export interface ITicketListFilters {
