@@ -496,17 +496,17 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
   {
     table: 'co_managed_ticket_references',
     reason:
-      'Anchored to the co-management relationship (co_management_relationships.sponsor_client_id), which a merge does not move; re-stamping the client alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   {
     table: 'co_managed_project_task_references',
     reason:
-      'Anchored to the co-management relationship (co_management_relationships.sponsor_client_id), which a merge does not move; re-stamping the client alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   {
     table: 'co_managed_time_work_references',
     reason:
-      'Anchored to the co-management relationship (co_management_relationships.sponsor_client_id), which a merge does not move; re-stamping the client alone would split the record from its relationship. Its billing profile is a relationship-side reference, not a client_billing_profiles row moved by the merge.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship. Its billing profile is a relationship-side reference, not a client_billing_profiles row moved by the merge.',
   },
   {
     table: 'co_management_requester_email_deliveries',
@@ -521,7 +521,7 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
   {
     table: 'co_management_workflow_ticket_emails',
     reason:
-      'Anchored to the co-management relationship (co_management_relationships.sponsor_client_id), which a merge does not move; re-stamping the client alone would split the record from its relationship.',
+      'Anchored to the co-management relationship, whose sponsor_client_id names this client but whose row lives in the customer's workspace (co_management_relationships.tenant), outside the tenant a merge is scoped to and so unreachable by it; re-stamping the client here alone would split the record from its relationship.',
   },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
@@ -569,6 +569,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   table: string;
   label: string;
   nullableBillingProfile?: boolean;
+  /** Present in one edition only; skipped when the table is not installed. */
+  editionOptional?: boolean;
 }> = [
   { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
@@ -576,4 +578,9 @@ export const PROFILE_HISTORY_TABLES: Array<{
   { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
   { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
+  // Enterprise autopay consent hangs off the profile (PK tenant+billing_profile_id)
+  // and carries a redundant client_id FK to clients. The profile moves, so the
+  // consent moves with it; leaving client_id on the tombstone would break
+  // `profile.client_id == row.client_id`. No collision is possible: one row per profile.
+  { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];

@@ -37,10 +37,15 @@ function tablesCreatedBy(source: string): string[] {
     .concat([...source.matchAll(/TABLE\s*=\s*['"`]([a-z0-9_]+)['"`]/g)].map((match) => match[1]));
 }
 
-const laterMigrations = fs.readdirSync(MIGRATION_DIR)
+// The lane's schema is built from TEST_MIGRATIONS_DIR (the CE+EE overlay) when
+// set, so the enterprise slices that reference the table (autopay, payment
+// customers re-keyed by profile) are dependants too; CE-only runs scan server/.
+const SCHEMA_MIGRATION_DIR = process.env.TEST_MIGRATIONS_DIR || MIGRATION_DIR;
+
+const laterMigrations = fs.readdirSync(SCHEMA_MIGRATION_DIR)
   .filter((file) => file.endsWith('.cjs') && file > CREATE_MIGRATION_FILE && file !== ASSIGNMENT_MIGRATION_FILE)
   .sort()
-  .map((file) => ({ file, source: fs.readFileSync(path.join(MIGRATION_DIR, file), 'utf8') }));
+  .map((file) => ({ file, source: fs.readFileSync(path.join(SCHEMA_MIGRATION_DIR, file), 'utf8') }));
 
 // Transitive closure: a slice that references client_billing_profiles is a
 // dependant, and so is anything referencing a table that slice created.
@@ -56,7 +61,7 @@ for (let changed = true; changed; ) {
   }
 }
 const dependentMigrationsNewestFirst = [...dependentFiles].sort().reverse()
-  .map((file) => require(path.join(MIGRATION_DIR, file)));
+  .map((file) => require(path.join(SCHEMA_MIGRATION_DIR, file)));
 
 // Column matrix for F006–F012 (the assignment columns S1 adds).
 const ASSIGNMENT_COLUMNS: Array<[string, string]> = [
