@@ -171,16 +171,9 @@ export function useContractLinePresetSelection({
       next.delete(presetId);
     } else {
       next.add(presetId);
-
-      // Initialize hourly preset configuration when the preset is selected so an
-      // unexpanded Hourly preset still carries its time-billing settings.
-      const preset = availablePresets.find(p => p.preset_id === presetId);
-      if (preset?.contract_line_type === 'Hourly' && !hourlyPresetOverrides[presetId]) {
-        initializeHourlyPreset(presetId, preset);
-      }
     }
     setSelectedPresetIds(next);
-  }, [availablePresets, hourlyPresetOverrides, initializeHourlyPreset, selectedPresetIds]);
+  }, [selectedPresetIds]);
 
   const toggleExpand = useCallback(async (presetId: string) => {
     const isExpanded = expandedPresets[presetId];
