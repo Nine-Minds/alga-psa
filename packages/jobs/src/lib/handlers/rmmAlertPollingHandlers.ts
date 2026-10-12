@@ -101,6 +101,7 @@ async function ensureFetchersRegistered(): Promise<void> {
   } catch {
     // CE build without the alias target — NinjaOne polling simply unavailable.
   }
+  // LEVERAGE: pattern rmm-provider-registration — hand-written dynamic-import registration block per provider
   try {
     const mod = await import('@enterprise/lib/integrations/unifi/alerts/reconciliationFetcher');
     if (mod.unifiAlertFetcher) {
@@ -344,6 +345,7 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
   } catch {
     // CE build without the alias target — Tanium device sync unavailable.
   }
+  // LEVERAGE: pattern rmm-provider-registration — hand-written dynamic-import registration block per provider
   try {
     const mod = await import('@enterprise/lib/integrations/unifi/sync/deviceSyncStrategy');
     if (mod.uniFiDeviceSyncStrategy) {

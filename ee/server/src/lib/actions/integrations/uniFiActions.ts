@@ -205,6 +205,22 @@ async function reconcileAlertsBestEffort(tenant: string): Promise<void> {
   }
 }
 
+/**
+ * Converge the recurring rmm-alert-reconciliation / rmm-device-sync jobs right
+ * after the integration's active state changes, instead of waiting for the
+ * maintenance tick (same pattern as ninjaoneActions.ts disconnect). Best effort.
+ */
+// LEVERAGE: pattern rmm-provider-registration — each provider's connect/disconnect action re-invokes the schedule reconciler by hand
+async function convergePollingSchedulesBestEffort(): Promise<void> {
+  try {
+    const { reconcileRmmPollingSchedules } = await import('@alga-psa/jobs/handlers/rmmAlertPollingHandlers');
+    const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
+    await reconcileRmmPollingSchedules(await initializeJobRunner());
+  } catch {
+    // The periodic reconciler converges schedules on its next tick.
+  }
+}
+
 export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
   user,
   { tenant },
@@ -245,6 +261,7 @@ export const saveUniFiConfiguration = withAdvancedAssetsAccess(async (
       syncError: null,
     });
 
+    await convergePollingSchedulesBestEffort();
     await reconcileAlertsBestEffort(tenant);
     return { success: true, integrationId: row.integration_id as string };
   } catch (error) {
@@ -271,6 +288,7 @@ export const testUniFiConnection = withAdvancedAssetsAccess(async (user, { tenan
       syncError: null,
     });
 
+    await convergePollingSchedulesBestEffort();
     await reconcileAlertsBestEffort(tenant);
     return { success: true };
   } catch (error) {
@@ -311,6 +329,9 @@ export const disconnectUniFiIntegration = withAdvancedAssetsAccess(async (user, 
         sync_error: null,
         updated_at: knex.fn.now(),
       });
+
+    // Integration is inactive now: cancel its recurring jobs immediately.
+    await convergePollingSchedulesBestEffort();
 
     if (integration?.integration_id) {
       const disconnectedAt = new Date().toISOString();
@@ -539,7 +560,14 @@ export const updateUniFiSiteMapping = withAdvancedAssetsAccess(async (
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
 
-    await db.table('rmm_organization_mappings').where({ mapping_id: input.mappingId }).update(patch);
+    // Scope to this tenant's UniFi integration so another provider's mapping can't be edited here.
+    const integrationIds = db.table('rmm_integrations').where({ provider: PROVIDER }).select('integration_id');
+    const updatedRows = await db
+      .table('rmm_organization_mappings')
+      .where({ mapping_id: input.mappingId })
+      .whereIn('integration_id', integrationIds)
+      .update(patch);
+    if (!updatedRows) return { success: false, error: 'UniFi site mapping not found.' };
 
     return { success: true };
   } catch (error) {
