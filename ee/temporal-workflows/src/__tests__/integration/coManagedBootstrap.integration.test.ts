@@ -76,6 +76,7 @@ const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
 const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn(), getReadStream: vi.fn() }));
 vi.mock('@alga-psa/storage/config/storage', () => ({
   validateFileUpload: async () => {},
+  validateSystemArtifact: async () => {},
   getStorageConfig: async () => ({ defaultProvider: 'local' }),
   getProviderConfig: async () => ({ type: 'local' }),
 }));
@@ -652,7 +653,11 @@ async function ticketServiceForTest() {
   const { TicketService } = await import('../../../../../server/src/lib/api/services/TicketService');
   const service = new TicketService();
   vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
-  const publish = vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+  // Main split TICKET_DELETED (no catalogue entry) onto safePublishNonCatalogEvent; both
+  // paths feed one recorder so 'nothing published' still covers every publisher.
+  const publish = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(service as any, 'safePublishEvent').mockImplementation(publish);
+  vi.spyOn(service as any, 'safePublishNonCatalogEvent').mockImplementation(publish);
   return { service, publish };
 }
 
@@ -3972,10 +3977,13 @@ it('uses the canonical close and reopen paths with qualified audit, event and li
     expect(parsed.payload).toMatchObject({ actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant,
       userId: principal.userId, ownerTenantId: resource.tenant, referenceId: reference.actor_reference_id } });
     expect(parsed.payload).not.toHaveProperty('actorUserId');
-    expect(parsed.payload).not.toHaveProperty('userId');
+    // Main's TICKET_RESPONSE_STATE_CHANGED still declares a nullable userId; a collaborator must leave it null, never a real id.
+    expect((parsed.payload as { userId?: unknown }).userId ?? null).toBeNull();
   }
-  const responseEvent = publish.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_RESPONSE_STATE_CHANGED')![0] as any;
-  expect(EventSchemas.TICKET_RESPONSE_STATE_CHANGED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...responseEvent }).payload)
+  // Catalogued events leave through publishWorkflowEvent as {eventType, payload, ctx}; the envelope is built from them.
+  const responseEvent = workflow.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_RESPONSE_STATE_CHANGED')![0] as any;
+  expect(EventSchemas.TICKET_RESPONSE_STATE_CHANGED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: responseEvent.eventType,
+    payload: buildWorkflowPayload(responseEvent.payload, responseEvent.ctx) }).payload)
     .toMatchObject({ actorReference: { referenceId: reference.actor_reference_id }, userId: null, newState: null, trigger: 'close' });
   expect(live).toHaveBeenCalledWith(expect.objectContaining({ tenantId: resource.tenant, ticketId: resource.id,
     updatedBy: expect.objectContaining({ userId: null, displayName: 'Morgan Provider (MSP)', actorReference: expect.objectContaining({ referenceId: reference.actor_reference_id }) }) }));
@@ -4154,8 +4162,10 @@ it('renders qualified ticket edit/close attribution in immediate email, accumula
     await internal.handleTicketUpdated(event as any, { db, propagateErrors: true });
     expect(notify.mock.calls.length).toBeGreaterThan(0);
     const updateNotification = notify.mock.calls.find(([, input]: any[]) => input.user_id === actor.userId)![1] as any;
-    expect(updateNotification.data).toMatchObject({ performedByName: 'Morgan Provider (MSP)', performedById: null,
+    expect(updateNotification.data).toMatchObject({ performedByName: 'Morgan Provider (MSP)',
       performedByActorReference: { tenantId: principal.tenant, userId: principal.userId }, newPriority: priority.priority_name });
+    // Main only attaches performedById for a real user; a collaborator carries none.
+    expect(updateNotification.data).not.toHaveProperty('performedById');
     expect(updateNotification.data.oldPriority).not.toBe('None');
     send.mockClear();
     const localUser = await customer.table('users').where('user_id', actor.userId).first();
@@ -5160,7 +5170,7 @@ it('delivers qualified comment names to customer recipients without colliding au
     expect(send.mock.calls.every(([input]: any[]) => input.to !== childContact.email)).toBe(true);
     expect(send.mock.calls.every(([input]: any[]) => input.context.comment.author === 'Morgan Provider (MSP)')).toBe(true);
     expect(notify.mock.calls.some(([, input]: any[]) => input.user_id === principal.userId && input.data.authorName === 'Morgan Provider (MSP)' &&
-      input.metadata.comment.authorId === null && input.metadata.comment.actorReference.tenantId === principal.tenant)).toBe(true);
+      (input.metadata.comment.authorId ?? null) === null && input.metadata.comment.actorReference.tenantId === principal.tenant)).toBe(true);
     send.mockClear(); notify.mockClear();
     const internalEvent = await added('shared_it');
     const mentioned = JSON.stringify([{ type: 'paragraph', content: [ { type: 'mention', props: { userId: principal.userId } }, { type: 'mention', props: { userId: portalUserId } } ] }]);
@@ -10436,6 +10446,11 @@ it('preserves ordinary PSA scheduled publication and stable native retries', asy
   const ordinaryTicketId = identities.get(resource.id)!, ordinaryCommentId = identities.get(comment.id)!;
   const { publishScheduledComment } = await import('../../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
   const run = () => publishScheduledComment(db, { tenantId: tenant, ticketId: ordinaryTicketId, commentId: ordinaryCommentId });
+  // The ordinary PSA path publishes the built catalogue payload through publishBuiltWorkflowPayload, which
+  // reaches the transport behind the stubbed publishEvent; observe it through the same recorder.
+  const events = await import('@alga-psa/event-bus/publishers');
+  const built = vi.spyOn(events, 'publishBuiltWorkflowPayload').mockImplementation(async (event: any, options: any) => { await publish(event, options); });
+  try {
   let fail = true; publish.mockClear(); publish.mockImplementation(async (event: any) => {
     if (event.eventType === 'TICKET_COMMENT_ADDED' && fail) { fail = false; throw new Error('Native dispatch crash'); }
   });
@@ -10447,6 +10462,7 @@ it('preserves ordinary PSA scheduled publication and stable native retries', asy
   expect(publish.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_COMMENT_ADDED').map(([, options]: any[]) => options.eventId))
     .toEqual([row.scheduled_publish_event_id, row.scheduled_publish_event_id]);
   expect(await ordinary.table('co_management_event_outbox')).toHaveLength(0);
+  } finally { built.mockRestore(); }
 }));
 
 it.each(['body', 'response', 'response_disabled'] as const)('applies scheduled publication field authority for %s', async field => withScheduledCommentFixture(async ({ customer, resource, customerPrincipal, comment, run }: any) => {
@@ -14176,7 +14192,7 @@ it('customer sheet API returns scoped operational summaries and authentic privat
   await expect(sheetService.getById(entry.time_sheet_id, { ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
 }));
 
-it('customer sheet API submits reviews and reverses real entries while storing feedback privately', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, publish }: any) => {
+it('customer sheet API submits reviews and reverses real entries while storing feedback privately', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, emitted }: any) => {
   expect(await sheetService.submitTimeSheet(entry.time_sheet_id, { submission_notes: 'Submission private context' }, context)).toMatchObject({ approval_status: 'SUBMITTED' });
   expect(await sheetService.requestChanges(entry.time_sheet_id, { change_reason: 'Correct duration', detailed_feedback: 'Private detail' }, context)).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
   await sheetService.submitTimeSheet(entry.time_sheet_id, {}, context);
@@ -14185,8 +14201,8 @@ it('customer sheet API submits reviews and reverses real entries while storing f
   expect(await sheetService.reverseApproval(entry.time_sheet_id, { reversal_reason: 'Revisit private detail' }, context)).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
   const comments = await sheetService.getTimeSheetComments(entry.time_sheet_id, context);
   expect(comments.map((row: any) => row.comment_text)).toEqual(expect.arrayContaining(['Submission private context', 'Correct duration\n\nPrivate detail', 'Reviewed privately', 'Approval reversed: Revisit private detail']));
-  expect(JSON.stringify(publish.mock.calls)).not.toContain('Private detail');
-  expect(publish.mock.calls.map((args: any[]) => args[0].eventType)).toEqual(expect.arrayContaining(['TIME_ENTRY_APPROVED', 'TIME_ENTRY_SUBMITTED', 'TIME_ENTRY_CHANGES_REQUESTED']));
+  expect(JSON.stringify(emitted.mock.calls)).not.toContain('Private detail');
+  expect(emitted.mock.calls.map((args: any[]) => args[0].eventType)).toEqual(expect.arrayContaining(['TIME_ENTRY_APPROVED', 'TIME_ENTRY_SUBMITTED', 'TIME_ENTRY_CHANGES_REQUESTED']));
   await expect(sheetService.delete(entry.time_sheet_id, context)).rejects.toMatchObject({ statusCode: 409 });
 }));
 
@@ -17359,7 +17375,7 @@ it.each(['reply', 'status'] as const)('MSP SLA reply adapters block read-only po
 }));
 
 it('MSP SLA ticket API preserves validated response-state updates and closes/reopens the independent obligation', async () => withSharedTicketMutationFixture(async f => {
-  const { service, publish } = await ticketServiceForTest();
+  const { service } = await ticketServiceForTest();
   const { updateTicketSchema } = await import('../../../../../server/src/lib/api/schemas/ticket');
   const context = { tenant: f.resource.tenant, userId: f.customerPrincipal.userId };
   const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
@@ -17369,7 +17385,8 @@ it('MSP SLA ticket API preserves validated response-state updates and closes/reo
   expect(await service.update(f.resource.id, patch, context)).toMatchObject({ response_state: 'awaiting_client' });
   const paused = await f.sponsor.table('sla_organization_obligations').first();
   expect(paused.clock.pauseReasons).toEqual(['awaiting_client']);
-  expect(publish.mock.calls.some(([type, , payload]: any[]) => type === 'TICKET_RESPONSE_STATE_CHANGED' && payload.newResponseState === 'awaiting_client')).toBe(true);
+  // The response-state change is a catalogued event: main publishes it as {eventType, payload, ctx} through publishWorkflowEvent.
+  expect(f.workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_RESPONSE_STATE_CHANGED' && event.payload.newState === 'awaiting_client')).toBe(true);
   await service.update(f.resource.id, updateTicketSchema.parse({ response_state: 'awaiting_internal' }), context);
   const resumed = await f.sponsor.table('sla_organization_obligations').first();
   expect(resumed.clock).toMatchObject({ pauseReasons: [], elapsedMilliseconds: paused.clock.elapsedMilliseconds });
