@@ -479,8 +479,16 @@ t8_through_pgbouncer() {
     local out
     out="$(sibling_psql pgbouncer 6432 app_user "$APP_SECRET" server -tAc 'select current_user')"
     [ "$out" = "app_user" ] && ok "app_user connects through 6432 with its secret" || nok "app_user connects through 6432 with its secret" "$out"
+    # The superuser is not served through PgBouncer at all, even with the right secret.
     out="$(sibling_psql pgbouncer 6432 postgres "$SUPER_SECRET" server -tAc 'select current_user')"
-    [ "$out" = "postgres" ] && ok "postgres connects through 6432 with the secret" || nok "postgres connects through 6432 with the secret" "$out"
+    auth_rejected "$out" && ok "postgres is rejected through 6432 even with the correct secret" || nok "postgres is rejected through 6432 even with the correct secret" "$out"
+    out="$(sibling_psql pgbouncer 6432 postgres "$SUPER_SECRET" postgres -tAc 'select current_user')"
+    auth_rejected "$out" && ok "postgres is rejected through 6432 for the postgres database too" || nok "postgres is rejected through 6432 for the postgres database too" "$out"
+    out="$(sibling_psql postgres 5432 postgres "$SUPER_SECRET" server -tAc 'select current_user')"
+    [ "$out" = "postgres" ] && ok "postgres still connects directly to Postgres with the secret" || nok "postgres still connects directly to Postgres with the secret" "$out"
+    out="$(sibling_psql pgbouncer 6432 app_user "$APP_SECRET" postgres -tAc 'select current_user')"
+    grep -qi 'no such database\|authentication failed\|not allowed' <<<"$out" \
+        && ok "app_user cannot open the postgres maintenance database through 6432" || nok "app_user cannot open the postgres maintenance database through 6432" "$out"
 
     local user secret
     for user in app_user postgres; do
@@ -493,7 +501,7 @@ t8_through_pgbouncer() {
 
 # auth_rejected <psql output>: true when the output is an authentication refusal.
 auth_rejected() {
-    grep -qi 'no password supplied\|authentication failed' <<<"$1"
+    grep -qi 'no password supplied\|authentication failed\|no such user' <<<"$1"
 }
 
 # T9 builds the PgBouncer image on its own and runs the entrypoint with bad inputs.
@@ -516,14 +524,12 @@ t9_pgbouncer_fails_closed() {
     fi
     local dir="$SANDBOX/t9" out rc
     mkdir -p "$dir"
-    printf '%s' "$SUPER_SECRET" > "$dir/postgres_password"
     printf '%s' "$APP_SECRET" > "$dir/db_password_server"
     chmod 644 "$dir"/*
 
     # t9_run <extra docker args...>: run the entrypoint to completion (it must exit by itself).
     t9_run() {
         timeout 60 docker run --rm \
-            -v "$dir/postgres_password:/run/secrets/postgres_password:ro" \
             -v "$dir/db_password_server:/run/secrets/db_password_server:ro" \
             "$@" "$image" 2>&1
     }
@@ -568,11 +574,9 @@ t9_pgbouncer_fails_closed() {
     up_postgres
     wait_ready "$SUPER_SECRET" || { nok "postgres started after upgrade"; return 1; }
     printf '  %s\r\n' "$APP_SECRET" > "$dir/db_password_server"
-    printf '%s\r\n' "$SUPER_SECRET" > "$dir/postgres_password"
     docker rm -f "$name" >/dev/null 2>&1
     docker run -d --name "$name" --network "$NETWORK" --network-alias t9-pgbouncer \
         -e POSTGRES_HOST=postgres \
-        -v "$dir/postgres_password:/run/secrets/postgres_password:ro" \
         -v "$dir/db_password_server:/run/secrets/db_password_server:ro" \
         "$image" >/dev/null
     sleep 3

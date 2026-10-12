@@ -37,19 +37,12 @@ read_secret() {
     printf '%s' "$_secret"
 }
 
-# Read secrets into environment variables with shell safety
-POSTGRES_PASSWORD=$(read_secret /run/secrets/postgres_password) || exit 1
-export POSTGRES_PASSWORD
-
-# Default superuser credential for PgBouncer admin connections
-POSTGRES_SUPERUSER_NAME=${POSTGRES_USER:-postgres}
-
-# Optional secret for application user (required for PgBouncer auth)
+# The application user is the only account served through PgBouncer. The Postgres
+# superuser is deliberately not listed: administration connects to Postgres directly.
 DB_USER_SERVER_NAME=${DB_USER_SERVER:-app_user}
 DB_PASSWORD_SERVER_FILE=/run/secrets/db_password_server
 DB_PASSWORD_SERVER=$(read_secret "$DB_PASSWORD_SERVER_FILE") || exit 1
 DB_PASSWORD_MD5=$(printf "%s%s" "$DB_PASSWORD_SERVER" "$DB_USER_SERVER_NAME" | md5sum | awk '{print $1}')
-POSTGRES_PASSWORD_MD5=$(printf "%s%s" "$POSTGRES_PASSWORD" "$POSTGRES_SUPERUSER_NAME" | md5sum | awk '{print $1}')
 
 echo "Config files created successfully" >&2
 
@@ -80,12 +73,10 @@ done
 # Generate userlist for PgBouncer authentication compatible with auth_type=md5.
 {
   printf '"%s" "md5%s"\n' "$DB_USER_SERVER_NAME" "$DB_PASSWORD_MD5"
-  printf '"%s" "md5%s"\n' "$POSTGRES_SUPERUSER_NAME" "$POSTGRES_PASSWORD_MD5"
 } > /etc/pgbouncer/userlist.txt
 chmod 600 /etc/pgbouncer/userlist.txt
 
 # Clear sensitive environment variables for security
-unset POSTGRES_PASSWORD
 unset DB_PASSWORD_SERVER
 
 # Start pgbouncer
