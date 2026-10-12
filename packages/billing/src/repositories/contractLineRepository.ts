@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { cloneTemplateLinePoolsDetailed } from '@alga-psa/shared/billingClients/templateClone';
 import {
+  assertLiveLineMatchesTemplateCurrency,
   nonNegativeCentsOrNull,
   positiveCentsOrNull,
   resolveTemplateAmounts,
@@ -258,6 +259,7 @@ export async function ensureTemplateLineSnapshot(
   if (!baseLine) {
     throw new Error(`Base contract line ${contractLineId} not found for template snapshot`);
   }
+  await assertLiveLineMatchesTemplateCurrency(knex as any, tenant, templateId, contractLineId);
 
   const now = knex.fn.now();
   const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')

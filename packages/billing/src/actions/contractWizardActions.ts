@@ -1,6 +1,7 @@
 'use server';
 
 
+import { isSupportedCurrency } from '@alga-psa/core/formatters';
 import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -38,6 +39,7 @@ import { getContractLineServicesWithConfigurations } from './contractLineService
 import {
   cloneTemplateLineToContract,
   ensureTemplateLineSnapshot,
+  fetchCurrencyCatalogRates,
   fetchDetailedContractLines,
   fetchTemplateLineViews,
   type TemplateLineEdits,
@@ -287,7 +289,8 @@ export type ContractTemplateWizardSubmission = {
   billing_frequency?: string;
   cadence_owner?: CadenceOwner;
   billing_timing?: 'arrears' | 'advance';
-  currency_code?: string; // step 6 makes currency_code required
+  /** The template's base currency (ISO 4217). Amounts the wizard writes are in this currency. */
+  currency_code: string;
   fixed_services: TemplateFixedServiceInput[];
   product_services?: TemplateProductServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
@@ -583,6 +586,14 @@ export const createContractTemplateFromWizard = withAuth(async (
     }
   }
 
+  if (typeof submission.currency_code !== 'string' || !/^[A-Z]{3}$/.test(submission.currency_code) || !isSupportedCurrency(submission.currency_code)) {
+    return actionError(
+      `"${String(submission.currency_code)}" is not a valid ISO 4217 currency code`,
+      'msp/contracts:errors.wizard.invalidTemplateCurrency',
+      { currency: String(submission.currency_code) },
+    );
+  }
+
   const { knex } = await createTenantKnex();
 
   try {
@@ -590,6 +601,8 @@ export const createContractTemplateFromWizard = withAuth(async (
     const now = new Date();
     const nowIso = now.toISOString();
     const templateId = uuidv4();
+    // Every amount this action writes is in the template's base currency.
+    const templateCurrencyCode = submission.currency_code;
 
     // Validate before any write so a rejected per-seat submission leaves no
     // half-built template behind. A template unit rate is optional.
@@ -604,7 +617,7 @@ export const createContractTemplateFromWizard = withAuth(async (
       template_name: submission.contract_name,
       template_description: submission.description ?? null,
       default_billing_frequency: submission.billing_frequency ?? 'monthly',
-      currency_code: submission.currency_code ?? 'USD', // step 6 makes currency_code required
+      currency_code: templateCurrencyCode,
       template_status: isDraft ? 'draft' : 'published',
       template_metadata: null,
       created_at: nowIso,
@@ -623,28 +636,16 @@ export const createContractTemplateFromWizard = withAuth(async (
       ...filteredUsageServices.map((s) => s.service_id),
     ];
     const serviceCatalogById = new Map<string, any>();
-    const templateCurrencyCode = 'USD';
-    const fixedModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
-      trx,
-      tenant,
-      filteredFixedServices.map((s) => s.service_id),
-      'Fixed',
-      templateCurrencyCode
-    );
-    const hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
-      trx,
-      tenant,
-      filteredHourlyServices.map((s) => s.service_id),
-      'Hourly',
-      templateCurrencyCode
-    );
-    const usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
-      trx,
-      tenant,
-      filteredUsageServices.map((s) => s.service_id),
-      'Usage',
-      templateCurrencyCode
-    );
+    // Snapshot rates come from the catalog IN THE TEMPLATE'S CURRENCY only: the
+    // mode default first, then the current service_prices row. The currency-
+    // untagged service_catalog.default_rate is never used, so a EUR template
+    // can no longer pick up a USD price. A service with no price in the
+    // currency gets no snapshot and the member follows the catalog.
+    const [fixedCatalog, hourlyCatalog, usageCatalog] = await Promise.all([
+      fetchCurrencyCatalogRates(trx, tenant, filteredFixedServices.map((s) => s.service_id), 'fixed', templateCurrencyCode),
+      fetchCurrencyCatalogRates(trx, tenant, filteredHourlyServices.map((s) => s.service_id), 'hourly', templateCurrencyCode),
+      fetchCurrencyCatalogRates(trx, tenant, filteredUsageServices.map((s) => s.service_id), 'usage', templateCurrencyCode),
+    ]);
 
     if (allServiceIds.length > 0) {
       const services = await tenantDb(trx, tenant).table('service_catalog')
@@ -790,8 +791,8 @@ export const createContractTemplateFromWizard = withAuth(async (
           } else {
             serviceBaseRate =
               firstPositiveRateInCents(
-                fixedModeDefaultsByServiceId.get(service.service_id),
-                serviceCatalogById.get(service.service_id)?.default_rate
+                fixedCatalog.modeDefaults.get(service.service_id),
+                fixedCatalog.currentPrices.get(service.service_id)
               ) ?? 0;
           }
         }
@@ -919,8 +920,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       for (const service of filteredHourlyServices) {
         const normalizedHourlyRate = firstPositiveRateInCents(
           service.hourly_rate,
-          hourlyModeDefaultsByServiceId.get(service.service_id),
-          serviceCatalogById.get(service.service_id)?.default_rate
+          hourlyCatalog.modeDefaults.get(service.service_id),
+          hourlyCatalog.currentPrices.get(service.service_id)
         );
 
         // Insert into template line services table (not contract_line_services)
@@ -1003,8 +1004,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       for (const service of filteredUsageServices) {
         const normalizedUnitRate = firstPositiveRateInCents(
           service.unit_rate,
-          usageModeDefaultsByServiceId.get(service.service_id),
-          serviceCatalogById.get(service.service_id)?.default_rate
+          usageCatalog.modeDefaults.get(service.service_id),
+          usageCatalog.currentPrices.get(service.service_id)
         );
 
         // Insert into template line services table (not contract_line_services)

@@ -707,3 +707,57 @@ export function legacyCloneAmountReader(amounts: ResolvedTemplateAmounts, templa
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Live line -> template snapshots
+// ---------------------------------------------------------------------------
+
+/**
+ * `ensureTemplateLineSnapshot` copies a live contract line into a template's
+ * base columns. That line is priced in its contract's currency, so it may only
+ * be copied into a template whose base currency is the same; writing it anywhere
+ * else would store amounts in a currency they do not belong to. A line with no
+ * contract (a template-authoring line) carries no currency and is always allowed.
+ * Throws a plain Error naming both currencies.
+ */
+export async function assertLiveLineMatchesTemplateCurrency(
+  knex: KnexLike,
+  tenant: string,
+  templateId: string,
+  contractLineId: string,
+): Promise<void> {
+  const db = tenantDb(knex, tenant);
+  const line = (await db.table('contract_lines').where({ contract_line_id: contractLineId }).first('contract_id')) as
+    | { contract_id?: string | null }
+    | undefined;
+  if (!line?.contract_id) return;
+  const contract = (await db.table('contracts').where({ contract_id: line.contract_id }).first('currency_code')) as
+    | { currency_code?: string | null }
+    | undefined;
+  const template = (await db.table('contract_templates').where({ template_id: templateId }).first('currency_code')) as
+    | { currency_code?: string | null }
+    | undefined;
+  if (!contract?.currency_code || !template?.currency_code) return;
+  if (contract.currency_code !== template.currency_code) {
+    throw new Error(
+      `This line is priced in ${contract.currency_code}; the template's base currency is ${template.currency_code}.`,
+    );
+  }
+}
+
+/**
+ * Delete every price-set row of one service on one template line. Price rows
+ * carry no FK on service_id, so any action that removes a service from a template
+ * line calls this in the same transaction.
+ */
+export async function deleteTemplateServicePrices(
+  trx: KnexLike,
+  tenant: string,
+  templateLineId: string,
+  serviceId: string,
+): Promise<void> {
+  await tenantDb(trx, tenant)
+    .table('contract_template_prices')
+    .where({ template_line_id: templateLineId, service_id: serviceId })
+    .del();
+}
