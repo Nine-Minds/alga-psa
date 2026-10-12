@@ -2452,7 +2452,8 @@
       "moveDown": "Mover {{row}} para baixo",
       "remove": "Remover {{row}}",
       "label": "Rótulo",
-      "emphasize": "Destacar (estilo de total geral)"
+      "emphasize": "Destacar (estilo de total geral)",
+      "hideWhenZero": "Ocultar quando zero"
     }
   },
   "draftInvoiceDetails": {

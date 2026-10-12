@@ -2504,7 +2504,8 @@
       "moveDown": "Przenieś {{row}} niżej",
       "remove": "Usuń {{row}}",
       "label": "Etykieta",
-      "emphasize": "Wyróżnij (styl sumy końcowej)"
+      "emphasize": "Wyróżnij (styl sumy końcowej)",
+      "hideWhenZero": "Ukryj, gdy zero"
     }
   },
   "draftInvoiceDetails": {

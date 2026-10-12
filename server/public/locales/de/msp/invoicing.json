@@ -2452,7 +2452,8 @@
       "moveDown": "{{row}} nach unten verschieben",
       "remove": "{{row}} entfernen",
       "label": "Bezeichnung",
-      "emphasize": "Hervorheben (Stil der Gesamtsumme)"
+      "emphasize": "Hervorheben (Stil der Gesamtsumme)",
+      "hideWhenZero": "Ausblenden, wenn null"
     }
   },
   "draftInvoiceDetails": {

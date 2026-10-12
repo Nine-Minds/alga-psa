@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { resolveFieldPreviewValue } from './previewBindings';
+import { INVOICE_PREVIEW_SAMPLE_SCENARIOS } from './sampleScenarios';
 
 const previewInvoice: WasmInvoiceViewModel = {
   invoiceNumber: 'INV-100',
@@ -106,21 +107,31 @@ describe('previewBindings', () => {
     ).toBe('Northwind MSP');
   });
 
-  // The persisted subtotal is already net of discount lines, so the old derived value was
-  // structurally always zero. Real discount exposure is tracked separately (alga0002295).
-  it('no longer exposes a derived invoice.discount value', () => {
-    const value = resolveFieldPreviewValue({
-      invoice: {
-        ...previewInvoice,
-        subtotal: 2000,
-        tax: 100,
-        total: 1900,
-      },
-      bindingKey: 'invoice.discount',
-      format: 'currency',
-    });
+  // The persisted subtotal is already net of discount lines, so there is still no derived
+  // `invoice.discount`; the real figure is the explicit `invoice.discountTotal` (alga0002295).
+  it('keeps invoice.discount unresolved and resolves invoice.discountTotal / grossSubtotal from the model', () => {
+    const invoice = {
+      ...previewInvoice,
+      subtotal: 2000,
+      tax: 100,
+      total: 2100,
+      discountTotal: 500,
+      grossSubtotal: 2500,
+    };
 
-    expect(value.text).toBeNull();
+    expect(resolveFieldPreviewValue({ invoice, bindingKey: 'invoice.discount', format: 'currency' }).text).toBeNull();
+    expect(resolveFieldPreviewValue({ invoice, bindingKey: 'invoice.discountTotal', format: 'currency' }).text).toBe('$5.00');
+    expect(resolveFieldPreviewValue({ invoice, bindingKey: 'invoice.grossSubtotal', format: 'currency' }).text).toBe('$25.00');
+  });
+
+  it('keeps sample scenarios consistent: subtotal equals grossSubtotal minus discountTotal', () => {
+    for (const scenario of INVOICE_PREVIEW_SAMPLE_SCENARIOS) {
+      const { subtotal, grossSubtotal, discountTotal } = scenario.data;
+      expect(grossSubtotal! - discountTotal!).toBe(subtotal);
+    }
+    const byId = (id: string) => INVOICE_PREVIEW_SAMPLE_SCENARIOS.find((scenario) => scenario.id === id)!.data;
+    expect(byId('sample-discount-credit')).toMatchObject({ discountTotal: 15000, grossSubtotal: 195000, subtotal: 180000 });
+    expect(byId('sample-mixed-recurring')).toMatchObject({ discountTotal: 15000, grossSubtotal: 595400, subtotal: 580400 });
   });
 
   it('returns null recurring service period header bindings when canonical summary is missing', () => {

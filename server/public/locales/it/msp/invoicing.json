@@ -2452,7 +2452,8 @@
       "moveDown": "Sposta {{row}} verso il basso",
       "remove": "Rimuovi {{row}}",
       "label": "Etichetta",
-      "emphasize": "Evidenzia (stile del totale complessivo)"
+      "emphasize": "Evidenzia (stile del totale complessivo)",
+      "hideWhenZero": "Nascondi se zero"
     }
   },
   "draftInvoiceDetails": {

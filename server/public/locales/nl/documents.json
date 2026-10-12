@@ -69,6 +69,7 @@
     "sku": "SKU",
     "source": "Bron",
     "subtotal": "Subtotaal",
+    "subtotalBeforeDiscounts": "Subtotaal vóór kortingen",
     "tax": "Belasting",
     "termsAndConditions": "Algemene voorwaarden",
     "ticket": "Ticket",

@@ -2452,7 +2452,8 @@
       "moveDown": "{{row}} omlaag verplaatsen",
       "remove": "{{row}} verwijderen",
       "label": "Label",
-      "emphasize": "Benadrukken (stijl van eindtotaal)"
+      "emphasize": "Benadrukken (stijl van eindtotaal)",
+      "hideWhenZero": "Verbergen bij nul"
     }
   },
   "draftInvoiceDetails": {

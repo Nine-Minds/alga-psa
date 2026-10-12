@@ -2452,7 +2452,8 @@
       "moveDown": "Flytta {{row}} nedåt",
       "remove": "Ta bort {{row}}",
       "label": "Etikett",
-      "emphasize": "Framhäv (som slutsumma)"
+      "emphasize": "Framhäv (som slutsumma)",
+      "hideWhenZero": "Dölj när noll"
     }
   },
   "draftInvoiceDetails": {

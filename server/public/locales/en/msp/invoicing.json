@@ -2452,7 +2452,8 @@
       "moveDown": "Move {{row}} down",
       "remove": "Remove {{row}}",
       "label": "Label",
-      "emphasize": "Emphasize (grand total style)"
+      "emphasize": "Emphasize (grand total style)",
+      "hideWhenZero": "Hide when zero"
     }
   },
   "draftInvoiceDetails": {
