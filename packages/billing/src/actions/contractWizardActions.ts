@@ -29,12 +29,16 @@ import { cloneTemplateDefaultDiscounts } from '../lib/billing/utils/templateClon
 import ContractLine from '../models/contractLine';
 import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
-import {
-  getContractLineServicesWithConfigurations,
-  getTemplateLineServicesWithConfigurations,
-} from './contractLineServiceActions';
+import { getContractLineServicesWithConfigurations } from './contractLineServiceActions';
 
-import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
+import {
+  cloneTemplateLineToContract,
+  ensureTemplateLineSnapshot,
+  fetchDetailedContractLines,
+  fetchTemplateLineViews,
+  type TemplateLineEdits,
+  type TemplateLineView,
+} from '../repositories/contractLineRepository';
 import {
   allocateBundleBaseRate,
   getFixedServiceBasisIssue,
@@ -381,7 +385,14 @@ export type ClientContractWizardSubmission = {
   usage_billing_frequency?: string;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
+  /**
+   * Published template to clone. When set the server clones every template line
+   * (services, rates, configs, pools, defaults) inside the same transaction and
+   * records the template on the client contract; the flat `*_services` arrays
+   * and `bucket_pools` are ignored, and `template_lines` carries per-line edits.
+   */
   template_id?: string;
+  template_lines?: ClientTemplateLineEditInput[];
   /**
    * Flag-on line-level bucket pools (weighted-burn model). Each draft carries
    * the line key it belongs to ('hourly' | 'usage'); pools are materialized
@@ -403,21 +414,28 @@ export type ClientBucketPoolDraftInput = {
   members: Array<{ service_id: string; burn_multiplier: number }>;
 };
 
-export type ClientTemplateSnapshot = {
+/**
+ * Per-line edits the client wizard sends for a template-derived contract. The
+ * server clones EVERY template line and then applies the edit for the matching
+ * `template_line_id`; lines are never merged by type.
+ */
+export type ClientTemplateLineEditInput = TemplateLineEdits & {
+  template_line_id: string;
+};
+
+/**
+ * What the client wizard shows for a template: the template's lines one by one,
+ * with member rates resolved for the client's currency. Replaces the old
+ * flattened one-line-per-type snapshot, which collapsed same-type lines.
+ */
+export type ClientTemplateLinesView = {
+  template_id: string;
   contract_name?: string;
   description?: string | null;
   billing_frequency?: string | null;
-  cadence_owner?: CadenceOwner;
-  billing_timing?: 'arrears' | 'advance';
-  // currency_code removed - templates are now currency-neutral
-  // Currency is inherited from the client when a contract is created from this template
-  fixed_lines?: ContractWizardFixedLine[];
-  product_services?: ClientProductServiceInput[];
-  enable_proration?: boolean;
-  hourly_services?: ClientHourlyServiceInput[];
-  usage_services?: ClientUsageServiceInput[];
-  minimum_billable_time?: number;
-  round_up_to_nearest?: number;
+  /** The client's contract currency the rates below are resolved in. */
+  currency_code: string;
+  lines: TemplateLineView[];
 };
 
 export type ContractWizardResult = {
@@ -1038,6 +1056,30 @@ export const createContractTemplateFromWizard = withAuth(async (
 // Client wizard
 // ---------------------------------------------------------------------------
 
+/**
+ * Currency a new contract for `clientId` is billed in: the client's configured
+ * default, then the tenant default (default_billing_settings), then 'USD' as the
+ * last-resort default the contract record has always used. Shared by contract
+ * creation and the template preview so both resolve the same currency.
+ */
+const resolveClientContractCurrency = async (
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<string> => {
+  const clientRow = await tenantDb(knex, tenant).table('clients')
+    .where({ client_id: clientId })
+    .select('default_currency_code')
+    .first();
+  if (clientRow?.default_currency_code) {
+    return clientRow.default_currency_code;
+  }
+  const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
+    .select('default_currency_code')
+    .first();
+  return billingSettings?.default_currency_code || 'USD';
+};
+
 export const createClientContractFromWizard = withAuth(async (
   user,
   { tenant },
@@ -1077,7 +1119,14 @@ export const createClientContractFromWizard = withAuth(async (
     }
     const endDate = normalizeDateOnly(submission.end_date) ?? null;
 
-    const fixedLinesInput = normalizeFixedLinesInput(submission);
+    // Template mode: the template is the source of truth and is cloned line by
+    // line below, so the wizard's flat per-type state must not also create lines.
+    const templateId =
+      typeof submission.template_id === 'string' && submission.template_id.trim().length > 0
+        ? submission.template_id.trim()
+        : null;
+
+    const fixedLinesInput = templateId ? [] : normalizeFixedLinesInput(submission);
     // An unfilled placeholder (no services, no recurring amount) carries no revenue and is not written.
     const writableFixedLines = fixedLinesInput.filter(
       (line) => line.services.length > 0 || Number(line.base_rate ?? 0) > 0,
@@ -1117,18 +1166,7 @@ export const createClientContractFromWizard = withAuth(async (
     // contract record AND for matching service-period prices below, so it must be consistent.
     let resolvedCurrencyCode: string = submission.currency_code;
     if (!existingContractId) {
-      const clientRow = await tenantDb(trx, tenant).table('clients')
-        .where({ client_id: submission.client_id })
-        .select('default_currency_code')
-        .first();
-      if (clientRow?.default_currency_code) {
-        resolvedCurrencyCode = clientRow.default_currency_code;
-      } else {
-        const billingSettings = await tenantDb(trx, tenant).table('default_billing_settings')
-          .select('default_currency_code')
-          .first();
-        resolvedCurrencyCode = billingSettings?.default_currency_code || 'USD';
-      }
+      resolvedCurrencyCode = await resolveClientContractCurrency(trx, tenant, submission.client_id);
     }
 
     let baselineMonthlyCents: number | null = null;
@@ -1159,6 +1197,18 @@ export const createClientContractFromWizard = withAuth(async (
 
       if (configIds.length > 0) {
         await tenantDb(trx, tenant).table('contract_line_service_bucket_config')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        // Typed config rows keyed by config_id have no FK to the configuration
+        // row; clear them explicitly so re-saving a draft leaves no orphans.
+        await tenantDb(trx, tenant).table('contract_line_service_fixed_config')
+          .whereIn('config_id', configIds)
+          .delete();
+        await tenantDb(trx, tenant).table('contract_line_service_hourly_configs')
+          .whereIn('config_id', configIds)
+          .delete();
+        await tenantDb(trx, tenant).table('contract_line_service_rate_tiers')
           .whereIn('config_id', configIds)
           .delete();
 
@@ -1272,9 +1322,9 @@ export const createClientContractFromWizard = withAuth(async (
       });
     }
 
-    const productServiceInputs = Array.isArray(submission.product_services) ? submission.product_services : [];
-    const hourlyServiceInputs = Array.isArray(submission.hourly_services) ? submission.hourly_services : [];
-    const usageServiceInputs = Array.isArray(submission.usage_services) ? submission.usage_services : [];
+    const productServiceInputs = !templateId && Array.isArray(submission.product_services) ? submission.product_services : [];
+    const hourlyServiceInputs = !templateId && Array.isArray(submission.hourly_services) ? submission.hourly_services : [];
+    const usageServiceInputs = !templateId && Array.isArray(submission.usage_services) ? submission.usage_services : [];
 
     const filteredFixedServices = writableFixedLines.flatMap((line) => line.services);
     const filteredProductServices = productServiceInputs.filter((service) => service?.service_id);
@@ -1536,6 +1586,63 @@ export const createClientContractFromWizard = withAuth(async (
     enableProration: submission.enable_proration,
   });
 
+    if (templateId) {
+      const template = await tenantDb(trx, tenant).table('contract_templates')
+        .where({ template_id: templateId })
+        .first('template_id', 'template_status');
+      // Only published templates can be instantiated (the picker lists only
+      // those), so a draft/archived id sent directly is rejected here too.
+      if (!template || template.template_status !== 'published') {
+        throw new Error('Template not found');
+      }
+
+      const templateLineRows = await tenantDb(trx, tenant).table('contract_template_lines')
+        .where({ template_id: templateId })
+        .orderBy('display_order', 'asc')
+        .orderBy('created_at', 'asc')
+        .select('template_line_id');
+
+      const editsByTemplateLineId = new Map<string, TemplateLineEdits>();
+      for (const lineEdit of Array.isArray(submission.template_lines) ? submission.template_lines : []) {
+        if (lineEdit?.template_line_id) {
+          editsByTemplateLineId.set(lineEdit.template_line_id, lineEdit);
+        }
+      }
+
+      const unpricedServiceNames = new Set<string>();
+      for (const templateLineRow of templateLineRows as Array<{ template_line_id: string }>) {
+        // One clone routine (shared with the addContractLine API): every line is
+        // copied with its own name/frequency/services/rates/configs; the wizard's
+        // edit for this line, if any, is applied on top.
+        const cloned = await cloneTemplateLineToContract(trx, tenant, contractId, templateLineRow.template_line_id, {
+          currencyCode: contractCurrency,
+          edits: editsByTemplateLineId.get(templateLineRow.template_line_id),
+          displayOrder: nextDisplayOrder,
+        });
+        // Keep the template discount's target identity when cloning a template
+        // line directly. The flattened wizard path fills this map as each
+        // source line becomes one or more authored lines; template mode must
+        // populate it from the clone result before copying line-scoped terms.
+        sourceTemplateLineMap[templateLineRow.template_line_id] = cloned.contract_line_id;
+        createdContractLineIds.push(cloned.contract_line_id);
+        if (!primaryContractLineId) {
+          primaryContractLineId = cloned.contract_line_id;
+        }
+        cloned.unpriced_services.forEach((service) => unpricedServiceNames.add(`"${service.service_name}"`));
+        nextDisplayOrder += 1;
+      }
+
+      // Same rule as the flat path: no rate from the template/edit and no price
+      // in the contract currency means we do NOT fall back to another currency.
+      if (unpricedServiceNames.size > 0) {
+        throw new Error(
+          `Cannot create contract in ${contractCurrency}. The following services do not have ${contractCurrency} pricing and no custom rate was entered: ${Array.from(unpricedServiceNames).join(', ')}. ` +
+          `Please either add ${contractCurrency} prices to these services in the Service Catalog, or enter a custom rate in the wizard.`
+        );
+      }
+    }
+
+
     for (const [lineIndex, fixedLine] of writableFixedLines.entries()) {
       assertTemplateSourceLine(fixedLine.source_template_line_id);
       // Per-line timing and proration; cadence owner stays contract-level.
@@ -1783,7 +1890,7 @@ export const createClientContractFromWizard = withAuth(async (
     // (weighted-burn model) onto the line the draft was authored for, after
     // that line exists. Drafts whose line was not created (no services) are
     // skipped — a pool without its member line cannot carry members.
-    const poolDrafts = Array.isArray(submission.bucket_pools) ? submission.bucket_pools : [];
+    const poolDrafts = !templateId && Array.isArray(submission.bucket_pools) ? submission.bucket_pools : [];
     if (poolDrafts.length > 0) {
       for (const draft of poolDrafts) {
         const typeLines = poolLines[draft.line_key ?? 'hourly'] ?? [];
@@ -1831,6 +1938,7 @@ export const createClientContractFromWizard = withAuth(async (
     const clientContractAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
+      template_contract_id: templateId,
       start_date: startDate,
       end_date: endDate,
       is_active: !isDraft,
@@ -2026,7 +2134,9 @@ export const listContractTemplatesForWizard = withAuth(async (
 
   // currency_code removed from contract_templates - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from a template
+  // Only published templates are offered; drafts are still being authored.
   const templates = await tenantDb(knex, tenant).table('contract_templates')
+    .where({ template_status: 'published' })
     .orderBy('template_name', 'asc')
     .select(
       'template_id',
@@ -2128,11 +2238,12 @@ function mapStoredFixedLineToWizard(
   };
 }
 
-export const getContractTemplateSnapshotForClientWizard = withAuth(async (
+export const getContractTemplateLinesForClientWizard = withAuth(async (
   user,
   { tenant },
-  templateId: string
-): Promise<ClientTemplateSnapshot | ContractWizardActionError> => {
+  templateId: string,
+  clientId?: string
+): Promise<ClientTemplateLinesView | ContractWizardActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     return permissionError('Permission denied: Cannot view contract template snapshot', 'msp/contracts:errors.wizard.permissions.viewSnapshot');
   }
@@ -2146,154 +2257,23 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
     return actionError('Template not found', 'msp/contracts:errors.wizard.templateNotFound');
   }
 
-  const detailedLines = await fetchDetailedContractLines(knex, tenant, templateId);
+  // Rates are shown in the currency the contract will be created in: the
+  // client's when known, otherwise the tenant default. Never a hardcoded USD.
+  const currencyCode = clientId
+    ? await resolveClientContractCurrency(knex, tenant, clientId)
+    : (await tenantDb(knex, tenant).table('default_billing_settings')
+        .select('default_currency_code')
+        .first())?.default_currency_code || 'USD';
 
-  const fixedLines: ContractWizardFixedLine[] = [];
-  const productServices: ClientTemplateSnapshot['product_services'] = [];
-  const hourlyServices: ClientTemplateSnapshot['hourly_services'] = [];
-  const usageServices: ClientTemplateSnapshot['usage_services'] = [];
-  let minimumBillableTime: number | undefined;
-  let roundUpToNearest: number | undefined;
-  let enableProration: boolean | undefined;
-  let cadenceOwner: CadenceOwner = 'client';
-  let billingTiming: 'arrears' | 'advance' = 'arrears';
-  const servicesByLineId = new Map<
-    string,
-    Awaited<ReturnType<typeof getTemplateLineServicesWithConfigurations>>
-  >();
-  const hourlyServiceIds: string[] = [];
-  const usageServiceIds: string[] = [];
-
-  for (const line of detailedLines) {
-    const servicesWithConfig = await getTemplateLineServicesWithConfigurations(line.contract_line_id);
-    servicesByLineId.set(line.contract_line_id, servicesWithConfig);
-
-    if (line.contract_line_type === 'Hourly') {
-      hourlyServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
-    } else if (line.contract_line_type === 'Usage') {
-      usageServiceIds.push(...servicesWithConfig.map(({ service }) => service.service_id));
-    }
-  }
-
-  const templateCurrencyCode = 'USD';
-  const hourlyModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
-    knex,
-    tenant,
-    hourlyServiceIds,
-    'Hourly',
-    templateCurrencyCode
-  );
-  const usageModeDefaultsByServiceId = await fetchModeDefaultRatesByServiceId(
-    knex,
-    tenant,
-    usageServiceIds,
-    'Usage',
-    templateCurrencyCode
-  );
-
-  for (const line of detailedLines) {
-    cadenceOwner = line.cadence_owner ?? cadenceOwner;
-    billingTiming = line.billing_timing ?? billingTiming;
-    const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
-
-    if (line.contract_line_type === 'Fixed') {
-      // One wizard line per template Fixed line (lossless by construction: every line is kept).
-      const mapped = mapStoredFixedLineToWizard(line, servicesWithConfig as LineServicesWithConfig, {
-        missingUnitRate: null,
-        includeLocation: false,
-      });
-      productServices?.push(
-        ...mapped.products.map((product) => ({ ...product, source_template_line_id: line.contract_line_id })),
-      );
-      if (mapped.fixedLine) {
-        fixedLines.push({ ...mapped.fixedLine, source_template_line_id: line.contract_line_id });
-        enableProration = enableProration ?? mapped.fixedLine.enable_proration;
-      }
-    } else if (line.contract_line_type === 'Hourly') {
-      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
-        const hourlyConfig = isHourlyConfig(typeConfig) ? typeConfig : null;
-        const hourlyRateCents = firstPositiveRateInCents(
-          hourlyConfig?.hourly_rate,
-          configuration?.custom_rate,
-          hourlyModeDefaultsByServiceId.get(service.service_id),
-          service.default_rate
-        );
-
-        const minimumBillable =
-          hourlyConfig && hourlyConfig.minimum_billable_time != null
-            ? Number(hourlyConfig.minimum_billable_time)
-            : minimumBillableTime;
-        const roundUp =
-          hourlyConfig && hourlyConfig.round_up_to_nearest != null
-            ? Number(hourlyConfig.round_up_to_nearest)
-            : roundUpToNearest;
-        minimumBillableTime = minimumBillable;
-        roundUpToNearest = roundUp;
-
-        hourlyServices?.push({
-          service_id: service.service_id,
-          service_name: service.service_name,
-          source_template_line_id: line.contract_line_id,
-          hourly_rate: hourlyRateCents,
-          bucket_overlay:
-            bucketConfig && isBucketConfig(bucketConfig)
-              ? {
-                  total_minutes: bucketConfig.total_minutes ?? undefined,
-                  overage_rate:
-                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
-                  allow_rollover: Boolean(bucketConfig.allow_rollover),
-                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
-                }
-              : undefined,
-        });
-      });
-    } else if (line.contract_line_type === 'Usage') {
-      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
-        const usageConfig = isUsageConfig(typeConfig) ? typeConfig : null;
-        const unitRateCents = firstPositiveRateInCents(
-          usageConfig?.base_rate,
-          configuration?.custom_rate,
-          usageModeDefaultsByServiceId.get(service.service_id),
-          service.default_rate
-        );
-
-        usageServices?.push({
-          service_id: service.service_id,
-          service_name: service.service_name,
-          source_template_line_id: line.contract_line_id,
-          unit_rate: unitRateCents,
-          unit_of_measure:
-            usageConfig?.unit_of_measure ||
-            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
-          bucket_overlay:
-            bucketConfig && isBucketConfig(bucketConfig)
-              ? {
-                  total_minutes: bucketConfig.total_minutes ?? undefined,
-                  overage_rate:
-                    bucketConfig.overage_rate != null ? Math.round(Number(bucketConfig.overage_rate)) : undefined,
-                  allow_rollover: Boolean(bucketConfig.allow_rollover),
-                  billing_period: bucketConfig.billing_period === 'weekly' ? 'weekly' : 'monthly',
-                }
-              : undefined,
-        });
-      });
-    }
-  }
+  const lines = await fetchTemplateLineViews(knex, tenant, templateId, currencyCode);
 
   return {
+    template_id: templateId,
     contract_name: template.template_name,
     description: template.template_description,
     billing_frequency: template.default_billing_frequency,
-    cadence_owner: cadenceOwner,
-    billing_timing: billingTiming,
-    // currency_code removed - templates are now currency-neutral
-    fixed_lines: fixedLines,
-    product_services: productServices,
-    enable_proration: enableProration,
-    hourly_services: hourlyServices,
-    usage_services: usageServices,
-    minimum_billable_time: minimumBillableTime,
-    round_up_to_nearest: roundUpToNearest,
+    currency_code: currencyCode,
+    lines,
   };
 });
 
@@ -2345,6 +2325,12 @@ export type DraftContractWizardData = {
   contract_id: string;
   is_draft: true;
   template_id?: string;
+  /**
+   * Per-line edits rebuilt from the saved (already cloned) lines for a
+   * template-derived draft, so resuming and re-saving does not revert edits.
+   * Absent when the saved lines can no longer be paired with the template's.
+   */
+  template_lines?: ClientTemplateLineEditInput[];
 };
 
 export const getDraftContractForResume = withAuth(async (
@@ -2602,6 +2588,51 @@ export const getDraftContractForResume = withAuth(async (
         : undefined
       : undefined;
 
+  // Template-derived draft: re-express the saved lines as per-line edits keyed
+  // by template line id. The clone preserves template line order, so lines are
+  // paired by position; if the counts differ (template edited since, or a line
+  // removed) we cannot pair safely and resume shows the template unedited.
+  let templateLineEdits: ClientTemplateLineEditInput[] | undefined;
+  if (clientContract.template_contract_id) {
+    const templateLineRows = (await tenantDb(knex, tenant).table('contract_template_lines')
+      .where({ template_id: clientContract.template_contract_id })
+      .orderBy('display_order', 'asc')
+      .orderBy('created_at', 'asc')
+      .select('template_line_id')) as Array<{ template_line_id: string }>;
+
+    if (templateLineRows.length > 0 && templateLineRows.length === detailedLines.length) {
+      templateLineEdits = detailedLines.map((line, index) => {
+        const members = servicesByLineId.get(line.contract_line_id) ?? [];
+        const edit: ClientTemplateLineEditInput = {
+          template_line_id: templateLineRows[index].template_line_id,
+          line_name: line.contract_line_name,
+          billing_frequency: line.billing_frequency,
+        };
+        if (line.contract_line_type === 'Fixed') {
+          edit.fixed_base_rate = line.rate != null ? Math.round(Number(line.rate)) : null;
+        }
+        edit.services = members.map(({ service, configuration, typeConfig }) => {
+          let rate: number | null = null;
+          if (line.contract_line_type === 'Hourly' && isHourlyConfig(typeConfig)) {
+            rate = typeConfig.hourly_rate != null ? Math.round(Number(typeConfig.hourly_rate)) : null;
+            edit.minimum_billable_time = typeConfig.minimum_billable_time ?? null;
+            edit.round_up_to_nearest = typeConfig.round_up_to_nearest ?? null;
+          } else if (line.contract_line_type === 'Usage' && isUsageConfig(typeConfig)) {
+            rate = typeConfig.base_rate != null ? Math.round(Number(typeConfig.base_rate)) : null;
+          } else if (configuration?.custom_rate != null) {
+            rate = Math.round(Number(configuration.custom_rate));
+          }
+          return {
+            service_id: service.service_id,
+            quantity: configuration?.quantity != null ? Number(configuration.quantity) : null,
+            rate,
+          };
+        });
+        return edit;
+      });
+    }
+  }
+
   const resumed: DraftContractWizardData = {
     client_id: clientContract.client_id,
     billing_profile_id: clientContract.billing_profile_id ?? null,
@@ -2640,14 +2671,21 @@ export const getDraftContractForResume = withAuth(async (
     contract_id: contractId,
     is_draft: true,
     template_id: clientContract.template_contract_id ?? undefined,
+    template_lines: templateLineEdits,
   };
 
   // Fidelity: the wizard must be able to hold everything that affects revenue. If re-projecting the
   // resumed data differs from what is stored, refuse rather than let Finish Setup rewrite it.
-  const differences = diffRecurringShapes(
-    recurringShapeFromStoredLines(storedLines, { contractBillingFrequency: resumed.billing_frequency }),
-    recurringShapeFromWizard(resumed),
-  );
+  // A template-derived draft is re-saved by re-cloning the template with the per-line edits above
+  // (per-line cadence, billable-time rounding and rates included), not from the flat wizard lines,
+  // so the flat projection does not describe what it will write; the save-time monthly-value guard
+  // still covers it.
+  const differences = resumed.template_id
+    ? []
+    : diffRecurringShapes(
+        recurringShapeFromStoredLines(storedLines, { contractBillingFrequency: resumed.billing_frequency }),
+        recurringShapeFromWizard(resumed),
+      );
   if (differences.length > 0) {
     const summary = differences.map((d) => d.message).join('; ');
     return actionError(

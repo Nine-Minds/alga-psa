@@ -2422,6 +2422,32 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const hourlyTemplateLineId = uuidv4();
     let createdContractId: string | undefined;
     const scopedInvoiceId = uuidv4();
+    const insertTemplateSourceLine = async (lineId: string, type: 'Fixed' | 'Hourly', lineRate: number | null, memberRate: number) => {
+      if (type === 'Fixed') {
+        await db('contract_template_line_fixed_config').insert({
+          tenant, template_line_id: lineId, base_rate: lineRate, enable_proration: false,
+        });
+      }
+      await db('contract_template_line_services').insert({
+        tenant, template_line_id: lineId, service_id: serviceId, quantity: 1,
+        custom_rate: type === 'Fixed' ? memberRate : null, display_order: 0,
+      });
+      const configId = uuidv4();
+      await db('contract_template_line_service_configuration').insert({
+        tenant, config_id: configId, template_line_id: lineId, service_id: serviceId,
+        configuration_type: type, custom_rate: type === 'Fixed' ? memberRate : null, quantity: 1,
+      });
+      if (type === 'Fixed') {
+        await db('contract_template_line_service_fixed_config').insert({
+          tenant, config_id: configId, base_rate: memberRate, pricing_basis: 'bundle',
+        });
+      } else {
+        await db('contract_template_line_service_hourly_config').insert({
+          tenant, config_id: configId, minimum_billable_time: 15, round_up_to_nearest: 15,
+          hourly_rate: memberRate,
+        });
+      }
+    };
     await db('contract_templates').insert({
       tenant, template_id: templateId, template_name: 'Repeated-service identity template',
       default_billing_frequency: 'monthly', template_status: 'published',
@@ -2432,23 +2458,17 @@ describe('contract invoice adjustments (DB-backed)', () => {
       ] },
     });
     await db('contract_template_lines').insert([
-      { tenant, template_line_id: fixedTemplateLineId, template_id: templateId, template_line_name: 'Fixed source', billing_frequency: 'monthly', line_type: 'Fixed', is_active: true },
-      { tenant, template_line_id: hourlyTemplateLineId, template_id: templateId, template_line_name: 'Hourly source', billing_frequency: 'monthly', line_type: secondType, is_active: true },
+      { tenant, template_line_id: fixedTemplateLineId, template_id: templateId, template_line_name: 'Fixed source', billing_frequency: 'monthly', line_type: 'Fixed', custom_rate: secondType === 'Fixed' ? 5_000 : 10_000, is_active: true },
+      { tenant, template_line_id: hourlyTemplateLineId, template_id: templateId, template_line_name: 'Hourly source', billing_frequency: 'monthly', line_type: secondType, custom_rate: secondType === 'Fixed' ? 5_000 : null, is_active: true },
     ]);
+    await insertTemplateSourceLine(fixedTemplateLineId, 'Fixed', secondType === 'Fixed' ? 5_000 : 10_000, secondType === 'Fixed' ? 5_000 : 10_000);
+    await insertTemplateSourceLine(hourlyTemplateLineId, secondType, secondType === 'Fixed' ? 5_000 : null, secondType === 'Fixed' ? 5_000 : 2_000);
     try {
       const { createClientContractFromWizard } = await import('../actions/contractWizardActions');
       const { runWithTenant } = await import('@alga-psa/db');
       const created = await runWithTenant(tenant, () => createClientContractFromWizard({
         contract_name: 'Repeated service contract', client_id: clientId, start_date: '2026-09-01', currency_code: 'USD',
         enable_proration: false, template_id: templateId,
-        // One wizard fixed line per template Fixed line; the 10,000 total is split across them.
-        fixed_lines: projectFixedLinesForSubmission([
-          { line_key: 'fixed-source', source_template_line_id: fixedTemplateLineId, enable_proration: false,
-            base_rate: secondType === 'Fixed' ? 5_000 : 10_000, services: [{ service_id: serviceId, quantity: 1, pricing_basis: 'bundle' }] },
-          ...(secondType === 'Fixed' ? [{ line_key: 'second-source', source_template_line_id: hourlyTemplateLineId, enable_proration: false,
-            base_rate: 5_000, services: [{ service_id: serviceId, quantity: 1, pricing_basis: 'bundle' as const }] }] : []),
-        ]),
-        hourly_services: secondType === 'Hourly' ? [{ service_id: serviceId, hourly_rate: 2_000, source_template_line_id: hourlyTemplateLineId }] : [],
       }, { isDraft: true }));
       expect(created).toHaveProperty('contract_id');
       createdContractId = (created as any).contract_id;
@@ -2562,6 +2582,16 @@ describe('contract invoice adjustments (DB-backed)', () => {
         }
         await db('contracts').where({ tenant, contract_id: createdContractId }).delete();
       }
+      const templateConfigIds = await db('contract_template_line_service_configuration')
+        .where({ tenant }).whereIn('template_line_id', [fixedTemplateLineId, hourlyTemplateLineId]).pluck('config_id');
+      if (templateConfigIds.length) {
+        await db('contract_template_line_service_fixed_config').where({ tenant }).whereIn('config_id', templateConfigIds).delete();
+        await db('contract_template_line_service_hourly_config').where({ tenant }).whereIn('config_id', templateConfigIds).delete();
+        await db('contract_template_line_service_usage_config').where({ tenant }).whereIn('config_id', templateConfigIds).delete();
+        await db('contract_template_line_service_configuration').where({ tenant }).whereIn('config_id', templateConfigIds).delete();
+      }
+      await db('contract_template_line_services').where({ tenant }).whereIn('template_line_id', [fixedTemplateLineId, hourlyTemplateLineId]).delete();
+      await db('contract_template_line_fixed_config').where({ tenant }).whereIn('template_line_id', [fixedTemplateLineId, hourlyTemplateLineId]).delete();
       await db('contract_template_lines').where({ tenant }).whereIn('template_line_id', [fixedTemplateLineId, hourlyTemplateLineId]).delete();
       await db('contract_templates').where({ tenant, template_id: templateId }).delete();
     }
