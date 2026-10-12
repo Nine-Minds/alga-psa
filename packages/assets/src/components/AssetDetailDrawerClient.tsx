@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCpuSummary } from '../lib/extensionDisplay';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useClientDrawer } from '@alga-psa/ui';
@@ -549,8 +550,10 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
           <ConfigurationRow label={t('assetDetailDrawer.configuration.serialNumber', { defaultValue: 'Serial number' })} value={asset.serial_number || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
           <ConfigurationRow label={t('assetDetailDrawer.configuration.location', { defaultValue: 'Location' })} value={asset.location || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={asset.purchase_date ? formatDate(asset.purchase_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={asset.warranty_end_date ? formatDate(asset.warranty_end_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          {/* Calendar days, not instants: formatDate would show the previous
+              day west of UTC, with a meaningless midnight time beside it. */}
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
         </div>
       </Card>
 

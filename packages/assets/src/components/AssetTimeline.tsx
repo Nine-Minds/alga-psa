@@ -30,6 +30,7 @@ import type {
 } from '@alga-psa/types';
 import { getAssetHistory, getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 
 type Lane = 'all' | 'service' | 'changes' | 'maintenance' | 'system';
 
@@ -56,6 +57,18 @@ export function formatEventAge(iso: string, now: number, locale?: string): strin
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(locale);
+}
+
+/**
+ * Milestones taken from a date column (`purchase_date`) rather than from an
+ * instant: the column holds UTC midnight for a calendar day, so feeding it
+ * straight to the formatter puts the event on the previous day west of UTC —
+ * the timeline read "Purchased May 22" while the Identity tile and the edit
+ * form both said May 23. Re-anchoring to local midnight keeps the three in
+ * agreement; instants (reboot, patch scan) are left alone.
+ */
+export function calendarMilestoneAt(value: string | null | undefined): string | undefined {
+  return calendarDateToLocalDate(value)?.toISOString();
 }
 
 /** "status_change" → "Status change". */
@@ -294,11 +307,12 @@ export function AssetTimeline({
         }),
       });
     }
-    if (asset.purchase_date) {
+    const purchasedAt = calendarMilestoneAt(asset.purchase_date);
+    if (purchasedAt) {
       list.push({
         id: 'system-purchased',
         lane: 'system',
-        at: asset.purchase_date,
+        at: purchasedAt,
         icon: Boxes,
         tone: 'neutral',
         title: t('assetTimeline.events.purchased', { defaultValue: 'Purchased' }),
