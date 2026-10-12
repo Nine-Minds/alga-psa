@@ -1010,11 +1010,6 @@
   },
   "assets": {
     "columns": {
-      "name": "〖Ƞȧḿḗ ··〗",
-      "type": "〖Ŧẏƥḗ ··〗",
-      "status": "〖Şŧȧŧŭş ···〗",
-      "location": "〖Ŀȯƈȧŧīȯƞ ····〗",
-      "lastUpdated": "〖Ŀȧşŧ Ŭƥḓȧŧḗḓ ·····〗",
       "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗"
     },
     "statuses": {
@@ -1024,8 +1019,6 @@
       "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
       "retired": "〖Řḗŧīřḗḓ ···〗"
     },
-    "notAvailable": "〖Ƞ/Ȧ ··〗",
-    "detailsTitle": "〖Ȧşşḗŧ Ḓḗŧȧīŀş ······〗",
     "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗",
     "sharedWorkspace": "〖Şħȧřḗḓ ẇȯřķşƥȧƈḗ: {{name}} ···········〗",
     "sharedWorkspaceLabel": "〖Şħȧřḗḓ ẇȯřķşƥȧƈḗ ·······〗"

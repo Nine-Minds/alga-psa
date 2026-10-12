@@ -1004,11 +1004,6 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Standort",
-      "lastUpdated": "Zuletzt aktualisiert",
       "assignedTo": "Zugewiesen an"
     },
     "statuses": {
@@ -1018,8 +1013,6 @@
       "inactive": "Inaktiv",
       "retired": "Ausgemustert"
     },
-    "notAvailable": "N/V",
-    "detailsTitle": "Asset-Details",
     "unassigned": "Nicht zugewiesen",
     "sharedWorkspace": "Gemeinsamer Arbeitsplatz: {{name}}",
     "sharedWorkspaceLabel": "Gemeinsamer Arbeitsplatz"

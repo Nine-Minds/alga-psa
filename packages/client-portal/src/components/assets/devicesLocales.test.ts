@@ -24,6 +24,11 @@ const REQUIRED_DEVICE_KEYS = [
   'devices.columns.updated',
   'devices.notAvailable',
   'devices.detailsTitle',
+  // FR-C6 / FR-E7b: the device list's Assigned-to column shares these with the
+  // details panel.
+  'assets.columns.assignedTo',
+  'assets.unassigned',
+  'assets.sharedWorkspace',
   'dashboard.timeAgo.justNow',
   'dashboard.timeAgo.minutes',
   'dashboard.timeAgo.hours',

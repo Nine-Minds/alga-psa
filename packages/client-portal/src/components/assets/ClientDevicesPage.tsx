@@ -202,6 +202,21 @@ export function ClientDevicesPage() {
       },
     },
     {
+      // FR-C6 / FR-E7b: who has the device — the contact name only, or the
+      // shared workspace it belongs to. The `assets.*` keys are shared with
+      // AssetDetails, which says the same thing about the same row.
+      title: t('assets.columns.assignedTo', 'Assigned to'),
+      dataIndex: 'contact_name',
+      sortable: false,
+      render: (value: string | null | undefined, record: Asset) =>
+        record.group?.kind === 'shared_workspace'
+          ? t('assets.sharedWorkspace', {
+              defaultValue: 'Shared workspace: {{name}}',
+              name: record.group.name,
+            })
+          : value || t('assets.unassigned', 'Unassigned'),
+    },
+    {
       title: t('devices.columns.location', 'Location'),
       dataIndex: 'location',
       render: (value?: string) => value || t('devices.notAvailable', 'N/A'),

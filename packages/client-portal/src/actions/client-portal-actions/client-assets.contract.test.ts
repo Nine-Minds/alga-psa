@@ -57,4 +57,23 @@ describe('client-assets server action contract', () => {
     // No read of `assets` bypasses scopedAssets (the only call is inside it).
     expect(source.match(/tenantScopedTable\(trx, 'assets', tenant\)/g)).toHaveLength(1);
   });
+
+  it('F040/F081: every row read carries the assignee name and the group summary', () => {
+    // `assets` holds a contact id and no group, so the portal's "Assigned to"
+    // and "Shared workspace" rows need the join and the summaries.
+    expect(source).toContain("'contacts.full_name as contact_name'");
+    expect(source).toContain('getAssetGroupSummariesForAssets');
+    expect(source).toContain('await getAssetGroupSummary(trx, tenant, assetId)');
+    expect(source).toContain('withAssigneeName(trx, tenant, baseQuery())');
+    expect(
+      source.match(/withAssigneeName\(trx, tenant, scopedAssets\(trx, tenant, visibility\)\)/g),
+    ).toHaveLength(2);
+  });
+
+  it('sorts on qualified asset columns so the contacts join stays unambiguous', () => {
+    // `contacts` has its own updated_at: an unqualified ORDER BY would be a
+    // 42702 on the default sort.
+    expect(source).toContain("updated_at: 'assets.updated_at'");
+    expect(source).toContain(".orderBy('assets.updated_at', 'desc')");
+  });
 });

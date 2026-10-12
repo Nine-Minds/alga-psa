@@ -1008,11 +1008,6 @@
   },
   "assets": {
     "columns": {
-      "name": "Nazwa",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Lokalizacja",
-      "lastUpdated": "Ostatnia aktualizacja",
       "assignedTo": "Przypisano do"
     },
     "statuses": {
@@ -1022,8 +1017,6 @@
       "inactive": "Nieaktywny",
       "retired": "Wycofany"
     },
-    "notAvailable": "Brak",
-    "detailsTitle": "Szczegóły zasobu",
     "unassigned": "Nieprzypisany",
     "sharedWorkspace": "Współdzielone stanowisko: {{name}}",
     "sharedWorkspaceLabel": "Współdzielone stanowisko"

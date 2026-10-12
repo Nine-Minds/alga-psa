@@ -5,6 +5,10 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { Asset, IUserWithRoles } from '@alga-psa/types';
 import { applyAssetVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
+import {
+  getAssetGroupSummariesForAssets,
+  getAssetGroupSummary,
+} from '@alga-psa/assets/lib/assetGroups';
 import { getClientContactVisibilityContext } from './visibilityResolver';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
@@ -43,11 +47,12 @@ export interface ListClientAssetsResponse {
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
+// Qualified: row reads join `contacts`, which carries its own `updated_at`.
 const SORT_FIELDS: Record<ClientAssetSortField, string> = {
-  name: 'name',
-  asset_type: 'asset_type',
-  status: 'status',
-  updated_at: 'updated_at',
+  name: 'assets.name',
+  asset_type: 'assets.asset_type',
+  status: 'assets.status',
+  updated_at: 'assets.updated_at',
 };
 
 function tenantScopedTable(
@@ -101,6 +106,46 @@ function scopedAssets(
     // FR-E7 / FR-E7b: a shared-workspace member is visible to its users.
     sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
   });
+}
+
+/**
+ * FR-C6: the portal names the person a device is assigned to, and `assets`
+ * stores only the contact id — so every row read joins `contacts`. Counts never
+ * need the join, which is why it lives here and not in `scopedAssets`.
+ */
+function withAssigneeName(
+  trx: Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+): Knex.QueryBuilder {
+  tenantDb(trx, tenant).tenantJoin(
+    query,
+    'contacts',
+    'contacts.contact_name_id',
+    'assets.contact_name_id',
+    { type: 'left' },
+  );
+  return query.select('assets.*', 'contacts.full_name as contact_name');
+}
+
+/**
+ * FR-E7b: a shared-workspace member reads as its workspace rather than as one
+ * person, so the group summary travels with every asset the portal returns.
+ */
+async function serializeWithGroups(
+  trx: Knex.Transaction,
+  tenant: string,
+  rows: Array<Asset & Record<string, unknown>>,
+): Promise<Asset[]> {
+  const summaries = await getAssetGroupSummariesForAssets(
+    trx,
+    tenant,
+    rows.map((row) => row.asset_id),
+  );
+  return rows.map((row) => ({
+    ...serializeAsset(row),
+    group: summaries.get(row.asset_id) ?? null,
+  }));
 }
 
 /**
@@ -175,13 +220,13 @@ export const listClientAssets = withAuth(async (
     }
 
     const offset = (page - 1) * limit;
-    const rows = await baseQuery()
+    const rows = await withAssigneeName(trx, tenant, baseQuery())
       .orderBy(sortField, sortDirection)
       .limit(limit)
       .offset(offset);
 
       return {
-        assets: rows.map(serializeAsset),
+        assets: await serializeWithGroups(trx, tenant, rows),
         total: Number(filteredCount?.count ?? 0),
         active: Number(statusCounts?.active ?? 0),
         inactive: Number(statusCounts?.inactive ?? 0),
@@ -208,9 +253,9 @@ export const getClientAssets = withAuth(async (
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const visibility = await resolveAssetVisibility(trx, user, tenant);
-      const assets = await scopedAssets(trx, tenant, visibility)
-        .orderBy('updated_at', 'desc');
-      return assets.map(serializeAsset);
+      const assets = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
+        .orderBy('assets.updated_at', 'desc');
+      return serializeWithGroups(trx, tenant, assets);
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);
@@ -236,10 +281,14 @@ export const getClientAssetById = withAuth(async (
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const visibility = await resolveAssetVisibility(trx, user, tenant);
-      const row = await scopedAssets(trx, tenant, visibility)
+      const row = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
         .where('assets.asset_id', assetId)
         .first();
-      return row ? serializeAsset(row) : null;
+      if (!row) return null;
+      return {
+        ...serializeAsset(row),
+        group: await getAssetGroupSummary(trx, tenant, assetId),
+      };
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);

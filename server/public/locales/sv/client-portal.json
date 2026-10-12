@@ -1010,11 +1010,6 @@
   },
   "assets": {
     "columns": {
-      "name": "Namn",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Plats",
-      "lastUpdated": "Senast uppdaterad",
       "assignedTo": "Tilldelad till"
     },
     "statuses": {
@@ -1024,8 +1019,6 @@
       "inactive": "Inaktiv",
       "retired": "Utfasad"
     },
-    "notAvailable": "Saknas",
-    "detailsTitle": "Enhetsdetaljer",
     "unassigned": "Ej tilldelad",
     "sharedWorkspace": "Delad arbetsplats: {{name}}",
     "sharedWorkspaceLabel": "Delad arbetsplats"

@@ -110,12 +110,31 @@ describe('ticket-from-asset requester (FR-E8)', () => {
 
 describe('client portal asset surfaces (FR-E7)', () => {
   it('T121: the portal list and detail name the shared workspace', () => {
-    const list = source('packages/client-portal/src/components/assets/AssetList.tsx');
+    // The live list is ClientDevicesPage (routed at /client-portal/devices);
+    // asserting a component nothing renders is how this row went missing once.
+    const list = source('packages/client-portal/src/components/assets/ClientDevicesPage.tsx');
     const detail = source('packages/client-portal/src/components/assets/AssetDetails.tsx');
 
-    expect(list).toMatch(/record\.group/);
+    expect(list).toMatch(/record\.group\?\.kind === 'shared_workspace'/);
     expect(list).toContain("t('assets.sharedWorkspace'");
+    expect(list).toContain("t('assets.columns.assignedTo'");
+    expect(list).toContain("t('assets.unassigned'");
     expect(detail).toContain("t('assets.sharedWorkspaceLabel'");
+  });
+
+  it('T030/T121: the portal read supplies the assignee and group those bind to', () => {
+    const text = source('packages/client-portal/src/actions/client-portal-actions/client-assets.ts');
+
+    // `assets` stores a contact id and no group, so a bare `assets.*` read
+    // renders every device as "Unassigned".
+    expect(text).toMatch(/'contacts\.full_name as contact_name'/);
+    expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
+    expect(text).toContain('await getAssetGroupSummary(trx, tenant, assetId)');
+    // Every row read goes through the joining helper.
+    expect(text).toMatch(/withAssigneeName\(trx, tenant, baseQuery\(\)\)/);
+    expect(
+      text.match(/withAssigneeName\(trx, tenant, scopedAssets\(trx, tenant, visibility\)\)/g),
+    ).toHaveLength(2);
   });
 
   it('T154: the portal asset picker and ticket creation use the extended filter', () => {
@@ -214,13 +233,9 @@ describe('status slug never reaches the screen (F021)', () => {
   });
 
   it('T030: the portal and mobile read-only surfaces humanize the slug', () => {
-    for (const file of [
-      'packages/client-portal/src/components/assets/AssetList.tsx',
-      'packages/client-portal/src/components/assets/AssetDetails.tsx',
-    ]) {
-      expect(source(file)).toMatch(/assets\.statuses\.\$\{(value|asset\.status)\}/);
-      expect(source(file)).toMatch(/assetStatusLabelForSlug\((value|asset\.status), null\)/);
-    }
+    const detail = source('packages/client-portal/src/components/assets/AssetDetails.tsx');
+    expect(detail).toMatch(/assets\.statuses\.\$\{asset\.status\}/);
+    expect(detail).toMatch(/assetStatusLabelForSlug\(asset\.status, null\)/);
 
     const portalLocale = JSON.parse(source('server/public/locales/en/client-portal.json'));
     expect(Object.keys(portalLocale.assets.statuses)).toEqual([

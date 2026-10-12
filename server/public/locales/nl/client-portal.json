@@ -1004,11 +1004,6 @@
   },
   "assets": {
     "columns": {
-      "name": "Naam",
-      "type": "Type",
-      "status": "Status",
-      "location": "Locatie",
-      "lastUpdated": "Laatst bijgewerkt",
       "assignedTo": "Toegewezen aan"
     },
     "statuses": {
@@ -1018,8 +1013,6 @@
       "inactive": "Inactief",
       "retired": "Afgevoerd"
     },
-    "notAvailable": "N.v.t.",
-    "detailsTitle": "Asset-details",
     "unassigned": "Niet toegewezen",
     "sharedWorkspace": "Gedeelde werkplek: {{name}}",
     "sharedWorkspaceLabel": "Gedeelde werkplek"

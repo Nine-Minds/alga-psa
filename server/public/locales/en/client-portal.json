@@ -1010,11 +1010,6 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Type",
-      "status": "Status",
-      "location": "Location",
-      "lastUpdated": "Last Updated",
       "assignedTo": "Assigned to"
     },
     "statuses": {
@@ -1024,8 +1019,6 @@
       "inactive": "Inactive",
       "retired": "Retired"
     },
-    "notAvailable": "N/A",
-    "detailsTitle": "Asset Details",
     "unassigned": "Unassigned",
     "sharedWorkspace": "Shared workspace: {{name}}",
     "sharedWorkspaceLabel": "Shared workspace"

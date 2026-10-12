@@ -212,3 +212,26 @@ a local `humanizeStatus` on the mobile screen, matching
 
 Not changed: `ClientDevicesPage` still shows the portal's binary
 Active/Inactive chip, which predates the registry and is not a slug leak.
+
+## Round: the portal showed "Unassigned" for every device
+
+Review found F040/F081 dead on the live portal. `client-assets.ts` read bare
+`assets.*` — no `contacts` join, no group summary — while `AssetDetails` bound
+to `asset.contact_name` and `asset.group`, so every assigned device read
+"Assigned to: Unassigned" and "Shared workspace" could never appear. Worse than
+a missing row: wrong information, on the surface the client actually sees.
+
+Fixed at the read: `withAssigneeName` left-joins `contacts` for
+`contact_name` on each row read (counts don't need it, which is why it is not in
+`scopedAssets`), and `serializeWithGroups` / `getAssetGroupSummary` attach the
+group to `listClientAssets`, `getClientAssets` and `getClientAssetById`. Because
+`contacts` carries its own `updated_at`, `SORT_FIELDS` and the preview's
+`orderBy` are now qualified — unqualified they would be a 42702 on the default
+sort. Verified against this card's database: the joined query returns
+"Wanda West" for the front-desk laptop and its bundle membership.
+
+The Assigned-to column went onto `ClientDevicesPage`, the component the
+`/client-portal/devices` route renders. The old `AssetList.tsx` — dead since the
+Nx split, imported by nothing — is deleted along with the seven locale keys only
+it used; the contract tests that greped it now grep the live list and the read
+action, which is what let the defect pass round 2.
