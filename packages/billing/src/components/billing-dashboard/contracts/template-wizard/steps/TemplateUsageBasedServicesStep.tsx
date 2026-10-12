@@ -225,6 +225,7 @@ export function TemplateUsageBasedServicesStep({
                       onChange={(next) => updateBucketOverlay(index, next)}
                       automationId={`template-usage-bucket-${index}`}
                       billingFrequency={data.billing_frequency}
+                      currencyCode={data.currency_code || undefined}
                     />
                   )}
                 </div>

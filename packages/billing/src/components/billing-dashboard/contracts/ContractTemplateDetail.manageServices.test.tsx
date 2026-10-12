@@ -49,6 +49,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [],
 }));
+vi.mock('./TemplatePricingSection', () => ({ TemplatePricingSection: () => null }));
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({
   default: () => <div />,
 }));

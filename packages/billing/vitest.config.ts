@@ -88,6 +88,7 @@ export default defineConfig({
       'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
     ],

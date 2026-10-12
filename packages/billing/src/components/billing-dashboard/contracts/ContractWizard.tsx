@@ -19,6 +19,7 @@ import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgres
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { Button } from "@alga-psa/ui/components/Button";
+import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
@@ -30,6 +31,10 @@ import {
   TemplateLinesStep,
   TemplateLinesReview,
 } from "./wizard-steps/TemplateLinesStep";
+import {
+  findMissingTemplateAmounts,
+  missingTemplateAmountsMessage,
+} from "./wizard-steps/templateLineAmounts";
 import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
@@ -224,6 +229,8 @@ export interface ContractWizardData {
   template_id?: string;
   /** Per-line edits (keyed by template line id) applied on top of the clone. */
   template_lines?: ClientTemplateLineEditInput[];
+  /** Save the amounts entered for a non-base currency back to the template as a price set. */
+  save_template_amounts?: boolean;
 }
 
 export const createDefaultContractWizardData = (): ContractWizardData => ({
@@ -251,6 +258,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   bucket_pools: [],
   template_id: undefined,
   template_lines: undefined,
+  save_template_amounts: false,
 });
 
 const normalizeRenewalMode = (
@@ -316,6 +324,9 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string;
+  price_set_currencies?: string[];
+  incomplete_set_currencies?: string[];
 };
 
 interface ContractWizardProps {
@@ -370,6 +381,7 @@ export function ContractWizard({
   const [templateView, setTemplateView] =
     useState<ClientTemplateLinesView | null>(null);
   const [isTemplateViewLoading, setIsTemplateViewLoading] = useState(false);
+  const templateViewCurrency = useRef<string | null>(null);
   const [templateViewError, setTemplateViewError] = useState<string | null>(
     null,
   );
@@ -539,7 +551,7 @@ export function ContractWizard({
     if (!templateId) {
       applyTemplateDefaultsFor.current = null;
       setTemplateView(null);
-      updateData({ template_id: undefined, template_lines: undefined });
+      updateData({ template_id: undefined, template_lines: undefined, save_template_amounts: false });
       return;
     }
 
@@ -549,6 +561,7 @@ export function ContractWizard({
     updateData({
       template_id: templateId,
       template_lines: [],
+      save_template_amounts: false,
       fixed_lines: [createEmptyFixedLine(wizardData.enable_proration)],
       product_services: [],
       hourly_services: [],
@@ -581,7 +594,18 @@ export function ContractWizard({
           setTemplateError(message);
           return;
         }
+        // Amount edits are denominated in the contract currency: a currency
+        // change (new client) invalidates every entered or prefilled amount.
+        const previousCurrency = templateViewCurrency.current;
+        templateViewCurrency.current = view.currency_code;
         setTemplateView(view);
+        if (previousCurrency && previousCurrency !== view.currency_code) {
+          setWizardData((prev) => ({
+            ...prev,
+            template_lines: [],
+            save_template_amounts: false,
+          }));
+        }
         if (applyTemplateDefaultsFor.current === templateId) {
           applyTemplateDefaultsFor.current = null;
           setWizardData((prev) => ({
@@ -680,6 +704,9 @@ export function ContractWizard({
         template_id: wizardData.template_id,
         template_lines: wizardData.template_id
           ? (wizardData.template_lines ?? [])
+          : undefined,
+        save_template_amounts: wizardData.template_id
+          ? Boolean(wizardData.save_template_amounts)
           : undefined,
       };
 
@@ -867,6 +894,20 @@ export function ContractWizard({
         return true;
       case 1:
         {
+        if (wizardData.template_id && templateView) {
+          const missing = findMissingTemplateAmounts(
+            templateView,
+            wizardData.template_lines ?? [],
+          );
+          if (missing.length > 0) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: missingTemplateAmountsMessage(t, templateView, missing),
+            }));
+            return false;
+          }
+        }
+          if (wizardData.template_id) return true;
           const lines = meaningfulFixedLines(wizardData.fixed_lines);
           const basisIssue = lines
             .flatMap((line) => line.services)
@@ -945,6 +986,19 @@ export function ContractWizard({
               }),
             }));
             return false;
+          }
+  if (templateView) {
+            const missing = findMissingTemplateAmounts(
+              templateView,
+              wizardData.template_lines ?? [],
+            );
+            if (missing.length > 0) {
+              setErrors((prev) => ({
+                ...prev,
+                [stepIndex]: missingTemplateAmountsMessage(t, templateView, missing),
+              }));
+              return false;
+            }
           }
           return true;
         }
@@ -1230,6 +1284,32 @@ export function ContractWizard({
                   edits={wizardData.template_lines ?? []}
                 />
               )}
+              {templateView &&
+                templateView.amount_source !== "base" &&
+                templateView.can_save_template_amounts && (
+                  <Checkbox
+                    id="save-template-amounts"
+                    checked={Boolean(wizardData.save_template_amounts)}
+                    onChange={(event) =>
+                      updateData({
+                        save_template_amounts: event.target.checked,
+                      })
+                    }
+                    label={
+                      templateView.amount_source === "price_set"
+                        ? t("review.saveMissingTemplateRates", {
+                            defaultValue:
+                              "Add the missing {{currency}} rates to the template",
+                            currency: templateView.currency_code,
+                          })
+                        : t("review.saveTemplateRates", {
+                            defaultValue:
+                              "Save these {{currency}} rates to the template",
+                            currency: templateView.currency_code,
+                          })
+                    }
+                  />
+                )}
             </div>
           );
         }

@@ -40,6 +40,9 @@ type TemplateOption = {
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string;
+  price_set_currencies?: string[];
+  incomplete_set_currencies?: string[];
 };
 
 interface ContractBasicsStepProps {
@@ -123,10 +126,30 @@ export function ContractBasicsStep({
     setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
 
-  const templateOptions = templates.map((template) => ({
-    value: template.contract_id,
-    label: template.contract_name,
-  }));
+  // Templates are never hidden by currency. Each shows its base currency, and
+  // once the client's currency is known a template without a complete price set
+  // for it is flagged: its structure still clones, but amounts must be entered.
+  const templateNeedsRates = (template: TemplateOption): boolean => {
+    const base = template.currency_code;
+    if (!base || !data.client_id || !data.currency_code || base === data.currency_code) return false;
+    const hasSet = (template.price_set_currencies ?? []).includes(data.currency_code);
+    const incomplete = (template.incomplete_set_currencies ?? []).includes(data.currency_code);
+    return !hasSet || incomplete;
+  };
+  const templateOptions = templates.map((template) => {
+    const needs = templateNeedsRates(template);
+    const badge = template.currency_code ? ` · ${template.currency_code}` : '';
+    const hint = needs
+      ? ` · ${t('wizard.templatePicker.needsRates', {
+          defaultValue: 'Needs {{currency}} rates',
+          currency: data.currency_code,
+        })}`
+      : '';
+    return {
+      value: template.contract_id,
+      label: `${template.contract_name}${badge}${hint}`,
+    };
+  });
   const renewalModeOptions = [
     {
       value: 'none',
@@ -233,6 +256,14 @@ export function ContractBasicsStep({
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
                 : t('wizardBasics.template.preview.notSpecified', { defaultValue: 'Not specified' })}
             </p>
+            {selectedTemplate.currency_code && (
+              <p>
+                <span className="font-semibold text-[rgb(var(--color-primary-700))]">
+                  {t('wizardBasics.template.preview.currencyLabel', { defaultValue: 'Base currency:' })}
+                </span>{' '}
+                {selectedTemplate.currency_code}
+              </p>
+            )}
             {selectedTemplate.contract_description && (
               <p className="text-[rgb(var(--color-text-600))]">{selectedTemplate.contract_description}</p>
             )}
