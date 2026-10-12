@@ -1017,6 +1017,13 @@
       "lastUpdated": "Last Updated",
       "assignedTo": "Assigned to"
     },
+    "statuses": {
+      "active": "Active",
+      "in_stock": "In stock",
+      "maintenance": "In maintenance",
+      "inactive": "Inactive",
+      "retired": "Retired"
+    },
     "notAvailable": "N/A",
     "detailsTitle": "Asset Details",
     "unassigned": "Unassigned",

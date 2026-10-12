@@ -5,7 +5,7 @@ vi.mock('../../actions/assetStatusActions', () => ({
   listAssetStatuses: vi.fn(),
 }));
 
-const { buildAssetStatusOptions } = await import('./useAssetStatusOptions');
+const { buildAssetStatusOptions, resolveAssetStatusLabel } = await import('./useAssetStatusOptions');
 
 const t = (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key);
 
@@ -48,5 +48,28 @@ describe('buildAssetStatusOptions', () => {
   it('does not duplicate the current status when it is already offered', () => {
     const options = buildAssetStatusOptions([status({ slug: 'active' })], t, 'active');
     expect(options.map((option) => option.value)).toEqual(['active']);
+  });
+});
+
+// T030: every surface that prints a bare slug reads it through this resolver,
+// so a custom status never shows as "in_repair".
+describe('resolveAssetStatusLabel', () => {
+  it('prefers the registry label for a custom status', () => {
+    const label = resolveAssetStatusLabel(t, 'in_repair', [
+      status({ slug: 'in_repair', label: 'Repair bench', kind: 'pending', is_builtin: false }),
+    ]);
+    expect(label).toBe('Repair bench');
+  });
+
+  it('humanizes a custom slug while the registry is still loading', () => {
+    expect(resolveAssetStatusLabel(t, 'in_repair', null)).toBe('In repair');
+  });
+
+  it('keeps the builtin label for a builtin slug', () => {
+    expect(resolveAssetStatusLabel(t, 'in_stock', null)).toBe('In stock');
+  });
+
+  it('renders nothing for an asset with no status', () => {
+    expect(resolveAssetStatusLabel(t, null, null)).toBe('');
   });
 });

@@ -184,3 +184,31 @@ each now has a test that fails if it recurs.
 - T141–T143 run against the merge engine's in-memory database
   (`clientMergeEngine.test.ts`), not a real one; the DB-level merge assertions
   remain in `server/src/test/integration/clientMerge.integration.test.ts`.
+
+## Round: the status slug on screen (browser check)
+
+The in-browser pass found `in_repair` printed verbatim in the asset list's
+Coverage cell and in the contact page's Assets tile, while the Identity tile and
+the dedicated Status column read "In repair". Those two surfaces were the only
+ones calling neither `resolveAssetStatusLabel` nor `assetStatusLabelForSlug`:
+the cell had its own `assetCells.status.*` keys covering three of the five
+builtins and falling through to the raw slug, and the tile printed
+`row.asset_status` directly.
+
+Both now use `resolveAssetStatusLabel`, and the `assetCells.status` block is
+deleted from all eleven locales — one reading of a status slug, not two. Because
+the cell renders per row it cannot fetch the registry itself, so
+`AssetDashboardClient` and `MspClientAssets` hand it the registry they already
+hold; with no registry (mid-load) the builtin label and then the humanized slug
+still keep the slug off the screen.
+
+Three more surfaces printed the slug the same way and were swept with it: the
+drawer's Asset summary grid (its badge already resolved the label, the grid
+beneath it did not), the printable detail header in `AssetDetailView`, and the
+read-only portal/mobile badges (`assets.statuses.*` in the portal locales,
+a local `humanizeStatus` on the mobile screen, matching
+`ProjectTaskDetailScreen`). `packages/client-portal` gained a dependency on
+`@alga-psa/assets` for the pure slug helper.
+
+Not changed: `ClientDevicesPage` still shows the portal's binary
+Active/Inactive chip, which predates the registry and is not a slug leak.

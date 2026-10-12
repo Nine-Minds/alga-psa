@@ -1011,6 +1011,13 @@
       "lastUpdated": "Laatst bijgewerkt",
       "assignedTo": "Toegewezen aan"
     },
+    "statuses": {
+      "active": "Actief",
+      "in_stock": "Op voorraad",
+      "maintenance": "In onderhoud",
+      "inactive": "Inactief",
+      "retired": "Afgevoerd"
+    },
     "notAvailable": "N.v.t.",
     "detailsTitle": "Asset-details",
     "unassigned": "Niet toegewezen",

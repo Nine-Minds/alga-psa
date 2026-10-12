@@ -37,6 +37,11 @@ type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** A tenant's custom status slug reads as "In repair", not "in_repair". */
+function humanizeStatus(value: string): string {
+  return value.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
 function warrantyBadge(
   status: AssetWarrantyStatus | undefined,
   t: (key: string, fallback: string) => string,
@@ -238,7 +243,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
           <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{asset.name ?? assetName}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
             <Badge label={warranty.label} tone={warranty.tone} />
-            {asset.status ? <Badge label={asset.status} /> : null}
+            {asset.status ? <Badge label={humanizeStatus(asset.status)} /> : null}
           </View>
           <View style={{ marginTop: theme.spacing.md }}>
             {asset.asset_tag ? <FieldRow label={t("identity.tag", "Tag")} value={asset.asset_tag} /> : null}

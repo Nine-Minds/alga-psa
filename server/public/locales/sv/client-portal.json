@@ -1017,6 +1017,13 @@
       "lastUpdated": "Senast uppdaterad",
       "assignedTo": "Tilldelad till"
     },
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "I lager",
+      "maintenance": "Under underhåll",
+      "inactive": "Inaktiv",
+      "retired": "Utfasad"
+    },
     "notAvailable": "Saknas",
     "detailsTitle": "Enhetsdetaljer",
     "unassigned": "Ej tilldelad",

@@ -185,3 +185,49 @@ describe('mobile asset detail', () => {
     }
   });
 });
+
+describe('status slug never reaches the screen (F021)', () => {
+  it('T030: the asset list Coverage cell reads the status through the registry', () => {
+    const text = source('packages/assets/src/components/assetListCells.tsx');
+
+    expect(text).toMatch(/resolveAssetStatusLabel\(t, asset\.status, statuses\)/);
+    // The cell cannot fetch per row, so both lists hand it the registry they
+    // already hold.
+    expect(source('packages/assets/src/components/AssetDashboardClient.tsx'))
+      .toMatch(/<AssetCoverageCell asset=\{record\} now=\{Date\.now\(\)\} statuses=\{assetStatuses\} \/>/);
+    expect(source('packages/msp-composition/src/clients/MspClientAssets.tsx'))
+      .toMatch(/<AssetCoverageCell asset=\{record\} now=\{Date\.now\(\)\} statuses=\{assetStatuses\} \/>/);
+  });
+
+  it('T030: the contact Assets tile and the printable header resolve the label too', () => {
+    expect(source('packages/assets/src/components/ContactAssetsSection.tsx'))
+      .toMatch(/resolveAssetStatusLabel\(t, row\.asset_status, assetStatuses\)/);
+    expect(source('packages/assets/src/components/AssetDetailView.tsx'))
+      .toMatch(/resolveAssetStatusLabel\(t, asset\.status, assetStatuses\)/);
+  });
+
+  it('T030: the drawer summary grid shows the same label as its badge', () => {
+    const text = source('packages/assets/src/components/AssetDetailDrawerClient.tsx');
+
+    expect(text).toMatch(/statusLabel: translateStatus\(asset\.status\)/);
+    expect(text).toMatch(/statusLabel=\{statusLabel\}/);
+  });
+
+  it('T030: the portal and mobile read-only surfaces humanize the slug', () => {
+    for (const file of [
+      'packages/client-portal/src/components/assets/AssetList.tsx',
+      'packages/client-portal/src/components/assets/AssetDetails.tsx',
+    ]) {
+      expect(source(file)).toMatch(/assets\.statuses\.\$\{(value|asset\.status)\}/);
+      expect(source(file)).toMatch(/assetStatusLabelForSlug\((value|asset\.status), null\)/);
+    }
+
+    const portalLocale = JSON.parse(source('server/public/locales/en/client-portal.json'));
+    expect(Object.keys(portalLocale.assets.statuses)).toEqual([
+      'active', 'in_stock', 'maintenance', 'inactive', 'retired',
+    ]);
+
+    expect(source('ee/mobile/src/screens/AssetDetailScreen.tsx'))
+      .toMatch(/<Badge label=\{humanizeStatus\(asset\.status\)\} \/>/);
+  });
+});

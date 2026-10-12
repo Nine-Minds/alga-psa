@@ -202,6 +202,7 @@ export function AssetDetailDrawerClient({
           maintenanceReport: maintenanceReport ?? null,
           router,
           statusBadge,
+          statusLabel: translateStatus(asset.status),
           onClose,
           defaultBoardId,
           t,
@@ -243,6 +244,7 @@ export function AssetDetailDrawerClient({
     statusBadge,
     tickets,
     t,
+    translateStatus,
     visibleAssetId,
   ]);
 
@@ -297,6 +299,7 @@ type OverviewTabProps = {
   history: AssetHistory[];
   router: ReturnType<typeof useRouter>;
   statusBadge: ReactNode;
+  statusLabel: string;
   onClose: () => void;
   defaultBoardId?: string;
   t: TranslationFn;
@@ -304,7 +307,7 @@ type OverviewTabProps = {
   hasTemplateLinks: boolean;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, statusLabel, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -403,7 +406,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
 
       <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-info' })}>
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title={t('assetDetailDrawer.overview.assetSummary', { defaultValue: 'Asset summary' })} />
-        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={t(`assetDetailDrawer.statuses.${asset.status}`, { defaultValue: formatTitleCase(asset.status) })} t={t} />
+        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={statusLabel} t={t} />
       </Card>
 
       {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}

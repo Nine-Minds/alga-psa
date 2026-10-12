@@ -9,6 +9,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getContactAssignedAssets } from '../actions/assetAssignmentActions';
 import { getContactSharedWorkspaces } from '../actions/assetGroupActions';
+import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 
 /**
  * FR-C6 / FR-E12: the contact page's Assets tile — what this person currently
@@ -20,6 +21,8 @@ import { getContactSharedWorkspaces } from '../actions/assetGroupActions';
  */
 export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { contactId: string; id?: string }) {
   const { t } = useTranslation('msp/assets');
+  // F021: a custom status reads as its registry label here too, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
 
   const { data: assigned } = useSWR(
     contactId ? ['contact', contactId, 'assigned-assets'] : null,
@@ -57,7 +60,11 @@ export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { con
             >
               <span className="truncate font-medium text-[rgb(var(--color-text-800))]">{row.asset_name}</span>
               <span className="flex-shrink-0 text-xs text-[rgb(var(--color-text-500))]">
-                {[row.asset_type, row.asset_tag, row.asset_status].filter(Boolean).join(' · ')}
+                {[
+                  row.asset_type,
+                  row.asset_tag,
+                  resolveAssetStatusLabel(t, row.asset_status, assetStatuses),
+                ].filter(Boolean).join(' · ')}
               </span>
             </Link>
           ))}

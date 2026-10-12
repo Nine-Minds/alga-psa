@@ -1660,11 +1660,6 @@
     },
     "coverage": {
       "noWarrantyDate": "brak daty gwarancji"
-    },
-    "status": {
-      "active": "aktywny",
-      "inactive": "nieaktywny",
-      "maintenance": "konserwacja"
     }
   },
   "errors": {

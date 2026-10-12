@@ -1011,6 +1011,13 @@
       "lastUpdated": "Ultimo aggiornamento",
       "assignedTo": "Assegnato a"
     },
+    "statuses": {
+      "active": "Attivo",
+      "in_stock": "In magazzino",
+      "maintenance": "In manutenzione",
+      "inactive": "Inattivo",
+      "retired": "Dismesso"
+    },
     "notAvailable": "N/D",
     "detailsTitle": "Dettagli asset",
     "unassigned": "Non assegnato",

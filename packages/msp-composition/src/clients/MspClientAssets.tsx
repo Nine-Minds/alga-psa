@@ -25,6 +25,7 @@ import {
   AssetPatchingCell,
 } from '@alga-psa/assets/components/assetListCells';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
+import { useAssetStatusRegistry } from '@alga-psa/assets/components/shared/useAssetStatusOptions';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -60,6 +61,8 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupKind, setNewGroupKind] = useState<AssetGroupKind>('bundle');
   const [loadError, setLoadError] = useState(false);
+  // F021: the Coverage cell reads a custom status as its label, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -281,7 +284,9 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         {
       title: t('clientTabs.assets.columns.coverage', { defaultValue: 'Coverage' }),
       dataIndex: 'warranty_end_date',
-      render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
+      render: (_: unknown, record: Asset) => (
+        <AssetCoverageCell asset={record} now={Date.now()} statuses={assetStatuses} />
+      )
     },
         {
       // FR-C6: who has the device is as much a part of "the client's assets"

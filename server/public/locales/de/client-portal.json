@@ -1011,6 +1011,13 @@
       "lastUpdated": "Zuletzt aktualisiert",
       "assignedTo": "Zugewiesen an"
     },
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "Auf Lager",
+      "maintenance": "In Wartung",
+      "inactive": "Inaktiv",
+      "retired": "Ausgemustert"
+    },
     "notAvailable": "N/V",
     "detailsTitle": "Asset-Details",
     "unassigned": "Nicht zugewiesen",

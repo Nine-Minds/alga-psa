@@ -7,6 +7,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { assetStatusLabelForSlug } from '@alga-psa/assets/lib/assetStatusSchema';
 import { ColumnDefinition } from '@alga-psa/types';
 
 interface AssetListProps {
@@ -45,7 +46,7 @@ export function AssetList({ assets }: AssetListProps) {
           value === 'inactive' ? 'default-muted' :
           'warning'
         }>
-          {value}
+          {t(`assets.statuses.${value}`, { defaultValue: assetStatusLabelForSlug(value, null) })}
         </Badge>
       )
     },

@@ -372,9 +372,9 @@
       "manufacturer": "〖Ḿȧƞŭƒȧƈŧŭřḗř ·····〗",
       "model": "〖Ḿȯḓḗŀ ··〗",
       "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗",
-      "group": "〖Ɠřȯŭƥ ······〗",
-      "groupSharedWorkspace": "〖{{name}} · şħȧřḗḓ ẇȯřķşƥȧƈḗ ······〗",
-      "groupBundle": "〖{{name}} · ƀŭƞḓŀḗ ······〗"
+      "group": "〖Ɠřȯŭƥ ··〗",
+      "groupSharedWorkspace": "〖{{name}} · şħȧřḗḓ ẇȯřķşƥȧƈḗ ···········〗",
+      "groupBundle": "〖{{name}} · ƀŭƞḓŀḗ ·······〗"
     },
     "typeDetails": {
       "workstation": "〖Ẇȯřķşŧȧŧīȯƞ ḓḗŧȧīŀş ········〗",
@@ -1660,11 +1660,6 @@
     },
     "coverage": {
       "noWarrantyDate": "〖ƞȯ ẇȧřřȧƞŧẏ ḓȧŧḗ ·······〗"
-    },
-    "status": {
-      "active": "〖ȧƈŧīṽḗ ···〗",
-      "inactive": "〖īƞȧƈŧīṽḗ ····〗",
-      "maintenance": "〖ḿȧīƞŧḗƞȧƞƈḗ ·····〗"
     }
   },
   "errors": {

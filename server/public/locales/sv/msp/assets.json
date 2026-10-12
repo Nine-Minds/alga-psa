@@ -1632,11 +1632,6 @@
     },
     "coverage": {
       "noWarrantyDate": "inget garantidatum"
-    },
-    "status": {
-      "active": "aktiv",
-      "inactive": "inaktiv",
-      "maintenance": "underhåll"
     }
   },
   "errors": {

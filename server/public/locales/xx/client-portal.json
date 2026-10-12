@@ -1017,6 +1017,13 @@
       "lastUpdated": "⟦Ŀȧşŧ Ŭƥḓȧŧḗḓ⟧",
       "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧"
     },
+    "statuses": {
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "in_stock": "⟦Īƞ şŧȯƈķ⟧",
+      "maintenance": "⟦Īƞ ḿȧīƞŧḗƞȧƞƈḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧",
+      "retired": "⟦Řḗŧīřḗḓ⟧"
+    },
     "notAvailable": "⟦Ƞ/Ȧ⟧",
     "detailsTitle": "⟦Ȧşşḗŧ Ḓḗŧȧīŀş⟧",
     "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",

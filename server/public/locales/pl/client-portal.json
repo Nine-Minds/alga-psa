@@ -1015,6 +1015,13 @@
       "lastUpdated": "Ostatnia aktualizacja",
       "assignedTo": "Przypisano do"
     },
+    "statuses": {
+      "active": "Aktywny",
+      "in_stock": "W magazynie",
+      "maintenance": "W serwisie",
+      "inactive": "Nieaktywny",
+      "retired": "Wycofany"
+    },
     "notAvailable": "Brak",
     "detailsTitle": "Szczegóły zasobu",
     "unassigned": "Nieprzypisany",

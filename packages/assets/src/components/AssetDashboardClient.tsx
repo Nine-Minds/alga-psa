@@ -1092,7 +1092,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       dataIndex: 'coverage',
       title: t('assetDashboardClient.table.coverage', { defaultValue: 'Coverage' }),
       sortable: false,
-      render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
+      render: (_: unknown, record: Asset) => (
+        <AssetCoverageCell asset={record} now={Date.now()} statuses={assetStatuses} />
+      )
     },
     asset_tag: {
       dataIndex: 'asset_tag',
@@ -1282,6 +1284,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     clientLogoById,
     getAssetStatusLabel,
     getAssetTypeLabel,
+    assetStatuses,
   ]);
 
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {

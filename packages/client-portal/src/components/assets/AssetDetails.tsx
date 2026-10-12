@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PlusCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { assetStatusLabelForSlug } from '@alga-psa/assets/lib/assetStatusSchema';
 
 // Extension numerics are nullable ("unknown", never 0) — show that instead of a bare "null cores".
 const formatCpu = (model: string | null | undefined, cores: number | null | undefined): string => {
@@ -137,7 +138,11 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
                   asset.status === 'inactive' ? 'default-muted' :
                   'warning'
                 }>
-                  {asset.status}
+                  {/* A tenant's custom status must read as its label, never as
+                      the "in_repair" slug the registry stores. */}
+                  {t(`assets.statuses.${asset.status}`, {
+                    defaultValue: assetStatusLabelForSlug(asset.status, null),
+                  })}
                 </Badge>
               </p>
             </div>

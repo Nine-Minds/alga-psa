@@ -1011,6 +1011,13 @@
       "lastUpdated": "Dernière mise à jour",
       "assignedTo": "Attribué à"
     },
+    "statuses": {
+      "active": "Actif",
+      "in_stock": "En stock",
+      "maintenance": "En maintenance",
+      "inactive": "Inactif",
+      "retired": "Retiré"
+    },
     "notAvailable": "N/D",
     "detailsTitle": "Détails de l'actif",
     "unassigned": "Non attribué",
