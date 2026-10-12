@@ -7,7 +7,22 @@ This directory contains the PgBouncer connection pooler configuration for the Al
 - `Dockerfile`: Builds the PgBouncer container
 - `entrypoint.sh`: Initializes PgBouncer with secrets and configuration
 - `pgbouncer.ini.template`: PgBouncer configuration template
-- `userlist.txt.template`: User authentication template
+
+## Authentication
+
+PgBouncer requires a password for every client connection (`auth_type = md5`).
+Compose stores md5 password verifiers in Postgres (`password_encryption=md5`),
+and the PgBouncer userlist is derived from the same secrets each time the
+container starts.
+
+- Leading and trailing whitespace (including `\r`) is trimmed from secret files,
+  the same way the application reads them.
+- The container refuses to start if a secret is empty, or if the rendered
+  configuration sets `auth_type` to anything other than `md5` or `scram-sha-256`.
+- Rotating a secret requires restarting (and, since the image is built locally,
+  rebuilding with `docker compose ... up -d --build`) the `pgbouncer` service.
+- External tools must authenticate with the `app_user` password from
+  `secrets/db_password_server`.
 
 ## Secrets Management
 

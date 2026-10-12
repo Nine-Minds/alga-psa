@@ -8,11 +8,9 @@ RUN apk add --no-cache gettext-envsubst
 
 # Copy configuration templates and entrypoint
 COPY pgbouncer.ini.template /etc/pgbouncer/pgbouncer.ini.template
-COPY userlist.txt.template /etc/pgbouncer/userlist.txt.template
 COPY entrypoint.sh /entrypoint.sh
 
 # Set permissions
-RUN chmod 600 /etc/pgbouncer/userlist.txt.template && \
-    chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
