@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSWRConfig } from 'swr';
 import Link from 'next/link';
 import type {
   Asset,
@@ -35,6 +36,7 @@ import { formatClientLocation } from '../lib/formatClientLocation';
 import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
 import { parseNumberInput } from '../lib/numberInput';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -132,6 +134,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
 
 
   const router = useRouter();
+  const { mutate: mutateCache } = useSWRConfig();
 
   // F308: type select sources the tenant registry (built-ins first with their
   // existing labels, then custom types by registry name).
@@ -1248,6 +1251,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         toast.error(message);
         return;
       }
+
+      // The detail page renders from the client-side asset cache, so
+      // router.refresh() alone leaves its tiles on the pre-save values until a
+      // reload — saving a new status kept showing the old one.
+      await mutateCache(matchAssetCacheKeys([assetId]));
 
       if (onSaved) {
         onSaved();

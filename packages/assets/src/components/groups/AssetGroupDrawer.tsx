@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSWRConfig } from 'swr';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
@@ -27,6 +28,7 @@ import { isAssetActionError, assetActionErrorMessage } from '../../actions/asset
 import { getClientContactsForAssets, getClientLocationsForAssets } from '../../actions/clientLookupActions';
 import { ClientAssetMultiSelect } from '../ClientAssetMultiSelect';
 import { formatClientLocation } from '../../lib/formatClientLocation';
+import { matchAssetCacheKeys } from '../../lib/assetCacheKeys';
 
 /**
  * FR-E12: the group drawer — name, kind, location, members and people.
@@ -45,6 +47,7 @@ export function AssetGroupDrawer({
   onDeleted?: () => void;
 }) {
   const { t } = useTranslation('msp/assets');
+  const { mutate } = useSWRConfig();
   const [group, setGroup] = useState<AssetGroup | null>(null);
   const [name, setName] = useState('');
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -108,10 +111,25 @@ export function AssetGroupDrawer({
   const users = group.contacts?.filter((contact) => contact.role === 'user') ?? [];
   const memberIds = (group.members ?? []).map((member) => member.asset_id);
 
+  /**
+   * Every write here moves its members — the location propagates, a bundle
+   * owner assigns them, a workspace unassigns them — so the surfaces behind
+   * the drawer are rendering stale asset records until those caches are
+   * dropped. Both the members it had and the members it ends up with count.
+   */
+  const revalidateMembers = (next?: unknown) => {
+    const after = next && !isAssetActionError(next)
+      ? ((next as AssetGroup).members ?? []).map((member) => member.asset_id)
+      : [];
+    void mutate(matchAssetCacheKeys([...memberIds, ...after]));
+  };
+
   const run = async (work: () => Promise<unknown>) => {
     setSaving(true);
     try {
-      apply(await work());
+      const result = await work();
+      apply(result);
+      revalidateMembers(result);
     } finally {
       setSaving(false);
     }
@@ -353,6 +371,7 @@ export function AssetGroupDrawer({
               return;
             }
             setConfirmDelete(false);
+            revalidateMembers();
             onDeleted?.();
           } finally {
             setSaving(false);

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { assignAssetContact } from '../actions/assetAssignmentActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
 import { getClientContactsForAssets } from '../actions/clientLookupActions';
+import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
 
 /**
  * FR-C6 / FR-C7: the Identity tile's Assigned-to row.
@@ -78,10 +79,10 @@ export function AssetAssigneeRow({
       }
       setCurrent({ id: result.contact_name_id, name: result.contact_name });
       setIsOpen(false);
-      // setAssetAssignee writes an `assignee_changed` entry, but AssetTimeline
-      // reads history from this SWR key — without the revalidation the new
-      // entry only appears after a page reload.
-      void mutate(['asset', assetId, 'history']);
+      // setAssetAssignee changes the record and writes an `assignee_changed`
+      // entry, both of which the surrounding tiles read from the asset cache —
+      // without this they only catch up on a page reload.
+      void mutate(matchAssetCacheKeys([assetId]));
       onAssigned?.(result);
     } finally {
       setSaving(false);
