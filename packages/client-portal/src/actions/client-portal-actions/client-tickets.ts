@@ -41,6 +41,7 @@ import {
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyAssetVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
@@ -1411,6 +1412,14 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         ? (contactProfiles[0].billing_profile_id as string)
         : undefined;
 
+      // FR-F2: a ticket about a specific device bills where the device says.
+      // That is a narrower statement than "this contact usually belongs to
+      // segment X", so the asset's profile (or its location's default) wins
+      // over the contact heuristic; both fall through to the client default.
+      const assetBillingProfileId = validatedData.asset_id
+        ? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id)
+        : null;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1418,7 +1427,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
-        billing_profile_id: contactBillingProfileId,
+        billing_profile_id: assetBillingProfileId ?? contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,

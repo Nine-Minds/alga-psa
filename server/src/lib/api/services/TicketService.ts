@@ -2278,7 +2278,10 @@ export class TicketService extends BaseService<ITicket> {
           status_id: data.status_id,
           board_id: data.board_id,
           asset_id: data.asset_id,
-          client_id: data.client_id
+          client_id: data.client_id,
+          contact_name_id: data.contact_name_id ?? null,
+          // FR-F2: omitted lets the model inherit the asset's profile.
+          billing_profile_id: data.billing_profile_id ?? null
         },
         context.userId,
         context.tenant,

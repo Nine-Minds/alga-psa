@@ -543,6 +543,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       location_id: null,
       // The assignee belongs to the previous client.
       contact_name_id: null,
+      // FR-F1: so does the billing profile — keeping it would make the save
+      // fail validation rather than quietly move the device.
+      billing_profile_id: null,
       location: ''
     }));
     setSelectedLocationId('custom');
