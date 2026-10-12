@@ -918,16 +918,21 @@ export class NinjaOneSyncEngine {
 
       // FR-D4: assignment from the signed-in user, after the extension row so
       // the matcher sees the value this run reported.
-      await applyRmmSignedInUserAssignment(trx, {
-        tenant: this.tenantId,
-        assetId,
-        clientId: mapping.client_id!,
-        integrationId: this.integrationId,
-        provider: 'ninjaone',
-        mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
-        currentUser: device.lastLoggedInUser ?? null,
-        actorUserId: this.auditUserId,
-      });
+      // The asset's own client, not the mapping's: sync no longer moves it
+      // (FR-G5), so a manually moved device matches against where it is now.
+      const assignmentClientId = asset?.client_id ? String(asset.client_id) : mapping.client_id ?? null;
+      if (assignmentClientId) {
+        await applyRmmSignedInUserAssignment(trx, {
+          tenant: this.tenantId,
+          assetId,
+          clientId: assignmentClientId,
+          integrationId: this.integrationId,
+          provider: 'ninjaone',
+          mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
+          currentUser: device.lastLoggedInUser ?? null,
+          actorUserId: this.auditUserId,
+        });
+      }
 
       // Update external entity mapping
       await db.table('tenant_external_entity_mappings')
@@ -1041,11 +1046,12 @@ export class NinjaOneSyncEngine {
 
     await withTransaction(this.knex!, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, this.tenantId);
-      // Update asset status to inactive
+      // FR-B6: a deleted/tombstoned device is retired; connectivity lives in
+      // agent_status.
       await db.table('assets')
         .where({ asset_id: assetId })
         .update({
-          status: 'inactive',
+          status: 'retired',
           agent_status: 'offline',
           updated_at: now,
         });

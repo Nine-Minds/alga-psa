@@ -88,10 +88,39 @@ export async function moveRmmOrganizationAssets(
       });
     }
 
+    // FR-E5/F068: leaving the group is its own event, so the asset's timeline
+    // says "removed from <group>" rather than only "client changed". Inlined
+    // rather than calling the assets package: this runs on the workflow worker,
+    // which sits below `packages/` in the dependency graph.
+    let removedGroup: { group_id: string; name: string; kind: string } | null = null;
     try {
-      await table(trx, tenant, 'asset_group_members').where({ asset_id: assetId }).delete();
+      const member = await table(trx, tenant, 'asset_group_members')
+        .where({ asset_id: assetId })
+        .first<{ group_id: string }>('group_id');
+      if (member?.group_id) {
+        removedGroup = await table(trx, tenant, 'asset_groups')
+          .where({ group_id: member.group_id })
+          .first<{ group_id: string; name: string; kind: string }>('group_id', 'name', 'kind');
+        await table(trx, tenant, 'asset_group_members').where({ asset_id: assetId }).delete();
+      }
     } catch {
       // The group tables arrive in a later migration.
+    }
+
+    if (removedGroup && args.actorUserId) {
+      await table(trx, tenant, 'asset_history').insert({
+        tenant,
+        asset_id: assetId,
+        changed_by: args.actorUserId,
+        change_type: 'group_removed',
+        changes: {
+          group_id: removedGroup.group_id,
+          group_name: removedGroup.name,
+          group_kind: removedGroup.kind,
+          source: 'rmm_organization_move',
+        },
+        changed_at: new Date().toISOString(),
+      });
     }
 
     await table(trx, tenant, 'assets')

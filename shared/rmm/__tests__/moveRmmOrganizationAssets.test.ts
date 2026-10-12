@@ -220,8 +220,16 @@ describe('moveRmmOrganizationAssets', () => {
     });
     expect(h.dbState.asset_assignments[0].unassigned_at).not.toBeNull();
     expect(h.dbState.asset_group_members).toHaveLength(0);
-    const history = h.dbState.asset_history.find((row) => row.changes?.source === 'rmm_organization_move');
-    expect(history?.changes).toMatchObject({ previous_client_id: OLD_CLIENT, client_id: NEW_CLIENT });
+    const move_history = h.dbState.asset_history.find((row) => row.change_type === 'updated');
+    expect(move_history?.changes).toMatchObject({ previous_client_id: OLD_CLIENT, client_id: NEW_CLIENT });
+    // FR-E5/F068: leaving the group is its own timeline entry, not a footnote
+    // on the client change.
+    const group_history = h.dbState.asset_history.find((row) => row.change_type === 'group_removed');
+    expect(group_history?.changes).toMatchObject({
+      group_id: 'g1',
+      group_kind: 'bundle',
+      source: 'rmm_organization_move',
+    });
   });
 
   it('leaves another organization and another tenant alone', async () => {
