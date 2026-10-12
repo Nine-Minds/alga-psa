@@ -19,7 +19,7 @@ import { registerCoManagedPortableWorkflowTests } from '../../../../../server/sr
 import { registerCoManagedPortableAssetTests } from '../../../../../server/src/test/integration/helpers/coManagedPortableAssetCases';
 import { registerCoManagedPortableOperationalCases } from '../../../../../server/src/test/integration/coManagedPortableOperational.cases';
 import { retainCoManagedInboundCommentEvent } from '../../../../../packages/co-managed/src/inboundConversationEvents';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -39,6 +39,31 @@ import { createTenantInDB } from '../../db/tenant-operations';
 vi.mock('@alga-psa/event-bus/publishers', async importOriginal => ({
   ...await importOriginal<typeof import('@alga-psa/event-bus/publishers')>(), publishEvent: vi.fn(async () => {}), publishWorkflowEvent: vi.fn(async () => {}),
 }));
+// Main routes catalogued conversation/project/time events through publishStoredEvent
+// (publishEvent is for non-catalog events only). Tests that observe those events stub it
+// here, and it is restored after each test so the real transport runs everywhere else.
+const storedEventSpies: Array<{ mockRestore(): void }> = [];
+function storedEventSpy(events: typeof import('@alga-psa/event-bus/publishers')) {
+  if (vi.isMockFunction(events.publishStoredEvent)) return vi.mocked(events.publishStoredEvent);
+  const spy = vi.spyOn(events, 'publishStoredEvent').mockResolvedValue(undefined);
+  storedEventSpies.push(spy);
+  return spy;
+}
+// Spies over the factory stubs below must hand back a working stub, not the restored export.
+// Time-entry events split by catalogue: submitted/approved ticket or task time publishes as a
+// workflow event, everything else through publishEvent. One recorder observes both streams.
+function recordTimeEvents(events: typeof import('@alga-psa/event-bus/publishers')) {
+  const recorder = vi.fn(async (_event: unknown) => {});
+  vi.mocked(events.publishEvent).mockImplementation(recorder as never);
+  vi.mocked(events.publishWorkflowEvent).mockImplementation(recorder as never);
+  return recorder;
+}
+function resetPublisherStub(spy: { mockReset(): unknown; mockImplementation(fn: () => Promise<void>): unknown }) { spy.mockReset(); spy.mockImplementation(async () => {}); }
+afterEach(async () => {
+  for (const spy of storedEventSpies.splice(0)) spy.mockRestore();
+  const events = await import('@alga-psa/event-bus/publishers');
+  resetPublisherStub(vi.mocked(events.publishEvent)); resetPublisherStub(vi.mocked(events.publishWorkflowEvent));
+});
 
 vi.mock('next/cache', async importOriginal => ({
   ...await importOriginal<typeof import('next/cache')>(), revalidatePath: vi.fn(),
@@ -1162,7 +1187,7 @@ describe('canonical material lifecycle admission', () => {
 async function withStorageFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
   storage: typeof import('../../../../../packages/storage/src/StorageService').StorageService;
   files: typeof import('../../../../../packages/storage/src/models/storage').FileStoreModel;
-  publish: ReturnType<typeof vi.spyOn>;
+  publish: ReturnType<typeof vi.mocked<typeof import('@alga-psa/event-bus/publishers').publishStoredEvent>>;
 }) => Promise<void>) {
   const fixture = await readyForAcceptance();
   const database = await import('@alga-psa/db');
@@ -1175,7 +1200,7 @@ async function withStorageFixture(work: (fixture: Awaited<ReturnType<typeof read
   artifactStorage.delete.mockReset().mockResolvedValue(undefined);
   artifactStorage.download.mockReset().mockResolvedValue(Buffer.from('saved'));
   try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, storage, files, publish })); }
-  finally { connection.mockRestore(); publish.mockRestore(); }
+  finally { connection.mockRestore(); resetPublisherStub(publish); }
 }
 
 function storageFileData(userId: string) {
@@ -1339,7 +1364,7 @@ describe('inherited operational API mutations', () => {
       expect(await services.boards.getById(operation.customer_board_id, context)).toMatchObject({ board_name: 'Service Desk' });
       expect(await services.statuses.getById(status.status_id, context)).toMatchObject({ status_id: status.status_id });
       expect(await services.priorities.getById(priority.priority_id, context)).toMatchObject({ priority_id: priority.priority_id });
-    } finally { publish.mockRestore(); }
+    } finally { resetPublisherStub(publish); }
   });
 
   it('supports real configuration edits and bulk operations after renewal without writing missing audit columns', async () => {
@@ -1370,7 +1395,7 @@ describe('inherited operational API mutations', () => {
       expect(await customer.table('boards')).toHaveLength(1);
       expect(await services.statuses.getById(status.status_id, context)).toMatchObject({ name: 'Renewed queue' });
       expect(await services.priorities.getById(priority.priority_id, context)).toMatchObject({ priority_name: 'Renewed priority' });
-    } finally { publish.mockRestore(); }
+    } finally { resetPublisherStub(publish); }
   });
 });
 
@@ -1388,7 +1413,7 @@ async function withProjectFixture(work: (fixture: Awaited<ReturnType<typeof read
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
   try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, service, connection, publish, workflow })); }
-  finally { publish.mockRestore(); workflow.mockRestore(); connection.mockRestore(); }
+  finally { resetPublisherStub(publish); resetPublisherStub(workflow); connection.mockRestore(); }
 }
 
 describe('co-managed project API lifecycle admission', () => {
@@ -1578,14 +1603,14 @@ async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<type
   const spies = [
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: fixture.actor.tenant }),
     vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db),
-    workflow,
   ];
-  const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  // Main moved project/task events with a catalogue entry to publishWorkflowEvent; one recorder sees both.
+  const publish = recordTimeEvents(events);
   try {
     const actions = await import('../../../../../packages/projects/src/actions/projectActions');
     const exports = await import('../../../../../packages/projects/src/actions/projectTaskExportActions');
     await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.actor.tenant, () => work({ ...fixture, actions, exports, publish, workflow })));
-  } finally { publish.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+  } finally { resetPublisherStub(publish); resetPublisherStub(workflow); for (const spy of spies.reverse()) spy.mockRestore(); }
 }
 
 describe('co-managed project action lifecycle admission', () => {
@@ -1936,7 +1961,7 @@ describe('co-managed task action lifecycle and publication', () => {
     await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
       async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
     const namesAtPublication: string[] = [];
-    publish.mockImplementation(async () => { namesAtPublication.push((await customer.table('project_tasks').where('task_id', task.task_id).first()).task_name); });
+    workflow.mockImplementation(async () => { namesAtPublication.push((await customer.table('project_tasks').where('task_id', task.task_id).first()).task_name); });
     expect(await actions.updateTaskWithChecklist(task.task_id, { task_name: 'Verified', checklist_items: [{ ...checklist, completed: true } as any] }))
       .toMatchObject({ task_name: 'Verified' });
     expect(namesAtPublication).toEqual(['Verified']);
@@ -2061,9 +2086,14 @@ describe('co-managed task comments and reactions', () => {
     expect(await customer.table('comment_threads')).toEqual([]);
     expect(publish).not.toHaveBeenCalled();
     const snapshots: any[] = [];
-    publish.mockImplementation(async (event: any) => {
+    // The retained PROJECT_TASK_COMMENT_* event leaves through publishStoredEvent; the catalogued
+    // TASK_COMMENT_* event through publishWorkflowEvent. Both must see the committed comment.
+    const stored = storedEventSpy(await import('@alga-psa/event-bus/publishers'));
+    stored.mockClear();
+    const snapshot = async (event: any) => {
       snapshots.push(await customer.table('project_task_comments').where('task_comment_id', event.payload.taskCommentId).first());
-    });
+    };
+    publish.mockImplementation(snapshot); stored.mockImplementation(snapshot);
     const root = await comments.createTaskComment({ taskId: task.task_id, note: 'Customer question' }) as string;
     expect(snapshots).toEqual([expect.objectContaining({ note: 'Customer question' }), expect.objectContaining({ note: 'Customer question' })]);
     const reply = await comments.createTaskComment({ taskId: task.task_id, note: 'Answer', parentCommentId: root }) as string;
@@ -2193,6 +2223,7 @@ describe('co-managed project templates and import', () => {
     expect(await customer.table('project_tasks')).toHaveLength(1);
     expect(await customer.table('task_checklist_items')).toHaveLength(1);
     const rows = [{ phase_name: 'CSV phase', tasks: [{ task_name: 'CSV task', task_type_key: 'task', tags: [] }] }] as any;
+    workflow.mockClear(); // applyTemplate's committed PROJECT_CREATED is recorded on the same publisher
     await expect(dbModule.withTransaction(db, async trx => {
       vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
       expect(await importer.importPhasesAndTasks(projectId, rows)).toMatchObject({ success: true, phasesCreated: 1, tasksCreated: 1 });
@@ -2300,11 +2331,16 @@ it('admits project status email at send time while retaining previews during pen
     statusEmail.send.mockClear();
     // Expiry after the UI preview, while preparing a provider, must still stop
     // transmission. An initial request-time check alone would miss this race.
-    statusEmail.create.mockImplementationOnce(async () => {
+    // Main's send path prepares through the locale resolver (the settings read
+    // belongs to the preview only), so that is where expiry lands now.
+    const localeResolver = await import('@alga-psa/notifications/notifications/emailLocaleResolver');
+    const resolveLocale = localeResolver.resolveEmailLocale;
+    const preparing = vi.spyOn(localeResolver, 'resolveEmailLocale').mockImplementationOnce(async (...args: Parameters<typeof resolveLocale>) => {
       await expireCoManagedEntitlement(operation.tenant);
-      return null;
+      return resolveLocale(...args);
     });
     expect(await actions.sendProjectStatusUpdate(projectId, 'Blocked')).toMatchObject({ actionError: expect.any(String) });
+    preparing.mockRestore();
     expect(statusEmail.send).not.toHaveBeenCalled();
     expect(await actions.getProjectStatusUpdateRecipient(projectId)).toMatchObject({ projectId, recipientEmail: contact.email });
     expect(await actions.sendProjectStatusUpdate(projectId, 'Still blocked')).toMatchObject({ actionError: expect.any(String) });
@@ -3898,7 +3934,7 @@ async function withSharedTicketMutationFixture(work: (fixture: Awaited<ReturnTyp
   const events = await import('@alga-psa/event-bus/publishers');
   const updates = await import('../../../../../packages/tickets/src/lib/liveUpdates');
   const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
-  const publish = vi.spyOn(events, 'publishStoredEvent').mockResolvedValue(undefined);
+  const publish = storedEventSpy(events); publish.mockClear();
   const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
   try {
     const { updateTicketInTransaction } = await import('../../../../../packages/tickets/src/actions/optimizedTicketActions');
@@ -3912,7 +3948,7 @@ async function withSharedTicketMutationFixture(work: (fixture: Awaited<ReturnTyp
       });
     };
     await work({ ...fixture, user, closedStatusId, mutate, workflow, publish, live });
-  } finally { live.mockRestore(); publish.mockRestore(); workflow.mockRestore(); }
+  } finally { live.mockRestore(); resetPublisherStub(workflow); }
 }
 
 it('uses the canonical close and reopen paths with qualified audit, event and live attribution for MSP actors', async () => withSharedTicketMutationFixture(async ({
@@ -6344,12 +6380,14 @@ it('excludes shared receipts and malformed shared metadata from client notificat
 
 async function withCommentMutationFixture(work: (fixture: Parameters<Parameters<typeof withCommentCreationFixture>[0]>[0] & {
   mutateComment: typeof import('../../../../../server/src/lib/co-managed/mutateTicketComment').mutateSharedTicketComment;
-  publish: ReturnType<typeof vi.mocked<typeof import('@alga-psa/event-bus/publishers').publishEvent>>;
+  publish: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   await withCommentCreationFixture(async fixture => {
     const { mutateSharedTicketComment: mutateComment } = await import('../../../../../server/src/lib/co-managed/mutateTicketComment');
-    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-    await work({ ...fixture, mutateComment, publish: vi.mocked(publishEvent) });
+    // Catalogued conversation events publish through the stored-event publisher.
+    const events = await import('@alga-psa/event-bus/publishers');
+    const publish = storedEventSpy(events); publish.mockClear();
+    await work({ ...fixture, mutateComment, publish });
   });
 }
 
@@ -6740,9 +6778,9 @@ const draftRef = (value: { storeTenant: string; operationId: string }) => ({ sto
 it('publishes a drafted message and every prepared attachment atomically through the production comment adapter', async () => withConversationDraftFixture(async ({
   principal, customerPrincipal, resource, customer, attachments, drafts, publishCustomer, upload, download, file,
 }) => {
-  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const events = await import('@alga-psa/event-bus/publishers');
   const delivered: number[] = [];
-  vi.mocked(publishEvent).mockImplementation(async event => {
+  storedEventSpy(events).mockImplementation(async event => {
     if (event.eventType === 'TICKET_COMMENT_ADDED') {
       const count = await customer.table('co_management_conversation_attachments as f').join('co_management_conversation_drafts as d', join => join.on('d.tenant', '=', 'f.tenant').andOn('d.operation_id', '=', 'f.draft_operation_id')).where('d.status', 'published').count({ count: '*' }).first();
       delivered.push(Number(count?.count));
@@ -7327,7 +7365,7 @@ it('discloses a customer-owned thread and its files atomically with confirmed sc
 }) => {
   const { previewCoManagedThreadDisclosure } = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const { discloseSharedTicketThread } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
-  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const events = await import('@alga-psa/event-bus/publishers');
   const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer note' });
   const reply = await create(customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Customer reply' });
   const ready = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource, { attachmentId: randomUUID(), comment: attachmentComment(reply),
@@ -7339,10 +7377,10 @@ it('discloses a customer-owned thread and its files atomically with confirmed sc
   const preview = await previewCoManagedThreadDisclosure(db, customerPrincipal, resource, target);
   expect(preview).toMatchObject({ audience: 'organization_private', comments: 2, attachments: 1, pendingAttachments: 0 });
   const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
-  vi.mocked(publishEvent).mockClear();
+  storedEventSpy(events).mockClear();
   const [receipt, duplicate] = await Promise.all([1, 2].map(() => discloseSharedTicketThread(db, customerPrincipal, resource, request)));
-  expect(duplicate).toEqual(receipt); expect(vi.mocked(publishEvent).mock.calls).toHaveLength(2);
-  for (const [event] of vi.mocked(publishEvent).mock.calls) expect(event).toMatchObject({ eventType: 'TICKET_COMMENT_UPDATED', payload: { collaborationMutation: { kind: 'audience', audience: 'requester' } } });
+  expect(duplicate).toEqual(receipt); expect(storedEventSpy(events).mock.calls).toHaveLength(2);
+  for (const [event] of storedEventSpy(events).mock.calls) expect(event).toMatchObject({ eventType: 'TICKET_COMMENT_UPDATED', payload: { collaborationMutation: { kind: 'audience', audience: 'requester' } } });
   expect(await portal.listPortalConversationAttachments(db, requester, portalAttachmentTarget(resource, reply))).toEqual([{ ...ready, audience: 'requester' }]);
   expect((await attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).attachment.audience).toBe('requester');
   const comments = await customer.table('comments').where('thread_id', root.threadId);
@@ -7429,7 +7467,7 @@ it('keeps published draft files attached across disclosure and rejects old-audie
 }) => {
   const { previewCoManagedThreadDisclosure } = await import('../../../../../packages/co-managed/src/threadDisclosure');
   const { discloseSharedTicketThread } = await import('../../../../../server/src/lib/co-managed/discloseTicketThread');
-  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const events = await import('@alga-psa/event-bus/publishers');
   const part = file('Whole-thread evidence'), request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Published root' }, files: [part.descriptor] };
   const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
   const ready = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
@@ -7440,9 +7478,9 @@ it('keeps published draft files attached across disclosure and rejects old-audie
   await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(staged), stagedFile.descriptor.attachmentId, stagedFile.content, upload);
   const target = { storeTenant: resource.tenant, threadId: root.threadId }, preview = await previewCoManagedThreadDisclosure(db, principal, resource, target);
   expect(preview).toMatchObject({ comments: 1, attachments: 1, pendingAttachments: 0 });
-  vi.mocked(publishEvent).mockClear();
+  storedEventSpy(events).mockClear();
   await discloseSharedTicketThread(db, principal, resource, { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester', confirmed: true });
-  expect(vi.mocked(publishEvent).mock.calls[0][0]).toMatchObject({ payload: { actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant, userId: principal.userId }, collaborationMutation: { kind: 'audience' } } });
+  expect(storedEventSpy(events).mock.calls[0][0]).toMatchObject({ payload: { actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant, userId: principal.userId }, collaborationMutation: { kind: 'audience' } } });
   expect(await portal.listPortalConversationAttachments(db, requester, portalAttachmentTarget(resource, root))).toEqual([{ ...ready, audience: 'requester' }]);
   await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(staged), publishCustomer)).rejects.toBeDefined();
   expect(await customer.table('comments').where('comment_id', staged.operationId).first()).toBeUndefined();
@@ -7488,7 +7526,7 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
     expect(await customer.table('co_management_conversation_attachments').where('thread_id', request.operationId)).toEqual([]);
     return uploadImpl(...args);
   });
-  const { publishEvent } = await import('@alga-psa/event-bus/publishers'); vi.mocked(publishEvent).mockClear();
+  const events = await import('@alga-psa/event-bus/publishers'); storedEventSpy(events).mockClear();
   const [receipt, duplicate] = await Promise.all([1, 2].map(() => disclose(db, principal, resource, request)));
   expect(duplicate).toEqual(receipt);
   expect(receipt).toMatchObject({ storeTenant: resource.tenant, threadId: request.operationId, sourceStoreTenant: principal.tenant, sourceThreadId: root.threadId });
@@ -7508,7 +7546,7 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
   expect(files[0].attachmentId).not.toBe(ready.attachmentId);
   const downloaded = await portal.downloadPortalConversationAttachment(db, requester, { ticketId: resource.id, threadId: receipt.threadId, commentId: receipt.threadId }, files[0].attachmentId, async path => Buffer.from(objects.get(path)!));
   expect(Buffer.from(downloaded.content).toString()).toBe('Customer-owned evidence');
-  expect(vi.mocked(publishEvent).mock.calls).toHaveLength(3);
+  expect(storedEventSpy(events).mock.calls).toHaveLength(3);
   const { getCoManagedTicketConversation } = await import('../../../../../packages/co-managed/src/ticketConversation');
   const timeline = await getCoManagedTicketConversation(db, principal, resource); expect(timeline.items.every(item => item.storeTenant === resource.tenant)).toBe(true);
   await expect(privateComment({ kind: 'edit', operationId: randomUUID(), comment: attachmentComment(root), expectedRevision: root.revision, text: 'Archived edit' })).rejects.toBeDefined();
@@ -7674,7 +7712,7 @@ it('rejects a colliding private-transfer destination without overwriting an exis
 it('recovers co-managed event outbox publication failures with current content and stable strict transport identities', async () => withCommentCreationFixture(async ({ principal, resource, customer, sponsor }) => {
   const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const events = await import('@alga-psa/event-bus/publishers');
-  const publish = vi.mocked(events.publishEvent), workflow = vi.mocked(events.publishWorkflowEvent);
+  const publish = storedEventSpy(events), workflow = vi.mocked(events.publishWorkflowEvent);
   publish.mockReset().mockRejectedValue(new Error('transport unavailable')); workflow.mockReset().mockRejectedValue(new Error('transport unavailable'));
   const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Original confidential body' });
   const rows = await customer.table('co_management_event_outbox');
@@ -7705,15 +7743,15 @@ it('recovers co-managed event outbox publication failures with current content a
 it('commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
   const { createSharedTicketComment } = await import('../../../../../server/src/lib/co-managed/createTicketComment');
   const { dispatchCoManagedConversationEvents } = await import('../../../../../packages/co-managed/src/conversationEventOutbox');
-  const { publishEvent, publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
-  vi.mocked(publishEvent).mockClear(); vi.mocked(publishWorkflowEvent).mockClear();
+  const events = await import('@alga-psa/event-bus/publishers');
+  storedEventSpy(events).mockClear(); vi.mocked(events.publishWorkflowEvent).mockClear();
   const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Crash after commit' };
   await expect(db.transaction(async trx => { await createSharedTicketComment(trx, principal, resource, request); throw new Error('rollback'); })).rejects.toThrow('rollback');
   expect(await customer.table('co_management_event_outbox')).toEqual([]);
   expect(await customer.table('comments').where('comment_id', request.operationId)).toEqual([]);
   const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, request));
   expect(receipt.commentId).toBe(request.operationId);
-  expect(publishEvent).not.toHaveBeenCalled(); expect(publishWorkflowEvent).not.toHaveBeenCalled();
+  expect(storedEventSpy(events)).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
   const publish = vi.fn().mockResolvedValue(undefined);
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 3, cancelled: 0, failed: 0 });
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 0, cancelled: 0, failed: 0 });
@@ -7899,7 +7937,7 @@ it('routes co-managed consumer recovery through the actual job with isolated tar
   const { coManagedNotificationRecoveryHandler } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
   const { recoverCoManagedEventConsumers } = await import('@alga-psa/co-managed');
   const database = await import('@alga-psa/db'), events = await import('@alga-psa/event-bus/publishers');
-  const publish = vi.mocked(events.publishEvent);
+  const publish = storedEventSpy(events);
   const pending = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Not yet published' }));
   await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Published but not consumed' });
   await customer.table('co_management_event_consumers').update({ next_attempt_at: '2020-01-02T00:00:00Z' });
@@ -11589,13 +11627,15 @@ async function withNativeTaskCommentsFixture(work: (fixture: any) => Promise<voi
     const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
     const events = await import('@alga-psa/event-bus/publishers'), avatars = await import('@alga-psa/formatting/avatarUtils');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
-    const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+    const publish = recordTimeEvents(events); // catalogued comment events now leave through publishWorkflowEvent
+    // Retained PROJECT_TASK_COMMENT_* events leave through publishStoredEvent(event, {eventId, strict}); one recorder sees all three.
+    storedEventSpy(events).mockImplementation(publish as never);
     const avatar = vi.spyOn(avatars, 'getEntityImageUrlsBatch').mockResolvedValue(new Map());
     const comments = await import('../../../../../packages/projects/src/actions/projectTaskCommentActions');
     const reactions = await import('../../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
     try { await withTrackedTaskBrowser(customerPrincipal, customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant,
       () => work({ ...fixture, ...browser, user, comments, reactions, publish, avatar, connection })))); }
-    finally { avatar.mockRestore(); publish.mockRestore(); connection.mockRestore(); }
+    finally { avatar.mockRestore(); resetPublisherStub(publish); connection.mockRestore(); }
   });
 }
 
@@ -11646,7 +11686,12 @@ it.each(['expired_session', 'revoked_session', 'api_override', 'wrong_session_us
     if (reason === 'api_override') override.mockReturnValue(user);
     if (reason === 'wrong_session_user') session.mockResolvedValue({ session_id: customerPrincipal.sessionId, user: { id: randomUUID(), tenant: resource.tenant, user_type: 'internal' } });
     if (reason === 'missing_project_role') await customer.table('user_roles').where('user_id', user.user_id).del();
-    for (const call of [() => comments.getTaskComments(resource.id), () => comments.getTaskCommentCount(resource.id), () => comments.getTaskCommentCountsBatch([resource.id]),
+    // Main's count actions check the project_task read permission before the shared-work
+    // admission and answer a denial with its permissionError result instead of throwing.
+    // A user whose role is gone is denied there; every other reason still rejects.
+    const mainRbacCounts = reason === 'missing_project_role' ? [() => comments.getTaskCommentCount(resource.id), () => comments.getTaskCommentCountsBatch([resource.id])] : [];
+    for (const count of mainRbacCounts) expect(await count()).toEqual({ permissionError: expect.stringContaining('Permission denied') });
+    for (const call of [() => comments.getTaskComments(resource.id), ...(mainRbacCounts.length ? [] : [() => comments.getTaskCommentCount(resource.id), () => comments.getTaskCommentCountsBatch([resource.id])]),
       () => reactions.getTaskCommentsReactionsBatch([root]), () => reactions.toggleTaskCommentReaction(root, '👍'),
       () => comments.createTaskComment({ taskId: resource.id, note: 'Denied' }), () => comments.updateTaskComment(root, { note: 'Denied' }, 1), () => comments.deleteTaskComment(root, 1)])
       await expect(call()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -12667,7 +12712,7 @@ async function withNativeOperationalTimeFixture(work: (fixture: any) => Promise<
     const { customer, customerPrincipal, resource } = fixture, auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
     const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
-    const events = await import('@alga-psa/event-bus/publishers'), publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+    const events = await import('@alga-psa/event-bus/publishers'), publish = recordTimeEvents(events);
     const actions = await import('../../../../../packages/scheduling/src/actions/timeEntryCrudActions');
     const periodId = randomUUID(), sheetId = randomUUID();
     await customer.table('time_periods').insert({ tenant: resource.tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
@@ -12676,7 +12721,7 @@ async function withNativeOperationalTimeFixture(work: (fixture: any) => Promise<
     const save = (extra: any = {}) => actions.saveTimeEntry({ ...input, ...extra });
     try { await withTrackedTaskBrowser(customerPrincipal, customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant,
       () => work({ ...fixture, ...browser, user, actions, publish, input, save, sheetId })))); }
-    finally { publish.mockRestore(); connection.mockRestore(); }
+    finally { resetPublisherStub(publish); connection.mockRestore(); }
   });
 }
 
@@ -12828,13 +12873,13 @@ async function withOperationalTimeApiFixture(work: (fixture: any) => Promise<voi
     const schemas = await import('../../../../../server/src/lib/api/schemas/timeEntry'), service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
     const apiEvents = await import('@alga-psa/event-bus/publishers');
-    const publish = vi.spyOn(apiEvents, 'publishEvent').mockResolvedValue(undefined);
+    const publish = recordTimeEvents(apiEvents);
     const context = { tenant: resource.tenant, userId: user.user_id, user, apiKeyId };
     const input = { work_item_type: 'project_task', work_item_id: resource.id, start_time: fixture.input.start_time, end_time: fixture.input.end_time, notes: 'Private API effort' };
     const create = (extra: any = {}, ctx = context) => service.create(schemas.createTimeEntrySchema.parse({ ...input, ...extra }), ctx);
     const update = (id: string, data: any, ctx = context) => service.update(id, schemas.updateTimeEntrySchema.parse(data), ctx);
     try { await work({ ...fixture, publish, service, schemas, context, apiKeyId, apiInput: input, create, update }); }
-    finally { publish.mockRestore(); connection.mockRestore(); }
+    finally { resetPublisherStub(publish); connection.mockRestore(); }
   });
 }
 
@@ -13410,7 +13455,7 @@ it('native timesheet collections reject the whole response when credentials expi
 
 it.each(['browser', 'api'])('native time deletion removes %s effort and review comments atomically with task totals', async channel => withNativeTimeSheetReadFixture(async ({ entry, addRequest, service, context, actions, customer, resource, publish }: any) => {
   await addRequest();
-  const events = await import('@alga-psa/event-bus/publishers'), emitted = channel === 'api' ? publish : vi.mocked(events.publishEvent);
+  const events = await import('@alga-psa/event-bus/publishers'), emitted = publish;
   emitted.mockClear();
   if (channel === 'api') await service.delete(entry.entry_id, context); else await actions.deleteTimeEntry(entry.entry_id);
   expect(await customer.table('time_entries')).toHaveLength(0); expect(await customer.table('time_entry_change_requests')).toHaveLength(0);
@@ -13687,7 +13732,7 @@ it('native time API collections reject the whole result when a key expires durin
 it.each(['browser', 'api'])('native time review retains %s feedback and sheet state without publishing private text', async channel => withNativeTimeSheetReadFixture(async ({ entry, service, context, actions, customer, publish }: any) => {
   await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
   await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'SUBMITTED' });
-  const events = await import('@alga-psa/event-bus/publishers'), emitted = channel === 'api' ? publish : vi.mocked(events.publishEvent);
+  const events = await import('@alga-psa/event-bus/publishers'), emitted = publish;
   emitted.mockClear();
   if (channel === 'browser') await actions.updateTimeEntryApprovalStatus({ entryId: entry.entry_id, approvalStatus: 'CHANGES_REQUESTED', changeRequestComment: 'Private review feedback' });
   else expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Private review feedback', detailed_feedback: 'Additional private context' }, context)).toMatchObject([{ success: true }]);
@@ -13763,7 +13808,7 @@ async function withNativeTimeSheetCommandFixture(work: (fixture: any) => Promise
     const sheets = await import('../../../../../packages/scheduling/src/actions/timeSheetActions');
     const operations = await import('../../../../../packages/scheduling/src/actions/timeSheetOperations');
     const events = await import('@alga-psa/event-bus/publishers');
-    await work({ ...fixture, sheets, operations, emitted: vi.mocked(events.publishEvent) });
+    await work({ ...fixture, sheets, operations, emitted: recordTimeEvents(events) });
   });
 }
 
@@ -14501,7 +14546,9 @@ async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
     const today = Temporal.Now.plainDateISO('UTC'), boundary = today.add({ days: 2 });
     const { customer, context } = fixture;
     await customer.table('time_periods').update({ start_date: today.subtract({ days: 5 }).toString(), end_date: boundary.toString() });
-    const settings = await fixture.sheetService.createTimePeriodSettings({ frequency: 7, frequency_unit: 'day', effective_from: today.subtract({ days: 30 }).toString() }, context);
+    // Main snaps generated periods to a grid anchored at effective_from. 63 days is a whole number of
+    // 7- and 9-day cells, so the open boundary sits on the grid for both the stored and the updated frequency.
+    const settings = await fixture.sheetService.createTimePeriodSettings({ frequency: 7, frequency_unit: 'day', effective_from: boundary.subtract({ days: 63 }).toString() }, context);
     const identity = { tenant: context.tenant, jobId: randomUUID(), scheduledJobId: randomUUID() };
     await customer.table('jobs').insert({ tenant: context.tenant, job_id: identity.jobId, type: 'createNextTimePeriods', status: 'processing', user_id: null,
       metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId: identity.scheduledJobId }) });
@@ -14590,19 +14637,21 @@ it('customer period jobs and native generation share semi-monthly and seasonal a
   const { TimePeriodSuggester } = await import('../../../../../packages/scheduling/src/lib/timePeriodSuggester');
   const { generateTimePeriods } = await import('../../../../../packages/scheduling/src/actions/timePeriodsActions');
   const base = { tenant: randomUUID(), time_period_settings_id: randomUUID(), frequency: 1, is_active: true, effective_from: '2026-01-01', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
+  // Main reads monthly end_day as the last included day (1..15 then 16..end) and effective_to likewise, and a
+  // stored end of month 12 / day 0 is the whole-year default, so the second season's exclusive bound is spelled Jan 1.
   for (const [settings, end, expected] of [
-    [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 16 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
-    [[{ ...base, frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 7, end_day_of_month: 1 }, { ...base, frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 }], '2028-01-01', [['2027-01-01', '2027-07-01'], ['2027-07-01', '2028-01-01']]],
+    [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 15 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
+    [[{ ...base, frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 7, end_day_of_month: 1 }, { ...base, frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 1, end_day_of_month: 1 }], '2028-01-01', [['2027-01-01', '2027-07-01'], ['2027-07-01', '2028-01-01']]],
   ] as any[]) {
     const native = await generateTimePeriods(settings, '2027-01-01', end);
     expect(native.map(row => [row.start_date, row.end_date]).sort()).toEqual(expected);
     const periods: any[] = [];
     for (let index = 0; index < expected.length; index++) {
-      const next = TimePeriodSuggester.suggestNewTimePeriod(settings, periods, Temporal.PlainDate.from('2027-01-01'));
+      const next = TimePeriodSuggester.suggestNewTimePeriod(settings, periods, { today: Temporal.PlainDate.from('2027-01-01') });
       expect(next.success).toBe(true); periods.push(next.data);
     }
     expect(periods.map(row => [row.start_date, row.end_date])).toEqual(expected);
-    expect(TimePeriodSuggester.suggestNewTimePeriod(settings.map((setting: any) => ({ ...setting, effective_to: end })), periods).success).toBe(false);
+    expect(TimePeriodSuggester.suggestNewTimePeriod(settings.map((setting: any) => ({ ...setting, effective_to: Temporal.PlainDate.from(end).subtract({ days: 1 }).toString() })), periods).success).toBe(false);
   }
 });
 
@@ -14742,7 +14791,9 @@ it('customer schedule calendar filters actual assignments sources and recurrence
   expect(await calendar()).toMatchObject({ success: false });
 }));
 
-it('customer schedule commands create edit and delete actual API entries without leaking event content', async () => withScheduleReadFixture(async ({ sheetService, context, resource, customer, publish }: any) => {
+it('customer schedule commands create edit and delete actual API entries without leaking event content', async () => withScheduleReadFixture(async ({ sheetService, context, resource, customer }: any) => {
+  // Schedule-entry events are catalogued: they publish as workflow events carrying the tenant in ctx.
+  const publish = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishWorkflowEvent);
   const { createScheduleEntrySchema, updateScheduleEntrySchema, scheduleEntryResponseSchema } = await import('../../../../../server/src/lib/api/schemas/timeSheet');
   publish.mockClear();
   const created = await sheetService.createScheduleEntry(createScheduleEntrySchema.parse({ title: 'API allocation', notes: 'Private allocation details', scheduled_start: '2026-09-15T09:00:00Z', scheduled_end: '2026-09-15T10:00:00Z', work_item_type: 'project_task', work_item_id: resource.id }), context);
@@ -14756,7 +14807,7 @@ it('customer schedule commands create edit and delete actual API entries without
   expect(await sheetService.getScheduleEntry(created.entry_id, context)).toBeNull();
   expect(await customer.table('schedule_entry_assignees').where('entry_id', created.entry_id)).toHaveLength(0);
   expect(publish).toHaveBeenCalledTimes(4);
-  for (const [event] of publish.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+  for (const [event] of publish.mock.calls) { expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'userId']); expect(event.ctx.tenantId).toBe(context.tenant); }
 }));
 
 it('customer schedule commands retain own-calendar permission and enforce actual write bundle rules', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, busyId, user, resource }: any) => {
@@ -14833,7 +14884,9 @@ it('customer schedule commands protect active clocks and reject mutations after 
 async function withNativeScheduleCommandFixture(work: (fixture: any) => Promise<void>) {
   await withScheduleReadFixture(async (fixture: any) => {
     const { native, context } = fixture;
-    const events = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishEvent);
+    // Schedule-entry events are catalogued, so main publishes them as workflow events
+    // ({ eventType, payload, ctx }); the tenant rides in ctx rather than the payload.
+    const events = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishWorkflowEvent);
     const createSchedule = (data: any = {}) => native.addScheduleEntry({ title: 'Native allocation', notes: 'Private recurring notes', scheduled_start: new Date('2026-10-05T09:00:00Z'), scheduled_end: new Date('2026-10-05T10:30:00Z'), work_item_type: 'ad_hoc', work_item_id: null, assigned_user_ids: [context.userId], status: 'scheduled', ...data });
     const createSeries = async (data: any = {}) => {
       const created = await createSchedule({ recurrence_pattern: { frequency: 'daily', interval: 1, startDate: new Date('2026-10-05T00:00:00Z'), count: 5 }, ...data });
@@ -14854,7 +14907,7 @@ it('native schedule commands share current authority and ordinary create edit de
   expect(await native.deleteScheduleEntry(created.entry.entry_id)).toMatchObject({ success: true, deleted: true });
   expect(await customer.table('schedule_entries').where('entry_id', created.entry.entry_id)).toHaveLength(0);
   expect(events).toHaveBeenCalledTimes(3);
-  for (const [event] of events.mock.calls) expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'tenantId', 'userId']);
+  for (const [event] of events.mock.calls) { expect(Object.keys(event.payload).sort()).toEqual(['entryId', 'userId']); expect(event.ctx.tenantId).toBe(context.tenant); }
 }));
 
 it('native schedule commands edit one actual occurrence while preserving its siblings and explicit clears', async () => withNativeScheduleCommandFixture(async ({ createSeries, native, calendar, customer, events, resource }: any) => {
@@ -15176,7 +15229,7 @@ it('customer appointment authority declines approved bookings with atomic reques
   expect(await customer.table('schedule_conflicts')).toEqual([]);
   expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'declined', declined_reason: 'Please choose another appointment', schedule_entry_id: null, online_meeting_id: null, approved_by_user_id: context.userId });
   expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'cancelled', co_managed_sync_action: 'delete' });
-  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(events).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: expect.objectContaining({ userId: context.userId, entryId: ownId }), ctx: expect.objectContaining({ tenantId: context.tenant }) }));
   expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Duplicate' })).toMatchObject({ success: false });
 }));
 
@@ -15214,7 +15267,7 @@ it('customer appointment rescheduling keeps requester wall-clock calendar and me
   const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
   expect(meeting).toMatchObject({ co_managed_sync_action: 'update', subject: 'Previously disclosed appointment' });
   expect(meeting.start_time.toISOString()).toBe(schedule.scheduled_start.toISOString());
-  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(events).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: expect.objectContaining({ userId: context.userId, entryId: ownId }), ctx: expect.objectContaining({ tenantId: context.tenant }) }));
 }));
 
 it('customer appointment rescheduling supports pending requests without approving them and rejects impossible local times', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, requestId, ownId, meetingId }: any) => {
@@ -15257,7 +15310,7 @@ it('customer appointment approval retains pending calendar identity and requeste
   const schedule = await customer.table('schedule_entries').where('entry_id', ownId).first();
   expect(schedule).toMatchObject({ title: 'Appointment: IT appointment', notes: 'Private appointment description\n\nIT approval note', work_item_type: 'appointment_request', work_item_id: requestId });
   expect(schedule.scheduled_start.toISOString()).toBe('2026-09-07T09:00:00.000Z');
-  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(events).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: expect.objectContaining({ userId: context.userId, entryId: ownId }), ctx: expect.objectContaining({ tenantId: context.tenant }) }));
   expect(await approve()).toMatchObject({ success: false });
   expect(await customer.table('schedule_entries')).toHaveLength(3);
 }));
@@ -15274,7 +15327,7 @@ it('customer appointment approval creates one actual allocation for an unlinked 
   expect(rows).toHaveLength(1); expect(rows[0].entry_id).toBe(request.schedule_entry_id);
   expect(rows[0].scheduled_start.toISOString()).toBe('2026-09-21T09:30:00.000Z');
   expect(request.requested_time).toBe('05:30:00');
-  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: rows[0].entry_id } });
+  expect(events).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: expect.objectContaining({ userId: context.userId, entryId: rows[0].entry_id }), ctx: expect.objectContaining({ tenantId: context.tenant }) }));
 }));
 
 it('customer appointment approval requires current approver scope active assignees and unmasked fields', async () => withAppointmentApprovalFixture(async ({ approve, customer, context, requestId, user, domain, actor }: any) => {
@@ -15784,7 +15837,10 @@ async function withInteractionMeetingReadFixture(work: (fixture: any) => Promise
     const actions = await import('../../../../../packages/clients/src/actions/interactionActions');
     const meetings = await import('../../../../../packages/clients/src/actions/onlineMeetingActions');
     const list = (options: any = {}) => domain.readCoManagedNativeInteractions(db, context.tenant, actor, options);
-    await work({ ...fixture, interactionId, typeId, clientId: request.client_id, actions, meetings, list });
+    // Interaction events are non-catalogued, so they still publish through publishEvent
+    // (the schedule fixture's `events` observes the catalogued workflow publisher).
+    const events = vi.mocked((await import('@alga-psa/event-bus/publishers')).publishEvent);
+    await work({ ...fixture, interactionId, typeId, clientId: request.client_id, actions, meetings, list, events });
   });
 }
 
