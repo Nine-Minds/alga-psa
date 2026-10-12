@@ -223,6 +223,7 @@ services:
       STORAGE_LOCAL_BASE_PATH: /data/files
       DB_HOST: pgbouncer
       DB_PORT: '6432'
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
       DB_HOST_ADMIN: postgres
       DB_PORT_ADMIN: '5432'
       DB_NAME_SERVER: server
