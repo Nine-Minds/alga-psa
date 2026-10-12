@@ -62,7 +62,7 @@ vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tact
  * provider that prompted this work — never reached its device sync at all.
  */
 
-const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
+const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium', 'unifi'];
 const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
 
 function deviceSyncEligible(row: {
@@ -91,6 +91,10 @@ describe('device sync eligibility', () => {
     // The case the restructure exists for.
     expect(ALERT_POLLING_PROVIDERS).not.toContain('levelio');
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'levelio' })).toBe(true);
+  });
+
+  it('is eligible for UniFi (device sync only until its alert fetcher is registered)', () => {
+    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'unifi' })).toBe(true);
   });
 
   it('is not eligible for a provider outside the device sync list', () => {
@@ -154,7 +158,7 @@ describe('device sync eligibility', () => {
  */
 describe('providers deliberately excluded from device sync', () => {
   it('lists only the providers with a job-callable device sync', () => {
-    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm', 'tanium']);
+    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm', 'tanium', 'unifi']);
   });
 });
 

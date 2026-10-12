@@ -21,6 +21,7 @@ import {
   listUniFiSiteMappings,
   saveUniFiConfiguration,
   syncUniFiSites,
+  triggerUniFiFullSync,
   testUniFiConnection,
   updateUniFiSiteMapping,
 } from '../../../lib/actions/integrations/uniFiActions';
@@ -70,6 +71,7 @@ export default function UniFiIntegrationSettings() {
   const [isTesting, startTesting] = useTransition();
   const [isDisconnecting, startDisconnecting] = useTransition();
   const [isSiteSyncing, startSiteSyncing] = useTransition();
+  const [isDeviceSyncing, startDeviceSyncing] = useTransition();
 
   const refresh = useCallback(async (background = false) => {
     if (!background) setIsLoading(true);
@@ -197,6 +199,30 @@ export default function UniFiIntegrationSettings() {
         }
       } else {
         setError(('error' in result && result.error) || t('integrations.rmm.unifi.errors.siteSyncFailed', { defaultValue: 'Site discovery failed' }));
+      }
+      await refresh(true);
+    });
+  };
+
+  const handleDeviceSync = () => {
+    startDeviceSyncing(async () => {
+      setError(null);
+      setSuccess(null);
+      const result = await triggerUniFiFullSync();
+      if (result.success && 'items_processed' in result) {
+        setSuccess(
+          t('integrations.rmm.unifi.success.deviceSyncCompleted', {
+            defaultValue: 'Device sync completed: {{processed}} processed, {{created}} created, {{updated}} updated',
+            processed: result.items_processed,
+            created: result.items_created,
+            updated: result.items_updated,
+          })
+        );
+        if ('errors' in result && result.errors?.length) {
+          setError(result.errors.join('; '));
+        }
+      } else {
+        setError(('error' in result && result.error) || t('integrations.rmm.unifi.errors.deviceSyncFailed', { defaultValue: 'Device sync failed' }));
       }
       await refresh(true);
     });
@@ -412,6 +438,14 @@ export default function UniFiIntegrationSettings() {
           <div className="flex flex-wrap gap-2">
             <Button id="unifi-sync-sites" onClick={handleSiteSync} disabled={isSiteSyncing || isLoading || !isActive}>
               {t('integrations.rmm.unifi.actions.discoverSites', { defaultValue: 'Discover Sites' })}
+            </Button>
+            <Button
+              id="unifi-sync-devices"
+              variant="outline"
+              onClick={handleDeviceSync}
+              disabled={isDeviceSyncing || isSiteSyncing || isLoading || !isActive}
+            >
+              {t('integrations.rmm.unifi.actions.runDeviceSync', { defaultValue: 'Run Device Sync' })}
             </Button>
           </div>
 

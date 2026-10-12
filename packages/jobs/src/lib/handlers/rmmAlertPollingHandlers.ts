@@ -60,7 +60,8 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
  * entitlement, so its engine asserts the tier itself rather than relying on the
  * action wrapper a scheduled run never passes through.
  */
-const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
+// LEVERAGE: pattern rmm-provider-registration — provider lists are hand-maintained per capability
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium', 'unifi'];
 
 const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
 const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
@@ -333,6 +334,14 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — Tanium device sync unavailable.
+  }
+  try {
+    const mod = await import('@enterprise/lib/integrations/unifi/sync/deviceSyncStrategy');
+    if (mod.uniFiDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('unifi', mod.uniFiDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — UniFi device sync unavailable.
   }
   deviceSyncStrategiesEnsured = true;
 }

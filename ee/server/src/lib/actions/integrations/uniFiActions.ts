@@ -21,8 +21,9 @@ import {
   type UniFiConnectionMode,
 } from '../../integrations/unifi/unifiApiClient';
 import { clearReconnectRequired } from '../../integrations/unifi/reconnect';
-import { runUniFiScopeSync } from '../../integrations/unifi/sync/syncEngine';
+import { runUniFiDeviceSync, runUniFiFullSync, runUniFiScopeSync } from '../../integrations/unifi/sync/syncEngine';
 import {
+  startUniFiDeviceSyncWorkflow,
   startUniFiSyncWorkflow,
   unifiTransportOverride,
 } from '../../integrations/unifi/sync/transport';
@@ -355,6 +356,64 @@ export const syncUniFiSites = withAdvancedAssetsAccess(async (user, { tenant }) 
     return { success: false, error: sanitizeError(error, 'Unable to sync UniFi sites.') };
   }
 });
+
+export const triggerUniFiFullSync = withAdvancedAssetsAccess(async (user, { tenant }) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex, integration } = await getUniFiIntegration(tenant);
+    if (!integration?.integration_id) {
+      throw new Error('UniFi integration is not configured.');
+    }
+    const mode = resolveMode(parseSettings(integration.settings));
+
+    return await runRmmSyncWithTransport({
+      context: { provider: PROVIDER, operation: 'full_sync', input: { tenant } },
+      transportOverride: unifiTransportOverride(),
+      directExecutor: async () => {
+        const client = await createUniFiClient(tenant, mode);
+        return runUniFiFullSync({ tenant, integrationId: integration.integration_id }, { knex, client });
+      },
+      temporalExecutor: async () =>
+        startUniFiSyncWorkflow({ tenantId: tenant, integrationId: integration.integration_id, syncType: 'full' }),
+    });
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to sync UniFi devices.') };
+  }
+});
+
+export const syncUniFiSingleDevice = withAdvancedAssetsAccess(
+  async (user, { tenant }, scopeKey: string, deviceId: string) => {
+    const permitted = await hasPermission(user as any, 'system_settings', 'update');
+    if (!permitted) return { success: false, error: 'Forbidden' };
+
+    try {
+      const { knex, integration } = await getUniFiIntegration(tenant);
+      if (!integration?.integration_id) {
+        throw new Error('UniFi integration is not configured.');
+      }
+      const mode = resolveMode(parseSettings(integration.settings));
+      const args = { tenant, integrationId: integration.integration_id, scopeKey, deviceId };
+
+      if (unifiTransportOverride() === 'direct') {
+        const client = await createUniFiClient(tenant, mode);
+        const result = await runUniFiDeviceSync(args, { knex, client });
+        return { success: true, result };
+      }
+      const result = await startUniFiDeviceSyncWorkflow({
+        tenantId: tenant,
+        integrationId: integration.integration_id,
+        scopeKey,
+        deviceId,
+        waitForResult: true,
+      });
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: sanitizeError(error, 'Unable to sync the UniFi device.') };
+    }
+  }
+);
 
 export const listUniFiSiteMappings = withAdvancedAssetsAccess(async (user, { tenant }) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
