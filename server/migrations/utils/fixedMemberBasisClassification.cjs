@@ -11,16 +11,14 @@
  * The statement is a pure SELECT. It returns one row per base_rate that has no
  * basis yet:
  *   tenant, config_id, contract_line_id, base_rate_basis, reason
- * plus, for Fixed `contract_line_service_configuration.custom_rate`
- * allocations that the migration's §3.3 move has not yet relocated, a virtual
- * row (reason = 'moved') so the report sees the state the migration produces.
- * After the move has run, those rows carry base_rate_basis = 'share' and drop
- * out of the pending set, so the same statement is valid both before and after.
+ *
+ * (Plan §3.3 proposed moving Fixed `contract_line_service_configuration.custom_rate`
+ * allocations into base_rate as shares. That was NOT done: those values are
+ * per-unit catalog prices, see the work-order note on §9.)
  *
  * Rules (per contract line, over its bundle members: Fixed, non-product,
  * non-unit configurations):
  *   - unit / product / non-Fixed rows            -> per_unit
- *   - moved clsc.custom_rate allocation          -> share
  *   - line is "share-shaped" (every member has a rate and every
  *     |rate_i - S*q_i/Q| <= ceil(n/2) cents, the fingerprint of the wizard's
  *     allocateBundleBaseRate) AND (quantities differ OR line rate = S) -> share
@@ -33,7 +31,6 @@ WITH cfg AS (
          clsc.config_id,
          clsc.contract_line_id,
          COALESCE(clsc.quantity, cls.quantity, 1)::numeric AS qty,
-         clsc.custom_rate AS cfg_rate,
          fc.base_rate AS fc_rate,
          fc.pricing_basis,
          __FC_BASIS__ AS base_rate_basis,
@@ -50,9 +47,7 @@ WITH cfg AS (
   WHERE clsc.configuration_type = 'Fixed'
 ),
 members AS (
-  SELECT cfg.*,
-         (fc_rate IS NULL AND cfg_rate IS NOT NULL) AS to_move,
-         CASE WHEN fc_rate IS NULL AND cfg_rate IS NOT NULL THEN cfg_rate ELSE fc_rate END AS rate
+  SELECT cfg.*, fc_rate AS rate
   FROM cfg
   WHERE NOT is_product AND pricing_basis IS DISTINCT FROM 'unit'
 ),
@@ -85,12 +80,10 @@ SELECT m.tenant,
        m.config_id,
        m.contract_line_id,
        CASE
-         WHEN m.to_move THEN 'share'
          WHEN sh.share_shaped AND (sh.distinct_q > 1 OR sh.line_rate = sh.s) THEN 'share'
          ELSE 'per_unit'
        END AS base_rate_basis,
        CASE
-         WHEN m.to_move THEN 'moved'
          WHEN sh.share_shaped AND (sh.distinct_q > 1 OR sh.line_rate = sh.s) THEN 'share_shaped'
          WHEN sh.share_shaped AND sh.distinct_q = 1 AND m.qty > 1 THEN 'ambiguous'
          ELSE 'per_unit_default'

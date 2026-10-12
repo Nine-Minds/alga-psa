@@ -4,22 +4,22 @@
  * `contract_line_service_fixed_config.base_rate_basis`: what a stored
  * `base_rate` MEANS.
  *
- * Plan: docs/plans/2026-10-12-fixed-line-base-rate-meaning-plan.md (§2.1, §3.3, §4).
+ * Plan: docs/plans/2026-10-12-fixed-line-base-rate-meaning-plan.md (§2.1, §4).
  *
  *   per_unit  the member's contribution is base_rate x quantity
  *   share     the member's contribution is base_rate (its slice of the line fee)
  *
  * Steps, in order:
  *   1. add the nullable column
- *   2. move Fixed bundle `contract_line_service_configuration.custom_rate`
- *      allocations into `base_rate` (basis 'share', provenance 'custom'), then
- *      null the configuration value
- *   3. classify every remaining stored base_rate (shared SQL, see
+ *   2. classify every stored base_rate (shared SQL, see
  *      utils/fixedMemberBasisClassification.cjs)
- *   4. add the constraints
+ *   3. add the constraints
  *
- * `down` drops only the constraints and the column. The step-2 move is not
- * reversed: after it, the allocation lives where the engine reads it.
+ * Plan §3.3 (moving Fixed clsc.custom_rate into base_rate as 'share') is
+ * deliberately NOT done: the add-service/template paths store per-unit catalog
+ * prices there, not shares.
+ *
+ * `down` drops only the constraints and the column.
  */
 
 const { CLASSIFICATION_SQL } = require('./utils/fixedMemberBasisClassification.cjs');
@@ -58,58 +58,7 @@ exports.up = async function up(knex) {
     await knex.raw(`ALTER TABLE ${TABLE} ADD COLUMN ${COLUMN} text`);
   }
 
-  // The move needs the classification-independent allocation set; the
-  // statements below only touch rows whose fixed-config rate is still NULL.
-  const movable = `
-    clsc.configuration_type = 'Fixed'
-    AND clsc.custom_rate IS NOT NULL
-    AND COALESCE(sc.item_kind, 'service') <> 'product'
-  `;
-
-  // 2a. Existing fixed-config row with no rate yet: it takes the allocation.
-  await knex.raw(`
-    UPDATE ${TABLE} fc
-    SET base_rate = clsc.custom_rate,
-        ${COLUMN} = 'share',
-        pricing_basis = COALESCE(fc.pricing_basis, 'bundle'),
-        rate_provenance = 'custom'
-    FROM contract_line_service_configuration clsc
-    JOIN service_catalog sc ON sc.tenant = clsc.tenant AND sc.service_id = clsc.service_id
-    WHERE fc.tenant = clsc.tenant
-      AND fc.config_id = clsc.config_id
-      AND fc.base_rate IS NULL
-      AND fc.pricing_basis IS DISTINCT FROM 'unit'
-      AND ${movable}
-  `);
-
-  // 2b. No fixed-config row at all: create it.
-  await knex.raw(`
-    INSERT INTO ${TABLE} (tenant, config_id, base_rate, pricing_basis, rate_provenance, ${COLUMN})
-    SELECT clsc.tenant, clsc.config_id, clsc.custom_rate, 'bundle', 'custom', 'share'
-    FROM contract_line_service_configuration clsc
-    JOIN service_catalog sc ON sc.tenant = clsc.tenant AND sc.service_id = clsc.service_id
-    WHERE ${movable}
-      AND NOT EXISTS (
-        SELECT 1 FROM ${TABLE} fc WHERE fc.tenant = clsc.tenant AND fc.config_id = clsc.config_id
-      )
-  `);
-
-  // 2c. The allocation now lives in base_rate (or was superseded by an
-  //     existing base_rate, which always won in the resolver): drop the copy.
-  await knex.raw(`
-    UPDATE contract_line_service_configuration clsc
-    SET custom_rate = NULL
-    FROM ${TABLE} fc, service_catalog sc
-    WHERE fc.tenant = clsc.tenant
-      AND fc.config_id = clsc.config_id
-      AND sc.tenant = clsc.tenant
-      AND sc.service_id = clsc.service_id
-      AND fc.base_rate IS NOT NULL
-      AND fc.pricing_basis IS DISTINCT FROM 'unit'
-      AND ${movable}
-  `);
-
-  // 3. Classify what is left.
+  // Classify every stored base_rate.
   const pending = await knex.raw(CLASSIFICATION_SQL);
   const counts = {};
   const ambiguousLines = new Set();

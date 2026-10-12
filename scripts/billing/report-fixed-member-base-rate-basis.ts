@@ -98,7 +98,7 @@ async function main() {
             'clsc.config_id',
             'clsc.contract_line_id',
             trx.raw('COALESCE(clsc.quantity, cls.quantity, 1)::numeric AS qty'),
-            trx.raw('COALESCE(fc.base_rate, clsc.custom_rate) AS rate'),
+            trx.raw('fc.base_rate AS rate'),
           );
         const perLine = new Map<string, { tenant: string; line: string; before: number; after: number }>();
         for (const member of members as Array<Record<string, any>>) {

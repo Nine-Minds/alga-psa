@@ -9,7 +9,6 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-uti
 
 /**
  * Migration 20261012000001_fixed_member_base_rate_basis (plan §4, §5.6):
- *   - the Fixed clsc.custom_rate -> clsfc.base_rate move (§3.3)
  *   - classification of the four line shapes
  *   - constraints: a rate with no basis fails; a 'unit' row labelled 'share' fails
  *
@@ -84,7 +83,7 @@ describe('fixed member base_rate_basis migration', () => {
     await db?.destroy();
   });
 
-  it('moves allocations, classifies four shapes, and enforces the constraints', async () => {
+  it('classifies the four shapes (and seats) and enforces the constraints', async () => {
     const [a, b, c, d, e, f, g] = await Promise.all(
       ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((n) => seedService(`Basis ${n}`)),
     );
@@ -113,11 +112,6 @@ describe('fixed member base_rate_basis migration', () => {
     const seatLine = await seedLine(null);
     const seat = await seedMember({ lineId: seatLine, serviceId: e, qty: 4, baseRate: 1500, pricingBasis: 'unit' });
 
-    // Section 3.3: preset / template-cloned line with allocations in clsc.custom_rate.
-    const presetLine = await seedLine(null);
-    const pr1 = await seedMember({ lineId: presetLine, serviceId: f, qty: 1, configCustomRate: 300 });
-    const pr2 = await seedMember({ lineId: presetLine, serviceId: g, qty: 2, configCustomRate: 600, pricingBasis: 'bundle' });
-
     await migration.up(db);
 
     expect(await basisOf(w1)).toBe('share');
@@ -129,17 +123,6 @@ describe('fixed member base_rate_basis migration', () => {
     expect(await basisOf(m1)).toBe('per_unit');
     expect(await basisOf(m2)).toBe('per_unit');
     expect(await basisOf(seat)).toBe('per_unit');
-
-    // The move: base_rate carries the allocation, basis share, provenance custom, clsc cleared.
-    for (const [configId, rate] of [[pr1, 300], [pr2, 600]] as const) {
-      const fc = await db('contract_line_service_fixed_config').where({ tenant, config_id: configId }).first();
-      expect(Number(fc.base_rate)).toBe(rate);
-      expect(fc.base_rate_basis).toBe('share');
-      expect(fc.rate_provenance).toBe('custom');
-      expect(fc.pricing_basis).toBe('bundle');
-      const clsc = await db('contract_line_service_configuration').where({ tenant, config_id: configId }).first();
-      expect(clsc.custom_rate).toBeNull();
-    }
 
     // Constraints.
     const extraConfig = await seedMember({ lineId: ambiguousLine, serviceId: await seedService('Basis H'), qty: 1 });
