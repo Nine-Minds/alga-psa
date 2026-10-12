@@ -795,16 +795,27 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   /**
-   * Legacy time-tracking endpoints run on the server-side stopwatch, except in a
-   * workspace where co-managed rules apply (operational time, or shared
-   * conversations): there the admitted native tracker owns them, because the
-   * stopwatch logs commercial time only and carries no co-managed admission.
+   * Legacy time-tracking endpoints run on the server-side stopwatch, except where
+   * co-managed rules apply: a workspace with operational time or shared
+   * conversations, a clock on shared (`co_managed`) work, or a clock the native
+   * tracker already owns. There the admitted native tracker serves the request,
+   * because the stopwatch logs commercial time only and carries no co-managed
+   * admission (and an MSP's clock on shared work lives in the native store even
+   * though the MSP workspace itself is an ordinary PSA one).
    */
-  private async nativeTimeTrackingApplies(knex: Knex, context: ServiceContext): Promise<boolean> {
+  private async nativeTimeTrackingApplies(knex: Knex, context: ServiceContext, clock?: { workItemType?: string | null; sessionId?: string }): Promise<boolean> {
+    // 'non_billable_category' clocks carry no work item, which the legacy stopwatch log cannot post.
+    if (clock?.workItemType === 'co_managed' || clock?.workItemType === 'non_billable_category') return true;
     return withTransaction(knex, async (trx) => {
       const workspace = await tenantDb(trx, context.tenant).table('tenants').first('product_code');
-      return productTimeEntryMode(workspace?.product_code) === 'operational'
-        || await hasCoManagedConversationOwnership(trx, context.tenant);
+      if (productTimeEntryMode(workspace?.product_code) === 'operational' || await hasCoManagedConversationOwnership(trx, context.tenant)) return true;
+      // A named clock belongs to the stopwatch only when the stopwatch holds it; any
+      // other id (including another user's or a completed native clock) goes to the
+      // native tracker, which answers with its own refusal instead of a stopwatch miss.
+      if (clock?.sessionId) {
+        return !!context.apiKeyId && !await tenantDb(trx, context.tenant).table('time_tracking_sessions').where('session_id', clock.sessionId).first('session_id');
+      }
+      return !!await tenantDb(trx, context.tenant).table('native_time_tracking_sessions').where('user_id', context.userId).whereNull('completed_entry_id').first('session_id');
     });
   }
 
@@ -816,12 +827,11 @@ export class TimeEntryService extends BaseService<any> {
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    if (await this.nativeTimeTrackingApplies(knex, context)) {
+    if (await this.nativeTimeTrackingApplies(knex, context, { workItemType: data.work_item_type })) {
       return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timeActor(context), data));
     }
 
     this.assertServiceIdPresent(data.service_id);
-
     let view: StopwatchSessionView;
     try {
       view = await knex.transaction((trx) =>
@@ -851,7 +861,7 @@ export class TimeEntryService extends BaseService<any> {
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    if (await this.nativeTimeTrackingApplies(knex, context)) {
+    if (await this.nativeTimeTrackingApplies(knex, context, { sessionId })) {
       return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timeActor(context), sessionId, data, async completion => {
       const { trx, actor, clock, endTime, billingMode, serviceId, notes, billable } = completion;
       const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
@@ -899,7 +909,7 @@ export class TimeEntryService extends BaseService<any> {
 
   async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    if (await this.nativeTimeTrackingApplies(knex, context)) {
+    if (await this.nativeTimeTrackingApplies(knex, context, { sessionId })) {
       return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timeActor(context), sessionId));
     }
     // Stopwatch sessions are discarded rather than logged.
