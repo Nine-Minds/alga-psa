@@ -112,6 +112,10 @@ hocuspocus:
     tag: "latest"
   pullPolicy: Always
   replicaCount: 1
+  # The hocuspocus image starts as root and drops to its own user, so it does
+  # not take the chart-wide non-root defaults. Left empty on purpose.
+  podSecurityContext: {}
+  securityContext: {}
   service:
     type: "ClusterIP"
     port: 1234
@@ -144,22 +148,49 @@ correlationPathsJson: ""
 # Development Pod Configuration
 devPod:
   enabled: false
+  # The dev pod image runs as root and writes into /app, so it does not take the
+  # chart-wide non-root defaults.
+  podSecurityContext: {}
+  securityContext: {}
 
 podLabels: {}
 
 podAnnotations:
   sidecar.istio.io/proxyMemory: "4Gi"
 
-podSecurityContext: {}
-  # fsGroup: 2000
+# The server, setup and worker images run as uid 1000 (`node`). fsGroup applies
+# to PVC-backed volumes; hostPath and local-path volumes ignore it, so use
+# `fixPermissions` below for those. Override per environment if the image user
+# differs (set runAsUser explicitly and keep runAsNonRoot: true).
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
   # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+
+# Optional root init container that hands the writable volumes (files PVC and
+# tenant-secret mounts) to the application uid. Needed on hostPath and
+# local-path volumes, where kubelet does not apply fsGroup. Runs the
+# `alga-runtime-permissions` script shipped in the server image, with only the
+# capabilities it needs.
+fixPermissions:
+  enabled: false
+  # Defaults to the server image when empty.
+  image:
+    name: ""
+    tag: ""
+  uid: 1000
+  gid: 1000
 
 
 resources: {}
@@ -298,6 +329,10 @@ redis:
   image:
     repository: redis
     tag: latest
+  # The official image's own `redis` user. Redis here takes its password from a
+  # Kubernetes Secret, so it does not need the app's uid.
+  runAsUser: 999
+  runAsGroup: 999
   service:
     port: 6379
   persistence:

@@ -68,7 +68,7 @@ spec:
         - name: "{{ .Values.server.image.credentials }}"
       {{- end }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.devPod.podSecurityContext | nindent 8 }}
       volumes:
         # Source code volume (emptyDir for fresh clone each pod start)
         - name: source-code
@@ -90,7 +90,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}-dev
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            {{- toYaml .Values.devPod.securityContext | nindent 12 }}
           image: "{{ .Values.server.image.name }}:{{ .Values.devPod.image.tag | default .Values.server.image.tag }}"
           command: ["/bin/sh", "-c"]
           args: 

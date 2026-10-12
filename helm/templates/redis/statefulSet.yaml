@@ -32,11 +32,49 @@ spec:
       annotations:
         redis-password: "{{ .Values.config.redis.password }}"
     spec:
+      # The official image's own `redis` user. The config (which holds the
+      # password) is written to an emptyDir, so the image filesystem stays
+      # untouched; the init container only fixes ownership of an existing /data
+      # volume that an earlier root-run Redis populated.
+      securityContext:
+        runAsUser: {{ .Values.redis.runAsUser }}
+        runAsGroup: {{ .Values.redis.runAsGroup }}
+        fsGroup: {{ .Values.redis.runAsGroup }}
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      {{- if .Values.redis.persistence.enabled }}
+      initContainers:
+      - name: fix-data-permissions
+        image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+        command: ["sh", "-c", "chown -R {{ .Values.redis.runAsUser }}:{{ .Values.redis.runAsGroup }} /data"]
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - CHOWN
+              - DAC_OVERRIDE
+              - FOWNER
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      {{- end }}
       containers:
       - name: redis
         image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
-        command: ["sh", "-c", "mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
+        command: ["sh", "-c", "umask 077 && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
         imagePullPolicy: Always
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         ports:
         - containerPort: {{ .Values.redis.service.port }}
           name: cql
@@ -46,8 +84,10 @@ spec:
               secretKeyRef:
                 name: redis-credentials
                 key: REDIS_PASSWORD
-        {{- if .Values.redis.persistence.enabled }}
         volumeMounts:
+        - name: redis-config
+          mountPath: /etc/redis
+        {{- if .Values.redis.persistence.enabled }}
         - name: redis-data
           mountPath: /data
         {{- end }}
@@ -58,8 +98,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- end }}
-      {{- if .Values.redis.persistence.enabled }}
       volumes:
+      - name: redis-config
+        emptyDir: {}
+      {{- if .Values.redis.persistence.enabled }}
       - name: redis-data
         persistentVolumeClaim:
           {{- if .Values.redis.persistence.existingClaim }}

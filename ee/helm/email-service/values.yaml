@@ -157,8 +157,20 @@ podDisruptionBudget:
 
 podAnnotations: {}
 podLabels: {}
-podSecurityContext: {}
-securityContext: {}
+# The email-service image runs as uid 1000 (`node`).
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 nodeSelector: {}
 tolerations: []
 affinity: {}
@@ -175,6 +187,20 @@ sharedTenantSecrets:
   enabled: false
   hostPath: /var/lib/alga-appliance/tenant-secrets
   mountPath: /shared-tenant-secrets
+
+# Optional root init container that hands the shared tenant-secret mount to the
+# application uid. hostPath volumes ignore fsGroup, so kubelet cannot do this
+# itself. Runs the `alga-runtime-permissions` script, which ships in the
+# alga-psa server image (not in this chart's image), so the server image is
+# required when enabled. Only acts when sharedTenantSecrets.enabled is true.
+fixPermissions:
+  enabled: false
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  uid: 1000
+  gid: 1000
 
 # Wait-for-bootstrap init container. When enabled, polls the server database
 # until the email_providers table exists so the service does not crashloop on

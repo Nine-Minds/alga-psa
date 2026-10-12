@@ -118,8 +118,57 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.tenantSecrets.persistence.existingClaim | default (printf "%s-tenant-secrets" (include "sebastian.fullname" .)) }}
         {{- end }}
-      {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
+      {{- if or .Values.fixPermissions.enabled .Values.setup.runMigrations .Values.setup.runSeeds }}
       initContainers:
+        {{- if .Values.fixPermissions.enabled }}
+        {{- $fixFiles := and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
+        {{- $fixTenants := or .Values.sharedTenantSecrets.enabled .Values.tenantSecrets.persistence.enabled }}
+        # Root, capability-limited: hands the writable volumes to the application
+        # uid. hostPath and local-path volumes ignore fsGroup, so kubelet cannot
+        # do this itself.
+        - name: fix-permissions
+          image: "{{ .Values.fixPermissions.image.name | default .Values.server.image.name }}:{{ .Values.fixPermissions.image.tag | default .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.pullPolicy }}
+          command: ["/usr/local/bin/alga-runtime-permissions"]
+          env:
+            - name: TARGET_UID
+              value: {{ .Values.fixPermissions.uid | quote }}
+            - name: TARGET_GID
+              value: {{ .Values.fixPermissions.gid | quote }}
+            - name: FILES_DIR
+              value: {{ ternary .Values.server.persistence.mountPath "/nonexistent/files" $fixFiles | quote }}
+            - name: TENANTS_DIR
+              value: {{ ternary (ternary .Values.sharedTenantSecrets.mountPath .Values.tenantSecrets.mountPath .Values.sharedTenantSecrets.enabled) "/nonexistent/tenants" $fixTenants | quote }}
+            - name: SECRETS_DIR
+              value: /nonexistent/secrets
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+          {{- if or $fixFiles $fixTenants }}
+          volumeMounts:
+            {{- if $fixFiles }}
+            - name: storage-volume
+              mountPath: {{ .Values.server.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.sharedTenantSecrets.enabled }}
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+            {{- else if .Values.tenantSecrets.persistence.enabled }}
+            - name: tenant-secrets
+              mountPath: {{ .Values.tenantSecrets.mountPath }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
         - name: wait-for-bootstrap
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
@@ -182,6 +231,7 @@ spec:
               value: {{ .Values.config.db.server_admin_password | quote }}
               {{- end }}
             {{- end }}
+        {{- end }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}

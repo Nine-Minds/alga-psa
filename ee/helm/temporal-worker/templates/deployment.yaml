@@ -80,6 +80,41 @@ spec:
       tolerations:
         {{- toYaml .Values.tolerations | nindent 8 }}
       {{- end }}
+      {{- if and .Values.fixPermissions.enabled .Values.sharedTenantSecrets.enabled }}
+      initContainers:
+        # Root, capability-limited: hands the shared tenant-secret store to the
+        # application uid (hostPath volumes ignore fsGroup).
+        - name: fix-permissions
+          image: "{{ required "fixPermissions.image.repository (the alga-psa server image) is required when fixPermissions.enabled" .Values.fixPermissions.image.repository }}:{{ required "fixPermissions.image.tag is required when fixPermissions.enabled" .Values.fixPermissions.image.tag }}"
+          imagePullPolicy: {{ .Values.fixPermissions.image.pullPolicy }}
+          command: ["/usr/local/bin/alga-runtime-permissions"]
+          env:
+            - name: TARGET_UID
+              value: {{ .Values.fixPermissions.uid | quote }}
+            - name: TARGET_GID
+              value: {{ .Values.fixPermissions.gid | quote }}
+            - name: FILES_DIR
+              value: /nonexistent/files
+            - name: SECRETS_DIR
+              value: /nonexistent/secrets
+            - name: TENANTS_DIR
+              value: {{ .Values.sharedTenantSecrets.mountPath | quote }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+          volumeMounts:
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+      {{- end }}
       containers:
         - name: temporal-worker
           securityContext:
