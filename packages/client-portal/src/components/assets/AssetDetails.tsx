@@ -6,7 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PlusCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { assetStatusLabelForSlug } from '@alga-psa/assets/lib/assetStatusSchema';
+import { portalAssetStatusLabel, portalAssetStatusVariant } from './portalAssetStatus';
 
 // Extension numerics are nullable ("unknown", never 0) — show that instead of a bare "null cores".
 const formatCpu = (model: string | null | undefined, cores: number | null | undefined): string => {
@@ -132,19 +132,16 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               <p className="text-sm text-gray-500">Status</p>
-              <p className="mt-1">
-                <Badge variant={
-                  asset.status === 'active' ? 'success' :
-                  asset.status === 'inactive' ? 'default-muted' :
-                  'warning'
-                }>
-                  {/* A tenant's custom status must read as its label, never as
-                      the "in_repair" slug the registry stores. */}
-                  {t(`assets.statuses.${asset.status}`, {
-                    defaultValue: assetStatusLabelForSlug(asset.status, null),
-                  })}
+              {/* A div, not a p: Badge renders a div, and a div inside a p is
+                  invalid markup that React reports as a hydration error. */}
+              <div className="mt-1">
+                {/* A tenant's custom status must read as its label, never as
+                    the "in_repair" slug the registry stores — and it must read
+                    the same here as in the device list. */}
+                <Badge variant={portalAssetStatusVariant(asset.status)}>
+                  {portalAssetStatusLabel(t, asset.status)}
                 </Badge>
-              </p>
+              </div>
             </div>
             <div>
               {/* FR-C6: contact name only — no assignment history, no cost. */}

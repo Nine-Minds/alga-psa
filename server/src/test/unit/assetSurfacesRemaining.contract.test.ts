@@ -248,9 +248,23 @@ describe('status slug never reaches the screen (F021)', () => {
   });
 
   it('T030: the portal and mobile read-only surfaces humanize the slug', () => {
+    // One helper, two surfaces: the list used to call every slug that was not
+    // `inactive` "Active" while the details panel named it correctly.
+    const helper = source('packages/client-portal/src/components/assets/portalAssetStatus.ts');
+    expect(helper).toMatch(/assets\.statuses\.\$\{status\}/);
+    expect(helper).toMatch(/assetStatusLabelForSlug\(status, null\)/);
+
     const detail = source('packages/client-portal/src/components/assets/AssetDetails.tsx');
-    expect(detail).toMatch(/assets\.statuses\.\$\{asset\.status\}/);
-    expect(detail).toMatch(/assetStatusLabelForSlug\(asset\.status, null\)/);
+    expect(detail).toMatch(/portalAssetStatusLabel\(t, asset\.status\)/);
+    expect(detail).toMatch(/portalAssetStatusVariant\(asset\.status\)/);
+    // Badge renders a div; a div inside a p is the hydration error the portal
+    // details panel used to log.
+    expect(detail).not.toMatch(/<p className="mt-1">\s*\{?\s*<Badge/);
+
+    const list = source('packages/client-portal/src/components/assets/ClientDevicesPage.tsx');
+    expect(list).toMatch(/portalAssetStatusLabel\(t, value\)/);
+    expect(list).toMatch(/portalAssetStatusVariant\(value\)/);
+    expect(list).not.toMatch(/devices\.status\.inactive', 'Inactive'\)\s*:/);
 
     const portalLocale = JSON.parse(source('server/public/locales/en/client-portal.json'));
     expect(Object.keys(portalLocale.assets.statuses)).toEqual([

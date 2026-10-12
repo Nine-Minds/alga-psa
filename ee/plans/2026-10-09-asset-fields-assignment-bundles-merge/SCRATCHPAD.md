@@ -281,3 +281,26 @@ The drawer's `apply` no longer calls `onChanged`. It was shared by the initial
 read and every write, which would have made opening the drawer reload the list
 behind it for nothing; `run` announces the write, and `apply` only takes the
 group.
+
+### The portal device list called every status "Active"
+
+The list's Status column was written when `active` and `inactive` were the only
+statuses that mattered: it rendered `devices.status.inactive` for the slug
+`inactive` and `devices.status.active` for everything else. F021 gave tenants
+their own statuses, so a laptop in `in_repair` read "Active" in the table and
+"In repair" one click away in its own details panel.
+
+Both surfaces now read the slug through `portalAssetStatus.ts`: the localized
+`assets.statuses.<slug>` when the portal has that key, else the builtin label,
+else the humanized slug. The badge tone follows the builtin kind — deployable
+reads well, undeployable and archived read spent, pending and anything the MSP
+invented read as something to ask about. The portal still never fetches the
+status registry.
+
+The details panel wrapped that badge in a `<p>`. `Badge` renders a `div`, and a
+div inside a p is invalid markup that React reports as a hydration error on
+every open; it is a `<div>` now.
+
+The status *filter* keeps its two options and its "active = not inactive"
+meaning: that is what the server-side counts and the `status` parameter mean,
+and FR-B5's kind-based metrics are an MSP surface.

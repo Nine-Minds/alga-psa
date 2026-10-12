@@ -40,6 +40,7 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
 import { AssetDetails } from './AssetDetails';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
+import { portalAssetStatusLabel, portalAssetStatusVariant } from './portalAssetStatus';
 
 const isReturnedActionError = (
   value: unknown
@@ -190,16 +191,14 @@ export function ClientDevicesPage() {
     {
       title: t('devices.columns.status', 'Status'),
       dataIndex: 'status',
-      render: (value: string) => {
-        const isInactive = value === 'inactive';
-        return (
-          <Badge variant={isInactive ? 'default' : 'success'}>
-            {isInactive
-              ? t('devices.status.inactive', 'Inactive')
-              : t('devices.status.active', 'Active')}
-          </Badge>
-        );
-      },
+      // F021: the column said "Active" for every slug that was not `inactive`,
+      // so a device the MSP put in a custom status contradicted its own
+      // details panel. Both read the slug through the same helper now.
+      render: (value: string) => (
+        <Badge variant={portalAssetStatusVariant(value)}>
+          {portalAssetStatusLabel(t, value)}
+        </Badge>
+      ),
     },
     {
       // FR-C6 / FR-E7b: who has the device — the contact name only, or the
