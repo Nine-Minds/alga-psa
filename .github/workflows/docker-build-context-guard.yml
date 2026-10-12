@@ -1,0 +1,23 @@
+name: Docker Build Context Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker-build-context-guard:
+    name: Local secrets and env files stay out of the Docker build context
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Docker Buildx version
+        run: docker buildx version
+
+      - name: Run docker build context tests
+        # Pure node:test; runs a FROM scratch buildx build over a synthetic context, so no images or secrets are needed.
+        run: node --test scripts/tests/docker-build-context.test.mjs
