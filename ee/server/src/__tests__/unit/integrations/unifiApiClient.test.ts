@@ -121,6 +121,31 @@ describe('UniFiApiClient', () => {
     expect(error.message).not.toContain(KEY);
   });
 
+  it('403 on a Connector console proxy is a per-console error and does not notify onAuthFailure', async () => {
+    const onAuthFailure = vi.fn();
+    const { client } = makeClient([new Response('forbidden', { status: 403 })], { onAuthFailure });
+    const error = await client.listDevices({ hostId: 'h1', siteId: 's1' }).catch((e) => e);
+    expect(error).toBeInstanceOf(UniFiApiError);
+    expect(error.kind).toBe('console_forbidden');
+    expect(onAuthFailure).not.toHaveBeenCalled();
+  });
+
+  it('401 on a Connector console proxy is still an auth failure', async () => {
+    const onAuthFailure = vi.fn();
+    const { client } = makeClient([new Response('no', { status: 401 })], { onAuthFailure });
+    const error = await client.listDevices({ hostId: 'h1', siteId: 's1' }).catch((e) => e);
+    expect(error.kind).toBe('auth');
+    expect(onAuthFailure).toHaveBeenCalledWith(401);
+  });
+
+  it.each(['/v1/hosts', '/v1/sites'])('403 on top-level %s stays an auth failure', async (path) => {
+    const onAuthFailure = vi.fn();
+    const { client } = makeClient([new Response('no', { status: 403 })], { onAuthFailure });
+    const error = await (path === '/v1/hosts' ? client.testConnection() : client.listSites()).catch((e: unknown) => e);
+    expect((error as UniFiApiError).kind).toBe('auth');
+    expect(onAuthFailure).toHaveBeenCalledWith(403);
+  });
+
   it('never leaks the key through error messages', async () => {
     const { client } = makeClient([new Response(`upstream echoed ${KEY} back`, { status: 502 })]);
     const error = await client.testConnection().catch((e) => e);

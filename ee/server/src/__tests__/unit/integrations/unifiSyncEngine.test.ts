@@ -109,6 +109,50 @@ describe('runUniFiFullSync', () => {
     expect(snapshots.some((s: any) => s.externalDeviceId === 'sw-9')).toBe(true);
   });
 
+  it('records a per-console 403 in errors[] without tombstoning that site or aborting', async () => {
+    const client = {
+      listDevices: vi.fn(async (site: any) => {
+        if (site.siteId === 'site-1') throw new UniFiApiError('console denied', 'console_forbidden', 403);
+        return [sw({ id: 'sw-9' })];
+      }),
+      getDevice: vi.fn(async () => sw({ id: 'sw-9' })),
+    };
+    const deps = baseDeps(client, {
+      rmm_organization_mappings: [SITE, SITE2],
+      tenant_external_entity_mappings: [{ external_entity_id: 'old-device', metadata: {} }],
+    });
+    const result = await runUniFiFullSync({ tenant: 't', integrationId: 'int-1' }, deps as any);
+    expect(result.success).toBe(false);
+    expect(result.errors?.[0]).toContain('HQ');
+    const snapshots = deps.ingest.mock.calls.map((c: any[]) => c[0].snapshot);
+    expect(snapshots.some((s: any) => s.externalScopeId === 'host-1:site-1' && s.lifecycleState === 'tombstoned')).toBe(false);
+    expect(snapshots.some((s: any) => s.externalDeviceId === 'sw-9')).toBe(true);
+  });
+
+  it('does not tombstone when a site returns zero devices but has live mapped assets; warns instead', async () => {
+    const client = { listDevices: vi.fn(async () => []), getDevice: vi.fn() };
+    const deps = baseDeps(client, {
+      rmm_organization_mappings: [SITE],
+      tenant_external_entity_mappings: [
+        { external_entity_id: 'a', metadata: {} },
+        { external_entity_id: 'b', metadata: { deleted: true } },
+      ],
+    });
+    const result = await runUniFiFullSync({ tenant: 't', integrationId: 'int-1' }, deps as any);
+    expect(deps.ingest).not.toHaveBeenCalled();
+    expect(result.errors?.some((e) => e.includes('site returned no devices; nothing removed'))).toBe(true);
+  });
+
+  it('an empty listing with only already-deleted mappings is quiet', async () => {
+    const client = { listDevices: vi.fn(async () => []), getDevice: vi.fn() };
+    const deps = baseDeps(client, {
+      rmm_organization_mappings: [SITE],
+      tenant_external_entity_mappings: [{ external_entity_id: 'b', metadata: { deleted: true } }],
+    });
+    const result = await runUniFiFullSync({ tenant: 't', integrationId: 'int-1' }, deps as any);
+    expect(result.errors ?? []).toEqual([]);
+  });
+
   it('aborts the whole run on an auth failure and reports a failed sync event', async () => {
     const client = {
       listDevices: vi.fn(async () => {

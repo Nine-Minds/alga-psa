@@ -1,4 +1,3 @@
-import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 
 const PROVIDER = 'unifi';
@@ -10,19 +9,21 @@ const PROVIDER = 'unifi';
  */
 export async function markUniFiReconnectRequired(tenant: string): Promise<void> {
   const knex = await getAdminConnection();
-  const db = tenantDb(knex, tenant);
-  const row = await db.table('rmm_integrations').where({ provider: PROVIDER }).first('settings');
-  if (!row) return;
-  const current = typeof row.settings === 'string' ? JSON.parse(row.settings) : row.settings ?? {};
-  const next = {
-    ...current,
-    reconnectRequired: true,
-    tokenLifecycle: { ...(current.tokenLifecycle ?? {}), status: 'reconnect_required', updatedAt: new Date().toISOString() },
-  };
-  await db
-    .table('rmm_integrations')
-    .where({ provider: PROVIDER })
-    .update({ settings: JSON.stringify(next), updated_at: knex.fn.now() });
+  // Single atomic jsonb merge: a read-modify-write of the whole settings blob
+  // would clobber a concurrent unifiOfflineObservations write or a settings save.
+  await knex.raw(
+    `UPDATE rmm_integrations
+        SET settings = COALESCE(settings, '{}'::jsonb)
+              || jsonb_build_object(
+                   'reconnectRequired', true,
+                   'tokenLifecycle',
+                   COALESCE(settings->'tokenLifecycle', '{}'::jsonb)
+                     || jsonb_build_object('status', 'reconnect_required', 'updatedAt', ?::text)
+                 ),
+            updated_at = now()
+      WHERE tenant = ? AND provider = ?`,
+    [new Date().toISOString(), tenant, PROVIDER]
+  );
 }
 
 /** Removes the reconnect marker after a successful key save / connection test. */

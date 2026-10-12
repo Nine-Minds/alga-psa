@@ -23,9 +23,9 @@ import type {
 } from '@alga-psa/shared/rmm/alerts';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { classifyUniFiState, deriveDeviceKind, resolveExternalDeviceId, severityForKind } from '../mappers/deviceMapper';
-import { createUniFiClient, type UniFiApiClient, type UniFiConnectionMode } from '../unifiApiClient';
-import { loadMappedSites } from '../sync/syncEngine';
+import { classifyUniFiState, deriveDeviceKind, mapDeviceKindToNetworkType, resolveExternalDeviceId, severityForKind } from '../mappers/deviceMapper';
+import { createUniFiClient, UniFiApiError, type UniFiApiClient, type UniFiConnectionMode } from '../unifiApiClient';
+import { parseUniFiScopeKey, type MappedSite } from '../sync/syncEngine';
 
 export const UNIFI_OFFLINE_ACTIVITY_TYPE = 'DEVICE_OFFLINE';
 export const DEFAULT_OFFLINE_GRACE_MINUTES = 5;
@@ -97,14 +97,17 @@ export function createUniFiAlertFetcher(overrides: Partial<UniFiAlertFetcherDeps
         .table('rmm_alerts')
         .where({ integration_id: integrationId, activity_type: UNIFI_OFFLINE_ACTIVITY_TYPE })
         .whereIn('status', ACTIVE_STATUSES)
-        .select(['external_device_id', 'external_alert_id']);
+        .select(['external_device_id', 'external_alert_id', 'external_organization_id']);
       const openIdByDevice = new Map<string, string>();
+      const openCountBySite = new Map<string, number>();
       for (const row of openRows as any[]) {
+        const orgId = row.external_organization_id ? String(row.external_organization_id) : null;
+        if (orgId) openCountBySite.set(orgId, (openCountBySite.get(orgId) ?? 0) + 1);
         if (row.external_device_id) openIdByDevice.set(String(row.external_device_id), String(row.external_alert_id));
       }
 
       const client = await deps.createClient(tenantId, mode);
-      const sites = await loadMappedSites({ knex } as any, tenantId, integrationId);
+      const sites = await loadAlertSites(knex, tenantId, integrationId);
 
       const events: NormalizedRmmAlertEvent[] = [];
       const nextObservations: Observations = {};
@@ -112,6 +115,14 @@ export function createUniFiAlertFetcher(overrides: Partial<UniFiAlertFetcherDeps
       for (const site of sites) {
         // Any listing failure throws: fail closed, nothing is reset on partial data.
         const devices = await client.listDevices(site);
+        // An empty listing while alerts are open on this site would synthesize a
+        // reset for every one of them. Treat it as "could not look", not "all back".
+        if (devices.length === 0 && (openCountBySite.get(site.scopeKey) ?? 0) > 0) {
+          throw new UniFiApiError(
+            `UniFi returned no devices for site ${site.siteName ?? site.scopeKey} while offline alerts are open; refusing to resolve them.`,
+            'invalid_response'
+          );
+        }
         for (const device of devices) {
           const kind = deriveDeviceKind(device);
           const deviceId = resolveExternalDeviceId(device);
@@ -180,10 +191,12 @@ function buildEvent(args: {
     kind: 'triggered',
     externalAlertId: args.openId ?? offlineAlertId(args.deviceId, args.firstObserved),
     externalDeviceId: args.deviceId,
-    conditionIdentity: UNIFI_OFFLINE_ACTIVITY_TYPE,
+    conditionIdentity: 'device_offline',
     activityType: UNIFI_OFFLINE_ACTIVITY_TYPE,
-    alertClass: UNIFI_OFFLINE_ACTIVITY_TYPE,
-    sourceType: 'unifi_device',
+    // Per-kind class so tenants can write rules with `alertClasses`: gateways are
+    // split into router/firewall exactly as the asset mapper does.
+    alertClass: args.kind === 'gateway' ? mapDeviceKindToNetworkType(args.kind, args.device.model) : args.kind,
+    sourceType: 'unifi_device_state',
     severity: severityForKind(args.kind),
     message: `${label} is offline${args.site.siteName ? ` at ${args.site.siteName}` : ''} (since ${args.firstObserved})`,
     deviceName: label,
@@ -200,3 +213,29 @@ function buildEvent(args: {
 }
 
 export const unifiAlertFetcher: RmmActiveAlertFetcher = createUniFiAlertFetcher();
+
+/**
+ * Offline alerting follows the client mapping only. `auto_sync_assets` governs
+ * whether devices become assets; a site mapped to a client but with asset sync
+ * switched off should still raise tickets when its gateway drops. (Deliberately
+ * not loadMappedSites, which also requires auto_sync_assets.)
+ */
+async function loadAlertSites(knex: any, tenant: string, integrationId: string): Promise<MappedSite[]> {
+  const rows = await tenantDb(knex, tenant)
+    .table('rmm_organization_mappings')
+    .where({ integration_id: integrationId })
+    .whereNotNull('client_id')
+    .select(['external_organization_id', 'external_organization_name', 'client_id']);
+  const sites: MappedSite[] = [];
+  for (const row of rows as any[]) {
+    const parsed = parseUniFiScopeKey(String(row.external_organization_id));
+    if (!parsed) continue;
+    sites.push({
+      scopeKey: String(row.external_organization_id),
+      ...parsed,
+      siteName: row.external_organization_name ?? null,
+      clientId: String(row.client_id),
+    });
+  }
+  return sites;
+}

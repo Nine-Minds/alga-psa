@@ -306,13 +306,23 @@ async function writeDeviceFacts(
  */
 async function tombstoneMissingDevices(
   deps: UniFiSyncDeps,
-  args: { tenant: string; integrationId: string; scopeKey: string; seenIds: Set<string> }
-): Promise<number> {
+  args: { tenant: string; integrationId: string; scopeKey: string; seenIds: Set<string>; listingWasEmpty?: boolean }
+): Promise<{ tombstoned: number; skippedEmptyListing: boolean }> {
   const ingest = deps.ingest ?? ingestNormalizedRmmDeviceSnapshot;
   const rows = await tenantDb(deps.knex, args.tenant)
     .table('tenant_external_entity_mappings')
     .where({ integration_type: UNIFI_PROVIDER, alga_entity_type: 'asset', external_realm_id: args.scopeKey })
     .select(['external_entity_id', 'metadata']);
+
+  // An empty listing from a site that has live mapped devices is far more likely
+  // an offline console or proxy hiccup than "every device was removed": fail closed.
+  if (args.listingWasEmpty) {
+    const hasLive = (rows as any[]).some((row) => {
+      const metadata = typeof row.metadata === 'string' ? safeJson(row.metadata) : row.metadata;
+      return metadata?.deleted !== true;
+    });
+    if (hasLive) return { tombstoned: 0, skippedEmptyListing: true };
+  }
 
   let tombstoned = 0;
   for (const row of rows as any[]) {
@@ -335,7 +345,7 @@ async function tombstoneMissingDevices(
     });
     if (outcome.action === 'marked_deleted') tombstoned += 1;
   }
-  return tombstoned;
+  return { tombstoned, skippedEmptyListing: false };
 }
 
 function safeJson(value: string): Record<string, any> | null {
@@ -352,7 +362,9 @@ function safeJson(value: string): Record<string, any> | null {
  *
  * Fail-closed: a site whose listing throws is reported in errors[] and is NOT
  * tombstoned (a partial or failed list must never look like "device removed").
- * Auth failures abort the whole run.
+ * Auth failures abort the whole run; a console_forbidden (403 from one console's
+ * Connector proxy) is a per-site error. An empty listing for a site with live
+ * mapped devices is treated as suspect and tombstones nothing.
  */
 export async function runUniFiFullSync(args: UniFiSyncArgs, deps: UniFiSyncDeps): Promise<RmmSyncResult> {
   const startedAt = new Date().toISOString();
@@ -429,12 +441,17 @@ export async function runUniFiFullSync(args: UniFiSyncArgs, deps: UniFiSyncDeps)
       }
 
       try {
-        tombstoned += await tombstoneMissingDevices(deps, {
+        const outcome = await tombstoneMissingDevices(deps, {
           tenant: args.tenant,
           integrationId: args.integrationId,
           scopeKey: site.scopeKey,
           seenIds,
+          listingWasEmpty: listed.length === 0,
         });
+        tombstoned += outcome.tombstoned;
+        if (outcome.skippedEmptyListing) {
+          errors.push(`Site ${site.siteName ?? site.scopeKey}: site returned no devices; nothing removed`);
+        }
       } catch (error) {
         errors.push(`Site ${site.siteName ?? site.scopeKey}: tombstoning failed (${sanitizeError(error)})`);
       }

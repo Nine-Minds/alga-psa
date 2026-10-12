@@ -26,7 +26,7 @@ export const UNIFI_CLOUD_BASE_URL = 'https://api.ui.com';
 export const UNIFI_LOCAL_HOST_ID = 'local';
 
 export type UniFiConnectionMode = 'site_manager' | 'local';
-export type UniFiApiErrorKind = 'auth' | 'rate_limited' | 'http' | 'network' | 'invalid_response' | 'config';
+export type UniFiApiErrorKind = 'auth' | 'console_forbidden' | 'rate_limited' | 'http' | 'network' | 'invalid_response' | 'config';
 
 export class UniFiApiError extends Error {
   readonly status?: number;
@@ -220,6 +220,17 @@ export class UniFiApiClient {
           'UniFi rate limit reached and retries were exhausted. Wait a few minutes and try again, or reduce how often syncs run.',
           'rate_limited',
           429
+        );
+      }
+
+      // A 403 from one console's Connector proxy means that console is unreachable
+      // or not permitted for this key, not that the key is dead. It must not mark
+      // the whole integration reconnect-required (that would halt every client).
+      if (response.status === 403 && url.pathname.startsWith('/v1/connector/')) {
+        throw new UniFiApiError(
+          'UniFi denied access to this console through the Cloud Connector. The console may be offline or not shared with this API key.',
+          'console_forbidden',
+          403
         );
       }
 

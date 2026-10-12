@@ -152,6 +152,75 @@ describe('unifi offline alert fetcher', () => {
     expect(Object.fromEntries(events.map((e) => [e.externalDeviceId, e.severity]))).toEqual({ gw: 'critical', ap: 'moderate' });
   });
 
+  it('sets per-kind alertClass, unifi_device_state source and device_offline condition', async () => {
+    const { fetcher } = setup({
+      settings: { offlineGraceMinutes: 0 },
+      devices: [
+        dev({ id: 'gw', model: 'UDM-Pro', features: [] }),
+        dev({ id: 'rt', model: 'UXG-Lite', features: [] }),
+        dev({ id: 'sw' }),
+        dev({ id: 'ap', model: 'U6-Pro', features: ['accessPoint'] }),
+      ],
+    });
+    const events = await run(fetcher);
+    const byId = Object.fromEntries(events.map((e) => [e.externalDeviceId, e]));
+    expect(byId.sw.alertClass).toBe('switch');
+    expect(byId.ap.alertClass).toBe('access_point');
+    expect(['firewall', 'router']).toContain(byId.gw.alertClass);
+    for (const e of events) {
+      expect(e.sourceType).toBe('unifi_device_state');
+      expect(e.conditionIdentity).toBe('device_offline');
+      expect(e.activityType).toBe('DEVICE_OFFLINE');
+    }
+  });
+
+  it('throws on an empty listing for a site with open offline alerts (no resets synthesized)', async () => {
+    const { fetcher, raw } = setup({
+      devices: [],
+      open: [{ external_device_id: 'sw-1', external_alert_id: 'unifi:offline:sw-1:X', external_organization_id: 'h:s' }],
+    });
+    await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);
+    expect(raw).not.toHaveBeenCalled();
+  });
+
+  it('an empty listing with no open alerts is fine', async () => {
+    const { fetcher } = setup({ devices: [] });
+    expect(await run(fetcher)).toEqual([]);
+  });
+
+  it('propagates a per-console 403 (fails closed) without any reconnect write', async () => {
+    const { fetcher, raw } = setup({ devices: new UniFiApiError('denied', 'console_forbidden', 403) });
+    await expect(run(fetcher)).rejects.toMatchObject({ kind: 'console_forbidden' });
+    expect(raw).not.toHaveBeenCalled();
+  });
+
+  it('alerts for client-mapped sites regardless of auto_sync_assets (own mapped-site query)', async () => {
+    const wheres: any[] = [];
+    const { knex } = makeKnex({
+      rmm_integrations: [{ settings: { offlineGraceMinutes: 0 } }],
+      rmm_organization_mappings: [SITE],
+      rmm_alerts: [],
+    });
+    const wrapped: any = (table: string) => {
+      const b = knex(table);
+      const orig = b.where;
+      b.where = (...a: any[]) => { wheres.push([table, ...a]); return orig(...a); };
+      const origAnd = b.andWhere;
+      b.andWhere = (...a: any[]) => { wheres.push([table, ...a]); return origAnd(...a); };
+      return b;
+    };
+    wrapped.raw = knex.raw;
+    wrapped.fn = knex.fn;
+    const fetcher = createUniFiAlertFetcher({
+      getKnex: async () => wrapped,
+      createClient: async () => ({ listDevices: async () => [dev()] }) as any,
+      now: () => NOW,
+    });
+    const events = await run(fetcher);
+    expect(events).toHaveLength(1);
+    expect(JSON.stringify(wheres)).not.toContain('auto_sync_assets');
+  });
+
   it('fails closed: a failed listing throws and writes no observations', async () => {
     const { fetcher, raw } = setup({ devices: new UniFiApiError('down', 'http', 503) });
     await expect(run(fetcher)).rejects.toBeInstanceOf(UniFiApiError);

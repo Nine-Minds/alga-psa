@@ -37,6 +37,8 @@ function sanitizeError(error: unknown, fallback = 'Unable to complete the UniFi 
     switch (error.kind) {
       case 'auth':
         return 'UniFi rejected the API key. Create a new key and save it in the integration settings.';
+      case 'console_forbidden':
+        return 'UniFi denied access to a console. It may be offline or not shared with this API key.';
       case 'rate_limited':
         return 'UniFi rate limit reached. Please try again later.';
       case 'config':
