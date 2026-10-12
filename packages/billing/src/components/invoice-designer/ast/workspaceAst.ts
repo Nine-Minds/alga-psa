@@ -332,7 +332,7 @@ const resolveFieldBindingPath = (node: WorkspaceNode, documentKind: DesignerDocu
     case 'tax':
       return 'tax';
     case 'discount':
-      return 'discount';
+      return 'discountTotal';
     case 'custom-total':
       return 'total';
     default:
@@ -1308,6 +1308,9 @@ const mapDesignerNodeToAstNode = (
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
               }
+              if (row.hideWhenZero === true) {
+                mappedRow.hideWhenZero = true;
+              }
               const labelStyle = mapTemplateNodeStyleRef(row.labelStyle);
               if (labelStyle) {
                 mappedRow.labelStyle = labelStyle;
@@ -2117,6 +2120,7 @@ export const importTemplateAstToWorkspace = (
               type: row.format,
               format: row.format,
               emphasize: row.emphasize === true,
+              ...(row.hideWhenZero === true ? { hideWhenZero: true } : {}),
               ...(row.style ? { style: cloneJson(row.style) } : {}),
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };
