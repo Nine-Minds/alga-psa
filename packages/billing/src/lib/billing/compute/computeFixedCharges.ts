@@ -7,6 +7,7 @@ import type {
   ISO8601String,
 } from "@alga-psa/types";
 import { toPlainDate } from "@alga-psa/core";
+import { allocateCentsByWeights } from "@alga-psa/shared/billingClients/fixedMemberRate";
 import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
@@ -417,39 +418,6 @@ const nonNegativeFinite = (raw: unknown): number => {
   const parsed = typeof raw === "string" ? parseFloat(raw) : Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
-
-/**
- * Split `totalCents` across weighted members so the parts sum EXACTLY to the
- * total: floor each exact share, then hand the leftover cents to the largest
- * fractional remainders (ties broken by service_id so the split never depends
- * on row order). `totalCents` is in the contract/invoice currency's minor
- * units; nothing here knows or assumes a currency.
- */
-function allocateCentsByWeights(
-  totalCents: number,
-  members: Array<{ key: string; weight: number }>,
-): { amounts: number[]; proportions: number[] } {
-  const weightSum = members.reduce((sum, member) => sum + member.weight, 0);
-  const exact = members.map((member) => (totalCents * member.weight) / weightSum);
-  const amounts = exact.map((value) => Math.floor(value));
-  let remainder = totalCents - amounts.reduce((sum, value) => sum + value, 0);
-  const order = members
-    .map((member, index) => ({ index, key: member.key, fraction: exact[index] - amounts[index] }))
-    .sort(
-      (a, b) =>
-        b.fraction - a.fraction ||
-        (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) ||
-        a.index - b.index,
-    );
-  for (let cursor = 0; remainder > 0 && order.length > 0; cursor += 1) {
-    amounts[order[cursor % order.length].index] += 1;
-    remainder -= 1;
-  }
-  return {
-    amounts,
-    proportions: members.map((member) => member.weight / weightSum),
-  };
-}
 
 // LEVERAGE: pattern fixed-fee-allocation — "split one fixed fee across member
 // services by a weight, with cent remainder handling" now exists in three

@@ -1,6 +1,9 @@
 import type { FixedPricingBasis } from '@alga-psa/types';
 import { isUnitPricedFixedConfig } from './usageSemantics';
 
+// Client-safe re-export, as resolveFixedLineRate is re-exported for billing.
+export * from '@alga-psa/shared/billingClients/fixedMemberRate';
+
 /**
  * Shared authoring rules for a fixed-line member's pricing basis.
  *
