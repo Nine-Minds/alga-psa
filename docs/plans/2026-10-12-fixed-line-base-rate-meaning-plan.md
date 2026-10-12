@@ -381,6 +381,8 @@ Unit tests (vitest, colocated):
 5. `contractMonthlyValue` and deferred-revenue loader tests: an inherited
    share line is valued at Σ share, and a per-unit line at Σ rate×q.
 6. Migration test (integration, `server/src/test/integration/billing/`): seed
+   a preset or template-cloned line with Fixed `clsc.custom_rate` allocations,
+   and assert they move to `clsfc.base_rate` with basis `share` (§3.3). Also seed
    the four shapes (wizard share line with a line rate; wizard share line made
    inherited; per-unit inherited line; ambiguous equal-quantity line). Run
    classification and assert the labels and constraint enforcement: inserting a
@@ -399,7 +401,9 @@ with:
 1. The `fixedMemberRate.ts` helper and its tests. Move `allocateCentsByWeights`.
 2. Migration: add the column, classify, add the constraints. Add the report
    script and the migration test.
-3. Writers: the persistence API type change, then every writer in §3 and §3.1.
+3. Writers: the persistence API type change (§3.1), then every writer in §3.2.
+   Move the Fixed `clsc.custom_rate` writers (§3.3) and add the i18n label
+   strings.
 4. Readers: resolver, compute, engine selects, loader, monthly value, deferred
    revenue, simulator. Add the source-contract grep test.
 5. LEVERAGE fold: wizard allocator, then FMV path (behind the §8 answer).
@@ -441,3 +445,12 @@ with:
    because one meaning has to hold on both engine and resolver. The alternative
    is to null those shares during the move, so the lines keep following the
    catalog.
+
+## 9. Pre-implementation checklist
+
+- [x] Census of every `clsfc.base_rate` writer and reader (§1, §3.2), taken
+      2026-10-12.
+- [ ] Confirm that the add-service lists store a share, not a per-unit price, in
+      Fixed `clsc.custom_rate` (§3.3).
+- [ ] Captain's answers to §8.1 and §8.2. The plan proceeds on the stated
+      defaults if none arrive.
