@@ -3,8 +3,13 @@
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
-import type { Asset, IUserWithRoles } from '@alga-psa/types';
+import type { Asset, AssetStatus, AssetStatusKind, IUserWithRoles } from '@alga-psa/types';
 import { applyAssetVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
+import {
+  assetStatusKindForSlug,
+  assetStatusLabelForSlug,
+  listAssetStatusRows,
+} from '@alga-psa/assets/lib/assetStatusRegistry';
 import {
   getAssetGroupSummariesForAssets,
   getAssetGroupSummary,
@@ -27,17 +32,30 @@ export interface ListClientAssetsParams {
   limit?: number;
   search?: string;
   asset_type?: ClientAssetType;
-  /** "active" => status != 'inactive', "inactive" => status == 'inactive', undefined => all */
-  status?: 'active' | 'inactive';
+  /** A status slug from `by_status` (FR-B5); undefined => every status. */
+  status?: string;
   sort_by?: ClientAssetSortField;
   sort_direction?: 'asc' | 'desc';
+}
+
+/** One status the client's visible devices are actually in (FR-B5). */
+export interface ClientAssetStatusSummary {
+  slug: string;
+  /** The tenant's label for the slug; the portal still localizes the builtins. */
+  label: string;
+  kind: AssetStatusKind;
+  count: number;
 }
 
 export interface ListClientAssetsResponse {
   assets: Asset[];
   total: number;
-  active: number;
-  inactive: number;
+  /**
+   * Statuses in use across the entire client with their counts, in registry
+   * order. Feeds the status filter and the banner, which reads "active" as the
+   * `deployable` kind rather than as "anything but inactive".
+   */
+  by_status: ClientAssetStatusSummary[];
   /** Per-type counts across the entire client (not bound to the current page). */
   by_type: Record<ClientAssetType, number>;
   page: number;
@@ -149,6 +167,46 @@ async function serializeWithGroups(
 }
 
 /**
+ * The statuses the client's devices are in, in the tenant's display order, with
+ * a row's own label and kind resolved from the registry. Only statuses actually
+ * in use are returned: the filter then offers exactly the statuses a portal
+ * user can find, and the tenant's wider taxonomy stays the MSP's business.
+ */
+function buildStatusSummary(
+  statusRows: AssetStatus[],
+  counts: Array<{ status: string | null; count: string | number }>,
+): ClientAssetStatusSummary[] {
+  const countBySlug = new Map<string, number>();
+  for (const row of counts) {
+    const slug = String(row.status ?? '').trim();
+    if (!slug) continue;
+    countBySlug.set(slug, (countBySlug.get(slug) ?? 0) + Number(row.count ?? 0));
+  }
+
+  const summaries: ClientAssetStatusSummary[] = statusRows
+    .filter((row) => countBySlug.has(row.slug))
+    .map((row) => ({
+      slug: row.slug,
+      label: row.label,
+      kind: row.kind,
+      count: countBySlug.get(row.slug) ?? 0,
+    }));
+
+  // A slug no registry row claims still has to read as something.
+  for (const [slug, count] of countBySlug) {
+    if (summaries.some((summary) => summary.slug === slug)) continue;
+    summaries.push({
+      slug,
+      label: assetStatusLabelForSlug(slug, statusRows),
+      kind: assetStatusKindForSlug(slug, statusRows),
+      count,
+    });
+  }
+
+  return summaries;
+}
+
+/**
  * Server-side paginated, searchable, filterable list of client-visible assets.
  */
 export const listClientAssets = withAuth(async (
@@ -169,8 +227,7 @@ export const listClientAssets = withAuth(async (
       const baseQuery = () => {
         const q = scopedAssets(trx, tenant, visibility);
         if (params.asset_type) q.where('asset_type', params.asset_type);
-        if (params.status === 'active') q.whereNot('status', 'inactive');
-        if (params.status === 'inactive') q.where('status', 'inactive');
+        if (params.status) q.where('status', params.status);
         if (params.search) {
           const term = `%${params.search.trim().toLowerCase()}%`;
           q.where((b) => {
@@ -182,17 +239,19 @@ export const listClientAssets = withAuth(async (
         return q;
       };
 
-    // Counts: filtered total, plus active/inactive and per-type counts across
+    // Counts: filtered total, plus per-status and per-type counts across
     // everything this user may see (so the summary tiles don't drift when the
     // user paginates or filters the table, and always match the list).
-    const [filteredCount, statusCounts, typeRows] = await Promise.all([
+    const [filteredCount, statusRows, statusCounts, typeRows] = await Promise.all([
       baseQuery().count<{ count: string }>('asset_id as count').first(),
+      // Archived statuses included: a device can still be sitting on one.
+      listAssetStatusRows(trx, tenant, { includeArchived: true }),
       scopedAssets(trx, tenant, visibility)
-        .select(
-          trx.raw(`SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END)::int as inactive`),
-          trx.raw(`SUM(CASE WHEN status <> 'inactive' OR status IS NULL THEN 1 ELSE 0 END)::int as active`),
-        )
-        .first<{ active: number | null; inactive: number | null }>(),
+        .groupBy('status')
+        .select<Array<{ status: string | null; count: string }>>(
+          'status',
+          trx.raw('count(*) as count'),
+        ),
       scopedAssets(trx, tenant, visibility)
         .groupBy('asset_type')
         .select<Array<{ asset_type: string | null; count: string }>>(
@@ -228,8 +287,7 @@ export const listClientAssets = withAuth(async (
       return {
         assets: await serializeWithGroups(trx, tenant, rows),
         total: Number(filteredCount?.count ?? 0),
-        active: Number(statusCounts?.active ?? 0),
-        inactive: Number(statusCounts?.inactive ?? 0),
+        by_status: buildStatusSummary(statusRows, statusCounts),
         by_type: byType,
         page,
         limit,

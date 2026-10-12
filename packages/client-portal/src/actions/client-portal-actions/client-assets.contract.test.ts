@@ -19,6 +19,24 @@ describe('client-assets server action contract', () => {
     expect(source).toContain(".groupBy('asset_type')");
   });
 
+  it('FR-B5: reports the statuses in use, with their registry kind, instead of an active/inactive pair', () => {
+    // "status <> 'inactive' => active" is how the banner announced all devices
+    // active with one in repair, and how the filter could only offer two
+    // statuses. The statuses in use travel with the response now.
+    expect(source).toContain("} from '@alga-psa/assets/lib/assetStatusRegistry';");
+    expect(source).toContain('assetStatusKindForSlug');
+    expect(source).toContain('assetStatusLabelForSlug');
+    expect(source).toContain('by_status: buildStatusSummary(statusRows, statusCounts)');
+    expect(source).toContain(".groupBy('status')");
+    expect(source).toContain('listAssetStatusRows(trx, tenant, { includeArchived: true })');
+    expect(source).not.toMatch(/whereNot\('status', 'inactive'\)/);
+    expect(source).not.toMatch(/status <> 'inactive'/);
+  });
+
+  it('filters by the status slug the caller asked for', () => {
+    expect(source).toContain("if (params.status) q.where('status', params.status);");
+  });
+
   it('keeps a backwards-compatible getClientAssets export for previews', () => {
     expect(source).toContain('export const getClientAssets = withAuth');
   });

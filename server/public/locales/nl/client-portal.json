@@ -858,12 +858,9 @@
       "network": "Netwerk",
       "unknown": "Overig"
     },
-    "statusWarnTitle": "Sommige apparaten inactief",
-    "statusWarnBody": "{{active}} actief · {{inactive}} inactief",
-    "status": {
-      "active": "Actief",
-      "inactive": "Inactief"
-    },
+    "statusAttentionTitle": "Sommige apparaten hebben aandacht nodig",
+    "statusAttentionBody": "{{active}} van {{total}} apparaten actief",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Zoek op naam, tag of serienummer",
     "filters": {
       "allTypes": "Alle types",

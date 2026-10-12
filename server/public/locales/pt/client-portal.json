@@ -59,12 +59,9 @@
       "network": "Rede",
       "unknown": "Outro"
     },
-    "statusWarnTitle": "Alguns dispositivos inativos",
-    "statusWarnBody": "{{active}} ativo · {{inactive}} inativo",
-    "status": {
-      "active": "Ativo",
-      "inactive": "Inativo"
-    },
+    "statusAttentionTitle": "Alguns dispositivos precisam de atenção",
+    "statusAttentionBody": "{{active}} de {{total}} dispositivos ativos",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Pesquise por nome, tag ou série",
     "filters": {
       "allTypes": "Todos os tipos",

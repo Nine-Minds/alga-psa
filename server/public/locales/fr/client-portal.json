@@ -858,12 +858,9 @@
       "network": "Réseau",
       "unknown": "Autres"
     },
-    "statusWarnTitle": "Certains appareils inactifs",
-    "statusWarnBody": "{{active}} actifs · {{inactive}} inactifs",
-    "status": {
-      "active": "Actif",
-      "inactive": "Inactif"
-    },
+    "statusAttentionTitle": "Certains appareils nécessitent une attention",
+    "statusAttentionBody": "{{active}} appareils actifs sur {{total}}",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Rechercher par nom, étiquette ou série",
     "filters": {
       "allTypes": "Tous les types",

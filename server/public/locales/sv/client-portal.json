@@ -65,12 +65,9 @@
       "network": "Nätverk",
       "unknown": "Annat"
     },
-    "statusWarnTitle": "Vissa enheter är inaktiva",
-    "statusWarnBody": "{{active}} aktiva · {{inactive}} inaktiva",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Vissa enheter behöver åtgärdas",
+    "statusAttentionBody": "{{active}} av {{total}} enheter aktiva",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
     "filters": {
       "allTypes": "Alla typer",

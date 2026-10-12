@@ -65,12 +65,9 @@
       "network": "Network",
       "unknown": "Other"
     },
-    "statusWarnTitle": "Some devices inactive",
-    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
-    "status": {
-      "active": "Active",
-      "inactive": "Inactive"
-    },
+    "statusAttentionTitle": "Some devices need attention",
+    "statusAttentionBody": "{{active}} of {{total}} devices active",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Search by name, tag, or serial",
     "filters": {
       "allTypes": "All types",

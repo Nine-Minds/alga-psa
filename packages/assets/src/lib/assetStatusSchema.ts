@@ -72,6 +72,19 @@ export function assetStatusLabelForSlug(
   return humanizeAssetStatusSlug(slug);
 }
 
+/**
+ * The lifecycle kind for a status slug: registry row, else builtin, else
+ * `undeployable` — a slug nobody can explain is not something to call deployed.
+ */
+export function assetStatusKindForSlug(
+  slug: string,
+  statuses: ReadonlyArray<Pick<AssetStatus, 'slug' | 'kind'>> | null | undefined
+): AssetStatusKind {
+  const registered = statuses?.find((candidate) => candidate.slug === slug);
+  if (registered?.kind) return registered.kind;
+  return BUILTIN_ASSET_STATUSES.find((candidate) => candidate.slug === slug)?.kind ?? 'undeployable';
+}
+
 /** Options for a status select, grouped by lifecycle kind in kind order. */
 export function groupAssetStatusesByKind(
   statuses: AssetStatus[]

@@ -255,16 +255,18 @@ describe('status slug never reaches the screen (F021)', () => {
     expect(helper).toMatch(/assetStatusLabelForSlug\(status, null\)/);
 
     const detail = source('packages/client-portal/src/components/assets/AssetDetails.tsx');
-    expect(detail).toMatch(/portalAssetStatusLabel\(t, asset\.status\)/);
-    expect(detail).toMatch(/portalAssetStatusVariant\(asset\.status\)/);
+    // The caller hands down the tenant's label and kind when it knows them,
+    // so a renamed status reads the same in the dialog as in the row.
+    expect(detail).toMatch(/portalAssetStatusLabel\(t, asset\.status, statusLabel\)/);
+    expect(detail).toMatch(/portalAssetStatusVariant\(asset\.status, statusKind\)/);
     // Badge renders a div; a div inside a p is the hydration error the portal
     // details panel used to log.
     expect(detail).not.toMatch(/<p className="mt-1">\s*\{?\s*<Badge/);
 
     const list = source('packages/client-portal/src/components/assets/ClientDevicesPage.tsx');
-    expect(list).toMatch(/portalAssetStatusLabel\(t, value\)/);
-    expect(list).toMatch(/portalAssetStatusVariant\(value\)/);
-    expect(list).not.toMatch(/devices\.status\.inactive', 'Inactive'\)\s*:/);
+    expect(list).toMatch(/portalAssetStatusLabel\(t, slug, slug \? statusBySlug\.get\(slug\)\?\.label : undefined\)/);
+    expect(list).toMatch(/portalAssetStatusVariant\(value, statusBySlug\.get\(value\)\?\.kind\)/);
+    expect(list).not.toMatch(/devices\.status\.inactive/);
 
     const portalLocale = JSON.parse(source('server/public/locales/en/client-portal.json'));
     expect(Object.keys(portalLocale.assets.statuses)).toEqual([

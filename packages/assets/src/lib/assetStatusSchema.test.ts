@@ -3,6 +3,7 @@ import type { AssetStatus } from '@alga-psa/types';
 import {
   ASSET_STATUS_KINDS,
   BUILTIN_ASSET_STATUSES,
+  assetStatusKindForSlug,
   generateAssetStatusSlug,
   groupAssetStatusesByKind,
 } from './assetStatusSchema';
@@ -52,6 +53,30 @@ describe('BUILTIN_ASSET_STATUSES', () => {
     for (const builtin of BUILTIN_ASSET_STATUSES) {
       expect(ASSET_STATUS_KINDS).toContain(builtin.kind);
     }
+  });
+});
+
+// FR-B5: what a surface is allowed to call "deployed" when all it holds is a slug.
+describe('assetStatusKindForSlug', () => {
+  const rows = [
+    status({ slug: 'on_loan', kind: 'deployable', is_builtin: false }),
+    status({ slug: 'in_repair', kind: 'pending', is_builtin: false }),
+  ];
+
+  it('reads the kind the tenant gave the status', () => {
+    expect(assetStatusKindForSlug('on_loan', rows)).toBe('deployable');
+    expect(assetStatusKindForSlug('in_repair', rows)).toBe('pending');
+  });
+
+  it('falls back to the builtin kind when the registry has not loaded', () => {
+    expect(assetStatusKindForSlug('active', null)).toBe('deployable');
+    expect(assetStatusKindForSlug('maintenance', [])).toBe('pending');
+    expect(assetStatusKindForSlug('retired', undefined)).toBe('archived');
+  });
+
+  it('never calls an unexplained slug deployable', () => {
+    expect(assetStatusKindForSlug('in_repair', null)).toBe('undeployable');
+    expect(assetStatusKindForSlug('', rows)).toBe('undeployable');
   });
 });
 

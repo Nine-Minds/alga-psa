@@ -65,12 +65,9 @@
       "network": "⟦Ƞḗŧẇȯřķ⟧",
       "unknown": "⟦Ȯŧħḗř⟧"
     },
-    "statusWarnTitle": "⟦Şȯḿḗ ḓḗṽīƈḗş īƞȧƈŧīṽḗ⟧",
-    "statusWarnBody": "⟦{{active}} ȧƈŧīṽḗ · {{inactive}} īƞȧƈŧīṽḗ⟧",
-    "status": {
-      "active": "⟦Ȧƈŧīṽḗ⟧",
-      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
-    },
+    "statusAttentionTitle": "⟦Şȯḿḗ ḓḗṽīƈḗş ƞḗḗḓ ȧŧŧḗƞŧīȯƞ⟧",
+    "statusAttentionBody": "⟦{{active}} ȯƒ {{total}} ḓḗṽīƈḗş ȧƈŧīṽḗ⟧",
+    "statusCount": "⟦{{count}} {{status}}⟧",
     "searchPlaceholder": "⟦Şḗȧřƈħ ƀẏ ƞȧḿḗ, ŧȧɠ, ȯř şḗřīȧŀ⟧",
     "filters": {
       "allTypes": "⟦Ȧŀŀ ŧẏƥḗş⟧",

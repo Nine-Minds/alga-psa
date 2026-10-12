@@ -858,12 +858,9 @@
       "network": "Netzwerk",
       "unknown": "Sonstiges"
     },
-    "statusWarnTitle": "Einige Geräte inaktiv",
-    "statusWarnBody": "{{active}} aktiv · {{inactive}} inaktiv",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Einige Geräte brauchen Aufmerksamkeit",
+    "statusAttentionBody": "{{active}} von {{total}} Geräten aktiv",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Suche nach Name, Tag oder Seriennummer",
     "filters": {
       "allTypes": "Alle Typen",

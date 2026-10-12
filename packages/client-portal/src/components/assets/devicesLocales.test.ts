@@ -9,10 +9,11 @@ const REQUIRED_LOCALES = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt'];
 const REQUIRED_DEVICE_KEYS = [
   'devices.statusOkTitle',
   'devices.statusOkBody',
-  'devices.statusWarnTitle',
-  'devices.statusWarnBody',
-  'devices.status.active',
-  'devices.status.inactive',
+  // FR-B5: the banner names the statuses in the way rather than calling an
+  // in-repair device "inactive", and the filter reads the tenant's statuses.
+  'devices.statusAttentionTitle',
+  'devices.statusAttentionBody',
+  'devices.statusCount',
   'devices.searchPlaceholder',
   'devices.filters.allTypes',
   'devices.filters.allStatuses',
@@ -90,9 +91,14 @@ describe('client portal devices/calendar locale coverage', () => {
   it.each(REQUIRED_LOCALES)('locale %s has retired the widget-only status labels', (locale) => {
     // The "Your devices" widget used to say Active/Inactive/Healthy on its own
     // terms, which is how a custom status read "Aktiv" on the dashboard.
-    const devices = loadJson(locale, 'client-portal.json').dashboard.devices;
-    expect(Object.keys(devices)).not.toContain('healthy');
-    expect(Object.keys(devices)).not.toContain('active');
-    expect(Object.keys(devices)).not.toContain('inactive');
+    const data = loadJson(locale, 'client-portal.json');
+    expect(Object.keys(data.dashboard.devices)).not.toContain('healthy');
+    expect(Object.keys(data.dashboard.devices)).not.toContain('active');
+    expect(Object.keys(data.dashboard.devices)).not.toContain('inactive');
+    // Same for the device page's own Active/Inactive pair: the status filter
+    // and the status column read the tenant's registry now.
+    expect(Object.keys(data.devices)).not.toContain('status');
+    expect(Object.keys(data.devices)).not.toContain('statusWarnTitle');
+    expect(Object.keys(data.devices)).not.toContain('statusWarnBody');
   });
 });
