@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSWRConfig } from 'swr';
 import { toast } from 'react-hot-toast';
 import { UserPlus } from 'lucide-react';
 import type { IContact } from '@alga-psa/types';
@@ -38,6 +39,7 @@ export function AssetAssigneeRow({
   onAssigned?: (next: { contact_name_id: string | null; contact_name: string | null }) => void;
 }) {
   const { t } = useTranslation('msp/assets');
+  const { mutate } = useSWRConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [saving, setSaving] = useState(false);
@@ -76,6 +78,10 @@ export function AssetAssigneeRow({
       }
       setCurrent({ id: result.contact_name_id, name: result.contact_name });
       setIsOpen(false);
+      // setAssetAssignee writes an `assignee_changed` entry, but AssetTimeline
+      // reads history from this SWR key — without the revalidation the new
+      // entry only appears after a page reload.
+      void mutate(['asset', assetId, 'history']);
       onAssigned?.(result);
     } finally {
       setSaving(false);

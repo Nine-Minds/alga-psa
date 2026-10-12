@@ -50,6 +50,7 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
 import { AssetGroupDrawer } from './groups/AssetGroupDrawer';
@@ -258,8 +259,12 @@ export function AssetBentoLayout({
                     value={asset.billing_profile_name ?? asset.billing_profile_id}
                   />
                 ) : null}
-                <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={asset.purchase_date ? new Date(asset.purchase_date).toLocaleDateString() : undefined} />
-                <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={asset.warranty_end_date ? new Date(asset.warranty_end_date).toLocaleDateString() : undefined} />
+                {/* Both columns hold UTC midnight for a calendar day, so they are
+                    read as calendar parts — `new Date(...).toLocaleDateString()`
+                    renders the previous day west of UTC and disagreed with the
+                    edit form's picker. */}
+                <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString()} />
+                <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString()} />
               </div>
             </BentoTile>
 
