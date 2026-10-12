@@ -10120,6 +10120,77 @@
               ]
             }
           },
+          "assets": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Assets that would move to the destination client."
+              },
+              "byRmmOrganization": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "externalOrganizationId": {
+                      "type": "string"
+                    },
+                    "externalOrganizationName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "deviceCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "externalOrganizationId",
+                    "externalOrganizationName",
+                    "deviceCount"
+                  ]
+                }
+              },
+              "groups": {
+                "type": "number",
+                "description": "Asset groups (bundles and shared workspaces) that would move."
+              }
+            },
+            "required": [
+              "total",
+              "byRmmOrganization",
+              "groups"
+            ]
+          },
+          "billingChoice": {
+            "type": "object",
+            "properties": {
+              "unstampedTickets": {
+                "type": "number"
+              },
+              "unstampedProjects": {
+                "type": "number"
+              },
+              "unstampedAssets": {
+                "type": "number"
+              },
+              "unstampedRmmMappings": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "unstampedTickets",
+              "unstampedProjects",
+              "unstampedAssets",
+              "unstampedRmmMappings"
+            ],
+            "description": "Rows with no billing profile — what `billing_strategy` decides the fate of."
+          },
           "visibilityGroupRenames": {
             "type": "array",
             "items": {
@@ -10200,6 +10271,8 @@
           "counts",
           "contacts",
           "contracts",
+          "assets",
+          "billingChoice",
           "visibilityGroupRenames",
           "unrestrictedPortalUserIds",
           "externalMappings"
@@ -10288,6 +10361,14 @@
                 "apply"
               ]
             }
+          },
+          "billing_strategy": {
+            "type": "string",
+            "enum": [
+              "source_profile",
+              "target_default"
+            ],
+            "description": "F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."
           }
         },
         "required": [
@@ -10340,6 +10421,14 @@
             "items": {
               "type": "string"
             }
+          },
+          "billing_strategy": {
+            "type": "string",
+            "enum": [
+              "source_profile",
+              "target_default"
+            ],
+            "description": "The strategy actually applied, as recorded on client_merges."
           }
         },
         "required": [
@@ -10350,7 +10439,8 @@
           "moved_default_profile_id",
           "counts",
           "remapped_external_mapping_ids",
-          "skipped_external_mapping_ids"
+          "skipped_external_mapping_ids",
+          "billing_strategy"
         ]
       },
       "BillingProfileContactResource": {
