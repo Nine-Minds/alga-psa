@@ -2,10 +2,11 @@
 
 **Status: BLOCKED for human review.** The implementation can be reviewed, but
 the prior READY claim is withdrawn until repaired-HEAD browser acceptance is
-captured. The app server was deliberately left stopped. The old review service
-and its prior `add21274560c861a2d277582a518ae940a131795` evidence do not prove
-the merge result. The base conflict is resolved in this branch; portal output,
-real app-to-Xero-simulator delivery, and automatic companion true-up acceptance
+captured. No app server was started or restarted for this work. An already
+present review listener was not used as acceptance evidence; the older review
+build and its prior `add21274560c861a2d277582a518ae940a131795` evidence do not
+prove the merge result. The base conflict is resolved in this branch; portal
+output, real app-to-Xero-simulator delivery, and current-HEAD browser acceptance
 remain open.
 
 ## Review first
@@ -26,77 +27,76 @@ remain open.
 
 ## Fixture state and safe setup
 
-The review-owned Client B contract copy prepared in the prior pass is **no
-longer unbilled**: the takeover generated `INV-000042`
-(`cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2`) for its September service window.
-The older `candidates-after-generation.json` confirms no automatic candidate
-remained after that generation. It is retained as billed history and must not
-be regenerated, reversed, or cleaned up for this review. Consequently this
-checkout does not currently have an unbilled browser-generation candidate.
-
-The app server was required to remain stopped, and no database fixture writes
-were made. To prepare a fresh isolated candidate when a current-HEAD review
-service is available, use the supported UI and a new synthetic client (never
-reuse Client B or a billed period):
-
-1. In **Clients**, create `REVIEW-3499-HEAD-UNBILLED-20261011` with a unique
-   `.invalid` billing address. Record its generated `client_id`.
-2. From **Billing → Contract Templates**, use the populated template below.
-   Create a new client contract from its wizard. Record the generated contract
-   and client-contract assignment IDs; verify the two lines copied separately.
-3. On that contract's **Discounts** tab, verify independent active copies of
-   the 12% contract discount, A$25 fixed contract discount, and 10% Cabling
-   line discount. Record each new `discount_id` and the target
-   `contract_line_id` before generation.
-4. Keep it unbilled until Automatic Invoices shows an eligible candidate for
-   its first full October 2026 arrears window. Then use Preview Selected →
-   Generate and retain the request, response, invoice, charge and settlement
-   identifiers. If the candidate is not yet eligible, leave it unbilled and
-   wait for the service window; do not force generation by editing dates.
-
-This handoff records the retained fixture's known IDs and expected amounts to
-make that setup repeatable, but it does not claim a fresh unbilled fixture has
-already been created. The missing live candidate is part of the blocked
-readiness state.
+An isolated unbilled automatic-generation candidate was prepared through the
+supported client creation, contract wizard, recurring-period materialization,
+due-work, and preview domain actions. No server was started. The
+candidate is currently eligible for the September 1–October 1 service period,
+with an October 1–November 1 arrears invoice window. The domain candidate says
+`due` and `canGenerate: true`; baseline invoice query returned no invoices,
+and the two matching period rows have no invoice or charge-detail claim.
+Exact captured candidate and preview output is in
+[`fixture-current-head.json`](./fixture-current-head.json).
 
 | Record | Identifier / value |
 | --- | --- |
 | Tenant | `6d178771-ad9a-4d43-8809-83992745f8f9` |
+| Client | `REVIEW-3499-UNBILLED-20261012-dcd6e36f` / `5ba78228-ace1-4990-b42f-30739458299a` |
 | Template | `REVIEW-3499-MITIGATION-TWO-FIXED-LINES` / `566a5bd6-2435-4818-b147-60edf805adbd` |
-| Template lines | Managed Workstation `89e47435-bb9c-4d48-801c-91d80c1d4c4c`; Cabling `edab1b08-848b-4946-8b1d-265dae4ee428` |
-| Client B | `REVIEW-3499-MITIGATION-CLIENT-B` / `ab0d087c-c435-42c8-90a3-256fd304f268` |
-| Client contract | `REVIEW-3499-LINE-SCOPE-COPY-B` / `a8fcc363-f389-44fb-81e5-98fc0d3633ab` |
-| Client-contract assignment | `42855623-69f8-4351-b36b-cb3fb21b989f` |
-| Independent copied terms | contract 12% `REVIEW-3499-MITIGATION-DEFAULT-12P`; contract fixed A$25 `REVIEW-3499-MITIGATION-DEFAULT-FIXED-25`; Cabling line 10% `REVIEW-3499-LINE-CABLING-10P` |
-| Current eligible source amounts | Managed Workstation A$200 (20000 minor units); Cabling A$120 (12000 minor units) |
-| Expected line-only settlement | Cabling base 12000; 10% discount −1200; the sibling 20000 is excluded |
-| Expected full invoice before tax | A$244.60 / 24460 minor units, from 32000 gross, −3840 contract percentage, −2500 contract fixed, and −1200 Cabling-only percentage |
-| Next service window | October 2026 in arrears, due for generation on 2026-11-01; confirm the current candidate row and dates in Automatic Invoices before generating |
+| Contract | `REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT` / `a5e37780-a9ba-4a35-a643-2233c25a5d0b` |
+| Client-contract assignment | `4921ceb2-72f5-4f0a-afdc-da256e932c41` (active, starts 2026-09-01) |
+| Managed Workstation line | `dd5c2b59-a8b8-430d-a3ca-1bcc126dd997`; quantity 1 × A$200 = 20000 minor units |
+| Cabling line | `85923f68-0cfa-4a94-83c5-3eadd740978d`; quantity 1 × A$120 = 12000 minor units |
+| Copied 12% contract discount | `c23f8952-378a-4de5-80d1-3f032396fec6` |
+| Copied fixed A$25 contract discount | `f100f50c-4f9f-4d3a-ba5f-6d607ef3e605` |
+| Copied 10% Cabling line discount | `9365c6cc-c681-483c-bb96-63ce6dea0271`, targeting Cabling line above |
+| Eligible candidate | `invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01` |
+| Unclaimed period rows | `fe039803-e891-4faf-89d0-7b3ec84af1c5` (Cabling), `dea8e371-e639-4650-87a3-87fa8ce42f28` (Managed Workstation); both `invoice_id` and `invoice_charge_detail_id` are null |
+| Preview before tax | Gross 32000; 12% contract −3840; Cabling 10% −1200; fixed A$25 −2500; subtotal A$244.60 / 24460 minor units; preview tax 0; total 24460 |
 
-Historical generated invoice for the retained copy: `INV-000042` /
+The retained Client B copy is billed history: `INV-000042` /
+`cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2`. Preserve it; do not regenerate,
+reverse, or clean it up. The fresh candidate above is the one to use for the
+first current-HEAD browser walkthrough. Navigation is **Billing → Invoicing →
+Automatic Invoices**. Select the candidate key above and compare the preview
+with the recorded amounts before any generation. Leave it unbilled until a
+reviewer explicitly performs the walkthrough.
+
+The fixture was created using a one-off integration harness, then audited
+read-only through the same supported due-work and preview actions. Exact setup
+invocation and baseline commands are recorded below; the mutating harness is
+not committed. The retained Client B copy is billed history: `INV-000042` /
 `cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2`, before-tax subtotal 24460, tax 0
-(`pending_external`). Keep it intact as review history.
-
-Navigation: **Billing → Invoicing → Automatic Invoices**. Select Client B's
-`REVIEW-3499-LINE-SCOPE-COPY-B` candidate, preview, then generate only when the
-window is eligible. Compare generated line amounts and all three discount
-settlements with the table above. Open the resulting invoice under **Drafts**,
-reload, and repeat the same generation request through the supported UI; there
-must be one settlement per copied source and stable settlement IDs. Record the
-request, invoice ID, all source/settlement IDs, persisted subtotal/tax/total,
-and screenshots. Pending external tax must be reported separately from a
-settled tax amount.
+(`pending_external`). Keep it intact. The new unbilled fixture's preview has
+the same expected subtotal (24460) and preview tax 0.
 
 The previously observed Automatic Invoices preview included a `−A$32` line
 discount because the old preview treated that copied term as invoice-wide.
 That screenshot is a defect reproduction only. The current-head expected
 line-scope value is `−A$12` on Cabling alone.
 
-### Read-only baseline queries
+### Setup command and read-only baseline queries
+
+The isolated fixture setup command was:
+
+```sh
+cd server
+TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts \
+  src/test/integration/pr3499FixtureSeed.once.test.ts --coverage.enabled=false \
+  --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot
+```
+
+It passed 1/1 and created the domain records above without generating an
+invoice. The read-only due-work and preview audit passed 1/1 with the same
+command and `src/test/integration/pr3499FixtureAudit.once.test.ts`. The first
+audit attempt failed only while writing evidence because its relative output
+path was one directory too high; the path was corrected and the audit then
+passed. The one-off harnesses are removed from the commit. The audit evidence
+file contains the candidate, source rows, discount copies, preview and baseline
+invoice result.
 
 Run these against the review DB before generation and retain the output. They
 must return the exact template, assignment, copied terms and line composition;
-there must be no invoice/charge for this client's next service period.
+there must be no invoice/charge for the eligible service period.
 
 ```sql
 -- Template source lines and source amounts.
@@ -123,10 +123,10 @@ LEFT JOIN contract_line_discounts cld
   ON cld.tenant = a.tenant AND cld.client_contract_id = a.client_contract_id
  AND cld.discount_id = a.discount_id
 WHERE a.tenant = '6d178771-ad9a-4d43-8809-83992745f8f9'
-  AND a.client_contract_id = '42855623-69f8-4351-b36b-cb3fb21b989f'
+  AND a.client_contract_id = '4921ceb2-72f5-4f0a-afdc-da256e932c41'
 ORDER BY d.priority, d.discount_name;
 
--- No invoice or charge has already claimed the next service period.
+-- No invoice or charge has already claimed the eligible service period.
 SELECT i.invoice_id, i.invoice_number, i.status, d.item_id,
        d.service_period_start, d.service_period_end,
        c.adjustment_source_kind, c.adjustment_source_id
@@ -136,20 +136,51 @@ LEFT JOIN invoice_charges c
 LEFT JOIN invoice_charge_details d
   ON d.tenant = c.tenant AND d.item_id = c.item_id
 WHERE i.tenant = '6d178771-ad9a-4d43-8809-83992745f8f9'
-  AND i.client_contract_id = '42855623-69f8-4351-b36b-cb3fb21b989f'
+  AND i.client_contract_id = '4921ceb2-72f5-4f0a-afdc-da256e932c41'
   AND i.invoice_date >= DATE '2026-10-01'
   AND i.invoice_date < DATE '2026-12-01'
 ORDER BY i.invoice_date, i.invoice_number;
+
+-- The two eligible period records are due and remain unclaimed.
+SELECT record_id, obligation_id, period_key, lifecycle_state,
+       invoice_window_start, invoice_window_end, invoice_id,
+       invoice_charge_detail_id
+FROM recurring_service_periods
+WHERE tenant = '6d178771-ad9a-4d43-8809-83992745f8f9'
+  AND record_id IN ('fe039803-e891-4faf-89d0-7b3ec84af1c5',
+                    'dea8e371-e639-4650-87a3-87fa8ce42f28')
+ORDER BY record_id;
 ```
+
+### Validation record
+
+Validation was run against repaired local HEAD `3b2dc0ec7e355fdc0ed67ad35282735dbd2f2bbe` before the follow-up repair commit. The main commands and outcomes are:
+
+| Command | Result |
+| --- | --- |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 121/121 pass, including source increases and decreases, canonical revision identity, discount ordering, repeat generation, manual preservation, contract-only discount scope, and validating/delivered export guards. |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" npx vitest run --config vitest.config.ts ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | 64/64 pass, including the canonical 390000 + 15000 → −40500 = 364500 first-save, later-charge/reload stability, and prior QBO allocation-tax cases. |
+| Same DB test command with `-t 'round-trips fixed allocation tax'` | 4/4 pass (QBO and Xero, legacy and current lineage); prior 462-versus-418 QBO failures do not reproduce on this HEAD. The current upstream base `d6dc22c27363eb6a3b52757e8008687b763121d7` does not contain this test file, so it is not a directly comparable base test. |
+| `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p server/tsconfig.json` | Pass. |
+| `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing` | Pass. |
+| `npm run build --workspace=@alga-psa/billing` | Pass (`tsup`, all eight entries). |
+| `npm run i18n:audit` | Pass; all eight locales have 34,712 keys and zero untranslated/forbidden/missing entries. |
+| `TMPDIR="$PWD/server/.vitest-tmp-review" npm run test:i18n` | Pass, 50/50. The same command without private `TMPDIR` failed 5 cases before assertions while writing temporary files (`Unknown system error -122`); the focused Vitest suites above passed with the private directory. |
+| `npx eslint packages/billing/src/lib/billing/reconcileContractChangeAdjustments.ts packages/billing/src/services/invoiceAutomaticAdjustments.ts server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts` | 0 errors, 102 warnings (existing `any` and non-null-assertion warnings in the large test file). |
+
+At the time of the `-122` failure, `/tmp` was 25/31 GiB used with 6.1 GiB available and 42% inode use; the workspace filesystem had 32 GiB available. `quota -s` is not installed. No shared or other review artifacts were deleted. The successful reruns used the worktree-private `server/.vitest-tmp-review` directory. The production build uses a distinct `NEXT_DIST_DIR`; its result is appended after completion.
 
 ### Cleanup boundary
 
-This review-owned template, Client B, client contract, copied discounts and
-any generated invoice are retained for review. Do not delete or reset them
-until the reviewer confirms completion. If cleanup is later requested, reverse
-only an editable draft through the supported UI, verify its recurring history,
-then remove only these explicitly owned records. Never unlock, reset, delete,
-or re-export delivered QBO review history; in particular preserve invoice
+Keep the new client, contract, assignment, two copied lines, three copied
+discounts, recurring period records, and any later reviewer-created invoice
+as an explicitly owned walkthrough fixture until reviewer sign-off. If
+cleanup is later requested, use supported domain/UI actions and remove only
+the new client ID `5ba78228-ace1-4990-b42f-30739458299a` and its associated
+contract data after confirming the invoice is still absent or is an editable
+draft. Do not delete the source template or any Client B record. Never unlock,
+reset, delete, or re-export delivered QBO review history; in particular
+preserve invoice
 `5a1e0000-0000-4000-8000-202610079004`, batch
 `3ac31e06-9479-4f5d-9c73-170a880d80d9`, and simulator invoice `invoice-21`.
 Keep shared credentials and shared fixtures unchanged.
@@ -168,5 +199,5 @@ Keep shared credentials and shared fixtures unchanged.
   discount ordering, one settlement per revision, and repeat-generation
   stability. Do not fabricate ledger source rows as acceptance.
 - **Browser freshness:** run all above against an application built from the
-  merged commit. The app stayed stopped for this implementation; the older
-  review build is not current-head evidence.
+  repaired commit. We did not start or restart a server; any preexisting review
+  service is not current-head evidence.

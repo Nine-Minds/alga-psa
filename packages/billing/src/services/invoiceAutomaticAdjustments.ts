@@ -93,12 +93,30 @@ export async function loadInvoiceServiceWindow(
   const detailEndInclusive = toDateOnly(row?.end);
   // invoice_charge_details stores service-period ends inclusively. The shared
   // adjustment/discount evaluator uses half-open windows, so normalize exactly
-  // once here (including companion contract_change detail rows).
+  // once here.
   const detailEnd = detailEndInclusive
     ? Temporal.PlainDate.from(detailEndInclusive).add({ days: 1 }).toString()
     : null;
-  if (detailStart && detailEnd) {
-    return { start: detailStart, end: detailEnd };
+  // A carried companion true-up has no canonical recurring detail row by
+  // design. Its persisted half-open provenance period still participates in
+  // discount eligibility, so include it in the covered service window.
+  const adjustmentRows = await tenantDb(conn, tenant)
+    .table('invoice_charges')
+    .where({ invoice_id: invoiceId, tenant, adjustment_source_kind: 'contract_change' })
+    .whereNotNull('adjustment_period_start')
+    .whereNotNull('adjustment_period_end')
+    .select('adjustment_period_start', 'adjustment_period_end') as Array<{
+      adjustment_period_start: unknown;
+      adjustment_period_end: unknown;
+    }>;
+  const coverageStarts = [detailStart, ...adjustmentRows.map((item) => toDateOnly(item.adjustment_period_start))]
+    .filter((value): value is string => Boolean(value))
+    .sort();
+  const coverageEnds = [detailEnd, ...adjustmentRows.map((item) => toDateOnly(item.adjustment_period_end))]
+    .filter((value): value is string => Boolean(value))
+    .sort();
+  if (coverageStarts.length > 0 && coverageEnds.length > 0) {
+    return { start: coverageStarts[0], end: coverageEnds[coverageEnds.length - 1] };
   }
   const date = toDateOnly(invoice?.invoice_date) ?? Temporal.Now.plainDateISO().toString();
   return { start: date, end: Temporal.PlainDate.from(date).add({ days: 1 }).toString() };
@@ -403,17 +421,23 @@ export async function previewAutomaticInvoiceDiscounts(
   });
   // Match persisted detail windows (inclusive ends). True-ups have their own
   // provenance period and do not create canonical recurring detail coverage.
-  const periods = charges.filter((charge) => !charge.contractChangeAdjustment).flatMap((charge) =>
-    charge.recurringDetailPeriods?.length ? charge.recurringDetailPeriods : [charge],
-  ).flatMap((period) => {
-    const start = toDateOnly(period.servicePeriodStart);
-    const end = toDateOnly(period.servicePeriodEnd);
-    return start && end ? [{ start, end }] : [];
+  const periods = charges.flatMap((charge) => {
+    if (charge.contractChangeAdjustment) {
+      const start = toDateOnly(charge.contractChangeAdjustment.periodStart);
+      const endExclusive = toDateOnly(charge.contractChangeAdjustment.periodEnd);
+      return start && endExclusive ? [{ start, endExclusive }] : [];
+    }
+    return (charge.recurringDetailPeriods?.length ? charge.recurringDetailPeriods : [charge]).flatMap((period) => {
+      const start = toDateOnly(period.servicePeriodStart);
+      const endInclusive = toDateOnly(period.servicePeriodEnd);
+      if (!start || !endInclusive) return [];
+      return [{ start, endExclusive: Temporal.PlainDate.from(endInclusive).add({ days: 1 }).toString() }];
+    });
   });
   const starts = periods.map((period) => period.start).sort();
-  const ends = periods.map((period) => period.end).sort();
+  const ends = periods.map((period) => period.endExclusive).sort();
   const window = starts.length && ends.length
-    ? { start: starts[0], end: Temporal.PlainDate.from(ends[ends.length - 1]).add({ days: 1 }).toString() }
+    ? { start: starts[0], end: ends[ends.length - 1] }
     : { start: invoiceDate, end: Temporal.PlainDate.from(invoiceDate).add({ days: 1 }).toString() };
   const rows = await loadApplicableDiscountRows(
     conn, tenant, clientId, window,
