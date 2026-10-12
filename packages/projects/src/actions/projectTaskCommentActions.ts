@@ -82,12 +82,14 @@ export const createTaskComment = withAuth(async (
   }
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
-    const { knex: db } = await createTenantKnex();
-    return await createTaskCommentWithDb(db, tenant, user, {
+    // Snapshot the command before the first await: the caller's object may change while we wait.
+    const command = {
       taskId: comment.taskId,
       note: comment.note,
       parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-    });
+    };
+    const { knex: db } = await createTenantKnex();
+    return await createTaskCommentWithDb(db, tenant, user, command);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -183,6 +185,8 @@ export const getTaskCommentCountsBatch = withAuth(async (
   taskIds: string[]
 ): Promise<Record<string, number> | ProjectTaskCommentActionError> => {
   try {
+    // Snapshot before the first await: the caller's array may change while we wait.
+    taskIds = [...taskIds];
     if (taskIds.length === 0) return {};
 
     if (!await hasPermission(user, 'project_task', 'read')) {

@@ -34,6 +34,8 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   { tenant },
   taskCommentIds: string[]
 ): Promise<IReactionsBatchResult> => {
+  // Snapshot before the first await: the caller's array may change while we wait.
+  taskCommentIds = [...taskCommentIds];
   const { knex: db } = await createTenantKnex();
   return getTaskCommentsReactionsBatchWithDb(db, tenant, user, taskCommentIds);
 });
