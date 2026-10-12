@@ -153,6 +153,12 @@ secrets:
 3. Test changes in both CE and EE environments
 4. Update documentation if the structure changes
 
+## Container user
+
+The server, setup, workflow-worker and email-service containers, and compose Redis, run as uid 1000 with `no-new-privileges`. A one-shot `runtime-permissions` service runs as root first, with only the capabilities it needs, and fixes ownership of `files_data`, `./secrets/*` (`1000:1000`, `0600`) and `secrets/tenants`. Every application service lists it under `depends_on` with `service_completed_successfully`.
+
+Set `ALGA_NO_NEW_PRIVILEGES=false` on hosts that use snap-installed Docker (`snap list docker`); leave it unset elsewhere. Upgrade steps, the manual `chown` alternative and the effect on host users other than uid 1000 are in the [setup guide](setup_guide.md#container-user).
+
 ## Troubleshooting
 
 If you encounter issues:
