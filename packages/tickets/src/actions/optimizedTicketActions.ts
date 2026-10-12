@@ -22,7 +22,6 @@ import type {
   IDocument,
   ITag,
   IUserWithRoles,
-  TicketResponseState,
 } from '@alga-psa/types';
 import {
   withTransaction,
@@ -34,6 +33,7 @@ import {
   type TenantScopedQuery,
 } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
@@ -372,60 +372,6 @@ function applyTicketReadAuthorizationSql(
       adapter: createTicketRelationshipSqlAdapter(trx, tenant),
     },
   });
-}
-
-// LEVERAGE: pattern response-state-from-comment — duplicate of applyCommentResponseState (shared/lib/tickets/responseState.ts) minus the tracking-setting check; not swapped because the contract/live-update tests pin this local function and the swap adds the tracking check.
-async function updateTicketResponseStateFromComment(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('response_state')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const previousState = (ticket?.response_state || null) as TicketResponseState;
-  let newState: TicketResponseState = previousState;
-
-  if (isInternal) {
-    return { previousState, newState };
-  }
-
-  if (authorType === 'internal') {
-    newState = 'awaiting_client';
-  } else if (authorType === 'client') {
-    newState = 'awaiting_internal';
-  }
-
-  if (newState !== previousState) {
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({ response_state: newState });
-
-    registerAfterCommit(trx, () =>
-      publishEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
-          ticketId,
-          userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
-          previousState,
-          newState,
-          trigger: 'comment',
-        },
-      }),
-      `TICKET_RESPONSE_STATE_CHANGED ticket=${ticketId}`
-    );
-  }
-
-  return { previousState, newState };
 }
 
 // Helper function to safely convert dates
@@ -3550,14 +3496,13 @@ export const addTicketCommentWithCache = withAuth(async (
 
     // Update ticket response state based on comment visibility and author (F005-F008)
     if (!isScheduled) {
-      await updateTicketResponseStateFromComment(
-        trx,
+      await applyCommentResponseState(trx, {
         tenant,
         ticketId,
         authorType,
-        authorType === 'internal' ? isInternal : false,
-        user.user_id ?? null
-      );
+        isInternal: authorType === 'internal' ? isInternal : false,
+        userId: user.user_id ?? null,
+      });
     }
 
     // Bundle child→master reopen: a public reply on a bundled child can

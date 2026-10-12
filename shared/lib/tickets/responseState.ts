@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { TicketResponseState } from '@alga-psa/types';
+import type { IEventPublisher, TicketResponseState } from '@alga-psa/types';
 
 /**
  * Shared "comment added" response-state engine.
@@ -84,6 +84,85 @@ export function nextResponseStateForComment(
   return previousState;
 }
 
+export interface ResponseStateChangedPayload {
+  tenantId: string;
+  occurredAt: string;
+  ticketId: string;
+  userId: string | null;
+  previousResponseState: TicketResponseState;
+  newResponseState: TicketResponseState;
+  previousState: TicketResponseState;
+  newState: TicketResponseState;
+  trigger: ResponseStateTrigger;
+}
+
+/**
+ * The one place that shapes the TICKET_RESPONSE_STATE_CHANGED payload. Every
+ * path (after-commit publish, durable outbox row) must build it here so the
+ * webhook body is identical whatever the source. `userId` is null when the
+ * author has no user (e.g. an inbound email from a bare contact).
+ */
+export function buildResponseStateChangedPayload(params: {
+  tenant: string;
+  ticketId: string;
+  userId: string | null;
+  previousState: TicketResponseState;
+  newState: TicketResponseState;
+  trigger: ResponseStateTrigger;
+  occurredAt?: string;
+}): ResponseStateChangedPayload {
+  return {
+    tenantId: params.tenant,
+    occurredAt: params.occurredAt ?? new Date().toISOString(),
+    ticketId: params.ticketId,
+    userId: params.userId,
+    previousResponseState: params.previousState,
+    newResponseState: params.newState,
+    previousState: params.previousState,
+    newState: params.newState,
+    trigger: params.trigger,
+  };
+}
+
+/**
+ * Sink that announces a response-state change. Called inside the caller's
+ * transaction, only when the state really changed. A sink must not publish
+ * synchronously: it either registers an after-commit hook or writes a durable
+ * outbox row that is dispatched after commit.
+ */
+export type ResponseStateAnnouncer = (
+  trx: Knex.Transaction,
+  payload: ResponseStateChangedPayload
+) => void | Promise<void>;
+
+/** Default sink: publish after the owning transaction commits. */
+export const announceAfterCommit: ResponseStateAnnouncer = (trx, payload) => {
+  registerAfterCommit(
+    trx,
+    async () => {
+      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+      await publishEvent({ eventType: 'TICKET_RESPONSE_STATE_CHANGED', payload });
+    },
+    `TICKET_RESPONSE_STATE_CHANGED ticket=${payload.ticketId}`
+  );
+};
+
+/**
+ * Pick the sink for an injected event publisher. The durable inbound-email
+ * outbox publisher records the event as an outbox row in the transaction;
+ * anything else (or no publisher) uses the default after-commit publish.
+ */
+export function announcerFor(eventPublisher?: IEventPublisher): ResponseStateAnnouncer {
+  if (
+    eventPublisher &&
+    (eventPublisher as { __inboundOutboxPublisher?: boolean }).__inboundOutboxPublisher === true &&
+    typeof eventPublisher.publishResponseStateChanged === 'function'
+  ) {
+    return (_trx, payload) => eventPublisher.publishResponseStateChanged!(payload);
+  }
+  return announceAfterCommit;
+}
+
 /**
  * Announce a response-state change after the owning transaction commits.
  * The only publisher of TICKET_RESPONSE_STATE_CHANGED for comment and
@@ -102,33 +181,13 @@ export function publishResponseStateChange(
   }
 ): void {
   if (params.previousState === params.newState) return;
-
-  registerAfterCommit(
-    trx,
-    async () => {
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      await publishEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: params.tenant,
-          occurredAt: params.occurredAt ?? new Date().toISOString(),
-          ticketId: params.ticketId,
-          userId: params.userId,
-          previousResponseState: params.previousState,
-          newResponseState: params.newState,
-          previousState: params.previousState,
-          newState: params.newState,
-          trigger: params.trigger,
-        },
-      });
-    },
-    `TICKET_RESPONSE_STATE_CHANGED ticket=${params.ticketId}`
-  );
+  announceAfterCommit(trx, buildResponseStateChangedPayload(params));
 }
 
 /**
  * Apply the comment rules to the ticket inside the caller's transaction and
- * queue the change event. Skips both when tracking is disabled for the tenant.
+ * announce the change (via `announce`, default after-commit publish). Skips
+ * both when tracking is disabled for the tenant.
  */
 export async function applyCommentResponseState(
   trx: Knex.Transaction,
@@ -138,6 +197,7 @@ export async function applyCommentResponseState(
     authorType: CommentAuthorType;
     isInternal: boolean;
     userId: string | null;
+    announce?: ResponseStateAnnouncer;
   }
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
   const { tenant, ticketId } = params;
@@ -161,7 +221,7 @@ export async function applyCommentResponseState(
       .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
-    publishResponseStateChange(trx, {
+    const payload = buildResponseStateChangedPayload({
       tenant,
       ticketId,
       userId: params.userId,
@@ -169,6 +229,7 @@ export async function applyCommentResponseState(
       newState,
       trigger: 'comment',
     });
+    await (params.announce ?? announceAfterCommit)(trx, payload);
   }
 
   return { previousState, newState };

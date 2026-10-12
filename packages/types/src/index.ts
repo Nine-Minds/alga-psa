@@ -194,6 +194,23 @@ export interface IEventPublisher {
     metadata?: Record<string, any>;
   }): Promise<void>;
 
+  /**
+   * Optional: record a ticket.response_state_changed event. Implemented by the
+   * durable inbound-email outbox publisher, which writes an outbox row inside
+   * the commit transaction. Publishers without it use the after-commit default.
+   */
+  publishResponseStateChanged?(payload: {
+    tenantId: string;
+    occurredAt: string;
+    ticketId: string;
+    userId: string | null;
+    previousResponseState: string | null;
+    newResponseState: string | null;
+    previousState: string | null;
+    newState: string | null;
+    trigger: 'comment' | 'manual' | 'close';
+  }): Promise<void>;
+
   publishTicketAssigned(data: {
     tenantId: string;
     ticketId: string;

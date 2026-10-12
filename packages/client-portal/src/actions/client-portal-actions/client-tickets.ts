@@ -3,6 +3,7 @@
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
@@ -678,14 +679,19 @@ export const addClientTicketComment = withAuth(async (
       });
       const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
+      let responseStateChanged = false;
       if (!isInternal) {
-        // LEVERAGE: pattern response-state-from-comment — client portal writes awaiting_internal directly (no tracking check, no TICKET_RESPONSE_STATE_CHANGED); route through applyCommentResponseState in shared/lib/tickets/responseState.ts once portal behaviour change is accepted.
-        await tenantDb(trx, tenant).table('tickets')
-          .where({
-            ticket_id: ticketId,
-          })
-          .update({ response_state: 'awaiting_internal' });
+        // authorType is 'client': the portal comment row is always stored with author_type 'client'.
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant,
+          ticketId,
+          authorType: 'client',
+          isInternal: false,
+          userId,
+        });
+        responseStateChanged = newState !== previousState;
 
+        // Independent of the response-state tracking setting.
         await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
 
@@ -710,7 +716,7 @@ export const addClientTicketComment = withAuth(async (
       await publishTicketUpdate({
         tenantId: tenant,
         ticketId,
-        updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
+        updatedFields: responseStateChanged ? ['comments', 'response_state'] : ['comments'],
         updatedBy: {
           userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',

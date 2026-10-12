@@ -259,6 +259,8 @@ function buildTrx(params: {
   currentTicket?: Record<string, unknown>;
   bundleSettings?: Record<string, unknown> | undefined;
   childTickets?: Array<Record<string, unknown>>;
+  /** Row returned for tenant_settings; undefined means no row (tracking on by default). */
+  tenantSettings?: Record<string, unknown>;
 }) {
   const currentTicket = { ...makeTicket(), ...(params.currentTicket ?? {}) };
   let childTickets = (params.childTickets ?? []).map((child) => ({ ...child }));
@@ -348,6 +350,15 @@ function buildTrx(params: {
 
     if (table === 'statuses') {
       return statusesTable;
+    }
+
+    if (table === 'tenant_settings') {
+      // Read by the shared response-state engine (tracking setting).
+      return {
+        select: vi.fn(() => ({
+          first: vi.fn(async () => params.tenantSettings),
+        })),
+      };
     }
 
     if (table === 'ticket_bundle_settings') {
@@ -853,6 +864,56 @@ describe('updateTicketWithCache live updates', () => {
         newState: null,
         trigger: 'close',
       },
+    });
+  });
+
+  describe('comment response state (shared engine)', () => {
+    const plainContent = '[{"type":"paragraph","content":"Reply"}]';
+
+    it('moves the state and emits one change event when tracking is enabled', async () => {
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+        callback(buildTrx({ currentTicket: makeTicket({ response_state: 'awaiting_internal' }) }))
+      );
+      const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+      await addTicketCommentWithCache('ticket-1', plainContent, false, false);
+
+      expect(ticketUpdates).toContainEqual({ response_state: 'awaiting_client' });
+      const changed = publishEventMock.mock.calls.filter(
+        ([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED'
+      );
+      expect(changed).toHaveLength(1);
+      expect(changed[0][0].payload).toEqual(
+        expect.objectContaining({
+          previousResponseState: 'awaiting_internal',
+          newResponseState: 'awaiting_client',
+          trigger: 'comment',
+          userId: 'user-1',
+        })
+      );
+    });
+
+    it.each([
+      ['the tenant_settings column', { ticket_display_settings: { responseStateTrackingEnabled: false } }],
+      [
+        'the nested settings.ticketing.display path',
+        { ticket_display_settings: {}, settings: { ticketing: { display: { responseStateTrackingEnabled: false } } } },
+      ],
+    ])('does not write state or emit when tracking is disabled via %s', async (_label, tenantSettings) => {
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+        callback(
+          buildTrx({
+            currentTicket: makeTicket({ response_state: 'awaiting_internal' }),
+            tenantSettings,
+          })
+        )
+      );
+      const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+      await addTicketCommentWithCache('ticket-1', plainContent, false, false);
+
+      expect(ticketUpdates.filter((u) => 'response_state' in u)).toEqual([]);
+      expect(
+        publishEventMock.mock.calls.filter(([event]: any[]) => event?.eventType === 'TICKET_RESPONSE_STATE_CHANGED')
+      ).toEqual([]);
     });
   });
 });

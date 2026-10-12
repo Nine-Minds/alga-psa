@@ -97,6 +97,36 @@ describe('workflow event payload schemas: product emitter contracts', () => {
       },
     },
     {
+      name: 'client portal reply (shared engine, trigger comment)',
+      payload: {
+        // shared/lib/tickets/responseState.ts buildResponseStateChangedPayload
+        tenantId,
+        occurredAt,
+        ticketId,
+        userId,
+        previousResponseState: 'awaiting_client',
+        newResponseState: 'awaiting_internal',
+        previousState: 'awaiting_client',
+        newState: 'awaiting_internal',
+        trigger: 'comment',
+      },
+    },
+    {
+      name: 'inbound email reply from an author with no user (outbox row, userId null)',
+      payload: {
+        // shared/workflow/adapters/inboundEmailOutboxEventPublisher.ts publishResponseStateChanged
+        tenantId,
+        occurredAt,
+        ticketId,
+        userId: null,
+        previousResponseState: 'awaiting_client',
+        newResponseState: 'awaiting_internal',
+        previousState: 'awaiting_client',
+        newState: 'awaiting_internal',
+        trigger: 'comment',
+      },
+    },
+    {
       name: 'close clears response state (new state null)',
       payload: {
         tenantId,

@@ -1648,22 +1648,19 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await db.table('tenant_settings')
-        .select('ticket_display_settings')
-        .first();
-      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
-
-      if (responseStateEnabled) {
-        if (normalizedAuthorType === 'client') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_internal' });
-        } else if (normalizedAuthorType === 'internal') {
-          await db.table('tickets')
-            .where({ ticket_id: commentData.ticket_id })
-            .update({ response_state: 'awaiting_client' });
-        }
+      // Client authors were handled by TicketModel.createComment. A staff reply
+      // by email moves the ticket to awaiting_client through the same engine; the
+      // announcer matches the publisher (outbox row on the durable path).
+      if (normalizedAuthorType === 'internal') {
+        const { applyCommentResponseState, announcerFor } = await import('../../lib/tickets/responseState');
+        await applyCommentResponseState(trx, {
+          tenant,
+          ticketId: commentData.ticket_id,
+          authorType: 'internal',
+          isInternal: false,
+          userId: commentData.author_id ?? userId ?? null,
+          announce: announcerFor(eventPublisher),
+        });
       }
 
       // Activity row for the inbound-email comment. Source is always

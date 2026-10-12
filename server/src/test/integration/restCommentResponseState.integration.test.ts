@@ -10,7 +10,6 @@
  * for a webhook created through the REST create path, contact/author fields on
  * `comment` and `comments[]`, and the `response_state` list filter.
  */
-import http from 'node:http';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +18,13 @@ import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import {
+  createMockRedis,
+  flushDeferredDeliveries as flushDeliveries,
+  startStubServer,
+  waitFor,
+  type WebhookHarnessState,
+} from '../../../test-utils/webhookSinkHarness';
 
 const state = vi.hoisted(() => ({
   db: null as any,
@@ -28,31 +34,15 @@ const state = vi.hoisted(() => ({
   pending: [] as Array<Promise<void>>,
   deferredErrors: [] as unknown[],
   secrets: new Map<string, string>(),
-}));
+})) as WebhookHarnessState;
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
   getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
     (envVar && process.env[envVar]) || fallback || ''),
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
-  getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
-    (envVar && process.env[envVar]) || fallback || ''),
-  getSecretProviderInstance: vi.fn(async () => ({
-    getAppSecret: async () => '',
-    getTenantSecret: async (tenant: string, name: string) => state.secrets.get(`${tenant}/${name}`) ?? null,
-    setTenantSecret: async (tenant: string, name: string, value: string) => {
-      state.secrets.set(`${tenant}/${name}`, value);
-    },
-    deleteTenantSecret: async (tenant: string, name: string) => {
-      state.secrets.delete(`${tenant}/${name}`);
-    },
-  })),
-  secretProvider: {
-    getSecret: vi.fn(async (_key: string, envVar?: string, fallback?: string) =>
-      (envVar && process.env[envVar]) || fallback || ''),
-  },
-}));
+vi.mock('@alga-psa/core/secrets', async () =>
+  (await import('../../../test-utils/webhookSinkHarness')).secretsMockFactory(state));
 
 vi.mock('@alga-psa/core/logger', () => {
   const stub = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
@@ -63,62 +53,14 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('server/src/lib/analytics/posthog', () => ({ analytics: { capture: vi.fn() } }));
 
-// The in-process "bus": publishEvent records the event and hands it to whatever
-// the real webhook subscriber registered through getEventBus().subscribe.
-// Like the real Redis consumer (packages/event-bus/src/eventBus.ts) it runs the
-// event through EventSchemas[eventType].parse(...) first, so fields the schema
-// does not declare are stripped exactly as in production.
-vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
-    state.published.push({ eventType: event.eventType, payload: event.payload });
-    const handler = state.handlers.get(event.eventType);
-    if (handler) {
-      const { EventSchemas } = await import('@alga-psa/event-bus/schemas/eventBusSchema');
-      const schema = (EventSchemas as Record<string, { parse: (v: unknown) => unknown } | undefined>)[event.eventType];
-      if (!schema) {
-        throw new Error(`No EventSchemas entry for ${event.eventType}; refusing to skip the consumer parse`);
-      }
-      const parsed = schema.parse({
-        id: uuidv4(),
-        eventType: event.eventType,
-        timestamp: new Date().toISOString(),
-        payload: event.payload,
-      }) as unknown;
-      if (event.eventType === 'TICKET_RESPONSE_STATE_CHANGED') {
-        // In production this event is consumed after the comment.added event of
-        // the same transaction (separate stream messages, possibly other pods).
-        // Deliver it late so the comment.added build cannot benefit from this
-        // event's side effects.
-        // Tracked in state.pending and flushed in afterEach so no delivery crosses
-        // a test boundary; failures are recorded and rethrown there.
-        state.pending.push(
-          new Promise<void>((resolve) => {
-            setTimeout(() => {
-              handler(parsed)
-                .catch((error) => { state.deferredErrors.push(error); })
-                .finally(resolve);
-            }, 250);
-          }),
-        );
-      } else {
-        await handler(parsed);
-      }
-    }
-  }),
-  publishWorkflowEvent: vi.fn(async () => {}),
-}));
+// The in-process "bus" (see test-utils/webhookSinkHarness): publishEvent records
+// the event, runs it through EventSchemas[eventType].parse like the real Redis
+// consumer, and hands it to the real webhook subscriber.
+vi.mock('@alga-psa/event-bus/publishers', async () =>
+  (await import('../../../test-utils/webhookSinkHarness')).publishersMockFactory(state));
 
-vi.mock('@/lib/eventBus', () => ({
-  getEventBus: () => ({
-    subscribe: async (eventType: string, handler: (event: unknown) => Promise<void>) => {
-      state.handlers.set(eventType, handler);
-    },
-    unsubscribe: async (eventType: string) => {
-      state.handlers.delete(eventType);
-    },
-    publish: vi.fn(async () => {}),
-  }),
-}));
+vi.mock('@/lib/eventBus', async () =>
+  (await import('../../../test-utils/webhookSinkHarness')).eventBusMockFactory(state));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -160,56 +102,6 @@ import {
   applyCommentResponseState,
   resolveCommentAuthor,
 } from '@alga-psa/shared/lib/tickets/responseState';
-
-type Captured = { headers: Record<string, string>; bodyRaw: string; body: any };
-
-function createMockRedis() {
-  const kv = new Map<string, string>();
-  return {
-    async get(key: string) { return kv.get(key) ?? null; },
-    async set(key: string, value: string) { kv.set(key, value); return 'OK'; },
-    async del(key: string | string[]) {
-      let n = 0;
-      for (const k of Array.isArray(key) ? key : [key]) if (kv.delete(k)) n += 1;
-      return n;
-    },
-    async zAdd() { return 1; },
-    async zRem() { return 1; },
-    async zRangeByScore() { return []; },
-    async zCard() { return 0; },
-  } as any;
-}
-
-async function startStubServer() {
-  const received: Captured[] = [];
-  const server = http.createServer((req, res) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (c) => chunks.push(c));
-    req.on('end', () => {
-      const bodyRaw = Buffer.concat(chunks).toString('utf8');
-      received.push({ headers: req.headers as Record<string, string>, bodyRaw, body: JSON.parse(bodyRaw) });
-      res.statusCode = 200;
-      res.end('{"ok":true}');
-    });
-  });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address() as { port: number };
-  return {
-    url: `http://127.0.0.1:${address.port}`,
-    received,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
-  };
-}
-
-async function waitFor<T>(fn: () => T | undefined | false, timeoutMs = 10_000): Promise<T> {
-  const start = Date.now();
-  for (;;) {
-    const value = fn();
-    if (value) return value as T;
-    if (Date.now() - start > timeoutMs) throw new Error('waitFor timed out');
-    await new Promise((r) => setTimeout(r, 50));
-  }
-}
 
 describe('REST comments update response_state + richer ticket webhooks (c219d6bf)', () => {
   const HOOK_TIMEOUT = 180_000;
@@ -338,18 +230,8 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     else process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = originalAllowPrivate;
   }, HOOK_TIMEOUT);
 
-  async function flushDeferredDeliveries() {
-    while (state.pending.length > 0) {
-      await Promise.all(state.pending.splice(0));
-    }
-    if (state.deferredErrors.length > 0) {
-      const errors = state.deferredErrors.splice(0);
-      throw new Error(`Deferred event delivery failed: ${errors.map(String).join('; ')}`);
-    }
-  }
-
   afterEach(async () => {
-    await flushDeferredDeliveries();
+    await flushDeliveries(state);
   });
 
   beforeEach(async () => {

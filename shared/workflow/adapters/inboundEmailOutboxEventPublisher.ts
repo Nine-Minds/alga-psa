@@ -14,6 +14,7 @@
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import type { IEventPublisher } from '@alga-psa/types';
+import type { ResponseStateChangedPayload } from '../../lib/tickets/responseState';
 import { insertOutboxRow } from '../../services/email/inboundEmailDurableStore';
 
 export interface InboundEmailOutboxEventPublisherContext {
@@ -179,6 +180,20 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
         },
       },
       publishOptions: isInitial ? { channel: 'internal-notifications' } : null,
+    });
+  }
+
+  /**
+   * One inbound message produces at most one reply comment, so a single
+   * `response-state-changed` key per inbox message is correct; a replay hits the
+   * unique `(tenant, inbox_id, event_key)` conflict and adds no second row.
+   */
+  async publishResponseStateChanged(payload: ResponseStateChangedPayload): Promise<void> {
+    await this.enqueue({
+      eventKey: 'response-state-changed',
+      eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+      // The engine's occurredAt wins over the enqueue stamp.
+      payload: { ...payload },
     });
   }
 
