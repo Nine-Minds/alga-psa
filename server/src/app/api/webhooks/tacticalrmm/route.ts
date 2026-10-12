@@ -120,7 +120,7 @@ export async function POST(req: Request) {
           assetId: assetId,
           rawPayload: body,
         },
-      } as any);
+      });
     } catch {
       // ignore
     }

@@ -10,7 +10,7 @@ import {
   throwActionError,
   type TenantTxContext,
 } from './shared';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 
 function tenantScopedTable(
   tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,

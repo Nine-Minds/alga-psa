@@ -42,6 +42,11 @@ vi.mock('@alga-psa/auth/actions', () => ({ getTicketAttributes: vi.fn(async () =
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -444,10 +449,13 @@ describe('ticket assignment and additional agents', () => {
       );
 
       expect(resource).toMatchObject({ ticket_id: ticketId, assigned_to: userA, additional_user_id: userB });
+      // The core returns the catalogued payload without a tenant stamp; tenant and actor travel beside it
+      // so the caller can build the publish context post-commit.
       expect(event).toEqual({
         eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+        tenant: tenantId,
+        actorUserId: actorId,
         payload: {
-          tenantId,
           ticketId,
           primaryAgentId: userA,
           additionalAgentId: userB,

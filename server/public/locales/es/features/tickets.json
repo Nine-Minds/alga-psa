@@ -761,6 +761,8 @@
       "failure": "Error al actualizar el estado",
       "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:",
       "resolutionLabel": "Comentario de resolución (opcional)",
+      "resolutionLabelRequired": "Comentario de resolución",
+      "resolutionRequiredHint": "Este tablero requiere un comentario de resolución antes de poder cerrar los tickets.",
       "resolutionPlaceholder": "Describa cómo se resolvieron estos tickets",
       "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar."
     },

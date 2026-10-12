@@ -85,11 +85,39 @@ describe('dispatchCommentPublication author self-heal', () => {
 
     const [event, options] = publish.mock.calls[0] as [any, any];
     expect(options.eventId).toBe(poisonRow.scheduled_publish_event_id);
-    expect(event.payload).toMatchObject({ userId: ticketId, comment: { author: 'Unmatched Sender' } });
+    expect(event.payload).toMatchObject({ actorType: 'SYSTEM', comment: { author: 'Unmatched Sender' } });
+    expect(event.payload).not.toHaveProperty('userId');
     expect(() => EventSchemas.TICKET_COMMENT_ADDED.parse({
       id: randomUUID(), timestamp: new Date().toISOString(), ...event,
     })).not.toThrow();
     expect(updates).toEqual([{ scheduled_publish_dispatched_at: 'now()' }]);
+  });
+
+  it('scrubs a persisted userId that is the ticket id (legacy sentinel) and publishes without userId', async () => {
+    const conn = makeConn({ comments: {
+      ...poisonRow,
+      comment_publication_payload: { ...poisonRow.comment_publication_payload, userId: ticketId, actorUserId: ticketId, actorType: 'USER' },
+    } });
+    const publish = vi.fn(async (_event: any, _options?: any) => undefined);
+
+    await dispatchCommentPublication(conn, tenant, commentId, publish);
+
+    const payload = (publish.mock.calls[0][0] as any).payload;
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload).not.toHaveProperty('actorUserId');
+    expect(payload.actorType).toBe('SYSTEM');
+  });
+
+  it('derives a CONTACT actor from the comment row when no user wrote it', async () => {
+    const contactId = randomUUID();
+    const conn = makeConn({ comments: { ...poisonRow, contact_id: contactId }, contacts: { full_name: 'Contact Person' } });
+    const publish = vi.fn(async (_event: any, _options?: any) => undefined);
+
+    await dispatchCommentPublication(conn, tenant, commentId, publish);
+
+    const payload = (publish.mock.calls[0][0] as any).payload;
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
   });
 
   it('keeps an author and actor the producer already recorded', async () => {
@@ -102,6 +130,6 @@ describe('dispatchCommentPublication author self-heal', () => {
 
     await dispatchCommentPublication(conn, tenant, commentId, publish);
 
-    expect((publish.mock.calls[0][0] as any).payload).toMatchObject({ userId, comment: { author: 'Grace Hopper' } });
+    expect((publish.mock.calls[0][0] as any).payload).toMatchObject({ userId, actorType: 'USER', actorUserId: userId, comment: { author: 'Grace Hopper' } });
   });
 });

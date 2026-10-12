@@ -3,10 +3,10 @@ import {
   DATE_TRIGGER_SOURCE_IDS,
   dateTriggerSourceDefinitions,
   getDateTriggerSourceDefinition,
-} from '../dateTriggerSourceDefinitions';
+} from '@alga-psa/event-schemas';
 import { canonicalizeDateTriggerParams, validateDateTriggerParams } from '../dateTriggerParams';
 import { DATE_TRIGGER_OCCURRENCE_RULES, computeStatusAgeOccurrence, deriveDateTriggerTiming } from '../dateTriggerOccurrence';
-import { dateTriggerPayloadSchemaRefs, dateTriggerPayloadSchemas } from '../schemas/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemaRefs, dateTriggerPayloadSchemas } from '@alga-psa/event-schemas';
 import { workflowDateTriggerSchema, workflowDateTriggerWithParamsSchema } from '../types';
 import { validateWorkflowDefinition } from '../validation/publishValidation';
 

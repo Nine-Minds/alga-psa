@@ -80,6 +80,12 @@ vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  // Comment-publication outbox replay (persisted intent, dispatched after commit).
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -126,6 +132,14 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
 
 vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
+  // The real helper publishes through publishWorkflowEvent with the event's own idempotency key.
+  publishWorkflowTicketSlaStageEvent: (event: any, ctx: any) =>
+    publishWorkflowEventMock({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx,
+      idempotencyKey: event.idempotencyKey,
+    }),
 }));
 
 vi.mock('../lib/validateTicketClosure', () => ({
@@ -866,11 +880,14 @@ describe('updateTicketWithCache live updates', () => {
       'alga-psa:ticket-updates:tenant-1:ticket-1',
       expect.stringContaining('"updatedFields":["status_id","response_state"]')
     );
-    expect(publishEventMock).toHaveBeenCalledWith({
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
+      ctx: expect.objectContaining({
         tenantId: 'tenant-1',
         occurredAt: expect.any(String),
+        actor: { actorType: 'USER', actorUserId: 'user-1' },
+      }),
+      payload: {
         ticketId: 'ticket-1',
         userId: 'user-1',
         previousResponseState: 'awaiting_client',

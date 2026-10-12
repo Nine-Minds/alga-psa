@@ -365,7 +365,7 @@ export async function publishExternalLinkEvent(
         externalParentId: row.external_parent_id ?? null,
         relationship: row.relationship,
       },
-    } as never);
+    });
   } catch (error) {
     console.error('[externalLinks] failed to publish event', { eventType, error });
   }

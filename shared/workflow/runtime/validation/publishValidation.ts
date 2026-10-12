@@ -1,14 +1,13 @@
 import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
 import { workflowDefinitionSchema } from '../types';
-import { dateTriggerPayloadSchemaRefs } from '../schemas/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemaRefs, getDateTriggerSourceByCatalogEvent, getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 import { validateDateTriggerParams } from '../dateTriggerParams';
-import { getDateTriggerSourceByCatalogEvent, getDateTriggerSourceDefinition } from '../dateTriggerSourceDefinitions';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
-import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 import { getWorkflowEventCorrelationPaths } from '../correlationDefaults';

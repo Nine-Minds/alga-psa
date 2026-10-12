@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { withTenantTransaction, requirePermission, throwActionError, uuidSchema, type TenantTxContext } from './shared';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -209,7 +209,7 @@ export function registerActivityActions(): void {
     ui: {
       label: 'Remove from Activity Groups',
       category: 'Business Operations',
-      description: 'Remove an activity from all of a user\'s activity groups. No-op when it is not grouped.',
+      description: 'Remove an activity from all of a user\'s activity groups, returning it to the owner\'s default group (or Ungrouped when no default is set). No-op when it is not grouped.',
     },
     handler: async (input, ctx) => {
       return withTenantTransaction(ctx, async (tx) => {

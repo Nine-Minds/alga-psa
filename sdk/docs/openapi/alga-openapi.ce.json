@@ -7434,37 +7434,141 @@
       "ContactBody": {
         "type": "object",
         "properties": {
-          "full_name": {
+          "contact_kind": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 255
+            "enum": [
+              "person",
+              "shared_mailbox"
+            ]
+          },
+          "full_name": {
+            "type": "string"
           },
           "client_id": {
             "type": "string",
+            "format": "uuid"
+          },
+          "manager_contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "phone_numbers": {
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": {}
-            }
+              "properties": {
+                "contact_phone_number_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Include to keep an existing row on update; omit for a new row."
+                },
+                "phone_number": {
+                  "type": "string"
+                },
+                "extension": {
+                  "type": "string",
+                  "description": "Digits only."
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "work",
+                    "mobile",
+                    "home",
+                    "fax",
+                    "other"
+                  ]
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1
+                },
+                "is_default": {
+                  "type": "boolean"
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "normalized_phone_number": {
+                  "type": "string",
+                  "description": "Read-only; ignored on write."
+                },
+                "custom_phone_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                }
+              },
+              "required": [
+                "phone_number"
+              ],
+              "additionalProperties": false,
+              "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+            },
+            "default": []
           },
           "email": {
-            "type": "string",
-            "format": "email"
+            "type": "string"
           },
           "primary_email_canonical_type": {
             "type": [
               "string",
               "null"
+            ],
+            "enum": [
+              "work",
+              "personal",
+              "billing",
+              "other"
             ]
           },
           "primary_email_custom_type": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "minLength": 1
           },
           "primary_email_custom_type_id": {
             "type": [
@@ -7477,17 +7581,98 @@
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": {}
-            }
+              "properties": {
+                "contact_additional_email_address_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Include to keep an existing row on update; omit for a new row."
+                },
+                "email_address": {
+                  "type": "string",
+                  "description": "Must be a valid email address."
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "work",
+                    "personal",
+                    "billing",
+                    "other"
+                  ]
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "normalized_email_address": {
+                  "type": "string",
+                  "description": "Read-only; ignored on write."
+                },
+                "custom_email_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                }
+              },
+              "required": [
+                "email_address"
+              ],
+              "additionalProperties": false,
+              "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+            },
+            "default": []
           },
           "role": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "notes": {
             "type": "string"
           },
           "is_inactive": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "tags": {
             "type": "array",
@@ -7499,7 +7684,253 @@
         "required": [
           "full_name",
           "email"
-        ]
+        ],
+        "additionalProperties": false
+      },
+      "ContactUpdateBody": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "manager_contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "phone_numbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_phone_number_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Include to keep an existing row on update; omit for a new row."
+                },
+                "phone_number": {
+                  "type": "string"
+                },
+                "extension": {
+                  "type": "string",
+                  "description": "Digits only."
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "work",
+                    "mobile",
+                    "home",
+                    "fax",
+                    "other"
+                  ]
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1
+                },
+                "is_default": {
+                  "type": "boolean"
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "normalized_phone_number": {
+                  "type": "string",
+                  "description": "Read-only; ignored on write."
+                },
+                "custom_phone_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                }
+              },
+              "required": [
+                "phone_number"
+              ],
+              "additionalProperties": false,
+              "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
+            },
+            "default": []
+          },
+          "email": {
+            "type": "string"
+          },
+          "primary_email_canonical_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "work",
+              "personal",
+              "billing",
+              "other"
+            ]
+          },
+          "primary_email_custom_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "primary_email_custom_type_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "additional_email_addresses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_additional_email_address_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Include to keep an existing row on update; omit for a new row."
+                },
+                "email_address": {
+                  "type": "string",
+                  "description": "Must be a valid email address."
+                },
+                "canonical_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "work",
+                    "personal",
+                    "billing",
+                    "other"
+                  ]
+                },
+                "custom_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "minLength": 1
+                },
+                "display_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "normalized_email_address": {
+                  "type": "string",
+                  "description": "Read-only; ignored on write."
+                },
+                "custom_email_type_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Read-only; ignored on write."
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                },
+                "updated_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Read-only; ignored on write."
+                }
+              },
+              "required": [
+                "email_address"
+              ],
+              "additionalProperties": false,
+              "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
+            },
+            "default": []
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "notes": {
+            "type": "string"
+          },
+          "is_inactive": {
+            "type": "boolean",
+            "default": false
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "ContactSearchQuery": {
         "type": "object",
@@ -14288,6 +14719,15 @@
             "additionalProperties": {},
             "description": "Workflow payload used as-is (wins over eventPayload and synthesis)."
           },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Replay this stored workflow runtime event (must match the trigger event type). Cannot be combined with payload."
+          },
+          "useLatestEvent": {
+            "type": "boolean",
+            "description": "Replay the latest stored event of the trigger event type for this tenant. Cannot be combined with payload."
+          },
           "eventPayload": {
             "type": "object",
             "additionalProperties": {},
@@ -18644,7 +19084,8 @@
           "ticket.status_changed",
           "ticket.assigned",
           "ticket.closed",
-          "ticket.comment.added"
+          "ticket.comment.added",
+          "ticket.response_state_changed"
         ],
         "description": "Ticket-domain webhook events emitted by the eventBus subscriber."
       },
@@ -18657,6 +19098,7 @@
           "ticket.assigned",
           "ticket.closed",
           "ticket.comment.added",
+          "ticket.response_state_changed",
           "project.created",
           "project.updated",
           "project.status_changed",
@@ -18770,8 +19212,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -18841,7 +19286,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": "object",
@@ -19125,8 +19570,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19196,7 +19644,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": [
@@ -20093,6 +20541,24 @@
           },
           "is_internal": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ],
+            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           }
         },
         "required": [
@@ -20123,6 +20589,23 @@
           },
           "is_resolution": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           },
           "created_at": {
             "type": "string",
@@ -20186,6 +20669,17 @@
           "is_closed": {
             "type": "boolean"
           },
+          "response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
+          },
           "previous_status_id": {
             "type": [
               "string",
@@ -20200,6 +20694,28 @@
               "null"
             ],
             "description": "Only populated on ticket.status_changed."
+          },
+          "previous_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
+          },
+          "new_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
           "priority_id": {
             "type": [
@@ -20567,6 +21083,39 @@
             "type": "string",
             "enum": [
               "ticket.comment.added"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketResponseStateChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.response_state_changed"
             ]
           },
           "occurred_at": {
@@ -23396,32 +23945,250 @@
       "WorkV1CreateTimeEntryBody": {
         "type": "object",
         "properties": {
-          "work_item_type": {
-            "type": "string"
-          },
           "work_item_id": {
-            "type": "string"
-          },
-          "user_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
           },
-          "started_at": {
-            "type": "string"
+          "work_item_type": {
+            "type": "string",
+            "enum": [
+              "ticket",
+              "project_task",
+              "non_billable_category",
+              "ad_hoc",
+              "interaction"
+            ]
           },
-          "ended_at": {
-            "type": "string"
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
           },
-          "duration_minutes": {
-            "type": "number"
-          },
-          "billable_minutes": {
-            "type": "number"
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
           },
           "notes": {
             "type": "string"
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required (it drives billing)."
+          },
+          "tax_region": {
+            "type": "string"
+          },
+          "is_billable": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "work_item_type",
+          "start_time",
+          "end_time",
+          "service_id"
+        ]
+      },
+      "WorkV1UpdateTimeEntryBody": {
+        "type": "object",
+        "properties": {
+          "work_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+          },
+          "work_item_type": {
+            "type": "string",
+            "enum": [
+              "ticket",
+              "project_task",
+              "non_billable_category",
+              "ad_hoc",
+              "interaction"
+            ]
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+          },
+          "notes": {
+            "type": "string"
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required on create (it drives billing); cannot be cleared on update."
+          },
+          "tax_region": {
+            "type": "string"
+          },
+          "is_billable": {
+            "type": "boolean",
+            "default": true
           }
         }
+      },
+      "WorkV1BulkCreateTimeEntriesBody": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "work_item_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+                },
+                "work_item_type": {
+                  "type": "string",
+                  "enum": [
+                    "ticket",
+                    "project_task",
+                    "non_billable_category",
+                    "ad_hoc",
+                    "interaction"
+                  ]
+                },
+                "start_time": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+                },
+                "end_time": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "service_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Required (it drives billing)."
+                },
+                "tax_region": {
+                  "type": "string"
+                },
+                "is_billable": {
+                  "type": "boolean",
+                  "default": true
+                }
+              },
+              "required": [
+                "work_item_type",
+                "start_time",
+                "end_time",
+                "service_id"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
+      "WorkV1BulkUpdateTimeEntriesBody": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entry_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "work_item_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types."
+                    },
+                    "work_item_type": {
+                      "type": "string",
+                      "enum": [
+                        "ticket",
+                        "project_task",
+                        "non_billable_category",
+                        "ad_hoc",
+                        "interaction"
+                      ]
+                    },
+                    "start_time": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted."
+                    },
+                    "end_time": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted."
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "service_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Required on create (it drives billing); cannot be cleared on update."
+                    },
+                    "tax_region": {
+                      "type": "string"
+                    },
+                    "is_billable": {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  }
+                }
+              },
+              "required": [
+                "entry_id",
+                "data"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "entries"
+        ]
+      },
+      "WorkV1BulkDeleteTimeEntriesBody": {
+        "type": "object",
+        "properties": {
+          "entry_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "entry_ids"
+        ]
       },
       "WorkV1CreateTimeSheetBody": {
         "type": "object",
@@ -45915,7 +46682,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ContactBody"
+                "$ref": "#/components/schemas/ContactUpdateBody"
               }
             }
           }
@@ -62481,7 +63248,7 @@
     "/api/workflow-definitions/simulate": {
       "post": {
         "summary": "Simulate a workflow definition draft",
-        "description": "Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger event schema or the workflow payload schema. Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.",
+        "description": "Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. For event-triggered workflows, pass useLatestEvent: true (or eventId) to replay a stored workflow runtime event through the trigger payload mapping; the simulation fails with \"Production would skip this event\" when production would not launch the workflow for it. Omit payload and replay to have one synthesized from the trigger event schema or the workflow payload schema (the trigger contract is then not checked). Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.",
         "tags": [
           "Workflow Definitions"
         ],
@@ -96388,7 +97155,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1BulkDeleteTimeEntriesBody"
               }
             }
           }
@@ -96474,7 +97241,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1BulkCreateTimeEntriesBody"
               }
             }
           }
@@ -96567,7 +97334,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1BulkUpdateTimeEntriesBody"
               }
             }
           }
@@ -97729,7 +98496,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1UpdateTimeEntryBody"
               }
             }
           }
@@ -135528,7 +136295,7 @@
     "ticket.comment.added": {
       "post": {
         "summary": "Outbound delivery: ticket.comment.added",
-        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
         "tags": [
           "Webhooks"
         ],
@@ -135603,6 +136370,99 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TicketCommentAddedDeliveryV1"
+              },
+              "description": "Signed JSON envelope."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoint accepted the delivery (any 2xx is treated as success)."
+          },
+          "410": {
+            "description": "Endpoint indicates the resource is permanently gone; webhook will be auto-disabled."
+          }
+        }
+      }
+    },
+    "ticket.response_state_changed": {
+      "post": {
+        "summary": "Outbound delivery: ticket.response_state_changed",
+        "description": "Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "tags": [
+          "Webhooks"
+        ],
+        "extensions": {
+          "x-alga-event-type": "ticket.response_state_changed",
+          "x-rbac-resource": "webhook"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`."
+            },
+            "required": true,
+            "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.",
+            "name": "x-alga-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-webhook-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-event-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/WebhookEventTypeV1"
+            },
+            "required": true,
+            "name": "x-alga-event-type",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-delivery-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stringified attempt count, starts at 1."
+            },
+            "required": true,
+            "description": "Stringified attempt count, starts at 1.",
+            "name": "x-alga-delivery-attempt",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Signed JSON envelope.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketResponseStateChangedDeliveryV1"
               },
               "description": "Signed JSON envelope."
             }

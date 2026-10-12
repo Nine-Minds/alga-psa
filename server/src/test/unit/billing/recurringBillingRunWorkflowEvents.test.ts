@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   recurringBillingRunCompletedEventPayloadSchema,
   recurringBillingRunFailedEventPayloadSchema,
   recurringBillingRunStartedEventPayloadSchema,
-} from '@shared/workflow/runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,

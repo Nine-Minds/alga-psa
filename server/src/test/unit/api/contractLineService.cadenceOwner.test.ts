@@ -46,6 +46,12 @@ vi.mock('@alga-psa/billing/services', () => ({
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEvent(...args),
+  publishUnregisteredEventType: (...args: any[]) => publishEvent(...args),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({

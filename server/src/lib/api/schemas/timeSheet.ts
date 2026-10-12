@@ -15,6 +15,10 @@ import {
 import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 
 // Time period frequency schema
+// Time periods are half-open [start_date, end_date).
+const TIME_PERIOD_END_DATE_DESCRIPTION =
+  'Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23.';
+
 export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']);
 
 // Create time sheet schema
@@ -91,7 +95,7 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   time_period: z.object({
     period_id: uuidSchema,
     start_date: dateSchema,
-    end_date: dateSchema,
+    end_date: dateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
     is_current: z.boolean()
   }).optional(),
   
@@ -119,7 +123,7 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
 // Time period schemas
 export const createTimePeriodSchema = z.object({
   start_date: dateSchema,
-  end_date: dateSchema,
+  end_date: dateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   is_current: z.boolean().optional().default(false)
 });
 
@@ -128,7 +132,7 @@ export const updateTimePeriodSchema = createUpdateSchema(createTimePeriodSchema)
 export const timePeriodResponseSchema = z.object({
   period_id: uuidSchema,
   start_date: dateSchema,
-  end_date: dateSchema,
+  end_date: dateSchema.describe(TIME_PERIOD_END_DATE_DESCRIPTION),
   is_current: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),

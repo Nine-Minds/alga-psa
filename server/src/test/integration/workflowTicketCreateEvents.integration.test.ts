@@ -21,7 +21,13 @@ vi.mock('@alga-psa/event-bus/publishers', async () => {
   const capture = async (event: { eventType: string; payload: Record<string, any> }) => {
     published.push({ eventType: event.eventType, payload: event.payload });
   };
-  return { ...actual, publishEvent: vi.fn(capture), publishWorkflowEvent: vi.fn(capture) };
+  // Catalogued events: stamp ctx (tenantId/occurredAt/actor) onto the payload like the real publisher.
+  const captureWorkflow = async (params: { eventType: string; payload: Record<string, any>; ctx: any; idempotencyKey?: string }) => {
+    const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+    const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+    published.push({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, ctx) });
+  };
+  return { ...actual, publishEvent: vi.fn(capture), publishWorkflowEvent: vi.fn(captureWorkflow) };
 });
 
 vi.mock('../../../../shared/workflow/runtime/actions/businessOperations/shared', async (importOriginal) => {

@@ -21,10 +21,20 @@ const fixture = vi.hoisted(() => ({
   published: [] as Array<{ eventType: string; payload: any }>,
 }));
 
-vi.mock('@alga-psa/ee-calendar/lib/eventBus/publishers', () => ({
+// CalendarSyncService publishes through the typed publishers; record what a subscriber would receive
+// (the real publisher stamps the tenant from ctx into the payload).
+vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: { eventType: string; payload: any }) => {
     fixture.published.push(event);
   },
+  publishWorkflowEvent: async (event: { eventType: string; payload: any; ctx: { tenantId: string } }) => {
+    fixture.published.push({ eventType: event.eventType, payload: { ...event.payload, tenantId: event.ctx.tenantId } });
+  },
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({

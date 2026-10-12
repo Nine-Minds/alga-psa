@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getDateTriggerSourceDefinition } from './dateTriggerSourceDefinitions';
+import { getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 
 /**
  * Parameters of a date trigger (`trigger.params`), validated per source.

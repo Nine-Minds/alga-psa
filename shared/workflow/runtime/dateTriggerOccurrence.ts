@@ -1,4 +1,4 @@
-import type { DateTriggerSourceId } from './dateTriggerSourceDefinitions';
+import type { DateTriggerSourceId } from '@alga-psa/event-schemas';
 import { validateDateTriggerParams, type TicketStatusAgeParams } from './dateTriggerParams';
 
 /**

@@ -85,9 +85,9 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-  POST_DROP_RECURRING_OBLIGATION_TYPES,
-} from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+  canonicalizeRecurringServicePeriodScheduleKey,
+  parseRecurringServicePeriodScheduleKey,
+} from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
@@ -120,6 +120,13 @@ import {
 } from '../lib/billing/recurringPricingIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
+  explainedPreviewFailureFromMessage,
+  invoiceGenerationActionErrorFrom,
+  newSupportReference,
+  unexpectedInvoiceFailureMessage,
+  type InvoiceGenerationActionError,
+} from './invoiceGenerationActionErrors';
+import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
 } from './recurringApprovalBlockers';
@@ -129,10 +136,14 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingSchedulePayload,
+  buildProjectBudgetExceededPayload,
+  buildProjectBudgetThresholdReachedPayload,
+} from '@alga-psa/workflow-streams';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
-type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
 
 function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
   return Boolean(
@@ -960,50 +971,6 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
 }
 
 /**
- * Expected preview refusals the billing engine raises as bare sentences. Each
- * gets a stable code (the UI translates by it) and an English message that says
- * what to do next, used when the UI has no translation for the code.
- */
-const EXPLAINED_PREVIEW_FAILURES: ReadonlyArray<{
-  matches: (message: string) => boolean;
-  code: Extract<
-    HandledRecurringFailureCode,
-    'RECURRING_PERIODS_NOT_MATERIALIZED' | 'NO_ACTIVE_CONTRACT_LINES' | 'NOTHING_TO_BILL'
-  >;
-  message: string;
-}> = [
-  {
-    matches: (message) => message.startsWith('Recurring service periods were not materialized'),
-    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
-    message:
-      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
-  },
-  {
-    matches: (message) =>
-      message === 'No active contract lines found for this client in the selected billing period.',
-    code: 'NO_ACTIVE_CONTRACT_LINES',
-    message:
-      'No contract line is active for this billing period. Check the contract start and end dates and that the contract is active.',
-  },
-  {
-    matches: (message) => message === 'Nothing to bill',
-    code: 'NOTHING_TO_BILL',
-    message:
-      'Nothing is ready to invoice for this window. Contracts billed in arrears can only be invoiced after their service period ends, so check the billing timing and dates.',
-  },
-];
-
-function explainedPreviewFailureFromMessage(
-  message: string,
-): { message: string; code: HandledRecurringFailureCode } | null {
-  // LEVERAGE: friction engine-failure-identity — the engine identifies these refusals only by
-  // their English sentence, so preview must string-match; typed errors from the engine would
-  // remove this table.
-  const explained = EXPLAINED_PREVIEW_FAILURES.find((entry) => entry.matches(message));
-  return explained ? { message: explained.message, code: explained.code } : null;
-}
-
-/**
  * Maps a preview failure to the user-safe message plus the structured, known
  * failure (code/params) the UI needs to render localized, actionable guidance.
  * Unknown/internal failures carry no code, so the UI keeps the generic string.
@@ -1091,8 +1058,10 @@ function previewInvoiceErrorInfo(error: unknown): {
   }
 
   // Unknown/internal exceptions never leak their raw message to the user; the
-  // full cause stays server-side in logPreviewInvoiceFailure.
-  return { message: 'An error occurred while previewing the invoice' };
+  // full cause stays server-side, tied to a short reference the operator can quote.
+  const ref = newSupportReference();
+  console.error('[previewInvoiceErrorInfo] Unexpected preview failure', { ref }, error);
+  return { message: unexpectedInvoiceFailureMessage(ref), code: 'UNEXPECTED', params: { ref } };
 }
 
 function logPreviewInvoiceFailure(
@@ -1101,119 +1070,6 @@ function logPreviewInvoiceFailure(
   error: unknown,
 ): void {
   console.error(`[${action}] Invoice preview failed:`, context, error);
-}
-
-/**
- * Maps a coded billing validation error (`ManualInvoiceError`) to the localized
- * message key the recurring run uses to recover the structured failure. Codes the
- * recurring flow does not handle deliberately have no key, so they fall back to the
- * generic action-error string.
- */
-function manualInvoiceErrorMessageKey(
-  code: HandledManualInvoiceErrorCode,
-): string | undefined {
-  switch (code) {
-    case 'NO_BILLING_EMAIL':
-      return NO_BILLING_EMAIL_MESSAGE_KEY;
-    case 'TIME_APPROVAL_REQUIRED':
-      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
-    case 'USAGE_RECORDS_MISSING':
-      return USAGE_RECORDS_MISSING_MESSAGE_KEY;
-    case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
-      return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
-    case 'USAGE_PERIOD_TOTAL_STALE':
-      return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
-    case 'RECURRING_PRICING_STALE':
-      return RECURRING_PRICING_STALE_MESSAGE_KEY;
-    case 'USAGE_CALCULATION_ERROR':
-      return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
-    case 'FIXED_LINE_RATE_UNRESOLVED':
-      return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
-    case 'FIXED_LINE_NO_SERVICES':
-      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
-    default:
-      return undefined;
-  }
-}
-
-function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
-  if (error instanceof Error) {
-    if (error.message.startsWith('Permission denied')) {
-      return permissionError(error.message);
-    }
-
-    // Coded billing validation error. Only the allowlisted code crosses this
-    // boundary as a keyed action error; unsupported codes are re-thrown so the
-    // recurring run's generic catch owns them (full logging, generic UI string).
-    // Checked before the message matching below, which would otherwise surface a
-    // raw, uncoded sentence for codes whose message happens to match a prefix.
-    if (error instanceof ManualInvoiceError) {
-      const messageKey = manualInvoiceErrorMessageKey(error.code);
-      return messageKey
-        ? actionError(error.message, messageKey, error.params)
-        : null;
-    }
-
-    // An expected, actionable refusal, not a failure: a contract covers these
-    // items but more than one line matched, so they may not be billed at
-    // catalog rate until someone decides (F139). The message names them.
-    if (error instanceof UnresolvedCatalogPricingError) {
-      return actionError(error.message);
-    }
-
-    if (error.message === 'Billing cycle not found') {
-      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.billingCycle.notFoundRefresh');
-    }
-    if (error.message === 'Invoice not found') {
-      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
-    }
-    if (error.message === 'Invalid billing cycle dates') {
-      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.', 'msp/invoicing:errors.billingCycle.invalidDates');
-    }
-    if (
-      error.message === 'No recurring execution windows selected' ||
-      error.message === 'No billing settings found' ||
-      error.message === 'Nothing to bill' ||
-      error.message === 'Project billing configuration not found' ||
-      error.message === 'Project is configured for recurring invoice generation' ||
-      error.message === 'Recurring selector input execution window kind is not supported.' ||
-      error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
-      error.message.startsWith('Purchase Order is required') ||
-      error.message.startsWith('Client ') ||
-      error.message.startsWith('Service "') ||
-      error.message.startsWith('Recurring service periods were not materialized') ||
-      error.message.includes('Mixed currency billing is not supported')
-    ) {
-      return actionError(error.message);
-    }
-
-    if (error.message.startsWith('Invoice already exists for this recurring execution window')) {
-      // Keyed so the recurring run can recognize it after the boundary translates it.
-      return actionError(error.message, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY);
-    }
-  }
-
-  const dbError = error as { code?: string; column?: string };
-  if (dbError?.code === '22P02') {
-    return actionError('One of the selected invoice values is invalid. Please refresh and try again.', 'msp/invoicing:errors.invoice.invalidValue');
-  }
-  if (dbError?.code === '23502') {
-    return dbError.column
-      ? actionError(
-          `Missing required invoice field: ${dbError.column}.`,
-          'msp/invoicing:errors.invoice.missingFieldNamed',
-          { field: dbError.column },
-        )
-      : actionError('Missing required invoice field.', 'msp/invoicing:errors.invoice.missingField');
-  }
-  if (dbError?.code === '23503') {
-    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.referenceMissing');
-  }
-  if (dbError?.code === '23505') {
-    return actionError('A conflicting invoice already exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.duplicate');
-  }
-
-  return null;
 }
 
 async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Promise<T | InvoiceGenerationActionError> {
@@ -1263,14 +1119,13 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
       db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
       return query.where({
         'rsp.cadence_owner': 'client',
-        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(executionWindow.scheduleKey ?? ''),
         'rsp.period_key': executionWindow.periodKey,
         'rsp.invoice_window_start': params.selectorInput.windowStart,
         'rsp.invoice_window_end': params.selectorInput.windowEnd,
         'ct.owner_client_id': params.selectorInput.clientId,
         'cc.client_id': params.selectorInput.clientId,
-      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+      }).whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .select('rsp.obligation_id', 'rsp.invoice_id', 'rsp.invoice_charge_id', 'cl.billing_profile_id as line_profile_id', 'ct.contract_id', 'cc.billing_profile_id as contract_profile_id');
     })
     : [];
@@ -1341,7 +1196,7 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
       return tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
-          obligation_type: 'contract_line',
+          cadence_owner: 'contract',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
@@ -1384,7 +1239,6 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
           'rsp.invoice_window_start': normalizedWindowStart,
           'rsp.invoice_window_end': normalizedWindowEnd,
         })
-        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .orderBy('rsp.service_period_start', 'asc')
         .orderBy('rsp.revision', 'asc')
@@ -1455,11 +1309,9 @@ async function resolveCanonicalSelectorInputsForClientWindow(params: {
     params.knex,
     async (trx: Knex.Transaction) => {
       const clientCadenceRows = await buildWindowRowsQuery(trx)
-        .where('rsp.cadence_owner', 'client')
-        .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+        .where('rsp.cadence_owner', 'client');
       const contractCadenceRows = await buildWindowRowsQuery(trx)
-        .where('rsp.cadence_owner', 'contract')
-        .where('rsp.obligation_type', 'contract_line');
+        .where('rsp.cadence_owner', 'contract');
       return [...clientCadenceRows, ...contractCadenceRows];
     },
   );
@@ -1561,14 +1413,13 @@ async function normalizeRecurringSelectorInput(params: {
         return query
           .where({
             'rsp.cadence_owner': 'client',
-            'rsp.schedule_key': params.selectorInput.executionWindow.scheduleKey,
+            'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(params.selectorInput.executionWindow.scheduleKey ?? ''),
             'rsp.period_key': params.selectorInput.executionWindow.periodKey,
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
             'c.client_id': params.selectorInput.clientId,
           })
-          .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+            .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
           .orderBy('rsp.service_period_start', 'asc')
           .orderBy('rsp.revision', 'asc')
           .first('rsp.schedule_key', 'rsp.period_key');
@@ -1611,7 +1462,6 @@ async function normalizeRecurringSelectorInput(params: {
         query
           .where({
             'rsp.cadence_owner': 'contract',
-            'rsp.obligation_type': 'contract_line',
             'rsp.invoice_window_start': normalizedWindowStart,
             'rsp.invoice_window_end': normalizedWindowEnd,
             'c.client_id': params.selectorInput.clientId,
@@ -1680,12 +1530,8 @@ async function calculatePreviewTax(
 }
 
 function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
-  if (!scheduleKey) {
-    return null;
-  }
-
-  const match = scheduleKey.match(/:client_contract_line:([^:]+):/);
-  return match?.[1] ?? null;
+  const parsed = parseRecurringServicePeriodScheduleKey(scheduleKey);
+  return parsed?.cadenceOwner === 'client' ? parsed.obligationId : null;
 }
 
 function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
@@ -1849,7 +1695,6 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
       .where('ct.owner_client_id', canonicalSelection.clientId)
       .where('rsp.invoice_window_start', canonicalSelection.windowStart)
       .where('rsp.invoice_window_end', canonicalSelection.windowEnd)
-      .whereIn('rsp.obligation_type', ['contract_line', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE])
       .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
       .select('rsp.obligation_id', 'rsp.service_period_start', 'rsp.service_period_end', 'rsp.schedule_key');
   });
@@ -2793,14 +2638,13 @@ async function resolveRecurringSelectionBillingProfileId(
       db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'ct.contract_id');
       const obligations = await query.where({
         'rsp.cadence_owner': 'client',
-        'rsp.schedule_key': executionWindow.scheduleKey,
+        'rsp.schedule_key': canonicalizeRecurringServicePeriodScheduleKey(executionWindow.scheduleKey ?? ''),
         'rsp.period_key': executionWindow.periodKey,
         'rsp.invoice_window_start': selector.windowStart,
         'rsp.invoice_window_end': selector.windowEnd,
         'ct.owner_client_id': clientId,
         'cc.client_id': clientId,
-      }).whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+      }).whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
         .select('rsp.obligation_id', 'cl.billing_profile_id as line_profile_id', 'cc.billing_profile_id as contract_profile_id');
       if (obligations.length === 0) {
         throw new Error('The selected client-cadence period does not resolve to an eligible persisted contract-line obligation for this client and tenant.');
@@ -4427,11 +4271,11 @@ export async function createInvoiceFromBillingResultImpl(
       'entry.description',
       'entry.requires_payment_before_work',
     );
+  const projectBillingCtx = { tenantId: tenant, actor: { actorType: 'USER' as const, actorUserId: userId } };
   for (const entry of invoicedScheduleRows) {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
-      payload: {
-        tenantId: tenant,
+      payload: buildProjectBillingSchedulePayload({
         projectId: entry.project_id,
         configId: entry.config_id,
         entryId: entry.schedule_entry_id,
@@ -4441,35 +4285,36 @@ export async function createInvoiceFromBillingResultImpl(
         requiresPaymentBeforeWork: entry.requires_payment_before_work,
         userId,
         changes: { invoiceId: newInvoice.invoice_id },
-      },
+      }),
+      ctx: projectBillingCtx,
     });
   }
 
   for (const delta of persistedCapDeltas) {
     for (const threshold of delta.notifiedThresholds) {
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'PROJECT_BUDGET_THRESHOLD_REACHED',
-        payload: {
-          tenantId: tenant,
+        payload: buildProjectBudgetThresholdReachedPayload({
           projectId: delta.projectId,
           threshold,
           billed: delta.billedAfter,
           cap: delta.cap,
-        },
+        }),
+        ctx: projectBillingCtx,
       });
     }
     if (isFirstProjectCapOverage(delta.writtenDownBefore, delta.writtenDownAfter)) {
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'PROJECT_BUDGET_EXCEEDED',
-        payload: {
-          tenantId: tenant,
+        payload: buildProjectBudgetExceededPayload({
           projectId: delta.projectId,
           invoiceId: newInvoice.invoice_id,
           billed: delta.billedAfter,
           attempted: delta.billedAfter + delta.writtenDownAfter,
           cap: delta.cap,
           writtenDown: delta.writtenDownAfter,
-        },
+        }),
+        ctx: projectBillingCtx,
       });
     }
   }

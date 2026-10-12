@@ -676,7 +676,8 @@
       "openSalesOrders": "Verkooporders openen",
       "successBody": "Productregels worden bij levering gefactureerd.",
       "successTitle": "Verkooporder {{number}} aangemaakt"
-    }
+    },
+    "contractBlockedServiceless": "Het terugkerende item \"{{description}}\" moet naar een catalogusdienst verwijzen vóór de contractconversie"
   },
   "quoteApproval": {
     "title": "Goedkeuringen van offertes",

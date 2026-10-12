@@ -48,6 +48,12 @@ const { publishEventMock } = vi.hoisted(() => ({
 // @alga-psa/db) stays real and reads the test tenant_settings row.
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<any>('@alga-psa/db');

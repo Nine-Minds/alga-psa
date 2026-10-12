@@ -2057,7 +2057,7 @@
       "openMenu": "Ouvrir le menu",
       "columns": {
         "startDate": "Date de début",
-        "endDate": "Date de fin",
+        "endDate": "Dernier jour",
         "actions": "Actions"
       },
       "form": {
@@ -2069,7 +2069,8 @@
         "startDate": "Date de début",
         "startDatePlaceholder": "Sélectionner la date de début",
         "noEndDate": "Aucune date de fin",
-        "endDate": "Date de fin",
+        "endDate": "Dernier jour de la période",
+        "endDateHelp": "La période inclut ce jour.",
         "endDatePlaceholder": "Sélectionner la date de fin",
         "deletePeriod": "Supprimer la période",
         "confirmDeleteTitle": "Confirmer la suppression",
@@ -2083,7 +2084,7 @@
         "noSettings": "Aucun paramètre de période disponible. Impossible de créer une nouvelle période.",
         "settingsRequired": "Impossible de gérer une période sans paramètres.",
         "startDateRequired": "Une date de début doit être indiquée.",
-        "startBeforeEnd": "La date de début doit précéder la date de fin.",
+        "startBeforeEnd": "La date de fin ne peut pas être antérieure à la date de début.",
         "overlap": "La période chevauche une période existante.",
         "overlapRetry": "Cette période en chevauche une autre. Veuillez choisir d’autres dates.",
         "create": "Impossible de créer la période.",

@@ -593,6 +593,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         if (!useLegacyMajorUnits) {
           return Math.trunc(numeric);
         }
+        // LEVERAGE: pattern currency-minor-units — local *100 parser assumes a 2-digit currency; should use core toMinorUnits keyed on the invoice currency (alga0002091 follow-up)
         return Math.round(numeric * 100);
       };
 

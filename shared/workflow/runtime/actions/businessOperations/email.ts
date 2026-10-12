@@ -7,7 +7,7 @@ import {
   withWorkflowPicker,
   withWorkflowRequireOneOf,
   type WorkflowJsonSchemaMetadata
-} from '../../jsonSchemaMetadata';
+} from '@alga-psa/event-schemas';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,

@@ -22,9 +22,10 @@ const {
   updateWorkflowDefinitionDraftActionMock: vi.fn(),
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => {
   const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
-  return createLocaleTranslationMock('msp/workflows');
+  // Keep the real formatters (the launch-skip banner uses useFormatters); only translations are stubbed.
+  return { ...((await importOriginal()) as Record<string, unknown>), ...createLocaleTranslationMock('msp/workflows') };
 });
 
 vi.mock('next/navigation', () => ({
@@ -329,7 +330,8 @@ describe('WorkflowDesigner publish error reset', () => {
       workflowId: WORKFLOW_ID,
       isPaused: true,
     })));
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    // The switch flips once the metadata save resolves, which can land after the call is observed.
+    await waitFor(() => expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false'));
     expect(screen.getByRole('switch')).toHaveTextContent('Paused');
   });
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DATE_TRIGGER_SOURCE_IDS, getDateTriggerSourceDefinition } from './dateTriggerSourceDefinitions';
+import { DATE_TRIGGER_SOURCE_IDS, getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 import { validateDateTriggerParams } from './dateTriggerParams';
 
 export const exprSchema = z.object({

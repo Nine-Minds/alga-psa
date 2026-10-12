@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 90;
@@ -60,7 +62,7 @@ export function buildContractCreatedPayload(params: {
   endDate?: string | null;
   status?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_CREATED', {
     contractId: params.contractId,
     clientId: params.clientId,
     createdByUserId: params.createdByUserId,
@@ -68,7 +70,7 @@ export function buildContractCreatedPayload(params: {
     startDate: params.startDate,
     endDate: params.endDate ?? undefined,
     status: params.status,
-  };
+  });
 }
 
 export function buildContractUpdatedPayload(params: {
@@ -78,13 +80,13 @@ export function buildContractUpdatedPayload(params: {
   updatedFields?: string[];
   changes?: Record<string, { previous: unknown; new: unknown }>;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_UPDATED', {
     contractId: params.contractId,
     clientId: params.clientId,
     updatedAt: params.updatedAt,
     updatedFields: params.updatedFields,
     changes: params.changes,
-  };
+  });
 }
 
 export function buildContractStatusChangedPayload(params: {
@@ -94,13 +96,13 @@ export function buildContractStatusChangedPayload(params: {
   newStatus: string;
   changedAt?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_STATUS_CHANGED', {
     contractId: params.contractId,
     clientId: params.clientId,
     previousStatus: params.previousStatus,
     newStatus: params.newStatus,
     changedAt: params.changedAt,
-  };
+  });
 }
 
 export function buildContractRenewalUpcomingPayload(params: {
@@ -112,7 +114,7 @@ export function buildContractRenewalUpcomingPayload(params: {
   daysUntilDecisionDue?: number;
   renewalCycleKey?: string;
 }) {
-  return {
+  return builtWorkflowPayload('CONTRACT_RENEWAL_UPCOMING', {
     contractId: params.contractId,
     clientId: params.clientId,
     renewalAt: params.renewalAt,
@@ -120,5 +122,62 @@ export function buildContractRenewalUpcomingPayload(params: {
     daysUntilRenewal: params.daysUntilRenewal,
     daysUntilDecisionDue: params.daysUntilDecisionDue,
     renewalCycleKey: params.renewalCycleKey,
-  };
+  });
+}
+
+/**
+ * CONTRACT_CREATED for the contract-record actions (billing `createContract`), as opposed to the
+ * client-assignment flows above. `clientId` is the contract's owner client; a contract with no
+ * owner has no client to name. Legacy `userId`/`timestamp` are kept for existing consumers.
+ */
+export function buildContractRecordCreatedPayload(params: {
+  contractId: string;
+  ownerClientId?: string | null;
+  userId?: string;
+  occurredAt: string;
+  status?: string;
+}) {
+  return builtWorkflowPayload('CONTRACT_CREATED', {
+    contractId: params.contractId,
+    ...(params.ownerClientId ? { clientId: params.ownerClientId } : {}),
+    createdByUserId: params.userId,
+    createdAt: params.occurredAt,
+    status: params.status,
+    userId: params.userId,
+    timestamp: params.occurredAt,
+  });
+}
+
+/**
+ * CONTRACT_UPDATED for the contract-record actions. `changes` is the schema's `{previous, new}`
+ * map (the action used to send the raw update patch), derived from the stored before/after rows.
+ */
+export function buildContractRecordUpdatedPayload(params: {
+  contractId: string;
+  ownerClientId?: string | null;
+  userId?: string;
+  occurredAt: string;
+  status?: string;
+  patch: Record<string, unknown>;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+}) {
+  const changes: Record<string, { previous: unknown; new: unknown }> = {};
+  for (const key of Object.keys(params.patch)) {
+    const previous = params.before[key];
+    const next = params.after[key];
+    if (JSON.stringify(previous) !== JSON.stringify(next)) {
+      changes[key] = { previous: previous ?? null, new: next ?? null };
+    }
+  }
+  return builtWorkflowPayload('CONTRACT_UPDATED', {
+    contractId: params.contractId,
+    ...(params.ownerClientId ? { clientId: params.ownerClientId } : {}),
+    updatedAt: params.occurredAt,
+    updatedFields: Object.keys(changes),
+    changes,
+    status: params.status,
+    userId: params.userId,
+    timestamp: params.occurredAt,
+  });
 }
