@@ -432,12 +432,6 @@ const nonNegativeFinite = (raw: unknown): number => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
-// LEVERAGE: pattern fixed-fee-allocation — "split one fixed fee across member
-// services by a weight, with cent remainder handling" now exists in three
-// places: the FMV allocation in computeFixedCharges below (no remainder
-// handling), this helper, and the wizard's quantity share in
-// contractWizardActions (last member takes the remainder). A single
-// allocation layer should own weight → exact cents.
 /**
  * Allocation for a fixed fee whose members carry no catalog price (FMV total
  * of 0), so the fee cannot be apportioned by fair market value. The full fee
@@ -997,8 +991,24 @@ export function computeFixedCharges(
     // When a guard above already resolved the charges (seats only), the
     // allocation below runs over nothing.
     const bundleAllocationNeeded = !generatedCharges;
-    // LEVERAGE: pattern fixed-fee-allocation — FMV-weighted split; rounds each
-    // member independently (no remainder handling), unlike the zero-FMV path.
+    // FMV-weighted split through the shared allocator when every FMV is
+    // non-negative; a credit (negative FMV) keeps the legacy per-member rounding.
+    // LEVERAGE: friction fixed-fee-allocation-negative-weights — allocateCentsByWeights assumes non-negative weights, so credit members still round independently below.
+    const fmvWeights = normalizedBundleServices.map((service) =>
+      Math.round(preferredCatalogRate(service) * service.quantity),
+    );
+    const fmvProrated =
+      planLevelEnableProration ? Math.round(baseRateInCents * coverageRatio) : baseRateInCents;
+    const fmvAllocation =
+      bundleAllocationNeeded && !zeroFmvAllocation && totalFMVCents > 0 && fmvWeights.every((w) => w >= 0)
+        ? allocateCentsByWeights(
+            fmvProrated,
+            normalizedBundleServices.map((service, index) => ({
+              key: String(index).padStart(6, "0"),
+              weight: fmvWeights[index],
+            })),
+          )
+        : null;
     const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service, serviceIndex) => {
       // FMV is based on the service's catalog rate (cents), not plan overrides.
       const rateForFMV = preferredCatalogRate(service);
@@ -1021,7 +1031,9 @@ export function computeFixedCharges(
 
       const allocatedAmount = zeroFmvAllocation
         ? zeroFmvAllocation.amounts[serviceIndex]
-        : Math.round(effectiveBaseRateInCents * proportion);
+        : fmvAllocation
+          ? fmvAllocation.amounts[serviceIndex]
+          : Math.round(effectiveBaseRateInCents * proportion);
 
       const { taxRegion: serviceTaxRegion, isTaxable } =
         taxPorts.getTaxInfoFromService(service);
