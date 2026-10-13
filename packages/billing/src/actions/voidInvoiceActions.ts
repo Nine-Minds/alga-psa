@@ -12,6 +12,7 @@ import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
+import { voidHourBlocksForVoidedInvoice } from '../services/prepaidBlockLifecycleService';
 import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
 import { signalAutopayInvoiceSettled } from '../services/autopayBridge';
 
@@ -205,6 +206,17 @@ export const voidInvoice = withAuth(async (
       })
       .first('id', 'external_entity_id');
     const remoteVoidWillPropagate = Boolean(remoteMapping);
+
+    // Hour blocks minted by this invoice (ad-hoc purchase, bucket replenishment,
+    // Prepaid Block contract blocks): pending ones release their allocations and
+    // are voided (re-dueing date-driven issuances), unused active ones are voided,
+    // and a block that has already been used refuses the void. Runs before any
+    // write so a refusal commits nothing. The replenishment alert stays attached
+    // (suppressed) below, keeping a voided usage-triggered follow-on suppressed.
+    const blockOutcome = await voidHourBlocksForVoidedInvoice(trx, tenant, invoiceId, user.user_id, now, trimmedReason);
+    if (!blockOutcome.ok) {
+      return { success: false, error: blockOutcome.error };
+    }
 
     if (isCreditNote) {
       // Claw back the issued pool credit: voiding the source document must
