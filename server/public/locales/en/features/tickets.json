@@ -222,7 +222,9 @@
     "printOptions": "Print options",
     "duplicate": "Duplicate",
     "rowActions": "Actions",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "duplicateForContacts": "Duplicate for contacts…",
+    "duplicateOptions": "More duplicate options"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -2311,5 +2313,70 @@
     "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
     "workDescription": "Work description",
     "whatAreYouWorkingOn": "What are you working on?"
+  },
+  "batchDuplicate": {
+    "title": "Duplicate #{{number}} for contacts",
+    "titleLoading": "Duplicate for contacts",
+    "loading": "Loading…",
+    "loadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "createFailed": "The copies could not be created. Please try again.",
+    "templateLabel": "Title template",
+    "insertToken": "Insert:",
+    "nameHint": "Replace \"{{name}}\" with {{token}} to personalise each copy.",
+    "replace": "Replace",
+    "contactsLabel": "Contacts",
+    "contactsPlaceholder": "Select contacts…",
+    "addBlankRow": "Add copy without contact",
+    "count": "{{count}} of {{max}}",
+    "capReached": "Maximum of {{max}} copies per batch.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Title"
+    },
+    "resetRow": "Reset to template",
+    "removeRow": "Remove copy",
+    "copyChecklist": "Copy checklist items (unchecked)",
+    "cancel": "Cancel",
+    "review": "Review",
+    "back": "Back",
+    "create_one": "Create {{count}} ticket",
+    "create_other": "Create {{count}} tickets",
+    "creating_one": "Creating {{count}} ticket…",
+    "creating_other": "Creating {{count}} tickets…",
+    "done": "Done",
+    "retryFailed_one": "Retry failed ({{count}})",
+    "retryFailed_other": "Retry failed ({{count}})",
+    "errors": {
+      "contactRequired": "This title uses {{token}} but the copy has no contact.",
+      "unknownToken": "Unknown token: {{tokens}}",
+      "empty": "The title cannot be empty.",
+      "unresolvedToken": "The title still contains a {{placeholder}} placeholder."
+    },
+    "summary": {
+      "client": "Client",
+      "board": "Board",
+      "category": "Category",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "team": "Team",
+      "additionalAgents": "Additional agents",
+      "tags": "Tags",
+      "checklist": "Checklist",
+      "checklistCopy_one": "Copy {{count}} item (unchecked)",
+      "checklistCopy_other": "Copy {{count}} items (unchecked)",
+      "checklistSkip": "Not copied",
+      "customFields": "Custom fields",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "sameAsSource": "Same as source",
+      "none": "None",
+      "notCopied": "Comments, time entries, attachments and due date are not copied."
+    },
+    "results": {
+      "created_one": "{{count}} ticket created",
+      "created_other": "{{count}} tickets created",
+      "failed_one": "{{count}} copy failed",
+      "failed_other": "{{count}} copies failed"
+    }
   }
 }

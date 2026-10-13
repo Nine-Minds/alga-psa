@@ -214,7 +214,9 @@
     "printOptions": "Options d'impression",
     "duplicate": "Dupliquer",
     "rowActions": "Actions",
-    "openMenu": "Ouvrir le menu"
+    "openMenu": "Ouvrir le menu",
+    "duplicateForContacts": "Dupliquer pour des contacts…",
+    "duplicateOptions": "Plus d’options de duplication"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -2311,5 +2313,70 @@
     "pausedHint": "En pause. Reprenez pour continuer le suivi, ou arrêtez pour enregistrer le temps.",
     "workDescription": "Description du travail",
     "whatAreYouWorkingOn": "Sur quoi travaillez-vous ?"
+  },
+  "batchDuplicate": {
+    "title": "Dupliquer #{{number}} pour des contacts",
+    "titleLoading": "Dupliquer pour des contacts",
+    "loading": "Chargement…",
+    "loadFailed": "Impossible de charger le ticket à dupliquer. Veuillez réessayer.",
+    "createFailed": "Impossible de créer les copies. Veuillez réessayer.",
+    "templateLabel": "Modèle de titre",
+    "insertToken": "Insérer :",
+    "nameHint": "Remplacez « {{name}} » par {{token}} pour personnaliser chaque copie.",
+    "replace": "Remplacer",
+    "contactsLabel": "Contacts",
+    "contactsPlaceholder": "Sélectionner des contacts…",
+    "addBlankRow": "Ajouter une copie sans contact",
+    "count": "{{count}} sur {{max}}",
+    "capReached": "Maximum de {{max}} copies par lot.",
+    "columns": {
+      "contact": "Contact",
+      "title": "Titre"
+    },
+    "resetRow": "Rétablir le modèle",
+    "removeRow": "Retirer la copie",
+    "copyChecklist": "Copier les éléments de la liste de contrôle (non cochés)",
+    "cancel": "Annuler",
+    "review": "Vérifier",
+    "back": "Retour",
+    "create_one": "Créer {{count}} ticket",
+    "create_other": "Créer {{count}} tickets",
+    "creating_one": "Création de {{count}} ticket…",
+    "creating_other": "Création de {{count}} tickets…",
+    "done": "Terminé",
+    "retryFailed_one": "Réessayer les échecs ({{count}})",
+    "retryFailed_other": "Réessayer les échecs ({{count}})",
+    "errors": {
+      "contactRequired": "Ce titre utilise {{token}} mais la copie n’a pas de contact.",
+      "unknownToken": "Jeton inconnu : {{tokens}}",
+      "empty": "Le titre ne peut pas être vide.",
+      "unresolvedToken": "Le titre contient encore un jeton {{placeholder}}."
+    },
+    "summary": {
+      "client": "Client",
+      "board": "Tableau",
+      "category": "Catégorie",
+      "priority": "Priorité",
+      "assignee": "Responsable",
+      "team": "Équipe",
+      "additionalAgents": "Agents supplémentaires",
+      "tags": "Étiquettes",
+      "checklist": "Liste de contrôle",
+      "checklistCopy_one": "Copier {{count}} élément (non coché)",
+      "checklistCopy_other": "Copier {{count}} éléments (non cochés)",
+      "checklistSkip": "Non copiée",
+      "customFields": "Champs personnalisés",
+      "status": "Statut",
+      "statusBoardDefault": "Valeur par défaut du tableau",
+      "sameAsSource": "Identique à la source",
+      "none": "Aucun",
+      "notCopied": "Les commentaires, saisies de temps, pièces jointes et la date d’échéance ne sont pas copiés."
+    },
+    "results": {
+      "created_one": "{{count}} ticket créé",
+      "created_other": "{{count}} tickets créés",
+      "failed_one": "{{count}} copie a échoué",
+      "failed_other": "{{count}} copies ont échoué"
+    }
   }
 }

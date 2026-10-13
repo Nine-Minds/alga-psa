@@ -246,7 +246,9 @@
     "printOptions": "Opcje drukowania",
     "duplicate": "Duplikuj",
     "rowActions": "Akcje",
-    "openMenu": "Otwórz menu"
+    "openMenu": "Otwórz menu",
+    "duplicateForContacts": "Duplikuj dla kontaktów…",
+    "duplicateOptions": "Więcej opcji duplikowania"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -2457,5 +2459,82 @@
     "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
     "workDescription": "Opis pracy",
     "whatAreYouWorkingOn": "Nad czym pracujesz?"
+  },
+  "batchDuplicate": {
+    "title": "Duplikuj #{{number}} dla kontaktów",
+    "titleLoading": "Duplikuj dla kontaktów",
+    "loading": "Ładowanie…",
+    "loadFailed": "Nie udało się wczytać zgłoszenia do zduplikowania. Spróbuj ponownie.",
+    "createFailed": "Nie udało się utworzyć kopii. Spróbuj ponownie.",
+    "templateLabel": "Szablon tytułu",
+    "insertToken": "Wstaw:",
+    "nameHint": "Zastąp „{{name}}” tokenem {{token}}, aby spersonalizować każdą kopię.",
+    "replace": "Zastąp",
+    "contactsLabel": "Kontakty",
+    "contactsPlaceholder": "Wybierz kontakty…",
+    "addBlankRow": "Dodaj kopię bez kontaktu",
+    "count": "{{count}} z {{max}}",
+    "capReached": "Maksymalnie {{max}} kopii w jednej partii.",
+    "columns": {
+      "contact": "Kontakt",
+      "title": "Tytuł"
+    },
+    "resetRow": "Przywróć szablon",
+    "removeRow": "Usuń kopię",
+    "copyChecklist": "Kopiuj pozycje listy kontrolnej (niezaznaczone)",
+    "cancel": "Anuluj",
+    "review": "Przejrzyj",
+    "back": "Wstecz",
+    "create_one": "Utwórz {{count}} zgłoszenie",
+    "create_few": "Utwórz {{count}} zgłoszenia",
+    "create_many": "Utwórz {{count}} zgłoszeń",
+    "create_other": "Utwórz {{count}} zgłoszenia",
+    "creating_one": "Tworzenie {{count}} zgłoszenia…",
+    "creating_few": "Tworzenie {{count}} zgłoszeń…",
+    "creating_many": "Tworzenie {{count}} zgłoszeń…",
+    "creating_other": "Tworzenie {{count}} zgłoszenia…",
+    "done": "Gotowe",
+    "retryFailed_one": "Ponów nieudane ({{count}})",
+    "retryFailed_few": "Ponów nieudane ({{count}})",
+    "retryFailed_many": "Ponów nieudane ({{count}})",
+    "retryFailed_other": "Ponów nieudane ({{count}})",
+    "errors": {
+      "contactRequired": "Ten tytuł używa {{token}}, ale kopia nie ma kontaktu.",
+      "unknownToken": "Nieznany token: {{tokens}}",
+      "empty": "Tytuł nie może być pusty.",
+      "unresolvedToken": "Tytuł nadal zawiera token {{placeholder}}."
+    },
+    "summary": {
+      "client": "Klient",
+      "board": "Tablica",
+      "category": "Kategoria",
+      "priority": "Priorytet",
+      "assignee": "Przypisany",
+      "team": "Zespół",
+      "additionalAgents": "Dodatkowi agenci",
+      "tags": "Tagi",
+      "checklist": "Lista kontrolna",
+      "checklistCopy_one": "Kopiuj {{count}} pozycję (niezaznaczoną)",
+      "checklistCopy_few": "Kopiuj {{count}} pozycje (niezaznaczone)",
+      "checklistCopy_many": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistCopy_other": "Kopiuj {{count}} pozycji (niezaznaczonych)",
+      "checklistSkip": "Nie kopiowana",
+      "customFields": "Pola niestandardowe",
+      "status": "Status",
+      "statusBoardDefault": "Domyślny dla tablicy",
+      "sameAsSource": "Tak jak w źródle",
+      "none": "Brak",
+      "notCopied": "Komentarze, wpisy czasu, załączniki i termin wykonania nie są kopiowane."
+    },
+    "results": {
+      "created_one": "Utworzono {{count}} zgłoszenie",
+      "created_few": "Utworzono {{count}} zgłoszenia",
+      "created_many": "Utworzono {{count}} zgłoszeń",
+      "created_other": "Utworzono {{count}} zgłoszenia",
+      "failed_one": "Nie udało się utworzyć {{count}} kopii",
+      "failed_few": "Nie udało się utworzyć {{count}} kopii",
+      "failed_many": "Nie udało się utworzyć {{count}} kopii",
+      "failed_other": "Nie udało się utworzyć {{count}} kopii"
+    }
   }
 }
