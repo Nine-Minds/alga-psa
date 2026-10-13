@@ -1911,8 +1911,17 @@ export class TicketService extends BaseService<ITicket> {
 
   /**
    * Update ticket
+   *
+   * `options.honorSuppliedClosure` is the status endpoint's opt-in (plan D4): only
+   * then does a caller-supplied closed_at / closed_by replace now / context.userId
+   * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(id: string, data: UpdateTicketData, context: ServiceContext): Promise<ITicket> {
+  async update(
+    id: string,
+    data: UpdateTicketData,
+    context: ServiceContext,
+    options: { honorSuppliedClosure?: boolean } = {}
+  ): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
@@ -2101,10 +2110,15 @@ export class TicketService extends BaseService<ITicket> {
       if (statusChanged) {
         updateData.is_closed = !!nextStatus?.is_closed;
         if (nextStatus?.is_closed && !previousStatus?.is_closed) {
-          // A caller-supplied closed_at / closed_by wins over now / the caller, so a
-          // backfilled close keeps its real date. The events still fire (live path).
-          const suppliedClosedAt = (cleanedData as { closed_at?: string }).closed_at;
-          const suppliedClosedBy = (cleanedData as { closed_by?: string }).closed_by;
+          // Only with the status endpoint's opt-in does a caller-supplied closed_at /
+          // closed_by win over now / the caller, so a backfilled close keeps its real
+          // date. Otherwise closure is derived (contract T048). Events fire either way.
+          const suppliedClosedAt = options.honorSuppliedClosure
+            ? (cleanedData as { closed_at?: string }).closed_at
+            : undefined;
+          const suppliedClosedBy = options.honorSuppliedClosure
+            ? (cleanedData as { closed_by?: string }).closed_by
+            : undefined;
           closedAt = suppliedClosedAt ? new Date(suppliedClosedAt) : new Date();
           if (
             suppliedClosedAt
@@ -2792,7 +2806,9 @@ export class TicketService extends BaseService<ITicket> {
         });
       }
 
-      if (!comment.is_internal && !scheduledPublication && !isHistoricalComment) {
+      if (isHistoricalComment) {
+        // historical import: no bundle reopen
+      } else if (!comment.is_internal && !scheduledPublication) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
       }
 
@@ -2843,7 +2859,9 @@ export class TicketService extends BaseService<ITicket> {
             .where({ comment_id: comment.comment_id, publish_state: 'scheduled' })
             .update({ schedule_job_id: scheduled.jobId });
         }, `schedule comment publication ${comment.comment_id}`);
-      } else if (!isHistoricalComment) {
+      } else if (isHistoricalComment) {
+        // historical import: no live TICKET_COMMENT_ADDED
+      } else {
         await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);
       }
       return { response, externalLinks: createdExternalLinks };

@@ -104,6 +104,7 @@ So today, closed history can't be backdated through the API either.
 - On an open→closed crossing, a caller-supplied `closed_at` / `closed_by` wins over the derived now / caller.
 - Validation: `closed_at` must not be in the future and must not be before `entered_at` (400 otherwise).
 - This path is live, not historical, so events still fire. The caller can pass the existing `suppressContactNotifications` / `suppressInternalNotifications` flags.
+- The override applies only to the status endpoint (`PUT /tickets/{id}/status`), via an explicit `honorSuppliedClosure` opt-in on `TicketService.update`. Generic `TicketService.update` (and generic PUT) keeps deriving `closed_at = now` / `closed_by = context.userId` on a close crossing (contract T048). This scoping was a deliberate decision.
 
 **D5. Validation rules.** All checks return 400 `ValidationError` with a field path.
 

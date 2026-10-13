@@ -227,6 +227,7 @@ describe('historical ticket import via TicketService (integration)', () => {
       ticket.ticket_id,
       { status_id: closedStatusId, closed_at: '2025-04-01T12:00:00Z' } as any,
       ctx(),
+      { honorSuppliedClosure: true },
     );
     const row = await table('tickets').where({ ticket_id: ticket.ticket_id }).first();
     expect(row.is_closed).toBe(true);
@@ -234,10 +235,12 @@ describe('historical ticket import via TicketService (integration)', () => {
     expect(eventTypes()).toContain('TICKET_CLOSED');
   });
 
+  // Generic update (no opt-in) keeps deriving closure: see ticketCloseRules T048.
+
   it('status endpoint rejects a closed_at before the ticket entered_at', async () => {
     const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
     const error = await service
-      .update(ticket.ticket_id, { status_id: closedStatusId, closed_at: '2025-01-01T00:00:00Z' } as any, ctx())
+      .update(ticket.ticket_id, { status_id: closedStatusId, closed_at: '2025-01-01T00:00:00Z' } as any, ctx(), { honorSuppliedClosure: true })
       .catch((e) => e);
     expect(error).toBeInstanceOf(ValidationError);
   });
@@ -257,7 +260,7 @@ describe('historical ticket import via TicketService (integration)', () => {
 
       const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
       const onUpdate = await service
-        .update(ticket.ticket_id, { status_id: closedStatusId, closed_at: '2025-04-01T12:00:00Z', closed_by: closedBy } as any, ctx())
+        .update(ticket.ticket_id, { status_id: closedStatusId, closed_at: '2025-04-01T12:00:00Z', closed_by: closedBy } as any, ctx(), { honorSuppliedClosure: true })
         .catch((e) => e);
       expect(onUpdate).toBeInstanceOf(ValidationError);
       expect(onUpdate.details[0].path).toEqual(['closed_by']);

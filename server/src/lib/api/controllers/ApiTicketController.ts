@@ -1770,7 +1770,8 @@ export class ApiTicketController extends ApiBaseController {
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
-            apiRequest.context!
+            apiRequest.context!,
+            { honorSuppliedClosure: true }
           );
 
           if (!updated) {
