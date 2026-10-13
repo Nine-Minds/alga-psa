@@ -682,6 +682,10 @@ export async function rollbackTenantInDB(
       await db.table('tenant_internal_notification_category_settings').delete();
       await db.table('tenant_internal_notification_subtype_settings').delete();
 
+      // Setup seeds a tenant-owned default service catalog. It must be removed
+      // before the tenant row because the catalog has a tenant foreign key.
+      await db.table('service_catalog').delete();
+
       // Delete clients (references tenant)
       await db.table('clients').delete();
 

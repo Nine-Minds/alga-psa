@@ -194,6 +194,28 @@ export class AccountingExportValidation {
             .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount', 'is_taxable')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
+
+    // Validate persisted Xero amounts before fixed-parent expansion. Expansion
+    // needs a real parent amount to reconcile its allocations; a null amount
+    // must remain a line-level readiness error and must never reach the adapter.
+    const rawChargeById = new Map(charges.map((charge) => [charge.item_id, charge]));
+    const missingNetAmountLineIds = new Set<string>();
+    if (adapterType === 'xero') {
+      for (const line of lines) {
+        if (!line.document_line_id) continue;
+        const charge = rawChargeById.get(line.document_line_id);
+        if (!charge || (charge.net_amount !== null && charge.net_amount !== undefined)) continue;
+        await repo.addError({
+          batch_id: batchId,
+          line_id: line.line_id,
+          code: 'missing_net_amount',
+          message: `Charge ${line.document_line_id} is missing its net amount. Repair the invoice, then cancel and recreate this export batch.`,
+          metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+        });
+        missingNetAmountLineIds.add(line.line_id);
+      }
+    }
+
     const expanded = await expandAccountingExportCharges(knex, tenant, new Map(charges.map((charge) => [charge.item_id, charge])), lines);
     const chargesById = expanded.charges;
     lines = expanded.lines;
@@ -350,6 +372,7 @@ export class AccountingExportValidation {
     );
 
     for (const line of lines) {
+      if (missingNetAmountLineIds.has(line.line_id)) continue;
       if (!line.document_line_id) {
         await repo.addError({
           batch_id: batchId,

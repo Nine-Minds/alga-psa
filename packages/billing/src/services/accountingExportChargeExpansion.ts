@@ -14,7 +14,11 @@ type Charge = {
 export async function expandAccountingExportCharges<T extends Charge>(
   knex: Knex, tenant: string, charges: Map<string, T>, lines: AccountingExportLine[],
 ): Promise<{ charges: Map<string, T>; lines: AccountingExportLine[] }> {
-  const parents = [...charges.values()].filter(row => row.is_manual === false && !row.service_id && !row.is_discount);
+  // A missing parent net amount is an accounting readiness error, not a value
+  // to coerce to zero while checking allocation totals. Leave it unexpanded so
+  // validation can report the more useful per-line missing-net-amount error.
+  const parents = [...charges.values()].filter(row => row.is_manual === false && !row.service_id && !row.is_discount
+    && row.net_amount !== null && row.net_amount !== undefined);
   if (!parents.length) return { charges, lines };
   const db = tenantDb(knex, tenant);
   const query = db.table('invoice_charge_details as d');

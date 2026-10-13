@@ -41,18 +41,20 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 vi.mock('../../services/accountingMappingResolver', () => ({
-  AccountingMappingResolver: {
-    create: vi.fn(async () => ({
-      resolveServiceMapping: vi.fn(async () => ({
+  AccountingMappingResolver: class {
+    resolveServiceMapping = vi.fn(async () => ({
         external_entity_id: 'item-1',
         metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT' }
-      })),
-      resolveDiscountMapping: vi.fn(async () => null),
-      resolveTaxCodeMapping: vi.fn(async () => null),
-      resolvePaymentTermMapping: vi.fn(async () => null),
-      resolveClientMapping: vi.fn(async () => null),
-      ensureCompanyMapping: vi.fn(async () => null)
-    }))
+      }));
+    resolveDiscountMapping = vi.fn(async () => ({
+      external_entity_id: 'discount-1',
+      metadata: { name: 'Discount', accountCode: '200', taxType: 'NONE' }
+    }));
+    resolveTaxCodeMapping = vi.fn(async () => null);
+    resolvePaymentTermMapping = vi.fn(async () => null);
+    resolveClientMapping = vi.fn(async () => null);
+    ensureCompanyMapping = vi.fn(async () => null);
+    static create = vi.fn(async () => new this());
   }
 }));
 

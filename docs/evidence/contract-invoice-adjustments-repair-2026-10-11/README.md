@@ -302,6 +302,31 @@ Keep shared credentials and shared fixtures unchanged.
 
 ## Remaining current-HEAD acceptance
 
+### Review continuation from `aa75047e8a`
+
+The owned unbilled walkthrough fixture was re-audited read-only on 2026-10-13
+with `PR3499_FIXTURE_DB_NAME=server node --import tsx
+scripts/audit-pr3499-unbilled-fixture.ts`. It remains unbilled: client
+`5ba78228-ace1-4990-b42f-30739458299a`, assignment
+`4921ceb2-72f5-4f0a-afdc-da256e932c41`, and recurring period rows
+`fe039803-e891-4faf-89d0-7b3ec84af1c5` and
+`dea8e371-e639-4650-87d3-87fa8ce42f28` have `invoice_id=null` and
+`invoice_charge_detail_id=null`. The audit database is `server`; the fixture
+client is `REVIEW-3499-UNBILLED-20261012-dcd6e36f`. Historical preview value
+is 24,460 minor units; recalculate on the repaired HEAD before walkthrough.
+Cleanup ownership and restrictions remain as above.
+
+The control, QBO, and Xero simulator listeners were observed on ports 29500,
+24020, and 24060. Listener presence is not an acceptance run. No application
+server was started, and portal/browser/app-to-Xero proof remains pending.
+
+- **Status: BLOCKED.** Do not treat historical READY wording as current
+  acceptance. Consolidated-period tax/totals/ledger DB regression, current
+  companion and settlement DB suites, production build, and latest CI reruns
+  must be recorded against the exact repaired HEAD before implementation
+  evidence can be reviewed. Portal, real Xero, and combined companion acceptance
+  still require the authorized smoke step.
+
 - **Client portal:** sign in as a Client B portal contact and compare its
   invoice line/discount/tax output with the persisted invoice and MSP preview.
 - **Xero simulator:** from the real application UI, execute a fresh isolated

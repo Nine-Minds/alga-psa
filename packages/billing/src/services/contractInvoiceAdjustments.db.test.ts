@@ -409,7 +409,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         discount_type: discountType, value: discountType === 'percentage' ? 0.1 : 500,
       });
       await trx('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({
-        service_id: null, net_amount: 30000, unit_price: 30000, total_price: 30000,
+        service_id: null, net_amount: 30000, unit_price: 30000, tax_amount: 300, total_price: 30300,
       });
       const configId = uuidv4();
       await trx('contract_line_service_configuration').insert({
@@ -421,24 +421,77 @@ describe('contract invoice adjustments (DB-backed)', () => {
         await trx('invoice_charge_details').insert({ tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId,
           service_id: serviceId, config_id: configId, quantity: 1, rate: amount, service_period_start: start, service_period_end: end });
         await trx('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId,
-          base_rate: amount, enable_proration: false, fmv: amount, proportion: 1, allocated_amount: amount });
+          base_rate: amount, enable_proration: false, fmv: amount, proportion: 1, allocated_amount: amount,
+          tax_amount: start === '2026-01-01' ? 100 : 200 });
         charges.push({ tenant, type: 'fixed', config_id: configId, serviceId, serviceName: 'Consolidated period',
           client_contract_id: clientContractId, client_contract_line_id: contractLineId, quantity: 1, rate: amount,
           total: amount, tax_amount: 0, tax_rate: 0, servicePeriodStart: start, servicePeriodEnd: end });
       }
-      const expected = discountType === 'percentage' ? 1000 : 10000;
+      // These source-linked true-ups straddle the half-open discount boundary:
+      // the positive Jan 31–Feb 1 amount is eligible, while the negative
+      // Feb 1–2 carry is outside the period and cannot widen it to February.
+      const trueUps = [
+        { amount: 2000, start: '2026-01-31', end: '2026-02-01', id: uuidv4(), reason: 'Increase' },
+        { amount: -3000, start: '2026-02-01', end: '2026-02-02', id: uuidv4(), reason: 'Decrease' },
+      ];
+      for (const row of trueUps) {
+        await trx('invoice_charges').insert({ tenant, item_id: row.id, invoice_id: fixture.invoiceId,
+          service_id: serviceId, client_contract_id: clientContractId, description: `Carried ${row.reason} true-up`,
+          quantity: 1, unit_price: row.amount, net_amount: row.amount, total_price: row.amount,
+          tax_amount: row.amount > 0 ? 20 : 0, tax_rate: 0, is_manual: false, is_discount: false, is_taxable: row.amount > 0,
+          adjustment_source_kind: 'contract_change', adjustment_source_id: uuidv4(), adjustment_source_revision: 1,
+          adjustment_scope: 'service', adjustment_period_start: row.start, adjustment_period_end: row.end,
+        });
+        charges.push({ type: 'fixed', serviceId, client_contract_id: clientContractId,
+          client_contract_line_id: contractLineId, serviceName: `Carried ${row.reason} true-up`,
+          quantity: 1, rate: Math.abs(row.amount), total: row.amount, tax_amount: row.amount > 0 ? 20 : 0,
+          tax_rate: 0, is_taxable: row.amount > 0, servicePeriodStart: row.start,
+          servicePeriodEnd: row.end,
+          contractChangeAdjustment: { periodStart: row.start, periodEnd: row.end, amountCents: row.amount },
+        } as any);
+      }
+      const manualCreditId = uuidv4();
+      await trx('invoice_charges').insert({ tenant, item_id: manualCreditId, invoice_id: fixture.invoiceId,
+        service_id: serviceId, description: 'Preserved manual credit', quantity: 1, unit_price: -400,
+        net_amount: -400, total_price: -400, tax_amount: 0, tax_rate: 0, is_manual: true,
+        is_discount: false, is_taxable: false, client_contract_id: null,
+      });
+
+      const expectedBase = 12000;
+      const expected = discountType === 'percentage' ? 1200 : 12000;
       const preview = await previewAutomaticInvoiceDiscounts(trx, tenant, clientId, charges, '2026-03-01');
-      expect(preview.eligibleCharges).toHaveLength(1);
-      expect(preview.discounts[0]).toMatchObject({ base_amount: 10000, amount: expected });
+      expect(preview.discounts[0]).toMatchObject({ base_amount: expectedBase, amount: expected });
       let settlementId: string | undefined;
       for (let attempt = 0; attempt < 2; attempt++) {
         await reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId);
         const row = await trx('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' }).first();
         expect(Number(row.net_amount)).toBe(-expected);
-        expect(Number(row.adjustment_base_amount)).toBe(10000);
+        expect(Number(row.adjustment_base_amount)).toBe(expectedBase);
         if (settlementId) expect(row.item_id).toBe(settlementId);
         settlementId = row.item_id;
       }
+
+      const { updateInvoiceTotalsAndRecordTransaction } = await import('./invoiceService');
+      await updateInvoiceTotalsAndRecordTransaction(trx, fixture.invoiceId, { client_id: clientId }, tenant, 'CONSOLIDATED-PERIOD-DB');
+      const expectedSubtotal = 30000 + 2000 - 3000 - 400 - expected;
+      const expectedTax = 320;
+      const totals = await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first('subtotal', 'tax', 'total_amount');
+      expect([Number(totals.subtotal), Number(totals.tax), Number(totals.total_amount)])
+        .toEqual([expectedSubtotal, expectedTax, expectedSubtotal + expectedTax]);
+      const canonicalAllocations = await trx('invoice_charge_details as d')
+        .join('invoice_charge_fixed_details as f', 'd.item_detail_id', 'f.item_detail_id')
+        .where('d.tenant', tenant).where('d.item_id', fixture.generatedChargeId)
+        .orderBy('d.service_period_start').select('f.allocated_amount', 'f.tax_amount');
+      expect(canonicalAllocations.map((row) => [Number(row.allocated_amount), Number(row.tax_amount)]))
+        .toEqual([[10000, 100], [20000, 200]]);
+      const manualLine = await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first();
+      expect(manualLine).toMatchObject({ description: 'Preserved manual credit', is_manual: true });
+      const ledger = await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).orderBy('transaction_id');
+      expect(ledger).toHaveLength(1);
+      expect(Number(ledger[0].amount)).toBe(expectedSubtotal + expectedTax);
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId);
+      expect(await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).orderBy('transaction_id')).toEqual(ledger);
+      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first()).toEqual(manualLine);
     } finally {
       await trx.rollback();
     }
