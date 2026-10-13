@@ -484,3 +484,17 @@ marking browser acceptance complete.
 **Status remains BLOCKED** for current-build browser walkthrough, portal
 comparison, real app-to-Xero-simulator delivery and companion schedule-writer
 acceptance. The app server was not started or restarted.
+
+### Selector review follow-up — 2026-10-13
+
+Commit `c1b61d9384aafddeda3c3337c2e84480ddf3c8da` repairs the locator by
+targeting `button[role="combobox"][id^="service-select-"]` and asserting one
+match before clicking. It is pushed to PR #3499. The first CI-only E2E run
+`38394210913` built/exported the enterprise image successfully; the community
+image build failed during `npm install --include=optional` with `ECONNRESET`.
+Both production browser matrix jobs then stopped at the build-result gate, so
+neither browser edition exercised the repaired locator. The failed jobs were
+rerun with `gh run rerun --failed`; as of this update the community image build
+is still in progress. No local app server was started. Record both browser
+edition results after that rerun reaches the production E2E jobs. Status remains
+**BLOCKED** for portal, app-to-Xero, and companion schedule-writer acceptance.
