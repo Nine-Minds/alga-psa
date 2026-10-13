@@ -495,8 +495,9 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .orderBy('d.service_period_start').select('f.allocated_amount', 'f.tax_amount');
       expect(canonicalAllocations.map((row) => [Number(row.allocated_amount), Number(row.tax_amount)]))
         .toEqual([[10000, 100], [20000, 200]]);
-      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first())
-        .toMatchObject({ description: 'Preserved manual credit', is_manual: true, net_amount: -400 });
+      const manualBeforeRecalculation = await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first();
+      expect(manualBeforeRecalculation).toMatchObject({ description: 'Preserved manual credit', is_manual: true });
+      expect(Number(manualBeforeRecalculation.net_amount)).toBe(-400);
       const ledger = await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).orderBy('transaction_id');
       expect(ledger).toHaveLength(1);
       expect(Number(ledger[0].amount)).toBe(expectedSubtotal + expectedTax);
@@ -530,9 +531,9 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .toEqual([expectedSubtotal - 100, expectedTax, expectedSubtotal + expectedTax - 100]);
       const settledDiscount = await trx('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' }).first('item_id');
       expect(settledDiscount.item_id).toBe(settlementId);
-      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first()).toMatchObject({
-        item_id: manualCreditId, description: 'Preserved manual credit', is_manual: true, net_amount: -500,
-      });
+      const manualAfterRecalculation = await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first();
+      expect(manualAfterRecalculation).toMatchObject({ item_id: manualCreditId, description: 'Preserved manual credit', is_manual: true });
+      expect(Number(manualAfterRecalculation.net_amount)).toBe(-500);
     } finally {
       await trx.rollback();
     }
