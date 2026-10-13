@@ -286,6 +286,9 @@ export const updateEmailSettings = withAuth(async (
       secretProvider
     );
 
+    // Everything between the secret write and the commit is inside this try so a
+    // failure anywhere in it removes the newly written secrets.
+    try {
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
       defaultFromDomain: nextDefaultFromDomain,
@@ -310,7 +313,6 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
-    try {
       await knex.transaction(async (trx) => {
         const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');
 
