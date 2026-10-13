@@ -35,9 +35,20 @@ import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingCli
  * settle the cycle, so it must not claim it. The window dates on the invoice
  * (billing_period_start/end) still record where it was issued.
  *
- * Listing filter: a block is ready once its window has started (windowStart <=
- * asOf, enforced by buildRecurringDueWorkRow), and it is listed when windowStart
- * <= dateRange.to, mirroring rsp.service_period_start for persisted rows. The
+ * Readiness is keyed on the issuance's DUE DATE, not the window start: the window
+ * only groups and selects the row. A row is Ready (dueState 'due', canGenerate)
+ * only when due_date <= asOf; while due_date > asOf it is 'early' and not
+ * generatable, shaped exactly like an early persisted row. So an expiry/renewal
+ * issuance due late in its window is not issuable from the first day of the
+ * window (that would start the new block's expiry clock while the old block still
+ * has hours), and contract_start / manual issuances due today are Ready in the
+ * default view (to = today). The server-side generate path (billing engine's
+ * loadPrepaidBlockIssuanceCharges) rejects an issuance whose due date is in the
+ * future, so the UI is not the only guard.
+ *
+ * Listing filter: a row is listed when windowStart <= dateRange.to, mirroring
+ * rsp.service_period_start for persisted rows (early rows are shown, flagged
+ * early, once their window has started). The
  * range's `from` is not applied: a scheduled issuance stays open until invoiced
  * and must not vanish because the user narrowed the lower bound.
  * The row carries the same grouping scope as the contract's persisted rows
@@ -233,8 +244,11 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
       },
     });
 
+    // Readiness follows the due date, not the window start (see header).
+    const notYetDue = dueDate > toDateOnly(asOf)!;
     rows.push({
       ...dueWorkRow,
+      ...(notYetDue ? { dueState: 'early' as const, isEarly: true, canGenerate: false } : {}),
       // The client-cadence selector carries no contract identity; attribute it
       // here so the candidate header can name the contract. contractLineId stays
       // null on purpose: approval blockers scope hourly time by it and a block

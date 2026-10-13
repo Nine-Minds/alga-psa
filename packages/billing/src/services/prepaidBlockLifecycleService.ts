@@ -201,23 +201,7 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
   return 'scheduled';
 }
 
-/**
- * Puts an issuance back into the right state after the block it produced was
- * voided (invoice deleted/voided):
- *  - contract_start / expiry / renewal: the date obligation still exists, so it
- *    returns to `scheduled` (re-due), unless the line's config is gone or
- *    another issuance is already scheduled for the line (then `superseded`/
- *    `cancelled` respectively, never violating the one-open-follow-on index);
- *  - exhaustion / threshold: usage-triggered, cancelled; the source block's expiry issuance that the
- *    follow-on superseded goes back to `scheduled` (the source block still expires on its anniversary).
- *    The prepaid alert
- *    keeps the episode suppressed (captain decision 4, unconfirmed) via
- *    suppressPrepaidReplenishmentForVoidedInvoice / clearPrepaidReplenishmentForInvoice;
- *  - manual: cancelled. A manual issuance is an on-demand MSP action, not an
- *    obligation; the MSP can issue another from the line card.
- *
- * Caller holds the issuance/config locks.
- */
+/** Undoes the supersession of a source block's expiry issuance by a usage-triggered follow-on. */
 async function restoreSourceBlockExpiryIssuance(
   trx: Knex.Transaction,
   tenant: string,
@@ -245,6 +229,23 @@ async function restoreSourceBlockExpiryIssuance(
     .update({ status: 'scheduled', cancel_reason: null, updated_at: new Date().toISOString() });
 }
 
+/**
+ * Puts an issuance back into the right state after the block it produced was
+ * voided (invoice deleted/voided):
+ *  - contract_start / expiry / renewal: the date obligation still exists, so it
+ *    returns to `scheduled` (re-due), unless the line's config is gone or
+ *    another issuance is already scheduled for the line (then `superseded`/
+ *    `cancelled` respectively, never violating the one-open-follow-on index);
+ *  - exhaustion / threshold: usage-triggered, cancelled; the source block's expiry issuance that the
+ *    follow-on superseded goes back to `scheduled` (the source block still expires on its anniversary).
+ *    The prepaid alert
+ *    keeps the episode suppressed (captain decision 4, unconfirmed) via
+ *    suppressPrepaidReplenishmentForVoidedInvoice / clearPrepaidReplenishmentForInvoice;
+ *  - manual: cancelled. A manual issuance is an on-demand MSP action, not an
+ *    obligation; the MSP can issue another from the line card.
+ *
+ * Caller holds the issuance/config locks.
+ */
 async function restoreIssuanceAfterBlockVoid(
   trx: Knex.Transaction,
   tenant: string,

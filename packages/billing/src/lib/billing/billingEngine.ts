@@ -3412,6 +3412,7 @@ export class BillingEngine {
         "cbi.contract_line_id",
         "cbi.client_contract_id",
         "cbi.status",
+        "cbi.due_date",
         "cfg.block_minutes",
         "cfg.block_price",
         "cfg.expiry_months",
@@ -3448,6 +3449,17 @@ export class BillingEngine {
       if (row.status !== "scheduled") {
         throw new Error(
           `Prepaid block issuance ${row.issuance_id} is ${row.status}, not scheduled; it cannot be invoiced.`,
+        );
+      }
+      // Server-side readiness guard (the Invoices screen shows such rows as early): a date-triggered
+      // block (expiry, renewal) must not be issued before its due date, or the new block's expiry
+      // clock would start while the old block still has hours.
+      const dueDate = row.due_date instanceof Date
+        ? row.due_date.toISOString().slice(0, 10)
+        : String(row.due_date).slice(0, 10);
+      if (dueDate > new Date().toISOString().slice(0, 10)) {
+        throw new Error(
+          `Prepaid block issuance ${row.issuance_id} is not due until ${dueDate}; it cannot be invoiced yet.`,
         );
       }
       if (!row.sold_as_service_id) {
