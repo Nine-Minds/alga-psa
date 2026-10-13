@@ -87,13 +87,13 @@ describe('WorkflowEventList URL-driven selection', () => {
   it('Close removes eventId and keeps section', async () => {
     render(<WorkflowEventList isActive />);
     fireEvent.click(await screen.findByText('Close'));
-    expect(navigationMocks.replace).toHaveBeenCalledWith('/msp/workflow-control?section=events');
+    expect(navigationMocks.replace).toHaveBeenCalledWith('/msp/workflow-control?section=events', { scroll: false });
   });
 
   it('Back removes eventId and keeps section', async () => {
     render(<WorkflowEventList isActive />);
     fireEvent.click(await screen.findByText('Back to events'));
-    expect(navigationMocks.replace).toHaveBeenCalledWith('/msp/workflow-control?section=events');
+    expect(navigationMocks.replace).toHaveBeenCalledWith('/msp/workflow-control?section=events', { scroll: false });
   });
 
   it('a row click writes eventId and keeps section', async () => {
@@ -101,7 +101,8 @@ describe('WorkflowEventList URL-driven selection', () => {
     render(<WorkflowEventList isActive />);
     fireEvent.click(await screen.findByRole('button', { name: 'row' }));
     expect(navigationMocks.replace).toHaveBeenCalledWith(
-      `/msp/workflow-control?section=events&eventId=${EVENT_B}`
+      `/msp/workflow-control?section=events&eventId=${EVENT_B}`,
+      { scroll: false }
     );
   });
 

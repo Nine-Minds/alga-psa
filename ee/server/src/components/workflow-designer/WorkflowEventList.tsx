@@ -182,7 +182,8 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
       }
       const query = params.toString();
       const pathname = window.location.pathname;
-      router.replace(query ? `${pathname}?${query}` : pathname);
+      // scroll: false — selecting an event must not jump the page to the top.
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
     [router, searchParams]
   );
