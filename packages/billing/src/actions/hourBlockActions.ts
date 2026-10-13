@@ -352,6 +352,15 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
   });
 });
 
+const CONTRACT_BLOCK_VOID_MESSAGE =
+  'Contract prepaid blocks cannot be voided here; void or delete the invoice that issued the block';
+const CONTRACT_BLOCK_GRANT_MESSAGE =
+  'Contract prepaid blocks cannot be granted; they are issued by invoicing the Prepaid Block contract line';
+
+function isContractIssuedBlock(block: { source_type?: string | null; contract_line_id?: string | null }): boolean {
+  return block.source_type === 'contract' || block.contract_line_id != null;
+}
+
 /**
  * Mints an hour block directly — no invoice (comped hours / PSA migrations).
  * The block is `active` immediately and carries an audit `grant` row.
@@ -366,6 +375,11 @@ export const grantHourBlock = withAuth(async (
       throw new Error('Permission denied: Cannot grant hour blocks');
     }
     const { clientId, serviceId, hours, hourlyRate, expirationDate, scopeServiceIds, reason, notes } = input;
+    // Grants mint ad-hoc blocks only; contract blocks are issued by invoicing.
+    const contractOwnership = input as { contractLineId?: unknown; contract_line_id?: unknown };
+    if (contractOwnership.contractLineId != null || contractOwnership.contract_line_id != null) {
+      throw new Error(CONTRACT_BLOCK_GRANT_MESSAGE);
+    }
     if (!clientId) throw new Error('Client ID is required');
     if (!Number.isFinite(hours) || hours <= 0) throw new Error('Block hours must be greater than zero');
     if (hourlyRate != null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
@@ -616,6 +630,9 @@ export const voidHourBlock = withAuth(async (
         .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
+      if (isContractIssuedBlock(block)) {
+        throw new Error(CONTRACT_BLOCK_VOID_MESSAGE);
+      }
       if (block.status !== 'pending' && block.status !== 'active') {
         throw new Error('Only pending or active hour blocks can be voided');
       }
@@ -720,6 +737,9 @@ export const listHourBlocks = withAuth(async (
       const blocksQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blocksQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
       scopedDb.tenantJoin(blocksQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
+      // Contract-issued blocks (contract_line_id set) show their owning contract in the Source column.
+      scopedDb.tenantJoin(blocksQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blocksQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await blocksQuery
         .where({ 'hb.client_id': clientId })
         .select(
@@ -727,6 +747,8 @@ export const listHourBlocks = withAuth(async (
           'sc.service_name as service_name',
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
           trx.raw('(hb.first_allocated_at IS NOT NULL) as has_allocations'),
         )
         .orderBy('hb.purchased_at', 'asc')
@@ -816,6 +838,8 @@ export const getHourBlockDetail = withAuth(async (
       const blockQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blockQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
       scopedDb.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const block = await blockQuery
         .where({ 'hb.block_id': blockId })
         .select(
@@ -823,6 +847,8 @@ export const getHourBlockDetail = withAuth(async (
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
           'sc.service_name as service_name',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
         )
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);

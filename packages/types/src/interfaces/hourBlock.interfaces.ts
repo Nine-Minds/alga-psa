@@ -106,6 +106,9 @@ export interface IHourBlock extends TenantEntity {
   // Joins populated by list/detail actions.
   service_name?: string;
   invoice_number?: string;
+  /** Owning contract / line names for contract-issued blocks (null for ad-hoc blocks). */
+  contract_name?: string | null;
+  contract_line_name?: string | null;
   scope_service_ids?: string[];
   /** Dollar value remaining in minor units (remaining_minutes/60 × hourly_rate). */
   remaining_value?: number;

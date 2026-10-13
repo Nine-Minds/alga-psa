@@ -126,7 +126,8 @@
     "autoExpired": "Automatiskt utgånget",
     "voidedLabel": "Makulerat",
     "purchaseReversed": "Köp återfört (fakturans fastställande har hävts)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Avtal: {{contract}}"
   },
   "expire": {
     "error": "Det gick inte att låta timblocket löpa ut.",

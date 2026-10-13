@@ -126,7 +126,8 @@
     "autoExpired": "Automatisch abgelaufen",
     "voidedLabel": "Storniert",
     "purchaseReversed": "Kauf storniert (Rechnung entfinalisiert)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Vertrag: {{contract}}"
   },
   "expire": {
     "error": "Der Stundenblock konnte nicht als verfallen markiert werden.",

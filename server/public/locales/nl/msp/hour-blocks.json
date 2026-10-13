@@ -126,7 +126,8 @@
     "autoExpired": "Automatisch vervallen",
     "voidedLabel": "Ongeldig gemaakt",
     "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
-    "unknownUser": "Systeem"
+    "unknownUser": "Systeem",
+    "sourceContract": "Contract: {{contract}}"
   },
   "expire": {
     "error": "Kan het urenblok niet laten vervallen.",

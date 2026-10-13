@@ -443,7 +443,8 @@
     "hoursLeft": "Nog {{hours}}u",
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
-    "timeEntry": "Tijdsvermelding"
+    "timeEntry": "Tijdsvermelding",
+    "contractLabel": "Contract: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Contractregel voor urenbundel",

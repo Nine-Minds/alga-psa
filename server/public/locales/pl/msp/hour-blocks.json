@@ -126,7 +126,8 @@
     "autoExpired": "Wygasł automatycznie",
     "voidedLabel": "Unieważniono",
     "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Umowa: {{contract}}"
   },
   "expire": {
     "error": "Nie udało się wygasić pakietu godzin.",

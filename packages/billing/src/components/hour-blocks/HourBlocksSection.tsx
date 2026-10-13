@@ -37,6 +37,11 @@ interface HourBlocksSectionProps {
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
+/** Contract-issued (Prepaid Block line) blocks: voided via their invoice, never granted/voided directly. */
+export function isContractBlock(block: Pick<IHourBlock, 'source_type' | 'contract_line_id'>): boolean {
+  return block.source_type === 'contract' || block.contract_line_id != null;
+}
+
 function getStatusBadge(t: TranslateFn, block: IHourBlock) {
   switch (block.status) {
     case 'pending':
@@ -179,6 +184,23 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
       title: t('columns.source', { defaultValue: 'Source' }),
       dataIndex: 'source_invoice_id',
       render: (value: string | null | undefined, record) => {
+        if (isContractBlock(record)) {
+          return (
+            <div className="min-w-0" id={`hb-source-contract-${record.block_id}`}>
+              <p className="truncate text-sm text-[rgb(var(--color-text-900))]">
+                {t('detail.sourceContract', {
+                  contract: record.contract_name || record.contract_line_name || '',
+                  defaultValue: 'Contract: {{contract}}',
+                })}
+              </p>
+              {record.invoice_number ? (
+                <p className="truncate text-xs text-[rgb(var(--color-text-500))]">
+                  {t('detail.sourceInvoice', { defaultValue: 'Invoice' })} #{record.invoice_number}
+                </p>
+              ) : null}
+            </div>
+          );
+        }
         if (record.invoice_number) {
           return (
             <span className="text-sm text-[rgb(var(--color-text-900))]">
@@ -256,7 +278,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
                         {t('actions.expire', { defaultValue: 'Expire' })}
                       </DropdownMenuItem>
                     )}
-                    {!record.has_allocations && (
+                    {!record.has_allocations && !isContractBlock(record) && (
                       <DropdownMenuItem
                         id={`hb-void-${value}`}
                         className="flex items-center gap-2 text-red-600 focus:text-red-600"

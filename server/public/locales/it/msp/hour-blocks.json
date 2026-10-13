@@ -126,7 +126,8 @@
     "autoExpired": "Scaduto automaticamente",
     "voidedLabel": "Annullato",
     "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contratto: {{contract}}"
   },
   "expire": {
     "error": "Impossibile far scadere il blocco ore.",

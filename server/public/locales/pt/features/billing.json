@@ -443,7 +443,8 @@
     "hoursLeft": "{{hours}}h restantes",
     "expires": "Expira em {{date}}",
     "recentBurn": "Uso recente",
-    "timeEntry": "Lançamento de horas"
+    "timeEntry": "Lançamento de horas",
+    "contractLabel": "Contrato: {{contract}}"
   },
   "bucketUsage": {
     "contractLine": "Linha de contrato de banco de horas",

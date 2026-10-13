@@ -443,7 +443,8 @@
     "hoursLeft": "〖{{hours}}ħ ŀḗƒŧ ······〗",
     "expires": "〖Ḗẋƥīřḗş {{date}} ·······〗",
     "recentBurn": "〖Řḗƈḗƞŧ ŭşȧɠḗ ·····〗",
-    "timeEntry": "〖Ŧīḿḗ ḗƞŧřẏ ····〗"
+    "timeEntry": "〖Ŧīḿḗ ḗƞŧřẏ ····〗",
+    "contractLabel": "〖Ƈȯƞŧřȧƈŧ: {{contract}} ·········〗"
   },
   "bucketUsage": {
     "contractLine": "〖Ɓŭƈķḗŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ ········〗",
