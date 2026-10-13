@@ -59,7 +59,6 @@ import {
   Star,
   Target,
   Repeat,
-  LayoutTemplate,
   Ticket,
   BadgeCheck,
   Wrench
