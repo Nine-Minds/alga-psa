@@ -3,7 +3,6 @@
 //
 // The authoritative copy sets live in docs/plans/2026-10-13-create-template-from-ticket-plan.md.
 
-import { z } from 'zod';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type {
@@ -13,7 +12,6 @@ import type {
 } from '@alga-psa/types';
 import { ticketTemplateInputSchema, type ParsedTicketTemplateInput, type TicketTemplateInput } from './ticketTemplateSchema';
 import { pickDuplicableAttributes, type ChecklistItemToInsert } from './ticketDuplicate';
-
 
 export { ticketTemplateInputSchema };
 export type { TicketTemplateInput, ParsedTicketTemplateInput };

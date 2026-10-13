@@ -1,5 +1,5 @@
 // Client-safe ticket template input schema. Imports only zod: client components (TicketTemplateEditor)
-// import this, so it must never reach @alga-psa/db, knex or pg. Guarded by ticketTemplateSchema.guard.test.ts.
+// import this, so it must never reach @alga-psa/db, knex or pg. Guarded by components/templates/__tests__/clientBundleGuard.test.ts.
 
 import { z } from 'zod';
 
