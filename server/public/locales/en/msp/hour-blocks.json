@@ -126,7 +126,8 @@
     "autoExpired": "Auto-expired",
     "voidedLabel": "Voided",
     "purchaseReversed": "Purchase reversed (invoice unfinalized)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Contract: {{contract}}"
   },
   "expire": {
     "error": "Could not expire the hour block.",

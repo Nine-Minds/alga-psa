@@ -126,7 +126,8 @@
     "autoExpired": "Vencido automáticamente",
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (factura desfinalizada)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contrato: {{contract}}"
   },
   "expire": {
     "error": "No se pudo caducar el bloque de horas.",

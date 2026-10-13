@@ -443,6 +443,7 @@
     "hoursLeft": "Noch {{hours}} Std.",
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
-    "timeEntry": "Zeiteintrag"
+    "timeEntry": "Zeiteintrag",
+    "contractLabel": "Vertrag: {{contract}}"
   }
 }

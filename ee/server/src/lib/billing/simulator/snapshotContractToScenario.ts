@@ -21,6 +21,7 @@ import type {
   ScenarioBillingSchedule,
   ScenarioServiceConfig,
   ScenarioPoolRef,
+  ScenarioPrepaidBlockConfig,
 } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
@@ -136,6 +137,41 @@ function toCents(value: number | string | null | undefined): number | null {
   }
   const parsed = typeof value === "string" ? parseFloat(value) : Number(value);
   return Number.isFinite(parsed) ? Math.round(parsed) : null;
+}
+
+interface PrepaidBlockRow {
+  contract_line_id?: string | null;
+  template_line_id?: string | null;
+  block_minutes: number | string;
+  block_price: number | string;
+  sold_as_service_id: string | null;
+  expiry_months: number | string | null;
+  trigger_on_exhaustion: boolean | null;
+  trigger_threshold_percent: number | string | null;
+  trigger_on_expiry: boolean | null;
+  trigger_on_renewal: boolean | null;
+  replenishment_tier: string | null;
+}
+
+/**
+ * Prepaid Block overlay (contract_line_prepaid_blocks / template twin) as a
+ * scenario config. The line itself stays a plain Hourly line, so snapshotting
+ * never hits the unsupported-contract_line_type error.
+ */
+function toScenarioPrepaidBlock(row: PrepaidBlockRow | undefined): ScenarioPrepaidBlockConfig | null {
+  if (!row) return null;
+  return {
+    block_minutes: Number(row.block_minutes),
+    block_price: toCents(row.block_price) ?? 0,
+    sold_as_service_id: row.sold_as_service_id ?? null,
+    expiry_months: row.expiry_months != null ? Number(row.expiry_months) : null,
+    trigger_on_exhaustion: Boolean(row.trigger_on_exhaustion),
+    trigger_threshold_percent:
+      row.trigger_threshold_percent != null ? Number(row.trigger_threshold_percent) : null,
+    trigger_on_expiry: Boolean(row.trigger_on_expiry),
+    trigger_on_renewal: Boolean(row.trigger_on_renewal),
+    replenishment_tier: row.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+  };
 }
 
 function toMidnightIso(value: unknown): ISO8601String {
@@ -352,6 +388,18 @@ export async function snapshotContractToScenario(
     });
     poolMembersByBucket.set(member.bucket_id, existing);
   }
+  const prepaidBlockRows = lineRows.length > 0
+    ? ((await db
+        .table(isTemplate ? "contract_template_line_prepaid_blocks" : "contract_line_prepaid_blocks")
+        .whereIn(
+          isTemplate ? "template_line_id" : "contract_line_id",
+          lineRows.map((line) => line.contract_line_id),
+        )
+        .select("*")) as PrepaidBlockRow[])
+    : [];
+  const prepaidBlockByLine = new Map<string, PrepaidBlockRow>(
+    prepaidBlockRows.map((row) => [String(row.template_line_id ?? row.contract_line_id ?? ""), row]),
+  );
   const templatePoolRowsByLine = isTemplate ? poolRowsByLine : new Map<string, PoolRow[]>();
 
   const templateConfigs = isTemplate
@@ -455,6 +503,7 @@ export async function snapshotContractToScenario(
             db,
             tenant,
             poolMembersByBucket,
+            toScenarioPrepaidBlock(prepaidBlockByLine.get(lineRow.contract_line_id)),
           )
         : buildScenarioLine(
             lineRow,
@@ -466,6 +515,7 @@ export async function snapshotContractToScenario(
             tenant,
             poolRowsByLine,
             poolMembersByBucket,
+            toScenarioPrepaidBlock(prepaidBlockByLine.get(lineRow.contract_line_id)),
           ),
     ),
   );
@@ -550,6 +600,7 @@ async function buildScenarioLine(
   tenant: string,
   poolRowsByLine: Map<string, PoolRow[]>,
   poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  prepaidBlock: ScenarioPrepaidBlockConfig | null,
 ): Promise<ScenarioLine> {
   const contractLineType = lineRow.contract_line_type;
   if (
@@ -635,6 +686,7 @@ async function buildScenarioLine(
         ? Number(lineRow.overtime_threshold)
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
+    ...(prepaidBlock ? { prepaid_block: prepaidBlock } : {}),
     services,
   };
 }
@@ -652,6 +704,7 @@ function buildTemplateScenarioLine(
   db: ReturnType<typeof tenantDb>,
   tenant: string,
   poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  prepaidBlock: ScenarioPrepaidBlockConfig | null,
 ): ScenarioLine {
   const lineType = lineRow.contract_line_type;
   if (lineType !== "Fixed" && lineType !== "Hourly" && lineType !== "Usage") {
@@ -817,6 +870,7 @@ function buildTemplateScenarioLine(
         ? Number(lineRow.overtime_threshold)
         : null,
     overtime_rate: toCents(lineRow.overtime_rate),
+    ...(prepaidBlock ? { prepaid_block: prepaidBlock } : {}),
     services,
   };
 }

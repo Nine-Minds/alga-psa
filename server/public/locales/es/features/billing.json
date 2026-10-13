@@ -443,6 +443,7 @@
     "hoursLeft": "Quedan {{hours}} h",
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
-    "timeEntry": "Entrada de tiempo"
+    "timeEntry": "Entrada de tiempo",
+    "contractLabel": "Contrato: {{contract}}"
   }
 }

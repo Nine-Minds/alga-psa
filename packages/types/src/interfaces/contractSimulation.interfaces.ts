@@ -131,6 +131,28 @@ export interface ScenarioCatalogService {
   is_license: boolean;
 }
 
+/**
+ * Prepaid Block overlay on an Hourly scenario line (contract_line_prepaid_blocks).
+ * Present only on block lines; the line stays contract_line_type "Hourly".
+ */
+export interface ScenarioPrepaidBlockConfig {
+  /** Block size in minutes. */
+  block_minutes: number;
+  /** Cents, in the scenario currency. */
+  block_price: number;
+  /** Catalog service the block invoice line is sold as (tax, GL, export mapping). */
+  sold_as_service_id: string | null;
+  /** Null = never expires. */
+  expiry_months: number | null;
+  trigger_on_exhaustion: boolean;
+  /** 1-99, or null when no usage threshold is configured. */
+  trigger_threshold_percent: number | null;
+  trigger_on_expiry: boolean;
+  /** Carried for display; renewal issuance is not simulated. */
+  trigger_on_renewal: boolean;
+  replenishment_tier: "draft" | "auto_issue";
+}
+
 export interface ScenarioLine {
   /** Stable key inside the scenario: live contract_line_id or `scenario-<n>`. */
   key: string;
@@ -149,6 +171,8 @@ export interface ScenarioLine {
   overtime_threshold: number | null;
   /** Cents per hour. */
   overtime_rate: number | null;
+  /** Prepaid Block config when this Hourly line sells prepaid blocks. */
+  prepaid_block?: ScenarioPrepaidBlockConfig | null;
   services: ScenarioLineService[];
 }
 

@@ -443,6 +443,7 @@
     "hoursLeft": "{{hours}} h kvar",
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
-    "timeEntry": "Tidpost"
+    "timeEntry": "Tidpost",
+    "contractLabel": "Avtal: {{contract}}"
   }
 }
