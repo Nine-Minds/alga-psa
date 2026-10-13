@@ -2185,7 +2185,7 @@
   },
   "templateReview": {
     "heading": "Przejrzyj szablon",
-    "description": "Potwierdź zawartość szablonu. Stawki są ustalane na podstawie cennika każdej usługi w walucie klienta w momencie tworzenia umowy z tego szablonu.",
+    "description": "Potwierdź zawartość szablonu. Stawki są zapisywane w walucie bazowej szablonu. Inne waluty korzystają z zestawów cen szablonu albo kwoty wpisuje się podczas tworzenia umowy.",
     "sections": {
       "basics": "Podstawy szablonu",
       "fixedFeeServices": "Usługi z opłatą stałą",
@@ -2196,7 +2196,8 @@
     "fields": {
       "templateName": "Nazwa szablonu",
       "billingFrequency": "Częstotliwość rozliczeń",
-      "internalNotes": "Notatki wewnętrzne"
+      "internalNotes": "Notatki wewnętrzne",
+      "baseCurrency": "Waluta bazowa"
     },
     "fallback": {
       "none": "—",
@@ -2697,6 +2698,7 @@
   },
   "review": {
     "saveTemplateRates": "Zapisz te stawki w {{currency}} w szablonie",
-    "saveMissingTemplateRates": "Dodaj do szablonu brakujące stawki w {{currency}}"
+    "saveMissingTemplateRates": "Dodaj do szablonu brakujące stawki w {{currency}}",
+    "updateTemplateRates": "Zaktualizuj stawki szablonu w {{currency}} tymi kwotami"
   }
 }

@@ -210,3 +210,23 @@ export function missingTemplateAmountsMessage(
     amounts: missing.map((ref) => `"${describeTemplateAmountField(t, ref)}"`).join(', '),
   });
 }
+
+/** Required slots the template's price set for the contract currency does not store. */
+export function hasMissingPriceSetSlots(view: ClientTemplateLinesView): boolean {
+  return listTemplateAmountFields(view).some((ref) => ref.field.required && ref.field.amount == null);
+}
+
+/**
+ * Whether the operator changed a required amount the price set already stores.
+ * Only required slots are persisted by "save to template", so only they count.
+ */
+export function hasEditedPriceSetAmounts(
+  view: ClientTemplateLinesView,
+  edits: ClientTemplateLineEditInput[],
+): boolean {
+  return listTemplateAmountFields(view).some((ref) => {
+    if (!ref.field.required || ref.field.amount == null) return false;
+    const edited = editedAmount(edits, ref);
+    return edited != null && edited !== ref.field.amount;
+  });
+}

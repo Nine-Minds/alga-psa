@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Sjabloon controleren",
-    "description": "Bevestig de inhoud van het sjabloon. Tarieven worden bepaald door de prijs van elke service in de valuta van de klant wanneer een contract op basis van dit sjabloon wordt aangemaakt.",
+    "description": "Bevestig de inhoud van het sjabloon. Tarieven worden opgeslagen in de basisvaluta van het sjabloon. Andere valuta's gebruiken de prijssets van het sjabloon, of u voert de bedragen in wanneer u een contract aanmaakt.",
     "sections": {
       "basics": "Sjabloonbasis",
       "fixedFeeServices": "Vaste-vergoedingsservices",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Sjabloonnaam",
       "billingFrequency": "Factureerfrequentie",
-      "internalNotes": "Interne notities"
+      "internalNotes": "Interne notities",
+      "baseCurrency": "Basisvaluta"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Deze {{currency}}-tarieven opslaan in de sjabloon",
-    "saveMissingTemplateRates": "De ontbrekende {{currency}}-tarieven aan de sjabloon toevoegen"
+    "saveMissingTemplateRates": "De ontbrekende {{currency}}-tarieven aan de sjabloon toevoegen",
+    "updateTemplateRates": "De {{currency}}-tarieven van het sjabloon bijwerken met deze bedragen"
   }
 }

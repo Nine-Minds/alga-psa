@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Vorlage überprüfen",
-    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden durch die Preisgestaltung jedes Services in der Währung des Kunden festgelegt, wenn ein Vertrag aus dieser Vorlage erstellt wird.",
+    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden in der Basiswährung der Vorlage gespeichert. Andere Währungen verwenden die Preissätze der Vorlage, oder Sie geben die Beträge ein, wenn Sie einen Vertrag erstellen.",
     "sections": {
       "basics": "Vorlagengrundlagen",
       "fixedFeeServices": "Festgebühren-Services",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Vorlagenname",
       "billingFrequency": "Abrechnungsfrequenz",
-      "internalNotes": "Interne Notizen"
+      "internalNotes": "Interne Notizen",
+      "baseCurrency": "Basiswährung"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Diese {{currency}}-Preise in der Vorlage speichern",
-    "saveMissingTemplateRates": "Fehlende {{currency}}-Preise zur Vorlage hinzufügen"
+    "saveMissingTemplateRates": "Fehlende {{currency}}-Preise zur Vorlage hinzufügen",
+    "updateTemplateRates": "Die {{currency}}-Preise der Vorlage mit diesen Beträgen aktualisieren"
   }
 }

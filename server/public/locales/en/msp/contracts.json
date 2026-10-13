@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Review Template",
-    "description": "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+    "description": "Confirm the template contents. Rates are stored in the template's base currency. Other currencies use the template's price sets, or you enter the amounts when you create a contract.",
     "sections": {
       "basics": "Template Basics",
       "fixedFeeServices": "Fixed Fee Services",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Template Name",
       "billingFrequency": "Billing Frequency",
-      "internalNotes": "Internal Notes"
+      "internalNotes": "Internal Notes",
+      "baseCurrency": "Base Currency"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Save these {{currency}} rates to the template",
-    "saveMissingTemplateRates": "Add the missing {{currency}} rates to the template"
+    "saveMissingTemplateRates": "Add the missing {{currency}} rates to the template",
+    "updateTemplateRates": "Update the template's {{currency}} rates with these amounts"
   }
 }

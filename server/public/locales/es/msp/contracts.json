@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Revisar plantilla",
-    "description": "Confirme el contenido de la plantilla. Las tarifas se determinan por el precio de cada servicio en la moneda del cliente cuando se crea un contrato a partir de esta plantilla.",
+    "description": "Confirme el contenido de la plantilla. Las tarifas se guardan en la moneda base de la plantilla. Las demás monedas usan los conjuntos de precios de la plantilla, o usted introduce los importes al crear un contrato.",
     "sections": {
       "basics": "Información básica de la plantilla",
       "fixedFeeServices": "Servicios de tarifa fija",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Nombre de la plantilla",
       "billingFrequency": "Frecuencia de facturación",
-      "internalNotes": "Notas internas"
+      "internalNotes": "Notas internas",
+      "baseCurrency": "Moneda base"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas en {{currency}} en la plantilla",
-    "saveMissingTemplateRates": "Añadir a la plantilla las tarifas en {{currency}} que faltan"
+    "saveMissingTemplateRates": "Añadir a la plantilla las tarifas en {{currency}} que faltan",
+    "updateTemplateRates": "Actualizar las tarifas en {{currency}} de la plantilla con estos importes"
   }
 }

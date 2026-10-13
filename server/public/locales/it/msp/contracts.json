@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Rivedi modello",
-    "description": "Conferma i contenuti del modello. Le tariffe sono determinate dal prezzo di ciascun servizio nella valuta del cliente quando viene creato un contratto da questo modello.",
+    "description": "Conferma i contenuti del modello. Le tariffe sono salvate nella valuta di base del modello. Le altre valute usano i listini del modello, oppure inserisci gli importi quando crei un contratto.",
     "sections": {
       "basics": "Nozioni di base del modello",
       "fixedFeeServices": "Servizi a tariffa fissa",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Nome del modello",
       "billingFrequency": "Frequenza di fatturazione",
-      "internalNotes": "Note interne"
+      "internalNotes": "Note interne",
+      "baseCurrency": "Valuta di base"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Salva queste tariffe in {{currency}} nel modello",
-    "saveMissingTemplateRates": "Aggiungi al modello le tariffe in {{currency}} mancanti"
+    "saveMissingTemplateRates": "Aggiungi al modello le tariffe in {{currency}} mancanti",
+    "updateTemplateRates": "Aggiorna le tariffe in {{currency}} del modello con questi importi"
   }
 }

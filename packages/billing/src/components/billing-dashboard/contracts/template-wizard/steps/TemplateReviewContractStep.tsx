@@ -109,7 +109,7 @@ export function TemplateReviewContractStep({
       <p className="text-sm text-[rgb(var(--color-text-500))]">
         {t('templateReview.description', {
           defaultValue:
-            "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+            "Confirm the template contents. Rates are stored in the template's base currency. Other currencies use the template's price sets, or you enter the amounts when you create a contract.",
         })}
       </p>
 
@@ -134,6 +134,14 @@ export function TemplateReviewContractStep({
                 {t('templateReview.fields.billingFrequency', { defaultValue: 'Billing Frequency' })}
               </span>
               <span className="font-medium text-[rgb(var(--color-text-900))]">{formattedBillingFrequency}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[rgb(var(--color-text-500))]">
+                {t('templateReview.fields.baseCurrency', { defaultValue: 'Base Currency' })}
+              </span>
+              <span className="font-medium text-[rgb(var(--color-text-900))]">
+                {data.currency_code || t('templateReview.fallback.none', { defaultValue: '—' })}
+              </span>
             </div>
             <div>
               <span className="text-[rgb(var(--color-text-500))] block mb-1">

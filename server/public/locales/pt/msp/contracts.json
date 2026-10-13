@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Modelo de revisão",
-    "description": "Confirme o conteúdo do modelo. As tarifas são determinadas pelo preço de cada serviço na moeda do cliente quando um contrato é criado a partir deste modelo.",
+    "description": "Confirme o conteúdo do modelo. As tarifas são guardadas na moeda base do modelo. As outras moedas usam os conjuntos de preços do modelo, ou introduz os valores ao criar um contrato.",
     "sections": {
       "basics": "Noções básicas do modelo",
       "fixedFeeServices": "Serviços de taxa fixa",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Nome do modelo",
       "billingFrequency": "Frequência de cobrança",
-      "internalNotes": "Notas internas"
+      "internalNotes": "Notas internas",
+      "baseCurrency": "Moeda base"
     },
     "fallback": {
       "none": "-",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
-    "saveMissingTemplateRates": "Adicionar ao modelo as tarifas em {{currency}} em falta"
+    "saveMissingTemplateRates": "Adicionar ao modelo as tarifas em {{currency}} em falta",
+    "updateTemplateRates": "Atualizar as tarifas em {{currency}} do modelo com estes valores"
   }
 }

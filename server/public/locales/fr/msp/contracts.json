@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Vérifier le modèle",
-    "description": "Confirmez le contenu du modèle. Les tarifs sont déterminés par la tarification de chaque service dans la devise du client lorsqu'un contrat est créé à partir de ce modèle.",
+    "description": "Confirmez le contenu du modèle. Les tarifs sont enregistrés dans la devise de base du modèle. Les autres devises utilisent les jeux de prix du modèle, ou vous saisissez les montants lors de la création d'un contrat.",
     "sections": {
       "basics": "Informations de base du modèle",
       "fixedFeeServices": "Services à frais fixes",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Nom du modèle",
       "billingFrequency": "Fréquence de facturation",
-      "internalNotes": "Notes internes"
+      "internalNotes": "Notes internes",
+      "baseCurrency": "Devise de base"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Enregistrer ces tarifs en {{currency}} dans le modèle",
-    "saveMissingTemplateRates": "Ajouter au modèle les tarifs en {{currency}} manquants"
+    "saveMissingTemplateRates": "Ajouter au modèle les tarifs en {{currency}} manquants",
+    "updateTemplateRates": "Mettre à jour les tarifs en {{currency}} du modèle avec ces montants"
   }
 }

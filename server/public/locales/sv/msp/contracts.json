@@ -2179,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Granska mall",
-    "description": "Bekräfta mallens innehåll. Taxorna bestäms av varje tjänsts prissättning i kundens valuta när ett avtal skapas från mallen.",
+    "description": "Bekräfta mallens innehåll. Taxorna sparas i mallens basvaluta. Andra valutor använder mallens prisuppsättningar, eller så anger du beloppen när du skapar ett avtal.",
     "sections": {
       "basics": "Mallens grunduppgifter",
       "fixedFeeServices": "Tjänster med fast avgift",
@@ -2190,7 +2190,8 @@
     "fields": {
       "templateName": "Mallnamn",
       "billingFrequency": "Faktureringsintervall",
-      "internalNotes": "Interna anteckningar"
+      "internalNotes": "Interna anteckningar",
+      "baseCurrency": "Basvaluta"
     },
     "fallback": {
       "none": "—",
@@ -2691,6 +2692,7 @@
   },
   "review": {
     "saveTemplateRates": "Spara dessa {{currency}}-priser i mallen",
-    "saveMissingTemplateRates": "Lägg till de saknade {{currency}}-priserna i mallen"
+    "saveMissingTemplateRates": "Lägg till de saknade {{currency}}-priserna i mallen",
+    "updateTemplateRates": "Uppdatera mallens {{currency}}-priser med dessa belopp"
   }
 }

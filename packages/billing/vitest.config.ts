@@ -91,6 +91,7 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',
+      'src/components/billing-dashboard/contracts/ContractWizard.templateErrors.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
     ],
