@@ -1818,12 +1818,19 @@ export async function calculateBillingForSelectionInputs(input: {
     ),
   );
 
-  const recurringTimingSelections =
-    await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
+  // A selection made only of source-record rows (unresolved time/usage, prepaid
+  // block issuances) selects no persisted periods, and scoping below would
+  // discard them anyway. Skipping the lookup also lets a client whose only live
+  // line is an Hourly / Prepaid Block line (which has no materialized periods)
+  // generate instead of failing the "not materialized" guard.
+  const selectsPersistedPeriods = input.selectorInputs.some((selectorInput) => !isNonPeriodSelectorInput(selectorInput));
+  const recurringTimingSelections = selectsPersistedPeriods
+    ? await input.billingEngine.selectDueRecurringServicePeriodsForBillingWindow(
       canonicalSelection.clientId,
       canonicalSelection.windowStart,
       canonicalSelection.windowEnd,
-    );
+    )
+    : {};
   const scopedRecurringTimingSelections = scopeRecurringTimingSelectionsForSelectorInputs(
     recurringTimingSelections,
     input.selectorInputs,

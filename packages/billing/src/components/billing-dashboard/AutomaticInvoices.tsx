@@ -534,7 +534,7 @@ const resolveIncompatibilityReasons = (candidate: ReadyPeriod): AutomaticInvoice
 // brand palette (primary = purple, secondary = cyan, accent = orange) plus the
 // semantic warning token; the family also tells the user whether the dollar
 // figure is known up front (Fixed) or only finalized at generation.
-type RecurringChargeTypeKey = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+type RecurringChargeTypeKey = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | 'PrepaidBlock';
 
 const CHARGE_TAG_META: Record<RecurringChargeTypeKey, {
   labelKey: string;
@@ -567,6 +567,13 @@ const CHARGE_TAG_META: Record<RecurringChargeTypeKey, {
     className: 'border-warning/40 bg-warning/10 text-warning',
     knownUpFront: false,
   },
+  PrepaidBlock: {
+    labelKey: 'automaticInvoices.chargeTags.prepaidBlock',
+    default: 'PRE',
+    className: 'border-success/30 bg-success/10 text-success',
+    // block_price is stored on the line config, so the amount is known before generation.
+    knownUpFront: true,
+  },
 };
 
 // Full names for the charge-tag tooltips (terse codes show in the column).
@@ -575,10 +582,11 @@ const CHARGE_TAG_FULL_NAME: Record<RecurringChargeTypeKey, string> = {
   Hourly: 'Time & materials',
   Usage: 'Usage-based',
   Bucket: 'Bucket / retainer',
+  PrepaidBlock: 'Prepaid block',
 };
 
 const isRecurringChargeTypeKey = (value: unknown): value is RecurringChargeTypeKey =>
-  value === 'Fixed' || value === 'Hourly' || value === 'Usage' || value === 'Bucket';
+  value === 'Fixed' || value === 'Hourly' || value === 'Usage' || value === 'Bucket' || value === 'PrepaidBlock';
 
 // Status of a parent group, derived from its combinability summary plus the
 // not-yet-due / blocked flags. Drives the colored pill in the Status column.
@@ -1242,7 +1250,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         .filter((code): code is string => Boolean(code)),
     ),
   ).sort();
-  const availableChargeTypes = (['Fixed', 'Hourly', 'Usage', 'Bucket'] as RecurringChargeTypeKey[]).filter((type) =>
+  const availableChargeTypes = (['Fixed', 'Hourly', 'Usage', 'Bucket', 'PrepaidBlock'] as RecurringChargeTypeKey[]).filter((type) =>
     readyParentGroups.some((group) =>
       group.childExecutionRows.some((member) => (member as { chargeType?: string | null }).chargeType === type),
     ),
@@ -1379,7 +1387,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         counts.set(type, (counts.get(type) ?? 0) + 1);
       }
     }
-    const order: RecurringChargeTypeKey[] = ['Fixed', 'Hourly', 'Usage', 'Bucket'];
+    const order: RecurringChargeTypeKey[] = ['Fixed', 'Hourly', 'Usage', 'Bucket', 'PrepaidBlock'];
     return order
       .filter((type) => counts.has(type))
       .map((type) => ({ type, count: counts.get(type) ?? 0 }));
@@ -2895,6 +2903,32 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         {member.contractLineName?.trim() && member.contractLineName.trim() !== childTitle ? (
                           <div className="text-xs text-muted-foreground">{member.contractLineName.trim()}</div>
                         ) : null}
+                        {(member as { blockDueDate?: string | null }).blockDueDate ? (
+                          <div className="text-xs text-muted-foreground" data-testid={`prepaid-block-due-${member.executionIdentityKey}`}>
+                            {t('automaticInvoices.executionRows.prepaidBlock.due', {
+                              defaultValue: '{{trigger}} · due {{date}}',
+                              trigger: t(
+                                `automaticInvoices.executionRows.prepaidBlock.trigger.${(member as { blockTriggerKind?: string | null }).blockTriggerKind ?? 'manual'}`,
+                                { defaultValue: 'Prepaid block' },
+                              ),
+                              date: (member as { blockDueDate?: string | null }).blockDueDate,
+                            })}
+                          </div>
+                        ) : null}
+                        {(member.warnings ?? [])
+                          .filter((warning) => warning.code === 'stale_pending_prepaid_block')
+                          .map((warning) => (
+                            <div
+                              key={warning.code}
+                              className="text-xs text-warning"
+                              data-testid={`stale-pending-prepaid-block-warning-${member.executionIdentityKey}`}
+                            >
+                              {t('automaticInvoices.executionRows.prepaidBlock.stalePendingWarning', {
+                                count: warning.entryCount,
+                                defaultValue: warning.message,
+                              })}
+                            </div>
+                          ))}
                         {nonContractSelection ? (
                           <div className="text-xs text-muted-foreground" data-testid={`non-contract-child-${member.executionIdentityKey}`}>
                             {t('automaticInvoices.executionRows.assignmentContext.unresolvedWork', { defaultValue: 'Unresolved work' })}

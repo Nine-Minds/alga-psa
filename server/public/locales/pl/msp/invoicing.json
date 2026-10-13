@@ -112,7 +112,23 @@
         "unresolvedWork": "Nierozwiązana praca"
       },
       "blockedUntilApproval_few": "Zablokowane do czasu zatwierdzenia: {{count}} niezatwierdzone wpisy.",
-      "blockedUntilApproval_many": "Zablokowane do czasu zatwierdzenia: {{count}} niezatwierdzonych wpisów."
+      "blockedUntilApproval_many": "Zablokowane do czasu zatwierdzenia: {{count}} niezatwierdzonych wpisów.",
+      "prepaidBlock": {
+        "due": "{{trigger}} · termin {{date}}",
+        "trigger": {
+          "contract_start": "Blok przedpłacony: początek umowy",
+          "exhaustion": "Blok przedpłacony: wyczerpany",
+          "threshold": "Blok przedpłacony: próg zużycia",
+          "expiry": "Blok przedpłacony: wygaśnięcie",
+          "renewal": "Blok przedpłacony: odnowienie",
+          "manual": "Blok przedpłacony: wystawiony ręcznie"
+        },
+        "stalePendingWarning": "{{count}} oczekujące bloki przedpłacone czekają na sfinalizowanie od ponad 14 dni i wstrzymują wpisy czasu. Sfinalizuj lub usuń ich faktury robocze, aby wstrzymany czas mógł zostać zafakturowany.",
+        "stalePendingWarning_one": "{{count}} oczekujący blok przedpłacony czeka na sfinalizowanie od ponad 14 dni i wstrzymuje wpisy czasu. Sfinalizuj lub usuń jego fakturę roboczą, aby wstrzymany czas mógł zostać zafakturowany.",
+        "stalePendingWarning_few": "{{count}} oczekujące bloki przedpłacone czekają na sfinalizowanie od ponad 14 dni i wstrzymują wpisy czasu. Sfinalizuj lub usuń ich faktury robocze, aby wstrzymany czas mógł zostać zafakturowany.",
+        "stalePendingWarning_many": "{{count}} oczekujących bloków przedpłaconych czeka na sfinalizowanie od ponad 14 dni i wstrzymuje wpisy czasu. Sfinalizuj lub usuń ich faktury robocze, aby wstrzymany czas mógł zostać zafakturowany.",
+        "stalePendingWarning_other": "{{count}} oczekujące bloki przedpłacone czekają na sfinalizowanie od ponad 14 dni i wstrzymują wpisy czasu. Sfinalizuj lub usuń ich faktury robocze, aby wstrzymany czas mógł zostać zafakturowany."
+      }
     },
     "actions": {
       "previewSelected": "Wybrano podgląd",
@@ -289,7 +305,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "Wybrano: {{count}}",

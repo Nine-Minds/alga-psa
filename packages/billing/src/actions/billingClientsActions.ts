@@ -27,6 +27,7 @@ import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/a
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
 import {
   actionError,
   permissionError,
@@ -262,11 +263,13 @@ export const createClientContractForBilling = withAuth(async (
 
     const created = await createClientContractAssignment(trx, tenant, input);
     if (created.is_active) {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContract(trx, {
         tenant,
         contractId: created.contract_id,
         sourceRunPrefix: 'client_contract_assignment_create',
       });
+      await syncPrepaidBlockIssuancesForContract(trx, tenant, created.contract_id);
     }
     return created;
   });
@@ -288,11 +291,13 @@ export const updateClientContractForBilling = withAuth(async (
   const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const updatedAssignment = await updateClientContractAssignment(trx, tenant, clientContractId, updateData);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: updatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_assignment_update',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, updatedAssignment.contract_id);
     return updatedAssignment;
   });
 
@@ -315,11 +320,13 @@ export const activateClientContractForBilling = withAuth(async (
   const activated = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
     const activatedAssignment = await activateClientContractAssignment(trx, tenant, clientContractId);
+    // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
     await syncRecurringServicePeriodsForContract(trx, {
       tenant,
       contractId: activatedAssignment.contract_id,
       sourceRunPrefix: 'client_contract_activate',
     });
+    await syncPrepaidBlockIssuancesForContract(trx, tenant, activatedAssignment.contract_id);
     return activatedAssignment;
   });
 

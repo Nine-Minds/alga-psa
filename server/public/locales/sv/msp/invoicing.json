@@ -98,6 +98,20 @@
         "assignedContractLine": "Tilldelad avtalsrad",
         "assignedWorkItem": "Tilldelad arbetspost",
         "unresolvedWork": "Arbete med olöst koppling"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · förfaller {{date}}",
+        "trigger": {
+          "contract_start": "Förbetalt block: avtalsstart",
+          "exhaustion": "Förbetalt block: förbrukat",
+          "threshold": "Förbetalt block: användningströskel",
+          "expiry": "Förbetalt block: utgång",
+          "renewal": "Förbetalt block: förnyelse",
+          "manual": "Förbetalt block: utfärdat manuellt"
+        },
+        "stalePendingWarning": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_one": "{{count}} väntande förbetalt block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkastet så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_other": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "Fast",
       "hourly": "Löpande",
       "usage": "Förbrukning",
-      "bucket": "Timpott"
+      "bucket": "Timpott",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "Markerade: {{count}}",

@@ -98,6 +98,20 @@
         "assignedContractLine": "Ligne de contrat attribuée",
         "assignedWorkItem": "Élément de travail affecté",
         "unresolvedWork": "Travail non résolu"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · échéance le {{date}}",
+        "trigger": {
+          "contract_start": "Bloc prépayé : début du contrat",
+          "exhaustion": "Bloc prépayé : épuisé",
+          "threshold": "Bloc prépayé : seuil d’utilisation",
+          "expiry": "Bloc prépayé : expiration",
+          "renewal": "Bloc prépayé : renouvellement",
+          "manual": "Bloc prépayé : émis manuellement"
+        },
+        "stalePendingWarning": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_one": "{{count}} bloc prépayé en attente depuis plus de 14 jours de finalisation retient des saisies de temps. Finalisez ou supprimez sa facture brouillon afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_other": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} sélectionné(s)",

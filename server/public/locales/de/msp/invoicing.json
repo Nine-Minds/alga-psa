@@ -98,6 +98,20 @@
         "assignedContractLine": "Zugewiesene Vertragszeile",
         "assignedWorkItem": "Zugewiesenes Arbeitselement",
         "unresolvedWork": "Ungelöste Arbeit"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · fällig am {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid-Block: Vertragsbeginn",
+          "exhaustion": "Prepaid-Block: aufgebraucht",
+          "threshold": "Prepaid-Block: Verbrauchsschwelle",
+          "expiry": "Prepaid-Block: Ablauf",
+          "renewal": "Prepaid-Block: Verlängerung",
+          "manual": "Prepaid-Block: manuell ausgestellt"
+        },
+        "stalePendingWarning": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_one": "{{count}} ausstehender Prepaid-Block wartet seit mehr als 14 Tagen auf die Finalisierung und hält Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsvorlage, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_other": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} ausgewählt",

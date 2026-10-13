@@ -98,6 +98,20 @@
         "assignedContractLine": "Toegewezen contractregel",
         "assignedWorkItem": "Toegewezen werkitem",
         "unresolvedWork": "Onopgelost werk"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vervalt op {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid blok: contractstart",
+          "exhaustion": "Prepaid blok: uitgeput",
+          "threshold": "Prepaid blok: gebruiksdrempel",
+          "expiry": "Prepaid blok: verval",
+          "renewal": "Prepaid blok: verlenging",
+          "manual": "Prepaid blok: handmatig uitgegeven"
+        },
+        "stalePendingWarning": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_one": "{{count}} openstaand prepaid blok wacht al meer dan 14 dagen op afronding en houdt tijdregistraties vast. Rond de conceptfactuur af of verwijder deze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_other": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} geselecteerd",

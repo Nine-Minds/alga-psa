@@ -27,6 +27,7 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import {
     getFixedServiceBasisIssue,
     hasBundleFixedService,
@@ -706,11 +707,13 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant: tenantId,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_preset_copy',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenantId, contractLineId);
 
             return contractLineId;
         });
@@ -970,11 +973,13 @@ export const createCustomContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant: tenantId,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_custom_create',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenantId, contractLineId);
 
             return contractLineId;
         });

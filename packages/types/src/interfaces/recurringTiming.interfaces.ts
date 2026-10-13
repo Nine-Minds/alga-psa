@@ -498,7 +498,7 @@ export interface IRecurringDueSelectionInput {
 export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | 'PrepaidBlock';
 
 export interface IRecurringDueWorkWarning {
-  code: 'stale_project_billing_ready_entries';
+  code: 'stale_project_billing_ready_entries' | 'stale_pending_prepaid_block';
   severity: 'warning';
   message: string;
   entryCount: number;
@@ -548,6 +548,10 @@ export interface IRecurringDueWorkRow {
    * ('Hourly' for time entries, 'Usage' for usage records). Null when unknown.
    */
   chargeType?: RecurringDueWorkChargeType | null;
+  /** Prepaid Block issuance rows only: the date the block is actually due (may precede the invoice window). */
+  blockDueDate?: ISO8601String | null;
+  /** Prepaid Block issuance rows only: contract_start | exhaustion | threshold | expiry | renewal | manual. */
+  blockTriggerKind?: string | null;
   purchaseOrderScopeKey?: string | null;
   currencyCode?: string | null;
   taxSource?: string | null;

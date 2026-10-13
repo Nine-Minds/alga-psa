@@ -98,6 +98,20 @@
         "assignedContractLine": "Assigned contract line",
         "assignedWorkItem": "Assigned work item",
         "unresolvedWork": "Unresolved work"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · due {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid block: contract start",
+          "exhaustion": "Prepaid block: exhausted",
+          "threshold": "Prepaid block: usage threshold",
+          "expiry": "Prepaid block: expiry",
+          "renewal": "Prepaid block: renewal",
+          "manual": "Prepaid block: issued manually"
+        },
+        "stalePendingWarning": "{{count}} pending prepaid blocks have been awaiting finalization for more than 14 days while holding time entries. Finalize or delete their draft invoices so the held time can bill.",
+        "stalePendingWarning_one": "{{count}} pending prepaid block has been awaiting finalization for more than 14 days while holding time entries. Finalize or delete its draft invoice so the held time can bill.",
+        "stalePendingWarning_other": "{{count}} pending prepaid blocks have been awaiting finalization for more than 14 days while holding time entries. Finalize or delete their draft invoices so the held time can bill."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} selected",

@@ -98,6 +98,20 @@
         "assignedContractLine": "Línea de contrato asignada",
         "assignedWorkItem": "Elemento de trabajo asignado",
         "unresolvedWork": "Trabajo no resuelto"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vence el {{date}}",
+        "trigger": {
+          "contract_start": "Bloque prepago: inicio del contrato",
+          "exhaustion": "Bloque prepago: agotado",
+          "threshold": "Bloque prepago: umbral de uso",
+          "expiry": "Bloque prepago: vencimiento",
+          "renewal": "Bloque prepago: renovación",
+          "manual": "Bloque prepago: emitido manualmente"
+        },
+        "stalePendingWarning": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_one": "{{count}} bloque prepago pendiente lleva más de 14 días esperando su finalización y retiene entradas de tiempo. Finalice o elimine su factura en borrador para que el tiempo retenido pueda facturarse.",
+        "stalePendingWarning_other": "{{count}} bloques prepago pendientes llevan más de 14 días esperando su finalización y retienen entradas de tiempo. Finalice o elimine sus facturas en borrador para que el tiempo retenido pueda facturarse."
       }
     },
     "actions": {
@@ -271,7 +285,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} seleccionado(s)",
