@@ -565,7 +565,8 @@
       "exportCsv": "Exporter en CSV",
       "exportJson": "Exporter en JSON",
       "close": "Fermer",
-      "viewRunDetails": "Voir les détails de l’exécution"
+      "viewRunDetails": "Voir les détails de l’exécution",
+      "backToEvents": "Retour aux événements"
     },
     "table": {
       "schemaConflict": "catalogue ≠ soumission",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Actualiser",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "backToList": "Retour aux messages en échec"
     },
     "table": {
       "columns": {

@@ -565,7 +565,8 @@
       "exportCsv": "CSV exporteren",
       "exportJson": "JSON exporteren",
       "close": "Sluiten",
-      "viewRunDetails": "Uitvoeringsdetails bekijken"
+      "viewRunDetails": "Uitvoeringsdetails bekijken",
+      "backToEvents": "Terug naar gebeurtenissen"
     },
     "table": {
       "schemaConflict": "catalogus ≠ indiening",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Vernieuwen",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "backToList": "Terug naar dead-letter"
     },
     "table": {
       "columns": {
