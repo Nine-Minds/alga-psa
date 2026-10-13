@@ -1,7 +1,9 @@
-# PR #3499 repair handoff — current source verified at `5bf290f894`
+# PR #3499 repair handoff — source `5bf290f894`, handoff `55291d1ecc`
 
 **Status: BLOCKED for human review.** The merged implementation source at
-`5bf290f894fd29e2243fd23feee717ebb8340e9b` was revalidated. It includes current
+`5bf290f894fd29e2243fd23feee717ebb8340e9b` was revalidated. A docs-only handoff
+commit `55291d1ecc4de279ba6f69340a4a344ad259dd74` is now the PR/local/upstream
+head; it changes no application source. The implementation source includes current
 `origin/main` (`aa4e1e5db3e4834ba1877b53dbc178819d975cd2`) with no merge
 conflicts; GitHub reports the PR mergeable, while the merge state is blocked by
 required checks. At the latest exact-head CI query, 44 checks passed, one was
@@ -764,7 +766,9 @@ app server remains stopped.
 
 This is the authoritative source-validation snapshot; earlier sections record
 historical checkpoints. The source head `5bf290f894fd29e2243fd23feee717ebb8340e9b`
-was pushed to PR #3499 and matched local and upstream. It merges current
+was pushed to PR #3499. The current PR/local/upstream head is the subsequent
+docs-only commit `55291d1ecc4de279ba6f69340a4a344ad259dd74`; application source
+is unchanged. It merges current
 `origin/main` at `aa4e1e5db3e4834ba1877b53dbc178819d975cd2`; the merge tree had
 no conflicts, GitHub reports `mergeable: MERGEABLE`, and `mergeStateStatus:
 BLOCKED` while required CI runs.
