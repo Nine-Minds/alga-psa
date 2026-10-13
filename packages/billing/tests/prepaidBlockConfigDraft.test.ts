@@ -8,6 +8,9 @@ import {
   majorToMinor,
   minorToMajor,
   minutesToHoursText,
+  emptyPrepaidBlockLineDraft,
+  prepaidLineDraftFromSubmission,
+  prepaidLineDraftsToSubmission,
 } from '../src/components/billing-dashboard/contracts/prepaidBlockConfigDraft';
 
 describe('prepaid block config draft helpers', () => {
@@ -62,5 +65,53 @@ describe('prepaid block config draft helpers', () => {
     expect(majorToMinor(165, 'EUR', 'en-US')).toBe(16500);
     expect(minorToMajor(1650, 'JPY', 'en-US')).toBe(1650);
     expect(majorToMinor(1650, 'JPY', 'en-US')).toBe(1650);
+  });
+});
+
+describe('prepaid block wizard line drafts', () => {
+  const filled = () => {
+    const line = emptyPrepaidBlockLineDraft();
+    line.services = [{ service_id: 'svc-a', service_name: 'Remote', hourly_rate: 11000 }];
+    line.block = { ...emptyPrepaidBlockDraft(), hours: '40' };
+    return line;
+  };
+
+  it('drops lines with no picked service and reports no errors for them', () => {
+    expect(prepaidLineDraftsToSubmission([emptyPrepaidBlockLineDraft()])).toEqual({ lines: [] });
+    expect(prepaidLineDraftsToSubmission(undefined)).toEqual({ lines: [] });
+  });
+
+  it('converts a filled draft, defaulting the price to hours x the sold-as service rate in minor units', () => {
+    const result = prepaidLineDraftsToSubmission([{ ...filled(), name: '  Support  ' }]);
+    expect('lines' in result).toBe(true);
+    if (!('lines' in result)) return;
+    expect(result.lines).toHaveLength(1);
+    expect(result.lines[0].name).toBe('Support');
+    expect(result.lines[0].services).toEqual([{ service_id: 'svc-a', service_name: 'Remote', hourly_rate: 11000 }]);
+    expect(result.lines[0].block).toMatchObject({ block_minutes: 2400, block_price: 440000 });
+  });
+
+  it('reports draft error codes by line index when a line with services has an invalid block', () => {
+    const bad = filled();
+    bad.block = { ...bad.block, hours: '' };
+    const result = prepaidLineDraftsToSubmission([filled(), bad]);
+    expect('errors' in result).toBe(true);
+    if (!('errors' in result)) return;
+    expect(result.errors.map((e) => e.lineIndex)).toEqual([1]);
+    expect(result.errors[0].codes.length).toBeGreaterThan(0);
+  });
+
+  it('round-trips a submission entry through a draft', () => {
+    const entry = {
+      name: 'Block',
+      services: [{ service_id: 'svc-a', hourly_rate: 11000 }],
+      block: {
+        block_minutes: 90, block_price: 16500, sold_as_service_id: 'svc-a', expiry_months: 6,
+        trigger_on_exhaustion: true, trigger_threshold_percent: 25, trigger_on_expiry: false,
+        trigger_on_renewal: true, replenishment_tier: 'auto_issue' as const,
+      },
+    };
+    const result = prepaidLineDraftsToSubmission([prepaidLineDraftFromSubmission(entry)]);
+    expect(result).toEqual({ lines: [{ ...entry, services: [{ service_id: 'svc-a', service_name: undefined, hourly_rate: 11000 }] }] });
   });
 });

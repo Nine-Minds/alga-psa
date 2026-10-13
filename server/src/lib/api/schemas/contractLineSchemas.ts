@@ -32,6 +32,20 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 // CORE CONTRACT LINE SCHEMAS
 // ============================================================================
 
+// Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
+// block_price is in minor units of the contract's currency.
+export const prepaidBlockConfigSchema = z.object({
+  block_minutes: z.number().int().min(1),
+  block_price: z.number().int().min(0),
+  sold_as_service_id: uuidSchema.nullable().optional(),
+  expiry_months: z.number().int().min(1).max(120).nullable().optional(),
+  trigger_on_exhaustion: z.boolean().optional(),
+  trigger_threshold_percent: z.number().int().min(1).max(99).nullable().optional(),
+  trigger_on_expiry: z.boolean().optional(),
+  trigger_on_renewal: z.boolean().optional(),
+  replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+});
+
 // Base contract line schema (without refinements)
 const baseContractLineSchema = z.object({
   contract_line_name: z.string().min(1, 'Plan name is required').max(255),
@@ -56,7 +70,10 @@ const baseContractLineSchema = z.object({
   // Additional features and settings
   is_active: z.boolean().optional().default(true),
   features: z.array(z.string()).optional(),
-  location_id: uuidSchema.optional().nullable()
+  location_id: uuidSchema.optional().nullable(),
+
+  // Optional Prepaid Block overlay (Hourly lines only). On update: object = upsert, null = remove.
+  prepaid_block: prepaidBlockConfigSchema.nullable().optional()
 });
 
 // Create contract line schema
@@ -96,6 +113,8 @@ export const contractLineResponseSchema = z.object({
   after_hours_multiplier: z.number().nullable(),
   is_active: z.boolean().optional(),
   features: z.array(z.string()).optional(),
+  prepaid_block: prepaidBlockConfigSchema.nullable().optional(),
+  display_kind: z.enum(['Fixed', 'Hourly', 'Usage', 'PrepaidBlock']).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

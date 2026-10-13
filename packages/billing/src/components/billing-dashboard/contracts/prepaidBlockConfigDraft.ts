@@ -1,5 +1,5 @@
 import { fromMinorUnits, toMinorUnits } from '@alga-psa/core';
-import type { IContractLinePrepaidBlock, PrepaidBlockReplenishmentTier } from '@alga-psa/types';
+import type { IPrepaidBlockConfigFields, PrepaidBlockReplenishmentTier } from '@alga-psa/types';
 import type { PrepaidBlockConfigInput } from '../../../services/prepaidBlockConfigService';
 
 /**
@@ -61,7 +61,7 @@ export function hoursTextToMinutes(text: string): number | null {
   return rounded;
 }
 
-export function draftFromConfig(config: IContractLinePrepaidBlock): PrepaidBlockConfigDraft {
+export function draftFromConfig(config: IPrepaidBlockConfigFields & { sold_as_service_id?: string | null }): PrepaidBlockConfigDraft {
   return {
     hours: minutesToHoursText(Number(config.block_minutes)),
     priceMinor: Number(config.block_price),
@@ -134,4 +134,84 @@ export function minorToMajor(minor: number | undefined, currencyCode: string, lo
 
 export function majorToMinor(major: number | undefined, currencyCode: string, locale?: string): number | undefined {
   return major === undefined || Number.isNaN(major) ? undefined : toMinorUnits(major, locale, currencyCode);
+}
+
+/**
+ * A Prepaid Block line as authored in a wizard: its own Hourly services plus the block
+ * config draft. `hourly_rate` is minor units (contract currency in the client wizard;
+ * template rates are optional and currency-neutral).
+ */
+export interface PrepaidBlockLineDraft {
+  name?: string;
+  services: Array<{ service_id: string; service_name?: string; hourly_rate?: number }>;
+  block: PrepaidBlockConfigDraft;
+}
+
+export function emptyPrepaidBlockLineDraft(): PrepaidBlockLineDraft {
+  return { name: '', services: [{ service_id: '', service_name: '', hourly_rate: undefined }], block: emptyPrepaidBlockDraft() };
+}
+
+/** Rate used for "hours x rate" and the sold-as default: the sold-as service's rate, else the first service's. */
+export function prepaidLineSoldAsRate(line: PrepaidBlockLineDraft): number | undefined {
+  const picked = line.services.filter((s) => s.service_id);
+  const target = picked.find((s) => s.service_id === line.block.soldAsServiceId) ?? picked[0];
+  return target?.hourly_rate || undefined;
+}
+
+export type PrepaidBlockLineSubmission = {
+  name?: string;
+  services: Array<{ service_id: string; service_name?: string; hourly_rate?: number }>;
+  block: PrepaidBlockConfigInput;
+};
+
+/**
+ * Convert wizard drafts to submission entries. Lines with no picked service are dropped
+ * (the wizard treats them as not yet started); a line with services but an invalid block
+ * config reports its draft error codes.
+ */
+export function prepaidLineDraftsToSubmission(
+  lines: PrepaidBlockLineDraft[] | undefined,
+): { lines: PrepaidBlockLineSubmission[] } | { errors: Array<{ lineIndex: number; codes: PrepaidBlockDraftErrorCode[] }> } {
+  const out: PrepaidBlockLineSubmission[] = [];
+  const errors: Array<{ lineIndex: number; codes: PrepaidBlockDraftErrorCode[] }> = [];
+  (lines ?? []).forEach((line, lineIndex) => {
+    const services = line.services.filter((s) => s.service_id);
+    if (services.length === 0) return;
+    const parsed = draftToInput(line.block, prepaidLineSoldAsRate(line));
+    if ('errors' in parsed) {
+      errors.push({ lineIndex, codes: parsed.errors });
+      return;
+    }
+    out.push({
+      name: line.name?.trim() || undefined,
+      services: services.map((s) => ({
+        service_id: s.service_id,
+        service_name: s.service_name,
+        hourly_rate: s.hourly_rate,
+      })),
+      block: parsed.input,
+    });
+  });
+  return errors.length > 0 ? { errors } : { lines: out };
+}
+
+/** Resumed/persisted submission entry -> editable draft. */
+export function prepaidLineDraftFromSubmission(entry: PrepaidBlockLineSubmission): PrepaidBlockLineDraft {
+  const { block } = entry;
+  return {
+    name: entry.name ?? '',
+    services: entry.services.map((s) => ({ ...s })),
+    block: {
+      hours: minutesToHoursText(block.block_minutes),
+      priceMinor: block.block_price,
+      priceManual: true,
+      soldAsServiceId: block.sold_as_service_id ?? null,
+      expiryMonths: block.expiry_months == null ? '' : String(block.expiry_months),
+      triggerOnExhaustion: Boolean(block.trigger_on_exhaustion),
+      thresholdPercent: block.trigger_threshold_percent == null ? '' : String(block.trigger_threshold_percent),
+      triggerOnExpiry: Boolean(block.trigger_on_expiry),
+      triggerOnRenewal: Boolean(block.trigger_on_renewal),
+      replenishmentTier: block.replenishment_tier ?? 'draft',
+    },
+  };
 }

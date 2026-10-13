@@ -12,6 +12,10 @@ import { IContractLineServiceConfiguration } from 'server/src/interfaces/contrac
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import {
+  upsertContractLinePrepaidBlockInTransaction,
+  removeContractLinePrepaidBlockInTransaction,
+} from '@alga-psa/billing/services/prepaidBlockConfigService';
 import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing/lib/fixedServiceBasis';
 
 // Import existing models and actions for integration
@@ -83,6 +87,62 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
     service_category: plan.service_category || undefined,
     cadence_owner: resolveCadenceOwner(plan.cadence_owner),
   };
+}
+
+const PREPAID_BLOCK_API_COLUMNS = [
+  'block_minutes',
+  'block_price',
+  'sold_as_service_id',
+  'expiry_months',
+  'trigger_on_exhaustion',
+  'trigger_threshold_percent',
+  'trigger_on_expiry',
+  'trigger_on_renewal',
+  'replenishment_tier',
+] as const;
+
+/**
+ * Attach the optional Prepaid Block overlay (`prepaid_block`, null when absent) and the
+ * derived `display_kind` to Hourly lines. Never persisted; the stored type stays unchanged.
+ */
+async function attachPrepaidBlocks<T extends { contract_line_id?: string; contract_line_type?: string }>(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  plans: T[],
+): Promise<Array<T & { prepaid_block: Record<string, unknown> | null; display_kind: string | undefined }>> {
+  const hourlyIds = plans
+    .filter((p) => p.contract_line_type === 'Hourly' && p.contract_line_id)
+    .map((p) => p.contract_line_id as string);
+  const byLine = new Map<string, Record<string, unknown>>();
+  if (hourlyIds.length > 0) {
+    const rows = await tenantDb(trx, tenant).table('contract_line_prepaid_blocks')
+      .whereIn('contract_line_id', hourlyIds)
+      .select('contract_line_id', ...PREPAID_BLOCK_API_COLUMNS);
+    for (const row of rows) {
+      const { contract_line_id, ...config } = row as Record<string, unknown>;
+      byLine.set(contract_line_id as string, config);
+    }
+  }
+  return plans.map((p) => {
+    const prepaid_block = p.contract_line_id ? byLine.get(p.contract_line_id) ?? null : null;
+    return {
+      ...p,
+      prepaid_block,
+      display_kind: prepaid_block ? 'PrepaidBlock' : p.contract_line_type,
+    };
+  });
+}
+
+/** Run a config-service call and surface its rule violations as API validation errors. */
+async function runPrepaidBlockWrite<R>(fn: () => Promise<R>): Promise<R> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof Error && !(error instanceof NotFoundError) && !(error instanceof ConflictError)) {
+      throw new ValidationError(error.message);
+    }
+    throw error;
+  }
 }
 
 function throwPlanServiceConfigurationApiError(error: unknown): never {
@@ -260,7 +320,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       ]);
   
       // Transform null to undefined for compatibility
-      const transformedPlans = plans.map((plan: any) => normalizeContractLineCompatibility(plan));
+      const transformedPlans = await attachPrepaidBlocks(
+        knex,
+        context.tenant,
+        plans.map((plan: any) => normalizeContractLineCompatibility(plan)),
+      );
   
       // Add HATEOAS links
       const plansWithLinks = transformedPlans.map((plan: any) => 
@@ -316,7 +380,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
     
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(plan);
+        const [transformedPlan] = await attachPrepaidBlocks(knex, context.tenant, [normalizeContractLineCompatibility(plan)]);
     
         // Add HATEOAS links
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
@@ -358,6 +422,14 @@ export class ContractLineService extends BaseService<IContractLine> {
         planData.billing_timing = recurringAuthoringPolicy.billingTiming;
 
         delete (planData as any).base_rate;
+
+        // Prepaid Block config needs the line's services, which do not exist yet at creation.
+        if ((data as any).prepaid_block) {
+          throw new ValidationError(
+            'prepaid_block cannot be set when creating a contract line: add the line\'s services first, then PUT the line with prepaid_block.',
+          );
+        }
+        delete (planData as any).prepaid_block;
 
         const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
 
@@ -419,6 +491,13 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
@@ -428,9 +507,18 @@ export class ContractLineService extends BaseService<IContractLine> {
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        return normalizeContractLineCompatibility(updatedPlan) as IContractLine;
+        const [withBlock] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
+        return withBlock as unknown as IContractLine;
       });
     }
   
@@ -470,6 +558,13 @@ export class ContractLineService extends BaseService<IContractLine> {
           delete updateData.round_up_to_nearest;
         }
         
+        // prepaid_block is an overlay table, never a contract_lines column.
+        const prepaidBlockInput = (data as any).prepaid_block as Record<string, unknown> | null | undefined;
+        delete (updateData as any).prepaid_block;
+        if (prepaidBlockInput !== undefined && existingPlan.contract_line_type !== 'Hourly') {
+          throw new ValidationError('prepaid_block is only supported on Hourly contract lines.');
+        }
+
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
@@ -479,9 +574,17 @@ export class ContractLineService extends BaseService<IContractLine> {
         if (!updatedPlan) {
           throw new NotFoundError('Plan not found');
         }
+
+        if (prepaidBlockInput === null) {
+          await runPrepaidBlockWrite(() => removeContractLinePrepaidBlockInTransaction(trx, context.tenant, id));
+        } else if (prepaidBlockInput) {
+          await runPrepaidBlockWrite(() =>
+            upsertContractLinePrepaidBlockInTransaction(trx, context.tenant, id, prepaidBlockInput as any),
+          );
+        }
         
         // Transform null to undefined for compatibility
-        const transformedPlan = normalizeContractLineCompatibility(updatedPlan);
+        const [transformedPlan] = await attachPrepaidBlocks(trx, context.tenant, [normalizeContractLineCompatibility(updatedPlan)]);
         
         return addHateoasLinks(transformedPlan, this.generatePlanLinks(id, context)) as ContractLineResponse;
       });

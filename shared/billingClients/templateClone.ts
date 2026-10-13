@@ -49,6 +49,7 @@ export async function cloneTemplateContractLine(
   // schedule, after-hours rule) and skip the legacy per-config bucket clone.
   const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, contractLineId);
   await cloneServices(trx, tenant, templateContractLineId, contractLineId, hasTemplatePools);
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateContractLineId, contractLineId);
 
   const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
   const appliedCustomRate = overrideRate ?? templateCustomRate;
@@ -130,6 +131,129 @@ export async function cloneTemplateLinePools(
     }
   }
 
+  return true;
+}
+
+const PREPAID_BLOCK_CONFIG_COLUMNS = [
+  'block_minutes',
+  'block_price',
+  'expiry_months',
+  'trigger_on_exhaustion',
+  'trigger_threshold_percent',
+  'trigger_on_expiry',
+  'trigger_on_renewal',
+  'replenishment_tier',
+] as const;
+
+/**
+ * Clone a template line's Prepaid Block config (contract_template_line_prepaid_blocks)
+ * onto a live contract line (contract_line_prepaid_blocks). A Prepaid Block line is an
+ * Hourly line plus this one overlay row, so every template clone path must call this
+ * AFTER the line's services exist (the sold-as service must be one of them).
+ *
+ * `block_price` is minor units and is copied as-is: the template is currency-neutral,
+ * the resulting line takes its currency from the contract (the block invoice charge
+ * passes contracts.currency_code explicitly). A template without the row, or a
+ * non-Hourly line, copies nothing.
+ *
+ * Does NOT sync block issuances: callers that attach the line to an active client
+ * contract run the prepaid issuance sync afterwards.
+ *
+ * Returns true when a config row was written.
+ *
+ * LEVERAGE: pattern template-pool-roundtrip — same rule as the pools above: this module
+ * owns the prepaid block copy so every clone path stays in lockstep.
+ */
+export async function cloneTemplateLinePrepaidBlock(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenant);
+  const templateConfig = await db.table('contract_template_line_prepaid_blocks')
+    .where('template_line_id', templateContractLineId)
+    .first();
+  if (!templateConfig) {
+    return false;
+  }
+
+  const targetLine = await db.table('contract_lines')
+    .where('contract_line_id', contractLineId)
+    .first('contract_line_type');
+  if (!targetLine || targetLine.contract_line_type !== 'Hourly') {
+    return false;
+  }
+
+  // The sold-as service must be one of the line's services; fall back to the first
+  // template service (display order) when the template has none chosen or it is gone.
+  const lineServiceIds: string[] = await db.table('contract_line_services')
+    .where('contract_line_id', contractLineId)
+    .pluck('service_id');
+  const templateServiceOrder: string[] = await db.table('contract_template_line_services')
+    .where('template_line_id', templateContractLineId)
+    .orderBy('display_order', 'asc')
+    .pluck('service_id');
+  const firstCovered = templateServiceOrder.find((id) => lineServiceIds.includes(id)) ?? lineServiceIds[0] ?? null;
+  const soldAs =
+    templateConfig.sold_as_service_id && lineServiceIds.includes(templateConfig.sold_as_service_id)
+      ? templateConfig.sold_as_service_id
+      : firstCovered;
+
+  const values: Record<string, unknown> = {};
+  for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
+    values[column] = templateConfig[column] ?? null;
+  }
+  await db.table('contract_line_prepaid_blocks')
+    .insert({
+      tenant,
+      contract_line_id: contractLineId,
+      sold_as_service_id: soldAs,
+      ...values,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    })
+    .onConflict(['tenant', 'contract_line_id'])
+    .merge({ sold_as_service_id: soldAs, ...values, updated_at: trx.fn.now() });
+  return true;
+}
+
+/**
+ * Contract -> template snapshot of a line's Prepaid Block config (the counterpart of
+ * {@link cloneTemplateLinePrepaidBlock}); used by both ensureTemplateLineSnapshot copies.
+ * Replaces any existing template config row so repeated snapshots stay in sync, and
+ * removes a stale one when the line no longer carries a config.
+ */
+export async function snapshotContractLinePrepaidBlockToTemplateLine(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  templateLineId: string
+): Promise<boolean> {
+  const db = tenantDb(trx, tenant);
+  const lineConfig = await db.table('contract_line_prepaid_blocks')
+    .where('contract_line_id', contractLineId)
+    .first();
+  if (!lineConfig) {
+    await db.table('contract_template_line_prepaid_blocks').where('template_line_id', templateLineId).delete();
+    return false;
+  }
+
+  const values: Record<string, unknown> = {};
+  for (const column of PREPAID_BLOCK_CONFIG_COLUMNS) {
+    values[column] = lineConfig[column] ?? null;
+  }
+  await db.table('contract_template_line_prepaid_blocks')
+    .insert({
+      tenant,
+      template_line_id: templateLineId,
+      sold_as_service_id: lineConfig.sold_as_service_id ?? null,
+      ...values,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    })
+    .onConflict(['tenant', 'template_line_id'])
+    .merge({ sold_as_service_id: lineConfig.sold_as_service_id ?? null, ...values, updated_at: trx.fn.now() });
   return true;
 }
 

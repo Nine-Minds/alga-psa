@@ -1237,7 +1237,8 @@
       "unitRateLabel": "Eenheidstarief:",
       "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
       "unitAmountLabel": "Terugkerend bedrag:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid blok"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
@@ -1311,6 +1312,10 @@
       "hypothetical": "Hypothetisch klantprofiel",
       "open": "Simuleren",
       "title": "Sjabloonsimulatie"
+    },
+    "prepaidBlock": {
+      "setup": "Verkopen als prepaid blok",
+      "blockNeutral": "{{hours}} u / {{price}} (in de valuta van de klant)"
     }
   },
   "quickStart": {
@@ -1812,7 +1817,8 @@
       "products": "Producten",
       "hourlyServices": "Uurservices",
       "usageBasedServices": "Verbruiksgebaseerde services",
-      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})"
+      "fixedFeeServicesNumbered": "Diensten met vaste prijs ({{number}})",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "client": "Klant",
@@ -1941,6 +1947,14 @@
       "itemPo": "Bevestig PO-vereisten (indien van toepassing)",
       "itemDates": "Verifieer de start- en einddatums",
       "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} regel",
+      "badgeCount_other": "{{count}} regels",
+      "blockSummary": "{{hours}} uur voor {{price}}",
+      "expiresAfter_one": "verloopt na {{count}} maand",
+      "expiresAfter_other": "verloopt na {{count}} maanden",
+      "neverExpires": "verloopt nooit"
     }
   },
   "wizardTemplateLines": {
@@ -2168,7 +2182,8 @@
       "fixedFeeServices": "Vaste-vergoedingsservices",
       "products": "Producten",
       "hourlyServices": "Uurservices",
-      "usageBasedServices": "Verbruiksgebaseerde services"
+      "usageBasedServices": "Verbruiksgebaseerde services",
+      "prepaidBlocks": "Prepaid blokregels"
     },
     "fields": {
       "templateName": "Sjabloonnaam",
@@ -2229,6 +2244,9 @@
       "unitSingular": "eenheid",
       "rolloverEnabled": "Overloop ingeschakeld",
       "period": "Periode: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} uur voor {{price}} (in de valuta van de klant)"
     }
   },
   "templatePreview": {
@@ -2761,13 +2779,31 @@
       "triggerRenewalPending": "Wordt met de regel opgeslagen. Hoe verlengingen blokken uitgeven is nog niet bevestigd, dus er wordt nog niets uitgegeven.",
       "tier": "Vervolgfactuur",
       "tierDraft": "Een concept ter controle aanmaken",
-      "tierAutoIssue": "Automatisch afronden en verzenden"
+      "tierAutoIssue": "Automatisch afronden en verzenden",
+      "blockPriceNeutral": "Blokprijs (in de valuta van de klant)"
     },
     "status": {
       "pending": "In behandeling",
       "active": "Actief",
       "expired": "Verlopen",
       "voided": "Geannuleerd"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Regels met prepaid blokken",
+    "description": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok; uren boven het blok worden gefactureerd tegen het uurtarief.",
+    "templateDescription": "Verkoop uren vooraf. Elke regel factureert een blok uren tegen een vaste prijs en geregistreerde tijd verbruikt het blok. De prijs neemt de valuta van de klant over wanneer er een contract van deze sjabloon wordt gemaakt.",
+    "lineName": "Regelnaam (optioneel)",
+    "lineNamePlaceholder": "Prepaid blok",
+    "removeLine": "Prepaid blokregel verwijderen",
+    "serviceItem": "Dienst {{index}}",
+    "overageRate": "Uurtarief",
+    "removeService": "Dienst verwijderen",
+    "addService": "Dienst aan deze regel toevoegen",
+    "addLine": "Prepaid blokregel toevoegen",
+    "validation": {
+      "invalidBlock": "Vul de blokgrootte, prijs en triggers van elke prepaid blokregel in voordat u afrondt.",
+      "rateRequired": "De prepaid blokdienst \"{{serviceName}}\" heeft een uurtarief boven nul nodig (uren boven het blok worden tegen dat tarief gefactureerd)."
     }
   }
 }

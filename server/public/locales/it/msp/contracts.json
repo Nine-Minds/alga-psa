@@ -1237,7 +1237,8 @@
       "unitRateLabel": "Tariffa unitaria:",
       "unitRateFromCatalog": "Prezzo di catalogo nella valuta del cliente",
       "unitAmountLabel": "Importo ricorrente:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Blocco prepagato"
     },
     "editBasicsTitle": "Modifica nozioni di base del modello",
     "editGuidanceTitle": "Modifica indicazioni del modello",
@@ -1311,6 +1312,10 @@
       "hypothetical": "Profilo cliente ipotetico",
       "open": "Simula",
       "title": "Simulazione del modello"
+    },
+    "prepaidBlock": {
+      "setup": "Vendi come blocco prepagato",
+      "blockNeutral": "{{hours}} h / {{price}} (nella valuta del cliente)"
     }
   },
   "quickStart": {
@@ -1812,7 +1817,8 @@
       "products": "Prodotti",
       "hourlyServices": "Servizi orari",
       "usageBasedServices": "Servizi basati su utilizzo",
-      "fixedFeeServicesNumbered": "Servizi a tariffa fissa ({{number}})"
+      "fixedFeeServicesNumbered": "Servizi a tariffa fissa ({{number}})",
+      "prepaidBlocks": "Righe di blocchi prepagati"
     },
     "fields": {
       "client": "Cliente",
@@ -1941,6 +1947,14 @@
       "itemPo": "Conferma i requisiti dell'ordine d'acquisto (se presenti)",
       "itemDates": "Verifica le date di inizio e fine",
       "itemEditLater": "Ricorda: puoi modificare il contratto in seguito se necessario"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} riga",
+      "badgeCount_other": "{{count}} righe",
+      "blockSummary": "{{hours}} ore per {{price}}",
+      "expiresAfter_one": "scade dopo {{count}} mese",
+      "expiresAfter_other": "scade dopo {{count}} mesi",
+      "neverExpires": "non scade mai"
     }
   },
   "wizardTemplateLines": {
@@ -2168,7 +2182,8 @@
       "fixedFeeServices": "Servizi a tariffa fissa",
       "products": "Prodotti",
       "hourlyServices": "Servizi orari",
-      "usageBasedServices": "Servizi basati su utilizzo"
+      "usageBasedServices": "Servizi basati su utilizzo",
+      "prepaidBlocks": "Righe di blocchi prepagati"
     },
     "fields": {
       "templateName": "Nome del modello",
@@ -2229,6 +2244,9 @@
       "unitSingular": "unità",
       "rolloverEnabled": "Riporto abilitato",
       "period": "Periodo: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)"
     }
   },
   "templatePreview": {
@@ -2761,13 +2779,31 @@
       "triggerRenewalPending": "Salvato con la riga. Il modo in cui i rinnovi emettono blocchi è in attesa di conferma, quindi per ora non viene emesso nulla.",
       "tier": "Fattura successiva",
       "tierDraft": "Crea una bozza da rivedere",
-      "tierAutoIssue": "Finalizza e invia automaticamente"
+      "tierAutoIssue": "Finalizza e invia automaticamente",
+      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)"
     },
     "status": {
       "pending": "In sospeso",
       "active": "Attivo",
       "expired": "Scaduto",
       "voided": "Annullato"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Righe di blocchi prepagati",
+    "description": "Vendi ore in anticipo. Ogni riga fattura un blocco di ore a prezzo fisso e il tempo registrato consuma il blocco; le ore oltre il blocco vengono fatturate alla tariffa oraria.",
+    "templateDescription": "Vendi ore in anticipo. Ogni riga fattura un blocco di ore a prezzo fisso e il tempo registrato consuma il blocco. Il prezzo assume la valuta del cliente quando da questo modello viene creato un contratto.",
+    "lineName": "Nome della riga (facoltativo)",
+    "lineNamePlaceholder": "Blocco prepagato",
+    "removeLine": "Rimuovi riga di blocco prepagato",
+    "serviceItem": "Servizio {{index}}",
+    "overageRate": "Tariffa oraria",
+    "removeService": "Rimuovi servizio",
+    "addService": "Aggiungi servizio a questa riga",
+    "addLine": "Aggiungi riga di blocco prepagato",
+    "validation": {
+      "invalidBlock": "Completa dimensione, prezzo e trigger di ogni riga di blocco prepagato prima di terminare.",
+      "rateRequired": "Il servizio di blocco prepagato \"{{serviceName}}\" richiede una tariffa oraria superiore a zero (le ore oltre il blocco vengono fatturate a quella tariffa)."
     }
   }
 }

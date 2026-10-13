@@ -1,7 +1,8 @@
 // server/src/lib/actions/contractLineMappingActions.ts
 'use server'
 
-import { resolveContractLineDisplayKinds } from '../services/prepaidBlockConfigService';
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
+import { snapshotContractLinePrepaidBlockToTemplateLine } from '@alga-psa/shared/billingClients/templateClone';
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -191,6 +192,10 @@ export async function ensureTemplateLineSnapshot(
       cadence_owner: contractRecurringStorage.cadence_owner,
       updated_at: now,
     });
+
+  // Prepaid Block overlay (Hourly line + config row) rides along with the template line.
+  // LEVERAGE: pattern template-line-clone — this snapshot duplicates repositories/contractLineRepository.ts ensureTemplateLineSnapshot; the prepaid copy is shared via shared/billingClients/templateClone.ts so the two cannot drift.
+  await snapshotContractLinePrepaidBlockToTemplateLine(knex, tenant, contractLineId, contractLineId);
 
   const services = await tenantScopedTable(knex, tenant, 'contract_line_services')
     .where({ contract_line_id: contractLineId });
@@ -544,7 +549,18 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
-        return rows.map((row) => normalizeDetailedContractLine(row));
+        const templateDisplayKinds = await resolveTemplateLineDisplayKinds(
+          trx,
+          tenant,
+          rows.map((row) => ({
+            contract_line_id: String(row.contract_line_id),
+            contract_line_type: String(row.contract_line_type),
+          })),
+        );
+        return rows.map((row) => ({
+          ...normalizeDetailedContractLine(row),
+          display_kind: templateDisplayKinds.get(String(row.contract_line_id)) ?? row.contract_line_type,
+        }));
       }
 
       const rows = await ContractLineMapping.getDetailedContractLines(contractId) as unknown as DetailedContractLineResultRow[];

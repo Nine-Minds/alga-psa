@@ -10,12 +10,19 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import type { IContractLinePrepaidBlock, ContractLineBlockIssuanceTriggerKind, HourBlockStatus } from '@alga-psa/types';
+import type {
+  IContractLinePrepaidBlock,
+  IContractTemplateLinePrepaidBlock,
+  ContractLineBlockIssuanceTriggerKind,
+  HourBlockStatus,
+} from '@alga-psa/types';
 import {
   loadCoveredServicesWithHourlyRates,
   removeContractLinePrepaidBlockInTransaction,
+  removeTemplateLinePrepaidBlockInTransaction,
   resolveContractLineDisplayKinds,
   upsertContractLinePrepaidBlockInTransaction,
+  upsertTemplateLinePrepaidBlockInTransaction,
   type PrepaidBlockConfigInput,
   type PrepaidBlockConfigWarning,
 } from '../services/prepaidBlockConfigService';
@@ -84,6 +91,90 @@ export const removeContractLinePrepaidBlock = withAuth(async (
         throw new Error('Permission denied: Cannot configure prepaid blocks');
       }
       return removeContractLinePrepaidBlockInTransaction(trx, tenant, contractLineId);
+    });
+  } catch (error) {
+    const expected = prepaidBlockActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export type TemplateLinePrepaidBlockView = {
+  template_line_id: string;
+  config: IContractTemplateLinePrepaidBlock | null;
+  services: Array<{ service_id: string; service_name: string }>;
+};
+
+/** A template line's block config plus its services (for the sold-as picker). */
+export const getTemplateLinePrepaidBlock = withAuth(async (
+  user,
+  { tenant },
+  templateLineId: string,
+): Promise<TemplateLinePrepaidBlockView | PrepaidBlockActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'billing', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view prepaid blocks');
+      }
+      const db = tenantDb(trx, tenant);
+      const config = await db.table('contract_template_line_prepaid_blocks')
+        .where({ template_line_id: templateLineId })
+        .first() as IContractTemplateLinePrepaidBlock | undefined;
+      const query = db.table('contract_template_line_services as tls');
+      db.tenantJoin(query, 'service_catalog as sc', 'sc.service_id', 'tls.service_id', { type: 'left' });
+      const rows = await (query as any)
+        .where('tls.template_line_id', templateLineId)
+        .orderBy('tls.display_order', 'asc')
+        .select('tls.service_id as service_id', 'sc.service_name as service_name') as Array<{ service_id: string; service_name: string | null }>;
+      return {
+        template_line_id: templateLineId,
+        config: config ?? null,
+        services: rows.map((r) => ({ service_id: r.service_id, service_name: r.service_name ?? r.service_id })),
+      };
+    });
+  } catch (error) {
+    const expected = prepaidBlockActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/** Create or replace a template line's Prepaid Block config (templates are currency-neutral). */
+export const upsertTemplateLinePrepaidBlock = withAuth(async (
+  user,
+  { tenant },
+  templateLineId: string,
+  config: PrepaidBlockConfigInput,
+): Promise<{ saved: true } | PrepaidBlockActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
+        throw new Error('Permission denied: Cannot configure prepaid blocks');
+      }
+      await upsertTemplateLinePrepaidBlockInTransaction(trx, tenant, templateLineId, config);
+      return { saved: true as const };
+    });
+  } catch (error) {
+    const expected = prepaidBlockActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const removeTemplateLinePrepaidBlock = withAuth(async (
+  user,
+  { tenant },
+  templateLineId: string,
+): Promise<{ removed: boolean } | PrepaidBlockActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'billing', 'update', trx)) {
+        throw new Error('Permission denied: Cannot configure prepaid blocks');
+      }
+      return removeTemplateLinePrepaidBlockInTransaction(trx, tenant, templateLineId);
     });
   } catch (error) {
     const expected = prepaidBlockActionErrorFrom(error);

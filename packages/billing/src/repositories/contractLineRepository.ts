@@ -13,7 +13,11 @@ import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import {
+  cloneTemplateLinePools,
+  cloneTemplateLinePrepaidBlock,
+  snapshotContractLinePrepaidBlockToTemplateLine,
+} from '@alga-psa/shared/billingClients/templateClone';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type DetailedContractLine = IContractLineMapping & {
@@ -282,6 +286,9 @@ export async function ensureTemplateLineSnapshot(
     billing_timing: baseRecurringStorage.billing_timing,
     cadence_owner: baseRecurringStorage.cadence_owner,
   });
+
+  // Prepaid Block overlay (Hourly line + config row) rides along with the template line.
+  await snapshotContractLinePrepaidBlockToTemplateLine(knex, tenant, contractLineId, targetTemplateLineId);
 
   return targetTemplateLineId;
 }
@@ -874,6 +881,10 @@ export async function cloneTemplateLineToContract(
       updated_at: now,
     });
   }
+
+  // Prepaid Block overlay: after the services exist so the sold-as service resolves. Price is minor
+  // units copied as-is; the currency is the contract's. Callers sync block issuances for the line.
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateLineId, newContractLineId);
 
   return { contract_line_id: newContractLineId, unpriced_services: unpricedServices };
 }

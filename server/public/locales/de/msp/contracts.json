@@ -1237,7 +1237,8 @@
       "unitRateLabel": "Stückpreis:",
       "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
       "unitAmountLabel": "Wiederkehrender Betrag:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid-Block"
     },
     "editBasicsTitle": "Vorlagengrundlagen bearbeiten",
     "editGuidanceTitle": "Vorlagenhinweise bearbeiten",
@@ -1311,6 +1312,10 @@
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
       "title": "Vorlagensimulation"
+    },
+    "prepaidBlock": {
+      "setup": "Als Prepaid-Block verkaufen",
+      "blockNeutral": "{{hours}} Std. / {{price}} (in der Währung des Kunden)"
     }
   },
   "quickStart": {
@@ -1812,7 +1817,8 @@
       "products": "Produkte",
       "hourlyServices": "Stunden-Services",
       "usageBasedServices": "Nutzungsbasierte Services",
-      "fixedFeeServicesNumbered": "Feste Services ({{number}})"
+      "fixedFeeServicesNumbered": "Feste Services ({{number}})",
+      "prepaidBlocks": "Prepaid-Block-Positionen"
     },
     "fields": {
       "client": "Kunde",
@@ -1941,6 +1947,14 @@
       "itemPo": "Bestellanforderungen bestätigen (falls vorhanden)",
       "itemDates": "Start- und Enddaten überprüfen",
       "itemEditLater": "Denken Sie daran: Sie können den Vertrag später bei Bedarf bearbeiten"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} Position",
+      "badgeCount_other": "{{count}} Positionen",
+      "blockSummary": "{{hours}} Stunden für {{price}}",
+      "expiresAfter_one": "läuft nach {{count}} Monat ab",
+      "expiresAfter_other": "läuft nach {{count}} Monaten ab",
+      "neverExpires": "läuft nie ab"
     }
   },
   "wizardTemplateLines": {
@@ -2168,7 +2182,8 @@
       "fixedFeeServices": "Festgebühren-Services",
       "products": "Produkte",
       "hourlyServices": "Stunden-Services",
-      "usageBasedServices": "Nutzungsbasierte Services"
+      "usageBasedServices": "Nutzungsbasierte Services",
+      "prepaidBlocks": "Prepaid-Block-Positionen"
     },
     "fields": {
       "templateName": "Vorlagenname",
@@ -2229,6 +2244,9 @@
       "unitSingular": "Einheit",
       "rolloverEnabled": "Übertrag aktiviert",
       "period": "Periode: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} Stunden für {{price}} (in der Währung des Kunden)"
     }
   },
   "templatePreview": {
@@ -2761,13 +2779,31 @@
       "triggerRenewalPending": "Wird mit der Position gespeichert. Wie Verlängerungen Blöcke ausstellen, ist noch nicht bestätigt, daher wird derzeit nichts ausgestellt.",
       "tier": "Folgerechnung",
       "tierDraft": "Entwurf zur Prüfung erstellen",
-      "tierAutoIssue": "Automatisch abschließen und senden"
+      "tierAutoIssue": "Automatisch abschließen und senden",
+      "blockPriceNeutral": "Blockpreis (in der Währung des Kunden)"
     },
     "status": {
       "pending": "Ausstehend",
       "active": "Aktiv",
       "expired": "Verfallen",
       "voided": "Storniert"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Vorausbezahlte Stundenblöcke",
+    "description": "Verkaufen Sie Stunden im Voraus. Jede Position stellt einen Stundenblock zu einem Festpreis in Rechnung, erfasste Zeit verbraucht den Block; Stunden über den Block hinaus werden zum Stundensatz abgerechnet.",
+    "templateDescription": "Verkaufen Sie Stunden im Voraus. Jede Position stellt einen Stundenblock zu einem Festpreis in Rechnung, erfasste Zeit verbraucht den Block. Der Preis übernimmt die Währung des Kunden, wenn aus dieser Vorlage ein Vertrag erstellt wird.",
+    "lineName": "Positionsname (optional)",
+    "lineNamePlaceholder": "Prepaid-Block",
+    "removeLine": "Prepaid-Block-Position entfernen",
+    "serviceItem": "Leistung {{index}}",
+    "overageRate": "Stundensatz",
+    "removeService": "Leistung entfernen",
+    "addService": "Leistung zu dieser Position hinzufügen",
+    "addLine": "Prepaid-Block-Position hinzufügen",
+    "validation": {
+      "invalidBlock": "Vervollständigen Sie Blockgröße, Preis und Auslöser für jede Prepaid-Block-Position, bevor Sie abschließen.",
+      "rateRequired": "Die Prepaid-Block-Leistung \"{{serviceName}}\" benötigt einen Stundensatz über null (Stunden über den Block hinaus werden zu diesem Satz abgerechnet)."
     }
   }
 }
