@@ -3980,6 +3980,8 @@
       "managePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per gestire le mappature contabili.",
       "loadFailed": "Impossibile caricare i dati di mappatura. Riprovare.",
       "duplicate": "Esiste già una mappatura per questa entità. Modificare invece la mappatura esistente.",
+      "duplicateTarget": "Questa destinazione è già associata a un'altra entità in questa organizzazione. Scegli una destinazione diversa.",
+      "duplicateXeroItem": "Questo articolo Xero è già associato a un altro servizio. Un articolo può essere associato a un solo servizio; per fatturare più servizi con lo stesso codice, associali a un conto di ricavo.",
       "saveFailed": "Impossibile salvare la mappatura. Riprovare.",
       "idRequiredForUpdate": "Per l’aggiornamento è necessario l’ID della mappatura.",
       "noUpdateData": "Nessun dato di aggiornamento fornito.",

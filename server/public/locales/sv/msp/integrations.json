@@ -3980,6 +3980,8 @@
       "managePermission": "Åtkomst nekad: Du har inte behörighet att hantera bokföringsmappningar.",
       "loadFailed": "Det går inte att läsa in mappningsdata. Försök igen.",
       "duplicate": "En mappning finns redan för den här entiteten. Redigera den befintliga mappningen i stället.",
+      "duplicateTarget": "Det här målet är redan kopplat till en annan enhet i organisationen. Välj ett annat mål.",
+      "duplicateXeroItem": "Den här Xero-artikeln är redan kopplad till en annan tjänst. En artikel kan bara kopplas till en tjänst; för att fakturera flera tjänster med samma kod, koppla dem till ett intäktskonto.",
       "saveFailed": "Det går inte att spara mappningen. Försök igen.",
       "idRequiredForUpdate": "Mappnings-ID krävs för uppdatering.",
       "noUpdateData": "Inga uppdateringsdata har angetts.",
