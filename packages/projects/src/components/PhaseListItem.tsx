@@ -116,6 +116,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const effectiveIsEditing = isEditing && !isBillingView;
   const isCompleted = Boolean(phase.completed_at);
   const showCompletionNudge = !isBillingView && !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
+  const showStatusScopeChip = !isBillingView && customStatusCount !== undefined && customStatusCount !== null;
   const phaseServiceName = phase.service_id
     ? services.find((service) => service.service_id === phase.service_id)?.service_name ?? null
     : null;
@@ -469,17 +470,20 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
                 )}
-                {!isBillingView && (
-                  <PhaseStatusScopeChip
-                    customStatusCount={customStatusCount}
-                    id={`phase-status-scope-${phase.phase_id}`}
-                  />
-                )}
                 <span className="chip-primary inline-flex items-center px-2 py-0.5 rounded text-xs font-medium">
                   {t('phases.taskCount', { count: taskCount ?? 0 })}
                 </span>
               </div>
             </div>
+            {/* Own row: the 250px phase panel has no width to spare beside the name */}
+            {showStatusScopeChip && (
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+                <PhaseStatusScopeChip
+                  customStatusCount={customStatusCount}
+                  id={`phase-status-scope-${phase.phase_id}`}
+                />
+              </div>
+            )}
             {showCompletionNudge && (
               <button
                 type="button"
