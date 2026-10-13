@@ -22,7 +22,7 @@ import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustme
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 // Hour-block burn MUST go through the shared canonical service too.
 import {
-  allocateTimeEntry,
+  allocateTimeEntryDetailed,
   reverseTimeEntryAllocations,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -76,6 +76,12 @@ export interface PersistedTimeEntry {
   isUpdate: boolean;
   /** Billable minutes actually stored (after the explicit-zero / actual-duration rule). */
   finalBillableDuration: number;
+  /**
+   * Set when the save drew minutes from a contract-issued Prepaid Block. The
+   * caller publishes PREPAID_BLOCK_USAGE_CHANGED after commit via
+   * publishPersistedTimeEntryEvents.
+   */
+  prepaidBlockUsage?: { clientId: string; contractLineId: string };
   /** Post-commit event for the caller to publish via publishPersistedTimeEntryEvents. */
   searchEvent: {
     eventType: TimeEntrySearchEventType;
@@ -107,6 +113,23 @@ export async function publishPersistedTimeEntryEvents(persisted: PersistedTimeEn
     });
   } catch (eventError) {
     console.error(`[TimeEntryActions] Failed to publish ${eventType} event`, eventError);
+  }
+
+  const usage = persisted.prepaidBlockUsage;
+  if (usage) {
+    try {
+      await publishEvent({
+        eventType: 'PREPAID_BLOCK_USAGE_CHANGED',
+        payload: {
+          tenantId: persisted.searchEvent.payload.tenantId,
+          clientId: usage.clientId,
+          contractLineId: usage.contractLineId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (eventError) {
+      console.error('[TimeEntryActions] Failed to publish PREPAID_BLOCK_USAGE_CHANGED event', eventError);
+    }
   }
 }
 
@@ -602,9 +625,10 @@ export async function persistTimeEntry(
   // --- End Bucket Usage Update Logic ---
 
   // --- Hour-block burn logic ---
-  // Applies only when the entry is NOT contract-covered (contracts always
-  // win), so it never fires for the bucket path above — the two are
-  // mutually exclusive by construction. Block burn is best-effort on save:
+  // The burn target is resolved inside the shared engine: a Prepaid Block
+  // line's entries draw that line's contract blocks; entries not covered by
+  // any contract line draw ad-hoc blocks; entries covered by any other
+  // contract line draw nothing (contracts always win). Block burn is best-effort on save:
   // a failure is logged, never aborts the entry save, and the nightly
   // reconcile converges allocations to the canonical FIFO state.
   // The reverse-on-update runs UNCONDITIONALLY (before any eligibility
@@ -612,6 +636,7 @@ export async function persistTimeEntry(
   // serviceless must still give its minutes back to the blocks immediately
   // — otherwise the client loses block minutes AND pays the contract/
   // hourly rate until the nightly reconcile catches up.
+  let prepaidBlockUsage: PersistedTimeEntry['prepaidBlockUsage'];
   try {
     // A caught PostgreSQL error still leaves its transaction aborted. Use
     // a nested transaction (SAVEPOINT) so a best-effort burn failure rolls
@@ -632,7 +657,7 @@ export async function persistTimeEntry(
             resultingEntry.work_item_type as string,
           );
         }
-        if (blockClientId && !resultingEntry.contract_line_id) {
+        if (blockClientId) {
           const burnEntry = {
             entry_id: savedEntryId!,
             service_id: resultingEntry.service_id,
@@ -643,9 +668,12 @@ export async function persistTimeEntry(
             work_date: resultingEntry.work_date,
             start_time: resultingEntry.start_time,
           };
-          const burned = await allocateTimeEntry(burnTrx, tenant, blockClientId, burnEntry);
+          const { target, allocations: burned } = await allocateTimeEntryDetailed(burnTrx, tenant, blockClientId, burnEntry);
           if (burned.length > 0) {
             console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
+            if (target?.kind === 'contract') {
+              prepaidBlockUsage = { clientId: blockClientId, contractLineId: target.contractLineId };
+            }
           }
         }
       }
@@ -669,6 +697,7 @@ export async function persistTimeEntry(
     entry,
     isUpdate: !!entry_id,
     finalBillableDuration,
+    prepaidBlockUsage,
     searchEvent: {
       eventType: entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED',
       payload: {

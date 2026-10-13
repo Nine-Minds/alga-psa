@@ -319,6 +319,16 @@ export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEven
 
 export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
 
+// Emitted (post-commit) when a time-entry save drew minutes from a contract-issued
+// Prepaid Block. The server subscriber runs evaluate -> replenish -> deliver scoped
+// to this client; the daily scan remains the correctness backstop.
+export const prepaidBlockUsageChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client whose prepaid block usage changed'),
+  contractLineId: z.string().describe('Prepaid Block contract line whose block was drawn'),
+}).describe('Payload for PREPAID_BLOCK_USAGE_CHANGED');
+
+export type PrepaidBlockUsageChangedEventPayload = z.infer<typeof prepaidBlockUsageChangedEventPayloadSchema>;
+
 export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   clientId: z.string().describe('Client ID whose hour blocks are expiring'),
   daysBeforeExpiration: z.number().describe('Days remaining before the hour blocks expire'),

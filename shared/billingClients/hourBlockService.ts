@@ -13,8 +13,16 @@
  * reconcile job) import this module; a stale fork that drifted on contract
  * coverage or FIFO ordering would mis-burn blocks.
  *
- * Burn model (docs/plans/2026-08-13-ad-hoc-prepaid-hour-blocks-plan.md):
- *  - Blocks catch billable time NOT matched to any contract line — contracts
+ * Burn model (docs/plans/2026-08-13-ad-hoc-prepaid-hour-blocks-plan.md and
+ * docs/plans/2026-10-13-prepaid-block-invoicing-plan.md D3):
+ *  - Every entry resolves to a BURN TARGET (`resolveBlockBurnTarget`):
+ *    `{ kind: 'contract', contractLineId }` when the entry's resolved contract
+ *    line carries a `contract_line_prepaid_blocks` config (draws ONLY blocks
+ *    issued for that line: active FIFO first, then the line's pending block as
+ *    a gap draw), `{ kind: 'adhoc' }` for the rule below, or null. Contract
+ *    blocks are never drawn by other lines' or non-contract time; ad-hoc blocks
+ *    (contract_line_id IS NULL) are never drawn by contract time.
+ *  - Ad-hoc blocks catch billable time NOT matched to any contract line — contracts
  *    always win. An entry is eligible when `contract_line_id` is null AND its
  *    service is not deterministically assignable to exactly one active
  *    contract line for the client at the entry's date.
@@ -147,34 +155,6 @@ export async function resolveClientIdForWorkItem(
 }
 
 /**
- * The one definition of "a contract line covers a service": client_contracts
- * (client, is_active) → contracts → contract_lines → contract_line_services,
- * where the client_contracts date range overlaps [from, to]. With from = to =
- * a work date this is the point-in-time predicate the burn uses. Do not add
- * extra status filters here for one caller; that would fork the rule.
- * `serviceIds` null/omitted means no service filter.
- */
-function coveringContractLinesQuery(
-  db: ReturnType<typeof tenantDb>,
-  clientId: string,
-  { serviceIds, from, to }: { serviceIds?: string[] | null; from: string; to: string },
-): Knex.QueryBuilder {
-  const query = db.table('client_contracts as cc');
-  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
-  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
-  db.tenantJoin(query, 'contract_line_services as cls', 'cls.contract_line_id', 'cl.contract_line_id');
-  query.where({ 'cc.client_id': clientId, 'cc.is_active': true });
-  if (serviceIds) {
-    query.whereIn('cls.service_id', serviceIds);
-  }
-  return query
-    .where('cc.start_date', '<=', to)
-    .where(function (this: Knex.QueryBuilder) {
-      this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', from);
-    });
-}
-
-/**
  * Number of distinct active contract lines that cover `serviceId` for the
  * client at `workDate`. Mirrors BillingEngine.getEligibleContractLineIdsFor-
  * ServiceAtDate: exactly one line means the entry is deterministically
@@ -188,203 +168,19 @@ export async function getEligibleContractLineCountForServiceAtDate(
   workDate: string,
 ): Promise<number> {
   const db = tenantDb(trx, tenant);
-  const row = await coveringContractLinesQuery(db, clientId, {
-    serviceIds: [serviceId],
-    from: workDate,
-    to: workDate,
-  })
+  const query = db.table('client_contracts as cc');
+  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
+  db.tenantJoin(query, 'contract_line_services as cls', 'cls.contract_line_id', 'cl.contract_line_id');
+  const row = await query
+    .where({ 'cc.client_id': clientId, 'cc.is_active': true, 'cls.service_id': serviceId })
+    .where('cc.start_date', '<=', workDate)
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('cc.end_date').orWhere('cc.end_date', '>=', workDate);
+    })
     .countDistinct('cl.contract_line_id as line_count')
     .first<{ line_count: string | number }>();
   return Number(row?.line_count ?? 0);
-}
-
-/** A covering-line row as read from {@link coveringContractLinesQuery}. */
-export interface ContractLineCoverageRow {
-  service_id: string;
-  service_name?: string | null;
-  contract_id: string;
-  contract_name: string;
-  client_contract_id: string;
-  contract_line_id: string;
-  contract_line_name: string;
-  start_date: string | Date;
-  end_date?: string | Date | null;
-}
-
-/**
- * Pure classification of covering-line rows (no I/O). Per service, dedupes
- * lines and decides `assignment`: 'automatic' when no two distinct lines'
- * client_contracts ranges overlap inside `window` (so the burn rule sees
- * exactly one line on every covered date and rejects every entry), otherwise
- * 'when_assigned'. Lines that follow each other in time stay 'automatic'.
- * Output is sorted by service, contract and line name.
- */
-export function classifyContractLineCoverage(
-  rows: ContractLineCoverageRow[],
-  window: { from: string; to: string },
-): ServiceContractLineCoverage[] {
-  const byService = new Map<string, { name: string; lines: Map<string, ContractLineCoverageLine> }>();
-  for (const row of rows) {
-    const start = toDateOnly(row.start_date);
-    if (!start) continue;
-    const end = toDateOnly(row.end_date ?? null);
-    let entry = byService.get(row.service_id);
-    if (!entry) {
-      entry = { name: row.service_name ?? '', lines: new Map() };
-      byService.set(row.service_id, entry);
-    }
-    const key = `${row.client_contract_id}:${row.contract_line_id}`;
-    if (!entry.lines.has(key)) {
-      entry.lines.set(key, {
-        contract_id: row.contract_id,
-        contract_name: row.contract_name,
-        client_contract_id: row.client_contract_id,
-        contract_line_id: row.contract_line_id,
-        contract_line_name: row.contract_line_name,
-        start_date: start,
-        end_date: end,
-      });
-    }
-  }
-
-  const clipStart = (l: ContractLineCoverageLine) => (l.start_date > window.from ? l.start_date : window.from);
-  const clipEnd = (l: ContractLineCoverageLine) =>
-    l.end_date && l.end_date < window.to ? l.end_date : window.to;
-
-  const result: ServiceContractLineCoverage[] = [];
-  for (const [serviceId, entry] of byService) {
-    const lines = [...entry.lines.values()].sort(
-      (a, b) =>
-        a.contract_name.localeCompare(b.contract_name) ||
-        a.contract_line_name.localeCompare(b.contract_line_name),
-    );
-    // Distinct lines (by contract_line_id) whose clipped ranges share a date.
-    let overlap = false;
-    for (let i = 0; i < lines.length && !overlap; i++) {
-      for (let j = i + 1; j < lines.length; j++) {
-        if (lines[i].contract_line_id === lines[j].contract_line_id) continue;
-        const s = clipStart(lines[i]) > clipStart(lines[j]) ? clipStart(lines[i]) : clipStart(lines[j]);
-        const e = clipEnd(lines[i]) < clipEnd(lines[j]) ? clipEnd(lines[i]) : clipEnd(lines[j]);
-        if (s <= e) {
-          overlap = true;
-          break;
-        }
-      }
-    }
-    result.push({
-      service_id: serviceId,
-      service_name: entry.name,
-      assignment: overlap ? 'when_assigned' : 'automatic',
-      lines,
-    });
-  }
-  return result.sort(
-    (a, b) => a.service_name.localeCompare(b.service_name) || a.service_id.localeCompare(b.service_id),
-  );
-}
-
-/** YYYY-MM-DD + n months, clamping the day to the target month's length. */
-function addMonthsToDateOnly(date: string, months: number): string {
-  const [y, m, d] = date.split('-').map(Number);
-  const total = y * 12 + (m - 1) + months;
-  const ny = Math.floor(total / 12);
-  const nm = (total % 12) + 1;
-  const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
-  const pad = (n: number, w = 2) => String(n).padStart(w, '0');
-  return `${pad(ny, 4)}-${pad(nm)}-${pad(Math.min(d, lastDay))}`;
-}
-
-/**
- * Raw covering-line rows for the client from the tenant's today until
- * `expirationDate` (or today + 12 months when there is none), plus the window
- * used. `serviceIds: null` means every service (unscoped). Shares
- * {@link coveringContractLinesQuery} with the burn rule. `today` is injectable
- * for tests. Callers that need several per-block windows (the list view) read
- * once over the widest window and re-classify per block with
- * {@link classifyContractLineCoverage}.
- */
-export async function getContractLineCoverageRowsForClient(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string,
-  options: {
-    serviceIds: string[] | null;
-    expirationDate?: string | Date | null;
-    /** Also cover the default no-expiry horizon (today + 12 months) when it is later than `expirationDate`. */
-    includeDefaultHorizon?: boolean;
-    today?: string;
-  },
-): Promise<{
-  rows: ContractLineCoverageRow[];
-  window: { from: string; to: string };
-  /** today + 12 months: the window end used for blocks with no expiry. */
-  defaultTo: string;
-}> {
-  let from = options.today ? toDateOnly(options.today) : null;
-  if (!from) {
-    // LEVERAGE: pattern tenant-today — tenant-calendar "today" via resolveEffectiveTimeZone, 3rd copy in this module
-    const timeZone = await resolveEffectiveTimeZone(conn, tenant);
-    from = toCalendarDateStringInTimeZone(new Date(), timeZone);
-  }
-  const expiry = toDateOnly(options.expirationDate ?? null);
-  const defaultTo = addMonthsToDateOnly(from, 12);
-  const to = expiry === null ? defaultTo : options.includeDefaultHorizon && defaultTo > expiry ? defaultTo : expiry;
-  const window = { from, to };
-  if ((options.serviceIds && options.serviceIds.length === 0) || window.to < window.from) {
-    return { rows: [], window, defaultTo };
-  }
-
-  const db = tenantDb(conn, tenant);
-  const query = coveringContractLinesQuery(db, clientId, { serviceIds: options.serviceIds, ...window });
-  db.tenantJoin(query, 'service_catalog as sc', 'sc.service_id', 'cls.service_id', { type: 'left' });
-  const rows = await query.distinct(
-    'cls.service_id as service_id',
-    'sc.service_name as service_name',
-    'c.contract_id as contract_id',
-    'c.contract_name as contract_name',
-    'cc.client_contract_id as client_contract_id',
-    'cl.contract_line_id as contract_line_id',
-    'cl.contract_line_name as contract_line_name',
-    'cc.start_date as start_date',
-    'cc.end_date as end_date',
-  );
-  return { rows: rows as ContractLineCoverageRow[], window, defaultTo };
-}
-
-/**
- * Narrows rows read over a wide window to one block: keeps rows for
- * `serviceIds` (null = all) whose client_contracts range overlaps
- * [window.from, window.to] — the same overlap predicate as the shared builder —
- * then classifies them. Lets a list view issue one query for many blocks.
- */
-export function classifyContractLineCoverageForWindow(
-  rows: ContractLineCoverageRow[],
-  options: { serviceIds: string[] | null; window: { from: string; to: string } },
-): ServiceContractLineCoverage[] {
-  const allowed = options.serviceIds ? new Set(options.serviceIds) : null;
-  const { from, to } = options.window;
-  const narrowed = rows.filter((row) => {
-    if (allowed && !allowed.has(row.service_id)) return false;
-    const start = toDateOnly(row.start_date);
-    const end = toDateOnly(row.end_date ?? null);
-    return !!start && start <= to && (end === null || end >= from);
-  });
-  return classifyContractLineCoverage(narrowed, options.window);
-}
-
-/**
- * Contract lines (per service) covering `serviceIds` for the client between
- * the tenant's today and the block's expiry, classified by how the burn rule
- * would treat time entries (see {@link classifyContractLineCoverage}).
- */
-export async function getContractLineCoverageForClient(
-  conn: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string,
-  options: { serviceIds: string[] | null; expirationDate?: string | Date | null; today?: string },
-): Promise<ServiceContractLineCoverage[]> {
-  const { rows, window } = await getContractLineCoverageRowsForClient(conn, tenant, clientId, options);
-  return classifyContractLineCoverage(rows, window);
 }
 
 /**
@@ -556,8 +352,7 @@ export async function allocateTimeEntry(
         // Immutable "ever used" marker: set once at the first burn and never
         // cleared (reversal/reconcile leave it alone), so the void guard can
         // reject a block whose allocation rows have since been deleted.
-        // Bound as a parameter: Citus rejects now() inside COALESCE in UPDATEs on distributed tables.
-        first_allocated_at: trx.raw('COALESCE(first_allocated_at, ?::timestamptz)', [now]),
+        first_allocated_at: trx.raw('COALESCE(first_allocated_at, now())'),
         updated_at: now,
       });
   }
@@ -786,7 +581,6 @@ export async function getAvailableHourBlockMinutes(
   // (no "user-local" ground truth exists, and UTC is deterministic across
   // workers). Host-local/UTC-today counted such blocks as available for up to
   // 24h, and drifted the other way east of UTC.
-  // LEVERAGE: pattern tenant-today — tenant-calendar "today" via resolveEffectiveTimeZone (see getContractLineCoverageForClient)
   const timeZone = await resolveEffectiveTimeZone(conn, tenant);
   const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
 
@@ -837,7 +631,6 @@ export async function getAvailableHourBlockMinutesForSubjects(
   if (subjects.length === 0) return result;
 
   const db = tenantDb(conn, tenant);
-  // LEVERAGE: pattern tenant-today — tenant-calendar "today" via resolveEffectiveTimeZone (see getContractLineCoverageForClient)
   const timeZone = await resolveEffectiveTimeZone(conn, tenant);
   const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
   const blocks = await db.table('hour_blocks as hb')

@@ -913,6 +913,6 @@ export const getAvailableHourBlockMinutesForClient = withAuth(async (
       throw new Error('Permission denied: Cannot read hour blocks');
     }
     const { knex } = await createTenantKnex();
-    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId);
+    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId, { adhocOnly: true });
   });
 });
