@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { isValidEmail } from '@alga-psa/core';
 import { normalizeEmailAddress } from '../email/addressUtils';
 
 /**
@@ -38,7 +39,9 @@ export const BOARD_NOTIFICATION_EMAIL_MAX_LENGTH = 254;
 /**
  * Normalize a board-notification recipient address: display names, `mailto:`,
  * case and whitespace are stripped (`normalizeEmailAddress`), then the result
- * must be a plausible address within the length cap. Returns null otherwise.
+ * must be within the length cap and pass `isValidEmail`, the same validator the
+ * ticket email send path filters with, so a saved address is never silently
+ * dropped at send time. Returns null otherwise.
  * Shared by the save action and the send-time resolver so they cannot disagree.
  */
 export function normalizeBoardNotificationEmail(value: string | null | undefined): string | null {
@@ -46,11 +49,7 @@ export function normalizeBoardNotificationEmail(value: string | null | undefined
   if (!normalized || normalized.length > BOARD_NOTIFICATION_EMAIL_MAX_LENGTH) {
     return null;
   }
-  const at = normalized.indexOf('@');
-  if (at < 1 || at !== normalized.lastIndexOf('@') || at === normalized.length - 1) {
-    return null;
-  }
-  return normalized;
+  return isValidEmail(normalized) ? normalized : null;
 }
 
 export interface ResolvedRecipient {
@@ -166,6 +165,10 @@ export async function loadMatchingRules(
   return hydrateRules(conn, tenant, rows);
 }
 
+function domainOf(address: string): string {
+  return address.slice(address.lastIndexOf('@') + 1);
+}
+
 function toDisplayName(row: { first_name?: string | null; last_name?: string | null; email: string }): string {
   const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
   return name || row.email;
@@ -226,6 +229,11 @@ export async function expandRuleRecipients(
  * - An address matching a client contact or client location is dropped (and
  *   logged): a contact created after the rule must not start receiving every
  *   client's tickets.
+ * - An address on a domain mapped to a client (`client_inbound_email_domains`)
+ *   is dropped and logged for the same reason: the mapping may have been added
+ *   after the rule was saved.
+ * - An address that is a connected inbound mailbox (`email_providers.mailbox`)
+ *   is dropped and logged: sending to it would loop the notification back in.
  * - Everything else is a non-principal address.
  */
 async function classifyRuleAddresses(
@@ -267,25 +275,47 @@ async function classifyRuleAddresses(
 
   const remaining = candidates.filter((address) => !userAddresses.has(address));
   const contactAddresses = new Set<string>();
+  const clientDomains = new Set<string>();
+  const inboundMailboxes = new Set<string>();
   if (remaining.length > 0) {
+    const remainingDomains = Array.from(new Set(remaining.map(domainOf)));
     // LEVERAGE: pattern principal-address-classification — contact / location lookup.
-    const [contactRows, additionalRows, locationRows] = await Promise.all([
+    const [contactRows, additionalRows, locationRows, domainRows, mailboxRows] = await Promise.all([
       db.table('contacts').select('email').whereRaw('lower(email) = ANY(?)', [remaining]),
       db.table('contact_additional_email_addresses').select('email_address').whereRaw('lower(email_address) = ANY(?)', [remaining]),
       db.table('client_locations').select('email').whereRaw('lower(email) = ANY(?)', [remaining]),
+      db.table('client_inbound_email_domains').select('domain').whereRaw('lower(domain) = ANY(?)', [remainingDomains]),
+      db.table('email_providers').select('mailbox').whereRaw('lower(mailbox) = ANY(?)', [remaining]),
     ]);
     for (const row of contactRows) contactAddresses.add(String(row.email).toLowerCase());
     for (const row of additionalRows) contactAddresses.add(String(row.email_address).toLowerCase());
     for (const row of locationRows) contactAddresses.add(String(row.email).toLowerCase());
+    for (const row of domainRows) clientDomains.add(String(row.domain).toLowerCase());
+    for (const row of mailboxRows) inboundMailboxes.add(String(row.mailbox).toLowerCase());
   }
 
   const addresses: AddressRecipient[] = [];
   for (const address of remaining) {
+    const boardIds = () => Array.from(boardsByAddress.get(address) ?? []);
+    // The address itself is deliberately not logged; the board is enough to find the rule.
     if (contactAddresses.has(address)) {
-      // The address itself is deliberately not logged; the board is enough to find the rule.
       logger.warn('[BoardNotificationRules] Dropped rule address that matches a client contact or location', {
         tenant,
-        boardIds: Array.from(boardsByAddress.get(address) ?? []),
+        boardIds: boardIds(),
+      });
+      continue;
+    }
+    if (clientDomains.has(domainOf(address))) {
+      logger.warn('[BoardNotificationRules] Dropped rule address on a client-mapped email domain', {
+        tenant,
+        boardIds: boardIds(),
+      });
+      continue;
+    }
+    if (inboundMailboxes.has(address)) {
+      logger.warn('[BoardNotificationRules] Dropped rule address that is a connected inbound mailbox', {
+        tenant,
+        boardIds: boardIds(),
       });
       continue;
     }

@@ -234,6 +234,30 @@ describe('board notification rules: resolve + expand (integration)', () => {
       expect(audience.addresses).toEqual([{ email: 'kept-dl@msp.test' }]);
     });
 
+    it('drops a saved address whose domain is mapped to a client after the rule was saved', async () => {
+      const { boardId } = await makeBoard('Addr late domain');
+      const clientId = uuidv4();
+      await scoped.table('clients').insert({ tenant, client_id: clientId, client_name: `Late domain client ${clientId}` });
+      await addRule({ boardId, notifyOnCreate: true, emails: ['dl@late-domain.test', 'kept-dl@msp.test'] });
+      const before = await resolveBoardNotificationAudience(db, tenant, { kind: 'created', boardId });
+      expect(before.addresses.map((a) => a.email).sort()).toEqual(['dl@late-domain.test', 'kept-dl@msp.test']);
+
+      await scoped.table('client_inbound_email_domains').insert({ tenant, client_id: clientId, domain: 'Late-Domain.test' });
+      const after = await resolveBoardNotificationAudience(db, tenant, { kind: 'created', boardId });
+      expect(after.addresses).toEqual([{ email: 'kept-dl@msp.test' }]);
+    });
+
+    it('drops a saved address that later becomes a connected inbound mailbox', async () => {
+      const { boardId } = await makeBoard('Addr late mailbox');
+      await addRule({ boardId, notifyOnCreate: true, emails: ['inbox@late-mailbox.test', 'kept-dl@msp.test'] });
+      await scoped.table('email_providers').insert({
+        id: uuidv4(), tenant, provider_type: 'google', provider_name: 'Late box', mailbox: 'Inbox@late-mailbox.test',
+        is_active: true, status: 'connected',
+      });
+      const audience = await resolveBoardNotificationAudience(db, tenant, { kind: 'created', boardId });
+      expect(audience.addresses).toEqual([{ email: 'kept-dl@msp.test' }]);
+    });
+
     it('dedupes addresses across rules and ignores addresses on a disabled rule', async () => {
       const { boardId } = await makeBoard('Addr dedupe');
       await addRule({ boardId, notifyOnCreate: true, emails: ['shared-dl@msp.test', 'a-dl@msp.test'] });

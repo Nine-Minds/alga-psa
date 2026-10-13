@@ -349,6 +349,10 @@ describe('board notification settings actions (integration)', () => {
 
     it('rejects an invalid address and a rule with more than 25 addresses, persisting nothing', async () => {
       expectError(await save([{ notify_on_create: true, email_addresses: ['not an address'] }]), 'invalid email address');
+      // Single-label domains pass a naive '@' check but are dropped by the send path's validator.
+      for (const bad of ['a@b', 'user@localhost']) {
+        expectError(await save([{ notify_on_create: true, email_addresses: [bad] }]), 'invalid email address');
+      }
       const tooMany = Array.from({ length: 26 }, (_, i) => `dl${i}@msp.test`);
       expectError(await save([{ notify_on_create: true, email_addresses: tooMany }]), 'at most 25 email addresses');
       const exactly = Array.from({ length: 25 }, (_, i) => `dl${i}@msp.test`);
