@@ -58,6 +58,16 @@ appSecrets:
 sharedTenantSecrets:
   enabled: true
 
+# Inbound attachments and the original .eml are written with the local storage
+# provider, which alga-core reads from its files PVC (<release>-sebastian-storage,
+# mounted at /data/files). That claim is ReadWriteOnce on local-path; RWO limits
+# attachment to a single node, not a single pod, and the appliance is single-node,
+# so email-service mounts the same claim. The claim's directory is handed to uid
+# 1000 by the alga-core fix-permissions init container (local-path ignores fsGroup).
+filesStorage:
+  mountPath: /data/files
+  existingClaim: alga-core-sebastian-storage
+
 # Runs as the image default uid (1000), the same uid as alga-core and
 # temporal-worker. The shared tenant-secret store is handed to uid 1000 by the
 # alga-core `fix-permissions` init container (hostPath ignores fsGroup).

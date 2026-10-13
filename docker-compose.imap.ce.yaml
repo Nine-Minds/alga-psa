@@ -110,6 +110,7 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       STORAGE_DEFAULT_PROVIDER: ${IMAP_STORAGE_DEFAULT_PROVIDER:-s3}
       STORAGE_S3_ENDPOINT: ${IMAP_STORAGE_S3_ENDPOINT:-http://minio:9000}
       STORAGE_S3_REGION: ${IMAP_STORAGE_S3_REGION:-us-east-1}
@@ -118,6 +119,7 @@ services:
       STORAGE_S3_SECRET_KEY: ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin}
       STORAGE_S3_FORCE_PATH_STYLE: ${IMAP_STORAGE_S3_FORCE_PATH_STYLE:-true}
     volumes:
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server

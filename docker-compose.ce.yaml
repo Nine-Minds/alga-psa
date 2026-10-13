@@ -247,7 +247,7 @@ services:
       # Expose a random port for health checks/monitoring
       - "3000"
     volumes:
-      # Email-attachment writes land in the shared files volume, not the container layer
+      # Shared files volume (also used by server and email-service), not the container layer
       - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
@@ -320,7 +320,10 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server

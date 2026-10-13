@@ -216,6 +216,8 @@ spec:
             - name: SECRET_FS_BASE_PATH
               value: "{{ .Values.sharedTenantSecrets.mountPath }}"
             {{- end }}
+            - name: STORAGE_LOCAL_BASE_PATH
+              value: {{ .Values.filesStorage.mountPath | quote }}
             {{- if .Values.secretsProvider.vault.addr }}
             - name: VAULT_ADDR
               value: "{{ .Values.secretsProvider.vault.addr }}"
@@ -331,6 +333,8 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
 
           volumeMounts:
+            - name: files-storage
+              mountPath: {{ .Values.filesStorage.mountPath }}
             {{- if .Values.sharedTenantSecrets.enabled }}
             - name: shared-tenant-secrets
               mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
@@ -340,6 +344,13 @@ spec:
             {{- end }}
 
       volumes:
+        - name: files-storage
+          {{- if .Values.filesStorage.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.filesStorage.existingClaim | quote }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- if .Values.sharedTenantSecrets.enabled }}
         - name: shared-tenant-secrets
           hostPath:

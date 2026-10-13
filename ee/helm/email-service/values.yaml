@@ -179,6 +179,22 @@ extraEnv: []
 extraVolumes: []
 extraVolumeMounts: []
 
+# Local-provider file storage (STORAGE_LOCAL_BASE_PATH). email-service writes
+# inbound email attachments and the original .eml here when the local storage
+# provider is used. The pod runs as uid 1000, so the image's default path under
+# /app is not writable and an explicit writable volume is always mounted.
+# Default is a pod-local emptyDir: files written there are NOT visible to the
+# server and are lost on pod restart. For attachments to reach the server's
+# storage, set existingClaim to the claim the server mounts for local storage
+# (or use the S3 provider on both sides).
+filesStorage:
+  mountPath: /data/files
+  # Name of an existing PersistentVolumeClaim to mount instead of an emptyDir.
+  # The claim must be writable by uid 1000 (fsGroup is applied for most CSI
+  # volumes; hostPath-backed classes such as local-path ignore it, so the
+  # server's fix-permissions init container must have handed it to uid 1000).
+  existingClaim: ""
+
 # Shared tenant-secret store on the single-node appliance. When enabled, mounts
 # a hostPath into the pod and points the filesystem secret provider at it via
 # SECRET_FS_BASE_PATH so this service reads the same tenant secrets alga-core

@@ -258,7 +258,7 @@ services:
       WORKFLOW_REDIS_BATCH_SIZE: "10"
       WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
     volumes:
-      # Email-attachment writes land in the shared files volume, not the container layer
+      # Shared files volume (also used by server and email-service), not the container layer
       - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
@@ -332,7 +332,10 @@ services:
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
