@@ -436,3 +436,34 @@ server was started, and portal/browser/app-to-Xero proof remains pending.
 - **Browser freshness:** run all above against an application built from the
   repaired commit. We did not start or restart a server; any preexisting review
   service is not current-head evidence.
+
+### Current builder follow-up — 2026-10-13
+
+The local fixture audit passed again against `server`; both September 1–October
+1 period rows remain `generated` with null `invoice_id` and
+`invoice_charge_detail_id`, and the October 1–November 1 candidate remains
+unclaimed. The committed production recalculation DB suite was rerun from this
+checkout: 66/66 passed. Billing package typecheck and build also passed.
+
+The current PR workflow `38374648373` completed with all non-browser required
+checks passing. Both community and enterprise production-browser jobs failed on
+the same stale E2E locator in `e2e-tests/tests/invoice-generation.spec.ts`: it
+selected `#service-select`, while the line editor correctly renders unique
+`service-select-{item_id}` IDs. The test now selects the rendered ID prefix;
+rerun the browser workflow after this test-only repair is pushed. This was an
+E2E selector failure, not evidence that the invoice editor control was absent.
+The enterprise and community browser runs otherwise reached that same test
+failure. Do not mark browser acceptance complete from this repair.
+
+On this exact checkout, a fresh enterprise production build was started with
+isolated output `server/.next-pr3499-builder-20261013`, one build worker and a
+12 GiB Node heap. At handoff it was still compiling under host pressure; record
+its final exit/result before treating production build validation as complete.
+The settlement suite passed. A local Xero-suite retry was terminated by the
+host with signal 15 before tests began; the preceding exact-head run recorded
+in this handoff remains 5/5. Companion automation coverage is recorded above;
+real schedule-writer acceptance still requires the blocked live walkthrough.
+
+**Status remains BLOCKED** for current-build browser walkthrough, portal
+comparison, real app-to-Xero-simulator delivery and companion schedule-writer
+acceptance. The app server was not started or restarted.

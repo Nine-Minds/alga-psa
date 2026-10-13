@@ -105,7 +105,7 @@ test('a manual invoice preserves its entered number, finalizes and downloads wit
   await page.locator(`#client-picker-option-${client.id}`).click();
   await page.locator('#new-invoice-number-input').fill(invoiceNumber);
   await page.getByText('Select Service', { exact: true }).click();
-  await page.locator('#service-select').click();
+  await page.locator('[id^="service-select-"]').click();
   await page.getByRole('option', { name: service.name, exact: true }).click();
   await page.locator('#quantity-input').fill('3');
   await page.locator('#rate-input').fill('12.50');
