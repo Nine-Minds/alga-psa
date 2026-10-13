@@ -210,6 +210,13 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   const nowIso = new Date().toISOString();
   const processedCycleKeys = new Set<string>();
 
+  // TODO(captain-decision-1): renewal issuance for Prepaid Block lines belongs in
+  // this loop. For each eligible renewing client contract with prepaid block
+  // lines, a 'renewal' trigger issuance (contract_line_block_issuances, due on the
+  // renewal start date, one open scheduled row per line) would be inserted under
+  // the line's config lock so the due-work runner drafts the next block for the
+  // renewal term. Not implemented pending the captain's decision on whether
+  // renewals issue a fresh block automatically.
   for (const row of candidateRows) {
     const normalized = normalizeClientContract(row as any) as unknown as Record<string, unknown>;
     const decisionDueDate = normalizeOptionalDateOnly(normalized.decision_due_date);

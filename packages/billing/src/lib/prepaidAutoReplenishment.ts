@@ -3,6 +3,7 @@ import { SharedNumberingService } from '@alga-psa/shared/services/numberingServi
 import { tenantDb } from '@alga-psa/db';
 import { createPrepaymentInvoiceInternal } from '../actions/creditActions';
 import { createHourBlockPurchaseInvoiceInternal } from '../actions/hourBlockActions';
+import { createPrepaidBlockFollowOnInvoice } from '../services/prepaidBlockFollowOnInvoice';
 
 export type PrepaidReplenishmentSubject = 'credit' | 'bucket' | 'prepaid_block';
 
@@ -70,6 +71,8 @@ export interface CreatePrepaidReplenishmentInvoiceInput {
   serviceName?: string | null;
   hourlyRate?: number | null;
   bucketUsageId?: string | null;
+  /** prepaid_block only: the `scheduled` usage-triggered issuance this invoice fulfils. */
+  issuanceId?: string | null;
 }
 
 /**
@@ -88,7 +91,9 @@ export async function createPrepaidReplenishmentInvoice(
 ): Promise<{ invoiceId: string; invoiceNumber: string }> {
   const serviceId = input.serviceId;
   const hourlyRate = input.hourlyRate;
-  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
+  // prepaid_block is priced entirely from the line config (minutes, price,
+  // currency), so `amount` is informational there.
+  if (input.subject !== 'prepaid_block' && (!Number.isSafeInteger(input.amount) || input.amount <= 0)) {
     throw new Error('Replenishment amount must be a positive integer');
   }
   if (input.subject === 'bucket' && (!serviceId || !Number.isFinite(hourlyRate ?? NaN))) {
@@ -115,6 +120,19 @@ export async function createPrepaidReplenishmentInvoice(
       invoiceNumber,
     );
     return { invoiceId: invoice.invoice_id, invoiceNumber };
+  }
+
+  if (input.subject === 'prepaid_block') {
+    if (!input.issuanceId) throw new Error('Prepaid block replenishment requires an issuance');
+    const created = await createPrepaidBlockFollowOnInvoice({
+      trx,
+      tenant: input.tenant,
+      client,
+      issuanceId: input.issuanceId,
+      invoiceNumber,
+      createdBy: null,
+    });
+    return { invoiceId: created.invoiceId, invoiceNumber };
   }
 
   if (!serviceId || hourlyRate == null) {

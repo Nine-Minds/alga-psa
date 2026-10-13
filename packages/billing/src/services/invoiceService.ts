@@ -1431,12 +1431,17 @@ async function persistFixedInvoiceCharges(
  * repeated generations for the same issuance fail fast instead of issuing two
  * blocks.
  */
-async function persistPrepaidBlockIssuance(params: {
+export async function persistPrepaidBlockIssuance(params: {
   tx: Knex.Transaction;
   tenant: string;
   invoiceId: string;
   invoiceChargeId: string;
-  charge: IPrepaidBlockCharge;
+  /** The block terms; a full engine charge or the same fields read from the line config (usage-triggered follow-ons). */
+  charge: Pick<
+    IPrepaidBlockCharge,
+    'issuance_id' | 'contract_line_id' | 'serviceId' | 'block_minutes' | 'block_price' | 'rate'
+    | 'currency_code' | 'expiry_months' | 'scope_service_ids'
+  >;
   clientId: string;
   createdBy: string | null;
   now: string;

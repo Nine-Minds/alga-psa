@@ -338,6 +338,10 @@ export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.
         blockId: z.string().describe('Hour block ID'),
         remainingMinutes: z.number().describe('Remaining minutes on the block'),
         expirationDate: z.string().describe('Block expiration date (ISO 8601)'),
+        contractName: z
+          .string()
+          .nullish()
+          .describe('Name of the contract a Prepaid Block contract-line block belongs to (absent for client-level blocks)'),
       })
     )
     .describe('Hour blocks expiring on the target date'),
