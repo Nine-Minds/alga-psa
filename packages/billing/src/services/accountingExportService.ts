@@ -297,8 +297,23 @@ export class AccountingExportService {
         });
       } catch (error) {
         for (const cleanup of scopedService?.afterRollback ?? []) await cleanup();
+        const validationErrors = error instanceof AppError && Array.isArray(error.details?.validationErrors)
+          ? error.details.validationErrors.flatMap((candidate: unknown) => {
+              if (typeof candidate !== 'object' || candidate === null) return [];
+              const item = candidate as Record<string, unknown>;
+              if (typeof item.code !== 'string' || typeof item.message !== 'string') return [];
+              return [{
+                line_id: typeof item.line_id === 'string' ? item.line_id : null,
+                code: item.code,
+                message: item.message,
+                metadata: item.metadata && typeof item.metadata === 'object' && !Array.isArray(item.metadata)
+                  ? item.metadata as Record<string, unknown>
+                  : null,
+              }];
+            })
+          : [];
         await this.repository.failExecution(batchId, executionId,
-          error instanceof Error ? error.message : 'Accounting export failed');
+          error instanceof Error ? error.message : 'Accounting export failed', validationErrors);
         throw error;
       }
       // Tax import opens its own invoice transaction, so run it only after the
@@ -344,7 +359,12 @@ export class AccountingExportService {
           {
             batchId,
             status: 'needs_attention',
-            validationErrors: openValidationErrors.slice(0, 10).map((item) => ({ code: item.code, message: item.message }))
+            validationErrors: openValidationErrors.map((item) => ({
+              line_id: item.line_id,
+              code: item.code,
+              message: item.message,
+              metadata: item.metadata,
+            }))
           }
         );
       }

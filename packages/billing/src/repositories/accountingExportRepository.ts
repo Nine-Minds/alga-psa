@@ -226,11 +226,30 @@ export class AccountingExportRepository {
     });
   }
 
-  async failExecution(batchId: string, executionId: string, notes: string): Promise<void> {
+  async failExecution(
+    batchId: string,
+    executionId: string,
+    notes: string,
+    validationErrors: Omit<CreateExportErrorInput, 'batch_id'>[] = []
+  ): Promise<boolean> {
     const tenant = this.requireTenant();
-    await this.table('accounting_export_batches', tenant)
-      .where({ batch_id: batchId, status: 'validating', execution_id: executionId })
-      .update({ status: 'failed', notes, updated_at: new Date().toISOString() });
+    return this.knex.transaction(async (trx) => {
+      const batch = await tenantDb(trx, tenant).table('accounting_export_batches')
+        .where({ tenant, batch_id: batchId, status: 'validating', execution_id: executionId })
+        .forUpdate().first('batch_id');
+      // Persist validation diagnostics only while this attempt still owns the
+      // reservation. A stale worker must not write errors onto a replacement.
+      if (!batch) return false;
+
+      const scopedRepository = new AccountingExportRepository(trx, tenant);
+      for (const error of validationErrors) {
+        await scopedRepository.addError({ ...error, batch_id: batchId });
+      }
+      const updated = await tenantDb(trx, tenant).table('accounting_export_batches')
+        .where({ tenant, batch_id: batchId, status: 'validating', execution_id: executionId })
+        .update({ status: 'failed', execution_id: null, notes, updated_at: new Date().toISOString() });
+      return updated > 0;
+    });
   }
 
   async recoverExpiredExecution(batchId: string, expiredBefore: string): Promise<boolean> {

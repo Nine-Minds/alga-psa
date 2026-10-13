@@ -65,6 +65,8 @@ const {
   persistManualInvoiceCharges,
   reconcileAutomaticInvoiceDiscounts,
   reconcileAutomaticInvoiceAdjustments,
+  calculateAndDistributeTax,
+  reconcileInvoiceAdjustmentTransaction,
   updateInvoiceTotalsAndRecordTransaction,
 } = await import('./invoiceService');
 
@@ -410,6 +412,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
       });
       await trx('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({
         service_id: null, net_amount: 30000, unit_price: 30000, tax_amount: 300, total_price: 30300,
+        is_taxable: true, tax_region: 'CONSOLIDATED-TEST', tax_rate: 1,
       });
       const configId = uuidv4();
       await trx('contract_line_service_configuration').insert({
@@ -439,6 +442,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           service_id: serviceId, client_contract_id: clientContractId, description: `Carried ${row.reason} true-up`,
           quantity: 1, unit_price: row.amount, net_amount: row.amount, total_price: row.amount,
           tax_amount: row.amount > 0 ? 20 : 0, tax_rate: 0, is_manual: false, is_discount: false, is_taxable: row.amount > 0,
+          tax_region: row.amount > 0 ? 'CONSOLIDATED-TEST' : null,
           adjustment_source_kind: 'contract_change', adjustment_source_id: uuidv4(), adjustment_source_revision: 1,
           adjustment_scope: 'service', adjustment_period_start: row.start, adjustment_period_end: row.end,
         });
@@ -471,8 +475,15 @@ describe('contract invoice adjustments (DB-backed)', () => {
         settlementId = row.item_id;
       }
 
-      const { updateInvoiceTotalsAndRecordTransaction } = await import('./invoiceService');
-      await updateInvoiceTotalsAndRecordTransaction(trx, fixture.invoiceId, { client_id: clientId }, tenant, 'CONSOLIDATED-PERIOD-DB');
+      const invoice = await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+      const client = { client_id: clientId, tax_region: 'CONSOLIDATED-TEST' };
+      // Exercise the real tax distribution pipeline against a deterministic
+      // one-percent tax calculator, then post generation principal once.
+      const taxService = { calculateTax: async (_client: string, amount: number) => ({
+        taxAmount: Math.round(amount / 100), taxRate: 1,
+      }) } as any;
+      expect(await calculateAndDistributeTax(trx, fixture.invoiceId, client, taxService, tenant)).toBe(320);
+      await updateInvoiceTotalsAndRecordTransaction(trx, fixture.invoiceId, client, tenant, 'CONSOLIDATED-PERIOD-DB');
       const expectedSubtotal = 30000 + 2000 - 3000 - 400 - expected;
       const expectedTax = 320;
       const totals = await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first('subtotal', 'tax', 'total_amount');
@@ -484,14 +495,44 @@ describe('contract invoice adjustments (DB-backed)', () => {
         .orderBy('d.service_period_start').select('f.allocated_amount', 'f.tax_amount');
       expect(canonicalAllocations.map((row) => [Number(row.allocated_amount), Number(row.tax_amount)]))
         .toEqual([[10000, 100], [20000, 200]]);
-      const manualLine = await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first();
-      expect(manualLine).toMatchObject({ description: 'Preserved manual credit', is_manual: true });
+      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first())
+        .toMatchObject({ description: 'Preserved manual credit', is_manual: true, net_amount: -400 });
       const ledger = await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).orderBy('transaction_id');
       expect(ledger).toHaveLength(1);
       expect(Number(ledger[0].amount)).toBe(expectedSubtotal + expectedTax);
-      await reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId);
-      expect(await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' }).orderBy('transaction_id')).toEqual(ledger);
-      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first()).toEqual(manualLine);
+
+      // A manual credit edit after posting exercises the same tax, totals, and
+      // delta-only ledger sequence used by BillingEngine.recalculate. Keep the
+      // manual row and settlement identity intact; rerunning it is a no-op.
+      await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).update({ net_amount: -500, unit_price: -500, total_price: -500 });
+      const recalculatePostedInvoice = async () => {
+        expect(await calculateAndDistributeTax(trx, fixture.invoiceId, client, taxService, tenant)).toBe(320);
+        const items = await trx('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId }).select('net_amount', 'tax_amount');
+        const subtotal = items.reduce((sum, item) => sum + Number(item.net_amount), 0);
+        const tax = items.reduce((sum, item) => sum + Number(item.tax_amount), 0);
+        await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({
+          subtotal, tax, total_amount: subtotal + tax,
+        });
+        await reconcileInvoiceAdjustmentTransaction(trx, tenant, invoice, subtotal + tax);
+      };
+      await recalculatePostedInvoice();
+      const afterAdjustment = await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId })
+        .whereIn('type', ['invoice_generated', 'invoice_adjustment']).orderBy('created_at').select('type', 'amount');
+      expect(afterAdjustment).toHaveLength(2);
+      expect(afterAdjustment.map((row) => [row.type, Number(row.amount)]))
+        .toEqual([['invoice_generated', expectedSubtotal + expectedTax], ['invoice_adjustment', -100]]);
+      await recalculatePostedInvoice();
+      expect(await trx('transactions').where({ tenant, invoice_id: fixture.invoiceId })
+        .whereIn('type', ['invoice_generated', 'invoice_adjustment']).orderBy('created_at').select('type', 'amount'))
+        .toEqual(afterAdjustment);
+      const adjustedInvoice = await trx('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first('subtotal', 'tax', 'total_amount');
+      expect([Number(adjustedInvoice.subtotal), Number(adjustedInvoice.tax), Number(adjustedInvoice.total_amount)])
+        .toEqual([expectedSubtotal - 100, expectedTax, expectedSubtotal + expectedTax - 100]);
+      const settledDiscount = await trx('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, adjustment_source_kind: 'discount' }).first('item_id');
+      expect(settledDiscount.item_id).toBe(settlementId);
+      expect(await trx('invoice_charges').where({ tenant, item_id: manualCreditId }).first()).toMatchObject({
+        item_id: manualCreditId, description: 'Preserved manual credit', is_manual: true, net_amount: -500,
+      });
     } finally {
       await trx.rollback();
     }

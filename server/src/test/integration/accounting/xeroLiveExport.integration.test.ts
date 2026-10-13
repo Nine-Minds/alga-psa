@@ -369,17 +369,32 @@ describe('Live Xero export integration', () => {
       amount_cents: 5000, currency_code: 'USD', service_period_start: '2025-01-01T00:00:00.000Z',
       service_period_end: '2025-01-31T00:00:00.000Z',
       payload: { service_period_source: 'canonical_detail_periods' } }] });
-    const addErrorSpy = vi.spyOn(repository, 'addError');
+    const reservationSpy = vi.spyOn(repository, 'reserveInvoicesForExport');
 
     const executionError = await service.executeBatch(batch.batch_id).then(() => null, (error: unknown) => error);
     expect(executionError).toMatchObject({
       code: 'ACCOUNTING_EXPORT_VALIDATION_FAILED',
-      details: { validationErrors: [expect.objectContaining({ code: 'missing_net_amount' })] },
+      details: { validationErrors: [expect.objectContaining({ line_id: line.line_id, code: 'missing_net_amount' })] },
     });
-    expect(addErrorSpy).toHaveBeenCalledWith(expect.objectContaining({
+    const executionId = reservationSpy.mock.calls[0]?.[4];
+    expect(executionId).toEqual(expect.any(String));
+    const persistedErrors = await repository.listErrors(batch.batch_id);
+    expect(persistedErrors).toEqual(expect.arrayContaining([expect.objectContaining({
       batch_id: batch.batch_id, line_id: line.line_id, code: 'missing_net_amount',
-    }));
+    })]));
     expect(xeroCreateMock).not.toHaveBeenCalled();
+
+    // A delayed failure callback from this attempt cannot overwrite a
+    // replacement reservation or append its stale diagnostics.
+    const replacementExecutionId = uuidv4();
+    await ctx.db('accounting_export_batches').where({ tenant, batch_id: batch.batch_id })
+      .update({ status: 'validating', execution_id: replacementExecutionId });
+    await expect(repository.failExecution(batch.batch_id, executionId!, 'stale attempt', [{
+      line_id: line.line_id, code: 'stale_validation', message: 'stale error',
+    }])).resolves.toBe(false);
+    const replacementBatch = await repository.getBatch(batch.batch_id);
+    expect(replacementBatch).toMatchObject({ status: 'validating', execution_id: replacementExecutionId });
+    expect(await repository.listErrors(batch.batch_id)).toEqual(persistedErrors);
   }, HOOK_TIMEOUT);
 
   it('T021: a realm-less Xero batch fails with XERO_REALM_REQUIRED and never reaches the Xero client', async () => {
