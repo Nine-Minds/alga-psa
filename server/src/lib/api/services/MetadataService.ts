@@ -462,6 +462,7 @@ export class MetadataService {
       'time-sheets': 'Time Management',
       'schedules': 'Time Management',
       'time-periods': 'Time Management',
+      'time-period-settings': 'Time Management',
       'invoices': 'Financial',
       'contract-lines': 'Financial',
       'financial': 'Financial',

@@ -11,10 +11,10 @@ Example: a weekly Sunday setting ended Tue 2026-10-06. A new weekly Sunday setti
 ### How the state can arise
 
 - **Server action (settings UI).** This is the only caller that takes the default path. `TimePeriodSettings.tsx:141` never sends `effective_from`.
-- **REST create.** `TimeSheetService.createTimePeriodSettings` (server/src/lib/api/services/TimeSheetService.ts:889) does not call the action. The REST schema requires `effective_from` (server/src/lib/api/schemas/timeSheet.ts:156). REST create therefore never uses the default. It also skips overlap validation, and when the new setting is active it deactivates every other setting.
-- **REST update and the action's update.** `TimeSheetService.updateTimePeriodSettings` and the `updateTimePeriodSettings` action (timePeriodSettingsActions.ts:131-132) can set `effective_to` on an existing active setting. That is how the "old setting ended mid-period" state appears. Direct data writes can also create it.
+- **REST.** Before this follow-up there was no REST endpoint for time period settings. `ApiTimeSheetController` had settings handlers, but no route mounted them and their schema did not match the table. The follow-up adds `/api/v1/time-period-settings` (see "REST endpoint" below), which goes through the same model as the action.
+- **The action's update.** The `updateTimePeriodSettings` action can set `effective_to` on an existing active setting, and so can `PUT /api/v1/time-period-settings/{id}`. That is how the "old setting ended mid-period" state appears. Direct data writes can also create it.
 
-The trigger is: an active setting is ended with `effective_to` through REST or data, and then a new setting is added from the UI. The trigger gets more likely if a visible Effective From/To field is added later (the backfill follow-up on #3206).
+The trigger is: an active setting is ended with `effective_to` through an update, REST or data, and then a new setting is added from the UI. The trigger gets more likely if a visible Effective From/To field is added later (the backfill follow-up on #3206).
 
 ## Decision
 
@@ -98,11 +98,20 @@ These are the results the tests assert. They follow from the existing suggester;
 - **Stored periods up to the current week.** `ensureTimePeriodCoversDate` finds a period covering today and does nothing. Fill-forward continues from the latest `end_date`. The old setting is no longer in force at 10-11, so the new setting's cell takes over.
 - **Stored periods end before the current week (e.g. last end 10-04).** The suggester targets 10-04. The new setting is not in force there, but the old one is. `periodContaining` does **not** clip a cell at `effective_to`, so it yields the old setting's whole cell `[10-04,10-11)`. Coverage is still contiguous and single, but the old setting's grid governs the hand-off week instead of a bridge. This is existing behavior. See Out of scope.
 
+## REST endpoint
+
+The rules live in one place: the scheduling `TimePeriodSettings` model (`packages/scheduling/src/models/timePeriodSettings.ts`). It holds `create`, `update`, `delete`, `getById` and `list`. Create owns the user-timezone default, the hand-off clamp and overlap validation. Update validates the merged row and never moves dates. Both the settings server actions and `TimeSheetService` call it. Rule failures throw `TimePeriodSettingsRuleError` with a `kind`. The action returns the message, and REST maps `invalid`, `not_found` and `overlap` to 400, 404 and 409.
+
+`/api/v1/time-period-settings` (GET, POST) and `/{id}` (GET, PUT, DELETE) are gated on `time_period` read/manage. They are PSA-only in `productSurfaceRegistry` and registered in OpenAPI with real body and response schemas. Effective dates are `YYYY-MM-DD`. POST without `effective_from` gets the same default and hand-off as the UI, using the API key user's timezone. An explicit overlapping date returns 409 and writes nothing. PUT accepts `effective_to: null` to clear the end date.
+
+Two rules are new for both callers. `effective_to` before `effective_from` is rejected (400). Deactivating a setting (`is_active: false`) skips the overlap check, because inactive settings take no part in period generation.
+
+Infra tests: `server/src/test/infrastructure/time-periods/timePeriodSettingsApi.test.ts`.
+
 ## Out of scope
 
 - Clipping suggester cells at `effective_to`, so the old setting's cell ends at its `effective_to` and the new setting bridges.
 - Unifying the inclusive and exclusive semantics of `effective_to` between `isSettingEffectiveOn` and `validateTimePeriodSettings`. A marker is left at both sites.
-- The REST create path. It requires `effective_from`, skips overlap validation, and deactivates other settings. Its divergence from the action is a separate issue.
 - Showing Effective From/To in the settings form (the backfill follow-up).
 - `doPeriodsOverlap` treats week/day settings as always overlapping and computes `getEndOfPeriodDay` from the current month.
 

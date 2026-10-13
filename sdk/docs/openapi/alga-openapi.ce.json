@@ -25134,6 +25134,256 @@
           }
         }
       },
+      "WorkV1TimePeriodSettings": {
+        "type": "object",
+        "properties": {
+          "time_period_settings_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frequency": {
+            "type": "number"
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "end_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_month": {
+            "type": "number"
+          },
+          "start_day_of_month": {
+            "type": "number"
+          },
+          "end_month": {
+            "type": "number"
+          },
+          "end_day_of_month": {
+            "type": "number"
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "time_period_settings_id",
+          "frequency",
+          "frequency_unit",
+          "start_day",
+          "end_day",
+          "start_month",
+          "start_day_of_month",
+          "end_month",
+          "end_day_of_month",
+          "effective_from",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "tenant"
+        ]
+      },
+      "WorkV1TimePeriodSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsCreateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+          }
+        },
+        "required": [
+          "frequency",
+          "frequency_unit"
+        ]
+      },
+      "WorkV1TimePeriodSettingsUpdateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive); null clears it."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Inactive settings are ignored by period generation and overlap checks."
+          }
+        }
+      },
       "QuoteIdParamV1": {
         "type": "object",
         "properties": {
@@ -98568,7 +98818,7 @@
     "/api/v1/time-periods": {
       "get": {
         "summary": "List time periods",
-        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98703,7 +98953,7 @@
       },
       "post": {
         "summary": "Create time period",
-        "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+        "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99045,7 +99295,7 @@
       },
       "get": {
         "summary": "Get time period",
-        "description": "Gets time period UUID via getTimePeriod().",
+        "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99141,7 +99391,7 @@
       },
       "put": {
         "summary": "Update time period",
-        "description": "Updates time period UUID via updateTimePeriod().",
+        "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -104979,6 +105229,452 @@
           },
           "500": {
             "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings": {
+      "get": {
+        "summary": "List time period settings",
+        "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create time period settings",
+        "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Setting created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure (field ranges, effective_to before effective_from).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings/{id}": {
+      "get": {
+        "summary": "Get time period settings",
+        "description": "Gets one time period setting by time_period_settings_id.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update time period settings",
+        "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete time period settings",
+        "description": "Deletes a time period setting. Time periods it already generated are kept.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
             "content": {
               "application/json": {
                 "schema": {

@@ -19087,7 +19087,8 @@
           "ticket.status_changed",
           "ticket.assigned",
           "ticket.closed",
-          "ticket.comment.added"
+          "ticket.comment.added",
+          "ticket.response_state_changed"
         ],
         "description": "Ticket-domain webhook events emitted by the eventBus subscriber."
       },
@@ -19100,6 +19101,7 @@
           "ticket.assigned",
           "ticket.closed",
           "ticket.comment.added",
+          "ticket.response_state_changed",
           "project.created",
           "project.updated",
           "project.status_changed",
@@ -19213,8 +19215,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19284,7 +19289,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": "object",
@@ -19568,8 +19573,11 @@
                     "status_id",
                     "status_name",
                     "is_closed",
+                    "response_state",
                     "previous_status_id",
                     "previous_status_name",
+                    "previous_response_state",
+                    "new_response_state",
                     "priority_id",
                     "priority_name",
                     "client_id",
@@ -19639,7 +19647,7 @@
                 }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": [
@@ -20536,6 +20544,24 @@
           },
           "is_internal": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ],
+            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           }
         },
         "required": [
@@ -20566,6 +20592,23 @@
           },
           "is_resolution": {
             "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
           },
           "created_at": {
             "type": "string",
@@ -20629,6 +20672,17 @@
           "is_closed": {
             "type": "boolean"
           },
+          "response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
+          },
           "previous_status_id": {
             "type": [
               "string",
@@ -20643,6 +20697,28 @@
               "null"
             ],
             "description": "Only populated on ticket.status_changed."
+          },
+          "previous_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
+          },
+          "new_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal"
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
           },
           "priority_id": {
             "type": [
@@ -21010,6 +21086,39 @@
             "type": "string",
             "enum": [
               "ticket.comment.added"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketResponseStateChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.response_state_changed"
             ]
           },
           "occurred_at": {
@@ -25025,6 +25134,256 @@
               "format": "uuid"
             },
             "description": "Required with mode=selective: the team members to keep as additional agents."
+          }
+        }
+      },
+      "WorkV1TimePeriodSettings": {
+        "type": "object",
+        "properties": {
+          "time_period_settings_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "frequency": {
+            "type": "number"
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "end_day": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "start_month": {
+            "type": "number"
+          },
+          "start_day_of_month": {
+            "type": "number"
+          },
+          "end_month": {
+            "type": "number"
+          },
+          "end_day_of_month": {
+            "type": "number"
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "time_period_settings_id",
+          "frequency",
+          "frequency_unit",
+          "start_day",
+          "end_day",
+          "start_month",
+          "start_day_of_month",
+          "end_month",
+          "end_day_of_month",
+          "effective_from",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "tenant"
+        ]
+      },
+      "WorkV1TimePeriodSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "WorkV1TimePeriodSettingsCreateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+          }
+        },
+        "required": [
+          "frequency",
+          "frequency_unit"
+        ]
+      },
+      "WorkV1TimePeriodSettingsUpdateBody": {
+        "type": "object",
+        "properties": {
+          "frequency": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+          },
+          "frequency_unit": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "start_day": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+          },
+          "end_day": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+          },
+          "start_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: first month. Defaults to 1."
+          },
+          "start_day_of_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31,
+            "description": "year: first day of start_month. Defaults to 1."
+          },
+          "end_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "year: last month. Defaults to 12."
+          },
+          "end_day_of_month": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31,
+            "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+          },
+          "effective_from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+          },
+          "effective_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Last day the setting is in force (inclusive); null clears it."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Inactive settings are ignored by period generation and overlap checks."
           }
         }
       },
@@ -98462,7 +98821,7 @@
     "/api/v1/time-periods": {
       "get": {
         "summary": "List time periods",
-        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+        "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98597,7 +98956,7 @@
       },
       "post": {
         "summary": "Create time period",
-        "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+        "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98939,7 +99298,7 @@
       },
       "get": {
         "summary": "Get time period",
-        "description": "Gets time period UUID via getTimePeriod().",
+        "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99035,7 +99394,7 @@
       },
       "put": {
         "summary": "Update time period",
-        "description": "Updates time period UUID via updateTimePeriod().",
+        "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -104873,6 +105232,452 @@
           },
           "500": {
             "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings": {
+      "get": {
+        "summary": "List time period settings",
+        "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create time period settings",
+        "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsCreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Setting created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure (field ranges, effective_to before effective_from).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/time-period-settings/{id}": {
+      "get": {
+        "summary": "Get time period settings",
+        "description": "Gets one time period setting by time_period_settings_id.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time period setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update time period settings",
+        "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TimePeriodSettingsUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated setting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete time period settings",
+        "description": "Deletes a time period setting. Time periods it already generated are kept.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiTimeSheetController",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "time_period",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (time_period:manage for writes, time_period:read for reads).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Time period settings not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -137303,7 +138108,7 @@
     "ticket.comment.added": {
       "post": {
         "summary": "Outbound delivery: ticket.comment.added",
-        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "description": "Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included. Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
         "tags": [
           "Webhooks"
         ],
@@ -137378,6 +138183,99 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TicketCommentAddedDeliveryV1"
+              },
+              "description": "Signed JSON envelope."
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Endpoint accepted the delivery (any 2xx is treated as success)."
+          },
+          "410": {
+            "description": "Endpoint indicates the resource is permanently gone; webhook will be auto-disabled."
+          }
+        }
+      }
+    },
+    "ticket.response_state_changed": {
+      "post": {
+        "summary": "Outbound delivery: ticket.response_state_changed",
+        "description": "Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.",
+        "tags": [
+          "Webhooks"
+        ],
+        "extensions": {
+          "x-alga-event-type": "ticket.response_state_changed",
+          "x-rbac-resource": "webhook"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`."
+            },
+            "required": true,
+            "description": "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.",
+            "name": "x-alga-signature",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-webhook-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-event-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/WebhookEventTypeV1"
+            },
+            "required": true,
+            "name": "x-alga-event-type",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "x-alga-delivery-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stringified attempt count, starts at 1."
+            },
+            "required": true,
+            "description": "Stringified attempt count, starts at 1.",
+            "name": "x-alga-delivery-attempt",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Signed JSON envelope.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketResponseStateChangedDeliveryV1"
               },
               "description": "Signed JSON envelope."
             }

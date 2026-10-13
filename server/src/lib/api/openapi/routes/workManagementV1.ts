@@ -14,6 +14,11 @@ import {
   stopwatchSessionResponseSchema,
   updateStopwatchSchema,
 } from '../../schemas/stopwatch';
+import {
+  createTimePeriodSettingsSchema,
+  timePeriodSettingsResponseSchema,
+  updateTimePeriodSettingsSchema,
+} from '../../schemas/timeSheet';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -1219,5 +1224,124 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: IdParam, body: { schema: TicketMaterialBody } },
     responses: ticketStdResponses({ code: 201, description: 'Material added.' }),
     extensions: ticketExt('update'), edition: 'both',
+  });
+
+  // ==========================================================================
+  // Time period settings - /api/v1/time-period-settings
+  // ==========================================================================
+  const TimePeriodSettingsSchema = registry.registerSchema('WorkV1TimePeriodSettings', timePeriodSettingsResponseSchema);
+  const TimePeriodSettingsResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsResponse',
+    zOpenApi.object({ data: TimePeriodSettingsSchema }),
+  );
+  const TimePeriodSettingsListResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsListResponse',
+    zOpenApi.object({ data: zOpenApi.array(TimePeriodSettingsSchema) }),
+  );
+  const TimePeriodSettingsCreateBody = registry.registerSchema('WorkV1TimePeriodSettingsCreateBody', createTimePeriodSettingsSchema);
+  const TimePeriodSettingsUpdateBody = registry.registerSchema('WorkV1TimePeriodSettingsUpdateBody', updateTimePeriodSettingsSchema);
+
+  const timePeriodSettingsExtensions = (action: 'read' | 'manage') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_period',
+    'x-rbac-action': action,
+  });
+  const timePeriodSettingsCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_period:manage for writes, time_period:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const timePeriodSettingsNotFound = { description: 'Time period settings not found.', schema: ApiError };
+  const timePeriodSettingsOverlap = {
+    description: 'The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.',
+    schema: ApiError,
+  };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings',
+    summary: 'List time period settings',
+    description: 'Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Time period settings.', schema: TimePeriodSettingsListResponse },
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/time-period-settings',
+    summary: 'Create time period settings',
+    description: 'Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller\'s timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TimePeriodSettingsCreateBody } },
+    responses: {
+      201: { description: 'Setting created.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure (field ranges, effective_to before effective_from).', schema: ApiError },
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Get time period settings',
+    description: 'Gets one time period setting by time_period_settings_id.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Time period setting.', schema: TimePeriodSettingsResponse },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Update time period settings',
+    description: 'Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TimePeriodSettingsUpdateBody } },
+    responses: {
+      200: { description: 'Updated setting.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: timePeriodSettingsNotFound,
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Delete time period settings',
+    description: 'Deletes a time period setting. Time periods it already generated are kept.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Deleted.', emptyBody: true },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
   });
 }

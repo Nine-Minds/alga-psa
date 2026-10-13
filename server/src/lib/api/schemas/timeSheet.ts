@@ -146,33 +146,52 @@ export const timePeriodResponseSchema = z.object({
 });
 
 // Time period settings schemas
-export const createTimePeriodSettingsSchema = z.object({
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1),
-  start_day: z.number().min(1).max(7).optional(), // 1=Monday, 7=Sunday
-  end_day: z.number().min(1).max(7).optional(),
-  start_month: z.number().min(1).max(12).optional(),
-  end_month: z.number().min(1).max(12).optional(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.optional(),
-  is_active: z.boolean().optional().default(true)
+// Settings drive period generation. Columns mirror time_period_settings; effective dates are calendar
+// dates and effective_to is the last day the setting is in force (inclusive).
+const timePeriodSettingsUnitSchema = z.enum(['day', 'week', 'month', 'year']);
+const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a calendar date (YYYY-MM-DD)');
+
+const timePeriodSettingsFieldsSchema = z.object({
+  frequency: z.number().int().positive().describe('Number of frequency_unit units per period (e.g. 1 with week = weekly).'),
+  frequency_unit: timePeriodSettingsUnitSchema,
+  start_day: z.number().int().min(1).max(31).optional()
+    .describe('week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1.'),
+  end_day: z.number().int().min(0).max(31).optional()
+    .describe('month: last day of the period, or 0 for the end of the month. Defaults to 0.'),
+  start_month: z.number().int().min(1).max(12).optional().describe('year: first month. Defaults to 1.'),
+  start_day_of_month: z.number().int().min(1).max(31).optional().describe('year: first day of start_month. Defaults to 1.'),
+  end_month: z.number().int().min(1).max(12).optional().describe('year: last month. Defaults to 12.'),
+  end_day_of_month: z.number().int().min(0).max(31).optional()
+    .describe('year: last day of end_month, or 0 for the end of the month. Defaults to 0.'),
+  effective_from: calendarDateSchema.optional().describe(
+    'First day the setting is in force. When omitted, defaults to the start of the period containing today in the ' +
+    "caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+  ),
+  effective_to: calendarDateSchema.optional().describe('Last day the setting is in force (inclusive). Omit for open-ended.'),
 });
 
-export const updateTimePeriodSettingsSchema = createUpdateSchema(createTimePeriodSettingsSchema);
+export const createTimePeriodSettingsSchema = timePeriodSettingsFieldsSchema;
+
+export const updateTimePeriodSettingsSchema = timePeriodSettingsFieldsSchema.partial().extend({
+  effective_to: calendarDateSchema.nullable().optional().describe('Last day the setting is in force (inclusive); null clears it.'),
+  is_active: z.boolean().optional().describe('Inactive settings are ignored by period generation and overlap checks.'),
+});
 
 export const timePeriodSettingsResponseSchema = z.object({
-  settings_id: uuidSchema,
-  frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number(),
+  time_period_settings_id: uuidSchema,
+  frequency: z.number(),
+  frequency_unit: timePeriodSettingsUnitSchema,
   start_day: z.number().nullable(),
   end_day: z.number().nullable(),
-  start_month: z.number().nullable(),
-  end_month: z.number().nullable(),
-  effective_from: dateSchema,
-  effective_to: dateSchema.nullable(),
+  start_month: z.number(),
+  start_day_of_month: z.number(),
+  end_month: z.number(),
+  end_day_of_month: z.number(),
+  effective_from: calendarDateSchema,
+  effective_to: calendarDateSchema.optional(),
   is_active: z.boolean(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string().datetime({ offset: true }),
+  updated_at: z.string().datetime({ offset: true }),
   tenant: uuidSchema
 });
 

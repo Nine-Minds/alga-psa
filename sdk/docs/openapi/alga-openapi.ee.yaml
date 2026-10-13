@@ -647,7 +647,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a49
             - asc
             - desc
         username:
@@ -660,7 +660,7 @@ components:
           type: string
         user_type:
           type: string
-          enum:
+          enum: &a50
             - internal
             - client
             - admin
@@ -673,17 +673,17 @@ components:
           format: uuid
         is_inactive:
           type: string
-          enum:
+          enum: &a51
             - "true"
             - "false"
         include_permissions:
           type: string
-          enum:
+          enum: &a52
             - "true"
             - "false"
         include_teams:
           type: string
-          enum:
+          enum: &a53
             - "true"
             - "false"
         fields:
@@ -699,7 +699,7 @@ components:
             field names.
         user_type:
           type: string
-          enum:
+          enum: &a54
             - internal
             - client
             - admin
@@ -712,7 +712,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum:
+          enum: &a55
             - "true"
             - "false"
         limit:
@@ -747,14 +747,14 @@ components:
           type: string
         is_inactive:
           type: string
-          enum:
+          enum: &a47
             - "true"
             - "false"
         sort:
           type: string
         order:
           type: string
-          enum:
+          enum: &a48
             - asc
             - desc
     AccessRoleListQueryV1:
@@ -768,14 +768,14 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a40
             - asc
             - desc
         role_name:
           type: string
         has_permissions:
           type: string
-          enum:
+          enum: &a41
             - "true"
             - "false"
         permission_resource:
@@ -784,7 +784,7 @@ components:
           type: string
         is_template:
           type: string
-          enum:
+          enum: &a42
             - "true"
             - "false"
     AccessPermissionListQueryV1:
@@ -798,7 +798,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a39
             - asc
             - desc
         resource:
@@ -816,7 +816,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a43
             - asc
             - desc
         team_name:
@@ -840,14 +840,14 @@ components:
           format: uuid
         has_manager:
           type: string
-          enum:
+          enum: &a44
             - "true"
             - "false"
         sort:
           type: string
         order:
           type: string
-          enum:
+          enum: &a45
             - asc
             - desc
     AccessTeamAnalyticsQueryV1:
@@ -863,7 +863,7 @@ components:
             array.
         granularity:
           type: string
-          enum:
+          enum: &a46
             - daily
             - weekly
             - monthly
@@ -889,7 +889,7 @@ components:
           type: string
         user_type:
           type: string
-          enum:
+          enum: &a1
             - internal
             - client
             - admin
@@ -931,11 +931,7 @@ components:
           type: string
         user_type:
           type: string
-          enum:
-            - internal
-            - client
-            - admin
-            - contractor
+          enum: *a1
         contact_id:
           type: string
           format: uuid
@@ -1282,7 +1278,7 @@ components:
           description: Sort column. Defaults to created_at.
         order:
           type: string
-          enum:
+          enum: &a56
             - asc
             - desc
           description: Sort direction. Defaults to desc.
@@ -1312,7 +1308,7 @@ components:
             AssetService.list.
         is_active:
           type: string
-          enum:
+          enum: &a57
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -1345,21 +1341,21 @@ components:
           description: Partial client name match; joins clients on client_id and tenant.
         has_warranty:
           type: string
-          enum:
+          enum: &a58
             - "true"
             - "false"
           description: true requires warranty_end_date to be non-null; false requires it
             to be null.
         warranty_expired:
           type: string
-          enum:
+          enum: &a59
             - "true"
             - "false"
           description: true filters warranty_end_date before now; false filters future
             warranty dates or no warranty.
         maintenance_due:
           type: string
-          enum:
+          enum: &a60
             - "true"
             - "false"
           description: Accepted by validation, but not currently applied by
@@ -1385,7 +1381,7 @@ components:
       properties:
         format:
           type: string
-          enum:
+          enum: &a61
             - csv
             - json
           description: Export format. csv (default) returns text/csv as an attachment;
@@ -2693,7 +2689,7 @@ components:
           type: array
           items:
             type: string
-            enum:
+            enum: &a62
               - asset_tag
               - name
               - serial_number
@@ -2720,7 +2716,7 @@ components:
           description: Optional client UUID filters.
         include_extension_data:
           type: string
-          enum:
+          enum: &a63
             - "true"
             - "false"
           description: When true, the service fetches asset-type-specific extension data
@@ -3196,7 +3192,7 @@ components:
       properties:
         type:
           type: string
-          enum:
+          enum: &a64
             - splashtop
             - teamviewer
             - vnc
@@ -3221,7 +3217,7 @@ components:
           type: string
         include_uninstalled:
           type: string
-          enum:
+          enum: &a65
             - "true"
             - "false"
     AssetSoftwareResponse:
@@ -3443,7 +3439,7 @@ components:
             orders executions by started_at desc.
         order:
           type: string
-          enum:
+          enum: &a66
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3468,7 +3464,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum:
+          enum: &a67
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3478,7 +3474,7 @@ components:
           description: Filter executions by parent automation rule UUID.
         status:
           type: string
-          enum:
+          enum: &a3
             - pending
             - running
             - completed
@@ -3505,14 +3501,14 @@ components:
           description: Maximum execution duration in milliseconds.
         has_errors:
           type: string
-          enum:
+          enum: &a68
             - "true"
             - "false"
           description: Filter by whether the execution has errors; transformed to boolean
             by validation.
         trigger_type:
           type: string
-          enum:
+          enum: &a2
             - time_based
             - event_based
             - condition_based
@@ -3536,7 +3532,7 @@ components:
             rules by created_at desc.
         order:
           type: string
-          enum:
+          enum: &a69
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3561,7 +3557,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum:
+          enum: &a70
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3570,7 +3566,7 @@ components:
           description: Optional rule name filter.
         status:
           type: string
-          enum:
+          enum: &a5
             - active
             - inactive
             - draft
@@ -3578,17 +3574,11 @@ components:
           description: Filter by automation rule status.
         trigger_type:
           type: string
-          enum:
-            - time_based
-            - event_based
-            - condition_based
-            - manual
-            - recurring
-            - webhook
+          enum: *a2
           description: Filter by trigger type.
         priority:
           type: string
-          enum:
+          enum: &a6
             - low
             - normal
             - high
@@ -3633,7 +3623,7 @@ components:
             templates by created_at desc.
         order:
           type: string
-          enum:
+          enum: &a71
             - asc
             - desc
           description: Accepted by shared list query validation.
@@ -3658,7 +3648,7 @@ components:
           description: Accepted by shared filter validation.
         is_active:
           type: string
-          enum:
+          enum: &a72
             - "true"
             - "false"
           description: Accepted by shared filter validation and transformed to boolean.
@@ -3692,7 +3682,7 @@ components:
           description: Optional upper bound for performance window.
         group_by:
           type: string
-          enum:
+          enum: &a73
             - hour
             - day
             - week
@@ -3761,14 +3751,7 @@ components:
           description: Trigger payload captured when execution started.
         status:
           type: string
-          enum:
-            - pending
-            - running
-            - completed
-            - failed
-            - cancelled
-            - timeout
-            - skipped
+          enum: *a3
           description: Current execution status.
         started_at:
           type: string
@@ -3928,19 +3911,13 @@ components:
               type: array
               items:
                 type: string
-                enum:
-                  - time_based
-                  - event_based
-                  - condition_based
-                  - manual
-                  - recurring
-                  - webhook
+                enum: *a2
               description: Valid automation trigger types.
             action_types:
               type: array
               items:
                 type: string
-                enum:
+                enum: &a4
                   - email_notification
                   - sms_notification
                   - webhook_call
@@ -3968,14 +3945,7 @@ components:
               type: array
               items:
                 type: string
-                enum:
-                  - pending
-                  - running
-                  - completed
-                  - failed
-                  - cancelled
-                  - timeout
-                  - skipped
+                enum: *a3
               description: Valid automation execution statuses.
             priority_levels:
               type: array
@@ -4060,19 +4030,7 @@ components:
       properties:
         type:
           type: string
-          enum:
-            - email_notification
-            - sms_notification
-            - webhook_call
-            - database_update
-            - ticket_creation
-            - ticket_update
-            - project_update
-            - time_entry_creation
-            - invoice_generation
-            - custom_script
-            - workflow_execution
-            - system_command
+          enum: *a4
           description: Automation action type.
         config:
           type: object
@@ -4135,29 +4093,15 @@ components:
             - "null"
         status:
           type: string
-          enum:
-            - active
-            - inactive
-            - draft
-            - error
+          enum: *a5
           description: Current automation rule status.
         priority:
           type: string
-          enum:
-            - low
-            - normal
-            - high
-            - critical
+          enum: *a6
           description: Current automation rule priority.
         trigger_type:
           type: string
-          enum:
-            - time_based
-            - event_based
-            - condition_based
-            - manual
-            - recurring
-            - webhook
+          enum: *a2
           description: Trigger type used to start rule execution.
         trigger_config:
           type: object
@@ -4248,29 +4192,15 @@ components:
           type: string
         status:
           type: string
-          enum:
-            - active
-            - inactive
-            - draft
-            - error
+          enum: *a5
           description: Defaults to draft when omitted.
         priority:
           type: string
-          enum:
-            - low
-            - normal
-            - high
-            - critical
+          enum: *a6
           description: Defaults to normal when omitted.
         trigger_type:
           type: string
-          enum:
-            - time_based
-            - event_based
-            - condition_based
-            - manual
-            - recurring
-            - webhook
+          enum: *a2
         trigger_config:
           type: object
           additionalProperties: {}
@@ -4281,7 +4211,7 @@ components:
             $ref: "#/components/schemas/AutomationRuleCondition"
         condition_logic:
           type: string
-          enum:
+          enum: &a7
             - and
             - or
         actions:
@@ -4326,29 +4256,15 @@ components:
           type: string
         status:
           type: string
-          enum:
-            - active
-            - inactive
-            - draft
-            - error
+          enum: *a5
           description: Defaults to draft when omitted.
         priority:
           type: string
-          enum:
-            - low
-            - normal
-            - high
-            - critical
+          enum: *a6
           description: Defaults to normal when omitted.
         trigger_type:
           type: string
-          enum:
-            - time_based
-            - event_based
-            - condition_based
-            - manual
-            - recurring
-            - webhook
+          enum: *a2
         trigger_config:
           type: object
           additionalProperties: {}
@@ -4359,9 +4275,7 @@ components:
             $ref: "#/components/schemas/AutomationRuleCondition"
         condition_logic:
           type: string
-          enum:
-            - and
-            - or
+          enum: *a7
         actions:
           type: array
           items:
@@ -4420,11 +4334,7 @@ components:
           description: Rule UUIDs from automation_rules.rule_id.
         status:
           type: string
-          enum:
-            - active
-            - inactive
-            - draft
-            - error
+          enum: *a5
           description: Status to apply to each provided rule id.
       required:
         - ids
@@ -4811,11 +4721,7 @@ components:
                 - bulk_status_update
             status:
               type: string
-              enum:
-                - active
-                - inactive
-                - draft
-                - error
+              enum: *a5
             rule_ids:
               type: array
               items:
@@ -5110,7 +5016,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a74
             - asc
             - desc
         search:
@@ -5133,12 +5039,12 @@ components:
           type: string
         client_type:
           type: string
-          enum:
+          enum: &a75
             - company
             - individual
         billing_cycle:
           type: string
-          enum:
+          enum: &a76
             - weekly
             - bi-weekly
             - monthly
@@ -5147,12 +5053,12 @@ components:
             - annually
         is_inactive:
           type: string
-          enum:
+          enum: &a77
             - "true"
             - "false"
         is_tax_exempt:
           type: string
-          enum:
+          enum: &a78
             - "true"
             - "false"
         account_manager_id:
@@ -5166,7 +5072,7 @@ components:
           type: string
         has_credit_limit:
           type: string
-          enum:
+          enum: &a79
             - "true"
             - "false"
         industry:
@@ -5192,7 +5098,7 @@ components:
           type: string
         client_type:
           type: string
-          enum:
+          enum: &a80
             - company
             - individual
         tax_id_number:
@@ -5211,7 +5117,7 @@ components:
           type: string
         billing_cycle:
           type: string
-          enum:
+          enum: &a81
             - weekly
             - bi-weekly
             - monthly
@@ -5231,7 +5137,7 @@ components:
           type: boolean
         invoice_delivery_method:
           type: string
-          enum:
+          enum: &a82
             - email
             - mail
             - portal
@@ -5321,7 +5227,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a83
             - asc
             - desc
         search:
@@ -5351,12 +5257,12 @@ components:
           type: string
         is_inactive:
           type: string
-          enum:
+          enum: &a84
             - "true"
             - "false"
         has_client:
           type: string
-          enum:
+          enum: &a85
             - "true"
             - "false"
         client_name:
@@ -5397,7 +5303,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum:
+                enum: &a9
                   - work
                   - mobile
                   - home
@@ -5442,14 +5348,14 @@ components:
               have is_default: true. On update, the array replaces all of the
               contact's phone numbers; include contact_phone_number_id to keep
               an existing row."
-          default: []
+          default: &a10 []
         email:
           type: string
         primary_email_canonical_type:
           type:
             - string
             - "null"
-          enum:
+          enum: &a8
             - work
             - personal
             - billing
@@ -5480,11 +5386,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum:
-                  - work
-                  - personal
-                  - billing
-                  - other
+                enum: *a8
               custom_type:
                 type:
                   - string
@@ -5521,7 +5423,7 @@ components:
               custom_type, not both. On update, the array replaces all of the
               contact's additional email addresses; include
               contact_additional_email_address_id to keep an existing row.
-          default: []
+          default: &a11 []
         role:
           type: string
           maxLength: 100
@@ -5569,12 +5471,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum:
-                  - work
-                  - mobile
-                  - home
-                  - fax
-                  - other
+                enum: *a9
               custom_type:
                 type:
                   - string
@@ -5614,18 +5511,14 @@ components:
               have is_default: true. On update, the array replaces all of the
               contact's phone numbers; include contact_phone_number_id to keep
               an existing row."
-          default: []
+          default: *a10
         email:
           type: string
         primary_email_canonical_type:
           type:
             - string
             - "null"
-          enum:
-            - work
-            - personal
-            - billing
-            - other
+          enum: *a8
         primary_email_custom_type:
           type:
             - string
@@ -5652,11 +5545,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum:
-                  - work
-                  - personal
-                  - billing
-                  - other
+                enum: *a8
               custom_type:
                 type:
                   - string
@@ -5693,7 +5582,7 @@ components:
               custom_type, not both. On update, the array replaces all of the
               contact's additional email addresses; include
               contact_additional_email_address_id to keep an existing row.
-          default: []
+          default: *a11
         role:
           type: string
           maxLength: 100
@@ -5721,7 +5610,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum:
+          enum: &a86
             - "true"
             - "false"
         limit:
@@ -5733,12 +5622,12 @@ components:
       properties:
         format:
           type: string
-          enum:
+          enum: &a87
             - csv
             - json
         include_inactive:
           type: string
-          enum:
+          enum: &a88
             - "true"
             - "false"
         client_id:
@@ -5758,7 +5647,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a89
             - asc
             - desc
         search:
@@ -5785,17 +5674,17 @@ components:
           type: string
         is_active:
           type: string
-          enum:
+          enum: &a90
             - "true"
             - "false"
         has_custom_rate:
           type: string
-          enum:
+          enum: &a91
             - "true"
             - "false"
         is_contractd:
           type: string
-          enum:
+          enum: &a92
             - "true"
             - "false"
         start_date_from:
@@ -6162,7 +6051,7 @@ components:
               type:
                 - string
                 - "null"
-              enum:
+              enum: &a12
                 - company
                 - individual
             tax_id_number:
@@ -6217,7 +6106,7 @@ components:
                 - "null"
             billing_cycle:
               type: string
-              enum:
+              enum: &a13
                 - weekly
                 - bi-weekly
                 - monthly
@@ -6367,9 +6256,7 @@ components:
                 type:
                   - string
                   - "null"
-                enum:
-                  - company
-                  - individual
+                enum: *a12
               tax_id_number:
                 type:
                   - string
@@ -6422,13 +6309,7 @@ components:
                   - "null"
               billing_cycle:
                 type: string
-                enum:
-                  - weekly
-                  - bi-weekly
-                  - monthly
-                  - quarterly
-                  - semi-annually
-                  - annually
+                enum: *a13
               credit_limit:
                 type:
                   - number
@@ -7418,7 +7299,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a93
             - asc
             - desc
         search:
@@ -7439,13 +7320,13 @@ components:
           type: string
         contract_line_type:
           type: string
-          enum:
+          enum: &a15
             - Fixed
             - Hourly
             - Usage
         billing_frequency:
           type: string
-          enum:
+          enum: &a14
             - weekly
             - bi-weekly
             - monthly
@@ -7454,19 +7335,19 @@ components:
             - annually
         is_custom:
           type: string
-          enum:
+          enum: &a94
             - "true"
             - "false"
         is_active:
           type: string
-          enum:
+          enum: &a95
             - "true"
             - "false"
         service_category:
           type: string
         has_services:
           type: string
-          enum:
+          enum: &a96
             - "true"
             - "false"
         clients_count_min:
@@ -7479,19 +7360,19 @@ components:
           type: string
         include_services:
           type: string
-          enum:
+          enum: &a97
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
         include_usage:
           type: string
-          enum:
+          enum: &a98
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
         include_clients:
           type: string
-          enum:
+          enum: &a99
             - "true"
             - "false"
           description: Controller-level include flag parsed directly from query string.
@@ -7515,26 +7396,17 @@ components:
           maxLength: 255
         billing_frequency:
           type: string
-          enum:
-            - weekly
-            - bi-weekly
-            - monthly
-            - quarterly
-            - semi-annually
-            - annually
+          enum: *a14
         is_custom:
           type: boolean
         service_category:
           type: string
         contract_line_type:
           type: string
-          enum:
-            - Fixed
-            - Hourly
-            - Usage
+          enum: *a15
         cadence_owner:
           type: string
-          enum:
+          enum: &a16
             - client
             - contract
         hourly_rate:
@@ -7583,28 +7455,17 @@ components:
           maxLength: 255
         billing_frequency:
           type: string
-          enum:
-            - weekly
-            - bi-weekly
-            - monthly
-            - quarterly
-            - semi-annually
-            - annually
+          enum: *a14
         is_custom:
           type: boolean
         service_category:
           type: string
         contract_line_type:
           type: string
-          enum:
-            - Fixed
-            - Hourly
-            - Usage
+          enum: *a15
         cadence_owner:
           type: string
-          enum:
-            - client
-            - contract
+          enum: *a16
         hourly_rate:
           type: number
           minimum: 0
@@ -7669,7 +7530,7 @@ components:
           minimum: 0
         configuration_type:
           type: string
-          enum:
+          enum: &a17
             - Fixed
             - Hourly
             - Usage
@@ -7839,19 +7700,10 @@ components:
           type: string
         contract_line_type:
           type: string
-          enum:
-            - Fixed
-            - Hourly
-            - Usage
+          enum: *a15
         billing_frequency:
           type: string
-          enum:
-            - weekly
-            - bi-weekly
-            - monthly
-            - quarterly
-            - semi-annually
-            - annually
+          enum: *a14
         default_services:
           type: array
           items:
@@ -7862,11 +7714,7 @@ components:
                 format: uuid
               configuration_type:
                 type: string
-                enum:
-                  - Fixed
-                  - Hourly
-                  - Usage
-                  - Bucket
+                enum: *a17
               default_rate:
                 type: number
                 minimum: 0
@@ -8023,7 +7871,7 @@ components:
       properties:
         format:
           type: string
-          enum:
+          enum: &a100
             - pdf
             - markdown
             - md
@@ -8503,7 +8351,7 @@ components:
           description: Filter to a single template name.
         language:
           type: string
-          enum:
+          enum: &a18
             - en
             - fr
             - es
@@ -8521,7 +8369,7 @@ components:
           description: Filter by notification category name.
         customized:
           type: string
-          enum:
+          enum: &a101
             - "true"
             - "false"
           description: Filter to templates the tenant has customized (true) or not (false).
@@ -8537,18 +8385,7 @@ components:
       properties:
         language:
           type: string
-          enum:
-            - en
-            - fr
-            - es
-            - de
-            - nl
-            - it
-            - pl
-            - pt
-            - sv
-            - xx
-            - yy
+          enum: *a18
           description: Language code to read. Defaults to the first language the template
             exists in.
     EmailTemplateDeleteQuery:
@@ -8556,18 +8393,7 @@ components:
       properties:
         language:
           type: string
-          enum:
-            - en
-            - fr
-            - es
-            - de
-            - nl
-            - it
-            - pl
-            - pt
-            - sv
-            - xx
-            - yy
+          enum: *a18
           description: Language code whose tenant override is removed.
       required:
         - language
@@ -8727,18 +8553,7 @@ components:
       properties:
         language_code:
           type: string
-          enum:
-            - en
-            - fr
-            - es
-            - de
-            - nl
-            - it
-            - pl
-            - pt
-            - sv
-            - xx
-            - yy
+          enum: *a18
           description: Language of the template being edited.
         subject:
           type: string
@@ -8908,7 +8723,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a103
             - asc
             - desc
         search:
@@ -8937,22 +8752,22 @@ components:
           type: string
         include_expired:
           type: string
-          enum:
+          enum: &a104
             - "true"
             - "false"
         expiring_soon:
           type: string
-          enum:
+          enum: &a105
             - "true"
             - "false"
         has_remaining:
           type: string
-          enum:
+          enum: &a106
             - "true"
             - "false"
         has_expiration:
           type: string
-          enum:
+          enum: &a107
             - "true"
             - "false"
         date_from:
@@ -8961,13 +8776,13 @@ components:
           type: string
         group_by:
           type: string
-          enum:
+          enum: &a108
             - day
             - week
             - month
         include_projections:
           type: string
-          enum:
+          enum: &a109
             - "true"
             - "false"
         as_of_date:
@@ -8983,27 +8798,27 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a122
             - asc
             - desc
         include_items:
           type: string
-          enum:
+          enum: &a123
             - "true"
             - "false"
         include_client:
           type: string
-          enum:
+          enum: &a124
             - "true"
             - "false"
         include_billing_cycle:
           type: string
-          enum:
+          enum: &a125
             - "true"
             - "false"
         include_transactions:
           type: string
-          enum:
+          enum: &a126
             - "true"
             - "false"
         q:
@@ -9014,7 +8829,7 @@ components:
           type: string
         format:
           type: string
-          enum:
+          enum: &a127
             - json
             - csv
       additionalProperties:
@@ -9033,7 +8848,7 @@ components:
             created_at).
         order:
           type: string
-          enum:
+          enum: &a110
             - asc
             - desc
         search:
@@ -9049,7 +8864,7 @@ components:
           type: string
         is_active:
           type: string
-          enum:
+          enum: &a111
             - "true"
             - "false"
         client_id:
@@ -9057,7 +8872,7 @@ components:
           format: uuid
         status:
           type: string
-          enum:
+          enum: &a112
             - draft
             - sent
             - paid
@@ -9079,12 +8894,12 @@ components:
           type: string
         is_manual:
           type: string
-          enum:
+          enum: &a113
             - "true"
             - "false"
         has_credit_applied:
           type: string
-          enum:
+          enum: &a114
             - "true"
             - "false"
     FinancialPaymentMethodListQuery:
@@ -9100,7 +8915,7 @@ components:
             (defaults to created_at).
         order:
           type: string
-          enum:
+          enum: &a115
             - asc
             - desc
         search:
@@ -9116,7 +8931,7 @@ components:
           type: string
         is_active:
           type: string
-          enum:
+          enum: &a116
             - "true"
             - "false"
         client_id:
@@ -9124,17 +8939,17 @@ components:
           format: uuid
         type:
           type: string
-          enum:
+          enum: &a117
             - credit_card
             - bank_account
         is_default:
           type: string
-          enum:
+          enum: &a118
             - "true"
             - "false"
         exclude_deleted:
           type: string
-          enum:
+          enum: &a119
             - "true"
             - "false"
           description: Exclude soft-deleted payment methods. Defaults to true.
@@ -9434,7 +9249,7 @@ components:
           minimum: 0
         status:
           type: string
-          enum:
+          enum: &a19
             - draft
             - sent
             - paid
@@ -9485,15 +9300,7 @@ components:
           minimum: 0
         status:
           type: string
-          enum:
-            - draft
-            - sent
-            - paid
-            - overdue
-            - cancelled
-            - pending
-            - prepayment
-            - partially_applied
+          enum: *a19
         credit_applied:
           type: integer
           minimum: 0
@@ -9771,7 +9578,7 @@ components:
           type: string
         sort:
           type: string
-          enum:
+          enum: &a120
             - created_at
             - updated_at
             - region_code
@@ -9783,7 +9590,7 @@ components:
           default: created_at
         order:
           type: string
-          enum:
+          enum: &a121
             - asc
             - desc
           default: desc
@@ -9922,20 +9729,20 @@ components:
           type: string
         article_type:
           type: string
-          enum:
+          enum: &a20
             - how_to
             - faq
             - troubleshooting
             - reference
         audience:
           type: string
-          enum:
+          enum: &a21
             - internal
             - client
             - public
         status:
           type: string
-          enum:
+          enum: &a22
             - draft
             - review
             - published
@@ -10011,18 +9818,11 @@ components:
           description: Optional; generated from the title when omitted.
         article_type:
           type: string
-          enum:
-            - how_to
-            - faq
-            - troubleshooting
-            - reference
+          enum: *a20
           description: Defaults to how_to.
         audience:
           type: string
-          enum:
-            - internal
-            - client
-            - public
+          enum: *a21
           description: Defaults to internal.
         category_id:
           type: string
@@ -10051,17 +9851,10 @@ components:
           type: string
         article_type:
           type: string
-          enum:
-            - how_to
-            - faq
-            - troubleshooting
-            - reference
+          enum: *a20
         audience:
           type: string
-          enum:
-            - internal
-            - client
-            - public
+          enum: *a21
         category_id:
           type: string
           format: uuid
@@ -10069,11 +9862,7 @@ components:
           type: integer
         status:
           type: string
-          enum:
-            - draft
-            - review
-            - published
-            - archived
+          enum: *a22
     KbArticleContentUpdateRequest:
       type: object
       properties:
@@ -10100,24 +9889,13 @@ components:
           maximum: 100
         status:
           type: string
-          enum:
-            - draft
-            - review
-            - published
-            - archived
+          enum: *a22
         audience:
           type: string
-          enum:
-            - internal
-            - client
-            - public
+          enum: *a21
         article_type:
           type: string
-          enum:
-            - how_to
-            - faq
-            - troubleshooting
-            - reference
+          enum: *a20
         category_id:
           type: string
           format: uuid
@@ -10203,11 +9981,7 @@ components:
                 type: string
               article_type:
                 type: string
-                enum:
-                  - how_to
-                  - faq
-                  - troubleshooting
-                  - reference
+                enum: *a20
             required:
               - template_id
               - name
@@ -10279,12 +10053,12 @@ components:
           type: string
         is_managed:
           type: string
-          enum:
+          enum: &a128
             - "true"
             - "false"
         is_security_relevant:
           type: string
-          enum:
+          enum: &a129
             - "true"
             - "false"
         client_id:
@@ -10336,7 +10110,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a130
             - asc
             - desc
     PriorityIdParam:
@@ -10404,17 +10178,17 @@ components:
       properties:
         preview:
           type: string
-          enum:
+          enum: &a131
             - "true"
             - "false"
         createNew:
           type: string
-          enum:
+          enum: &a132
             - "true"
             - "false"
         updateExisting:
           type: string
-          enum:
+          enum: &a133
             - "true"
             - "false"
         matchBy:
@@ -10424,7 +10198,7 @@ components:
       properties:
         preview:
           type: string
-          enum:
+          enum: &a134
             - "true"
             - "false"
     AccountingBatchIdParam:
@@ -10631,7 +10405,7 @@ components:
       properties:
         force:
           type: string
-          enum:
+          enum: &a135
             - "true"
             - "false"
     WorkflowImportBody:
@@ -10843,13 +10617,13 @@ components:
           description: Case-insensitive match on event type, name, and description.
         source:
           type: string
-          enum:
+          enum: &a136
             - all
             - system
             - tenant
         status:
           type: string
-          enum:
+          enum: &a137
             - all
             - active
             - beta
@@ -11745,7 +11519,7 @@ components:
           type: string
         active:
           type: string
-          enum:
+          enum: &a138
             - "true"
             - "false"
         search:
@@ -11754,7 +11528,7 @@ components:
           type: string
         force_refresh:
           type: string
-          enum:
+          enum: &a139
             - "true"
             - "false"
     QuickBooksV1SyncHistoryQuery:
@@ -11766,7 +11540,7 @@ components:
           type: string
         status:
           type: string
-          enum:
+          enum: &a140
             - pending
             - in_progress
             - completed
@@ -11775,7 +11549,7 @@ components:
             - partial
         operation_type:
           type: string
-          enum:
+          enum: &a141
             - customer_sync
             - invoice_export
             - invoice_import
@@ -12293,12 +12067,12 @@ components:
           type: boolean
         category_type:
           type: string
-          enum:
+          enum: &a23
             - custom
             - itil
         priority_type:
           type: string
-          enum:
+          enum: &a24
             - custom
             - itil
         default_assigned_to:
@@ -12336,14 +12110,10 @@ components:
           type: boolean
         category_type:
           type: string
-          enum:
-            - custom
-            - itil
+          enum: *a23
         priority_type:
           type: string
-          enum:
-            - custom
-            - itil
+          enum: *a24
         default_assigned_to:
           type:
             - string
@@ -12532,7 +12302,7 @@ components:
           description: Opaque pagination cursor copied from a prior response's nextCursor.
         sort:
           type: string
-          enum:
+          enum: &a142
             - relevance
             - recent
           description: Result ordering. "relevance" (default) ranks by full-text score;
@@ -12856,7 +12626,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a143
             - asc
             - desc
         search:
@@ -12883,19 +12653,19 @@ components:
           format: uuid
         is_parent:
           type: string
-          enum:
+          enum: &a144
             - "true"
             - "false"
         is_child:
           type: string
-          enum:
+          enum: &a145
             - "true"
             - "false"
         depth:
           type: string
         active:
           type: string
-          enum:
+          enum: &a146
             - "true"
             - "false"
         offset:
@@ -12904,17 +12674,17 @@ components:
           type: string
         sort_order:
           type: string
-          enum:
+          enum: &a147
             - asc
             - desc
         include_hierarchy:
           type: string
-          enum:
+          enum: &a148
             - "true"
             - "false"
         category_type:
           type: string
-          enum:
+          enum: &a149
             - service
             - ticket
     CategoryMoveRequest:
@@ -12941,7 +12711,7 @@ components:
           minLength: 1
         category_type:
           type: string
-          enum:
+          enum: &a150
             - service
             - ticket
         board_id:
@@ -12949,7 +12719,7 @@ components:
           format: uuid
         include_inactive:
           type: string
-          enum:
+          enum: &a151
             - "true"
             - "false"
         limit:
@@ -12963,7 +12733,7 @@ components:
       properties:
         category_type:
           type: string
-          enum:
+          enum: &a152
             - service
             - ticket
         board_id:
@@ -12977,7 +12747,7 @@ components:
           format: date-time
         include_usage:
           type: string
-          enum:
+          enum: &a153
             - "true"
             - "false"
     CategoryAnalyticsResponse:
@@ -13642,7 +13412,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a159
             - asc
             - desc
         name:
@@ -13653,24 +13423,24 @@ components:
           type: string
         is_active:
           type: string
-          enum:
+          enum: &a160
             - "true"
             - "false"
         is_test_mode:
           type: string
-          enum:
+          enum: &a161
             - "true"
             - "false"
         payload_format:
           type: string
-          enum:
+          enum: &a162
             - json
             - xml
             - form_data
             - custom
         has_failures:
           type: string
-          enum:
+          enum: &a163
             - "true"
             - "false"
         last_delivery_from:
@@ -13704,7 +13474,7 @@ components:
           type: string
         status:
           type: string
-          enum:
+          enum: &a164
             - pending
             - delivered
             - failed
@@ -13725,6 +13495,7 @@ components:
         - ticket.assigned
         - ticket.closed
         - ticket.comment.added
+        - ticket.response_state_changed
       description: Ticket-domain webhook events emitted by the eventBus subscriber.
     WebhookEventTypeV1:
       type: string
@@ -13735,6 +13506,7 @@ components:
         - ticket.assigned
         - ticket.closed
         - ticket.comment.added
+        - ticket.response_state_changed
         - project.created
         - project.updated
         - project.status_changed
@@ -13823,15 +13595,18 @@ components:
                 - "null"
               items:
                 type: string
-                enum:
+                enum: &a25
                   - ticket_number
                   - title
                   - url
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
+                  - previous_response_state
+                  - new_response_state
                   - priority_id
                   - priority_name
                   - client_id
@@ -13860,7 +13635,7 @@ components:
                 - "null"
               items:
                 type: string
-                enum:
+                enum: &a26
                   - project_name
                   - wbs_code
                   - description
@@ -13899,7 +13674,8 @@ components:
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
             priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
@@ -14111,83 +13887,22 @@ components:
                 - "null"
               items:
                 type: string
-                enum:
-                  - ticket_number
-                  - title
-                  - url
-                  - status_id
-                  - status_name
-                  - is_closed
-                  - previous_status_id
-                  - previous_status_name
-                  - priority_id
-                  - priority_name
-                  - client_id
-                  - client_name
-                  - contact_name_id
-                  - contact_name
-                  - contact_email
-                  - assigned_to
-                  - assigned_to_name
-                  - assigned_team_id
-                  - board_id
-                  - board_name
-                  - category_id
-                  - subcategory_id
-                  - entered_at
-                  - updated_at
-                  - closed_at
-                  - due_date
-                  - tags
-                  - comment
-                  - changes
-                  - comments
+                enum: *a25
             project:
               type:
                 - array
                 - "null"
               items:
                 type: string
-                enum:
-                  - project_name
-                  - wbs_code
-                  - description
-                  - status_id
-                  - status_name
-                  - is_closed
-                  - previous_status_id
-                  - previous_status_name
-                  - client_id
-                  - client_name
-                  - contact_name_id
-                  - contact_name
-                  - contact_email
-                  - assigned_to
-                  - assigned_to_name
-                  - start_date
-                  - end_date
-                  - budgeted_hours
-                  - url
-                  - changes
-                  - phases
-                  - task_counts
-                  - task_id
-                  - phase_id
-                  - phase_name
-                  - task_name
-                  - estimated_hours
-                  - actual_hours
-                  - due_date
-                  - priority_id
-                  - priority_name
-                  - tags
+                enum: *a26
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
             keys. Unknown entities and fields are rejected by
             WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields.
             Supported fields: ticket: ticket_number, title, url, status_id,
-            status_name, is_closed, previous_status_id, previous_status_name,
+            status_name, is_closed, response_state, previous_status_id,
+            previous_status_name, previous_response_state, new_response_state,
             priority_id, priority_name, client_id, client_name, contact_name_id,
             contact_name, contact_email, assigned_to, assigned_to_name,
             assigned_team_id, board_id, board_name, category_id, subcategory_id,
@@ -14835,6 +14550,21 @@ components:
           format: date-time
         is_internal:
           type: boolean
+        author_type:
+          type: string
+          enum:
+            - internal
+            - client
+            - unknown
+          description: "Who wrote the comment: MSP staff (`internal`), a client/contact
+            (`client`), or unknown."
+        contact_id:
+          type: string
+          format: uuid
+          description: Present when a contact wrote the comment.
+        contact_name:
+          type: string
+          description: Present when a contact wrote the comment.
       required:
         - text
         - author
@@ -14856,6 +14586,19 @@ components:
           type: boolean
         is_resolution:
           type: boolean
+        author_type:
+          type: string
+          enum:
+            - internal
+            - client
+            - unknown
+        contact_id:
+          type: string
+          format: uuid
+          description: Present when a contact wrote the comment.
+        contact_name:
+          type: string
+          description: Present when a contact wrote the comment.
         created_at:
           type: string
           format: date-time
@@ -14901,6 +14644,15 @@ components:
             - "null"
         is_closed:
           type: boolean
+        response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Current response state of the ticket. On
+            ticket.response_state_changed it equals new_response_state.
         previous_status_id:
           type:
             - string
@@ -14912,6 +14664,24 @@ components:
             - string
             - "null"
           description: Only populated on ticket.status_changed.
+        previous_response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Only populated on ticket.response_state_changed. null when there
+            was no prior state.
+        new_response_state:
+          type:
+            - string
+            - "null"
+          enum:
+            - awaiting_client
+            - awaiting_internal
+          description: Only populated on ticket.response_state_changed. null when the
+            state was cleared (e.g. ticket closed).
         priority_id:
           type:
             - string
@@ -15189,6 +14959,30 @@ components:
         - occurred_at
         - tenant_id
         - data
+    TicketResponseStateChangedDeliveryV1:
+      type: object
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - ticket.response_state_changed
+        occurred_at:
+          type: string
+          format: date-time
+        tenant_id:
+          type: string
+          format: uuid
+        data:
+          $ref: "#/components/schemas/TicketWebhookDataV1"
+      required:
+        - event_id
+        - event_type
+        - occurred_at
+        - tenant_id
+        - data
     WorkflowV1MissingApiError:
       type: object
       properties:
@@ -15262,7 +15056,7 @@ components:
           type: string
         status:
           type: string
-          enum:
+          enum: &a27
             - pending
             - claimed
             - completed
@@ -15340,12 +15134,7 @@ components:
                 type: string
               status:
                 type: string
-                enum:
-                  - pending
-                  - claimed
-                  - completed
-                  - canceled
-                  - expired
+                enum: *a27
               priority:
                 type: string
               dueDate:
@@ -15442,12 +15231,7 @@ components:
               type: string
             status:
               type: string
-              enum:
-                - pending
-                - claimed
-                - completed
-                - canceled
-                - expired
+              enum: *a27
             priority:
               type: string
             dueDate:
@@ -15560,7 +15344,7 @@ components:
             for all types.
         status:
           type: string
-          enum:
+          enum: &a165
             - open
             - closed
             - all
@@ -15605,7 +15389,7 @@ components:
           description: ISO 8601 upper bound of the created-date ("date entered") filter.
         sortBy:
           type: string
-          enum:
+          enum: &a166
             - type
             - title
             - status
@@ -15615,14 +15399,14 @@ components:
             date ascending).
         sortDirection:
           type: string
-          enum:
+          enum: &a167
             - asc
             - desc
           description: Sort direction for `sortBy` (default asc). Ignored when `sortBy` is
             omitted.
         groupBy:
           type: string
-          enum:
+          enum: &a168
             - type
             - priority
             - status
@@ -16887,7 +16671,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a169
             - asc
             - desc
         fields:
@@ -16905,7 +16689,7 @@ components:
           type: string
         sort:
           type: string
-          enum:
+          enum: &a170
             - client_name
             - closed_at
             - created_at
@@ -16925,7 +16709,7 @@ components:
             descending. Any other value is rejected with 400.
         order:
           type: string
-          enum:
+          enum: &a171
             - asc
             - desc
         fields:
@@ -17267,7 +17051,7 @@ components:
             must exist). Not required for other work item types.
         work_item_type:
           type: string
-          enum:
+          enum: &a28
             - ticket
             - project_task
             - non_billable_category
@@ -17309,12 +17093,7 @@ components:
             must exist). Not required for other work item types.
         work_item_type:
           type: string
-          enum:
-            - ticket
-            - project_task
-            - non_billable_category
-            - ad_hoc
-            - interaction
+          enum: *a28
         start_time:
           type: string
           format: date-time
@@ -17351,12 +17130,7 @@ components:
                   must exist). Not required for other work item types.
               work_item_type:
                 type: string
-                enum:
-                  - ticket
-                  - project_task
-                  - non_billable_category
-                  - ad_hoc
-                  - interaction
+                enum: *a28
               start_time:
                 type: string
                 format: date-time
@@ -17408,12 +17182,7 @@ components:
                       must exist). Not required for other work item types.
                   work_item_type:
                     type: string
-                    enum:
-                      - ticket
-                      - project_task
-                      - non_billable_category
-                      - ad_hoc
-                      - interaction
+                    enum: *a28
                   start_time:
                     type: string
                     format: date-time
@@ -18125,6 +17894,204 @@ components:
             format: uuid
           description: "Required with mode=selective: the team members to keep as
             additional agents."
+    WorkV1TimePeriodSettings:
+      type: object
+      properties:
+        time_period_settings_id:
+          type: string
+          format: uuid
+        frequency:
+          type: number
+        frequency_unit:
+          type: string
+          enum: &a29
+            - day
+            - week
+            - month
+            - year
+        start_day:
+          type:
+            - number
+            - "null"
+        end_day:
+          type:
+            - number
+            - "null"
+        start_month:
+          type: number
+        start_day_of_month:
+          type: number
+        end_month:
+          type: number
+        end_day_of_month:
+          type: number
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+        effective_to:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tenant:
+          type: string
+          format: uuid
+      required:
+        - time_period_settings_id
+        - frequency
+        - frequency_unit
+        - start_day
+        - end_day
+        - start_month
+        - start_day_of_month
+        - end_month
+        - end_day_of_month
+        - effective_from
+        - is_active
+        - created_at
+        - updated_at
+        - tenant
+    WorkV1TimePeriodSettingsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkV1TimePeriodSettings"
+      required:
+        - data
+    WorkV1TimePeriodSettingsListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkV1TimePeriodSettings"
+      required:
+        - data
+    WorkV1TimePeriodSettingsCreateBody:
+      type: object
+      properties:
+        frequency:
+          type: integer
+          exclusiveMinimum: 0
+          description: Number of frequency_unit units per period (e.g. 1 with week =
+            weekly).
+        frequency_unit:
+          type: string
+          enum: *a29
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "week: first weekday (1=Monday … 7=Sunday); month: first day of the
+            month. Defaults to 1."
+        end_day:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "month: last day of the period, or 0 for the end of the month.
+            Defaults to 0."
+        start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: first month. Defaults to 1."
+        start_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "year: first day of start_month. Defaults to 1."
+        end_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: last month. Defaults to 12."
+        end_day_of_month:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "year: last day of end_month, or 0 for the end of the month.
+            Defaults to 0."
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: First day the setting is in force. When omitted, defaults to the
+            start of the period containing today in the caller's timezone; if an
+            earlier setting ended on or after that day, it starts the day after
+            that setting ended.
+        effective_to:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Last day the setting is in force (inclusive). Omit for open-ended.
+      required:
+        - frequency
+        - frequency_unit
+    WorkV1TimePeriodSettingsUpdateBody:
+      type: object
+      properties:
+        frequency:
+          type: integer
+          exclusiveMinimum: 0
+          description: Number of frequency_unit units per period (e.g. 1 with week =
+            weekly).
+        frequency_unit:
+          type: string
+          enum: *a29
+        start_day:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "week: first weekday (1=Monday … 7=Sunday); month: first day of the
+            month. Defaults to 1."
+        end_day:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "month: last day of the period, or 0 for the end of the month.
+            Defaults to 0."
+        start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: first month. Defaults to 1."
+        start_day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: "year: first day of start_month. Defaults to 1."
+        end_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: "year: last month. Defaults to 12."
+        end_day_of_month:
+          type: integer
+          minimum: 0
+          maximum: 31
+          description: "year: last day of end_month, or 0 for the end of the month.
+            Defaults to 0."
+        effective_from:
+          type: string
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: First day the setting is in force. When omitted, defaults to the
+            start of the period containing today in the caller's timezone; if an
+            earlier setting ended on or after that day, it starts the day after
+            that setting ended.
+        effective_to:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          description: Last day the setting is in force (inclusive); null clears it.
+        is_active:
+          type: boolean
+          description: Inactive settings are ignored by period generation and overlap
+            checks.
     QuoteIdParamV1:
       type: object
       properties:
@@ -18182,7 +18149,7 @@ components:
           type: string
         order:
           type: string
-          enum:
+          enum: &a172
             - asc
             - desc
         search:
@@ -18191,12 +18158,12 @@ components:
           type: string
         include_items:
           type: string
-          enum:
+          enum: &a173
             - "true"
             - "false"
         include_client:
           type: string
-          enum:
+          enum: &a174
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -18400,14 +18367,14 @@ components:
       properties:
         status:
           type: string
-          enum:
+          enum: &a175
             - open
             - won
             - lost
             - all
         stage:
           type: string
-          enum:
+          enum: &a176
             - identified
             - qualified
             - assessment
@@ -18423,14 +18390,14 @@ components:
           format: uuid
         opportunity_type:
           type: string
-          enum:
+          enum: &a177
             - new_logo
             - expansion
             - renewal
             - project
         stalled_only:
           type: string
-          enum:
+          enum: &a178
             - "true"
             - "false"
         search:
@@ -18446,7 +18413,7 @@ components:
           default: "25"
         sort_by:
           type: string
-          enum:
+          enum: &a179
             - next_action_due
             - expected_close_date
             - mrr_cents
@@ -18455,7 +18422,7 @@ components:
           default: next_action_due
         sort_direction:
           type: string
-          enum:
+          enum: &a180
             - asc
             - desc
           default: asc
@@ -18475,7 +18442,7 @@ components:
           minLength: 1
         opportunity_type:
           type: string
-          enum:
+          enum: &a30
             - new_logo
             - expansion
             - renewal
@@ -18485,7 +18452,7 @@ components:
           format: uuid
         confidence:
           type: string
-          enum:
+          enum: &a31
             - low
             - medium
             - high
@@ -18522,7 +18489,7 @@ components:
           type:
             - string
             - "null"
-          enum:
+          enum: &a32
             - renewal
             - tm_conversion
             - whitespace
@@ -18561,21 +18528,13 @@ components:
           minLength: 1
         opportunity_type:
           type: string
-          enum:
-            - new_logo
-            - expansion
-            - renewal
-            - project
+          enum: *a30
         owner_id:
           type: string
           format: uuid
         confidence:
           type: string
-          enum:
-            - low
-            - medium
-            - high
-            - committed
+          enum: *a31
           default: medium
         mrr_cents:
           type: integer
@@ -18602,12 +18561,7 @@ components:
           type:
             - string
             - "null"
-          enum:
-            - renewal
-            - tm_conversion
-            - whitespace
-            - asset_aging
-            - inbound-lead
+          enum: *a32
         generator_context:
           type:
             - object
@@ -18620,7 +18574,7 @@ components:
           format: uuid
         stage:
           type: string
-          enum:
+          enum: &a33
             - identified
             - qualified
             - assessment
@@ -18649,14 +18603,7 @@ components:
       properties:
         stage:
           type: string
-          enum:
-            - identified
-            - qualified
-            - assessment
-            - proposed
-            - verbal
-            - won
-            - lost
+          enum: *a33
         detail:
           type:
             - string
@@ -18776,7 +18723,7 @@ components:
       properties:
         status:
           type: string
-          enum:
+          enum: &a181
             - pending
             - accepted
             - dismissed
@@ -19086,7 +19033,7 @@ components:
       properties:
         active_only:
           type: string
-          enum:
+          enum: &a182
             - "true"
             - "false"
           description: When "true", only active channels are returned. Omit for all
@@ -19096,7 +19043,7 @@ components:
       properties:
         status:
           type: string
-          enum:
+          enum: &a183
             - scheduled
             - awaiting-manual-publish
             - published
@@ -19131,7 +19078,7 @@ components:
           maxLength: 100
         status:
           type: string
-          enum:
+          enum: &a34
             - draft
             - active
             - completed
@@ -19167,11 +19114,7 @@ components:
           maxLength: 100
         status:
           type: string
-          enum:
-            - draft
-            - active
-            - completed
-            - archived
+          enum: *a34
         start_date:
           type:
             - string
@@ -19198,7 +19141,7 @@ components:
           additionalProperties:
             type: string
             maxLength: 10000
-          default: {}
+          default: &a35 {}
         campaign_id:
           type:
             - string
@@ -19222,7 +19165,7 @@ components:
           additionalProperties:
             type: string
             maxLength: 10000
-          default: {}
+          default: *a35
         campaign_id:
           type:
             - string
@@ -19371,7 +19314,7 @@ components:
           maxLength: 2000
         status:
           type: string
-          enum:
+          enum: &a36
             - draft
             - active
             - paused
@@ -19406,7 +19349,7 @@ components:
               - delay_minutes
               - subject
           maxItems: 50
-          default: []
+          default: &a37 []
       required:
         - name
     UpdateMarketingSequenceBodyV1:
@@ -19423,11 +19366,7 @@ components:
           maxLength: 2000
         status:
           type: string
-          enum:
-            - draft
-            - active
-            - paused
-            - archived
+          enum: *a36
         campaign_id:
           type:
             - string
@@ -19458,7 +19397,7 @@ components:
               - delay_minutes
               - subject
           maxItems: 50
-          default: []
+          default: *a37
     EnrollMarketingContactBodyV1:
       type: object
       properties:
@@ -19544,7 +19483,7 @@ components:
           format: uuid
         is_closed:
           type: string
-          enum:
+          enum: &a184
             - "true"
             - "false"
           description: Filter by status closure; 'false' also matches interactions with no
@@ -19719,7 +19658,7 @@ components:
                 - "null"
             visibility:
               type: string
-              enum:
+              enum: &a38
                 - internal
                 - client_visible
           required:
@@ -19861,9 +19800,7 @@ components:
                   - "null"
               visibility:
                 type: string
-                enum:
-                  - internal
-                  - client_visible
+                enum: *a38
             required:
               - tenant
               - interaction_id
@@ -20084,7 +20021,7 @@ components:
           format: uuid
         low_stock:
           type: string
-          enum:
+          enum: &a187
             - "true"
             - "false"
     InventoryLooseBodyV1:
@@ -21855,9 +21792,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a39
           required: false
           name: order
           in: query
@@ -22381,9 +22316,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a40
           required: false
           name: order
           in: query
@@ -22394,9 +22327,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a41
           required: false
           name: has_permissions
           in: query
@@ -22412,9 +22343,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a42
           required: false
           name: is_template
           in: query
@@ -23011,9 +22940,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a43
           required: false
           name: order
           in: query
@@ -23321,9 +23248,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a44
           required: false
           name: has_manager
           in: query
@@ -23334,9 +23259,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a45
           required: false
           name: order
           in: query
@@ -23653,10 +23576,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - daily
-              - weekly
-              - monthly
+            enum: *a46
           required: false
           name: granularity
           in: query
@@ -24408,9 +24328,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a47
           required: false
           name: is_inactive
           in: query
@@ -24421,9 +24339,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a48
           required: false
           name: order
           in: query
@@ -24495,9 +24411,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a49
           required: false
           name: order
           in: query
@@ -24523,11 +24437,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - internal
-              - client
-              - admin
-              - contractor
+            enum: *a50
           required: false
           name: user_type
           in: query
@@ -24545,25 +24455,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a51
           required: false
           name: is_inactive
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a52
           required: false
           name: include_permissions
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a53
           required: false
           name: include_teams
           in: query
@@ -24897,11 +24801,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - internal
-              - client
-              - admin
-              - contractor
+            enum: *a54
           required: false
           name: user_type
           in: query
@@ -24919,9 +24819,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a55
           required: false
           name: include_inactive
           in: query
@@ -26306,9 +26204,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a56
             description: Sort direction. Defaults to desc.
           required: false
           description: Sort direction. Defaults to desc.
@@ -26366,9 +26262,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a57
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -26436,9 +26330,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a58
             description: true requires warranty_end_date to be non-null; false requires it
               to be null.
           required: false
@@ -26448,9 +26340,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a59
             description: true filters warranty_end_date before now; false filters future
               warranty dates or no warranty.
           required: false
@@ -26460,9 +26350,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a60
             description: Accepted by validation, but not currently applied by
               AssetService.list.
           required: false
@@ -26806,9 +26694,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - csv
-              - json
+            enum: *a61
             description: Export format. csv (default) returns text/csv as an attachment;
               json returns the success envelope with the rows in data.
           required: false
@@ -27126,12 +27012,7 @@ paths:
             type: array
             items:
               type: string
-              enum:
-                - asset_tag
-                - name
-                - serial_number
-                - location
-                - client_name
+              enum: *a62
             description: Search fields. If omitted, the service searches asset_tag, name,
               serial_number, and location.
           required: false
@@ -27170,9 +27051,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a63
             description: When true, the service fetches asset-type-specific extension data
               for every result.
           required: false
@@ -28890,12 +28769,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum:
-              - splashtop
-              - teamviewer
-              - vnc
-              - rdp
-              - shell
+            enum: *a64
             description: Remote-control protocol (default splashtop).
           required: false
           description: Remote-control protocol (default splashtop).
@@ -29051,9 +28925,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a65
           required: false
           name: include_uninstalled
           in: query
@@ -29364,9 +29236,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a66
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -29413,9 +29283,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a67
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -29431,14 +29299,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - pending
-              - running
-              - completed
-              - failed
-              - cancelled
-              - timeout
-              - skipped
+            enum: *a3
             description: Filter by execution status.
           required: false
           description: Filter by execution status.
@@ -29478,9 +29339,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a68
             description: Filter by whether the execution has errors; transformed to boolean
               by validation.
           required: false
@@ -29490,13 +29349,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - time_based
-              - event_based
-              - condition_based
-              - manual
-              - recurring
-              - webhook
+            enum: *a2
             description: Filter by automation trigger type.
           required: false
           description: Filter by automation trigger type.
@@ -29732,9 +29585,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a69
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -29781,9 +29632,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a70
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -29798,11 +29647,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - active
-              - inactive
-              - draft
-              - error
+            enum: *a5
             description: Filter by automation rule status.
           required: false
           description: Filter by automation rule status.
@@ -29810,13 +29655,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - time_based
-              - event_based
-              - condition_based
-              - manual
-              - recurring
-              - webhook
+            enum: *a2
             description: Filter by trigger type.
           required: false
           description: Filter by trigger type.
@@ -29824,11 +29663,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - low
-              - normal
-              - high
-              - critical
+            enum: *a6
             description: Filter by priority level.
           required: false
           description: Filter by priority level.
@@ -30437,9 +30272,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a71
             description: Accepted by shared list query validation.
           required: false
           description: Accepted by shared list query validation.
@@ -30486,9 +30319,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a72
             description: Accepted by shared filter validation and transformed to boolean.
           required: false
           description: Accepted by shared filter validation and transformed to boolean.
@@ -30869,11 +30700,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
+            enum: *a73
             description: Aggregation bucket size; defaults to day.
           required: false
           description: Aggregation bucket size; defaults to day.
@@ -31300,9 +31127,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a74
           required: false
           name: order
           in: query
@@ -31347,37 +31172,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - company
-              - individual
+            enum: *a75
           required: false
           name: client_type
           in: query
         - schema:
             type: string
-            enum:
-              - weekly
-              - bi-weekly
-              - monthly
-              - quarterly
-              - semi-annually
-              - annually
+            enum: *a76
           required: false
           name: billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a77
           required: false
           name: is_inactive
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a78
           required: false
           name: is_tax_exempt
           in: query
@@ -31404,9 +31217,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a79
           required: false
           name: has_credit_limit
           in: query
@@ -31601,9 +31412,7 @@ paths:
                   format: uri
                 client_type:
                   type: string
-                  enum:
-                    - company
-                    - individual
+                  enum: *a80
                 tax_id_number:
                   type: string
                 notes:
@@ -31620,13 +31429,7 @@ paths:
                   type: string
                 billing_cycle:
                   type: string
-                  enum:
-                    - weekly
-                    - bi-weekly
-                    - monthly
-                    - quarterly
-                    - semi-annually
-                    - annually
+                  enum: *a81
                 credit_limit:
                   type: number
                   minimum: 0
@@ -31640,10 +31443,7 @@ paths:
                   type: boolean
                 invoice_delivery_method:
                   type: string
-                  enum:
-                    - email
-                    - mail
-                    - portal
+                  enum: *a82
                 region_code:
                   type: string
                 is_tax_exempt:
@@ -32710,9 +32510,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a83
           required: false
           name: order
           in: query
@@ -32773,17 +32571,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a84
           required: false
           name: is_inactive
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a85
           required: false
           name: has_client
           in: query
@@ -33214,9 +33008,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a86
           required: false
           name: include_inactive
           in: query
@@ -33276,17 +33068,13 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - csv
-              - json
+            enum: *a87
           required: false
           name: format
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a88
           required: false
           name: include_inactive
           in: query
@@ -33406,9 +33194,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a89
           required: false
           name: order
           in: query
@@ -33460,25 +33246,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a90
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a91
           required: false
           name: has_custom_rate
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a92
           required: false
           name: is_contractd
           in: query
@@ -33656,9 +33436,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a93
           required: false
           name: order
           in: query
@@ -33698,38 +33476,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - Fixed
-              - Hourly
-              - Usage
+            enum: *a15
           required: false
           name: contract_line_type
           in: query
         - schema:
             type: string
-            enum:
-              - weekly
-              - bi-weekly
-              - monthly
-              - quarterly
-              - semi-annually
-              - annually
+            enum: *a14
           required: false
           name: billing_frequency
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a94
           required: false
           name: is_custom
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a95
           required: false
           name: is_active
           in: query
@@ -33740,9 +33505,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a96
           required: false
           name: has_services
           in: query
@@ -33768,9 +33531,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a97
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -33778,9 +33539,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a98
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -33788,9 +33547,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a99
             description: Controller-level include flag parsed directly from query string.
           required: false
           description: Controller-level include flag parsed directly from query string.
@@ -35113,10 +34870,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum:
-              - pdf
-              - markdown
-              - md
+            enum: *a100
             description: Optional export format. pdf generates a PDF; markdown or md exports
               markdown; omitted downloads the original stored file.
           required: false
@@ -35707,7 +35461,7 @@ paths:
         with the system default and the tenant override merged into one row per
         name and language. Use is_customized to tell which templates the tenant
         has edited.
-      tags:
+      tags: &a102
         - Email Templates
         - Notifications
       security:
@@ -35731,18 +35485,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - en
-              - fr
-              - es
-              - de
-              - nl
-              - it
-              - pl
-              - pt
-              - sv
-              - xx
-              - yy
+            enum: *a18
             description: Filter to one language code.
           required: false
           description: Filter to one language code.
@@ -35757,9 +35500,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a101
             description: Filter to templates the tenant has customized (true) or not
               (false).
           required: false
@@ -35804,9 +35545,7 @@ paths:
       description: "Returns one email template: the read-only system default, the
         tenant override when there is one, and the effective content that would
         be sent."
-      tags:
-        - Email Templates
-        - Notifications
+      tags: *a102
       security:
         - ApiKeyAuth: []
       extensions:
@@ -35828,18 +35567,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum:
-              - en
-              - fr
-              - es
-              - de
-              - nl
-              - it
-              - pl
-              - pt
-              - sv
-              - xx
-              - yy
+            enum: *a18
             description: Language code to read. Defaults to the first language the template
               exists in.
           required: false
@@ -35878,9 +35606,7 @@ paths:
         write clones the system default, then applies the fields provided, so
         unspecified fields keep the standard content. System templates
         themselves are never modified.
-      tags:
-        - Email Templates
-        - Notifications
+      tags: *a102
       security:
         - ApiKeyAuth: []
       extensions:
@@ -35944,9 +35670,7 @@ paths:
       description: Removes the tenant override for one template and language, so the
         standard template is used again. Other languages of the same template
         are untouched.
-      tags:
-        - Email Templates
-        - Notifications
+      tags: *a102
       security:
         - ApiKeyAuth: []
       extensions:
@@ -35968,18 +35692,7 @@ paths:
           in: path
         - schema:
             type: string
-            enum:
-              - en
-              - fr
-              - es
-              - de
-              - nl
-              - it
-              - pl
-              - pt
-              - sv
-              - xx
-              - yy
+            enum: *a18
             description: Language code whose tenant override is removed.
           required: true
           description: Language code whose tenant override is removed.
@@ -37018,9 +36731,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a103
           required: false
           name: order
           in: query
@@ -37083,33 +36794,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a104
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a105
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a106
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a107
           required: false
           name: has_expiration
           in: query
@@ -37125,18 +36828,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - day
-              - week
-              - month
+            enum: *a108
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a109
           required: false
           name: include_projections
           in: query
@@ -37457,9 +37155,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a110
           required: false
           name: order
           in: query
@@ -37492,9 +37188,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a111
           required: false
           name: is_active
           in: query
@@ -37506,15 +37200,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - draft
-              - sent
-              - paid
-              - overdue
-              - cancelled
-              - pending
-              - prepayment
-              - partially_applied
+            enum: *a112
           required: false
           name: status
           in: query
@@ -37546,17 +37232,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a113
           required: false
           name: is_manual
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a114
           required: false
           name: has_credit_applied
           in: query
@@ -37778,9 +37460,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a115
           required: false
           name: order
           in: query
@@ -37813,9 +37493,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a116
           required: false
           name: is_active
           in: query
@@ -37827,25 +37505,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - credit_card
-              - bank_account
+            enum: *a117
           required: false
           name: type
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a118
           required: false
           name: is_default
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a119
             description: Exclude soft-deleted payment methods. Defaults to true.
           required: false
           description: Exclude soft-deleted payment methods. Defaults to true.
@@ -38177,9 +37849,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a103
           required: false
           name: order
           in: query
@@ -38242,33 +37912,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a104
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a105
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a106
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a107
           required: false
           name: has_expiration
           in: query
@@ -38284,18 +37946,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - day
-              - week
-              - month
+            enum: *a108
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a109
           required: false
           name: include_projections
           in: query
@@ -38369,9 +38026,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a103
           required: false
           name: order
           in: query
@@ -38434,33 +38089,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a104
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a105
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a106
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a107
           required: false
           name: has_expiration
           in: query
@@ -38476,18 +38123,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - day
-              - week
-              - month
+            enum: *a108
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a109
           required: false
           name: include_projections
           in: query
@@ -38561,9 +38203,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a103
           required: false
           name: order
           in: query
@@ -38626,33 +38266,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a104
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a105
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a106
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a107
           required: false
           name: has_expiration
           in: query
@@ -38668,18 +38300,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - day
-              - week
-              - month
+            enum: *a108
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a109
           required: false
           name: include_projections
           in: query
@@ -38809,24 +38436,14 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - created_at
-              - updated_at
-              - region_code
-              - tax_percentage
-              - start_date
-              - end_date
-              - cap_amount
-              - currency_code
+            enum: *a120
             default: created_at
           required: false
           name: sort
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a121
             default: desc
           required: false
           name: order
@@ -38944,9 +38561,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a103
           required: false
           name: order
           in: query
@@ -39009,33 +38624,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a104
           required: false
           name: include_expired
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a105
           required: false
           name: expiring_soon
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a106
           required: false
           name: has_remaining
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a107
           required: false
           name: has_expiration
           in: query
@@ -39051,18 +38658,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - day
-              - week
-              - month
+            enum: *a108
           required: false
           name: group_by
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a109
           required: false
           name: include_projections
           in: query
@@ -39321,41 +38923,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a122
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a123
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a124
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a125
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a126
           required: false
           name: include_transactions
           in: query
@@ -39376,9 +38968,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - csv
+            enum: *a127
           required: false
           name: format
           in: query
@@ -39501,41 +39091,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a122
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a123
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a124
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a125
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a126
           required: false
           name: include_transactions
           in: query
@@ -39556,9 +39136,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - csv
+            enum: *a127
           required: false
           name: format
           in: query
@@ -39836,41 +39414,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a122
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a123
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a124
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a125
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a126
           required: false
           name: include_transactions
           in: query
@@ -39891,9 +39459,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - csv
+            enum: *a127
           required: false
           name: format
           in: query
@@ -40326,41 +39892,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a122
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a123
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a124
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a125
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a126
           required: false
           name: include_transactions
           in: query
@@ -40381,9 +39937,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - csv
+            enum: *a127
           required: false
           name: format
           in: query
@@ -40456,41 +40010,31 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a122
           required: false
           name: order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a123
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a124
           required: false
           name: include_client
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a125
           required: false
           name: include_billing_cycle
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a126
           required: false
           name: include_transactions
           in: query
@@ -40511,9 +40055,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - csv
+            enum: *a127
           required: false
           name: format
           in: query
@@ -41613,30 +41155,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - draft
-              - review
-              - published
-              - archived
+            enum: *a22
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum:
-              - internal
-              - client
-              - public
+            enum: *a21
           required: false
           name: audience
           in: query
         - schema:
             type: string
-            enum:
-              - how_to
-              - faq
-              - troubleshooting
-              - reference
+            enum: *a20
           required: false
           name: article_type
           in: query
@@ -41801,11 +41332,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - how_to
-              - faq
-              - troubleshooting
-              - reference
+            enum: *a20
           required: false
           name: article_type
           in: query
@@ -42546,17 +42073,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a128
           required: false
           name: is_managed
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a129
           required: false
           name: is_security_relevant
           in: query
@@ -42680,9 +42203,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a130
           required: false
           name: order
           in: query
@@ -43137,25 +42658,19 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a131
           required: false
           name: preview
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a132
           required: false
           name: createNew
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a133
           required: false
           name: updateExisting
           in: query
@@ -43216,9 +42731,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a134
           required: false
           name: preview
           in: query
@@ -43941,9 +43454,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a135
           required: false
           name: force
           in: query
@@ -45947,21 +45458,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - all
-              - system
-              - tenant
+            enum: *a136
           required: false
           name: source
           in: query
         - schema:
             type: string
-            enum:
-              - all
-              - active
-              - beta
-              - draft
-              - deprecated
+            enum: *a137
           required: false
           name: status
           in: query
@@ -48690,9 +48193,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -48708,9 +48209,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -49071,9 +48570,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -49089,9 +48586,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -49635,9 +49130,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -49653,9 +49146,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -49728,9 +49219,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -49746,9 +49235,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -50251,9 +49738,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -50269,9 +49754,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -50520,27 +50003,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - pending
-              - in_progress
-              - completed
-              - failed
-              - cancelled
-              - partial
+            enum: *a140
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum:
-              - customer_sync
-              - invoice_export
-              - invoice_import
-              - payment_sync
-              - item_sync
-              - tax_sync
-              - full_sync
-              - test_connection
+            enum: *a141
           required: false
           name: operation_type
           in: query
@@ -50869,9 +50338,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -50887,9 +50354,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -51078,9 +50543,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -51096,9 +50559,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -51171,9 +50632,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -51189,9 +50648,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -51558,9 +51015,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -51576,9 +51031,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -52130,9 +51583,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -52148,9 +51599,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -52224,9 +51673,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -52242,9 +51689,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -52755,9 +52200,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -52773,9 +52216,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -53028,27 +52469,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - pending
-              - in_progress
-              - completed
-              - failed
-              - cancelled
-              - partial
+            enum: *a140
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum:
-              - customer_sync
-              - invoice_export
-              - invoice_import
-              - payment_sync
-              - item_sync
-              - tax_sync
-              - full_sync
-              - test_connection
+            enum: *a141
           required: false
           name: operation_type
           in: query
@@ -53382,9 +52809,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -53400,9 +52825,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -53593,9 +53016,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a138
           required: false
           name: active
           in: query
@@ -53611,9 +53032,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a139
           required: false
           name: force_refresh
           in: query
@@ -54206,9 +53625,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - relevance
-              - recent
+            enum: *a142
             description: Result ordering. "relevance" (default) ranks by full-text score;
               "recent" orders by last update.
           required: false
@@ -54583,9 +54000,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a143
           required: false
           name: order
           in: query
@@ -54637,17 +54052,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a144
           required: false
           name: is_parent
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a145
           required: false
           name: is_child
           in: query
@@ -54658,9 +54069,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a146
           required: false
           name: active
           in: query
@@ -54676,25 +54085,19 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a147
           required: false
           name: sort_order
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a148
           required: false
           name: include_hierarchy
           in: query
         - schema:
             type: string
-            enum:
-              - service
-              - ticket
+            enum: *a149
           required: false
           name: category_type
           in: query
@@ -55150,9 +54553,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - service
-              - ticket
+            enum: *a150
           required: false
           name: category_type
           in: query
@@ -55164,9 +54565,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a151
           required: false
           name: include_inactive
           in: query
@@ -55241,9 +54640,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - service
-              - ticket
+            enum: *a152
           required: false
           name: category_type
           in: query
@@ -55267,9 +54664,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a153
           required: false
           name: include_usage
           in: query
@@ -55355,7 +54750,7 @@ paths:
         this endpoint to inspect existing service catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new service.
-      tags:
+      tags: &a154
         - Services
         - Service Catalog
       security:
@@ -55430,7 +54825,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
+            enum: &a155
               - fixed
               - hourly
               - usage
@@ -55481,9 +54876,7 @@ paths:
         prices (rates in integer minor units) to set the displayed prices;
         prices[0] is primary and is mirrored into default_rate, so default_rate
         may then be omitted. scheduled_prices sets future-dated prices.
-      tags:
-        - Services
-        - Service Catalog
+      tags: *a154
       security:
         - ApiKeyAuth: []
       extensions:
@@ -55512,10 +54905,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum:
-                    - fixed
-                    - hourly
-                    - usage
+                  enum: *a155
                 default_rate:
                   type: number
                   minimum: 0
@@ -55637,9 +55027,7 @@ paths:
     get:
       summary: Get service
       description: Returns a single service catalog entry by UUID.
-      tags:
-        - Services
-        - Service Catalog
+      tags: *a154
       security:
         - ApiKeyAuth: []
       extensions:
@@ -55695,9 +55083,7 @@ paths:
         differs from prices[0].rate, a top-level currency_code, an unsupported
         currency, a fractional or negative rate, or a duplicate currency returns
         400.
-      tags:
-        - Services
-        - Service Catalog
+      tags: *a154
       security:
         - ApiKeyAuth: []
       extensions:
@@ -55735,10 +55121,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum:
-                    - fixed
-                    - hourly
-                    - usage
+                  enum: *a155
                 default_rate:
                   type: number
                   minimum: 0
@@ -55861,9 +55244,7 @@ paths:
     delete:
       summary: Delete service
       description: Deletes a service catalog entry by UUID.
-      tags:
-        - Services
-        - Service Catalog
+      tags: *a154
       security:
         - ApiKeyAuth: []
       extensions:
@@ -55912,7 +55293,7 @@ paths:
         this endpoint to inspect existing product catalog records and to gather
         prerequisite IDs such as custom_service_type_id and category_id before
         creating a new product.
-      tags:
+      tags: &a156
         - Products
         - Service Catalog
       security:
@@ -56024,9 +55405,7 @@ paths:
         catalog entries with item_kind product and always use billing_method
         usage. Supply prices (integer minor units) to set the displayed prices;
         prices[0] is primary and is mirrored into default_rate.
-      tags:
-        - Products
-        - Service Catalog
+      tags: *a156
       security:
         - ApiKeyAuth: []
       extensions:
@@ -56055,7 +55434,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum:
+                  enum: &a157
                     - usage
                   default: usage
                 default_rate:
@@ -56245,9 +55624,7 @@ paths:
     get:
       summary: Get product
       description: Returns a single product catalog entry by UUID.
-      tags:
-        - Products
-        - Service Catalog
+      tags: *a156
       security:
         - ApiKeyAuth: []
       extensions:
@@ -56303,9 +55680,7 @@ paths:
         differs from prices[0].rate, a top-level currency_code, an unsupported
         currency, a fractional or negative rate, or a duplicate currency returns
         400.
-      tags:
-        - Products
-        - Service Catalog
+      tags: *a156
       security:
         - ApiKeyAuth: []
       extensions:
@@ -56343,8 +55718,7 @@ paths:
                   format: uuid
                 billing_method:
                   type: string
-                  enum:
-                    - usage
+                  enum: *a157
                   default: usage
                 default_rate:
                   type: number
@@ -56535,9 +55909,7 @@ paths:
     delete:
       summary: Delete product
       description: Deletes a product catalog entry by UUID.
-      tags:
-        - Products
-        - Service Catalog
+      tags: *a156
       security:
         - ApiKeyAuth: []
       extensions:
@@ -56585,7 +55957,7 @@ paths:
       description: Returns tenant service types. Use this endpoint to resolve
         custom_service_type_id before creating or updating services and products
         in the service catalog.
-      tags:
+      tags: &a158
         - Service Types
         - Service Catalog
       security:
@@ -56646,9 +56018,7 @@ paths:
     get:
       summary: Get service type
       description: Returns a single tenant service type by UUID.
-      tags:
-        - Service Types
-        - Service Catalog
+      tags: *a158
       security:
         - ApiKeyAuth: []
       extensions:
@@ -56729,9 +56099,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a159
           required: false
           name: order
           in: query
@@ -56752,35 +56120,25 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a160
           required: false
           name: is_active
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a161
           required: false
           name: is_test_mode
           in: query
         - schema:
             type: string
-            enum:
-              - json
-              - xml
-              - form_data
-              - custom
+            enum: *a162
           required: false
           name: payload_format
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a163
           required: false
           name: has_failures
           in: query
@@ -57811,12 +57169,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - pending
-              - delivered
-              - failed
-              - retrying
-              - abandoned
+            enum: *a164
           required: false
           name: status
           in: query
@@ -59690,10 +59043,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - open
-              - closed
-              - all
+            enum: *a165
             description: Open/closed filter. `open`→active only, `closed`→closed, `all`→no
               filter (default).
           required: false
@@ -59781,12 +59131,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - type
-              - title
-              - status
-              - priority
-              - dueDate
+            enum: *a166
             description: Sort column. Omit for the default sort (priority high→low, then due
               date ascending).
           required: false
@@ -59796,9 +59141,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a167
             description: Sort direction for `sortBy` (default asc). Ignored when `sortBy` is
               omitted.
           required: false
@@ -59808,11 +59151,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - type
-              - priority
-              - status
-              - dueDate
+            enum: *a168
             description: When set, the response is grouped by this dimension
               (ActivityGroupedResponseV1) instead of the paginated list;
               `page`/`pageSize` are ignored. `priority` groups by the real
@@ -61102,9 +60441,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -61405,9 +60742,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -61491,9 +60826,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -61577,9 +60910,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -61672,9 +61003,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -61774,9 +61103,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -62229,9 +61556,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -62328,9 +61653,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -62588,9 +61911,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -62680,9 +62001,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -62826,9 +62145,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -63123,9 +62440,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -63216,9 +62531,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -63362,9 +62675,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -63799,9 +63110,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -64112,9 +63421,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -64537,18 +63844,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - client_name
-              - closed_at
-              - created_at
-              - due_date
-              - entered_at
-              - latest_activity_at
-              - priority_name
-              - status_name
-              - ticket_number
-              - title
-              - updated_at
+            enum: *a170
             description: Sort field. Defaults to entered_at. `created_at` is a legacy alias
               for `entered_at` (tickets have no created_at column).
               `latest_activity_at` orders by the newest of the ticket's own
@@ -64566,9 +63862,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a171
           required: false
           name: order
           in: query
@@ -64664,9 +63958,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -64851,9 +64143,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -64938,9 +64228,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -65318,9 +64606,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -65419,9 +64705,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -66169,9 +65453,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -66318,9 +65600,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -66629,9 +65909,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -66774,9 +66052,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -66923,9 +66199,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -67085,9 +66359,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -67339,7 +66611,9 @@ paths:
   /api/v1/time-periods:
     get:
       summary: List time periods
-      description: Lists time periods via ApiTimeSheetController.listTimePeriods().
+      description: "Lists time periods via ApiTimeSheetController.listTimePeriods().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67370,9 +66644,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -67424,7 +66696,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time period
-      description: Creates time period via ApiTimeSheetController.createTimePeriod().
+      description: "Creates time period via ApiTimeSheetController.createTimePeriod().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67516,9 +66790,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -67641,7 +66913,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     get:
       summary: Get time period
-      description: Gets time period UUID via getTimePeriod().
+      description: "Gets time period UUID via getTimePeriod(). end_date is exclusive:
+        the first day after the period (a period covering Aug 16–22 has end_date
+        2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67702,7 +66976,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update time period
-      description: Updates time period UUID via updateTimePeriod().
+      description: "Updates time period UUID via updateTimePeriod(). end_date is
+        exclusive: the first day after the period (a period covering Aug 16–22
+        has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67953,9 +67229,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -68158,9 +67432,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -68246,9 +67518,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -68691,9 +67961,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -69164,9 +68432,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a169
           required: false
           name: order
           in: query
@@ -71453,6 +70719,305 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/time-period-settings:
+    get:
+      summary: List time period settings
+      description: Returns every time period setting for the tenant, active or not,
+        newest effective_from first. Settings drive time period generation.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Time period settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsListResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Create time period settings
+      description: Creates an active time period setting. When effective_from is
+        omitted it defaults to the start of the period containing today in the
+        caller's timezone; if an earlier setting ended on or after that day, the
+        new setting starts the day after it ended (the default may then be in
+        the future). An explicit effective_from is used as given. Returns 409
+        when the setting overlaps an active setting.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TimePeriodSettingsCreateBody"
+      responses:
+        "201":
+          description: Setting created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "400":
+          description: Validation failure (field ranges, effective_to before
+            effective_from).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The setting overlaps an active setting (same or conflicting period
+            cells over intersecting effective dates). Nothing is written;
+            explicit dates are never adjusted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/time-period-settings/{id}:
+    get:
+      summary: Get time period settings
+      description: Gets one time period setting by time_period_settings_id.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Time period setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    put:
+      summary: Update time period settings
+      description: "Applies a partial update. The merged setting is validated like a
+        create and returns 409 when it overlaps another active setting.
+        effective_to: null clears the end date; is_active: false takes the
+        setting out of period generation and overlap checks."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TimePeriodSettingsUpdateBody"
+      responses:
+        "200":
+          description: Updated setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1TimePeriodSettingsResponse"
+        "400":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: The setting overlaps an active setting (same or conflicting period
+            cells over intersecting effective dates). Nothing is written;
+            explicit dates are never adjusted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Delete time period settings
+      description: Deletes a time period setting. Time periods it already generated
+        are kept.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiTimeSheetController
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: time_period
+        x-rbac-action: manage
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: Permission denied (time_period:manage for writes, time_period:read
+            for reads).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Time period settings not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/quotes:
     get:
       summary: List quotes
@@ -71489,9 +71054,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a172
           required: false
           name: order
           in: query
@@ -71507,17 +71070,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a173
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a174
           required: false
           name: include_client
           in: query
@@ -71586,9 +71145,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a172
           required: false
           name: order
           in: query
@@ -71604,17 +71161,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a173
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a174
           required: false
           name: include_client
           in: query
@@ -73029,9 +72582,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a172
           required: false
           name: order
           in: query
@@ -73047,17 +72598,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a173
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a174
           required: false
           name: include_client
           in: query
@@ -73130,9 +72677,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a172
           required: false
           name: order
           in: query
@@ -73148,17 +72693,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a173
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a174
           required: false
           name: include_client
           in: query
@@ -73378,24 +72919,13 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - open
-              - won
-              - lost
-              - all
+            enum: *a175
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum:
-              - identified
-              - qualified
-              - assessment
-              - proposed
-              - verbal
-              - won
-              - lost
+            enum: *a176
           required: false
           name: stage
           in: query
@@ -73413,19 +72943,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - new_logo
-              - expansion
-              - renewal
-              - project
+            enum: *a177
           required: false
           name: opportunity_type
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a178
           required: false
           name: stalled_only
           in: query
@@ -73451,21 +72975,14 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - next_action_due
-              - expected_close_date
-              - mrr_cents
-              - last_activity_at
-              - created_at
+            enum: *a179
             default: next_action_due
           required: false
           name: sort_by
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            enum: *a180
             default: asc
           required: false
           name: sort_direction
@@ -74809,11 +74326,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - pending
-              - accepted
-              - dismissed
-              - snoozed
+            enum: *a181
           required: false
           name: status
           in: query
@@ -76737,9 +76250,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a182
             description: When "true", only active channels are returned. Omit for all
               channels.
           required: false
@@ -77159,12 +76670,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum:
-              - scheduled
-              - awaiting-manual-publish
-              - published
-              - skipped
-              - expired
+            enum: *a183
           required: false
           name: status
           in: query
@@ -78013,9 +77519,9 @@ paths:
   /api/v1/interactions:
     get:
       summary: List interactions
-      tags:
+      tags: &a185
         - Interactions v1
-      security:
+      security: &a186
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
@@ -78075,9 +77581,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a184
             description: Filter by status closure; 'false' also matches interactions with no
               status.
           required: false
@@ -78153,10 +77657,8 @@ paths:
         to start_time plus duration (or 30 minutes). schedule_assigned_user_ids
         defaults to the API key owner; booking other users requires
         user_schedule:update. This does not create a Teams meeting.
-      tags:
-        - Interactions v1
-      security:
-        - ApiKeyAuth: []
+      tags: *a185
+      security: *a186
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -78210,10 +77712,8 @@ paths:
   /api/v1/interactions/{id}:
     get:
       summary: Get an interaction
-      tags:
-        - Interactions v1
-      security:
-        - ApiKeyAuth: []
+      tags: *a185
+      security: *a186
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -78270,10 +77770,8 @@ paths:
       description: Closes/reopens an interaction (status_id must be an interaction
         status) or replaces its notes. Title and timing are not editable here
         because they also re-sync the linked calendar entry.
-      tags:
-        - Interactions v1
-      security:
-        - ApiKeyAuth: []
+      tags: *a185
+      security: *a186
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -78335,10 +77833,8 @@ paths:
     get:
       summary: List interaction statuses
       description: Tenant statuses of type interaction, in display order.
-      tags:
-        - Interactions v1
-      security:
-        - ApiKeyAuth: []
+      tags: *a185
+      security: *a186
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -78387,10 +77883,8 @@ paths:
     get:
       summary: List interaction types
       description: Returns the union of system and tenant-defined interaction types.
-      tags:
-        - Interactions v1
-      security:
-        - ApiKeyAuth: []
+      tags: *a185
+      security: *a186
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -78557,9 +78051,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a187
           required: false
           name: low_stock
           in: query
@@ -78721,9 +78213,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a187
           required: false
           name: low_stock
           in: query
@@ -79018,9 +78508,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a187
           required: false
           name: low_stock
           in: query
@@ -79454,9 +78942,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a187
           required: false
           name: low_stock
           in: query
@@ -79701,9 +79187,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - "true"
-              - "false"
+            enum: *a187
           required: false
           name: low_stock
           in: query
@@ -92480,10 +91964,11 @@ webhooks:
     post:
       summary: "Outbound delivery: ticket.comment.added"
       description: Emitted when a comment is added to a ticket. `data.comment` carries
-        the new comment block; attachments are never included. Delivered with
-        HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata
-        headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being
-        abandoned.
+        the new comment block (including `author_type` and, for contact authors,
+        `contact_id`/`contact_name`); attachments are never included. Delivered
+        with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-*
+        metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before
+        being abandoned.
       tags:
         - Webhooks
       extensions:
@@ -92538,6 +92023,76 @@ webhooks:
           application/json:
             schema:
               $ref: "#/components/schemas/TicketCommentAddedDeliveryV1"
+            description: Signed JSON envelope.
+      responses:
+        "200":
+          description: Endpoint accepted the delivery (any 2xx is treated as success).
+        "410":
+          description: Endpoint indicates the resource is permanently gone; webhook will
+            be auto-disabled.
+  ticket.response_state_changed:
+    post:
+      summary: "Outbound delivery: ticket.response_state_changed"
+      description: Emitted when whose turn it is on a ticket changes.
+        `data.previous_response_state` and `data.new_response_state` are
+        `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g.
+        on close). Delivered with HMAC-SHA256 signature header X-Alga-Signature,
+        and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m,
+        2h, 12h) before being abandoned.
+      tags:
+        - Webhooks
+      extensions:
+        x-alga-event-type: ticket.response_state_changed
+        x-rbac-resource: webhook
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over
+              `${timestamp}.${raw_body}`."
+          required: true
+          description: "`t=<unix-seconds>,v1=<hex-hmac-sha256>` over
+            `${timestamp}.${raw_body}`."
+          name: x-alga-signature
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-webhook-id
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-event-id
+          in: header
+        - schema:
+            $ref: "#/components/schemas/WebhookEventTypeV1"
+          required: true
+          name: x-alga-event-type
+          in: header
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: x-alga-delivery-id
+          in: header
+        - schema:
+            type: string
+            description: Stringified attempt count, starts at 1.
+          required: true
+          description: Stringified attempt count, starts at 1.
+          name: x-alga-delivery-attempt
+          in: header
+      requestBody:
+        description: Signed JSON envelope.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketResponseStateChangedDeliveryV1"
             description: Signed JSON envelope.
       responses:
         "200":

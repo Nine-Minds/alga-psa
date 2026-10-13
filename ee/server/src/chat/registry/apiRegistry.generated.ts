@@ -38618,8 +38618,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -38689,7 +38692,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -39070,8 +39073,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -39141,7 +39147,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -39547,8 +39553,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "status_id",
                   "status_name",
                   "is_closed",
+                  "response_state",
                   "previous_status_id",
                   "previous_status_name",
+                  "previous_response_state",
+                  "new_response_state",
                   "priority_id",
                   "priority_name",
                   "client_id",
@@ -39618,7 +39627,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               }
             }
           },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
+          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
         },
         "payload_transformation": {
           "type": "object",
@@ -49898,7 +49907,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "List time periods",
     "summary": "List time periods",
-    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods().",
+    "description": "Lists time periods via ApiTimeSheetController.listTimePeriods(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50023,7 +50032,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods",
     "displayName": "Create time period",
     "summary": "Create time period",
-    "description": "Creates time period via ApiTimeSheetController.createTimePeriod().",
+    "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50169,7 +50178,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Get time period",
     "summary": "Get time period",
-    "description": "Gets time period UUID via getTimePeriod().",
+    "description": "Gets time period UUID via getTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -50221,7 +50230,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-periods/{id}",
     "displayName": "Update time period",
     "summary": "Update time period",
-    "description": "Updates time period UUID via updateTimePeriod().",
+    "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
     "tags": [
       "Work Management v1"
     ],
@@ -53896,6 +53905,295 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data"
       ]
     }
+  },
+  {
+    "id": "get-_api_v1_timeperiodsettings",
+    "method": "get",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "List time period settings",
+    "summary": "List time period settings",
+    "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_timeperiodsettings",
+    "method": "post",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "Create time period settings",
+    "summary": "Create time period settings",
+    "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+        }
+      },
+      "required": [
+        "frequency",
+        "frequency_unit"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_timeperiodsettings_id",
+    "method": "get",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Get time period settings",
+    "summary": "Get time period settings",
+    "description": "Gets one time period setting by time_period_settings_id.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_timeperiodsettings_id",
+    "method": "put",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Update time period settings",
+    "summary": "Update time period settings",
+    "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive); null clears it."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Inactive settings are ignored by period generation and overlap checks."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_timeperiodsettings_id",
+    "method": "delete",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Delete time period settings",
+    "summary": "Delete time period settings",
+    "description": "Deletes a time period setting. Time periods it already generated are kept.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ]
   },
   {
     "id": "get-_api_v1_quotes",
