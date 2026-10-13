@@ -2131,6 +2131,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            contract_line_type: editingLine.contract_line_type,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}

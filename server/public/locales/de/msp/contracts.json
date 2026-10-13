@@ -819,7 +819,7 @@
       "advance": "Voraus (Abrechnung zu Periodenbeginn)",
       "arrears": "Nachträglich (Abrechnung am Periodenende)"
     },
-    "billingTimingHelp": "Abrechnung im Voraus ist typisch für Festgebühren; nachträgliche Abrechnung für zeit-/nutzungsbasierte Services.",
+    "billingTimingHelp": "Festpreispositionen können im Voraus oder nachträglich abgerechnet werden. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde.",
     "chooseBillingModel": "Abrechnungsmodell auswählen *",
     "chooseBillingModelDescription": "Wählen Sie das Abrechnungsverhalten aus, das zu diesem Angebot passt.",
     "contractLineNameLabel": "Name der Vertragslinie *",
@@ -2049,7 +2049,7 @@
       "advance": "Voraus – Rechnung zu Beginn der Periode"
     },
     "fields": {
-      "billingTiming": "Abrechnungszeitpunkt",
+      "billingTiming": "Abrechnungszeitpunkt für Festpreispositionen",
       "adjustPartialPeriods": "Für Teilperioden anpassen",
       "services": "Dienste",
       "serviceNumber": "Dienst {{index}}",
@@ -2663,5 +2663,14 @@
   },
   "sellHourBlockNote": {
     "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, verwenden Sie „Block verkaufen“ unter „Stundenblöcke“ auf dem Tab „Abrechnungs-Dashboard“ des Kunden."
+  },
+  "billingTimingField": {
+    "arrears": "Nachträglich",
+    "fixedHelp": "Festpreispositionen können im Voraus oder nachträglich abgerechnet werden.",
+    "nonFixedHelp": "Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde.",
+    "options": {
+      "advance": "Im Voraus (zu Beginn des Zeitraums abrechnen)",
+      "arrears": "Nachträglich (am Ende des Zeitraums abrechnen)"
+    }
   }
 }

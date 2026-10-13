@@ -714,7 +714,8 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Hourly",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Hourly lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.hourly_billing_frequency ??
               wizardData.billing_frequency,
@@ -724,7 +725,8 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Usage",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            // Usage lines always bill in arrears, whatever the contract-wide timing says.
+            billingTiming: "arrears",
             billingFrequency:
               wizardData.usage_billing_frequency ??
               wizardData.billing_frequency,

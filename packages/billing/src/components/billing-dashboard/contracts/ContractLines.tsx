@@ -65,6 +65,8 @@ import {
 } from '@alga-psa/billing/actions/billingProfileActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { BillingTimingField } from './BillingTimingField';
+import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ContractLinesProps {
@@ -182,16 +184,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     schedule_name: string;
     is_default: boolean;
   }>>([]);
-  const billingTimingOptions = [
-    {
-      value: 'advance',
-      label: t('billing.timing.advance', { defaultValue: 'In Advance' }),
-    },
-    {
-      value: 'arrears',
-      label: t('billing.timing.arrears', { defaultValue: 'In Arrears' }),
-    },
-  ] as const;
   const cadenceOwnerOptions = [
     {
       value: 'client',
@@ -694,7 +686,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // Start editing - populate edit data from the line
       setEditingLineId(line.contract_line_id);
       setEditLineData({
-        billing_timing: line.billing_timing ?? 'arrears',
+        billing_timing: resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing),
         cadence_owner: line.cadence_owner ?? 'client',
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
@@ -826,7 +818,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // Persist recurring authoring fields in one mutation so service periods
       // are rematerialized once from the final contract-line state.
       const updateResult = pricingOnly ? true : await updateContractLine(contractLineId, {
-        billing_timing: editLineData.billing_timing,
+        billing_timing: resolveEffectiveBillingTiming(
+          contractLines.find((l) => l.contract_line_id === contractLineId)?.contract_line_type,
+          editLineData.billing_timing,
+        ),
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
         round_up_to_nearest: editLineData.round_up_to_nearest,
@@ -1546,26 +1541,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               disabled={isReadOnly}
                             />
 
-                            {/* Billing timing and cadence owner - applies to all recurring line types */}
+                            {/* Billing timing is editable for Fixed lines only (Hourly/Usage always bill in arrears); cadence owner applies to all recurring line types */}
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   {t('billing.labels.timing', { defaultValue: 'Billing Timing' })}
                                 </Label>
                                 {editingLineId === line.contract_line_id && !pricingOnly ? (
-                                  <CustomSelect
+                                  <BillingTimingField
                                     id={`billing-timing-${line.contract_line_id}`}
+                                    lineType={line.contract_line_type}
                                     value={editLineData.billing_timing || line.billing_timing || 'arrears'}
-                                    onValueChange={(value) => setEditLineData({
+                                    onChange={(value) => setEditLineData({
                                       ...editLineData,
-                                      billing_timing: value as 'arrears' | 'advance'
+                                      billing_timing: value
                                     })}
-                                    options={[...billingTimingOptions]}
+                                    hideHelp
                                     className="mt-1"
                                   />
                                 ) : (
                                   <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {(line.billing_timing || 'arrears') === 'advance'
+                                    {resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing) === 'advance'
                                       ? t('billing.timing.advance', { defaultValue: 'In Advance' })
                                       : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
                                   </p>

@@ -819,7 +819,7 @@
       "advance": "Adiantamento (fatura no início do período)",
       "arrears": "Atrasos (fatura no final do período)"
     },
-    "billingTimingHelp": "O faturamento antecipado é típico para taxas fixas; atrasos por serviços baseados em tempo/utilização.",
+    "billingTimingHelp": "As linhas fixas podem ser faturadas antecipadamente ou após o período. As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado.",
     "chooseBillingModel": "Escolha um modelo de cobrança *",
     "chooseBillingModelDescription": "Selecione o comportamento de cobrança adequado a esta oferta.",
     "contractLineNameLabel": "Nome da linha de contrato *",
@@ -2049,7 +2049,7 @@
       "advance": "Adiantamento - fatura no início do período"
     },
     "fields": {
-      "billingTiming": "Tempo de faturamento",
+      "billingTiming": "Momento de faturação das linhas de valor fixo",
       "adjustPartialPeriods": "Ajuste para períodos parciais",
       "services": "Serviços",
       "serviceNumber": "Serviço {{index}}",
@@ -2663,5 +2663,14 @@
   },
   "sellHourBlockNote": {
     "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, use Vender bloco em Blocos de horas, na guia Painel de faturamento do cliente."
+  },
+  "billingTimingField": {
+    "arrears": "Pós-pago",
+    "fixedHelp": "As linhas fixas podem ser faturadas antecipadamente ou após o período.",
+    "nonFixedHelp": "As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado.",
+    "options": {
+      "advance": "Antecipado (faturar no início do período)",
+      "arrears": "Após o período (faturar no fim do período)"
+    }
   }
 }

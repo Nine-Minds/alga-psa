@@ -2351,14 +2351,17 @@ export const getDraftContractForResume = withAuth(async (
     contractCurrencyCode
   );
 
-  // Contract-level timing and cadence owner come from the first non-fixed line when there is one,
-  // else the first fixed line, instead of whichever line happens to be last.
+  // Cadence owner comes from the first non-fixed line when there is one, else the first fixed
+  // line, instead of whichever line happens to be last. Billing timing is only a real choice on
+  // Fixed lines (Hourly/Usage always bill in arrears), so it is derived from Fixed lines first.
   const linesByPrecedence = [
     ...detailedLines.filter((l) => l.contract_line_type !== 'Fixed'),
     ...detailedLines.filter((l) => l.contract_line_type === 'Fixed'),
   ];
   cadenceOwner = linesByPrecedence.find((l) => l.cadence_owner)?.cadence_owner ?? cadenceOwner;
-  billingTiming = linesByPrecedence.find((l) => l.billing_timing)?.billing_timing ?? billingTiming;
+  billingTiming =
+    [...detailedLines.filter((l) => l.contract_line_type === 'Fixed'), ...detailedLines]
+      .find((l) => l.billing_timing)?.billing_timing ?? billingTiming;
 
   for (const line of detailedLines) {
     const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
