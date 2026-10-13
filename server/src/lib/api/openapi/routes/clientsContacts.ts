@@ -43,7 +43,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       email: zOpenApi.string().optional(),
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']).optional(),
-      is_inactive: zOpenApi.enum(['true', 'false']).optional(),
+      is_inactive: zOpenApi.enum(['true', 'false']).optional().describe(
+        'Filters to inactive clients when true and active clients when false; omit to include all clients.',
+      ),
       is_tax_exempt: zOpenApi.enum(['true', 'false']).optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       region_code: zOpenApi.string().optional(),
@@ -88,6 +90,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       billing_email: zOpenApi.string().email().optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       is_inactive: zOpenApi.boolean().optional(),
+      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
