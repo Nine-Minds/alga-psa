@@ -238,7 +238,8 @@
       "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
       "fixAllNoop": "Tous les plannings de facturation sont déjà à jour. Tout élément encore listé ci-dessous doit être examiné individuellement.",
       "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
-      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
+      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service.",
+      "fixAllManualReview": "{{count}} période(s) horaire(s) ou d'utilisation nécessitent un examen individuel."
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",

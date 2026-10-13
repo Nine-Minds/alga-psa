@@ -30,6 +30,7 @@ import {
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
+import { fetchStrandedArrearsOnlyLineGaps } from './arrearsOnlyLineGaps';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
@@ -2036,9 +2037,13 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 monthEndCloseEligibilityDate,
             );
 
+        // Leftovers of an old advance schedule on Hourly/Usage lines strand work but never block
+        // invoicing of other windows, so they are appended after the block/suppression passes above.
+        const strandedArrearsOnlyGaps = await fetchStrandedArrearsOnlyLineGaps(knex, tenant);
+
         return {
             invoiceCandidates: canonicalizedInvoiceCandidates,
-            materializationGaps,
+            materializationGaps: [...materializationGaps, ...strandedArrearsOnlyGaps],
             total,
             page,
             pageSize,

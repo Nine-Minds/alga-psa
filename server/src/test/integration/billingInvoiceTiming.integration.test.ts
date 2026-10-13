@@ -50,6 +50,7 @@ let calculateBillingForSelectionInputAction: typeof import('@alga-psa/billing/ac
 let previewInvoiceForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoiceForSelectionInput;
 let getPurchaseOrderOverageForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').getPurchaseOrderOverageForSelectionInput;
 let getAvailableRecurringDueWorkAction: typeof import('@alga-psa/billing/actions/billingAndTax').getAvailableRecurringDueWork;
+let repairAllRecurringServicePeriodsForTenantAction: typeof import('@alga-psa/billing/actions/recurringServicePeriodActions').repairAllRecurringServicePeriodsForTenant;
 let hardDeleteInvoiceAction: typeof import('@alga-psa/billing/actions/invoiceModification').hardDeleteInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let getInvoicedBillingCyclesPaginatedAction: typeof import('@alga-psa/billing/actions/billingCycleActions').getInvoicedBillingCyclesPaginated;
@@ -209,6 +210,7 @@ describe('Billing Invoice Timing Integration', () => {
     ({
       getAvailableRecurringDueWork: getAvailableRecurringDueWorkAction,
     } = await import('@alga-psa/billing/actions/billingAndTax'));
+    ({ repairAllRecurringServicePeriodsForTenant: repairAllRecurringServicePeriodsForTenantAction } = await import('@alga-psa/billing/actions/recurringServicePeriodActions'));
     ({ hardDeleteInvoice: hardDeleteInvoiceAction } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({
@@ -5738,6 +5740,165 @@ it('T1: time logged after an empty legacy advance hourly period is stranded, the
   expect(await countRows()).toBe(rowsBeforeSecondRun);
 }, HOOK_TIMEOUT);
 
+/**
+ * Seeds the legacy state the arrears-only rule leaves behind: an Hourly line stored as advance
+ * with advance service periods from Feb 2025. Returns helpers to find the Generate-page row for an
+ * invoice window.
+ */
+async function seedLegacyAdvanceHourlyLine(label: string) {
+  const clientName = `${label} Client`;
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName,
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: `${label} Service`,
+    planName: `${label} Plan`,
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: `integration-legacy-advance-${label}`,
+    targetHorizonDays: 100,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of plan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const findDueRow = async (windowStart: string, windowEnd: string, range: { from: string; to: string }) => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 50, searchTerm: clientName, dateRange: range,
+    });
+    return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+      .find((row) => row.contractLineId === line.contractLineId
+        && row.invoiceWindowStart === windowStart
+        && row.invoiceWindowEnd === windowEnd);
+  };
+  const strandedGaps = async () => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 50, searchTerm: clientName, dateRange: { from: '2025-02-01', to: '2025-04-01' },
+    });
+    return dueWork.materializationGaps.filter((gap) => gap.clientId === clientId && gap.reason === 'stranded_arrears_only_line');
+  };
+  return { clientId, clientName, line, findDueRow, strandedGaps };
+}
+
+const runMigrationA = async () => {
+  const migrationA = createRequire(import.meta.url)('../../../migrations/20261013120000_hourly_usage_lines_bill_in_arrears.cjs');
+  await migrationA.up(db);
+};
+
+it('T10: unbilled advance period before the billed boundary gets an arrears catch-up row; its time bills once and the billed period is untouched', async () => {
+  setupCommonMocks({ tenantId, userId: 'pre-boundary-user', permissionCheck: () => true });
+  const { clientId, line, findDueRow } = await seedLegacyAdvanceHourlyLine('Pre Boundary');
+  // Feb (unbilled) advance period has time; only the March advance period is invoiced.
+  const febEntry = await createApprovedTimeEntryForContractLine({
+    clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+    startTime: '2025-02-10T10:00:00.000Z', endTime: '2025-02-10T11:00:00.000Z',
+  });
+  const marchRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-03-01', to: '2025-04-01' });
+  expect(marchRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(marchRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const periods = () => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .orderBy('service_period_start')
+    .select('*');
+  const before = await periods();
+  const febAdvanceBefore = before.find((row) => row.due_position === 'advance' && dateOnlyOf(row.service_period_start) === '2025-02-01');
+  const marchBilledBefore = before.find((row) => row.due_position === 'advance' && row.lifecycle_state === 'billed');
+  expect(febAdvanceBefore).toMatchObject({ lifecycle_state: 'generated' });
+  expect(dateOnlyOf(marchBilledBefore!.service_period_start)).toBe('2025-03-01');
+
+  await runMigrationA();
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(repair.manualReview.filter((item) => item.contractLineId === line.contractLineId)).toEqual([]);
+
+  const after = await periods();
+  // The billed March advance row is untouched.
+  expect(after.find((row) => row.record_id === marchBilledBefore!.record_id)).toEqual(marchBilledBefore);
+  // February's retired advance row now has exactly one live arrears counterpart for the same span.
+  const febArrears = after.filter((row) => row.due_position === 'arrears'
+    && dateOnlyOf(row.service_period_start) === '2025-02-01'
+    && !['superseded', 'archived'].includes(row.lifecycle_state));
+  expect(febArrears).toHaveLength(1);
+  expect(febArrears[0]).toMatchObject({ lifecycle_state: 'generated', reason_code: 'stranded_advance_catch_up', provenance_kind: 'repair' });
+  // No service period exists twice among live rows.
+  const liveSpans = after
+    .filter((row) => !['superseded', 'archived'].includes(row.lifecycle_state))
+    .map((row) => `${row.due_position}|${dateOnlyOf(row.service_period_start)}|${dateOnlyOf(row.service_period_end)}`);
+  expect(new Set(liveSpans).size).toBe(liveSpans.length);
+
+  // February's time is billable exactly once through the catch-up row; March is not billed again.
+  const catchUpRow = await findDueRow(
+    dateOnlyOf(febArrears[0].invoice_window_start), dateOnlyOf(febArrears[0].invoice_window_end),
+    { from: '2025-02-01', to: '2025-04-01' },
+  );
+  expect(catchUpRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(catchUpRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const febLinks = () => tenantTable(db, tenantId, 'invoice_time_entries').where({ tenant: tenantId, entry_id: febEntry.entry_id });
+  expect(await febLinks()).toHaveLength(1);
+  expect(await tenantTable(db, tenantId, 'time_entries').where({ tenant: tenantId, entry_id: febEntry.entry_id }).first('invoiced'))
+    .toMatchObject({ invoiced: true });
+
+  const second = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(second).toMatchObject({ timingFlipped: 0, advanceRowsSuperseded: 0, rowsRehomed: 0, catchUpRowsCreated: 0 });
+  expect(await febLinks()).toHaveLength(1);
+  const final = await periods();
+  expect(final.filter((row) => row.lifecycle_state === 'billed' && row.due_position === 'advance')).toHaveLength(1);
+  expect(final.find((row) => row.record_id === marchBilledBefore!.record_id)).toEqual(marchBilledBefore);
+}, HOOK_TIMEOUT);
+
+it('T11: Generate page reports a billed empty advance Hourly period with later time; Fix all repairs it and the time bills once', async () => {
+  setupCommonMocks({ tenantId, userId: 'gap-fix-user', permissionCheck: () => true });
+  const { clientId, line, findDueRow, strandedGaps } = await seedLegacyAdvanceHourlyLine('Gap Fix');
+  // February is invoiced empty on the advance schedule, then time is logged in it.
+  const februaryRow = await findDueRow('2025-02-01', '2025-03-01', { from: '2025-02-01', to: '2025-03-01' });
+  expect(februaryRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(februaryRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId, serviceId: line.serviceId, contractLineId: line.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z', endTime: '2025-02-15T11:00:00.000Z',
+  });
+
+  // After Migration A (no repair yet) the Generate-page data reports the gap.
+  await runMigrationA();
+  const gapsBefore = await strandedGaps();
+  expect(gapsBefore.length).toBeGreaterThanOrEqual(1);
+  expect(gapsBefore.some((gap) => gap.servicePeriodStart === '2025-02-01' && gap.servicePeriodEnd === '2025-03-01')).toBe(true);
+
+  // "Fix all" runs the arrears-only repair, then the client-cadence repair.
+  const summary: any = await repairAllRecurringServicePeriodsForTenantAction();
+  expect(summary.arrearsOnlyLines.catchUpRowsCreated).toBeGreaterThanOrEqual(1);
+  expect(await strandedGaps()).toEqual([]);
+
+  // The stranded time appears as a Ready catch-up row and bills exactly once.
+  const catchUpRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-04-01' });
+  expect(catchUpRow).toBeTruthy();
+  expect(await generateInvoiceForSelectionInput(catchUpRow!.selectorInput)).toMatchObject({ invoice_id: expect.any(String) });
+  const links = () => tenantTable(db, tenantId, 'invoice_time_entries').where({ tenant: tenantId, entry_id: entry.entry_id });
+  expect(await links()).toHaveLength(1);
+
+  // A second invoice run does not bill it again.
+  expect(await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-04-01' })).toBeUndefined();
+  await generateInvoiceForSelectionInput(catchUpRow!.selectorInput).catch(() => undefined);
+  expect(await links()).toHaveLength(1);
+  await repairAllRecurringServicePeriodsForTenantAction();
+  expect(await links()).toHaveLength(1);
+  expect(await strandedGaps()).toEqual([]);
+}, HOOK_TIMEOUT);
+
 it('T4: a stored-advance Hourly or Usage line materializes arrears service periods (engine backstop)', async () => {
   setupCommonMocks({ tenantId, userId: 'engine-backstop-user', permissionCheck: () => true });
   const { contextLike } = await createClientWithRecurringCycles({
@@ -7139,6 +7300,10 @@ function normalizeDateValue(value: unknown): string | null {
   } catch (error) {
     return null;
   }
+}
+
+function dateOnlyOf(value: unknown): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 }
 
 async function ensureTenant(connection: Knex): Promise<string> {
