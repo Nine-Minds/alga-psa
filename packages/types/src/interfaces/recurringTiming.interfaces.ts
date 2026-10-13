@@ -495,7 +495,7 @@ export interface IRecurringDueSelectionInput {
  * the "known now vs calculated at generation" split on the Automatic Invoices
  * screen. Values mirror `contract_lines.contract_line_type`.
  */
-export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | 'PrepaidBlock';
 
 export interface IRecurringDueWorkWarning {
   code: 'stale_project_billing_ready_entries';

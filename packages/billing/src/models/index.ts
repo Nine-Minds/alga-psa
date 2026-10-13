@@ -36,3 +36,5 @@ export type {
 export { default as ProjectBillingCapUsage } from './projectBillingCapUsage';
 export type { ProjectBillingCapUsageIncrement } from './projectBillingCapUsage';
 export { default as HourBlock } from './hourBlock';
+export { default as ContractLinePrepaidBlock } from './contractLinePrepaidBlock';
+export { default as ContractLineBlockIssuance } from './contractLineBlockIssuance';
