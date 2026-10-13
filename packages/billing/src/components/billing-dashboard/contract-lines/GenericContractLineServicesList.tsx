@@ -369,12 +369,12 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           : isCustom
             ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
             : t('services.generic.badges.standard', { defaultValue: 'Standard' });
-        // Display rate directly as decimal
+        // custom_rate and the default_rate fallback are both stored in minor units
         return (
           <span className="inline-flex items-center gap-2">
             <Badge variant={badgeVariant}>{badgeLabel}</Badge>
             {rate !== undefined && rate !== null
-              ? money(Math.round(Number(rate) * 100))
+              ? money(Math.round(Number(rate)))
               : t('common.notAvailable', { defaultValue: 'N/A' })}
           </span>
         );
