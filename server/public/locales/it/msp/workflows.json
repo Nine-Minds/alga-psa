@@ -3304,6 +3304,9 @@
     "errors": {
       "nameRequired": "Il nome del workflow è obbligatorio",
       "generic": "Impossibile creare la bozza del workflow"
-    }
+    },
+    "includeCustomFieldsCount": "Campi personalizzati ({{n}})",
+    "includeChecklistCount": "Lista di controllo ({{total}} elementi: {{templates}} da modelli / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Gli elementi dei modelli vengono riapplicati dal modello attuale, quindi le modifiche fatte su questo ticket non vengono riportate."
   }
 }

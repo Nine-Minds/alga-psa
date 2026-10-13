@@ -3182,6 +3182,9 @@
     "errors": {
       "nameRequired": "Arbetsflödesnamn krävs",
       "generic": "Det gick inte att skapa arbetsflödesutkastet"
-    }
+    },
+    "includeCustomFieldsCount": "Anpassade fält ({{n}})",
+    "includeChecklistCount": "Checklista ({{total}} punkter: {{templates}} från mallar / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Punkter från mallar tillämpas på nytt från den aktuella mallen, så ändringar som gjorts på det här ärendet förs inte över."
   }
 }

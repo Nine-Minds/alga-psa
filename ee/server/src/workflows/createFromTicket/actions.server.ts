@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import {
   buildWorkflowDraftFromTicket,
+  splitTicketChecklist,
   type TicketWorkflowTrigger,
 } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
@@ -136,5 +137,58 @@ export const createWorkflowFromTicketAction = withAuth(
     });
 
     return { workflowId: created.workflowId };
+  }
+);
+
+const ImportSummaryInput = z.object({ ticketId: z.string().uuid() });
+
+export type WorkflowFromTicketImportSummary = {
+  customFieldCount: number;
+  /** Checklist items whose template is still active; re-applied from the current template. */
+  templateItemCount: number;
+  /** Ad-hoc items, including items whose template is inactive or missing. */
+  adHocItemCount: number;
+};
+
+export type WorkflowFromTicketImportSummaryResult =
+  | WorkflowFromTicketImportSummary
+  | ReturnType<typeof permissionError>
+  | ReturnType<typeof actionError>;
+
+/**
+ * Read-only counts shown in the dialog's import section. Same gate as the create action
+ * (edition, not a client user, workflow manage/admin, then ticket read + row-auth through
+ * the tickets action). Returns counts only; no ticket content crosses to the client.
+ */
+// LEVERAGE: pattern ee-workflow-from-ticket-gate — same gate sequence as createWorkflowFromTicketAction
+export const getWorkflowFromTicketImportSummaryAction = withAuth(
+  async (user, _ctx, input: unknown): Promise<WorkflowFromTicketImportSummaryResult> => {
+    if (!isEnterprise) {
+      throw new Error('Create workflow from ticket is only available in the Enterprise edition');
+    }
+    if (user.user_type === 'client') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+    const parsed = ImportSummaryInput.safeParse(input);
+    if (!parsed.success) {
+      return actionError(parsed.error.issues[0]?.message ?? 'Invalid request');
+    }
+    const { knex } = await createTenantKnex();
+    const canManage =
+      (await hasPermission(user, 'workflow', 'manage', knex)) ||
+      (await hasPermission(user, 'workflow', 'admin', knex));
+    if (!canManage) {
+      return permissionError('Permission denied: workflow manage rights are required');
+    }
+    const blueprint = await getTicketWorkflowBlueprint(parsed.data.ticketId);
+    if (isActionPermissionError(blueprint) || isActionMessageError(blueprint)) {
+      return blueprint as unknown as WorkflowFromTicketImportSummaryResult;
+    }
+    const { adHocItems } = splitTicketChecklist(blueprint.checklist);
+    return {
+      customFieldCount: Object.keys(blueprint.custom_fields).length,
+      templateItemCount: blueprint.checklist.length - adHocItems.length,
+      adHocItemCount: adHocItems.length,
+    };
   }
 );

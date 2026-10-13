@@ -3304,6 +3304,9 @@
     "errors": {
       "nameRequired": "El nombre del flujo de trabajo es obligatorio",
       "generic": "No se pudo crear el borrador del flujo de trabajo"
-    }
+    },
+    "includeCustomFieldsCount": "Campos personalizados ({{n}})",
+    "includeChecklistCount": "Lista de verificación ({{total}} elementos: {{templates}} de plantillas / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Los elementos de plantillas se vuelven a aplicar desde la plantilla actual, por lo que las ediciones hechas en este ticket no se trasladan."
   }
 }

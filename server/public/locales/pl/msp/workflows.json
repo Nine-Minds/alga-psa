@@ -3308,6 +3308,9 @@
     "errors": {
       "nameRequired": "Nazwa workflow jest wymagana",
       "generic": "Nie udało się utworzyć szkicu workflow"
-    }
+    },
+    "includeCustomFieldsCount": "Pola niestandardowe ({{n}})",
+    "includeChecklistCount": "Lista kontrolna ({{total}} pozycji: {{templates}} z szablonów / {{adHoc}} doraźnych)",
+    "checklistTemplateNote": "Pozycje z szablonów są stosowane ponownie z bieżącego szablonu, więc zmiany wprowadzone w tym zgłoszeniu nie są przenoszone."
   }
 }

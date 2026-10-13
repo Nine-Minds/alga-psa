@@ -3304,6 +3304,9 @@
     "errors": {
       "nameRequired": "Workflow-Name ist erforderlich",
       "generic": "Workflow-Entwurf konnte nicht erstellt werden"
-    }
+    },
+    "includeCustomFieldsCount": "Benutzerdefinierte Felder ({{n}})",
+    "includeChecklistCount": "Checkliste ({{total}} Elemente: {{templates}} aus Vorlagen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Elemente aus Vorlagen werden aus der aktuellen Vorlage neu angewendet; Änderungen an diesem Ticket werden nicht übernommen."
   }
 }

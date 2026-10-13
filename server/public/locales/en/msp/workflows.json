@@ -3182,6 +3182,9 @@
     "errors": {
       "nameRequired": "Workflow name is required",
       "generic": "Failed to create the workflow draft"
-    }
+    },
+    "includeCustomFieldsCount": "Custom fields ({{n}})",
+    "includeChecklistCount": "Checklist ({{total}} items: {{templates}} from templates / {{adHoc}} ad-hoc)",
+    "checklistTemplateNote": "Items from templates are re-applied from the current template, so edits made on this ticket are not carried over."
   }
 }

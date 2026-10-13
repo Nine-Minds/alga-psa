@@ -3304,6 +3304,9 @@
     "errors": {
       "nameRequired": "Workflownaam is vereist",
       "generic": "Het conceptworkflow kon niet worden aangemaakt"
-    }
+    },
+    "includeCustomFieldsCount": "Aangepaste velden ({{n}})",
+    "includeChecklistCount": "Controlelijst ({{total}} items: {{templates}} uit sjablonen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Items uit sjablonen worden opnieuw toegepast vanuit het huidige sjabloon, dus wijzigingen op dit ticket worden niet overgenomen."
   }
 }

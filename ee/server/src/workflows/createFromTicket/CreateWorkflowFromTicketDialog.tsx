@@ -15,7 +15,11 @@ import {
   type WorkflowEventCatalogOptionV2,
 } from '@alga-psa/workflows/actions';
 import { workflowEditorPath } from '../../components/workflow-designer/workflowEditorRoute';
-import { createWorkflowFromTicketAction } from './actions.server';
+import {
+  createWorkflowFromTicketAction,
+  getWorkflowFromTicketImportSummaryAction,
+  type WorkflowFromTicketImportSummary,
+} from './actions.server';
 
 const MANUAL_TRIGGER_VALUE = '__manual__';
 const TICKET_CREATED_EVENT = 'TICKET_CREATED';
@@ -51,6 +55,7 @@ export default function CreateWorkflowFromTicketDialog({
     checklist: true,
   });
   const [events, setEvents] = useState<WorkflowEventCatalogOptionV2[]>([]);
+  const [summary, setSummary] = useState<WorkflowFromTicketImportSummary | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +67,26 @@ export default function CreateWorkflowFromTicketDialog({
     setInclude({ assignment: true, tags: true, customFields: true, checklist: true });
     setError(null);
   }, [open, title]);
+
+  // Counts come from the server (it owns ticket access); failure only hides the counts.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setSummary(null);
+    (async () => {
+      try {
+        const result = await getWorkflowFromTicketImportSummaryAction({ ticketId });
+        if (cancelled) return;
+        if (isActionPermissionError(result) || isActionMessageError(result)) return;
+        setSummary(result as WorkflowFromTicketImportSummary);
+      } catch {
+        if (!cancelled) setSummary(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, ticketId]);
 
   useEffect(() => {
     if (!open) return;
@@ -238,16 +263,40 @@ export default function CreateWorkflowFromTicketDialog({
           />
           <Checkbox
             id="create-workflow-from-ticket-include-custom-fields"
-            label={t('createFromTicket.includeCustomFields', { defaultValue: 'Custom fields' })}
+            label={
+              summary
+                ? t('createFromTicket.includeCustomFieldsCount', {
+                    defaultValue: 'Custom fields ({{n}})',
+                    n: summary.customFieldCount,
+                  })
+                : t('createFromTicket.includeCustomFields', { defaultValue: 'Custom fields' })
+            }
             checked={include.customFields}
             onChange={toggle('customFields')}
           />
           <Checkbox
             id="create-workflow-from-ticket-include-checklist"
-            label={t('createFromTicket.includeChecklist', { defaultValue: 'Checklist' })}
+            label={
+              summary
+                ? t('createFromTicket.includeChecklistCount', {
+                    defaultValue: 'Checklist ({{total}} items: {{templates}} from templates / {{adHoc}} ad-hoc)',
+                    total: summary.templateItemCount + summary.adHocItemCount,
+                    templates: summary.templateItemCount,
+                    adHoc: summary.adHocItemCount,
+                  })
+                : t('createFromTicket.includeChecklist', { defaultValue: 'Checklist' })
+            }
             checked={include.checklist}
             onChange={toggle('checklist')}
           />
+          {summary && summary.templateItemCount > 0 && (
+            <p id="create-workflow-from-ticket-checklist-template-note" className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('createFromTicket.checklistTemplateNote', {
+                defaultValue:
+                  'Items from templates are re-applied from the current template, so edits made on this ticket are not carried over.',
+              })}
+            </p>
+          )}
         </fieldset>
       </form>
     </Dialog>

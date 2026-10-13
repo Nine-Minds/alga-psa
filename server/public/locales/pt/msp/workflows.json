@@ -3182,6 +3182,9 @@
     "errors": {
       "nameRequired": "O nome do fluxo de trabalho é obrigatório",
       "generic": "Falha ao criar o rascunho do fluxo de trabalho"
-    }
+    },
+    "includeCustomFieldsCount": "Campos personalizados ({{n}})",
+    "includeChecklistCount": "Lista de verificação ({{total}} itens: {{templates}} de modelos / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Os itens de modelos são reaplicados a partir do modelo atual, portanto as edições feitas neste ticket não são transferidas."
   }
 }

@@ -35,7 +35,7 @@ vi.mock('@alga-psa/workflows/actions', () => ({
   createWorkflowDefinitionAction: (...a: unknown[]) => m.createDefinition(...a),
 }));
 
-import { createWorkflowFromTicketAction } from '../../workflows/createFromTicket/actions.server';
+import { createWorkflowFromTicketAction, getWorkflowFromTicketImportSummaryAction } from '../../workflows/createFromTicket/actions.server';
 
 const blueprint = {
   ticket_id: TICKET_ID,
@@ -160,5 +160,49 @@ describe('createWorkflowFromTicketAction', () => {
   it('rethrows unexpected errors', async () => {
     m.createDefinition.mockRejectedValue(new Error('db down'));
     await expect(createWorkflowFromTicketAction(input)).rejects.toThrow('db down');
+  });
+});
+
+describe('getWorkflowFromTicketImportSummaryAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    m.edition.enterprise = true;
+    m.user = { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    m.hasPermission.mockImplementation(async (_u: any, resource: string, action: string) => resource === 'workflow' && action === 'manage');
+  });
+
+  it('returns only counts; inactive/missing-template items count as ad-hoc', async () => {
+    m.getBlueprint.mockResolvedValue({
+      ...blueprint,
+      custom_fields: { a: 1, b: 2 },
+      checklist: [
+        { item_name: 'x', is_required: false, template_id: 't1', template_name: 'T', template_is_active: true },
+        { item_name: 'y', is_required: false, template_id: 't1', template_name: 'T', template_is_active: true },
+        { item_name: 'z', is_required: false, template_id: 't2', template_name: 'Old', template_is_active: false },
+        { item_name: 'w', is_required: false, template_id: null },
+      ],
+    });
+    const result = await getWorkflowFromTicketImportSummaryAction({ ticketId: TICKET_ID });
+    expect(result).toEqual({ customFieldCount: 2, templateItemCount: 2, adHocItemCount: 2 });
+  });
+
+  it('fails fast outside EE, denies client users and users without workflow rights before reading the ticket', async () => {
+    m.edition.enterprise = false;
+    await expect(getWorkflowFromTicketImportSummaryAction({ ticketId: TICKET_ID })).rejects.toThrow(/Enterprise/);
+    m.edition.enterprise = true;
+
+    m.user = { ...m.user, user_type: 'client' };
+    expect(await getWorkflowFromTicketImportSummaryAction({ ticketId: TICKET_ID })).toHaveProperty('permissionError');
+    m.user = { ...m.user, user_type: 'internal' };
+
+    m.hasPermission.mockResolvedValue(false);
+    expect(await getWorkflowFromTicketImportSummaryAction({ ticketId: TICKET_ID })).toHaveProperty('permissionError');
+    expect(m.getBlueprint).not.toHaveBeenCalled();
+  });
+
+  it('passes through the ticket row-auth denial and rejects a bad id', async () => {
+    m.getBlueprint.mockResolvedValue({ permissionError: 'Permission denied: Cannot view ticket' });
+    expect(await getWorkflowFromTicketImportSummaryAction({ ticketId: TICKET_ID })).toEqual({ permissionError: 'Permission denied: Cannot view ticket' });
+    expect(await getWorkflowFromTicketImportSummaryAction({ ticketId: 'nope' })).toHaveProperty('actionError');
   });
 });

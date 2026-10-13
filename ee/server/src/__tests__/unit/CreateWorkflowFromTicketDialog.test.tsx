@@ -9,6 +9,7 @@ const m = vi.hoisted(() => ({
   push: vi.fn(),
   createAction: vi.fn(),
   listEvents: vi.fn(),
+  summary: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: m.push }) }));
@@ -26,6 +27,7 @@ vi.mock('@alga-psa/workflows/actions', () => ({
 }));
 vi.mock('../../workflows/createFromTicket/actions.server', () => ({
   createWorkflowFromTicketAction: (...a: unknown[]) => m.createAction(...a),
+  getWorkflowFromTicketImportSummaryAction: (...a: unknown[]) => m.summary(...a),
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, title, children, footer, id }: any) =>
@@ -71,6 +73,7 @@ describe('CreateWorkflowFromTicketDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     m.listEvents.mockResolvedValue({ events });
+    m.summary.mockResolvedValue({ customFieldCount: 2, templateItemCount: 3, adHocItemCount: 1 });
   });
   afterEach(cleanup);
 
@@ -137,5 +140,31 @@ describe('CreateWorkflowFromTicketDialog', () => {
     fireEvent.submit(document.getElementById('create-workflow-from-ticket-form')!);
     expect(await screen.findByText('Workflow name is required')).toBeTruthy();
     expect(m.createAction).not.toHaveBeenCalled();
+  });
+
+  it('loads the counts from the server on open and shows them next to the import checkboxes', async () => {
+    setup();
+    expect(await screen.findByText('Custom fields (2)')).toBeTruthy();
+    expect(m.summary).toHaveBeenCalledWith({ ticketId: 'ticket-1' });
+    expect(screen.getByText('Checklist (4 items: 3 from templates / 1 ad-hoc)')).toBeTruthy();
+    expect(document.getElementById('create-workflow-from-ticket-checklist-template-note')).not.toBeNull();
+    expect(screen.getByText(/re-applied from the current template/)).toBeTruthy();
+  });
+
+  it('omits the template-drift note when no items come from templates', async () => {
+    m.summary.mockResolvedValue({ customFieldCount: 0, templateItemCount: 0, adHocItemCount: 2 });
+    setup();
+    expect(await screen.findByText('Checklist (2 items: 0 from templates / 2 ad-hoc)')).toBeTruthy();
+    expect(document.getElementById('create-workflow-from-ticket-checklist-template-note')).toBeNull();
+  });
+
+  it('falls back to plain labels when the counts are denied or fail, without blocking submit', async () => {
+    m.summary.mockResolvedValue({ permissionError: 'Permission denied' });
+    setup();
+    await waitFor(() => expect(m.summary).toHaveBeenCalled());
+    expect(screen.getByText('Custom fields')).toBeTruthy();
+    expect(screen.getByText('Checklist')).toBeTruthy();
+    expect(document.getElementById('create-workflow-from-ticket-checklist-template-note')).toBeNull();
+    expect(document.getElementById('create-workflow-from-ticket-error')).toBeNull();
   });
 });

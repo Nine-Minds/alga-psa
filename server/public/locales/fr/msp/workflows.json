@@ -3304,6 +3304,9 @@
     "errors": {
       "nameRequired": "Le nom du workflow est obligatoire",
       "generic": "Échec de la création du brouillon du workflow"
-    }
+    },
+    "includeCustomFieldsCount": "Champs personnalisés ({{n}})",
+    "includeChecklistCount": "Liste de contrôle ({{total}} éléments : {{templates}} issus de modèles / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Les éléments issus de modèles sont réappliqués depuis le modèle actuel ; les modifications faites sur ce ticket ne sont donc pas reprises."
   }
 }
