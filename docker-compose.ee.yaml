@@ -1,11 +1,24 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Services whose image runs as uid 1000: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 version: '3.8'
 
 services:
   server:
+    <<: *hardening
     extends:
       file: ./server/docker-compose.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ee
+    image: ${APP_NAME:-sebastian}_server_ee_local
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -13,6 +26,7 @@ services:
         INCLUDE_EE: "true"
     environment:
       EDITION: enterprise
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
@@ -95,6 +109,8 @@ services:
       STORAGE_S3_BUNDLE_BUCKET: ${STORAGE_S3_BUNDLE_BUCKET:-extensions}
       STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-true}
     volumes:
+      # Persist user-uploaded documents and generated files
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -119,6 +135,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -131,6 +149,7 @@ services:
         condition: service_completed_successfully
 
   setup:
+    <<: *hardening
     build:
       context: .
       dockerfile: ee/setup/Dockerfile.dev
@@ -207,6 +226,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -215,12 +236,45 @@ services:
         condition: service_completed_successfully
     entrypoint: ["/opt/setup/ee-entrypoint.sh"]
 
+  # One-shot root init: hands the files volume, the tenant secret store and the
+  # host secret files to uid 1000 so the non-root services can use them. Runs
+  # on every `up`, is idempotent, and holds only the capabilities it needs.
+  runtime-permissions:
+    <<: *hardening
+    image: ${APP_NAME:-sebastian}_server_ee_local
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        INCLUDE_EE: "true"
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    volumes:
+      - files_data:/data/files
+      - type: bind
+        source: ./secrets
+        target: /host-secrets
+      - type: bind
+        source: ./secrets/tenants
+        target: /data/tenants
+
   workflow-worker:
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: services/workflow-worker/Dockerfile
     environment:
       EDITION: enterprise
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
       # Optional override for event.wait correlation derivation paths.
       # Unset = built-in defaults (shared/workflow/runtime/correlationDefaults.ts).
       WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
@@ -267,6 +321,8 @@ services:
       # Expose a random port for health checks/monitoring
       - "4000"
     volumes:
+      # Shared files volume (also used by server and email-service), not the container layer
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -286,6 +342,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -301,6 +359,7 @@ services:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   email-service:
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: services/email-service/Dockerfile
@@ -338,7 +397,10 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -361,6 +423,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -433,6 +497,9 @@ services:
       service: redis
     ports:
       - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
 
   pgbouncer:
     extends:
@@ -442,6 +509,7 @@ services:
       - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
 
   temporal-dev:
+    <<: *hardening
     image: temporalio/auto-setup:1.24.2
     ports:
       - "${EXPOSE_TEMPORAL_PORT:-7233}:7233"
@@ -465,12 +533,15 @@ services:
       - app-network
 
   temporal-worker:
+    <<: *hardening
     image: temporal-worker-dev
     build:
       context: .
       dockerfile: ee/temporal-workflows/Dockerfile
       target: production
     working_dir: /app/ee/temporal-workflows
+    # Reads the uid-1000-owned secret files (the image user is a different uid)
+    user: "1000:1000"
     entrypoint: ["docker-entrypoint.sh"]
     command: ["node", "dist/ee/temporal-workflows/src/worker.js"]
     environment:
@@ -538,6 +609,8 @@ services:
       - ninjaone_client_id
       - ninjaone_client_secret
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       temporal-dev:
         condition: service_started
       pgbouncer:
@@ -548,6 +621,7 @@ services:
       - app-network
 
   temporal-ui:
+    <<: *hardening
     image: temporalio/ui:latest
     environment:
       - TEMPORAL_ADDRESS=temporal-dev:7233
@@ -560,6 +634,7 @@ services:
       - app-network
 
 volumes:
+  files_data:
   ngrok-data:
     external: true
     name: ${COMPOSE_PROJECT_NAME:-alga}_ngrok_data

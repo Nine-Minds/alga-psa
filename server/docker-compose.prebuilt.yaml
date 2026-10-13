@@ -1,3 +1,8 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
 x-common-config: &common-config
   ports:
     # The prebuilt server image listens on port 3000 inside the container.
@@ -87,7 +92,7 @@ x-common-config: &common-config
 
 services:
   server:
-    <<: *common-config
+    <<: [*common-config, *hardening]
     networks:
       - app-network
 

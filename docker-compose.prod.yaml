@@ -15,6 +15,22 @@ services:
       dockerfile: Dockerfile.build
       args:
         NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+    # Production server image runs as uid 1000 (Dockerfile.build), so it needs no capabilities.
+    # The dev-image `setup` service below runs as root and keeps its defaults, because a
+    # root process without DAC_OVERRIDE cannot read the uid-1000-owned secret files.
+    cap_drop:
+      - ALL
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
+
+  # Same production image as `server`, so the init container and the app agree on the script.
+  runtime-permissions:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
 
   setup:
     environment:

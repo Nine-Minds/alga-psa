@@ -313,6 +313,50 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 - `docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image down` followed by `... up -d` is safe for restarts. Avoid adding `-v` unless you explicitly intend to wipe Postgres/files volumes.
 - To inspect the volume contents from the host, use `docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data busybox ls /var/lib/postgresql/data` (replace the volume name if you changed `APP_NAME` or pass `-p`).
 
+## Container user
+
+The server, setup, workflow-worker and email-service containers, and the compose Redis container, run as uid 1000 (`node`) instead of root. Every service also sets `no-new-privileges`, and the long-running non-root application containers drop all Linux capabilities.
+
+A short-lived `runtime-permissions` container runs first on every `docker compose up`. It is the only application-image container that runs as root, and it holds only the capabilities it needs to change file ownership. It:
+
+- changes ownership of the `files_data` volume to uid 1000,
+- sets the owner and mode of the files in `./secrets` to `1000:1000` and `0600`, and
+- repairs the tenant secret store under `secrets/tenants` (owner uid 1000, directories `0700`, files `0600`).
+
+Each step only touches entries that are not already correct, so a second run changes nothing.
+
+### Upgrading
+
+On the first start after upgrading, `runtime-permissions` changes the owner of the files in `./secrets` on the host. Other host users that read those files, for example a backup job that runs as an unprivileged user, lose access unless they run as root or uid 1000. If your login uid is not 1000, use `sudo` to read or edit the files from then on.
+
+To make the change yourself instead:
+
+```bash
+sudo chown -R 1000:1000 secrets
+sudo find secrets -maxdepth 1 -type f -exec chmod 600 {} +
+scripts/repair-secret-permissions.sh --apply --path secrets/tenants --uid 1000
+```
+
+If a file cannot be changed (some network and desktop-virtualized file systems refuse `chown`), `runtime-permissions` stops with an error that names the file, and the application services do not start.
+
+Uploaded files now go to the `files_data` volume (`STORAGE_LOCAL_BASE_PATH=/data/files`). Earlier releases wrote uploads from the prebuilt server image into the container layer, so they were lost when the container was recreated. Files uploaded by earlier releases are not migrated.
+
+### Snap-installed Docker
+
+Docker installed from the snap package applies an AppArmor profile that rejects `no-new-privileges`, so every container fails to start. Check how Docker is installed:
+
+```bash
+snap list docker
+```
+
+If it is listed, turn the option off for that host in `server/.env` (or your shell):
+
+```bash
+ALGA_NO_NEW_PRIVILEGES=false
+```
+
+Leave the variable unset everywhere else. The default is `true`.
+
 ## Monitoring
 
 You can monitor the initialization process through Docker logs:

@@ -194,4 +194,14 @@ WORKDIR /app
 COPY --from=builder /app /app
 
 ENV NODE_ENV=production
+
+# Run as the unprivileged node user (uid 1000). The /app tree stays root-owned
+# and read-only to the process. /run/secrets must be owned by the running uid so
+# the filesystem secret provider can write tenant secrets below it, and
+# /data/files is the local file-storage root (mount the files volume here).
+RUN install -d -o 1000 -g 1000 -m 0700 /run/secrets && \
+    install -d -o 1000 -g 1000 -m 0755 /data/files
+
+USER 1000:1000
+
 ENTRYPOINT ["/app/entrypoint.sh"]

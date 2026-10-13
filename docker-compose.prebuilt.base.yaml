@@ -1,5 +1,16 @@
 version: '3.8'
 
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Non-root long-running services: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
@@ -94,6 +105,7 @@ secrets:
 
 services:
   postgres:
+    <<: *hardening
     extends:
       file: ./docker-compose.images.yaml
       service: pgvector
@@ -118,6 +130,7 @@ services:
       service: postgres-extension-update
 
   redis:
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: redis/Dockerfile

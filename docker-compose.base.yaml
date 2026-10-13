@@ -1,3 +1,14 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Non-root long-running services: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
@@ -108,6 +119,7 @@ secrets:
 
 services:
   ai-gateway:
+    <<: *hardening
     build:
       context: .
       dockerfile: services/ai-gateway/Dockerfile
@@ -158,6 +170,7 @@ services:
         condition: service_started
 
   ai-gateway-postgres:
+    <<: *hardening
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ai_gateway
@@ -173,6 +186,7 @@ services:
       - app-network
 
   postgres: # Renamed from postgres-base
+    <<: *hardening
     extends:
       file: ./docker-compose.images.yaml
       service: pgvector
@@ -195,6 +209,7 @@ services:
   # directory in line with the pinned image. Targets the bundled `postgres`
   # service only, never an external DB_HOST. See helm/files/postgres/update-extensions.sh.
   postgres-extension-update:
+    <<: *hardening
     extends:
       file: ./docker-compose.images.yaml
       service: pgvector
@@ -218,6 +233,7 @@ services:
         condition: service_started
 
   redis: # Renamed from redis-base
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: redis/Dockerfile

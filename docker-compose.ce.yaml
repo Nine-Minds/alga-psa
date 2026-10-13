@@ -1,5 +1,17 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Services whose image runs as uid 1000: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 services:
   server:
+    <<: *hardening
     extends:
       file: ./server/docker-compose.yaml
       service: server
@@ -73,6 +85,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -85,6 +99,7 @@ services:
         condition: service_completed_successfully
 
   setup:
+    <<: *hardening
     # One-shot DB bootstrap (create DB/users, run migrations/seeds).
     # Use the locally-built CE server image so this works without GHCR access.
     image: ${APP_NAME:-sebastian}_server_ce_local
@@ -148,6 +163,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer: # Added dependency on pgbouncer
@@ -156,7 +173,35 @@ services:
         condition: service_completed_successfully
     entrypoint: ["/app/setup/entrypoint.sh"]
 
+  # One-shot root init: hands the files volume, the tenant secret store and the
+  # host secret files to uid 1000 so the non-root services can use them. Runs
+  # on every `up`, is idempotent, and holds only the capabilities it needs.
+  runtime-permissions:
+    <<: *hardening
+    image: ${APP_NAME:-sebastian}_server_ce_local
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    volumes:
+      - files_data:/data/files
+      - type: bind
+        source: ./secrets
+        target: /host-secrets
+
+
   workflow-worker:
+    <<: *hardening-nonroot
     # Remove extends to use a custom build
     # extends:
     #   file: ./server/docker-compose.yaml
@@ -197,10 +242,13 @@ services:
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
       WORKFLOW_REDIS_BATCH_SIZE: "10"
       WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     ports:
       # Expose a random port for health checks/monitoring
       - "3000"
     volumes:
+      # Shared files volume (also used by server and email-service), not the container layer
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -220,6 +268,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -233,6 +283,7 @@ services:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   email-service:
+    <<: *hardening-nonroot
     build:
       context: .
       dockerfile: services/email-service/Dockerfile
@@ -269,7 +320,10 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_LOCAL_BASE_PATH: ${STORAGE_LOCAL_BASE_PATH:-/data/files}
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -289,6 +343,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -359,6 +415,9 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: redis # Updated from redis-base
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
     ports:
       - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
 

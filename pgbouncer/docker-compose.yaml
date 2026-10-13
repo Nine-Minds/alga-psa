@@ -1,7 +1,13 @@
 version: '3.8'
 
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
 services:
   pgbouncer:
+    <<: *hardening
     build:
       context: .
       dockerfile: Dockerfile

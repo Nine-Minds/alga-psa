@@ -1,3 +1,14 @@
+x-hardening: &hardening
+  # LEVERAGE: pattern compose-hardening-anchor — repeated per compose file because YAML anchors do not cross files, and `extends` appends lists so each service must get it exactly once along its extends chain; a shared include layer would remove the copies
+  security_opt:
+    - no-new-privileges:${ALGA_NO_NEW_PRIVILEGES:-true}
+
+# Services whose image runs as uid 1000: no capabilities are needed once nothing runs as root.
+x-hardening-nonroot: &hardening-nonroot
+  <<: *hardening
+  cap_drop:
+    - ALL
+
 version: '3.8'
 
 services:
@@ -8,7 +19,11 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ee
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
+    cap_drop:
+      - ALL
     environment:
+      # Uploads and generated files go to the files_data volume, not the container layer
+      STORAGE_LOCAL_BASE_PATH: /data/files
       EDITION: enterprise
       DB_NAME: server
       PGBOSS_DATABASE: server
@@ -72,6 +87,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       setup:
         condition: service_completed_successfully
       postgres:
@@ -85,6 +102,7 @@ services:
         required: false
 
   setup:
+    <<: *hardening-nonroot
     image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ee
@@ -149,6 +167,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -157,7 +177,35 @@ services:
         condition: service_completed_successfully
     entrypoint: ["/app/setup/entrypoint.sh"]
 
+  # One-shot root init: hands the files volume, the tenant secret store and the
+  # host secret files to uid 1000 so the non-root services can use them. Runs
+  # on every `up`, is idempotent, and holds only the capabilities it needs.
+  runtime-permissions:
+    <<: *hardening
+    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
+    platform: linux/amd64
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    volumes:
+      - files_data:/data/files
+      - type: bind
+        source: ./secrets
+        target: /host-secrets
+      - type: bind
+        source: ./secrets/tenants
+        target: /data/tenants
+
   workflow-worker:
+    <<: *hardening-nonroot
     # NOTE: The published EE server image does not currently ship the workflow-worker runtime bundle.
     # For local prebuilt-stack testing, build the worker image from source.
     build:
@@ -165,6 +213,7 @@ services:
       dockerfile: services/workflow-worker/Dockerfile
     platform: linux/amd64
     environment:
+      STORAGE_LOCAL_BASE_PATH: /data/files
       EDITION: enterprise
       DB_NAME: server
       PGBOSS_DATABASE: server
@@ -199,6 +248,8 @@ services:
       # Expose a random port for health checks/monitoring
       - "3000"
     volumes:
+      # Shared files volume (also used by server and email-service), not the container layer
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -218,6 +269,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -231,6 +284,7 @@ services:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   email-service:
+    <<: *hardening-nonroot
     # NOTE: The published EE server image does not currently ship the email-service runtime bundle.
     # For local prebuilt-stack testing, build the IMAP service image from source.
     build:
@@ -268,7 +322,10 @@ services:
       IMAP_FETCH_DELAY_MS: ${IMAP_FETCH_DELAY_MS:-0}
       IMAP_EVENT_CHANNEL_BY_TENANT: ${IMAP_EVENT_CHANNEL_BY_TENANT:-false}
       IMAP_OAUTH_AUTH_MECHANISM: ${IMAP_OAUTH_AUTH_MECHANISM:-XOAUTH2}
+      STORAGE_LOCAL_BASE_PATH: /data/files
     volumes:
+      # email-service writes inbound attachments and the original .eml here
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -294,6 +351,8 @@ services:
     networks:
       - app-network
     depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
       postgres:
         condition: service_started
       pgbouncer:
@@ -355,6 +414,9 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: redis
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
 
   pgbouncer:
     extends:
