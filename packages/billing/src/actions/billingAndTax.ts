@@ -14,6 +14,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     IBillingCharge,
     IBucketCharge,
+    IPrepaidBlockCharge,
     IUsageBasedCharge,
     ITimeBasedCharge,
     IFixedPriceCharge,
@@ -1651,18 +1652,24 @@ export async function isBucketCharge(charge: IBillingCharge): Promise<boolean> {
     return charge.type === 'bucket';
 }
 
+export async function isPrepaidBlockCharge(charge: IBillingCharge): Promise<boolean> {
+    return charge.type === 'prepaid_block';
+}
+
 // Charge Helpers
 export async function getChargeQuantity(charge: IBillingCharge): Promise<number> {
     // Need to await the results of the async type guards
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageHours;
     if (await isFixedPriceCharge(charge) || await isUsageBasedCharge(charge)) return (charge as IFixedPriceCharge | IUsageBasedCharge).quantity ?? 0; // Handle potential undefined quantity
     if (await isTimeBasedCharge(charge)) return (charge as ITimeBasedCharge).duration ?? 0; // Handle potential undefined duration
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).quantity;
     return 1;
 }
 
 export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number> {
     // Need to await the result of the async type guard
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageRate;
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).rate;
     return charge.rate;
 }
 
