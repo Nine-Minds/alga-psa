@@ -16,7 +16,10 @@ export type HourBlockAuditType =
   | 'manual_expiration'
   | 'auto_expiration'
   | 'void'
-  | 'purchase_reversal';
+  | 'purchase_reversal'
+  | 'contract_end_expiration'
+  | 'allocation_release'
+  | 'reassignment';
 
 /** One contract line (through a client_contracts association) that covers a service. */
 export interface ContractLineCoverageLine {
@@ -85,7 +88,14 @@ export interface IHourBlock extends TenantEntity {
    * purchase provenance even when the source invoice is later deleted, so the
    * UI can distinguish "purchase, invoice deleted" from a true grant.
    */
-  source_type?: 'purchase' | 'grant';
+  source_type?: 'purchase' | 'grant' | 'contract';
+  /** Set for bucket top-up replenishment blocks (ad-hoc ledger; contract_line_id stays null). */
+  replenishment_bucket_usage_id?: string | null;
+  /** Prepaid Block contract line that owns this block (source_type 'contract'); null for ad-hoc blocks. */
+  contract_line_id?: string | null;
+  client_contract_id?: string | null;
+  /** contract_line_block_issuances row that produced this block. */
+  issuance_id?: string | null;
   voided_at?: string | null;
   voided_by?: string | null;
   void_reason?: string | null;

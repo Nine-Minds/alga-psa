@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createPrepaymentInvoiceInternal } from '../actions/creditActions';
 import { createHourBlockPurchaseInvoiceInternal } from '../actions/hourBlockActions';
 
-export type PrepaidReplenishmentSubject = 'credit' | 'bucket';
+export type PrepaidReplenishmentSubject = 'credit' | 'bucket' | 'prepaid_block';
 
 function nowForUpdate(knex: Knex | Knex.Transaction): unknown {
   const candidate = (knex as Knex & { fn?: { now?: () => unknown } }).fn?.now;
