@@ -62,7 +62,9 @@ export function toRegistrySearchHit(r: RegistrySearchResult): RegistrySearchHit 
 export function runRegistrySearch(
   registry: ChatApiRegistryEntry[],
   args: { query?: unknown; limit?: unknown },
-): { ok: true; data: RegistrySearchResponse } | { ok: false; error: string } {
+):
+  | { ok: true; data: RegistrySearchResponse; error?: undefined }
+  | { ok: false; error: string; data?: undefined } {
   const query = typeof args.query === 'string' ? args.query : '';
   if (!query.trim()) {
     return { ok: false, error: 'search_api_registry requires a non-empty "query".' };
