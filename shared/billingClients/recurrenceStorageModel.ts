@@ -2,6 +2,7 @@ import type { CadenceOwner } from '@alga-psa/types';
 
 import { DEFAULT_RECURRING_AUTHORING_BILLING_TIMING } from './recurringAuthoringPolicy';
 import { resolveCadenceOwner } from './recurringTiming';
+import { resolveEffectiveBillingTiming } from './contractLineTimingRule';
 
 export type RecurringBillingTiming = 'arrears' | 'advance';
 
@@ -70,4 +71,20 @@ export function normalizePresetRecurringStorage<T extends NormalizableRecurringS
   row: T,
 ): T & { billing_timing: RecurringBillingTiming; cadence_owner: CadenceOwner } {
   return normalizeLiveRecurringStorage(row);
+}
+
+/**
+ * Copy-path normalizer: a row copied from a template, preset or another plan may
+ * carry a stored advance timing that its line type cannot honour (legacy data).
+ * Copy sites use this so the copy never re-creates a bad row.
+ */
+export function normalizeRecurringStorageForLineType<T extends NormalizableRecurringStorage>(
+  row: T,
+  lineType: string | null | undefined,
+): T & { billing_timing: RecurringBillingTiming; cadence_owner: CadenceOwner } {
+  const normalized = normalizeLiveRecurringStorage(row);
+  return {
+    ...normalized,
+    billing_timing: resolveEffectiveBillingTiming(lineType, normalized.billing_timing),
+  };
 }

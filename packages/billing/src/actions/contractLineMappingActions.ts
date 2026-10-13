@@ -13,7 +13,7 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
-import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 import { withTransaction } from '@alga-psa/db';
@@ -149,7 +149,8 @@ export async function ensureTemplateLineSnapshot(
   }
 
   const now = new Date().toISOString();
-  const contractRecurringStorage = normalizeLiveRecurringStorage(contractLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const contractRecurringStorage = normalizeRecurringStorageForLineType(contractLine, contractLine.contract_line_type);
 
   // All terms columns are now stored directly on contract_lines
   await tenantScopedTable(knex, tenant, 'contract_template_lines')

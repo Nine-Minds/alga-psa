@@ -8,6 +8,7 @@ import {
   resolveEffectiveBillingTiming,
   resolveRecurringChargeFamily,
 } from '../contractLineTimingRule';
+import { normalizeRecurringStorageForLineType } from '../recurrenceStorageModel';
 
 describe('contractLineTimingRule', () => {
   it('covers Hourly and Usage only', () => {
@@ -59,5 +60,25 @@ describe('contractLineTimingRule', () => {
     expect(resolveRecurringChargeFamily('Fixed')).toBe('fixed');
     expect(resolveRecurringChargeFamily(null)).toBe('fixed');
     expect(resolveRecurringChargeFamily('whatever')).toBe('fixed');
+  });
+});
+
+// T8: copy paths never re-create an advance Hourly/Usage row from a legacy source.
+describe('normalizeRecurringStorageForLineType', () => {
+  const advanceSource = { billing_timing: 'advance' as const, cadence_owner: 'client' as const };
+
+  it.each(['Hourly', 'Usage'])('copies an advance source as arrears for %s', (lineType) => {
+    expect(normalizeRecurringStorageForLineType(advanceSource, lineType).billing_timing).toBe('arrears');
+  });
+
+  it.each(['Fixed', 'Product', null])('preserves advance for %s', (lineType) => {
+    expect(normalizeRecurringStorageForLineType(advanceSource, lineType).billing_timing).toBe('advance');
+  });
+
+  it('still defaults a missing timing to arrears and keeps the cadence owner', () => {
+    expect(normalizeRecurringStorageForLineType({ cadence_owner: 'contract' }, 'Fixed')).toMatchObject({
+      billing_timing: 'arrears',
+      cadence_owner: 'contract',
+    });
   });
 });

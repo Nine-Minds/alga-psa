@@ -27,7 +27,8 @@ import {
   DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
   resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
-import { normalizeTemplateRecurringStorage } from '@shared/billingClients/recurrenceStorageModel';
+import { normalizeRecurringStorageForLineType } from '@shared/billingClients/recurrenceStorageModel';
+import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { resolveCadenceOwner } from '@shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@shared/billingClients/billingCycleAlignmentCompatibility';
 
@@ -1186,10 +1187,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       // The template link stays as provenance on the assignment/response, but
       // recurring cadence fields are copied onto the live line and do not keep
       // following future template edits.
-      const templateRecurringStorage = normalizeTemplateRecurringStorage({
+      // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+      const templateRecurringStorage = normalizeRecurringStorageForLineType({
         billing_timing: templateLine.billing_timing,
         cadence_owner: templateLine.cadence_owner,
-      });
+      }, templateLine.contract_line_type);
       const newContractLineId = uuidv4();
       const contractLineData = this.addCreateAuditFields({
         contract_line_id: newContractLineId,
@@ -1339,8 +1341,10 @@ export class ContractLineService extends BaseService<IContractLine> {
       const sourcePlan = await this.getExistingPlan(data.source_contract_line_id, context, trx);
       
       // Create new plan
+// LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
       const newPlanData = {
         ...sourcePlan,
+        billing_timing: resolveEffectiveBillingTiming(sourcePlan.contract_line_type, sourcePlan.billing_timing),
         contract_line_id: uuidv4(),
         contract_line_name: data.new_contract_line_name,
         is_custom: true,
@@ -2042,10 +2046,10 @@ export class ContractLineService extends BaseService<IContractLine> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const templateRecurringStorage = normalizeTemplateRecurringStorage({
+    const templateRecurringStorage = normalizeRecurringStorageForLineType({
       billing_timing: templateLine.billing_timing,
       cadence_owner: templateLine.cadence_owner,
-    });
+    }, templateLine.contract_line_type);
     const clonedCustomRate = data.custom_rate ?? templateLine.custom_rate ?? null;
     const overlapping = await tenantDb(trx, context.tenant).table('contract_lines')
       .where('contract_id', targetContractId)

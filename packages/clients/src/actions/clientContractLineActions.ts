@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
-import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { normalizeLiveRecurringStorage, normalizeRecurringStorageForLineType } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
@@ -456,7 +456,8 @@ export const addClientContractLine = withAuth(async (
       if (!templateLine) {
         throw new Error(`Template contract line ${newBilling.contract_line_id} not found`);
       }
-      const templateRecurringStorage = normalizeLiveRecurringStorage(templateLine);
+      // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+      const templateRecurringStorage = normalizeRecurringStorageForLineType(templateLine, templateLine.contract_line_type);
 
       // Check if this contract already has a line from the same template
       const existingLine = await db.table('contract_lines')
