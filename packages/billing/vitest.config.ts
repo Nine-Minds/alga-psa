@@ -83,6 +83,9 @@ export default defineConfig({
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
+      // Contract-line service rates are stored in minor units; the services list
+      // must not re-scale them. Listed for the same reason as above.
+      'src/components/billing-dashboard/contract-lines/GenericContractLineServicesList.customRate.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
