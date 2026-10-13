@@ -16,6 +16,7 @@ import {
   createFixedPlanAssignment,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
@@ -38,7 +39,6 @@ import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpe
 
 let db: Knex;
 let tenantId: string;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createPDFGenerationService: typeof import('@alga-psa/billing/services/pdfGenerationService').createPDFGenerationService;
@@ -147,7 +147,6 @@ describe('journey: invoice render → stored PDF', () => {
     await db.migrate.latest();
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, userId: journeyUserId, permissionCheck: () => true });
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ createPDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService'));
@@ -263,7 +262,7 @@ describe('journey: invoice render → stored PDF', () => {
     });
 
     // --- generate + finalize: the rendered artifact is a finalized invoice ---
-    const generated = await generateInvoice(januaryCycleId);
+    const generated = await generateInvoiceForCycle(januaryCycleId);
     expect(generated, JSON.stringify(generated)).toBeTruthy();
     expect(generated?.invoice_id, JSON.stringify(generated)).toBeDefined();
     const invoiceId = generated!.invoice_id;

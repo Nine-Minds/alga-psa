@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable, materializeRecurringServicePeriods } from '../../../../../test-utils/billingTestHelpers';
+
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable, materializeRecurringServicePeriods, generateInvoiceForCycle } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
@@ -180,7 +180,7 @@ describe('Billing Invoice Edge Cases', () => {
       detailBaseRateCents: 7500
     });
 
-    // generateInvoice refuses a window with no recurring service period, and
+    // generateInvoiceForCycle refuses a window with no recurring service period, and
     // the fixture only materializes on request. Run it after the extra service
     // so the line is complete.
     await materializeRecurringServicePeriods(context, creditContractLineId);
@@ -197,7 +197,7 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(-12500);
@@ -237,7 +237,7 @@ describe('Billing Invoice Edge Cases', () => {
 
     // This test is about a zero-dollar invoice that is actually produced, so
     // the client must not be on the suppressing default: with
-    // suppress_zero_dollar_invoices set, generateInvoice returns null.
+    // suppress_zero_dollar_invoices set, generateInvoiceForCycle returns null.
     await context.db('client_billing_settings')
       .insert({
         tenant: context.tenantId,
@@ -262,7 +262,7 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
 
     expect(invoice).toBeDefined();
     expect(invoice!.subtotal).toBe(0);

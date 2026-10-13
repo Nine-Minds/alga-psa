@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +22,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createContractTemplateFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createContractTemplateFromWizard;
 let getServiceCatalogRatesForCurrency: typeof import('@alga-psa/billing/actions/serviceActions').getServiceCatalogRatesForCurrency;
@@ -191,7 +191,6 @@ describe('contract templates: per-seat recurring services', () => {
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard, createContractTemplateFromWizard, getContractTemplateLinesForClientWizard } =
       await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ getServiceCatalogRatesForCurrency } = await import('@alga-psa/billing/actions/serviceActions'));
     ({ cloneTemplateContractLine: sharedCloneTemplateContractLine } = await import('@alga-psa/shared/billingClients/templateClone'));
@@ -280,7 +279,7 @@ describe('contract templates: per-seat recurring services', () => {
     expect(await lineCustomRate(result.contract_line_id)).toBeNull();
 
     await syncLine(result.contract_line_id);
-    const invoice: any = ok(await generateInvoice(januaryCycle));
+    const invoice: any = ok(await generateInvoiceForCycle(januaryCycle));
     // 23 x $100 + 30 x $50 + 2 x $200
     expect(Number(invoice.subtotal)).toBe(420000);
   }, HOOK_TIMEOUT);
@@ -504,7 +503,7 @@ describe('contract templates: per-seat recurring services', () => {
       await syncLine(mapping.contract_line_id);
       await syncLine(host.contract_line_id);
 
-      const invoice: any = ok(await generateInvoice(januaryCycle));
+      const invoice: any = ok(await generateInvoiceForCycle(januaryCycle));
       // 20 x $100 + 30 x $50 (catalog) + 2 x $200
       expect(Number(invoice.subtotal)).toBe(390000);
     }, HOOK_TIMEOUT);

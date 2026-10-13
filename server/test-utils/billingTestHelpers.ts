@@ -1195,7 +1195,7 @@ function toDateOnly(value: unknown): string {
 }
 
 /**
- * Test-only replacement for the retired `generateInvoice(billing_cycle_id)`
+ * Test-only replacement for the retired cycle-id invoice-generation
  * action. Picks invoice members exactly the way Automatic Invoices does: the
  * real due-work reader (unbilled obligations only), narrowed to the cycle's
  * client + invoice window, then one `generateInvoiceForSelectionInputs` call

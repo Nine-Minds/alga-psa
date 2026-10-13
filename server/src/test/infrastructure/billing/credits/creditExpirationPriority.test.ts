@@ -5,12 +5,13 @@ import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   createTestService,
-  createFixedPlanAssignment
+  createFixedPlanAssignment,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';

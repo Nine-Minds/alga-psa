@@ -19,6 +19,7 @@ import {
   ensureDefaultBillingSettings,
   setupClientTaxConfiguration,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import {
   assignContractToProfile,
@@ -131,7 +132,6 @@ let db: Knex;
 let tenantId: string;
 let userId: string;
 
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let generateGroupedInvoicesAsRecurringBillingRun: typeof import('@alga-psa/billing/actions/recurringBillingRunActions')['generateGroupedInvoicesAsRecurringBillingRun'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
@@ -283,7 +283,6 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
     await ensureDefaultBillingSettings({ db, tenantId } as any);
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ generateGroupedInvoicesAsRecurringBillingRun } = await import('@alga-psa/billing/actions/recurringBillingRunActions'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
@@ -392,7 +391,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       });
     });
 
-    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const charges = await chargesFor(invoice.invoice_id);
 
     expect(charges.length).toBeGreaterThan(1);
@@ -992,7 +991,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       minutes: 60,
     });
 
-    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const timeCharges = (await chargesFor(invoice.invoice_id)).filter(
       (row: any) => row.billing_profile_source === 'contract',
     );
@@ -1038,7 +1037,7 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
       });
     }
 
-    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
+    const invoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(cycleId));
     const workItemCharges = (await chargesFor(invoice.invoice_id)).filter(
       (row: any) => row.billing_profile_source === 'work_item',
     );

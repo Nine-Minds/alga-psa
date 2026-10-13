@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import {
   createTestService,
   createFixedPlanAssignment,
@@ -13,7 +13,8 @@ import {
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable,
   materializeRecurringServicePeriods,
-  unwrapManualInvoice
+  unwrapManualInvoice,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -259,7 +260,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     await addServiceToFixedPlan(context, planId, serviceB, { detailBaseRateCents: 7500 });
     await addServiceToFixedPlan(context, planId, serviceC, { detailBaseRateCents: 10000 });
 
-    // generateInvoice refuses a window with no recurring service period, and
+    // generateInvoiceForCycle refuses a window with no recurring service period, and
     // the fixture only materializes on request. Run it after the extra services
     // so the line is complete.
     await materializeRecurringServicePeriods(context, planId);
@@ -272,7 +273,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
 
     expect(invoice).not.toBeNull();
 
@@ -375,7 +376,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
 
     expect(invoice).not.toBeNull();
 
@@ -410,7 +411,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
 
     expect(invoice).not.toBeNull();
     expect(invoice!.subtotal).toBe(-12500);

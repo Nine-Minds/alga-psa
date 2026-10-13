@@ -8,6 +8,7 @@ import {
   createTestService,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
@@ -120,7 +121,6 @@ type Currency = 'USD' | 'EUR';
 let addContractLine: typeof import('@alga-psa/billing/repositories/contractLineRepository')['addContractLine'];
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions')['createClientContractFromWizard'];
 let copyPresetToContractLine: typeof import('@alga-psa/billing/actions/contractLinePresetActions')['copyPresetToContractLine'];
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let previewInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['previewInvoice'];
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -298,7 +298,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
     ({ addContractLine } = await import('@alga-psa/billing/repositories/contractLineRepository'));
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ copyPresetToContractLine } = await import('@alga-psa/billing/actions/contractLinePresetActions'));
-    ({ generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+({ previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -359,7 +359,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       }
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const invoice = await generateInvoice(cycleId);
+      const invoice = await generateInvoiceForCycle(cycleId);
       const generated = unwrap(invoice) as any;
       expect(generated).toBeTruthy();
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
@@ -454,7 +454,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === serviceB)?.total).toBe(60000);
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const generated = unwrap(await generateInvoice(cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(FEE);
     }, HOOK_TIMEOUT);
@@ -526,7 +526,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === serviceB)?.total).toBe(90000);
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const generated = unwrap(await generateInvoice(cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(FEE);
     }, HOOK_TIMEOUT);
@@ -590,7 +590,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(String(preview.error)).toContain('Unpriceable Fixed line');
       expect(String(preview.error)).not.toBe('Nothing to bill');
 
-      const generation = await generateInvoice(cycleId).catch((error: unknown) => error);
+      const generation = await generateInvoiceForCycle(cycleId).catch((error: unknown) => error);
       const generationText = JSON.stringify(generation instanceof Error ? { message: generation.message } : generation);
       expect(generationText).toContain('Unpriceable Fixed line');
       const invoiceCount = await table('invoices').where({ client_id: clientId });
@@ -643,7 +643,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(String(preview.error)).not.toContain('has no rate');
       expect(String(preview.error)).not.toBe('Nothing to bill');
 
-      const generation = await generateInvoice(cycleId).catch((error: unknown) => error);
+      const generation = await generateInvoiceForCycle(cycleId).catch((error: unknown) => error);
       const generationText = JSON.stringify(generation instanceof Error ? { message: generation.message } : generation);
       expect(generationText).toContain('No Services Fixed line');
       const invoices = await table('invoices').where({ client_id: clientId });
