@@ -478,7 +478,7 @@ vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
   getAnalyticsAsync: mocks.getAnalyticsAsync,
 }));
 
-const { generateInvoice, generateInvoiceForSelectionInput } = await import(
+const { generateInvoiceForSelectionInput, generateInvoiceForSelectionInputs } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 const {
@@ -658,8 +658,16 @@ describe('selector-input recurring generation', () => {
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 
-  it('T047: recurring generation API accepts a compatibility billing-cycle wrapper and routes internally through the selector-input pipeline', async () => {
-    const result = await generateInvoice('cycle-1');
+  it('T047b: selector-input generation with billing-cycle bridge metadata stamps billing_cycle_id on the invoice', async () => {
+    const result = await generateInvoiceForSelectionInputs([
+      buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
+        periodKey: 'period:2025-01-01:2025-02-01',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+    ], {}, { billingCycleId: 'cycle-1' });
 
     expect(mocks.selectDueRecurringServicePeriodsForBillingWindow).toHaveBeenCalledWith(
       'client-1',

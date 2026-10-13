@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -405,7 +406,7 @@ vi.mock('../../../../../packages/billing/src/actions/recurringApprovalBlockers',
   ),
 }));
 
-const { generateInvoice } = await import(
+const { generateInvoiceForSelectionInputs } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
 
@@ -428,7 +429,15 @@ describe('invoice generation zero-dollar recurring handling', () => {
       profile[column] = 'foreign-owner';
 
       try {
-        await expect(generateInvoice('cycle-1')).rejects.toThrow(
+        await expect(generateInvoiceForSelectionInputs([
+          buildClientCadenceDueSelectionInput({
+            clientId: 'client-1',
+            scheduleKey: 'schedule:tenant-1:contract-line-1:client:advance',
+            periodKey: 'period:2025-02-01:2025-03-01',
+            windowStart: '2025-02-01',
+            windowEnd: '2025-03-01',
+          }),
+        ], {}, { billingCycleId: 'cycle-1' })).rejects.toThrow(
           'does not belong to client client-1 in this tenant',
         );
         expect(mocks.rowsByTable.invoices).toEqual([]);
@@ -442,7 +451,15 @@ describe('invoice generation zero-dollar recurring handling', () => {
   );
 
   it('T210/T273: zero-dollar recurring invoices with canonical billing content are persisted and finalized according to zero-dollar settings', async () => {
-    const result = await generateInvoice('cycle-1');
+    const result = await generateInvoiceForSelectionInputs([
+      buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:contract-line-1:client:advance',
+        periodKey: 'period:2025-02-01:2025-03-01',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+    ], {}, { billingCycleId: 'cycle-1' });
 
     expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);
     expect(mocks.claimRecurringServicePeriodsForSelectionInputs).toHaveBeenCalledWith({
@@ -479,7 +496,15 @@ describe('invoice generation zero-dollar recurring handling', () => {
     const claimError = new Error('Recurring service period was claimed by another invoice');
     mocks.claimRecurringServicePeriodsForSelectionInputs.mockRejectedValueOnce(claimError);
 
-    await expect(generateInvoice('cycle-1')).rejects.toThrow(claimError);
+    await expect(generateInvoiceForSelectionInputs([
+      buildClientCadenceDueSelectionInput({
+        clientId: 'client-1',
+        scheduleKey: 'schedule:tenant-1:contract-line-1:client:advance',
+        periodKey: 'period:2025-02-01:2025-03-01',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      }),
+    ], {}, { billingCycleId: 'cycle-1' })).rejects.toThrow(claimError);
 
     expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);
     expect(mocks.rowsByTable.invoices).toEqual([]);
