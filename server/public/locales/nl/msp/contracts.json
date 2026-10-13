@@ -1673,10 +1673,6 @@
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
-    },
-    "advanceSuggestion": {
-      "message": "Bij facturering achteraf kan deze regel pas worden gefactureerd na afloop van de eerste serviceperiode. Bij facturering vooraf volgens het contractritme wordt hij op de startdatum gefactureerd.",
-      "action": "Vooraf factureren volgens het contractritme"
     }
   },
   "wizardProducts": {
@@ -2651,7 +2647,8 @@
       "advance": "Vooraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar vanaf {{date}}, de startdatum van het contract."
     },
     "client": {
-      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de huidige factureringsperiode van de klant eindigt.",
+      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de factureringsperiode van de klant die de startdatum bevat eindigt.",
+      "arrearsPartial": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de factureringsperiode van de klant die de startdatum bevat eindigt. Omdat de startdatum midden in die periode valt, dekt deze {{periodStart}} – {{periodEnd}}.",
       "advance": "Vooraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar vanaf {{date}}, het begin van de factureringsperiode van de klant waarin de contractstartdatum valt."
     }
   },
@@ -2663,5 +2660,9 @@
   },
   "sellHourBlockNote": {
     "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Eerste factuur: de factuur van {{invoiceDate}} dekt {{periodStart}} – {{periodEnd}} (achteraf gefactureerd). Kies Vooraf om het te factureren op de factuur voor de periode die begint op {{advanceInvoiceDate}}.",
+    "billInAdvance": "Vooraf factureren"
   }
 }

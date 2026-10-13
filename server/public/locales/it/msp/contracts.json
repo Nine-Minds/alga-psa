@@ -1673,10 +1673,6 @@
       "recurringQuantityLabel": "Quantità ricorrente",
       "allocationQuantityLabel": "Quantità di allocazione",
       "noCurrencyPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria."
-    },
-    "advanceSuggestion": {
-      "message": "Con la fatturazione a posticipo, questa riga non può essere fatturata prima della fine del suo primo periodo di servizio. Con la fatturazione in anticipo con la cadenza del contratto viene invece fatturata alla data di inizio.",
-      "action": "Fattura in anticipo con la cadenza del contratto"
     }
   },
   "wizardProducts": {
@@ -2651,7 +2647,8 @@
       "advance": "Fatturata in anticipo con la cadenza del contratto: la prima fattura è disponibile dal {{date}}, la data di inizio del contratto."
     },
     "client": {
-      "arrears": "Fatturata a posticipo secondo il calendario di fatturazione del cliente: la prima fattura sarà disponibile il {{date}}, alla fine dell'attuale periodo di fatturazione del cliente.",
+      "arrears": "Fatturata a posticipo secondo il calendario di fatturazione del cliente: la prima fattura sarà disponibile il {{date}}, alla fine del periodo di fatturazione del cliente che contiene la data di inizio.",
+      "arrearsPartial": "Fatturata a posticipo secondo il calendario di fatturazione del cliente: la prima fattura sarà disponibile il {{date}}, alla fine del periodo di fatturazione del cliente che contiene la data di inizio. Poiché la data di inizio cade a metà di quel periodo, copre {{periodStart}} – {{periodEnd}}.",
       "advance": "Fatturata in anticipo secondo il calendario di fatturazione del cliente: la prima fattura è disponibile dal {{date}}, l'inizio del periodo di fatturazione del cliente che comprende la data di inizio del contratto."
     }
   },
@@ -2663,5 +2660,9 @@
   },
   "sellHourBlockNote": {
     "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, usa Vendi blocco in Blocchi ore, nella scheda Pannello di fatturazione del cliente."
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Prima fattura: la fattura del {{invoiceDate}} copre {{periodStart}} – {{periodEnd}} (fatturata a posticipo). Scelga Anticipata per fatturarla nella fattura del periodo che inizia il {{advanceInvoiceDate}}.",
+    "billInAdvance": "Fattura in anticipo"
   }
 }

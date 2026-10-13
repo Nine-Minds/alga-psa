@@ -1673,10 +1673,6 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    },
-    "advanceSuggestion": {
-      "message": "Com faturamento em atraso, esta linha só pode ser faturada depois que seu primeiro período de serviço terminar. Com faturamento antecipado pelo ciclo do contrato, ela é faturada na data de início.",
-      "action": "Faturar antecipadamente pelo ciclo do contrato"
     }
   },
   "wizardProducts": {
@@ -2651,7 +2647,8 @@
       "advance": "Faturada antecipadamente pelo ciclo do contrato: a primeira fatura está disponível a partir de {{date}}, a data de início do contrato."
     },
     "client": {
-      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando o período de faturamento atual do cliente termina.",
+      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início.",
+      "arrearsPartial": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início. Como a data de início cai no meio desse período, ela cobre {{periodStart}} – {{periodEnd}}.",
       "advance": "Faturada antecipadamente pelo calendário de faturamento do cliente: a primeira fatura está disponível a partir de {{date}}, o início do período de faturamento do cliente que contém a data de início do contrato."
     }
   },
@@ -2663,5 +2660,9 @@
   },
   "sellHourBlockNote": {
     "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, use Vender bloco em Blocos de horas, na guia Painel de faturamento do cliente."
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Primeira fatura: a fatura de {{invoiceDate}} cobre {{periodStart}} – {{periodEnd}} (faturada em atraso). Escolha Antecipado para faturá-la na fatura do período que começa em {{advanceInvoiceDate}}.",
+    "billInAdvance": "Faturar antecipadamente"
   }
 }

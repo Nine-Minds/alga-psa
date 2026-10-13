@@ -80,7 +80,7 @@ describe('FirstInvoiceNotice', () => {
     expect(screen.queryByText(/nothing to bill for this line/)).toBeNull();
   });
 
-  it('client cadence, arrears: waits for the client schedule, then names the end of the current billing period', async () => {
+  it('client cadence, arrears: waits for the client schedule, then names the end of the billing period containing the start date and the covered dates', async () => {
     mocks.getClientBillingCycleAnchor.mockResolvedValue(monthlyConfig());
 
     render(
@@ -97,7 +97,29 @@ describe('FirstInvoiceNotice', () => {
     expect(screen.getByText(/Checking the client's billing schedule/)).toBeTruthy();
     const notice = await screen.findByText(/Billed in arrears on the client's billing schedule/);
     expect(notice.textContent).toContain('2025-02-01');
+    expect(notice.textContent).toContain('billing period containing the start date ends');
+    expect(notice.textContent).not.toContain('current billing period');
+    // Start 01-15 is partway through the 01-01 → 02-01 period: states what is covered.
+    expect(notice.textContent).toContain('covers 2025-01-15 – 2025-01-31');
     expect(mocks.getClientBillingCycleAnchor).toHaveBeenCalledWith('client-1');
+  });
+
+  it('client cadence, arrears: a cycle-aligned start omits the partial-period clause', async () => {
+    mocks.getClientBillingCycleAnchor.mockResolvedValue(monthlyConfig());
+
+    render(
+      <FirstInvoiceNotice
+        id="notice"
+        cadenceOwner="client"
+        billingTiming="arrears"
+        startDate="2025-01-01"
+        clientId="client-1"
+      />,
+    );
+
+    const notice = await screen.findByText(/Billed in arrears on the client's billing schedule/);
+    expect(notice.textContent).toContain('2025-02-01');
+    expect(notice.textContent).not.toContain('covers');
   });
 
   it('client cadence, advance: names the start of the billing period that contains the start date', async () => {
