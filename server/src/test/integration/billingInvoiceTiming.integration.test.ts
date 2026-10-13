@@ -2414,6 +2414,9 @@ async function insertPlainInvoice(clientId: string, status: 'draft' | 'sent' = '
   return { invoiceId, chargeIds };
 }
 
+const NOT_DRAFT_DELETE_MESSAGE = 'Only draft invoices can be deleted; void the invoice instead.';
+const HAS_PAYMENTS_DELETE_MESSAGE = 'Invoices with recorded payments cannot be deleted';
+
 it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases its periods, and the window is due and regenerable again', async () => {
   setupCommonMocks({ tenantId, userId: 'rest-delete-recurring-user', permissionCheck: () => true });
   const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
@@ -2547,7 +2550,7 @@ it('T-REST-DEL-3: REST DELETE of a finalized invoice answers 409 and leaves the 
   expect(response.status).toBe(409);
   const body = await response.json();
   expect(body.error.code).toBe('CONFLICT');
-  expect(body.error.message).toMatch(/void/i);
+  expect(body.error.message).toBe(NOT_DRAFT_DELETE_MESSAGE);
 
   const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
   expect(after).toBeTruthy();
@@ -2563,12 +2566,13 @@ async function expectRestDeleteRefused(
   invoiceId: string,
   chargeIds: string[],
   expectedStatus: string,
+  expectedMessage: string = NOT_DRAFT_DELETE_MESSAGE,
 ) {
   const response = await restDelete(invoiceId);
   expect(response.status).toBe(409);
   const body = await response.json();
   expect(body.error.code).toBe('CONFLICT');
-  expect(body.error.message).toMatch(/void/i);
+  expect(body.error.message).toBe(expectedMessage);
 
   const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
   expect(after).toBeTruthy();
@@ -2605,7 +2609,7 @@ it('T-REST-DEL-7: REST DELETE of a draft that has a recorded payment answers 409
     status: 'completed',
   });
 
-  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft');
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft', HAS_PAYMENTS_DELETE_MESSAGE);
   const payment = await tenantTable(db, tenantId, 'invoice_payments')
     .where({ tenant: tenantId, payment_id: paymentId })
     .first();

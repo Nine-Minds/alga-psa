@@ -21,8 +21,7 @@ export class ExpectedInvoiceActionError extends Error {
 
 /**
  * Thrown by deleteInvoiceWithKnex({ requireDraft: true }) when the invoice is
- * not a true draft: finalized_at is set, status is not 'draft', or recorded
- * invoice_payments exist.
+ * not a true draft: finalized_at is set or status is not 'draft'.
  */
 export class InvoiceNotDraftError extends Error {
   readonly invoiceId: string;
@@ -30,6 +29,20 @@ export class InvoiceNotDraftError extends Error {
   constructor(invoiceId: string) {
     super(`Only draft invoices can be deleted; void the invoice instead.`);
     this.name = 'InvoiceNotDraftError';
+    this.invoiceId = invoiceId;
+  }
+}
+
+/**
+ * Thrown by deleteInvoiceWithKnex({ requireDraft: true }) when a draft invoice
+ * has recorded invoice_payments (deleting would cascade them away).
+ */
+export class InvoiceHasPaymentsError extends Error {
+  readonly invoiceId: string;
+
+  constructor(invoiceId: string) {
+    super('Invoices with recorded payments cannot be deleted');
+    this.name = 'InvoiceHasPaymentsError';
     this.invoiceId = invoiceId;
   }
 }

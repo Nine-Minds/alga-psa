@@ -45,7 +45,7 @@ import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
 } from '@alga-psa/billing/actions/invoiceModification';
-import { ExpectedInvoiceActionError, InvoiceNotDraftError } from '@alga-psa/billing/lib/invoiceDeletionErrors';
+import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '@alga-psa/billing/lib/invoiceDeletionErrors';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
@@ -896,8 +896,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         },
       });
     } catch (error) {
-      if (error instanceof InvoiceNotDraftError) {
-        throw new ConflictError('Finalized invoices cannot be deleted; void the invoice instead');
+      if (error instanceof InvoiceNotDraftError || error instanceof InvoiceHasPaymentsError) {
+        throw new ConflictError(error.message);
       }
       if (error instanceof ExpectedInvoiceActionError) {
         throw new ConflictError(error.message);

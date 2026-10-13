@@ -12,7 +12,7 @@ import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdow
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
-import { ExpectedInvoiceActionError, InvoiceNotDraftError } from '../lib/invoiceDeletionErrors';
+import { ExpectedInvoiceActionError, InvoiceNotDraftError, InvoiceHasPaymentsError } from '../lib/invoiceDeletionErrors';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -1967,7 +1967,8 @@ async function addManualInvoiceItemsInternal(
 
 export interface DeleteInvoiceOptions {
   /**
-   * Refuse (InvoiceNotDraftError) unless the invoice is a true draft:
+   * Refuse (InvoiceNotDraftError, or InvoiceHasPaymentsError when payments
+   * exist) unless the invoice is a true draft:
    * finalized_at IS NULL AND status === 'draft' AND no invoice_payments rows
    * exist for it. Checked after the invoice row lock, inside the delete trx.
    */
@@ -2042,7 +2043,7 @@ export async function deleteInvoiceWithKnex(
         .where({ invoice_id: invoiceId, tenant })
         .first('invoice_id');
       if (recordedPayment) {
-        throw new InvoiceNotDraftError(invoiceId);
+        throw new InvoiceHasPaymentsError(invoiceId);
       }
     }
     deletedClientId = invoice.client_id ?? undefined;
