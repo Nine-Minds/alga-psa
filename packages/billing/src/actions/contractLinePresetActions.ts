@@ -56,9 +56,10 @@ class ContractLinePresetDomainError extends Error {
  * so it is rejected here before it can reach a stored charge and silently get
  * zero tax and no discount-base inclusion.
  */
-function assertNonNegativeRate(value: number | null | undefined, label: string): void {
+function assertNonNegativeRate(value: number | string | null | undefined, label: string): void {
     if (value === null || value === undefined) return;
-    if (!Number.isFinite(value) || value < 0) {
+    const numericValue = typeof value === 'string' && value.trim() === '' ? Number.NaN : Number(value);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
         throw new ContractLinePresetDomainError(`${label} must be zero or greater.`);
     }
 }
