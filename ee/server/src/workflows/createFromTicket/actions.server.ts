@@ -117,23 +117,27 @@ export const createWorkflowFromTicketAction = withAuth(
       throw error;
     }
 
-    await auditLog(knex, {
-      userId: user.user_id,
-      operation: 'workflow_definition_create_from_ticket',
-      tableName: 'workflow_definitions',
-      recordId: created.workflowId,
-      changedData: {
-        sourceTicketId: request.ticketId,
-        include: request.include,
-        triggerEventName: request.trigger.type === 'event' ? request.trigger.eventName : null,
-      },
-      details: {
-        tenant,
-        dateSourceId,
-        payloadSchemaRef:
-          trigger.kind === 'trigger' ? trigger.payloadSchemaRef : EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
-        source: 'ui',
-      },
+    // LEVERAGE: pattern tenant-scoped-audit — auditLog outside a GUC-setting trx is silently skipped behind pgbouncer
+    await knex.transaction(async (trx) => {
+      await trx.raw("select set_config('app.current_tenant', ?, true)", [tenant]);
+      await auditLog(trx, {
+        userId: user.user_id,
+        operation: 'workflow_definition_create_from_ticket',
+        tableName: 'workflow_definitions',
+        recordId: created.workflowId,
+        changedData: {
+          sourceTicketId: request.ticketId,
+          include: request.include,
+          triggerEventName: request.trigger.type === 'event' ? request.trigger.eventName : null,
+        },
+        details: {
+          tenant,
+          dateSourceId,
+          payloadSchemaRef:
+            trigger.kind === 'trigger' ? trigger.payloadSchemaRef : EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+          source: 'ui',
+        },
+      });
     });
 
     return { workflowId: created.workflowId };

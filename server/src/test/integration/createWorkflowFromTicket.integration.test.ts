@@ -216,7 +216,33 @@ describe('Create workflow from ticket (integration)', () => {
   describe('happy path', () => {
     it('creates a clean draft with the right trigger/steps, no version rows, and an audit record', async () => {
       const { createWorkflowFromTicketAction } = await loadEeAction();
-      const result: any = await createWorkflowFromTicketAction(request());
+
+      // The harness runs everything inside one outer transaction, so a transaction-local
+      // set_config made by any earlier savepoint would outlive it and mask a bare-knex audit.
+      // Emulate pgbouncer transaction mode: the GUC is empty at start and is cleared whenever a
+      // nested transaction() ends (as a real COMMIT would), so only set_config(..., true) inside
+      // the audit's own trx can satisfy auditLog.
+      const clearGuc = () => context.db.raw("select set_config('app.current_tenant', '', false)");
+      const trxHost = context.db as any;
+      const originalTransaction = trxHost.transaction;
+      Object.defineProperty(trxHost, 'transaction', {
+        configurable: true,
+        writable: true,
+        value: async (...args: any[]) => {
+          try {
+            return await originalTransaction.apply(trxHost, args);
+          } finally {
+            await clearGuc();
+          }
+        },
+      });
+      let result: any;
+      try {
+        await clearGuc();
+        result = await createWorkflowFromTicketAction(request());
+      } finally {
+        Object.defineProperty(trxHost, 'transaction', { configurable: true, writable: true, value: originalTransaction });
+      }
       expect(result).toEqual({ workflowId: expect.any(String) });
 
       const row: any = await tt('workflow_definitions').where({ workflow_id: result.workflowId }).first();
@@ -248,6 +274,20 @@ describe('Create workflow from ticket (integration)', () => {
           changedData: expect.objectContaining({ sourceTicketId, triggerEventName: null }),
         })
       );
+
+      // The spy proves the call; the row proves it was not silently skipped (see GUC emulation above).
+      const bare = await context.db.raw("select current_setting('app.current_tenant', true) as tenant");
+      expect((bare.rows ?? bare)[0].tenant || '').toBe('');
+
+      const auditRows: any[] = await tt('audit_logs').where({
+        record_id: result.workflowId,
+        operation: 'workflow_definition_create_from_ticket',
+      });
+      expect(auditRows).toHaveLength(1);
+      const changed = typeof auditRows[0].changed_data === 'string' ? JSON.parse(auditRows[0].changed_data) : auditRows[0].changed_data;
+      expect(changed).toHaveProperty('sourceTicketId', sourceTicketId);
+      expect(changed).toHaveProperty('include');
+      expect(changed).toHaveProperty('triggerEventName', null);
     });
 
     it('resolves an event trigger server-side from the catalog', async () => {
