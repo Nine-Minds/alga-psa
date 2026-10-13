@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Forfait",
       "Hourly": "Horaire",
-      "Usage": "À l'usage"
+      "Usage": "À l'usage",
+      "PrepaidBlock": "Bloc prépayé"
     },
     "quoteStatus": {
       "draft": "Brouillon",

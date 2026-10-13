@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Stała stawka",
       "Hourly": "Godzinowe",
-      "Usage": "Na podstawie zużycia"
+      "Usage": "Na podstawie zużycia",
+      "PrepaidBlock": "Blok przedpłacony"
     },
     "quoteStatus": {
       "draft": "Szkic",

@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Fijo",
       "Hourly": "Por hora",
-      "Usage": "Basado en uso"
+      "Usage": "Basado en uso",
+      "PrepaidBlock": "Bloque prepagado"
     },
     "quoteStatus": {
       "draft": "Borrador",

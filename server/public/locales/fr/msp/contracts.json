@@ -583,7 +583,8 @@
       "failedToUpdate": "Échec de la mise à jour de la ligne de contrat",
       "failedToResetRate": "Échec de la réinitialisation du tarif de la ligne",
       "protectedStartDate": "La date de début doit être le {{boundary}} ou antérieure pour inclure l’historique protégé.",
-      "protectedEndDate": "La date de fin doit être le {{boundary}} ou postérieure pour inclure l’historique protégé."
+      "protectedEndDate": "La date de fin doit être le {{boundary}} ou postérieure pour inclure l’historique protégé.",
+      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées."
     },
     "loading": {
       "contractLines": "Chargement des lignes de contrat",
@@ -827,7 +828,9 @@
       "hourlyTitle": "Horaire",
       "usageDescription": "Facturer pour les unités consommées.",
       "usageTitle": "À l'usage",
-      "fixedSemantics": "Facturer un prix forfaitaire ou une quantité récurrente × tarif unitaire à chaque période."
+      "fixedSemantics": "Facturer un prix forfaitaire ou une quantité récurrente × tarif unitaire à chaque période.",
+      "prepaidBlockTitle": "Bloc prépayé",
+      "prepaidBlockDescription": "Facturez un bloc d'heures à l'avance ; le temps saisi le consomme et le bloc suivant est facturé lorsqu'il est épuisé."
     },
     "billingTiming": {
       "advance": "Par avance (facturer en début de période)",
@@ -895,7 +898,8 @@
       "usageServiceRequired": "Au moins un service à l'usage est requis",
       "usageServiceSelectRequired": "Service {{index}} : veuillez sélectionner un service",
       "invalidQuantity": "La quantité doit être supérieure ou égale à zéro.",
-      "recurringUnitRateRequired": "Saisissez un tarif unitaire pour chaque service récurrent."
+      "recurringUnitRateRequired": "Saisissez un tarif unitaire pour chaque service récurrent.",
+      "prepaidBlockCurrencyRequired": "Le contrat a besoin d'une devise avant de pouvoir tarifer un bloc prépayé."
     },
     "fixedServicesPricingIntent": "Choisissez un prix forfaitaire ou des postes/unités récurrents pour chaque service.",
     "fixedServicesPricingExplanation": "Les allocations au forfait se partagent le tarif de base de la ligne. Les postes récurrents facturent la quantité convenue × tarif unitaire à chaque période, sans enregistrement de consommation.",
@@ -906,7 +910,9 @@
     "invoiceTextPlaceholder": "Imprimé sur la facture ; par défaut, le nom de la ligne",
     "invoiceTextHelp": "Ce texte est imprimé tel quel sur la ligne de facture récurrente.",
     "startDateLabel": "Date de début de la ligne",
-    "endDateLabel": "Date de fin de la ligne"
+    "endDateLabel": "Date de fin de la ligne",
+    "prepaidBlockTitle": "Bloc prépayé",
+    "prepaidBlockDescription": "Définissez la taille et le prix du bloc. Le prix par défaut est heures x tarif du service et est enregistré comme montant explicite."
   },
   "pricingSchedules": {
     "list": {
@@ -2788,6 +2794,107 @@
     "errors": {
       "loadFailed": "Échec du chargement des remises.",
       "saveFailed": "Échec de l'enregistrement de la remise."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Saisissez une taille de bloc supérieure à zéro (les fractions d'heure sont autorisées).",
+      "priceInvalid": "Saisissez un prix de bloc supérieur ou égal à zéro.",
+      "expiryInvalid": "L'expiration doit être un nombre entier de mois entre 1 et 120, ou vide.",
+      "thresholdInvalid": "Le seuil d'utilisation doit être un pourcentage entier de 1 à 99, ou vide.",
+      "serviceRequired": "La ligne nécessite au moins un service horaire."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Bloc initial",
+      "exhaustion": "Bloc épuisé",
+      "threshold": "Seuil d'utilisation",
+      "expiry": "Bloc expiré",
+      "renewal": "Renouvellement du contrat",
+      "manual": "Émis manuellement"
+    },
+    "loading": "Chargement des détails du bloc prépayé...",
+    "heading": "Bloc prépayé",
+    "actions": {
+      "edit": "Modifier",
+      "remove": "Supprimer la configuration du bloc",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "issueNext": "Émettre le bloc suivant"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} figure aussi sur une autre ligne active ({{line}}). Le temps correspondant peut y être facturé au lieu d'être imputé sur ce bloc."
+    },
+    "summary": {
+      "block": "Bloc",
+      "expiry": "Expiration",
+      "neverExpires": "N'expire jamais",
+      "expiresAfterMonths": "{{months}} mois",
+      "soldAs": "Vendu comme",
+      "triggers": "Le bloc suivant est facturé lorsque",
+      "onExhaustion": "le bloc est épuisé",
+      "onThreshold": "{{percent}} % utilisé",
+      "onExpiry": "le bloc expire",
+      "onRenewal": "le contrat est renouvelé (politique en attente de confirmation)",
+      "tierAutoIssue": "Finalisé automatiquement",
+      "tierDraft": "Brouillon à vérifier"
+    },
+    "balance": {
+      "label": "Solde actif",
+      "value": "{{remaining}} sur {{total}} restantes",
+      "none": "Aucun bloc actif pour l'instant. Un bloc s'active lorsque sa facture est finalisée."
+    },
+    "pending": {
+      "heading": "Bloc en attente de finalisation de la facture",
+      "draftInvoice": "Facture brouillon",
+      "noInvoice": "Aucune facture liée",
+      "ageDays": "{{days}} jours",
+      "held": "{{hours}} de temps saisi sont retenues jusqu'à l'activation de ce bloc."
+    },
+    "next": {
+      "label": "Prochaine émission planifiée",
+      "none": "Aucune"
+    },
+    "history": {
+      "heading": "Historique des blocs",
+      "empty": "Aucun bloc n'a encore été émis.",
+      "columns": {
+        "issued": "Émis",
+        "reason": "Motif",
+        "status": "Statut",
+        "hours": "Restant",
+        "amount": "Montant",
+        "invoice": "Facture"
+      }
+    },
+    "fields": {
+      "blockHours": "Taille du bloc (heures)",
+      "blockHoursHelp": "Les fractions sont acceptées, par exemple 1,5 pour 90 minutes.",
+      "blockPrice": "Prix du bloc ({{currency}})",
+      "blockPriceManualHelp": "Défini explicitement. Il est enregistré tel quel et ne suit pas le taux horaire.",
+      "blockPriceDefaultHelp": "Par défaut, heures x tarif du service. Enregistré comme prix explicite.",
+      "useRateTimesHours": "Utiliser heures x taux",
+      "soldAs": "La ligne de facture est vendue comme",
+      "soldAsHelp": "Détermine la taxe, le grand livre et le mappage d'export comptable de la ligne de facture du bloc.",
+      "expiryMonths": "Expire après (mois)",
+      "neverExpires": "N'expire jamais",
+      "expiryMonthsHelp": "Laissez vide pour des heures qui n'expirent jamais. Les heures non utilisées sont perdues à l'expiration.",
+      "thresholdPercent": "Émettre le bloc suivant à l'utilisation (%)",
+      "noThreshold": "Aucun seuil",
+      "triggersHeading": "Facturer le bloc suivant lorsque",
+      "triggerExhaustion": "Le bloc est épuisé",
+      "triggerExpiry": "Le bloc expire",
+      "triggerRenewal": "Le contrat est renouvelé",
+      "triggerRenewalPending": "Enregistré avec la ligne. La façon dont les renouvellements émettent des blocs est en attente de confirmation, donc rien n'est encore émis.",
+      "tier": "Facture suivante",
+      "tierDraft": "Créer un brouillon à vérifier",
+      "tierAutoIssue": "Finaliser et envoyer automatiquement"
+    },
+    "status": {
+      "pending": "En attente",
+      "active": "Actif",
+      "expired": "Expiré",
+      "voided": "Annulé"
     }
   }
 }

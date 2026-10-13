@@ -583,7 +583,8 @@
       "failedToUpdate": "Nie udało się zaktualizować linii kontraktowej",
       "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
       "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
-      "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług."
+      "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług.",
+      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur."
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",
@@ -827,7 +828,9 @@
       "hourlyTitle": "Godzinowa",
       "usageDescription": "Fakturuj za zużyte jednostki.",
       "usageTitle": "Według zużycia",
-      "fixedSemantics": "Rozliczaj cenę pakietową albo cykliczną ilość × stawkę jednostkową w każdym okresie."
+      "fixedSemantics": "Rozliczaj cenę pakietową albo cykliczną ilość × stawkę jednostkową w każdym okresie.",
+      "prepaidBlockTitle": "Blok przedpłacony",
+      "prepaidBlockDescription": "Zafakturuj z góry blok godzin; zarejestrowany czas go zużywa, a następny blok jest fakturowany po jego wyczerpaniu."
     },
     "billingTiming": {
       "advance": "Z góry (rozliczenie na początku okresu)",
@@ -895,7 +898,8 @@
       "usageServiceRequired": "Wymagana jest co najmniej jedna usługa rozliczana według zużycia",
       "usageServiceSelectRequired": "Usługa {{index}}: wybierz usługę",
       "invalidQuantity": "Ilość musi wynosić zero lub więcej.",
-      "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej."
+      "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej.",
+      "prepaidBlockCurrencyRequired": "Umowa wymaga waluty, zanim będzie można wycenić blok przedpłacony."
     },
     "fixedServicesPricingIntent": "Dla każdej usługi wybierz cenę pakietową albo cykliczne stanowiska/jednostki.",
     "fixedServicesPricingExplanation": "Alokacje pakietowe dzielą stawkę bazową linii. Cykliczne stanowiska rozliczają uzgodnioną ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia.",
@@ -906,7 +910,9 @@
     "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
     "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej.",
     "startDateLabel": "Data rozpoczęcia wiersza",
-    "endDateLabel": "Data zakończenia wiersza"
+    "endDateLabel": "Data zakończenia wiersza",
+    "prepaidBlockTitle": "Blok przedpłacony",
+    "prepaidBlockDescription": "Ustaw rozmiar i cenę bloku. Cena domyślnie to godziny x stawka usługi i jest zapisywana jako jawna kwota."
   },
   "pricingSchedules": {
     "list": {
@@ -2794,6 +2800,107 @@
     "errors": {
       "loadFailed": "Nie udało się załadować rabatów.",
       "saveFailed": "Nie udało się zapisać rabatu."
+    }
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Wprowadź rozmiar bloku większy od zera (dozwolone są ułamki godziny).",
+      "priceInvalid": "Wprowadź cenę bloku równą zero lub wyższą.",
+      "expiryInvalid": "Wygaśnięcie musi być całkowitą liczbą miesięcy od 1 do 120 lub puste.",
+      "thresholdInvalid": "Próg zużycia musi być całkowitym procentem od 1 do 99 lub puste.",
+      "serviceRequired": "Pozycja wymaga co najmniej jednej usługi godzinowej."
+    },
+    "hoursValue": "{{hours}} godz.",
+    "trigger": {
+      "initial": "Blok początkowy",
+      "exhaustion": "Blok wyczerpany",
+      "threshold": "Próg zużycia",
+      "expiry": "Blok wygasł",
+      "renewal": "Odnowienie umowy",
+      "manual": "Wystawiony ręcznie"
+    },
+    "loading": "Ładowanie szczegółów bloku przedpłaconego...",
+    "heading": "Blok przedpłacony",
+    "actions": {
+      "edit": "Edytuj",
+      "remove": "Usuń konfigurację bloku",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "issueNext": "Wystaw następny blok"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} znajduje się także w innej aktywnej pozycji ({{line}}). Czas może być tam rozliczany zamiast pobierany z tego bloku."
+    },
+    "summary": {
+      "block": "Blok",
+      "expiry": "Wygaśnięcie",
+      "neverExpires": "Nigdy nie wygasa",
+      "expiresAfterMonths": "{{months}} mies.",
+      "soldAs": "Sprzedawane jako",
+      "triggers": "Następny blok jest fakturowany, gdy",
+      "onExhaustion": "blok zostanie wyczerpany",
+      "onThreshold": "zużyto {{percent}}%",
+      "onExpiry": "blok wygaśnie",
+      "onRenewal": "umowa zostanie odnowiona (polityka oczekuje na potwierdzenie)",
+      "tierAutoIssue": "Finalizowane automatycznie",
+      "tierDraft": "Wersja robocza do przeglądu"
+    },
+    "balance": {
+      "label": "Aktywne saldo",
+      "value": "pozostało {{remaining}} z {{total}}",
+      "none": "Brak aktywnego bloku. Blok aktywuje się po sfinalizowaniu jego faktury."
+    },
+    "pending": {
+      "heading": "Oczekujący blok czeka na sfinalizowanie faktury",
+      "draftInvoice": "Wersja robocza faktury",
+      "noInvoice": "Brak powiązanej faktury",
+      "ageDays": "{{days}} dni",
+      "held": "{{hours}} zarejestrowanego czasu jest wstrzymane do aktywacji tego bloku."
+    },
+    "next": {
+      "label": "Następne zaplanowane wystawienie",
+      "none": "Brak"
+    },
+    "history": {
+      "heading": "Historia bloków",
+      "empty": "Nie wystawiono jeszcze żadnych bloków.",
+      "columns": {
+        "issued": "Wystawiono",
+        "reason": "Powód",
+        "status": "Status",
+        "hours": "Pozostało",
+        "amount": "Kwota",
+        "invoice": "Faktura"
+      }
+    },
+    "fields": {
+      "blockHours": "Rozmiar bloku (godziny)",
+      "blockHoursHelp": "Ułamki są dozwolone, np. 1,5 dla 90 minut.",
+      "blockPrice": "Cena bloku ({{currency}})",
+      "blockPriceManualHelp": "Ustawiona jawnie. Jest zapisywana w podanej postaci i nie podąża za stawką godzinową.",
+      "blockPriceDefaultHelp": "Domyślnie godziny x stawka usługi. Zapisywana jako jawna cena.",
+      "useRateTimesHours": "Użyj godzin x stawka",
+      "soldAs": "Pozycja faktury jest sprzedawana jako",
+      "soldAsHelp": "Określa podatek, księgę główną i mapowanie eksportu księgowego dla pozycji faktury bloku.",
+      "expiryMonths": "Wygasa po (miesiącach)",
+      "neverExpires": "Nigdy nie wygasa",
+      "expiryMonthsHelp": "Pozostaw puste dla godzin, które nie wygasają. Niewykorzystane godziny przepadają po wygaśnięciu.",
+      "thresholdPercent": "Wystaw następny blok przy zużyciu (%)",
+      "noThreshold": "Brak progu",
+      "triggersHeading": "Zafakturuj następny blok, gdy",
+      "triggerExhaustion": "Blok zostanie wyczerpany",
+      "triggerExpiry": "Blok wygaśnie",
+      "triggerRenewal": "Umowa zostanie odnowiona",
+      "triggerRenewalPending": "Zapisywane z pozycją. Sposób wystawiania bloków przy odnowieniach czeka na potwierdzenie polityki, więc na razie nic nie jest wystawiane.",
+      "tier": "Faktura następna",
+      "tierDraft": "Utwórz wersję roboczą do przeglądu",
+      "tierAutoIssue": "Finalizuj i wyślij automatycznie"
+    },
+    "status": {
+      "pending": "Oczekujący",
+      "active": "Aktywny",
+      "expired": "Wygasły",
+      "voided": "Anulowany"
     }
   }
 }

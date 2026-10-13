@@ -176,6 +176,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
   'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
   'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
+  // alga-2026-0002695: Prepaid Block issuance due-work rows map issuances onto
+  // service-period windows; added after the pass-0 snapshot.
+  'packages/billing/src/lib/prepaidBlockDueWork.ts',
+  'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
+  'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
