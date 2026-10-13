@@ -9,8 +9,8 @@ import { TicketTemplateEditor } from '@alga-psa/tickets/components/templates/Tic
  * (no assets, no clients), so these are thin; they exist so the route files import from composition
  * like every other MSP ticket screen.
  */
-export function MspTicketTemplatesPage() {
-  return <TicketTemplatesPage />;
+export function MspTicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode?: boolean }) {
+  return <TicketTemplatesPage isAlgaDeskMode={isAlgaDeskMode} />;
 }
 
 export function MspTicketTemplateEditor({ templateId, fromTicketId }: { templateId: string; fromTicketId?: string }) {

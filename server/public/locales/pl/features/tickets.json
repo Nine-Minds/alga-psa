@@ -2495,6 +2495,7 @@
     },
     "actions": {
       "edit": "Edytuj",
+      "newTicket": "Nowe zgłoszenie z szablonu",
       "activate": "Aktywuj",
       "deactivate": "Dezaktywuj",
       "delete": "Usuń",

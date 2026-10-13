@@ -2349,6 +2349,7 @@
     },
     "actions": {
       "edit": "Modifica",
+      "newTicket": "Nuovo ticket da modello",
       "activate": "Attiva",
       "deactivate": "Disattiva",
       "delete": "Elimina",

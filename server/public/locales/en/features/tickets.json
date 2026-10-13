@@ -2349,6 +2349,7 @@
     },
     "actions": {
       "edit": "Edit",
+      "newTicket": "New ticket from template",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "delete": "Delete",

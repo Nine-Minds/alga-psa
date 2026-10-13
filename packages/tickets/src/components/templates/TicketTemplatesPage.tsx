@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Power, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, TicketTemplateListItem } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -18,19 +18,23 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import {
   deleteTicketTemplate,
   listTicketTemplates,
   setTicketTemplateActive,
 } from '../../actions/ticketTemplateActions';
+import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import { recurringErrorMessage, unwrapRecurring } from '../recurring/recurringUi';
 import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
 
 /** The ticket templates list: name, board, checklist size, active state and the row actions. */
-export function TicketTemplatesPage() {
+export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode?: boolean } = {}) {
   const { t } = useTranslation('features/tickets');
   const router = useRouter();
   const permissions = useTicketTemplatePermissions();
+  // "New ticket from template" creates a ticket, so it follows `ticket:create`, not the template grants.
+  const [canCreateTicket, setCanCreateTicket] = useState(false);
   const [items, setItems] = useState<TicketTemplateListItem[]>([]);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,6 +56,16 @@ export function TicketTemplatesPage() {
   }, [includeInactive]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    checkCurrentUserPermissions([{ resource: 'ticket', action: 'create' }])
+      .then((results) => {
+        if (!cancelled) setCanCreateTicket(results.some((result) => result.resource === 'ticket' && result.action === 'create' && result.granted));
+      })
+      .catch(() => { if (!cancelled) setCanCreateTicket(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleActive = useCallback(async (item: TicketTemplateListItem) => {
     const message = recurringErrorMessage(await setTicketTemplateActive(item.template_id, !item.is_active));
@@ -89,7 +103,7 @@ export function TicketTemplatesPage() {
         ),
       },
     ];
-    if (permissions.update || permissions.delete) {
+    if (canCreateTicket || permissions.update || permissions.delete) {
       cols.push({
         title: <span className="sr-only">{t('actions.rowActions', 'Actions')}</span>,
         dataIndex: 'actions',
@@ -114,6 +128,19 @@ export function TicketTemplatesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* Inactive templates are refused by addTicket, so the action is only offered on active ones. */}
+                {canCreateTicket && record.is_active && (
+                  <DropdownMenuItem
+                    id="new-ticket-from-template-menu-item"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      router.push(buildCreateTicketHref({ templateId: record.template_id, isAlgaDeskMode }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('templates.actions.newTicket', 'New ticket from template')}
+                  </DropdownMenuItem>
+                )}
                 {permissions.update && (
                   <DropdownMenuItem
                     id="edit-ticket-template-menu-item"
@@ -160,7 +187,7 @@ export function TicketTemplatesPage() {
       });
     }
     return cols;
-  }, [t, permissions.update, permissions.delete, router, toggleActive]);
+  }, [t, canCreateTicket, isAlgaDeskMode, permissions.update, permissions.delete, router, toggleActive]);
 
   return (
     <div id="ticket-templates-page" className="space-y-4 p-6">

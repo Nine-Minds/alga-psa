@@ -2349,6 +2349,7 @@
     },
     "actions": {
       "edit": "Redigera",
+      "newTicket": "Nytt ärende från mall",
       "activate": "Aktivera",
       "deactivate": "Inaktivera",
       "delete": "Ta bort",

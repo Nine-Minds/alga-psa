@@ -2349,6 +2349,7 @@
     },
     "actions": {
       "edit": "Bearbeiten",
+      "newTicket": "Neues Ticket aus Vorlage",
       "activate": "Aktivieren",
       "deactivate": "Deaktivieren",
       "delete": "Löschen",

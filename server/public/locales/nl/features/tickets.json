@@ -2349,6 +2349,7 @@
     },
     "actions": {
       "edit": "Bewerken",
+      "newTicket": "Nieuw ticket op basis van sjabloon",
       "activate": "Activeren",
       "deactivate": "Deactiveren",
       "delete": "Verwijderen",
