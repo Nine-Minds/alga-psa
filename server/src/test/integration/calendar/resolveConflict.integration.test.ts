@@ -490,8 +490,10 @@ describe('CalendarSyncService.resolveConflict (EE) transaction handling', () => 
     const result = await new CalendarSyncService().resolveConflict(mappingId, resolution);
     expect(result.success).toBe(true);
 
-    expect(context.txStartDepths.length).toBeGreaterThan(0);
-    expect(context.txStartDepths.every(depth => depth === 0)).toBe(true);
+    // Only the callee's own transaction is opened (no outer wrapper), and it is
+    // never nested: exactly one tx:start/tx:end pair, started at depth 0.
+    expect(context.txStartDepths).toEqual([0]);
+    expect(context.trace.filter(t => t.startsWith('tx:'))).toEqual(['tx:start', 'tx:end']);
   });
 
   it('T4: merge commits the update transaction before the provider is called', async () => {
