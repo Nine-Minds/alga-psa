@@ -39,6 +39,9 @@ describe('prepaid replenishment pending-state lifecycle wiring', () => {
     const hourBlockSource = source('packages/billing/src/actions/hourBlockActions.ts');
     expect(replenishmentSource).toContain('createHourBlockPurchaseInvoiceInternal');
     expect(replenishmentSource).toContain('hours: input.amount / 60');
-    expect(hourBlockSource).toContain('source_invoice_id: invoiceId');
+    const pendingBlockSource = source('packages/billing/src/services/pendingHourBlockService.ts');
+    expect(hourBlockSource).toContain('createPendingHourBlockForInvoiceCharge');
+    expect(hourBlockSource).toContain('invoiceId,');
+    expect(pendingBlockSource).toContain('source_invoice_id: input.invoiceId');
   });
 });

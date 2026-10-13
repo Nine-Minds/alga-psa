@@ -27,6 +27,7 @@ import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import * as invoiceService from '../services/invoiceService';
 import { TaxService } from '../services/taxService';
+import { createPendingHourBlockForInvoiceCharge } from '../services/pendingHourBlockService';
 import {
   actionError,
   getErrorMessage,
@@ -218,7 +219,6 @@ export async function createHourBlockPurchaseInvoiceInternal(
   } = input;
   const sessionLike = { user: { id: createdBy } };
   const invoiceId = uuidv4();
-  const blockId = uuidv4();
   const totalMinutes = Math.round(hours * 60);
   const purchaseAmount = Math.round(hours * hourlyRate);
   const invoice = {
@@ -264,27 +264,23 @@ export async function createHourBlockPurchaseInvoiceInternal(
     .first();
   if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
 
-  await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
-    block_id: blockId,
+  const { blockId } = await createPendingHourBlockForInvoiceCharge(trx, {
     tenant,
-    client_id: clientId,
-    service_id: serviceId,
-    total_minutes: totalMinutes,
-    remaining_minutes: totalMinutes,
-    hourly_rate: Math.round(hourlyRate),
-    purchase_amount: purchaseAmount,
-    currency_code: currencyCode,
-    status: 'pending',
-    purchased_at: null,
-    expiration_date: toCalendarDateString(expirationDate),
-    source_invoice_id: invoiceId,
-    source_invoice_charge_id: purchaseLine.item_id,
-    replenishment_bucket_usage_id: replenishmentBucketUsageId ?? null,
-    source_type: 'purchase',
-    created_by: createdBy,
-    notes: notes?.trim() || null,
+    clientId,
+    serviceId,
+    minutes: totalMinutes,
+    hourlyRate,
+    purchaseAmount,
+    currencyCode,
+    invoiceId,
+    invoiceChargeId: purchaseLine.item_id,
+    expirationDate,
+    scopeServiceIds,
+    sourceType: 'purchase',
+    replenishmentBucketUsageId,
+    createdBy,
+    notes,
   });
-  await resolveScopeServiceIds(trx, tenant, blockId, scopeServiceIds);
   return { invoiceId, blockId, invoiceNumber };
 }
 
