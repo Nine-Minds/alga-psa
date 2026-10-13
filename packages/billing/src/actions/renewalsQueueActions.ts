@@ -855,6 +855,15 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       throw new Error('Activated renewal contract was not found in active status');
     }
 
+    // TODO(captain-decision-1): Prepaid Block re-ownership belongs here. Once the
+    // renewal contract is confirmed active, unexpired contract blocks
+    // (hour_blocks.client_contract_id = this source client contract) on lines
+    // that continue into the renewal contract would be re-owned to the new
+    // client_contract_id / matching new contract_line_id (config locks first,
+    // then blocks in block_id order, then reconcileLineAllocations per line),
+    // so remaining hours carry across the renewal. Not implemented pending the
+    // captain's decision on carry-over semantics.
+
     const updatedAt = new Date().toISOString();
     await db.table('client_contracts')
       .where({

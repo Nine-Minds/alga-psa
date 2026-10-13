@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, getConnection, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { IHourBlock } from '@alga-psa/types';
+import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 
 export interface ExpiredHourBlocksJobData extends Record<string, unknown> {
@@ -50,6 +51,28 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
 
         const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
 
+        // Prepaid Block lock order: a contract line's config row is locked
+        // BEFORE any of its blocks. Peek (unlocked) at the candidate contract
+        // lines, lock their config rows in line-id order, then lock blocks below.
+        let peek = tenantScopedTable(trx, 'hour_blocks', tenantId)
+          .where('status', 'active')
+          .whereNotNull('expiration_date')
+          .whereNotNull('contract_line_id')
+          .where('expiration_date', '<', today)
+          .where('remaining_minutes', '>', 0)
+          .distinct('contract_line_id');
+        if (clientId) {
+          peek = peek.where('client_id', clientId);
+        }
+        const peekedLineIds: string[] = (await peek).map((r: { contract_line_id: string }) => r.contract_line_id).sort();
+        if (peekedLineIds.length > 0) {
+          await tenantScopedTable(trx, 'contract_line_prepaid_blocks', tenantId)
+            .whereIn('contract_line_id', peekedLineIds)
+            .orderBy('contract_line_id', 'asc')
+            .forUpdate()
+            .select('contract_line_id');
+        }
+
         // Lock the candidates (canonical block_id order — the same order
         // allocateTimeEntry/unfinalize lock hour_blocks in) so the eligibility
         // check and the expired transition are one serialized step: a
@@ -75,7 +98,9 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         console.log(`Found ${expiredBlocks.length} expired hour blocks to process`);
 
         const now = new Date().toISOString();
+        const expiredLineIds = new Set<string>();
         for (const block of expiredBlocks) {
+          if (block.contract_line_id) expiredLineIds.add(block.contract_line_id);
           await tenantScopedTable(trx, 'hour_blocks', tenantId)
             .where({ tenant: tenantId, block_id: block.block_id })
             .update({ status: 'expired', updated_at: now });
@@ -95,6 +120,20 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
           });
 
           console.log(`Expired hour block ${block.block_id} for client ${block.client_id}, remaining: ${block.remaining_minutes}`);
+        }
+
+        // Expiry shrinks the line's available pool: re-draw uninvoiced entries so
+        // work that was only covered by the expired block's remainder falls to
+        // overage (entries already drawn against the expired block stay as they
+        // were). The audit rows above are kept as-is.
+        // TODO(captain-decision-2): contract-end forfeiture belongs here. When a
+        // contract ends (client_contracts.end_date passed / terminated), active
+        // contract blocks on its lines would be force-expired with a distinct
+        // audit reason (e.g. 'contract_end_forfeiture') in this same pass, before
+        // the re-draw below. Not implemented pending the captain's decision on
+        // whether unused prepaid hours are forfeited at contract end.
+        for (const lineId of [...expiredLineIds].sort()) {
+          await reconcileLineAllocations(trx, tenantId, lineId);
         }
 
         console.log(`Successfully processed ${expiredBlocks.length} expired hour blocks`);

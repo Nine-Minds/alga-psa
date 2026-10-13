@@ -1,13 +1,15 @@
 import type { Knex } from 'knex';
+import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { createPrepaidReplenishmentInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
 import { finalizeInvoiceWithKnex } from '@alga-psa/billing/actions/invoiceModification';
 import { enqueueImmediateJob } from '@alga-psa/core';
+import { supersedeExpiryIssuancesForLine } from '@alga-psa/billing/services/prepaidBlockLifecycleService';
 
 type AlertRow = {
   alert_id: string;
   client_id: string;
-  alert_type: 'credit' | 'bucket';
+  alert_type: 'credit' | 'bucket' | 'prepaid_block';
   resolved_at: string | null;
   replenishment_status: string | null;
   replenishment_invoice_id: string | null;
@@ -17,6 +19,8 @@ type AlertRow = {
   service_catalog_id: string | null;
   contract_line_id: string | null;
   bucket_usage_id: string | null;
+  hour_block_id: string | null;
+  bucket_percent: number | string | null;
   replenishment_attempt_count?: number | null;
 };
 
@@ -59,7 +63,7 @@ async function getAlertContract(
   tenant: string,
   alert: AlertRow,
 ): Promise<ContractPolicyRow | null> {
-  if (alert.alert_type !== 'bucket' || !alert.contract_line_id) return null;
+  if (alert.alert_type === 'credit' || !alert.contract_line_id) return null;
   const today = new Date().toISOString().slice(0, 10);
   const db = tenantDb(trx, tenant);
   const query = db.table('client_contracts as cc')
@@ -122,6 +126,7 @@ async function processAlert(
 ): Promise<{ result: ReplenishmentResult; autoIssue: boolean }> {
   let autoIssue = false;
   let invoiceId: string | null = null;
+  let alertType: AlertRow['alert_type'] | null = null;
 
   const result = await knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenant);
@@ -130,6 +135,7 @@ async function processAlert(
       .forUpdate()
       .first() as AlertRow | undefined;
     if (!alert) return 'unchanged' as const;
+    alertType = alert.alert_type;
 
     const settings = await db.table('client_billing_settings')
       .where({ client_id: alert.client_id })
@@ -139,20 +145,48 @@ async function processAlert(
         'prepaid_bucket_replenishment_minutes',
         'prepaid_replenishment_horizon_days',
       );
+    // Config/issuance locks come before any block lock (plan Risk 6). Taken
+    // here, right under the alert lock, so everything below (open follow-on
+    // check, issuance insert, block creation) runs under the line's lock.
+    const blockConfig = alert.alert_type === 'prepaid_block' && alert.contract_line_id
+      ? await db.table('contract_line_prepaid_blocks')
+        .where({ contract_line_id: alert.contract_line_id })
+        .forUpdate()
+        .first('contract_line_id', 'block_minutes', 'replenishment_tier')
+      : null;
+
     const contract = await getAlertContract(trx, tenant, alert);
-    if (alert.alert_type === 'bucket' && !contract) {
+    if (alert.alert_type !== 'credit' && !contract) {
       await db.table('prepaid_balance_alerts').where({ alert_id: alert.alert_id }).update({
         replenishment_status: 'skipped',
         replenishment_attempted_at: trx.fn.now(),
-        replenishment_error: 'Bucket alert is not linked to an active client contract',
+        replenishment_error: alert.alert_type === 'prepaid_block'
+          ? 'Prepaid block alert is not linked to an active client contract'
+          : 'Bucket alert is not linked to an active client contract',
         updated_at: trx.fn.now(),
       });
       return 'skipped' as const;
     }
-    const tier = contract?.prepaid_replenishment_tier ?? settings?.prepaid_replenishment_tier ?? 'draft';
+    if (alert.alert_type === 'prepaid_block' && !blockConfig) {
+      await db.table('prepaid_balance_alerts').where({ alert_id: alert.alert_id }).update({
+        replenishment_status: 'skipped',
+        replenishment_attempted_at: trx.fn.now(),
+        replenishment_error: 'Prepaid block configuration no longer exists for this line',
+        updated_at: trx.fn.now(),
+      });
+      return 'skipped' as const;
+    }
+    // A Prepaid Block line carries its own tier (draft | auto_issue); the
+    // contract/client override chain does not apply, and the block size/price
+    // come from the line config rather than a replenishment amount.
+    const tier = alert.alert_type === 'prepaid_block'
+      ? (blockConfig!.replenishment_tier ?? 'draft')
+      : (contract?.prepaid_replenishment_tier ?? settings?.prepaid_replenishment_tier ?? 'draft');
     const amount = Number(alert.alert_type === 'credit'
       ? (contract?.prepaid_credit_replenishment_amount ?? settings?.prepaid_credit_replenishment_amount)
-      : (contract?.prepaid_bucket_replenishment_minutes ?? settings?.prepaid_bucket_replenishment_minutes));
+      : alert.alert_type === 'prepaid_block'
+        ? blockConfig!.block_minutes
+        : (contract?.prepaid_bucket_replenishment_minutes ?? settings?.prepaid_bucket_replenishment_minutes));
     if (tier === 'notify' || !Number.isSafeInteger(amount) || amount <= 0) {
       return 'unchanged' as const;
     }
@@ -184,6 +218,42 @@ async function processAlert(
       .first();
     if (!client) return 'unchanged' as const;
 
+    let issuanceId: string | null = null;
+    if (alert.alert_type === 'prepaid_block') {
+      const lineId = alert.contract_line_id!;
+      // At most one open follow-on per line: a pending contract block means a
+      // follow-on is already drafted/awaiting finalize; a scheduled issuance
+      // (other than a not-yet-needed expiry one) is an existing obligation.
+      const pendingBlock = await db.table('hour_blocks')
+        .where({ contract_line_id: lineId, status: 'pending' })
+        .first('block_id');
+      if (pendingBlock) return 'unchanged' as const;
+      const openIssuance = await db.table('contract_line_block_issuances')
+        .where({ contract_line_id: lineId, status: 'scheduled' })
+        .forUpdate()
+        .first('issuance_id', 'trigger_kind');
+      if (openIssuance && openIssuance.trigger_kind !== 'expiry') return 'unchanged' as const;
+      if (openIssuance) {
+        // The usage trigger replaces the old block's expiry re-issue.
+        await supersedeExpiryIssuancesForLine(trx, tenant, lineId, {
+          reason: 'A usage-triggered block replaces the expiry issuance',
+        });
+      }
+      issuanceId = randomUUID();
+      await db.table('contract_line_block_issuances').insert({
+        tenant,
+        issuance_id: issuanceId,
+        contract_line_id: lineId,
+        client_contract_id: contract!.client_contract_id,
+        client_id: alert.client_id,
+        trigger_kind: alert.bucket_percent == null ? 'exhaustion' : 'threshold',
+        due_date: new Date().toISOString().slice(0, 10),
+        status: 'scheduled',
+        source_block_id: alert.hour_block_id,
+        alert_id: alert.alert_id,
+      });
+    }
+
     let serviceName: string | null = null;
     let hourlyRate: number | null = null;
     if (alert.alert_type === 'bucket') {
@@ -210,11 +280,17 @@ async function processAlert(
       clientId: alert.client_id,
       subject: alert.alert_type,
       amount,
-      currencyCode: alert.credit_currency_code ?? client.default_currency_code ?? 'USD',
+      // A Prepaid Block follow-on is priced from the line config in the CONTRACT
+      // currency (resolved inside createPrepaidReplenishmentInvoice); the
+      // client-default/USD fallback must never apply to it.
+      currencyCode: alert.alert_type === 'prepaid_block'
+        ? ''
+        : alert.credit_currency_code ?? client.default_currency_code ?? 'USD',
       serviceId: alert.service_catalog_id,
       serviceName,
       hourlyRate,
       bucketUsageId: alert.bucket_usage_id,
+      issuanceId,
     });
     invoiceId = created.invoiceId;
     autoIssue = tier === 'auto_issue';
@@ -240,7 +316,9 @@ async function processAlert(
       // down existing credit against the replenishment invoice itself.
       await finalizeInvoiceWithKnex(invoiceId, knex, tenant, null, {
         skipAutoApply: true,
-        deferPrepaidActivation: true,
+        // Credit/bucket top-ups activate at payment; a Prepaid Block follow-on
+        // activates at finalize (invoiceModification exempts its alert type).
+        deferPrepaidActivation: alertType !== 'prepaid_block',
         markReplenishmentIssued: false,
       });
       await enqueueImmediateJob('invoice_email', {
@@ -280,7 +358,7 @@ export async function replenishOpenPrepaidBalanceAlerts(
   const db = tenantDb(knex, tenant);
   const query = db.table('prepaid_balance_alerts')
     .whereNull('resolved_at')
-    .whereIn('alert_type', ['credit', 'bucket']);
+    .whereIn('alert_type', ['credit', 'bucket', 'prepaid_block']);
   if (clientId) {
     query.where({ client_id: clientId });
   }
