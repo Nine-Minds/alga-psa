@@ -348,7 +348,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       title: t('services.generic.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => {
-        const rate = value !== undefined ? value : record.default_rate;
+        // A row with no custom rate stores SQL NULL, not undefined, so the
+        // catalog fallback has to be nullish — otherwise Standard rows read N/A.
+        const rate = value ?? record.default_rate;
         const hasCustomRate = value !== undefined && value !== null;
         // The member-level rate_provenance governs the same way the line-level
         // one does: `inherited` follows the catalog, `custom`/`unreviewed` take

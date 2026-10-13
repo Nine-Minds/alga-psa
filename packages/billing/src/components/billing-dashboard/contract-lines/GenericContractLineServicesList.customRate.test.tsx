@@ -112,11 +112,30 @@ const serviceConfigs = [
       service_id: 'svc-standard',
       configuration_type: 'Hourly',
       quantity: 1,
-      // No custom_rate: the column falls back to the catalog default_rate.
+      // custom_rate is a nullable numeric column, so a row with no custom rate
+      // comes back as null; the column falls back to the catalog default_rate.
+      custom_rate: null,
     },
     service: {
       service_id: 'svc-standard',
       service_name: 'Project Manager',
+      service_type_name: 'Support',
+      billing_method: 'hourly',
+      unit_of_measure: 'hour',
+      default_rate: 10000,
+    },
+    typeConfig: null,
+  },
+  {
+    configuration: {
+      service_id: 'svc-absent',
+      configuration_type: 'Hourly',
+      quantity: 1,
+      // Key absent entirely: same fallback as an explicit null.
+    },
+    service: {
+      service_id: 'svc-absent',
+      service_name: 'Field Technician',
       service_type_name: 'Support',
       billing_method: 'hourly',
       unit_of_measure: 'hour',
@@ -162,13 +181,36 @@ describe('GenericContractLineServicesList custom rate formatting', () => {
     expect(cell.textContent).not.toContain('7,000.00');
   });
 
-  it('renders the default_rate fallback of 10000 minor units as €100.00 with a Standard badge', async () => {
+  it('falls back to default_rate when custom_rate is null, not N/A', async () => {
     renderList();
 
     const cell = await screen.findByTestId('cell-1-custom_rate');
     expect(cell).toHaveTextContent('Standard');
     expect(cell).toHaveTextContent('€100.00');
+    expect(cell.textContent).not.toContain('N/A');
     expect(cell.textContent).not.toContain('10,000.00');
+  });
+
+  it('renders the default_rate fallback when custom_rate is absent', async () => {
+    renderList();
+
+    const cell = await screen.findByTestId('cell-2-custom_rate');
+    expect(cell).toHaveTextContent('Standard');
+    expect(cell).toHaveTextContent('€100.00');
+  });
+
+  it('handles the numeric string Postgres returns for custom_rate', async () => {
+    actions.getContractLineServicesWithConfigurations.mockResolvedValue([
+      {
+        ...serviceConfigs[0],
+        configuration: { ...serviceConfigs[0].configuration, custom_rate: '7000.00' },
+      },
+    ]);
+
+    renderList();
+
+    const cell = await screen.findByTestId('cell-0-custom_rate');
+    expect(cell).toHaveTextContent('€70.00');
   });
 
   it('never inflates either rate by 100 anywhere in the table', async () => {
