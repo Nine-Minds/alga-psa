@@ -4,22 +4,27 @@ vi.setConfig({ testTimeout: 30000 });
 
 const TICKET_ID = '11111111-1111-4111-8111-111111111111';
 
-const m = vi.hoisted(() => ({
+const m = vi.hoisted(() => {
+  const trx = { raw: vi.fn(async (..._a: unknown[]) => undefined) };
+  return {
+  trx,
+  transaction: vi.fn(async (cb: (t: typeof trx) => unknown) => cb(trx)),
   user: { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1', roles: [] as any[] } as any,
   hasPermission: vi.fn(),
   getBlueprint: vi.fn(),
   buildTrigger: vi.fn(),
   createDefinition: vi.fn(),
-  auditLog: vi.fn(async () => undefined),
+  auditLog: vi.fn(async (..._a: unknown[]) => undefined),
   edition: { enterprise: true },
-}));
+  };
+});
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (input: unknown) => action(m.user, { tenant: 'tenant-1' }, input),
   hasPermission: (...a: unknown[]) => m.hasPermission(...a),
 }));
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: {} }),
+  createTenantKnex: async () => ({ knex: { transaction: (...a: unknown[]) => (m.transaction as any)(...a) } }),
   auditLog: (...a: unknown[]) => m.auditLog(...a),
 }));
 vi.mock('@alga-psa/core/features', () => ({
@@ -68,6 +73,8 @@ describe('createWorkflowFromTicketAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     m.edition.enterprise = true;
+    m.trx.raw.mockImplementation(async () => undefined);
+    m.transaction.mockImplementation(async (cb: (t: typeof m.trx) => unknown) => cb(m.trx));
     m.user = { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
     m.hasPermission.mockImplementation(async (_u: any, resource: string, action: string) => resource === 'workflow' && action === 'manage');
     m.getBlueprint.mockResolvedValue(blueprint);
@@ -109,6 +116,7 @@ describe('createWorkflowFromTicketAction', () => {
     expect(result).toEqual({ permissionError: 'Permission denied: Cannot view ticket' });
     expect(m.createDefinition).not.toHaveBeenCalled();
     expect(m.auditLog).not.toHaveBeenCalled();
+    expect(m.transaction).not.toHaveBeenCalled();
   });
 
   it('rejects a non-uuid ticket id and an empty name with an inline error', async () => {
@@ -126,8 +134,10 @@ describe('createWorkflowFromTicketAction', () => {
     expect(definition.trigger).toBeUndefined();
     expect(definition.payloadSchemaRef).toBe('payload.Empty.v1');
     expect(definition.steps[0]).toMatchObject({ type: 'action.call', config: { actionId: 'tickets.create' } });
+    expect(m.transaction).toHaveBeenCalledTimes(1);
+    expect(m.auditLog).toHaveBeenCalledTimes(1);
     expect(m.auditLog).toHaveBeenCalledWith(
-      {},
+      m.trx,
       expect.objectContaining({
         userId: 'user-1',
         operation: 'workflow_definition_create_from_ticket',
@@ -136,6 +146,10 @@ describe('createWorkflowFromTicketAction', () => {
         changedData: { sourceTicketId: TICKET_ID, include: input.include, triggerEventName: null },
       })
     );
+    // The audit must run on the tenant-scoped trx, with the tenant GUC set first.
+    expect(m.auditLog.mock.calls[0][0]).toBe(m.trx);
+    expect(m.trx.raw).toHaveBeenCalledWith("select set_config('app.current_tenant', ?, true)", ['tenant-1']);
+    expect(m.trx.raw.mock.invocationCallOrder[0]).toBeLessThan(m.auditLog.mock.invocationCallOrder[0]);
   });
 
   it('resolves an event trigger from the catalog server-side, never from the client', async () => {
@@ -149,12 +163,21 @@ describe('createWorkflowFromTicketAction', () => {
     const { definition } = m.createDefinition.mock.calls[0][0];
     expect(definition.trigger).toEqual({ type: 'event', eventName: 'TICKET_CREATED' });
     expect(definition.payloadSchemaRef).toBe('payload.TicketCreated.v1');
+    expect(m.auditLog).toHaveBeenCalledTimes(1);
+    expect(m.auditLog.mock.calls[0][0]).toBe(m.trx);
+    expect(m.auditLog).toHaveBeenCalledWith(
+      m.trx,
+      expect.objectContaining({ changedData: expect.objectContaining({ triggerEventName: 'TICKET_CREATED' }) })
+    );
+    expect(m.trx.raw).toHaveBeenCalledWith("select set_config('app.current_tenant', ?, true)", ['tenant-1']);
+    expect(m.trx.raw.mock.invocationCallOrder[0]).toBeLessThan(m.auditLog.mock.invocationCallOrder[0]);
   });
 
   it('maps a Forbidden from createWorkflowDefinitionAction to a permission error and does not audit', async () => {
     m.createDefinition.mockRejectedValue(new Error('Forbidden'));
     expect(await createWorkflowFromTicketAction(input)).toHaveProperty('permissionError');
     expect(m.auditLog).not.toHaveBeenCalled();
+    expect(m.transaction).not.toHaveBeenCalled();
   });
 
   it('rethrows unexpected errors', async () => {
