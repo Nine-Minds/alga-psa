@@ -1219,10 +1219,12 @@ export async function generateInvoiceForCycle(
   );
 
   const { knex, tenant } = await createTenantKnex();
-  const db = tenantDb(knex, tenant as string);
+  // Some suites resolve the tenant only through a mocked current user, so
+  // createTenantKnex() can return a null tenant; billing_cycle_id is globally
+  // unique, so look the cycle up directly in that case.
   const cycleQuery = tenant
-    ? db.table('client_billing_cycles')
-    : db.unscoped('client_billing_cycles', 'generateInvoiceForCycle test helper without tenant context');
+    ? tenantDb(knex, tenant).table('client_billing_cycles')
+    : knex('client_billing_cycles');
   const cycle = await cycleQuery.where({ billing_cycle_id: billingCycleId }).first();
   if (!cycle) {
     return { actionError: 'Billing cycle not found' };
