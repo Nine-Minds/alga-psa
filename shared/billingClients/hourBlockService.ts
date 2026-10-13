@@ -342,7 +342,8 @@ export async function allocateTimeEntry(
         // Immutable "ever used" marker: set once at the first burn and never
         // cleared (reversal/reconcile leave it alone), so the void guard can
         // reject a block whose allocation rows have since been deleted.
-        first_allocated_at: trx.raw('COALESCE(first_allocated_at, now())'),
+        // Bound as a parameter: Citus rejects now() inside COALESCE in UPDATEs on distributed tables.
+        first_allocated_at: trx.raw('COALESCE(first_allocated_at, ?::timestamptz)', [now]),
         updated_at: now,
       });
   }
