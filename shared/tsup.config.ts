@@ -30,6 +30,7 @@ export default defineConfig({
     'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',
     'workflow/index': 'workflow/index.ts',
     'workflow/runtime/index': 'workflow/runtime/index.ts',
+    'workflow/runtime/designer/draftFromTicket': 'workflow/runtime/designer/draftFromTicket.ts',
     'workflow/persistence/index': 'workflow/persistence/index.ts',
     'workflow/streams/index': 'workflow/streams/index.ts',
     'workflow/streams/eventBusSchema': 'workflow/streams/eventBusSchema.ts',

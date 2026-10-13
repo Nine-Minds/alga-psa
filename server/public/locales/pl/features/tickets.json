@@ -246,7 +246,9 @@
     "printOptions": "Opcje drukowania",
     "duplicate": "Duplikuj",
     "rowActions": "Akcje",
-    "openMenu": "Otwórz menu"
+    "openMenu": "Otwórz menu",
+    "more": "Więcej",
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",

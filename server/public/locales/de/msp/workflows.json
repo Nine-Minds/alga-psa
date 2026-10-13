@@ -3284,5 +3284,26 @@
       "label": "Verursachungstiefe überschritten",
       "hint": "Die Kette verursachter Ereignisse überschritt die maximale Tiefe; übersprungen, um Endlosschleifen zu verhindern."
     }
+  },
+  "createFromTicket": {
+    "title": "Workflow aus Ticket erstellen",
+    "description": "Erstellt einen Workflow-Entwurf, dessen erster Schritt ein Ticket wie #{{number}} anlegt. Es wird nichts veröffentlicht.",
+    "cancel": "Abbrechen",
+    "creating": "Wird erstellt…",
+    "submit": "Entwurf erstellen & Designer öffnen",
+    "nameLabel": "Workflow-Name",
+    "triggerLabel": "Auslöser",
+    "triggerManual": "Manuell (bei Bedarf ausführen)",
+    "ticketCreatedWarning": "Dieser Workflow erstellt ein Ticket, und ein neues Ticket löst diesen Auslöser erneut aus. Fügen Sie vor der Veröffentlichung eine Bedingung hinzu, um eine Schleife zu vermeiden.",
+    "includeLegend": "Aus dem Ticket übernehmen",
+    "propertiesAlways": "Titel, Beschreibung, Kunde, Kontakt, Board, Kategorie und Priorität werden immer übernommen.",
+    "includeAssignment": "Zuweisung",
+    "includeTags": "Tags",
+    "includeCustomFields": "Benutzerdefinierte Felder",
+    "includeChecklist": "Checkliste",
+    "errors": {
+      "nameRequired": "Workflow-Name ist erforderlich",
+      "generic": "Workflow-Entwurf konnte nicht erstellt werden"
+    }
   }
 }

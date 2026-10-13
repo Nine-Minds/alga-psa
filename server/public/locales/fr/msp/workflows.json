@@ -3284,5 +3284,26 @@
       "label": "Profondeur de causalité dépassée",
       "hint": "La chaîne d'événements provoqués a dépassé la profondeur maximale ; ignoré pour éviter les boucles incontrôlées."
     }
+  },
+  "createFromTicket": {
+    "title": "Créer un workflow à partir du ticket",
+    "description": "Crée un workflow brouillon dont la première étape crée un ticket comme #{{number}}. Rien n’est publié.",
+    "cancel": "Annuler",
+    "creating": "Création…",
+    "submit": "Créer le brouillon et ouvrir le concepteur",
+    "nameLabel": "Nom du workflow",
+    "triggerLabel": "Déclencheur",
+    "triggerManual": "Manuel (exécuter à la demande)",
+    "ticketCreatedWarning": "Ce workflow crée un ticket, et un nouveau ticket déclenche à nouveau ce déclencheur. Ajoutez une condition avant la publication pour éviter une boucle.",
+    "includeLegend": "Inclure depuis le ticket",
+    "propertiesAlways": "Le titre, la description, le client, le contact, le tableau, la catégorie et la priorité sont toujours inclus.",
+    "includeAssignment": "Affectation",
+    "includeTags": "Étiquettes",
+    "includeCustomFields": "Champs personnalisés",
+    "includeChecklist": "Liste de contrôle",
+    "errors": {
+      "nameRequired": "Le nom du workflow est obligatoire",
+      "generic": "Échec de la création du brouillon du workflow"
+    }
   }
 }

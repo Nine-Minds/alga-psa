@@ -3284,5 +3284,26 @@
       "label": "Profundidad de causalidad excedida",
       "hint": "La cadena de eventos causados superó la profundidad máxima; omitido para evitar bucles descontrolados."
     }
+  },
+  "createFromTicket": {
+    "title": "Crear flujo de trabajo desde el ticket",
+    "description": "Crea un flujo de trabajo en borrador cuyo primer paso crea un ticket como #{{number}}. No se publica nada.",
+    "cancel": "Cancelar",
+    "creating": "Creando…",
+    "submit": "Crear borrador y abrir el diseñador",
+    "nameLabel": "Nombre del flujo de trabajo",
+    "triggerLabel": "Desencadenador",
+    "triggerManual": "Manual (ejecutar bajo demanda)",
+    "ticketCreatedWarning": "Este flujo de trabajo crea un ticket, y un ticket nuevo vuelve a activar este desencadenador. Añada una condición antes de publicar para evitar un bucle.",
+    "includeLegend": "Incluir del ticket",
+    "propertiesAlways": "El título, la descripción, el cliente, el contacto, el tablero, la categoría y la prioridad siempre se incluyen.",
+    "includeAssignment": "Asignación",
+    "includeTags": "Etiquetas",
+    "includeCustomFields": "Campos personalizados",
+    "includeChecklist": "Lista de verificación",
+    "errors": {
+      "nameRequired": "El nombre del flujo de trabajo es obligatorio",
+      "generic": "No se pudo crear el borrador del flujo de trabajo"
+    }
   }
 }

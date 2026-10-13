@@ -3288,5 +3288,26 @@
       "label": "Przekroczono głębokość przyczynowości",
       "hint": "Łańcuch wywołanych zdarzeń przekroczył maksymalną głębokość; pominięto, aby zapobiec niekontrolowanym pętlom."
     }
+  },
+  "createFromTicket": {
+    "title": "Utwórz workflow ze zgłoszenia",
+    "description": "Tworzy szkic workflow, którego pierwszy krok tworzy zgłoszenie takie jak #{{number}}. Nic nie zostaje opublikowane.",
+    "cancel": "Anuluj",
+    "creating": "Tworzenie…",
+    "submit": "Utwórz szkic i otwórz projektanta",
+    "nameLabel": "Nazwa workflow",
+    "triggerLabel": "Wyzwalacz",
+    "triggerManual": "Ręczny (uruchamiany na żądanie)",
+    "ticketCreatedWarning": "Ten workflow tworzy zgłoszenie, a nowe zgłoszenie ponownie uruchamia ten wyzwalacz. Przed publikacją dodaj warunek, aby uniknąć pętli.",
+    "includeLegend": "Uwzględnij ze zgłoszenia",
+    "propertiesAlways": "Tytuł, opis, klient, kontakt, tablica, kategoria i priorytet są zawsze uwzględniane.",
+    "includeAssignment": "Przypisanie",
+    "includeTags": "Tagi",
+    "includeCustomFields": "Pola niestandardowe",
+    "includeChecklist": "Lista kontrolna",
+    "errors": {
+      "nameRequired": "Nazwa workflow jest wymagana",
+      "generic": "Nie udało się utworzyć szkicu workflow"
+    }
   }
 }

@@ -222,7 +222,9 @@
     "printOptions": "Utskriftsalternativ",
     "duplicate": "Duplicera",
     "rowActions": "Åtgärder",
-    "openMenu": "Öppna meny"
+    "openMenu": "Öppna meny",
+    "more": "Mer",
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",

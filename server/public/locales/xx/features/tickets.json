@@ -222,7 +222,9 @@
     "printOptions": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧",
     "duplicate": "⟦Ḓŭƥŀīƈȧŧḗ⟧",
     "rowActions": "⟦Ȧƈŧīȯƞş⟧",
-    "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧"
+    "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
+    "more": "⟦Ḿȯřḗ⟧",
+    "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧"
   },
   "messages": {
     "noTickets": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ⟧",

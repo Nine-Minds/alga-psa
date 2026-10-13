@@ -222,7 +222,9 @@
     "printOptions": "Print options",
     "duplicate": "Duplicate",
     "rowActions": "Actions",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "more": "More",
+    "createWorkflowFromTicket": "Create workflow from ticket"
   },
   "messages": {
     "noTickets": "No tickets found",

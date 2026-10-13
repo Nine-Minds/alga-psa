@@ -87,7 +87,8 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreVertical, Workflow } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -135,7 +136,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -252,6 +253,19 @@ interface TicketDetailsProps {
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
+     * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
+     * fills it from the `@alga-psa/workflows/ticket-actions` seam). When absent (CE) or in
+     * Alga Desk mode the More menu entry is not rendered.
+     */
+    renderCreateWorkflowFromTicket?: (args: {
+        ticketId: string;
+        ticketNumber: string;
+        title: string;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -326,6 +340,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderCreateWorkflowFromTicket,
     renderClientDetails,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
@@ -353,8 +368,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Tracks which mount fetches the server bootstrap already satisfied, so the
     // corresponding effects skip their FIRST run only (later dep-driven runs —
     // e.g. checklist on status change — still fetch).
+    const [canManageWorkflows, setCanManageWorkflows] = useState(
+        bootstrap?.canManageWorkflows ?? false,
+    );
+    const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -380,6 +399,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+                setCanManageWorkflows(hasWorkflowManageAccess(perms));
             }
         });
         return () => {
@@ -3661,6 +3681,40 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
+                                {renderCreateWorkflowFromTicket && canManageWorkflows && !isAlgaDeskMode ? (
+                                    <>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                id={`${id}-more-actions-menu`}
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex items-center gap-2"
+                                                aria-label={t('actions.more', { defaultValue: 'More' })}
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                                <span>{t('actions.more', { defaultValue: 'More' })}</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                id="create-workflow-from-ticket-menu-item"
+                                                onSelect={() => setCreateWorkflowOpen(true)}
+                                            >
+                                                <Workflow className="mr-2 h-4 w-4" />
+                                                {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    {renderCreateWorkflowFromTicket({
+                                        ticketId: ticket.ticket_id as string,
+                                        ticketNumber: ticket.ticket_number ?? '',
+                                        title: ticket.title,
+                                        open: createWorkflowOpen,
+                                        onOpenChange: setCreateWorkflowOpen,
+                                    })}
+                                    </>
+                                ) : null}
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
