@@ -23,7 +23,7 @@ import {
   updateTicketTemplate,
 } from '../../actions/ticketTemplateActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
-import { ticketTemplateInputSchema } from '../../lib/ticketTemplates';
+import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { BoardStatusFields, CategoryField, PriorityField } from '../recurring/RecurringFieldGroups';
 // LEVERAGE: friction recurring-reference-data-hook — the board/priority/category lookups live in a recurring-named hook (and also load users, teams, checklist templates this editor does not use); a neutral reference-data hook would serve both
