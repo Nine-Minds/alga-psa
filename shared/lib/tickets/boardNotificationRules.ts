@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
+import { normalizeEmailAddress } from '../email/addressUtils';
 
 /**
  * Board notification rules: matching, recipient expansion and exclusion.
@@ -26,12 +28,51 @@ export interface BoardNotificationRule {
   status_ids: string[];
   user_ids: string[];
   team_ids: string[];
+  /** Normalized plain-address recipients (e.g. a distribution list). */
+  email_addresses: string[];
+}
+
+/** Maximum length of a stored recipient address (RFC 5321 path limit). */
+export const BOARD_NOTIFICATION_EMAIL_MAX_LENGTH = 254;
+
+/**
+ * Normalize a board-notification recipient address: display names, `mailto:`,
+ * case and whitespace are stripped (`normalizeEmailAddress`), then the result
+ * must be a plausible address within the length cap. Returns null otherwise.
+ * Shared by the save action and the send-time resolver so they cannot disagree.
+ */
+export function normalizeBoardNotificationEmail(value: string | null | undefined): string | null {
+  const normalized = normalizeEmailAddress(value);
+  if (!normalized || normalized.length > BOARD_NOTIFICATION_EMAIL_MAX_LENGTH) {
+    return null;
+  }
+  const at = normalized.indexOf('@');
+  if (at < 1 || at !== normalized.lastIndexOf('@') || at === normalized.length - 1) {
+    return null;
+  }
+  return normalized;
 }
 
 export interface ResolvedRecipient {
   userId: string;
   email: string;
   displayName: string;
+}
+
+/**
+ * A plain address that is not an Alga principal (not an active internal user,
+ * contact or client location). It has no principal, so the ticket-read check
+ * cannot be applied; it must never be passed to the visibility filter.
+ */
+export interface AddressRecipient {
+  email: string;
+}
+
+export interface BoardNotificationAudience {
+  /** Principals: pass through `filterRecipientsWhoCanReadTicket` before sending. */
+  users: ResolvedRecipient[];
+  /** Non-principals: email only, never visibility-filtered, never in-app. */
+  addresses: AddressRecipient[];
 }
 
 async function hydrateRules(
@@ -48,7 +89,7 @@ async function hydrateRules(
     db.table('board_notification_rule_statuses').select('rule_id', 'status_id').whereIn('rule_id', ruleIds),
     db
       .table('board_notification_rule_recipients')
-      .select('rule_id', 'recipient_type', 'user_id', 'team_id')
+      .select('rule_id', 'recipient_type', 'user_id', 'team_id', 'email')
       .whereIn('rule_id', ruleIds),
   ]);
 
@@ -64,6 +105,9 @@ async function hydrateRules(
     team_ids: recipientRows
       .filter((r: any) => r.rule_id === row.rule_id && r.recipient_type === 'team' && r.team_id)
       .map((r: any) => r.team_id as string),
+    email_addresses: recipientRows
+      .filter((r: any) => r.rule_id === row.rule_id && r.recipient_type === 'email' && r.email)
+      .map((r: any) => r.email as string),
   }));
 }
 
@@ -175,23 +219,114 @@ export async function expandRuleRecipients(
 }
 
 /**
- * Resolve the recipients of every rule matching the trigger, deduped across
- * rules (each user at most once), minus `excludeUserIds`.
+ * Classify the rules' plain addresses at send time (plan D4).
+ *
+ * - An address matching an active internal user becomes that user, so the
+ *   visibility filter, preferences and in-app delivery apply to them.
+ * - An address matching a client contact or client location is dropped (and
+ *   logged): a contact created after the rule must not start receiving every
+ *   client's tickets.
+ * - Everything else is a non-principal address.
  */
-export async function resolveBoardNotificationRecipients(
+async function classifyRuleAddresses(
+  conn: Conn,
+  tenant: string,
+  rules: BoardNotificationRule[]
+): Promise<{ users: ResolvedRecipient[]; addresses: AddressRecipient[] }> {
+  const boardsByAddress = new Map<string, Set<string>>();
+  for (const rule of rules) {
+    for (const raw of rule.email_addresses) {
+      const address = normalizeBoardNotificationEmail(raw);
+      if (!address) continue;
+      if (!boardsByAddress.has(address)) boardsByAddress.set(address, new Set());
+      boardsByAddress.get(address)!.add(rule.board_id);
+    }
+  }
+  if (boardsByAddress.size === 0) {
+    return { users: [], addresses: [] };
+  }
+
+  const db = tenantDb(conn, tenant);
+  const candidates = Array.from(boardsByAddress.keys());
+
+  // LEVERAGE: pattern principal-address-classification — classifies an address as
+  // internal user, contact or unknown; the inbound sender resolution in
+  // processInboundEmailInApp.ts does the same. Not extracted here.
+  const userRows = await db
+    .table('users')
+    .select('user_id', 'email', 'first_name', 'last_name')
+    .whereRaw('lower(email) = ANY(?)', [candidates])
+    .where({ is_inactive: false, user_type: 'internal' });
+
+  const users: ResolvedRecipient[] = [];
+  const userAddresses = new Set<string>();
+  for (const user of userRows) {
+    userAddresses.add(String(user.email).toLowerCase());
+    users.push({ userId: user.user_id, email: user.email, displayName: toDisplayName(user) });
+  }
+
+  const remaining = candidates.filter((address) => !userAddresses.has(address));
+  const contactAddresses = new Set<string>();
+  if (remaining.length > 0) {
+    // LEVERAGE: pattern principal-address-classification — contact / location lookup.
+    const [contactRows, additionalRows, locationRows] = await Promise.all([
+      db.table('contacts').select('email').whereRaw('lower(email) = ANY(?)', [remaining]),
+      db.table('contact_additional_email_addresses').select('email_address').whereRaw('lower(email_address) = ANY(?)', [remaining]),
+      db.table('client_locations').select('email').whereRaw('lower(email) = ANY(?)', [remaining]),
+    ]);
+    for (const row of contactRows) contactAddresses.add(String(row.email).toLowerCase());
+    for (const row of additionalRows) contactAddresses.add(String(row.email_address).toLowerCase());
+    for (const row of locationRows) contactAddresses.add(String(row.email).toLowerCase());
+  }
+
+  const addresses: AddressRecipient[] = [];
+  for (const address of remaining) {
+    if (contactAddresses.has(address)) {
+      // The address itself is deliberately not logged; the board is enough to find the rule.
+      logger.warn('[BoardNotificationRules] Dropped rule address that matches a client contact or location', {
+        tenant,
+        boardIds: Array.from(boardsByAddress.get(address) ?? []),
+      });
+      continue;
+    }
+    addresses.push({ email: address });
+  }
+  return { users, addresses };
+}
+
+/**
+ * Resolve the audience of every rule matching the trigger, deduped across
+ * rules (each user and address at most once), minus `excludeUserIds`.
+ * Principals (`users`) and non-principal addresses (`addresses`) are returned
+ * separately so a caller cannot send an address through the user path or skip
+ * the visibility check for a user.
+ */
+export async function resolveBoardNotificationAudience(
   conn: Conn,
   tenant: string,
   trigger: BoardNotificationTrigger,
   options: { excludeUserIds?: Iterable<string | null | undefined> } = {}
-): Promise<ResolvedRecipient[]> {
+): Promise<BoardNotificationAudience> {
   const rules = await loadMatchingRules(conn, tenant, trigger);
   if (rules.length === 0) {
-    return [];
+    return { users: [], addresses: [] };
   }
   const excluded = new Set<string>();
   for (const id of options.excludeUserIds ?? []) {
     if (id) excluded.add(id);
   }
-  const recipients = await expandRuleRecipients(conn, tenant, rules);
-  return recipients.filter((recipient) => !excluded.has(recipient.userId));
+
+  const [expanded, classified] = await Promise.all([
+    expandRuleRecipients(conn, tenant, rules),
+    classifyRuleAddresses(conn, tenant, rules),
+  ]);
+
+  const seen = new Set<string>();
+  const users: ResolvedRecipient[] = [];
+  for (const recipient of [...expanded, ...classified.users]) {
+    if (excluded.has(recipient.userId) || seen.has(recipient.userId)) continue;
+    seen.add(recipient.userId);
+    users.push(recipient);
+  }
+  return { users, addresses: classified.addresses };
 }

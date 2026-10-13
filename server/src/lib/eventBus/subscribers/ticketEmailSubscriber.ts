@@ -23,7 +23,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import {
-  resolveBoardNotificationRecipients,
+  resolveBoardNotificationAudience,
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
 import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
@@ -1237,7 +1237,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // actor, and for active internal watchers (who already get the standard ticket-created email).
     let boardRuleRecipients: ResolvedRecipient[] = [];
     if (ticket.board_id && shouldSendInternalTicketEmail(suppression)) {
-      const resolved = await resolveBoardNotificationRecipients(
+      const { users: resolved } = await resolveBoardNotificationAudience(
         db,
         tenantId,
         { kind: 'created', boardId: ticket.board_id },
@@ -1416,7 +1416,7 @@ async function handleTicketStatusChanged(event: { id?: string; payload: any }): 
 
     const enteredStatusId: string = payload.newStatusId ?? ticket.status_id;
     const assignees = await getAllTicketAssignees(db, tenantId, payload.ticketId);
-    const resolved = await resolveBoardNotificationRecipients(
+    const { users: resolved } = await resolveBoardNotificationAudience(
       db,
       tenantId,
       { kind: 'status_entered', statusId: enteredStatusId },
