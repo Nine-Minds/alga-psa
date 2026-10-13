@@ -75,6 +75,25 @@ const MultiContactPicker = ({
     return () => document.removeEventListener('mousedown', handleClickOutside, true);
   }, [isOpen]);
 
+  // An open list owns Escape. Radix dialogs listen for Escape on `document` in
+  // the capture phase and the dialog's focus trap can keep focus on the trigger
+  // (outside this portal), so the key is claimed on `window`, which runs first:
+  // the first Escape closes only the list, never the dialog behind it.
+  // LEVERAGE: pattern popup-owns-escape — AsyncSearchableSelect/editor popups each re-solve "popup beats dialog on Escape"
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen(false);
+      setSearchQuery('');
+      buttonRef.current?.focus();
+    };
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
       setTimeout(() => searchInputRef.current?.focus(), 10);

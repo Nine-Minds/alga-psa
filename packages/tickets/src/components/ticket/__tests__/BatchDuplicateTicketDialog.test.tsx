@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const duplicateTicketBatchMock = vi.fn();
+const dialogPropsSpy = vi.fn();
 const getTicketDuplicateSourceMock = vi.fn();
 const getContactsByClientMock = vi.fn();
 
@@ -34,13 +35,17 @@ vi.mock('../../../actions/clientLookupActions', () => ({
 
 // Lightweight Dialog: the radix dialog is not under test here.
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children, title }: any) =>
-    isOpen ? (
+  Dialog: (props: any) => {
+    dialogPropsSpy(props);
+    const { isOpen, children, title, footer } = props;
+    return isOpen ? (
       <div role="dialog">
         <h2>{title}</h2>
         {children}
+        {footer ? <div data-testid="dialog-footer">{footer}</div> : null}
       </div>
-    ) : null,
+    ) : null;
+  },
   DialogContent: ({ children }: any) => <div>{children}</div>,
 }));
 
@@ -212,6 +217,30 @@ describe('BatchDuplicateTicketDialog', () => {
     // Editing the row's own title clears the error.
     fireEvent.change(titleInputs()[0], { target: { value: 'No contact copy' } });
     expect(document.getElementById('batch-duplicate-review-button')).not.toBeDisabled();
+  });
+
+  it('does not use allowOverflow, bounds the rows with their own scroll, and pins step buttons in the footer', async () => {
+    renderDialog();
+    await loaded();
+    fireEvent.change(screen.getByLabelText('Title template'), { target: { value: 'Copy' } });
+    pick('Jane Doe');
+    pick('Bob Ray');
+
+    const props = dialogPropsSpy.mock.calls.at(-1)![0];
+    expect(props.allowOverflow).toBeFalsy();
+
+    const scroll = document.getElementById('batch-duplicate-rows-scroll')!;
+    expect(scroll.className).toMatch(/max-h-72/);
+    expect(scroll.className).toMatch(/overflow-y-auto/);
+    expect(scroll).toContainElement(document.getElementById('batch-duplicate-rows')!);
+
+    const footer = screen.getByTestId('dialog-footer');
+    expect(within(footer).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(footer).toContainElement(document.getElementById('batch-duplicate-review-button')!);
+
+    fireEvent.click(document.getElementById('batch-duplicate-review-button')!);
+    expect(screen.getByTestId('dialog-footer')).toContainElement(document.getElementById('batch-duplicate-create-button')!);
+    expect(screen.getByTestId('dialog-footer')).toContainElement(document.getElementById('batch-duplicate-back-button')!);
   });
 
   it('enforces the cap of 50 copies', async () => {

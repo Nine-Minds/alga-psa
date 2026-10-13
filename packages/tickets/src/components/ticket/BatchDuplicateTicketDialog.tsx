@@ -330,6 +330,64 @@ export default function BatchDuplicateTicketDialog({
     ? t('batchDuplicate.title', { number: source.ticket_number, defaultValue: 'Duplicate #{{number}} for contacts' })
     : t('batchDuplicate.titleLoading', 'Duplicate for contacts');
 
+  const footer =
+    !source ? undefined : (
+      <div className="flex justify-end gap-2">
+        {step === 'setup' && (
+          <>
+            <Button id={`${idPrefix}-cancel-button`} variant="ghost" disabled={isPending} onClick={requestCancel}>
+              {t('batchDuplicate.cancel', 'Cancel')}
+            </Button>
+            <Button
+              id={`${idPrefix}-review-button`}
+              disabled={!canReview || !interactive}
+              onClick={() => {
+                setRequestError(null);
+                setStep('review');
+              }}
+            >
+              {t('batchDuplicate.review', 'Review')}
+            </Button>
+          </>
+        )}
+        {step === 'review' && (
+          <>
+            <Button
+              id={`${idPrefix}-back-button`}
+              variant="ghost"
+              disabled={isPending}
+              onClick={() => {
+                setRequestError(null);
+                setStep('setup');
+              }}
+            >
+              {t('batchDuplicate.back', 'Back')}
+            </Button>
+            <Button id={`${idPrefix}-create-button`} disabled={isPending || rows.length === 0} onClick={() => void submit(null)}>
+              {t('batchDuplicate.create', { count: rows.length, defaultValue: 'Create {{count}} tickets' })}
+            </Button>
+          </>
+        )}
+        {step === 'results' && (
+          <>
+            {failedRows.length > 0 && (
+              <Button
+                id={`${idPrefix}-retry-button`}
+                variant="outline"
+                disabled={isPending}
+                onClick={() => void submit(new Set(failedRows.map((entry) => entry.key)))}
+              >
+                {t('batchDuplicate.retryFailed', { count: failedRows.length, defaultValue: 'Retry failed ({{count}})' })}
+              </Button>
+            )}
+            <Button id={`${idPrefix}-done-button`} disabled={isPending} onClick={finish}>
+              {t('batchDuplicate.done', 'Done')}
+            </Button>
+          </>
+        )}
+      </div>
+    );
+
   return (
     <Dialog
       isOpen={isOpen}
@@ -341,7 +399,7 @@ export default function BatchDuplicateTicketDialog({
       id={`${idPrefix}-dialog`}
       title={dialogTitle}
       className="max-w-3xl"
-      allowOverflow
+      footer={footer}
     >
       <DialogContent>
         {isLoading && (
@@ -455,6 +513,7 @@ export default function BatchDuplicateTicketDialog({
             </div>
 
             {rows.length > 0 && (
+              <div id={`${idPrefix}-rows-scroll`} className="max-h-72 overflow-y-auto rounded-md border border-gray-200 px-2">
               <table id={`${idPrefix}-rows`} className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500">
@@ -520,6 +579,7 @@ export default function BatchDuplicateTicketDialog({
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {source.checklist.length > 0 && (
@@ -531,22 +591,6 @@ export default function BatchDuplicateTicketDialog({
                 label={t('batchDuplicate.copyChecklist', 'Copy checklist items (unchecked)')}
               />
             )}
-
-            <div className="flex justify-end gap-2">
-              <Button id={`${idPrefix}-cancel-button`} variant="ghost" disabled={isPending} onClick={requestCancel}>
-                {t('batchDuplicate.cancel', 'Cancel')}
-              </Button>
-              <Button
-                id={`${idPrefix}-review-button`}
-                disabled={!canReview || !interactive}
-                onClick={() => {
-                  setRequestError(null);
-                  setStep('review');
-                }}
-              >
-                {t('batchDuplicate.review', 'Review')}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -632,23 +676,6 @@ export default function BatchDuplicateTicketDialog({
                 {t('batchDuplicate.creating', { count: pendingCount, defaultValue: 'Creating {{count}} tickets…' })}
               </p>
             )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                id={`${idPrefix}-back-button`}
-                variant="ghost"
-                disabled={isPending}
-                onClick={() => {
-                  setRequestError(null);
-                  setStep('setup');
-                }}
-              >
-                {t('batchDuplicate.back', 'Back')}
-              </Button>
-              <Button id={`${idPrefix}-create-button`} disabled={isPending || rows.length === 0} onClick={() => void submit(null)}>
-                {t('batchDuplicate.create', { count: rows.length, defaultValue: 'Create {{count}} tickets' })}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -700,22 +727,6 @@ export default function BatchDuplicateTicketDialog({
                 {t('batchDuplicate.creating', { count: pendingCount, defaultValue: 'Creating {{count}} tickets…' })}
               </p>
             )}
-
-            <div className="flex justify-end gap-2">
-              {failedRows.length > 0 && (
-                <Button
-                  id={`${idPrefix}-retry-button`}
-                  variant="outline"
-                  disabled={isPending}
-                  onClick={() => void submit(new Set(failedRows.map((entry) => entry.key)))}
-                >
-                  {t('batchDuplicate.retryFailed', { count: failedRows.length, defaultValue: 'Retry failed ({{count}})' })}
-                </Button>
-              )}
-              <Button id={`${idPrefix}-done-button`} disabled={isPending} onClick={finish}>
-                {t('batchDuplicate.done', 'Done')}
-              </Button>
-            </div>
           </div>
         )}
       </DialogContent>
