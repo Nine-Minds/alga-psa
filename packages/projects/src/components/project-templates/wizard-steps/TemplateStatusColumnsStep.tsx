@@ -116,7 +116,7 @@ export function TemplateStatusColumnsStep({
       return !scopeSelectedStatusIds.has(status.status_id);
     });
 
-  // A row whose status is still unpicked. "Add Status Column" focuses it
+  // A row whose status is still unpicked. "Add Existing" focuses it
   // instead of spawning a second stray empty row.
   const pendingMapping = (hasPhaseSpecificStatuses ? phaseStatusMappings : defaultStatusMappings)
     .find((mapping) => !mapping.status_id);
@@ -440,7 +440,7 @@ export function TemplateStatusColumnsStep({
                 disabled={isLoadingStatuses || !editableMappings || Boolean(pendingMapping)}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                {t('templates.statuses.add_title')}
+                {t('settings.statuses.add_existing', 'Add Existing')}
               </Button>
               <Button
                 id="add-new-status"

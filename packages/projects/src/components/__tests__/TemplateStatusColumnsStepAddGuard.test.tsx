@@ -52,7 +52,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 const DICT: Record<string, string> = {
-  'templates.statuses.add_title': 'Add Status Column',
+  'settings.statuses.add_existing': 'Add Existing',
   'templates.statuses.pending_row_hint': 'Fill in the empty status column before adding another one.',
   'templates.statuses.select_placeholder': 'Select a status...',
   'templates.statuses.create_new': 'Create New',
@@ -98,11 +98,12 @@ afterEach(() => {
 });
 
 describe('TemplateStatusColumnsStep add-status guard', () => {
-  it('does not spawn a second empty row when Add Status Column is clicked twice', () => {
+  it('does not spawn a second empty row when Add Existing is clicked twice', () => {
     const { container } = render(<Harness />);
 
     const addButton = () => container.querySelector('#add-existing-status') as HTMLButtonElement;
 
+    expect(addButton().textContent).toContain('Add Existing');
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
 
     fireEvent.click(addButton());
@@ -116,7 +117,7 @@ describe('TemplateStatusColumnsStep add-status guard', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 
-  it('re-enables Add Status Column once the pending row is filled', () => {
+  it('re-enables Add Existing once the pending row is filled', () => {
     const { container } = render(<Harness />);
     const addButton = () => container.querySelector('#add-existing-status') as HTMLButtonElement;
 

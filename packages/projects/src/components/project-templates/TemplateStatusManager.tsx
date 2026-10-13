@@ -444,7 +444,7 @@ export function TemplateStatusManager({
                         onClick={handleAddStatus}
                         disabled={!selectedStatusId || isAdding}
                       >
-                        {t('common:actions.create')}
+                        {t('settings.statuses.add_existing', 'Add Existing')}
                       </Button>
                     </>
                   ) : (
