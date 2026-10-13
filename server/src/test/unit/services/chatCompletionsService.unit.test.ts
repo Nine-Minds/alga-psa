@@ -355,11 +355,12 @@ describe('ChatCompletionsService (unit)', () => {
 
     const results = (ChatCompletionsService as any).searchRegistry('create project', 5);
 
-    expect(results[0]).toMatchObject({
-      id: 'post-_api_v1_projects',
+    expect(results.results[0]).toMatchObject({
+      entryId: 'post-_api_v1_projects',
       method: 'POST',
       path: '/api/v1/projects',
     });
+    expect(results.results[0].requestBodySchema).toEqual({ type: 'object', properties: {} });
   });
 
   it('prefers nested phase creation endpoints for project phase creation queries', async () => {
@@ -409,8 +410,8 @@ describe('ChatCompletionsService (unit)', () => {
 
     const results = (ChatCompletionsService as any).searchRegistry('create project phase', 5);
 
-    expect(results[0]).toMatchObject({
-      id: 'post-_api_v1_projects_id_phases',
+    expect(results.results[0]).toMatchObject({
+      entryId: 'post-_api_v1_projects_id_phases',
       method: 'POST',
       path: '/api/v1/projects/{id}/phases',
     });
@@ -442,8 +443,8 @@ describe('ChatCompletionsService (unit)', () => {
 
     const results = (ChatCompletionsService as any).searchRegistry('list project phase tasks', 5);
 
-    expect(results[0]).toMatchObject({
-      id: 'get-_api_v1_projects_id_phases_phaseid_tasks',
+    expect(results.results[0]).toMatchObject({
+      entryId: 'get-_api_v1_projects_id_phases_phaseid_tasks',
       method: 'GET',
       path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
     });
@@ -504,8 +505,8 @@ describe('ChatCompletionsService (unit)', () => {
 
     const results = (ChatCompletionsService as any).searchRegistry('create a project task in discovery', 5);
 
-    expect(results[0]).toMatchObject({
-      id: 'post-_api_v1_projects_id_phases_phaseid_tasks',
+    expect(results.results[0]).toMatchObject({
+      entryId: 'post-_api_v1_projects_id_phases_phaseid_tasks',
       method: 'POST',
       path: '/api/v1/projects/{id}/phases/{phaseId}/tasks',
     });
