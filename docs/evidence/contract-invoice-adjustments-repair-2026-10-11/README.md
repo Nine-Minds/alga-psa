@@ -1,13 +1,30 @@
-# PR #3499 repair handoff — 2026-10-13
+# PR #3499 repair handoff — current source verified at `5bf290f894`
 
-**Status: BLOCKED for human review.** The implementation can be reviewed, but
-the prior READY claim is withdrawn until repaired-HEAD browser acceptance is
-captured. No app server was started or restarted for this work. An already
-present review listener was not used as acceptance evidence; the older review
-build and its prior `add21274560c861a2d277582a518ae940a131795` evidence do not
-prove the merge result. The base conflict is resolved in this branch; portal
-output, real app-to-Xero-simulator delivery, and current-HEAD browser acceptance
-remain open.
+**Status: BLOCKED for human review.** The merged implementation source at
+`5bf290f894fd29e2243fd23feee717ebb8340e9b` was revalidated. It includes current
+`origin/main` (`aa4e1e5db3e4834ba1877b53dbc178819d975cd2`) with no merge
+conflicts; GitHub reports the PR mergeable, while the merge state is blocked by
+required checks. At the latest exact-head CI query, 44 checks passed, one was
+skipped, 24 were in progress, and two failed. The Workspace database test job
+failed during `npm ci` with an npm registry `ECONNRESET` before tests ran; its
+paired execution-complete check failed downstream because test evidence was
+absent. This is infrastructure failure, not a test result. Pending checks are
+not passes; recheck CI before review.
+
+Current-source validation passed: billing and server typechecks, billing
+package build, settlement DB 66/66, companion quantity/history DB 121/121,
+Xero integration 5/5 (mocked transport), expanded-save/percentage UI 20/20,
+translation validation, and an isolated enterprise production build (74/74
+static pages, traces collected). A read-only audit confirmed the owned
+unbilled fixture remains available. No invoice was generated, no delivered or
+locked history was changed, and no app server was started or restarted.
+
+Earlier browser evidence, including the `add21274560c861a2d277582a518ae940a131795`
+smoke, is historical and does not establish acceptance at `5bf290f894`. The
+current-build browser walkthrough, portal parity, application-to-Xero-simulator
+delivery, and companion schedule-writer acceptance remain open. The served
+guide is [available here](http://100.109.101.64:23186/); its status is
+**BLOCKED** until those live gates pass.
 
 ## Production reconciliation regression (2026-10-13)
 
@@ -102,10 +119,10 @@ Fresh takeover results:
 | Populated local-parent Citus regression | Pass: distribution, colocation, identity preservation, rerun and FK cascade |
 | Unbilled fixture audit | Pass; both periods remain unclaimed |
 
-The production build is running in `server/.next-pr3499-takeover-20261012`
-with a 12 GiB heap. Inspect
-`server/.vitest-tmp-review/takeover-production-build.log` for completion; it is
-not a running application. No app server was started or restarted.
+That paragraph recorded an earlier in-progress build and is superseded by the
+completed build on source revision `5bf290f894` below. The successful isolated
+build used one worker and a 12 GiB heap, generated all 74 static pages, and
+collected traces. It was a build only; no app server was started or restarted.
 
 Run the committed fixture audit from the repository root:
 
@@ -132,9 +149,9 @@ preserved. The board fact command timed out; the schema and period-allocation
 facts above are retained here for the next step.
 
 Current-head browser, portal, app-to-Xero, and source-workflow acceptance remain
-BLOCKED. The existing production listener's revision stamp is still
-`add21274560c861a2d277582a518ae940a131795+da39a3ee5e6b`; its historical output
-cannot validate this repair.
+BLOCKED. The previously observed production listener's revision stamp was
+`add21274560c861a2d277582a518ae940a131795+da39a3ee5e6b`; that historical output
+cannot validate this repair. No listener was used as current-head proof.
 
 ## Review first
 
@@ -742,3 +759,61 @@ ESLint and EE workflow build guard were still pending. These checks are pending,
 not a green final-head CI result. Fresh browser, portal, real application-to-Xero
 simulator and companion schedule-writer acceptance remains **BLOCKED**; the
 app server remains stopped.
+
+### Current source-head verification — 2026-10-13 (`5bf290f894`)
+
+This is the authoritative source-validation snapshot; earlier sections record
+historical checkpoints. The source head `5bf290f894fd29e2243fd23feee717ebb8340e9b`
+was pushed to PR #3499 and matched local and upstream. It merges current
+`origin/main` at `aa4e1e5db3e4834ba1877b53dbc178819d975cd2`; the merge tree had
+no conflicts, GitHub reports `mergeable: MERGEABLE`, and `mergeStateStatus:
+BLOCKED` while required CI runs.
+
+Current-source validation on `5bf290f894`:
+
+- Billing typecheck passed with a 12 GiB Node heap; server TypeScript check
+  passed with the same heap.
+- Billing package build passed.
+- Settlement database suite: **66/66 passed**. The consolidated-period
+  regressions call `BillingEngine.recalculateInvoice` with canonical companion
+  ledger entries and verify allocations, tax, principal delta, stable IDs and
+  no-op repeat recalculation.
+- Companion quantity/history/true-up database suite: **121/121 passed**.
+- Xero integration: **5/5 passed** with mocked transport, including durable
+  per-line validation errors and stale-owner fencing.
+- Expanded-row save and percentage-total UI regressions: **20/20 passed**.
+- Translation validation passed with 10 locales, zero errors and zero warnings.
+  Targeted ESLint exited 0 with pre-existing warnings and no errors.
+- Enterprise production build passed with one worker and a 12 GiB heap. It
+  compiled, generated **74/74 static pages**, and collected traces. The build
+  output used a unique dist directory under `/tmp`; no app server was started.
+
+The read-only fixture audit passed in database `server`. Client
+`5ba78228-ace1-4990-b42f-30739458299a`, assignment
+`4921ceb2-72f5-4f0a-afdc-da256e932c41`, and both September period rows remain
+unclaimed for the October 1–November 1 invoice window. The three active copied
+terms remain 12% contract-wide, fixed A$25 contract-wide, and 10% Cabling-only.
+The recorded candidate preview is A$320 gross less A$38.40, A$12 and A$25,
+for A$244.60 before tax. The preview is historical; recalculate in the later
+authorized walkthrough. No generation, reset, or history mutation occurred.
+
+Exact-head CI on `5bf290f894` was rechecked again before this handoff update.
+GitHub reported 44 successful checks, one skipped check, 24 in progress, and
+two failed checks. The primary completed failure was
+`integration / Workspace database tests` (job
+`115500664821`, workflow run `38455744857`): dependency installation failed
+before tests ran because `npm ci` received `ECONNRESET` fetching Playwright
+from `registry.npmjs.org`. The paired `Workspace database execution complete`
+job failed downstream while collecting/verifying absent test evidence. This
+is an observed registry/network infrastructure failure, not a product test
+result. Twenty-four other checks were still pending; pending checks are not
+passes. Recheck exact-head CI after publishing this documentation update.
+
+The served guide at
+[`http://100.109.101.64:23186/`](http://100.109.101.64:23186/) has been corrected
+to identify the `add212` browser smoke as historical, report the existing
+unbilled fixture, replace the stale running-build claim with the completed
+build result, and supersede the obsolete merge-conflict statement. It remains
+**BLOCKED** for current-head browser walkthrough, portal parity, actual
+application-to-Xero-simulator delivery, and companion schedule-writer
+acceptance. The app server remains stopped.
