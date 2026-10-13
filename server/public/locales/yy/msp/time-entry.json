@@ -457,7 +457,8 @@
       "missingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ŧīḿḗ şħḗḗŧ ȯř ŧīḿḗ ḗƞŧřẏ ƒīḗŀḓ: {{field}}. ························〗"
     },
     "timePeriod": {
-      "datesRequired": "〖Ḗƞŧḗř ṽȧŀīḓ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş. ·············〗"
+      "datesRequired": "〖Ḗƞŧḗř ṽȧŀīḓ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş. ·············〗",
+      "closed": "This time period is closed. Reopen it before making changes."
     },
     "timePeriodSettings": {
       "invalidValue": "〖Ȯƞḗ ȯƒ ŧħḗ ŧīḿḗ ƥḗřīȯḓ şḗŧŧīƞɠ ṽȧŀŭḗş īş īƞṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ································〗",

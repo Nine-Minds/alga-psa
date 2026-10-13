@@ -457,7 +457,8 @@
       "missingFieldNamed": "Falta um campo obrigatório da planilha de horas ou do lançamento de horas: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Informe datas de início e de término válidas."
+      "datesRequired": "Informe datas de início e de término válidas.",
+      "closed": "This time period is closed. Reopen it before making changes."
     },
     "timePeriodSettings": {
       "invalidValue": "Um dos valores da configuração de período é inválido. Atualize a página e tente novamente.",

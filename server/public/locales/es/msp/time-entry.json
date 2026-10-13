@@ -457,7 +457,8 @@
       "missingFieldNamed": "Falta un campo obligatorio de la hoja de horas o de la entrada de tiempo: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Introduzca fechas de inicio y de fin válidas."
+      "datesRequired": "Introduzca fechas de inicio y de fin válidas.",
+      "closed": "This time period is closed. Reopen it before making changes."
     },
     "timePeriodSettings": {
       "invalidValue": "Uno de los valores de la configuración del período no es válido. Actualice la página e inténtelo de nuevo.",

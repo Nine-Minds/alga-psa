@@ -457,7 +457,8 @@
       "missingFieldNamed": "Ett obligatoriskt fält för tidrapport eller tidpost saknas: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Ange giltiga start- och slutdatum."
+      "datesRequired": "Ange giltiga start- och slutdatum.",
+      "closed": "This time period is closed. Reopen it before making changes."
     },
     "timePeriodSettings": {
       "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",

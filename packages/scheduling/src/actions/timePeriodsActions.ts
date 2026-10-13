@@ -76,6 +76,8 @@ const toTimePeriodView = (period: ITimePeriod): ITimePeriodView => ({
   end_date: serializeDateOnly(period.end_date),
 });
 
+const CLOSED_TIME_PERIOD_MESSAGE = 'Time period is closed; reopen it first';
+
 function timePeriodActionErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
@@ -84,6 +86,7 @@ function timePeriodActionErrorMessage(error: unknown, fallback: string): string 
   }
 
   if (
+    message === CLOSED_TIME_PERIOD_MESSAGE ||
     message === 'Cannot delete time period with associated time sheets' ||
     message === 'Cannot remove a period that has timesheets' ||
     message === 'Cannot remove the current period' ||
@@ -114,6 +117,10 @@ function timePeriodActionErrorFrom(error: unknown, fallback = ''): TimePeriodAct
 
   if (message.startsWith('Access denied:')) {
     return permissionError(message);
+  }
+
+  if (message === CLOSED_TIME_PERIOD_MESSAGE) {
+    return actionError(message, 'msp/time-entry:errors.timePeriod.closed');
   }
 
   return actionError(message);
@@ -481,6 +488,10 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
       throw new Error('Time period not found');
     }
 
+    if (period.is_closed) {
+      throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
+    }
+
     const isEditable = await TimePeriod.isEditable(knex, tenant, periodId);
     if (!isEditable) {
       throw new Error('Cannot delete time period with associated time sheets');
@@ -549,6 +560,10 @@ export const deleteTimePeriods = withAuth(async (
         throw new Error('Time period not found');
       }
 
+      if (period.is_closed) {
+        throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
+      }
+
       // Tenant-wide guard: refuse if any timesheet exists for the period.
       const editable = await TimePeriod.isEditable(knex, tenant, periodId);
       if (!editable) {
@@ -606,6 +621,10 @@ export const updateTimePeriod = withAuth(async (
       const period = await TimePeriod.findById(trx, tenant, periodId);
       if (!period) {
         throw new Error('Time period not found');
+      }
+
+      if (period.is_closed) {
+        throw new Error(CLOSED_TIME_PERIOD_MESSAGE);
       }
 
       const isEditable = await TimePeriod.isEditable(trx, tenant, periodId);
