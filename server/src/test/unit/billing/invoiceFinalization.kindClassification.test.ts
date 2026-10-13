@@ -22,6 +22,11 @@ function createMockDb() {
         );
         return builder;
       },
+      // Prepaid Block owner lookup (alga-2026-0002695): where(...).whereNotNull(...).select(...)
+      whereNotNull(column: string) {
+        filteredRows = filteredRows.filter((row) => row[column] != null);
+        return builder;
+      },
       async first() {
         return filteredRows[0] ?? null;
       },
