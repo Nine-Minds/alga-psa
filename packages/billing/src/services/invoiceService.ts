@@ -223,7 +223,16 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       );
     }
 
+    // A contract-cadence window can hold a billed advance period and an unbilled arrears
+    // catch-up period for the same line (arrears-only line repair). Only the unbilled
+    // sibling is claimed by this invoice; the earlier invoice keeps its own period.
+    const hasClaimableRow = executionWindow.kind === 'contract_cadence_window'
+      && rows.some((row) => !row.invoice_id || row.invoice_id === invoiceId);
+
     for (const row of rows) {
+      if (hasClaimableRow && row.invoice_id && row.invoice_id !== invoiceId) {
+        continue;
+      }
       if (row.charge_family === 'usage' && omitted.has(JSON.stringify([
         row.obligation_id, storedDate(row.service_period_start), storedDate(row.service_period_end),
       ]))) {

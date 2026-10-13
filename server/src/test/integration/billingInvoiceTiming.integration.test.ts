@@ -1,3 +1,4 @@
+import { repairArrearsOnlyLineSchedulesForTenant } from '@alga-psa/billing/actions/arrearsOnlyLineRepair';
 import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -5541,7 +5542,26 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     .toMatchObject({ contract_line_id: line.contractLineId });
 }, HOOK_TIMEOUT);
 
-it('T1: time logged after an empty legacy advance hourly period is stranded (stranding probe; fixture for the repair)', async () => {
+const CONTRACT_LINES_ADVANCE_CHECK = 'contract_lines_hourly_usage_not_advance_check';
+
+/**
+ * Simulates legacy bad data: Migration B's CHECK constraint stops Hourly/Usage lines from
+ * being stored as advance, so drop it, write the legacy value, and restore the constraint
+ * NOT VALID (new writes stay checked; the legacy rows are not re-validated).
+ */
+async function storeLegacyAdvanceTiming(lineIds: string[]): Promise<void> {
+  await db.raw(`ALTER TABLE contract_lines DROP CONSTRAINT IF EXISTS ${CONTRACT_LINES_ADVANCE_CHECK}`);
+  await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId })
+    .whereIn('contract_line_id', lineIds)
+    .update({ billing_timing: 'advance' });
+  await db.raw(
+    `ALTER TABLE contract_lines ADD CONSTRAINT ${CONTRACT_LINES_ADVANCE_CHECK} `
+    + "CHECK (NOT (contract_line_type IN ('Hourly', 'Usage') AND billing_timing = 'advance')) NOT VALID",
+  );
+}
+
+it('T1: time logged after an empty legacy advance hourly period is stranded, then the repair makes it billable once', async () => {
   setupCommonMocks({ tenantId, userId: 'stranding-probe-user', permissionCheck: () => true });
   const { contextLike, clientId } = await createClientWithRecurringCycles({
     clientName: 'Stranding Probe Client',
@@ -5560,9 +5580,7 @@ it('T1: time logged after an empty legacy advance hourly period is stranded (str
     billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
-  await tenantTable(db, tenantId, 'contract_lines')
-    .where({ tenant: tenantId, contract_line_id: line.contractLineId })
-    .update({ billing_timing: 'advance' });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
   const legacyAdvancePlan = materializeContractCadenceServicePeriods({
     asOf: '2025-02-01T00:00:00Z',
     materializedAt: '2025-01-15T00:00:00.000Z',
@@ -5580,10 +5598,10 @@ it('T1: time logged after an empty legacy advance hourly period is stranded (str
     await upsertRecurringServicePeriodRecord(record);
   }
 
-  const findDueRow = async (windowStart: string, windowEnd: string) => {
+  const findDueRow = async (windowStart: string, windowEnd: string, range?: { from: string; to: string }) => {
     const dueWork = await getAvailableRecurringDueWorkAction({
       page: 1, pageSize: 20, searchTerm: 'Stranding Probe Client',
-      dateRange: { from: windowStart, to: windowEnd },
+      dateRange: range ?? { from: windowStart, to: windowEnd },
     });
     return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
       .find((row) => row.contractLineId === line.contractLineId
@@ -5631,6 +5649,60 @@ it('T1: time logged after an empty legacy advance hourly period is stranded (str
   const billedLinks = await tenantTable(db, tenantId, 'invoice_time_entries')
     .where({ tenant: tenantId, entry_id: entry.entry_id });
   expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: false, links: 0 });
+
+  // 5. Repair. The billed advance rows stay exactly as they are; a sibling arrears
+  //    catch-up row for February makes the stranded entry billable again.
+  const billedBefore = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance', lifecycle_state: 'billed' })
+    .orderBy('service_period_start')
+    .select('record_id', 'invoice_id', 'invoice_charge_detail_id', 'service_period_start', 'revision');
+  expect(billedBefore.length).toBeGreaterThanOrEqual(2);
+
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  // Other tests in this file leave stored-advance legacy lines in the tenant; the repair is tenant-wide.
+  expect(repair.timingFlipped).toBeGreaterThanOrEqual(1);
+  expect(repair).toMatchObject({ catchUpRowsCreated: 1, rowsRehomed: 0 });
+  expect(repair.manualReview).toEqual([]);
+  expect(await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId, contract_line_id: line.contractLineId })
+    .first('billing_timing')).toMatchObject({ billing_timing: 'arrears' });
+
+  const billedAfter = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance', lifecycle_state: 'billed' })
+    .orderBy('service_period_start')
+    .select('record_id', 'invoice_id', 'invoice_charge_detail_id', 'service_period_start', 'revision');
+  expect(billedAfter).toEqual(billedBefore);
+
+  const catchUps = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, reason_code: 'stranded_advance_catch_up' })
+    .select('due_position', 'lifecycle_state', 'provenance_kind', 'revision', 'service_period_start', 'service_period_end',
+      'invoice_window_start', 'invoice_window_end');
+  expect(catchUps).toHaveLength(1);
+  expect(catchUps[0]).toMatchObject({ due_position: 'arrears', lifecycle_state: 'generated', provenance_kind: 'repair', revision: 1 });
+  expect(String(catchUps[0].service_period_start).slice(0, 10) === '2025-02-01' || catchUps[0].service_period_start instanceof Date).toBe(true);
+
+  // 6. The catch-up window bills the stranded entry exactly once.
+  // Arrears: the February service period is invoiced in the March window.
+  const catchUpRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-03-01' });
+  expect(catchUpRow).toBeTruthy();
+  const catchUpResult = await generateInvoiceForSelectionInput(catchUpRow!.selectorInput);
+  expect(catchUpResult).toMatchObject({ invoice_id: expect.any(String) });
+  expect(await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .first('invoiced')).toMatchObject({ invoiced: true });
+  expect(await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })).toHaveLength(1);
+
+  // 7. Idempotent: a second run changes nothing.
+  const countRows = async () => Number((await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .count('* as n').first())?.n);
+  const rowsBeforeSecondRun = await countRows();
+  const second = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(second).toMatchObject({
+    timingFlipped: 0, advanceRowsSuperseded: 0, rowsRehomed: 0, catchUpRowsCreated: 0, manualReview: [],
+  });
+  expect(await countRows()).toBe(rowsBeforeSecondRun);
 }, HOOK_TIMEOUT);
 
 it('T4: a stored-advance Hourly or Usage line materializes arrears service periods (engine backstop)', async () => {
@@ -5665,10 +5737,7 @@ it('T4: a stored-advance Hourly or Usage line materializes arrears service perio
     cadenceOwner: 'contract',
   });
   // Legacy bad rows: advance stored on Hourly and Usage lines.
-  await tenantTable(db, tenantId, 'contract_lines')
-    .where({ tenant: tenantId })
-    .whereIn('contract_line_id', [hourly.contractLineId, usage.contractLineId])
-    .update({ billing_timing: 'advance' });
+  await storeLegacyAdvanceTiming([hourly.contractLineId, usage.contractLineId]);
 
   for (const lineId of [hourly.contractLineId, usage.contractLineId, fixed.contractLineId]) {
     await syncContractLineRecurringPeriods(lineId);
@@ -5685,6 +5754,195 @@ it('T4: a stored-advance Hourly or Usage line materializes arrears service perio
   expect(new Set(usagePositions)).toEqual(new Set(['arrears']));
   // A Fixed line is unaffected.
   expect(new Set(await duePositions(fixed.contractLineId))).toEqual(new Set(['advance']));
+}, HOOK_TIMEOUT);
+
+it('T9: the database rejects Hourly and Usage contract lines stored as advance (Migration B)', async () => {
+  setupCommonMocks({ tenantId, userId: 'constraint-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Constraint Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const hourly = await createHourlyContractLine(contextLike, {
+    serviceName: 'Constraint Hourly Service',
+    planName: 'Constraint Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Constraint Fixed Service',
+    planName: 'Constraint Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await expect(
+    tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_line_id: hourly.contractLineId })
+      .update({ billing_timing: 'advance' }),
+  ).rejects.toThrow(/hourly_usage_not_advance_check/);
+  await expect(
+    tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_line_id: fixed.contractLineId })
+      .update({ billing_timing: 'advance' }),
+  ).resolves.toBe(1);
+}, HOOK_TIMEOUT);
+
+it('T5/T2: Migration A flips stored-advance Hourly/Usage rows to arrears and supersedes unbilled advance rows; the repair re-homes edited rows', async () => {
+  setupCommonMocks({ tenantId, userId: 'migration-a-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Migration A Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Migration A Hourly Service',
+    planName: 'Migration A Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Migration A Fixed Service',
+    planName: 'Migration A Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([line.contractLineId]);
+
+  const templateId = uuidv4();
+  const templateLineId = uuidv4();
+  const presetId = uuidv4();
+  const fixedPresetId = uuidv4();
+  await db.raw('ALTER TABLE contract_template_lines DROP CONSTRAINT IF EXISTS contract_template_lines_hourly_usage_not_advance_check');
+  await db.raw('ALTER TABLE contract_line_presets DROP CONSTRAINT IF EXISTS contract_line_presets_hourly_usage_not_advance_check');
+  await tenantTable(db, tenantId, 'contract_templates').insert({
+    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template',
+  });
+  await tenantTable(db, tenantId, 'contract_template_lines').insert({
+    tenant: tenantId, template_id: templateId, template_line_id: templateLineId,
+    template_line_name: 'Legacy Hourly Template Line', line_type: 'Hourly', billing_timing: 'advance',
+  });
+  await tenantTable(db, tenantId, 'contract_line_presets').insert([
+    { tenant: tenantId, preset_id: presetId, preset_name: 'Legacy Hourly Preset', contract_line_type: 'Hourly', billing_timing: 'advance' },
+    { tenant: tenantId, preset_id: fixedPresetId, preset_name: 'Fixed Advance Preset', contract_line_type: 'Fixed', billing_timing: 'advance' },
+  ]);
+
+  const plan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-migration-a',
+    targetHorizonDays: 100,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of plan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const advanceRows = () => tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance' })
+    .orderBy('service_period_start')
+    .select('record_id', 'lifecycle_state', 'reason_code', 'service_period_start');
+  const before = await advanceRows();
+  expect(before.length).toBeGreaterThanOrEqual(2);
+  // The first row is user-edited and must survive the migration untouched.
+  const editedId = before[0].record_id;
+  await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: editedId })
+    .update({ lifecycle_state: 'edited', provenance_kind: 'user_edited' });
+
+  const migrationA = createRequire(import.meta.url)('../../../migrations/20261013120000_hourly_usage_lines_bill_in_arrears.cjs');
+  await migrationA.up(db);
+
+  const lineTiming = (id: string) => tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId, contract_line_id: id }).first('billing_timing');
+  expect(await lineTiming(line.contractLineId)).toMatchObject({ billing_timing: 'arrears' });
+  expect(await lineTiming(fixed.contractLineId)).toMatchObject({ billing_timing: 'advance' });
+  expect(await tenantTable(db, tenantId, 'contract_template_lines')
+    .where({ tenant: tenantId, template_line_id: templateLineId }).first('billing_timing'))
+    .toMatchObject({ billing_timing: 'arrears' });
+  expect(await tenantTable(db, tenantId, 'contract_line_presets')
+    .where({ tenant: tenantId, preset_id: presetId }).first('billing_timing')).toMatchObject({ billing_timing: 'arrears' });
+  expect(await tenantTable(db, tenantId, 'contract_line_presets')
+    .where({ tenant: tenantId, preset_id: fixedPresetId }).first('billing_timing')).toMatchObject({ billing_timing: 'advance' });
+
+  const after = await advanceRows();
+  expect(after.find((row) => row.record_id === editedId)).toMatchObject({ lifecycle_state: 'edited', reason_code: before[0].reason_code });
+  for (const row of after.filter((r) => r.record_id !== editedId)) {
+    expect(row).toMatchObject({ lifecycle_state: 'superseded', reason_code: 'hourly_usage_arrears_repair' });
+  }
+
+  // Re-running the migration changes nothing.
+  await migrationA.up(db);
+  expect(await advanceRows()).toEqual(after);
+
+  // T2a: an edited advance row is retired and carried onto the arrears schedule when the
+  // line's arrears twin can be materialized; otherwise it is flagged for manual review.
+  const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  const editedHandled = repair.rowsRehomed
+    + repair.manualReview.filter((entry) => entry.recordId === editedId).length;
+  expect(editedHandled).toBeGreaterThanOrEqual(1);
+  expect(await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: editedId }).first('lifecycle_state')).toMatchObject({ lifecycle_state: 'superseded' });
+
+  // T2b: a current/future edited advance row moves onto the arrears schedule.
+  const futureLine = await createHourlyContractLine(contextLike, {
+    serviceName: 'Migration A Future Hourly Service',
+    planName: 'Migration A Future Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2026-11-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  await storeLegacyAdvanceTiming([futureLine.contractLineId]);
+  const futurePlan = materializeContractCadenceServicePeriods({
+    asOf: '2026-11-01T00:00:00Z',
+    materializedAt: '2026-10-01T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2026-11-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: futureLine.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${futureLine.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-migration-a-future',
+    targetHorizonDays: 70,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of futurePlan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
+  const futureAdvance = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: futureLine.contractLineId, due_position: 'advance', lifecycle_state: 'generated' })
+    .orderBy('service_period_start')
+    .select('record_id');
+  expect(futureAdvance.length).toBeGreaterThanOrEqual(1);
+  const futureEditedId = futureAdvance[0].record_id;
+  await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: futureEditedId })
+    .update({ lifecycle_state: 'edited', provenance_kind: 'user_edited' });
+
+  await migrationA.up(db);
+  const repairFuture = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
+  expect(repairFuture.rowsRehomed).toBeGreaterThanOrEqual(1);
+  expect(await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, record_id: futureEditedId }).first('lifecycle_state')).toMatchObject({ lifecycle_state: 'superseded' });
+  const rehomed = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: futureLine.contractLineId, due_position: 'arrears', supersedes_record_id: futureEditedId })
+    .select('lifecycle_state', 'provenance_kind', 'revision');
+  expect(rehomed).toHaveLength(1);
+  expect(rehomed[0]).toMatchObject({ lifecycle_state: 'edited', provenance_kind: 'repair' });
+  expect(Number(rehomed[0].revision)).toBeGreaterThanOrEqual(2);
 }, HOOK_TIMEOUT);
 
 it('T159: production schema has time-entry updated_at but no usage_tracking updated_at', async () => {

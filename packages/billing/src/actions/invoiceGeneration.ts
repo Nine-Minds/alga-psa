@@ -1193,17 +1193,32 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
     executionWindow.kind === 'contract_cadence_window'
     && executionWindow.contractLineId
   ) {
-    const linkedRow = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, params.tenant).table('recurring_service_periods')
+    const { linkedRow, hasPendingRow } = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      const periods = () => tenantDb(trx, params.tenant).table('recurring_service_periods')
         .where({
           cadence_owner: 'contract',
           obligation_id: executionWindow.contractLineId,
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
-        })
-        .whereNotNull('invoice_id')
-        .first('invoice_id');
+        });
+      const rows = (await periods().select('invoice_id', 'lifecycle_state')) as Array<{
+        invoice_id: string | null;
+        lifecycle_state?: string | null;
+      }>;
+      return {
+        linkedRow: rows.find((row) => row.invoice_id) ?? null,
+        // A period of the same line and window that is still waiting to be invoiced. This
+        // happens when a repair adds an arrears catch-up row beside an advance period
+        // that was already invoiced for the same window (arrears-only line repair).
+        hasPendingRow: rows.some((row) => !row.invoice_id
+          && ['generated', 'edited', 'locked'].includes(String(row.lifecycle_state))),
+      };
     });
+
+    if (hasPendingRow) {
+      // The window is not fully invoiced: the sibling row still has to be billed.
+      return null;
+    }
 
     return linkedRow?.invoice_id
       ? { invoiceId: linkedRow.invoice_id }

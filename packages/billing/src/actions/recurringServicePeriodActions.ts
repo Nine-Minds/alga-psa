@@ -5,6 +5,10 @@ import {
   resolveRecurringChargeFamily,
 } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  repairArrearsOnlyLineSchedulesForTenant,
+  type ArrearsOnlyLineRepairSummary,
+} from './arrearsOnlyLineRepair';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -1116,7 +1120,7 @@ export const previewRecurringServicePeriodInvoiceLinkageRepair = withAuth(async 
 export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
   user,
   { tenant },
-): Promise<RepairAllClientCadenceServicePeriodsSummary | ActionPermissionError> => {
+): Promise<(RepairAllClientCadenceServicePeriodsSummary & { arrearsOnlyLines: ArrearsOnlyLineRepairSummary }) | ActionPermissionError> => {
   const denied = await requireRecurringServicePeriodPermission(
     user,
     'regenerate',
@@ -1128,6 +1132,10 @@ export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: any) => {
-    return repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    // Hourly/Usage lines saved as "advance" are repaired first so the client-cadence
+    // pass below sees their arrears schedule.
+    const arrearsOnlyLines = await repairArrearsOnlyLineSchedulesForTenant(trx, { tenant });
+    const summary = await repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    return { ...summary, arrearsOnlyLines };
   });
 });

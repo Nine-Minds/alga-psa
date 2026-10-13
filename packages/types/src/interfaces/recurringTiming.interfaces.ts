@@ -242,6 +242,8 @@ export const RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES = {
     'integrity_repair',
     'invoice_linkage_repair',
     'admin_correction',
+    'hourly_usage_arrears_repair',
+    'stranded_advance_catch_up',
   ],
 } as const satisfies Record<RecurringServicePeriodProvenanceKind, readonly string[]>;
 

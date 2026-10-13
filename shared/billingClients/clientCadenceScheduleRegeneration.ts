@@ -278,7 +278,7 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
   };
 }
 
-function buildScheduleSourceRuleVersion(
+export function buildScheduleSourceRuleVersion(
   billingCycle: BillingCycleType,
   anchor: NormalizedBillingCycleAnchorSettings,
 ) {
