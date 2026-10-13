@@ -2,11 +2,13 @@ import React from 'react';
 import type { ColumnDefinition, ITicketListItem } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { MoreVertical, Copy } from 'lucide-react';
+import { MoreVertical, Copy, Users } from 'lucide-react';
 
 interface CreateTicketActionsColumnOptions {
   t: (key: string, defaultValue: string) => string;
   onDuplicate: (ticketId: string) => void;
+  /** Opens the batch dialog (one copy per selected contact). The item is hidden when omitted. */
+  onBatchDuplicate?: (ticketId: string) => void;
 }
 
 /**
@@ -19,6 +21,7 @@ interface CreateTicketActionsColumnOptions {
 export function createTicketActionsColumn({
   t,
   onDuplicate,
+  onBatchDuplicate,
 }: CreateTicketActionsColumnOptions): ColumnDefinition<ITicketListItem> {
   return {
     title: <span className="sr-only">{t('actions.rowActions', 'Actions')}</span>,
@@ -64,6 +67,18 @@ export function createTicketActionsColumn({
                 <Copy className="h-4 w-4 mr-2" />
                 {t('actions.duplicate', 'Duplicate')}
               </DropdownMenuItem>
+              {onBatchDuplicate && (
+                <DropdownMenuItem
+                  id="batch-duplicate-ticket-menu-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onBatchDuplicate(ticketId);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {t('actions.duplicateForContacts', 'Duplicate for contacts…')}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

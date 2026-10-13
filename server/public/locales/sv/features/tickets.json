@@ -222,7 +222,9 @@
     "printOptions": "Utskriftsalternativ",
     "duplicate": "Duplicera",
     "rowActions": "Åtgärder",
-    "openMenu": "Öppna meny"
+    "openMenu": "Öppna meny",
+    "duplicateForContacts": "Duplicera för kontakter …",
+    "duplicateOptions": "Fler dupliceringsalternativ"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -2311,5 +2313,74 @@
     "pausedHint": "Pausat. Återuppta för att fortsätta spåra eller stoppa för att logga tiden.",
     "workDescription": "Arbetsbeskrivning",
     "whatAreYouWorkingOn": "Vad arbetar du med?"
+  },
+  "batchDuplicate": {
+    "title": "Duplicera #{{number}} för kontakter",
+    "titleLoading": "Duplicera för kontakter",
+    "loading": "Läser in …",
+    "loadFailed": "Ärendet som ska dupliceras kunde inte läsas in. Försök igen.",
+    "createFailed": "Kopiorna kunde inte skapas. Försök igen.",
+    "templateLabel": "Titelmall",
+    "insertToken": "Infoga:",
+    "nameHint": "Ersätt \"{{name}}\" med {{token}} för att anpassa varje kopia.",
+    "replace": "Ersätt",
+    "contactsLabel": "Kontakter",
+    "contactsPlaceholder": "Välj kontakter …",
+    "addBlankRow": "Lägg till kopia utan kontakt",
+    "count": "{{count}} av {{max}}",
+    "capReached": "Högst {{max}} kopior per omgång.",
+    "columns": {
+      "contact": "Kontakt",
+      "title": "Titel"
+    },
+    "resetRow": "Återställ till mall",
+    "removeRow": "Ta bort kopia",
+    "copyChecklist": "Kopiera checklistpunkter (obockade)",
+    "cancel": "Avbryt",
+    "review": "Granska",
+    "back": "Tillbaka",
+    "create_one": "Skapa {{count}} ärende",
+    "create_other": "Skapa {{count}} ärenden",
+    "creating_one": "Skapar {{count}} ärende …",
+    "creating_other": "Skapar {{count}} ärenden …",
+    "done": "Klart",
+    "retryFailed_one": "Försök igen med misslyckade ({{count}})",
+    "retryFailed_other": "Försök igen med misslyckade ({{count}})",
+    "errors": {
+      "contactRequired": "Titeln använder {{token}} men kopian saknar kontakt.",
+      "unknownToken": "Okänd platshållare: {{tokens}}",
+      "empty": "Titeln får inte vara tom.",
+      "unresolvedToken": "Titeln innehåller fortfarande en platshållare {{placeholder}}."
+    },
+    "summary": {
+      "client": "Kund",
+      "board": "Tavla",
+      "category": "Kategori",
+      "priority": "Prioritet",
+      "assignee": "Tilldelad",
+      "team": "Team",
+      "additionalAgents": "Ytterligare agenter",
+      "tags": "Taggar",
+      "checklist": "Checklista",
+      "checklistCopy_one": "Kopiera {{count}} punkt (obockad)",
+      "checklistCopy_other": "Kopiera {{count}} punkter (obockade)",
+      "checklistSkip": "Kopieras inte",
+      "customFields": "Anpassade fält",
+      "status": "Status",
+      "statusBoardDefault": "Tavlans standard",
+      "none": "Ingen",
+      "notCopied": "Kommentarer, tidsposter, bilagor och förfallodatum kopieras inte.",
+      "unresolved": "Namn otillgängligt"
+    },
+    "results": {
+      "created_one": "{{count}} ärende skapat",
+      "created_other": "{{count}} ärenden skapade",
+      "failed_one": "{{count}} kopia misslyckades",
+      "failed_other": "{{count}} kopior misslyckades"
+    },
+    "discardTitle": "Förkasta dessa kopior?",
+    "discardMessage": "De kopior du har ställt in har inte skapats ännu. Förkasta dem och stäng?",
+    "discardConfirm": "Förkasta",
+    "discardKeep": "Fortsätt redigera"
   }
 }

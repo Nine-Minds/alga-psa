@@ -6,6 +6,14 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import type { CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 
 /** Shape returned to the create-ticket form to prefill a duplicate. */
 export interface TicketDuplicateSource {
@@ -25,6 +33,17 @@ export interface TicketDuplicateSource {
   itil_urgency: number | null;
   assigned_to: string | null;
   assigned_team_id: string | null;
+  /**
+   * Display names for the ids above, resolved server-side in the same tenant-scoped load.
+   * `null` when the id is null OR the referenced row could not be found; callers must treat
+   * "id set, name null" as unresolved and say so rather than guess.
+   */
+  board_name: string | null;
+  category_name: string | null;
+  subcategory_name: string | null;
+  priority_name: string | null;
+  assignee_name: string | null;
+  assigned_team_name: string | null;
   additional_agents: { user_id: string; first_name: string | null; last_name: string | null }[];
   tags: {
     tag_id: string;
@@ -71,6 +90,21 @@ export function pickDuplicableAttributes(attributes: unknown): Record<string, un
 export function countDuplicableCustomFields(attributes: unknown): number {
   const picked = pickDuplicableAttributes(attributes);
   return picked.custom_fields ? Object.keys(picked.custom_fields as Record<string, unknown>).length : 0;
+}
+
+/**
+ * The create-input fields that make a ticket a duplicate: provenance plus the
+ * attributes allowlist. Single and batch Duplicate both spread this, so the copy
+ * set is defined once.
+ */
+export function duplicateCreateInputPatch(source: {
+  ticket_id: string;
+  attributes?: unknown;
+}): Pick<CreateTicketInput, 'duplicated_from_ticket_id' | 'attributes'> {
+  return {
+    duplicated_from_ticket_id: source.ticket_id,
+    attributes: pickDuplicableAttributes(source.attributes),
+  };
 }
 
 interface CopyChecklistParams {
@@ -171,4 +205,76 @@ export async function copyChecklistFromSource(
   );
 
   return sourceItems.length;
+}
+
+interface RecordDuplicateCopyParams {
+  source: { ticket_id: string; ticket_number: string; attributes?: unknown };
+  targetTicketId: string;
+  targetTicketNumber: string;
+  actorUserId: string;
+  copyChecklist: boolean;
+  /** Groups the copies made by one batch request; omitted for single Duplicate. */
+  batchId?: string;
+}
+
+/**
+ * Writes everything that makes a freshly created ticket a duplicate, inside the
+ * caller's transaction: the checklist copy (when requested), then the
+ * `TICKET_DUPLICATED_FROM` row on the copy and `TICKET_DUPLICATED_TO` on the source.
+ * Must run after the ticket is created, so templates auto-applied by
+ * `TicketModel.createTicket` are already in place for `copyChecklistFromSource`.
+ */
+export async function recordDuplicateCopy(
+  trx: Knex.Transaction,
+  tenant: string,
+  { source, targetTicketId, targetTicketNumber, actorUserId, copyChecklist, batchId }: RecordDuplicateCopyParams
+): Promise<{ checklistItemsCopied: number }> {
+  const checklistItemsCopied = copyChecklist
+    ? await copyChecklistFromSource(trx, tenant, {
+        sourceTicketId: source.ticket_id,
+        targetTicketId,
+        userId: actorUserId,
+      })
+    : 0;
+
+  const batchDetail = batchId ? { batch_id: batchId } : {};
+
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: targetTicketId,
+    eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_FROM,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: targetTicketId,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: actorUserId,
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    details: {
+      source_ticket_id: source.ticket_id,
+      source_ticket_number: source.ticket_number,
+      checklist_items_copied: checklistItemsCopied,
+      custom_fields_copied: countDuplicableCustomFields(source.attributes),
+      ...batchDetail,
+    },
+  });
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: source.ticket_id,
+    eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_TO,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: source.ticket_id,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: actorUserId,
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    details: {
+      duplicate_ticket_id: targetTicketId,
+      duplicate_ticket_number: targetTicketNumber,
+      ...batchDetail,
+    },
+  });
+
+  return { checklistItemsCopied };
 }

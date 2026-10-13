@@ -214,7 +214,9 @@
     "printOptions": "Druckoptionen",
     "duplicate": "Duplizieren",
     "rowActions": "Aktionen",
-    "openMenu": "Menü öffnen"
+    "openMenu": "Menü öffnen",
+    "duplicateForContacts": "Für Kontakte duplizieren …",
+    "duplicateOptions": "Weitere Duplizierungsoptionen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -2311,5 +2313,74 @@
     "pausedHint": "Pausiert. Setzen Sie fort, um weiter zu erfassen, oder stoppen Sie, um die Zeit zu buchen.",
     "workDescription": "Arbeitsbeschreibung",
     "whatAreYouWorkingOn": "Woran arbeiten Sie?"
+  },
+  "batchDuplicate": {
+    "title": "#{{number}} für Kontakte duplizieren",
+    "titleLoading": "Für Kontakte duplizieren",
+    "loading": "Wird geladen …",
+    "loadFailed": "Das zu duplizierende Ticket konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "createFailed": "Die Kopien konnten nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "templateLabel": "Titelvorlage",
+    "insertToken": "Einfügen:",
+    "nameHint": "Ersetzen Sie „{{name}}“ durch {{token}}, um jede Kopie zu personalisieren.",
+    "replace": "Ersetzen",
+    "contactsLabel": "Kontakte",
+    "contactsPlaceholder": "Kontakte auswählen …",
+    "addBlankRow": "Kopie ohne Kontakt hinzufügen",
+    "count": "{{count}} von {{max}}",
+    "capReached": "Höchstens {{max}} Kopien pro Stapel.",
+    "columns": {
+      "contact": "Kontakt",
+      "title": "Titel"
+    },
+    "resetRow": "Auf Vorlage zurücksetzen",
+    "removeRow": "Kopie entfernen",
+    "copyChecklist": "Checklistenpunkte kopieren (nicht abgehakt)",
+    "cancel": "Abbrechen",
+    "review": "Prüfen",
+    "back": "Zurück",
+    "create_one": "{{count}} Ticket erstellen",
+    "create_other": "{{count}} Tickets erstellen",
+    "creating_one": "{{count}} Ticket wird erstellt …",
+    "creating_other": "{{count}} Tickets werden erstellt …",
+    "done": "Fertig",
+    "retryFailed_one": "Fehlgeschlagene wiederholen ({{count}})",
+    "retryFailed_other": "Fehlgeschlagene wiederholen ({{count}})",
+    "errors": {
+      "contactRequired": "Dieser Titel verwendet {{token}}, die Kopie hat aber keinen Kontakt.",
+      "unknownToken": "Unbekannter Platzhalter: {{tokens}}",
+      "empty": "Der Titel darf nicht leer sein.",
+      "unresolvedToken": "Der Titel enthält noch einen Platzhalter {{placeholder}}."
+    },
+    "summary": {
+      "client": "Kunde",
+      "board": "Board",
+      "category": "Kategorie",
+      "priority": "Priorität",
+      "assignee": "Bearbeiter",
+      "team": "Team",
+      "additionalAgents": "Weitere Bearbeiter",
+      "tags": "Tags",
+      "checklist": "Checkliste",
+      "checklistCopy_one": "{{count}} Punkt kopieren (nicht abgehakt)",
+      "checklistCopy_other": "{{count}} Punkte kopieren (nicht abgehakt)",
+      "checklistSkip": "Nicht kopiert",
+      "customFields": "Benutzerdefinierte Felder",
+      "status": "Status",
+      "statusBoardDefault": "Standard des Boards",
+      "none": "Keine",
+      "notCopied": "Kommentare, Zeiteinträge, Anhänge und Fälligkeitsdatum werden nicht kopiert.",
+      "unresolved": "Name nicht verfügbar"
+    },
+    "results": {
+      "created_one": "{{count}} Ticket erstellt",
+      "created_other": "{{count}} Tickets erstellt",
+      "failed_one": "{{count}} Kopie fehlgeschlagen",
+      "failed_other": "{{count}} Kopien fehlgeschlagen"
+    },
+    "discardTitle": "Diese Kopien verwerfen?",
+    "discardMessage": "Die eingerichteten Kopien wurden noch nicht erstellt. Verwerfen und schließen?",
+    "discardConfirm": "Verwerfen",
+    "discardKeep": "Weiter bearbeiten"
   }
 }

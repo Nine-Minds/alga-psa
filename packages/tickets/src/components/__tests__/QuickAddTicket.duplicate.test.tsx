@@ -638,6 +638,12 @@ const makeSource = (overrides: Record<string, unknown> = {}) => ({
   itil_urgency: null,
   assigned_to: 'user-9',
   assigned_team_id: null,
+  board_name: 'Support',
+  category_name: 'Hardware',
+  subcategory_name: 'Laptops',
+  priority_name: 'High',
+  assignee_name: 'Grace Hopper',
+  assigned_team_name: null,
   additional_agents: [
     { user_id: 'user-2', first_name: 'Ada', last_name: 'Lovelace' },
     { user_id: 'user-3', first_name: 'Alan', last_name: 'Turing' },

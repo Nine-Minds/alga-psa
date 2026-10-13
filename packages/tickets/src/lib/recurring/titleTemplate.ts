@@ -10,12 +10,10 @@
  * never reach a generated ticket title; `renderTitleTemplate` therefore throws on one as well.
  */
 
+import { findUnknownTokens, substituteTokens } from '../titleTokens';
+
 export const RECURRING_TITLE_TOKENS = ['client', 'due_date', 'month', 'year'] as const;
 export type RecurringTitleToken = (typeof RECURRING_TITLE_TOKENS)[number];
-
-const TOKEN_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
-
-const KNOWN_TOKENS: ReadonlySet<string> = new Set(RECURRING_TITLE_TOKENS);
 
 export interface TitleTemplateContext {
   clientName: string;
@@ -27,12 +25,7 @@ export interface TitleTemplateContext {
 
 /** Tokens in `template` that are not one of {@link RECURRING_TITLE_TOKENS}, in first-seen order. */
 export function findUnknownTitleTokens(template: string): string[] {
-  const unknown: string[] = [];
-  for (const match of template.matchAll(TOKEN_PATTERN)) {
-    const token = match[1];
-    if (!KNOWN_TOKENS.has(token) && !unknown.includes(token)) unknown.push(token);
-  }
-  return unknown;
+  return findUnknownTokens(template, RECURRING_TITLE_TOKENS);
 }
 
 function resolveLocale(locale: string | null | undefined): string {
@@ -52,13 +45,8 @@ function dueDateAsUtc(dueDate: string): Date {
 }
 
 export function renderTitleTemplate(template: string, context: TitleTemplateContext): string {
-  const unknown = findUnknownTitleTokens(template);
-  if (unknown.length > 0) {
-    throw new Error(`Unknown title token${unknown.length > 1 ? 's' : ''}: ${unknown.map((t) => `{{${t}}}`).join(', ')}`);
-  }
-
   const locale = resolveLocale(context.locale);
-  const due = dueDateAsUtc(context.dueDate);
+  let due: Date | undefined;
   const format = (options: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(due);
 
@@ -69,5 +57,9 @@ export function renderTitleTemplate(template: string, context: TitleTemplateCont
     year: () => format({ year: 'numeric' }),
   };
 
-  return template.replace(TOKEN_PATTERN, (_whole, token: string) => values[token as RecurringTitleToken]());
+  // An unknown token is reported before an invalid due date, as before; the date is then validated
+  // even when the template has no tokens.
+  if (findUnknownTitleTokens(template).length > 0) return substituteTokens(template, values);
+  due = dueDateAsUtc(context.dueDate);
+  return substituteTokens(template, values);
 }

@@ -214,7 +214,9 @@
     "printOptions": "Opciones de impresión",
     "duplicate": "Duplicar",
     "rowActions": "Acciones",
-    "openMenu": "Abrir menú"
+    "openMenu": "Abrir menú",
+    "duplicateForContacts": "Duplicar para contactos…",
+    "duplicateOptions": "Más opciones de duplicado"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",
@@ -2311,5 +2313,74 @@
     "pausedHint": "En pausa. Reanude para seguir registrando o detenga para guardar el tiempo.",
     "workDescription": "Descripción del trabajo",
     "whatAreYouWorkingOn": "¿En qué está trabajando?"
+  },
+  "batchDuplicate": {
+    "title": "Duplicar #{{number}} para contactos",
+    "titleLoading": "Duplicar para contactos",
+    "loading": "Cargando…",
+    "loadFailed": "No se pudo cargar el ticket que se va a duplicar. Inténtalo de nuevo.",
+    "createFailed": "No se pudieron crear las copias. Inténtalo de nuevo.",
+    "templateLabel": "Plantilla de título",
+    "insertToken": "Insertar:",
+    "nameHint": "Sustituye «{{name}}» por {{token}} para personalizar cada copia.",
+    "replace": "Sustituir",
+    "contactsLabel": "Contactos",
+    "contactsPlaceholder": "Seleccionar contactos…",
+    "addBlankRow": "Añadir copia sin contacto",
+    "count": "{{count}} de {{max}}",
+    "capReached": "Máximo de {{max}} copias por lote.",
+    "columns": {
+      "contact": "Contacto",
+      "title": "Título"
+    },
+    "resetRow": "Restablecer a la plantilla",
+    "removeRow": "Quitar copia",
+    "copyChecklist": "Copiar elementos de la lista de verificación (sin marcar)",
+    "cancel": "Cancelar",
+    "review": "Revisar",
+    "back": "Atrás",
+    "create_one": "Crear {{count}} ticket",
+    "create_other": "Crear {{count}} tickets",
+    "creating_one": "Creando {{count}} ticket…",
+    "creating_other": "Creando {{count}} tickets…",
+    "done": "Hecho",
+    "retryFailed_one": "Reintentar fallidas ({{count}})",
+    "retryFailed_other": "Reintentar fallidas ({{count}})",
+    "errors": {
+      "contactRequired": "Este título usa {{token}}, pero la copia no tiene contacto.",
+      "unknownToken": "Marcador desconocido: {{tokens}}",
+      "empty": "El título no puede estar vacío.",
+      "unresolvedToken": "El título aún contiene un marcador {{placeholder}}."
+    },
+    "summary": {
+      "client": "Cliente",
+      "board": "Tablero",
+      "category": "Categoría",
+      "priority": "Prioridad",
+      "assignee": "Asignado a",
+      "team": "Equipo",
+      "additionalAgents": "Agentes adicionales",
+      "tags": "Etiquetas",
+      "checklist": "Lista de verificación",
+      "checklistCopy_one": "Copiar {{count}} elemento (sin marcar)",
+      "checklistCopy_other": "Copiar {{count}} elementos (sin marcar)",
+      "checklistSkip": "No se copia",
+      "customFields": "Campos personalizados",
+      "status": "Estado",
+      "statusBoardDefault": "Predeterminado del tablero",
+      "none": "Ninguno",
+      "notCopied": "Los comentarios, las entradas de tiempo, los archivos adjuntos y la fecha de vencimiento no se copian.",
+      "unresolved": "Nombre no disponible"
+    },
+    "results": {
+      "created_one": "{{count}} ticket creado",
+      "created_other": "{{count}} tickets creados",
+      "failed_one": "Falló {{count}} copia",
+      "failed_other": "Fallaron {{count}} copias"
+    },
+    "discardTitle": "¿Descartar estas copias?",
+    "discardMessage": "Las copias configuradas aún no se han creado. ¿Descartarlas y cerrar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Seguir editando"
   }
 }

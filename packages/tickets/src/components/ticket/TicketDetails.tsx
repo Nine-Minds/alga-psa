@@ -82,12 +82,14 @@ import { getTeamById, getTeams, isTeamActionError } from '@alga-psa/teams/action
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import type { WorkItemScheduleContext } from '@alga-psa/ui/context';
 import { Button } from "@alga-psa/ui/components/Button";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@alga-psa/ui/components/DropdownMenu";
+import BatchDuplicateTicketDialog from "./BatchDuplicateTicketDialog";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, ChevronDown, Users } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -398,6 +400,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
     const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
+    const [batchDuplicateOpen, setBatchDuplicateOpen] = useState(false);
     // Single-ticket delete (mirrors the client/contact detail-page delete pattern)
     const [isDeleteTicketDialogOpen, setIsDeleteTicketDialogOpen] = useState(false);
 
@@ -3661,6 +3664,28 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            id={`${id}-duplicate-options-button`}
+                                            variant="outline"
+                                            size="sm"
+                                            className="-ml-1 px-2"
+                                            aria-label={t('actions.duplicateOptions', { defaultValue: 'More duplicate options' })}
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            id={`${id}-batch-duplicate-menu-item`}
+                                            onClick={() => setBatchDuplicateOpen(true)}
+                                        >
+                                            <Users className="h-4 w-4 mr-2" />
+                                            {t('actions.duplicateForContacts', { defaultValue: 'Duplicate for contacts…' })}
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -4590,6 +4615,14 @@ const handleClose = () => {
                     ) : null}
                 </div>
             </Drawer>
+            {batchDuplicateOpen && ticket.ticket_id && (
+                <BatchDuplicateTicketDialog
+                    sourceTicketId={ticket.ticket_id}
+                    isOpen
+                    onClose={() => setBatchDuplicateOpen(false)}
+                    onCompleted={() => setActivityLogRefreshKey((value) => value + 1)}
+                />
+            )}
         </ReflectionContainer>
     );
 };
