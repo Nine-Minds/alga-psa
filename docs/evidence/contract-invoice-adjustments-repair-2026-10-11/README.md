@@ -302,6 +302,32 @@ Keep shared credentials and shared fixtures unchanged.
 
 ## Remaining current-HEAD acceptance
 
+### Repair validation on 2026-10-13
+
+Implementation fixes are committed as `428c6261f7f186076129e89e513cc3d1821f49ac`
+and the CI test-fixture follow-up as `7dc4221ef1aeca6435dee9f5430de261da24e481`.
+The exact local HEAD at validation was `7dc4221ef1aeca6435dee9f5430de261da24e481`.
+No application server was started. Commands ran against the isolated PostgreSQL
+database `test_pr3499_aa75047` at `127.0.0.1:5472` unless noted.
+
+| Command / check | Result |
+| --- | --- |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" TEST_DB_NAME=test_pr3499_aa75047 DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run --config vitest.config.ts src/test/integration/accounting/xeroLiveExport.integration.test.ts -t 'T020: missing net_amount' --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --retry=0 --reporter=dot` | Exit 0, 1 passed / 4 skipped. The consolidated parent with null `net_amount` records per-line `missing_net_amount`; Xero provider mock remains uncalled. |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" TEST_DB_NAME=test_pr3499_aa75047 DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run --config vitest.config.ts src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | Exit 0, 121/121 pass. |
+| `cd server && TMPDIR="$PWD/.vitest-tmp-review" TEST_DB_NAME=test_pr3499_aa75047 DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run --config .vitest-pr3499-review.config.ts ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts --coverage.enabled=false --maxWorkers=1 --pool=threads --no-file-parallelism --reporter=dot` | Exit 0, 66/66 pass using a temporary Vitest config (600s hook / 120s test timeout; config removed after run). Consolidated period cases assert preview and repeated settlement, tax/totals, canonical allocations, stable invoice ledger posting, manual-line preservation, and carried positive/negative true-ups at half-open boundaries. |
+| Four focused manual/finalization/void/currency adapter unit files on HEAD `7dc4221ef1aeca6435dee9f5430de261da24e481` | Exit 0, 24/24 pass. This addresses the failed unit shards reported by run `38348261029` on old HEAD `aa75047e8a47780c6bde57100cca8fd4034a1f1c`. |
+| `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing` | Exit 0. |
+| `npm run build --workspace=@alga-psa/billing` | Exit 0; all eight tsup entries built. |
+| `cd server && NEXT_DIST_DIR=.next-pr3499-repair-7dc-20261013 NEXT_BUILD_CPUS=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build` | Exit 0; production build compiled, generated 74 static pages, and collected traces. Existing warnings include middleware naming, webpack cache size, and dynamic `headers()` use in `/_global-error`. It skipped type validation per project config. |
+| `cd server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json` | Exit 2 due parser errors in ignored generated `server/.next-dev/dev/types/routes.d.ts`, imported by `next-env.d.ts`; that generated file contains truncated route text around line 761. It was not edited or removed to preserve local artifacts. Billing package typecheck passed separately. |
+| `git fetch origin main`; `gh pr view 3499` | Fetch succeeded; current base `450070437d770ba651a63b4318a72a9de4e8fc7c` is an ancestor of HEAD and matches the PR base. PR head still reported old `aa75047`; two local commits were ahead. The old run's remaining failures include unit shards, integration shard 4, Citus migration, and browser/fresh-install jobs. Local focused tests address unit and T020 failures; rollback now deletes tenant-owned `service_catalog` before tenant deletion to address the Citus FK failure. New Citus CI confirmation and new-HEAD CI are pending push. |
+| `PR3499_FIXTURE_DB_NAME=server node --import tsx scripts/audit-pr3499-unbilled-fixture.ts` | Exit 0, read-only audit confirms the owned client/assignment and both period rows remain unclaimed. Recorded preview is historical (24,460 minor units); recalculate before walkthrough. |
+
+The branch is not human-review-ready. Keep this guide **BLOCKED** until CI and
+the authorized browser, portal, real app-to-Xero, and combined companion
+acceptance are demonstrated. Those acceptance paths need an application server;
+this implementation step must leave it stopped.
+
 ### Review continuation from `aa75047e8a`
 
 The owned unbilled walkthrough fixture was re-audited read-only on 2026-10-13
