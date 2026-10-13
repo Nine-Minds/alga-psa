@@ -250,6 +250,64 @@ describe.runIf(enabled)('Prepaid Block due-work rows', () => {
     }
   });
 
+  async function insertExpiry(w: World, dueDate: string) {
+    await w.db('contract_line_block_issuances').insert({
+      tenant: w.tenant, issuance_id: uuidv4(), contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+      client_id: w.clientId, trigger_kind: 'expiry', due_date: dueDate, status: 'scheduled',
+    });
+  }
+  const listAt = (w: World, asOf: string) => fetchPrepaidBlockIssuanceDueWorkRows(w.db, {
+    tenant: w.tenant, asOf, options: { dateRange: { to: asOf } },
+  });
+
+  it('lists an expiry issuance due later in the current client-cadence window as early and not generatable', async () => {
+    const w = await setup({ lineCreatedAt: '2026-01-01T00:00:00Z' });
+    try {
+      await insertExpiry(w, '2026-04-20');
+      // The April window has started (04-01) but the issuance is not due until 04-20.
+      const rows = await listAt(w, '2026-04-10');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        blockTriggerKind: 'expiry', blockDueDate: '2026-04-20', invoiceWindowStart: '2026-04-01', invoiceWindowEnd: '2026-05-01',
+        dueState: 'early', isEarly: true, canGenerate: false,
+      });
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('the same expiry issuance is Ready when asOf is its due date', async () => {
+    const w = await setup({ lineCreatedAt: '2026-01-01T00:00:00Z' });
+    try {
+      await insertExpiry(w, '2026-04-20');
+      const rows = await listAt(w, '2026-04-20');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ blockDueDate: '2026-04-20', dueState: 'due', isEarly: false, canGenerate: true });
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('contract cadence: an expiry issuance due later in the current window is early, and Ready on its due date', async () => {
+    const w = await setup({ lineCreatedAt: '2026-01-01T00:00:00Z' });
+    try {
+      await w.db('contract_lines').where({ tenant: w.tenant, contract_line_id: w.lineId })
+        .update({ cadence_owner: 'contract', billing_timing: 'advance', billing_frequency: 'monthly' });
+      const { syncRecurringServicePeriodsForContractLine } = await import('../src/actions/recurringServicePeriodSync');
+      await w.db.transaction((trx) => syncRecurringServicePeriodsForContractLine(trx, {
+        tenant: w.tenant, contractLineId: w.lineId, sourceRunPrefix: 'pbd-test',
+      }));
+      await insertExpiry(w, '2026-04-20');
+      const early = await listAt(w, '2026-04-10');
+      expect(early).toHaveLength(1);
+      expect(early[0]).toMatchObject({ blockDueDate: '2026-04-20', invoiceWindowStart: '2026-04-01', dueState: 'early', isEarly: true, canGenerate: false });
+      const ready = await listAt(w, '2026-04-20');
+      expect(ready[0]).toMatchObject({ dueState: 'due', isEarly: false, canGenerate: true });
+    } finally {
+      await teardown(w);
+    }
+  });
+
   it('derives the window from the client schedule when no cycle rows or persisted periods exist', async () => {
     const w = await setup({ startDate: '2026-03-15', lineCreatedAt: '2026-01-01T00:00:00Z' });
     try {

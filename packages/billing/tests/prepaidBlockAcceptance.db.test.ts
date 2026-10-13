@@ -504,6 +504,24 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect((await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'exhaustion' }).first()).status).toBe('cancelled');
     expect((await alerts())[0].replenishment_status).toBeNull();
   });
+
+  it('void path: voiding the exhaustion follow-on\'s invoice restores the source block\'s expiry issuance to scheduled', async () => {
+    const w = await setup();
+    const first = await startContractAndIssueFirstBlock(w);
+    const { followOn, followOnInvoiceId } = await logToExhaustionAndDraftFollowOn(w, first.blockId);
+
+    const sourceExpiry = () => db('contract_line_block_issuances').where({ tenant, trigger_kind: 'expiry', source_block_id: first.blockId }).first();
+    expect((await sourceExpiry()).status).toBe('superseded');
+
+    // The same service voidInvoice runs for the invoice's hour blocks (the draft's pending block is unused).
+    const { voidHourBlocksForVoidedInvoice } = await import('../src/services/prepaidBlockLifecycleService');
+    const outcome = await db.transaction((trx) => voidHourBlocksForVoidedInvoice(
+      trx, tenant, followOnInvoiceId, userId, new Date().toISOString(), 'test void',
+    ));
+    expect(outcome).toEqual({ ok: true });
+    expect((await db('hour_blocks').where({ tenant, block_id: followOn.block_id }).first()).status).toBe('voided');
+    expect(await sourceExpiry()).toMatchObject({ status: 'scheduled', cancel_reason: null });
+  });
 });
 
 // ------------------------------------------------- deploy-fix: real generation path
@@ -585,6 +603,21 @@ describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real
     expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(1);
     // The block was issued exactly once.
     expect(await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'contract_start', status: 'invoiced' })).toHaveLength(1);
+  });
+
+  it('the server-side generate path rejects an issuance whose due date is in the future', async () => {
+    const w = await setup();
+    await prepareClientForGeneration(w);
+    await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.blockLineId));
+    const future = new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10);
+    const issuance = await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'contract_start' }).first();
+    await db('contract_line_block_issuances').where({ tenant, issuance_id: issuance.issuance_id }).update({ due_date: future });
+    const engine = BillingEngine.forTransaction(db as any, tenant);
+    await expect((engine as any).loadPrepaidBlockIssuanceCharges(w.clientId, WINDOW, [issuance.issuance_id]))
+      .rejects.toThrow(/not due until/);
+    await db('contract_line_block_issuances').where({ tenant, issuance_id: issuance.issuance_id }).update({ due_date: today() });
+    await expect((engine as any).loadPrepaidBlockIssuanceCharges(w.clientId, WINDOW, [issuance.issuance_id]))
+      .resolves.toHaveLength(1);
   });
 
   it('after generate + finalize, "Issue next block" lists a row in the same window without creating a cycle', async () => {
