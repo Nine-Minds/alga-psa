@@ -75,6 +75,7 @@ describe('Google Provider Data Persistence Tests', () => {
   afterEach(async () => {
     // Clean up test data
     try {
+      await tenantTable('imap_email_provider_config').delete();
       await tenantTable('google_email_provider_config').delete();
       await tenantTable('email_providers').delete();
 
@@ -416,8 +417,6 @@ describe('Google Provider Data Persistence Tests', () => {
 
       const reread = await emailProviderService.getProvider(created.id);
       expect(created.provider_config).toEqual(reread?.provider_config);
-
-      await tenantTable('imap_email_provider_config').where({ email_provider_id: created.id }).delete();
     });
 
     it('joins a caller transaction and leaves nothing behind when it rolls back', async () => {
