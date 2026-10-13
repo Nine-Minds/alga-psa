@@ -2368,15 +2368,19 @@
       "customFields": "Campos personalizados",
       "status": "Estado",
       "statusBoardDefault": "Predeterminado del tablero",
-      "sameAsSource": "Igual que el original",
       "none": "Ninguno",
-      "notCopied": "Los comentarios, las entradas de tiempo, los archivos adjuntos y la fecha de vencimiento no se copian."
+      "notCopied": "Los comentarios, las entradas de tiempo, los archivos adjuntos y la fecha de vencimiento no se copian.",
+      "unresolved": "Nombre no disponible"
     },
     "results": {
       "created_one": "{{count}} ticket creado",
       "created_other": "{{count}} tickets creados",
       "failed_one": "Falló {{count}} copia",
       "failed_other": "Fallaron {{count}} copias"
-    }
+    },
+    "discardTitle": "¿Descartar estas copias?",
+    "discardMessage": "Las copias configuradas aún no se han creado. ¿Descartarlas y cerrar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Seguir editando"
   }
 }

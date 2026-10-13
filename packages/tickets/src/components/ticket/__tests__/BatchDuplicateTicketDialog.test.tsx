@@ -8,7 +8,6 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 const duplicateTicketBatchMock = vi.fn();
 const getTicketDuplicateSourceMock = vi.fn();
 const getContactsByClientMock = vi.fn();
-const getTicketFormDataMock = vi.fn();
 
 const { translate } = vi.hoisted(() => ({
   translate: (key: string, fallback?: string | Record<string, unknown>) => {
@@ -32,9 +31,6 @@ vi.mock('../../../actions/ticketActions', () => ({
 vi.mock('../../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
 }));
-vi.mock('../../../actions/ticketFormActions', () => ({
-  getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args),
-}));
 
 // Lightweight Dialog: the radix dialog is not under test here.
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -49,6 +45,17 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 }));
 
 // A checkbox list stands in for the dropdown picker.
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, onConfirm, onClose, title, id }: any) =>
+    isOpen ? (
+      <div id={id}>
+        <span>{title}</span>
+        <button id={`${id}-confirm`} onClick={onConfirm}>confirm</button>
+        <button id={`${id}-keep`} onClick={onClose}>keep</button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('@alga-psa/ui/components/MultiContactPicker', () => ({
   default: ({ id, values, onValuesChange, contacts, disabled }: any) => (
     <div id={id}>
@@ -85,13 +92,19 @@ const source = {
   contact: { id: 'c-john', name: 'John Smith' },
   location_id: null,
   board_id: 'board-1',
-  category_id: null,
-  subcategory_id: null,
+  category_id: 'cat-1',
+  subcategory_id: 'sub-1',
   priority_id: 'prio-1',
   itil_impact: null,
   itil_urgency: null,
   assigned_to: 'user-1',
-  assigned_team_id: null,
+  assigned_team_id: 'team-1',
+  board_name: 'Support',
+  category_name: 'Hardware',
+  subcategory_name: 'Laptops',
+  priority_name: 'High',
+  assignee_name: 'Ann Agent',
+  assigned_team_name: 'Onboarding Crew',
   additional_agents: [],
   tags: [{ tag_id: 'tag-1', tag_text: 'onboarding', background_color: null, text_color: null }],
   checklist: [
@@ -133,11 +146,6 @@ describe('BatchDuplicateTicketDialog', () => {
     vi.clearAllMocks();
     getTicketDuplicateSourceMock.mockResolvedValue(source);
     getContactsByClientMock.mockResolvedValue(contacts);
-    getTicketFormDataMock.mockResolvedValue({
-      users: [{ user_id: 'user-1', first_name: 'Ann', last_name: 'Agent' }],
-      boards: [{ board_id: 'board-1', board_name: 'Support' }],
-      priorities: [{ priority_id: 'prio-1', priority_name: 'High' }],
-    });
   });
   afterEach(() => cleanup());
 
@@ -220,6 +228,9 @@ describe('BatchDuplicateTicketDialog', () => {
     expect(within(summary).getByText('Support')).toBeInTheDocument();
     expect(within(summary).getByText('High')).toBeInTheDocument();
     expect(within(summary).getByText('Ann Agent')).toBeInTheDocument();
+    expect(within(summary).getByText('Hardware › Laptops')).toBeInTheDocument();
+    expect(within(summary).getByText('Onboarding Crew')).toBeInTheDocument();
+    expect(within(summary).queryByText('Same as source')).toBeNull();
     expect(within(summary).getByText('onboarding')).toBeInTheDocument();
     expect(within(summary).getByText('Copy 2 items (unchecked)')).toBeInTheDocument();
     expect(within(summary).getByText('Board default')).toBeInTheDocument();
@@ -229,6 +240,36 @@ describe('BatchDuplicateTicketDialog', () => {
     expect(list).toHaveTextContent('Jane Doe→Onboard Jane Doe');
     expect(list).toHaveTextContent('Bob Ray→Onboard Bob Ray');
     expect(document.getElementById('batch-duplicate-create-button')).toHaveTextContent('Create 2 tickets');
+  });
+
+  it('says so explicitly when a referenced name cannot be resolved', async () => {
+    getTicketDuplicateSourceMock.mockResolvedValue({ ...source, assigned_team_name: null, category_name: null });
+    renderDialog();
+    await loaded();
+    pick('Jane Doe');
+    fireEvent.click(document.getElementById('batch-duplicate-review-button')!);
+    const summary = document.getElementById('batch-duplicate-review-summary')!;
+    expect(within(summary).getAllByText(/Name unavailable/).length).toBeGreaterThanOrEqual(2);
+    expect(within(summary).queryByText('Same as source')).toBeNull();
+  });
+
+  it('asks before Cancel discards copies that were set up, and closes straight away when nothing was', async () => {
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+    await loaded();
+    fireEvent.click(document.getElementById('batch-duplicate-cancel-button')!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    onClose.mockClear();
+    pick('Jane Doe');
+    fireEvent.click(document.getElementById('batch-duplicate-cancel-button')!);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('Discard these copies?')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('batch-duplicate-discard-dialog-keep')!);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('batch-duplicate-cancel-button')!);
+    fireEvent.click(document.getElementById('batch-duplicate-discard-dialog-confirm')!);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('sends { key, contactId, title } rows and copyChecklist to duplicateTicketBatch', async () => {

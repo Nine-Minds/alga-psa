@@ -2368,15 +2368,19 @@
       "customFields": "Campos personalizados",
       "status": "Status",
       "statusBoardDefault": "Padrão do quadro",
-      "sameAsSource": "Igual ao original",
       "none": "Nenhum",
-      "notCopied": "Comentários, lançamentos de tempo, anexos e data de vencimento não são copiados."
+      "notCopied": "Comentários, lançamentos de tempo, anexos e data de vencimento não são copiados.",
+      "unresolved": "Nome indisponível"
     },
     "results": {
       "created_one": "{{count}} ticket criado",
       "created_other": "{{count}} tickets criados",
       "failed_one": "{{count}} cópia falhou",
       "failed_other": "{{count}} cópias falharam"
-    }
+    },
+    "discardTitle": "Descartar estas cópias?",
+    "discardMessage": "As cópias configuradas ainda não foram criadas. Descartá-las e fechar?",
+    "discardConfirm": "Descartar",
+    "discardKeep": "Continuar editando"
   }
 }

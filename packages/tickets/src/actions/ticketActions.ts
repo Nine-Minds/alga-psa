@@ -763,7 +763,30 @@ async function loadDuplicateSourceDraft(
   tenant: string,
   source: ITicket & { ticket_id: string }
 ): Promise<TicketDuplicateSource> {
-  const [client, contact, additionalAgentRows, tagRows, checklistRows] = await Promise.all([
+  const nameOf = async (
+    table: string,
+    idColumn: string,
+    nameColumn: string,
+    id: string | null | undefined
+  ): Promise<string | null> => {
+    if (!id) return null;
+    const row = await tenantScopedTable(trx, table, tenant).where({ [idColumn]: id }).select(nameColumn).first();
+    return (row?.[nameColumn] as string | undefined) ?? null;
+  };
+
+  const [
+    client,
+    contact,
+    additionalAgentRows,
+    tagRows,
+    checklistRows,
+    boardName,
+    categoryName,
+    subcategoryName,
+    priorityName,
+    assignee,
+    teamName,
+  ] = await Promise.all([
     tenantScopedTable(trx, 'clients', tenant)
       .where({ client_id: source.client_id })
       .select('client_id', 'client_name', 'client_type')
@@ -787,7 +810,21 @@ async function loadDuplicateSourceDraft(
       .where({ ticket_id: source.ticket_id })
       .orderBy('order_number', 'asc')
       .select('item_name', 'is_required'),
+    nameOf('boards', 'board_id', 'board_name', source.board_id),
+    nameOf('categories', 'category_id', 'category_name', source.category_id),
+    nameOf('categories', 'category_id', 'category_name', source.subcategory_id),
+    nameOf('priorities', 'priority_id', 'priority_name', source.priority_id),
+    source.assigned_to
+      ? tenantScopedTable(trx, 'users', tenant)
+          .where({ user_id: source.assigned_to })
+          .select('first_name', 'last_name')
+          .first()
+      : Promise.resolve(undefined),
+    nameOf('teams', 'team_id', 'team_name', source.assigned_team_id),
   ]);
+  const assigneeName = assignee
+    ? `${assignee.first_name ?? ''} ${assignee.last_name ?? ''}`.trim() || null
+    : null;
 
   const attributes = (source.attributes ?? {}) as Record<string, unknown>;
 
@@ -813,6 +850,12 @@ async function loadDuplicateSourceDraft(
     itil_urgency: source.itil_urgency ?? null,
     assigned_to: source.assigned_to ?? null,
     assigned_team_id: source.assigned_team_id ?? null,
+    board_name: boardName,
+    category_name: categoryName,
+    subcategory_name: subcategoryName,
+    priority_name: priorityName,
+    assignee_name: assigneeName,
+    assigned_team_name: teamName,
     additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
       user_id: row.user_id,
       first_name: row.first_name ?? null,

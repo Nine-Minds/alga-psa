@@ -2368,15 +2368,19 @@
       "customFields": "Campi personalizzati",
       "status": "Stato",
       "statusBoardDefault": "Predefinito della board",
-      "sameAsSource": "Come l’originale",
       "none": "Nessuno",
-      "notCopied": "Commenti, registrazioni di tempo, allegati e scadenza non vengono copiati."
+      "notCopied": "Commenti, registrazioni di tempo, allegati e scadenza non vengono copiati.",
+      "unresolved": "Nome non disponibile"
     },
     "results": {
       "created_one": "{{count}} ticket creato",
       "created_other": "{{count}} ticket creati",
       "failed_one": "{{count}} copia non riuscita",
       "failed_other": "{{count}} copie non riuscite"
-    }
+    },
+    "discardTitle": "Annullare queste copie?",
+    "discardMessage": "Le copie impostate non sono ancora state create. Annullarle e chiudere?",
+    "discardConfirm": "Annulla copie",
+    "discardKeep": "Continua a modificare"
   }
 }

@@ -2368,15 +2368,19 @@
       "customFields": "Aangepaste velden",
       "status": "Status",
       "statusBoardDefault": "Standaard van het board",
-      "sameAsSource": "Zoals het origineel",
       "none": "Geen",
-      "notCopied": "Opmerkingen, tijdregistraties, bijlagen en de vervaldatum worden niet gekopieerd."
+      "notCopied": "Opmerkingen, tijdregistraties, bijlagen en de vervaldatum worden niet gekopieerd.",
+      "unresolved": "Naam niet beschikbaar"
     },
     "results": {
       "created_one": "{{count}} ticket aangemaakt",
       "created_other": "{{count}} tickets aangemaakt",
       "failed_one": "{{count}} kopie mislukt",
       "failed_other": "{{count}} kopieën mislukt"
-    }
+    },
+    "discardTitle": "Deze kopieën verwerpen?",
+    "discardMessage": "De ingestelde kopieën zijn nog niet aangemaakt. Verwerpen en sluiten?",
+    "discardConfirm": "Verwerpen",
+    "discardKeep": "Verder bewerken"
   }
 }

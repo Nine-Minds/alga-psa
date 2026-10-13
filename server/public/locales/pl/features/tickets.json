@@ -2522,9 +2522,9 @@
       "customFields": "Pola niestandardowe",
       "status": "Status",
       "statusBoardDefault": "Domyślny dla tablicy",
-      "sameAsSource": "Tak jak w źródle",
       "none": "Brak",
-      "notCopied": "Komentarze, wpisy czasu, załączniki i termin wykonania nie są kopiowane."
+      "notCopied": "Komentarze, wpisy czasu, załączniki i termin wykonania nie są kopiowane.",
+      "unresolved": "Nazwa niedostępna"
     },
     "results": {
       "created_one": "Utworzono {{count}} zgłoszenie",
@@ -2535,6 +2535,10 @@
       "failed_few": "Nie udało się utworzyć {{count}} kopii",
       "failed_many": "Nie udało się utworzyć {{count}} kopii",
       "failed_other": "Nie udało się utworzyć {{count}} kopii"
-    }
+    },
+    "discardTitle": "Odrzucić te kopie?",
+    "discardMessage": "Skonfigurowane kopie nie zostały jeszcze utworzone. Odrzucić je i zamknąć?",
+    "discardConfirm": "Odrzuć",
+    "discardKeep": "Kontynuuj edycję"
   }
 }

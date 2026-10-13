@@ -2368,15 +2368,19 @@
       "customFields": "Benutzerdefinierte Felder",
       "status": "Status",
       "statusBoardDefault": "Standard des Boards",
-      "sameAsSource": "Wie beim Original",
       "none": "Keine",
-      "notCopied": "Kommentare, Zeiteinträge, Anhänge und Fälligkeitsdatum werden nicht kopiert."
+      "notCopied": "Kommentare, Zeiteinträge, Anhänge und Fälligkeitsdatum werden nicht kopiert.",
+      "unresolved": "Name nicht verfügbar"
     },
     "results": {
       "created_one": "{{count}} Ticket erstellt",
       "created_other": "{{count}} Tickets erstellt",
       "failed_one": "{{count}} Kopie fehlgeschlagen",
       "failed_other": "{{count}} Kopien fehlgeschlagen"
-    }
+    },
+    "discardTitle": "Diese Kopien verwerfen?",
+    "discardMessage": "Die eingerichteten Kopien wurden noch nicht erstellt. Verwerfen und schließen?",
+    "discardConfirm": "Verwerfen",
+    "discardKeep": "Weiter bearbeiten"
   }
 }

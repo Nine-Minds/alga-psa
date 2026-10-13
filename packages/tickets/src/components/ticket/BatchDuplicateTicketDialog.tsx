@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import MultiContactPicker from '@alga-psa/ui/components/MultiContactPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -24,7 +25,6 @@ import {
   type TicketDuplicateBatchResult,
 } from '../../actions/ticketActions';
 import { getContactsByClient } from '../../actions/clientLookupActions';
-import { getTicketFormData } from '../../actions/ticketFormActions';
 import type { TicketDuplicateSource } from '../../lib/ticketDuplicate';
 import {
   DUPLICATE_TITLE_TOKENS,
@@ -57,12 +57,6 @@ type RowIssue =
   | { kind: 'empty' }
   | { kind: 'unresolved_token' };
 
-interface SharedLabels {
-  board?: string;
-  priority?: string;
-  assignee?: string;
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -80,7 +74,6 @@ export default function BatchDuplicateTicketDialog({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [source, setSource] = useState<TicketDuplicateSource | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [labels, setLabels] = useState<SharedLabels>({});
 
   const [step, setStep] = useState<Step>('setup');
   const [template, setTemplate] = useState('');
@@ -88,6 +81,7 @@ export default function BatchDuplicateTicketDialog({
   const [copyChecklist, setCopyChecklist] = useState(true);
 
   const [isPending, setIsPending] = useState(false);
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [created, setCreated] = useState<TicketDuplicateBatchResult['created']>([]);
@@ -102,7 +96,7 @@ export default function BatchDuplicateTicketDialog({
     return `r${rowCounter.current}`;
   }, []);
 
-  // Load the source, its client's contacts and (best effort) display names for the review.
+  // Load the source (with display names for the review) and its client's contacts.
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
@@ -116,7 +110,6 @@ export default function BatchDuplicateTicketDialog({
     setLoadError(null);
     setSource(null);
     setContacts([]);
-    setLabels({});
     setIsLoading(true);
 
     (async () => {
@@ -130,25 +123,13 @@ export default function BatchDuplicateTicketDialog({
         setSource(result);
         setTemplate(result.title);
 
-        const [contactList, formData] = await Promise.all([
-          getContactsByClient(result.client.id, 'active'),
-          getTicketFormData().catch(() => null),
-        ]);
+        const contactList = await getContactsByClient(result.client.id, 'active');
         if (cancelled) return;
         if (isActionMessageError(contactList) || isActionPermissionError(contactList)) {
           setLoadError(getErrorMessage(contactList));
           return;
         }
         setContacts(contactList as IContact[]);
-
-        if (formData && !isActionMessageError(formData) && !isActionPermissionError(formData)) {
-          const user = formData.users?.find((u) => u.user_id === result.assigned_to);
-          setLabels({
-            board: formData.boards?.find((b) => b.board_id === result.board_id)?.board_name,
-            priority: formData.priorities?.find((p) => p.priority_id === result.priority_id)?.priority_name,
-            assignee: user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || undefined : undefined,
-          });
-        }
       } catch (error) {
         console.error('[BatchDuplicateTicketDialog] Failed to load duplicate source:', error);
         if (!cancelled) {
@@ -172,6 +153,12 @@ export default function BatchDuplicateTicketDialog({
   }, [contacts]);
 
   const clientName = source?.client.name ?? '';
+
+  /** Name for a source reference; no id means "none", an id without a name is reported as unresolved. */
+  const resolvedName = (id: string | null, name: string | null): string => {
+    if (!id) return t('batchDuplicate.summary.none', 'None');
+    return name ?? t('batchDuplicate.summary.unresolved', 'Name unavailable');
+  };
 
   /** Final title and the issue (if any) for each row. */
   const resolved = useMemo(() => {
@@ -277,6 +264,17 @@ export default function BatchDuplicateTicketDialog({
       onCompleted?.({ batchId: lastBatchIdRef.current, created, failed });
     }
     onClose();
+  };
+
+  // The Dialog's own close paths (X, Escape, overlay) run through its dismiss guard; the in-body
+  // Cancel button asks the same question.
+  const requestCancel = () => {
+    if (isPending) return;
+    if (rows.length > 0 && created.length === 0) {
+      setIsDiscardConfirmOpen(true);
+      return;
+    }
+    finish();
   };
 
   const submit = async (only: Set<string> | null) => {
@@ -526,7 +524,7 @@ export default function BatchDuplicateTicketDialog({
             )}
 
             <div className="flex justify-end gap-2">
-              <Button id={`${idPrefix}-cancel-button`} variant="ghost" disabled={isPending} onClick={finish}>
+              <Button id={`${idPrefix}-cancel-button`} variant="ghost" disabled={isPending} onClick={requestCancel}>
                 {t('batchDuplicate.cancel', 'Cancel')}
               </Button>
               <Button
@@ -549,25 +547,25 @@ export default function BatchDuplicateTicketDialog({
               <dt className="text-gray-500">{t('batchDuplicate.summary.client', 'Client')}</dt>
               <dd>{source.client.name}</dd>
               <dt className="text-gray-500">{t('batchDuplicate.summary.board', 'Board')}</dt>
-              <dd>{labels.board ?? t('batchDuplicate.summary.sameAsSource', 'Same as source')}</dd>
+              <dd>{resolvedName(source.board_id, source.board_name)}</dd>
               {source.category_id && (
                 <>
                   <dt className="text-gray-500">{t('batchDuplicate.summary.category', 'Category')}</dt>
-                  <dd>{t('batchDuplicate.summary.sameAsSource', 'Same as source')}</dd>
+                  <dd>
+                    {source.subcategory_id
+                      ? `${resolvedName(source.category_id, source.category_name)} › ${resolvedName(source.subcategory_id, source.subcategory_name)}`
+                      : resolvedName(source.category_id, source.category_name)}
+                  </dd>
                 </>
               )}
               <dt className="text-gray-500">{t('batchDuplicate.summary.priority', 'Priority')}</dt>
-              <dd>{labels.priority ?? t('batchDuplicate.summary.sameAsSource', 'Same as source')}</dd>
+              <dd>{resolvedName(source.priority_id, source.priority_name)}</dd>
               <dt className="text-gray-500">{t('batchDuplicate.summary.assignee', 'Assignee')}</dt>
-              <dd>
-                {source.assigned_to
-                  ? labels.assignee ?? t('batchDuplicate.summary.sameAsSource', 'Same as source')
-                  : t('batchDuplicate.summary.none', 'None')}
-              </dd>
+              <dd>{resolvedName(source.assigned_to, source.assignee_name)}</dd>
               {source.assigned_team_id && (
                 <>
                   <dt className="text-gray-500">{t('batchDuplicate.summary.team', 'Team')}</dt>
-                  <dd>{t('batchDuplicate.summary.sameAsSource', 'Same as source')}</dd>
+                  <dd>{resolvedName(source.assigned_team_id, source.assigned_team_name)}</dd>
                 </>
               )}
               {source.additional_agents.length > 0 && (
@@ -712,6 +710,19 @@ export default function BatchDuplicateTicketDialog({
           </div>
         )}
       </DialogContent>
+      <ConfirmationDialog
+        id={`${idPrefix}-discard-dialog`}
+        isOpen={isDiscardConfirmOpen}
+        onClose={() => setIsDiscardConfirmOpen(false)}
+        onConfirm={() => {
+          setIsDiscardConfirmOpen(false);
+          finish();
+        }}
+        title={t('batchDuplicate.discardTitle', 'Discard these copies?')}
+        message={t('batchDuplicate.discardMessage', 'The copies you set up have not been created yet. Discard them and close?')}
+        confirmLabel={t('batchDuplicate.discardConfirm', 'Discard')}
+        cancelLabel={t('batchDuplicate.discardKeep', 'Keep editing')}
+      />
     </Dialog>
   );
 }

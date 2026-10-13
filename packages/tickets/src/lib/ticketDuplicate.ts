@@ -33,6 +33,17 @@ export interface TicketDuplicateSource {
   itil_urgency: number | null;
   assigned_to: string | null;
   assigned_team_id: string | null;
+  /**
+   * Display names for the ids above, resolved server-side in the same tenant-scoped load.
+   * `null` when the id is null OR the referenced row could not be found; callers must treat
+   * "id set, name null" as unresolved and say so rather than guess.
+   */
+  board_name: string | null;
+  category_name: string | null;
+  subcategory_name: string | null;
+  priority_name: string | null;
+  assignee_name: string | null;
+  assigned_team_name: string | null;
   additional_agents: { user_id: string; first_name: string | null; last_name: string | null }[];
   tags: {
     tag_id: string;

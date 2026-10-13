@@ -2368,15 +2368,19 @@
       "customFields": "Custom fields",
       "status": "Status",
       "statusBoardDefault": "Board default",
-      "sameAsSource": "Same as source",
       "none": "None",
-      "notCopied": "Comments, time entries, attachments and due date are not copied."
+      "notCopied": "Comments, time entries, attachments and due date are not copied.",
+      "unresolved": "Name unavailable"
     },
     "results": {
       "created_one": "{{count}} ticket created",
       "created_other": "{{count}} tickets created",
       "failed_one": "{{count}} copy failed",
       "failed_other": "{{count}} copies failed"
-    }
+    },
+    "discardTitle": "Discard these copies?",
+    "discardMessage": "The copies you set up have not been created yet. Discard them and close?",
+    "discardConfirm": "Discard",
+    "discardKeep": "Keep editing"
   }
 }

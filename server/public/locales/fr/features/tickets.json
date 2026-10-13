@@ -2368,15 +2368,19 @@
       "customFields": "Champs personnalisés",
       "status": "Statut",
       "statusBoardDefault": "Valeur par défaut du tableau",
-      "sameAsSource": "Identique à la source",
       "none": "Aucun",
-      "notCopied": "Les commentaires, saisies de temps, pièces jointes et la date d’échéance ne sont pas copiés."
+      "notCopied": "Les commentaires, saisies de temps, pièces jointes et la date d’échéance ne sont pas copiés.",
+      "unresolved": "Nom indisponible"
     },
     "results": {
       "created_one": "{{count}} ticket créé",
       "created_other": "{{count}} tickets créés",
       "failed_one": "{{count}} copie a échoué",
       "failed_other": "{{count}} copies ont échoué"
-    }
+    },
+    "discardTitle": "Abandonner ces copies ?",
+    "discardMessage": "Les copies configurées n'ont pas encore été créées. Les abandonner et fermer ?",
+    "discardConfirm": "Abandonner",
+    "discardKeep": "Continuer la modification"
   }
 }

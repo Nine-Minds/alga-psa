@@ -2368,15 +2368,19 @@
       "customFields": "Anpassade fält",
       "status": "Status",
       "statusBoardDefault": "Tavlans standard",
-      "sameAsSource": "Samma som originalet",
       "none": "Ingen",
-      "notCopied": "Kommentarer, tidsposter, bilagor och förfallodatum kopieras inte."
+      "notCopied": "Kommentarer, tidsposter, bilagor och förfallodatum kopieras inte.",
+      "unresolved": "Namn otillgängligt"
     },
     "results": {
       "created_one": "{{count}} ärende skapat",
       "created_other": "{{count}} ärenden skapade",
       "failed_one": "{{count}} kopia misslyckades",
       "failed_other": "{{count}} kopior misslyckades"
-    }
+    },
+    "discardTitle": "Förkasta dessa kopior?",
+    "discardMessage": "De kopior du har ställt in har inte skapats ännu. Förkasta dem och stäng?",
+    "discardConfirm": "Förkasta",
+    "discardKeep": "Fortsätt redigera"
   }
 }

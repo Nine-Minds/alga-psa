@@ -32,6 +32,28 @@ vi.mock('@alga-psa/auth', async () => {
   return { ...createAuthModuleMock(), localizeActionError: async (error: unknown) => error };
 });
 
+// Lets a test run code right after the Nth copy's provenance write (inside that copy's
+// transaction), i.e. between copy N and copy N+1 of the same batch.
+const duplicateHook: { afterCall: number | null; calls: number; run: (() => Promise<void>) | null } = {
+  afterCall: null,
+  calls: 0,
+  run: null,
+};
+vi.mock('@alga-psa/tickets/lib/ticketDuplicate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/tickets/lib/ticketDuplicate')>();
+  return {
+    ...actual,
+    recordDuplicateCopy: async (...args: Parameters<typeof actual.recordDuplicateCopy>) => {
+      const result = await actual.recordDuplicateCopy(...args);
+      duplicateHook.calls += 1;
+      if (duplicateHook.afterCall === duplicateHook.calls && duplicateHook.run) {
+        await duplicateHook.run();
+      }
+      return result;
+    },
+  };
+});
+
 const HOOK_TIMEOUT = 900_000;
 
 type Outcome = { threw: Error | null; value: any };
@@ -361,24 +383,54 @@ describe('Batch duplicate ticket (integration)', () => {
       }
     });
 
-    it('refuses cleanly, creating nothing, once the source has been deleted (retry after a mid-batch deletion)', async () => {
-      // A true mid-batch deletion cannot be interleaved deterministically; this covers the
-      // outcome a retry sees (preflight refusal) after the first round created a copy.
-      const copies = copiesFor(contactIds.slice(0, 3));
-      const original = ticketActions.duplicateTicketBatch;
-      // Run the first copy alone, delete the source, then submit the rest as a retry would.
-      const first: any = await original(sourceTicketId, [copies[0]], { copyChecklist: true });
-      expect(first.created).toHaveLength(1);
-
+    async function deleteSourceTicket() {
       await tt('ticket_audit_logs').where({ ticket_id: sourceTicketId }).delete();
       await tt('ticket_checklist_items').where({ ticket_id: sourceTicketId }).delete();
       await tt('ticket_resources').where({ ticket_id: sourceTicketId }).delete();
       await tt('tag_mappings').where({ tagged_id: sourceTicketId, tagged_type: 'ticket' }).delete();
       await tt('tickets').where({ duplicated_from_ticket_id: sourceTicketId }).update({ duplicated_from_ticket_id: null });
       await tt('tickets').where({ ticket_id: sourceTicketId }).delete();
+    }
+
+    it('keeps the copies already made and fails the rest cleanly when the source is deleted mid-batch', async () => {
+      // Delete the source from inside copy 2 (right after its provenance write), so copies 3..4
+      // find no source when they re-authorize inside their own transaction.
+      const base = context.db;
+      const savepointDb = new Proxy(base as any, {
+        get: (target, prop) => (prop === 'commit' || prop === 'rollback' ? undefined : Reflect.get(target, prop, target)),
+      });
+      const spy = vi.spyOn(pkgDb, 'createTenantKnex').mockImplementation(async () => ({ knex: savepointDb, tenant: tenantId }) as any);
+      duplicateHook.calls = 0;
+      duplicateHook.afterCall = 2;
+      duplicateHook.run = deleteSourceTicket;
+      try {
+        const copies = copiesFor(contactIds.slice(0, 4));
+        const before = await countTickets();
+        const result: any = await ticketActions.duplicateTicketBatch(sourceTicketId, copies, { copyChecklist: true });
+
+        expect(result.created.map((c: any) => c.key)).toEqual(copies.slice(0, 2).map((c) => c.key));
+        expect(result.failed.map((f: any) => f.key)).toEqual(copies.slice(2).map((c) => c.key));
+        for (const failure of result.failed) expect(failure.message).toMatch(/Source ticket not found/);
+        // +2 copies, -1 for the source the hook deleted.
+        expect(await countTickets()).toBe(before + 2 - 1);
+        for (const created of result.created) {
+          expect(await tt('tickets').where({ ticket_id: created.ticketId })).toHaveLength(1);
+        }
+      } finally {
+        duplicateHook.afterCall = null;
+        duplicateHook.run = null;
+        spy.mockRestore();
+      }
+    });
+
+    it('refuses the whole request, creating nothing, when the source is already gone (retry after deletion)', async () => {
+      const copies = copiesFor(contactIds.slice(0, 3));
+      const first: any = await ticketActions.duplicateTicketBatch(sourceTicketId, [copies[0]], { copyChecklist: true });
+      expect(first.created).toHaveLength(1);
+      await deleteSourceTicket();
 
       const before = await countTickets();
-      const rest = await attempt(() => original(sourceTicketId, copies.slice(1), { copyChecklist: true }));
+      const rest = await attempt(() => ticketActions.duplicateTicketBatch(sourceTicketId, copies.slice(1), { copyChecklist: true }));
       expect(refusalMessage(rest)).toMatch(/not found|cannot view/i);
       expect(await countTickets()).toBe(before);
     });
