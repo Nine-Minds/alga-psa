@@ -72,6 +72,7 @@ import {
 } from './bucketOverlayActions';
 import { createBucketPoolInTransaction } from './bucketPoolActions';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContract } from '../services/prepaidBlockIssuanceSync';
 import {
   contractWizardActionErrorFrom,
   fixedLineNoServiceMessage,
@@ -2088,11 +2089,13 @@ export const createClientContractFromWizard = withAuth(async (
     }
 
     if (!isDraft) {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContract(trx, {
         tenant,
         contractId,
         sourceRunPrefix: 'contract_wizard_save',
       });
+      await syncPrepaidBlockIssuancesForContract(trx, tenant, contractId);
     }
 
     createdForWorkflow = {

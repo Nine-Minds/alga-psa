@@ -30,6 +30,7 @@ import {
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
+import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
 import { TaxService } from '../services/taxService';
 import { fetchStrandedArrearsOnlyLineGaps } from './arrearsOnlyLineGaps';
 import { ITaxCalculationResult } from '@alga-psa/types';
@@ -58,6 +59,7 @@ import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/b
 import {
     detectRecurringApprovalBlockers,
     detectRecurringApprovalWarnings,
+    detectStalePendingPrepaidBlockWarnings,
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
     type RecurringApprovalWarnings,
@@ -782,6 +784,7 @@ function normalizeChargeType(
         case 'Hourly':
         case 'Usage':
         case 'Bucket':
+        case 'PrepaidBlock':
             return raw;
         default:
             return null;
@@ -1970,8 +1973,20 @@ export const getAvailableRecurringDueWork = withAuth(async (
             tenant,
             clientMetadataById,
         );
+        // Scheduled Prepaid Block issuances: dated one-off in-advance rows that
+        // share the contract's invoice window (and grouping scope) with its Fixed rows.
+        const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
+            tenant,
+            asOf,
+            candidateBillingPeriods,
+            clientTaxSourceById: new Map(
+                Array.from(clientMetadataById.entries()).map(([clientId, meta]) => [clientId, meta.taxSource] as const),
+            ),
+            options,
+            groupingMetadataByRecordId,
+        });
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
-            [...readyPersistedRows, ...unresolvedNonContractRows],
+            [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows],
             groupingMetadataByRecordId,
             asOf,
             monthEndCloseEligibilityDate,
@@ -1983,7 +1998,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const approvalBlockedEntryCountsByExecutionIdentityKey = await detectRecurringApprovalBlockers({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
                 executionIdentityKey: row.executionIdentityKey,
                 clientId: row.clientId,
                 servicePeriodStart: row.servicePeriodStart,
@@ -1992,18 +2007,28 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 scheduleKey: row.scheduleKey ?? null,
             })),
         });
-        const approvalWarningsByExecutionIdentityKey = await detectRecurringApprovalWarnings({
+        const approvalWarningRows = [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            }));
+        const projectApprovalWarnings = await detectRecurringApprovalWarnings({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
-                executionIdentityKey: row.executionIdentityKey,
-                clientId: row.clientId,
-                servicePeriodStart: row.servicePeriodStart,
-                servicePeriodEnd: row.servicePeriodEnd,
-                contractLineId: row.contractLineId ?? null,
-                scheduleKey: row.scheduleKey ?? null,
-            })),
+            rows: approvalWarningRows,
         });
+        const stalePrepaidBlockWarnings = await detectStalePendingPrepaidBlockWarnings({
+            knex,
+            tenant,
+            rows: approvalWarningRows,
+        });
+        const approvalWarningsByExecutionIdentityKey = new Map(projectApprovalWarnings);
+        for (const [key, extra] of stalePrepaidBlockWarnings) {
+            approvalWarningsByExecutionIdentityKey.set(key, [...(approvalWarningsByExecutionIdentityKey.get(key) ?? []), ...extra]);
+        }
         const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
             blockedInvoiceCandidates,
             approvalBlockedEntryCountsByExecutionIdentityKey,
