@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Festpreis",
       "Hourly": "Stündlich",
-      "Usage": "Nutzungsbasiert"
+      "Usage": "Nutzungsbasiert",
+      "PrepaidBlock": "Prepaid-Block"
     },
     "quoteStatus": {
       "draft": "Entwurf",

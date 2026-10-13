@@ -813,7 +813,9 @@
       "hourlyTitle": "Hourly",
       "usageDescription": "Invoice for units consumed.",
       "usageTitle": "Usage-Based",
-      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period."
+      "fixedSemantics": "Bill a bundle price or recurring quantity × unit rate every period.",
+      "prepaidBlockTitle": "Prepaid Block",
+      "prepaidBlockDescription": "Invoice a block of hours up front; time logged draws it down and the next block is invoiced when it runs out."
     },
     "billingTiming": {
       "advance": "Advance (bill at start of period)",
@@ -881,13 +883,16 @@
       "usageServiceRequired": "At least one usage-based service is required",
       "usageServiceSelectRequired": "Service {{index}}: Please select a service",
       "invalidQuantity": "Quantity must be zero or greater.",
-      "recurringUnitRateRequired": "Enter a unit rate for each recurring service."
+      "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
+      "prepaidBlockCurrencyRequired": "The contract needs a currency before a prepaid block can be priced."
     },
     "fixedServicesPricingIntent": "Choose a bundle price or recurring seats/units for each service.",
     "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
     "recurringQuantity": "Recurring quantity",
     "allocationQuantity": "Allocation quantity",
-    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.",
+    "prepaidBlockTitle": "Prepaid Block",
+    "prepaidBlockDescription": "Set the block size and price. The price defaults to hours x the service rate and is saved as an explicit amount."
   },
   "pricingSchedules": {
     "list": {
@@ -2663,5 +2668,106 @@
   },
   "sellHourBlockNote": {
     "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Enter a block size greater than zero (fractions of an hour are allowed).",
+      "priceInvalid": "Enter a block price of zero or more.",
+      "expiryInvalid": "Expiry must be a whole number of months from 1 to 120, or empty.",
+      "thresholdInvalid": "The usage threshold must be a whole percentage from 1 to 99, or empty.",
+      "serviceRequired": "The line needs at least one hourly service."
+    },
+    "hoursValue": "{{hours}} h",
+    "trigger": {
+      "initial": "Initial block",
+      "exhaustion": "Block ran out",
+      "threshold": "Usage threshold",
+      "expiry": "Block expired",
+      "renewal": "Contract renewal",
+      "manual": "Issued manually"
+    },
+    "loading": "Loading prepaid block details...",
+    "heading": "Prepaid Block",
+    "actions": {
+      "edit": "Edit",
+      "remove": "Remove block config",
+      "cancel": "Cancel",
+      "save": "Save",
+      "issueNext": "Issue next block"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} is also on another active line ({{line}}). Time for it may bill there instead of drawing from this block."
+    },
+    "summary": {
+      "block": "Block",
+      "expiry": "Expiry",
+      "neverExpires": "Never expires",
+      "expiresAfterMonths": "{{months}} months",
+      "soldAs": "Sold as",
+      "triggers": "Next block is invoiced when",
+      "onExhaustion": "The block runs out",
+      "onThreshold": "{{percent}}% used",
+      "onExpiry": "The block expires",
+      "onRenewal": "The contract renews (pending policy confirmation)",
+      "tierAutoIssue": "Finalized automatically",
+      "tierDraft": "Draft for review"
+    },
+    "balance": {
+      "label": "Active balance",
+      "value": "{{remaining}} of {{total}} remaining",
+      "none": "No active block yet. A block activates when its invoice is finalized."
+    },
+    "pending": {
+      "heading": "Pending block awaiting invoice finalization",
+      "draftInvoice": "Draft invoice",
+      "noInvoice": "No invoice linked",
+      "ageDays": "{{days}} days old",
+      "held": "{{hours}} of logged time is held until this block activates."
+    },
+    "next": {
+      "label": "Next scheduled issuance",
+      "none": "None"
+    },
+    "history": {
+      "heading": "Block history",
+      "empty": "No blocks have been issued yet.",
+      "columns": {
+        "issued": "Issued",
+        "reason": "Reason",
+        "status": "Status",
+        "hours": "Remaining",
+        "amount": "Amount",
+        "invoice": "Invoice"
+      }
+    },
+    "fields": {
+      "blockHours": "Block size (hours)",
+      "blockHoursHelp": "Fractions are fine, for example 1.5 for 90 minutes.",
+      "blockPrice": "Block price ({{currency}})",
+      "blockPriceManualHelp": "Set explicitly. It is stored as entered and does not follow the hourly rate.",
+      "blockPriceDefaultHelp": "Defaults to hours x the service rate. It is saved as an explicit price.",
+      "useRateTimesHours": "Use hours x rate",
+      "soldAs": "Invoice line is sold as",
+      "soldAsHelp": "Drives tax, GL and accounting export mapping for the block invoice line.",
+      "expiryMonths": "Expires after (months)",
+      "neverExpires": "Never expires",
+      "expiryMonthsHelp": "Leave empty for hours that never expire. Unused hours are forfeited at expiry.",
+      "thresholdPercent": "Issue next block at usage (%)",
+      "noThreshold": "No threshold",
+      "triggersHeading": "Invoice the next block when",
+      "triggerExhaustion": "The block runs out",
+      "triggerExpiry": "The block expires",
+      "triggerRenewal": "The contract renews",
+      "triggerRenewalPending": "Saved with the line. How renewals issue blocks is pending policy confirmation, so this does not issue anything yet.",
+      "tier": "Follow-on invoice",
+      "tierDraft": "Create a draft for review",
+      "tierAutoIssue": "Finalize and send automatically"
+    },
+    "status": {
+      "pending": "Pending",
+      "active": "Active",
+      "expired": "Expired",
+      "voided": "Voided"
+    }
   }
 }

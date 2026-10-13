@@ -1,5 +1,6 @@
 'use server';
 
+import { assertContractLineHasNoPrepaidBlock } from '../services/prepaidBlockConfigService';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -264,7 +265,9 @@ export async function upsertBucketOverlayInTransaction(
     return member.bucket_id;
   }
 
-  // No pool yet: create a member-scoped single-member 1x pool.
+  // No pool yet: create a member-scoped single-member 1x pool. A Prepaid Block
+  // line carries no bucket pools (plan D1).
+  await assertContractLineHasNoPrepaidBlock(trx, tenant, contractLineId);
   const bucketId = uuidv4();
   await db.table('contract_line_buckets').insert({
     tenant,

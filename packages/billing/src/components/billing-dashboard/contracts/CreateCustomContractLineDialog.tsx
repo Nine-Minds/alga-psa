@@ -11,7 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createCustomContractLine, CreateCustomContractLineInput, CustomContractLineServiceConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
+import { Package, Clock, Activity, Plus, X, Coins, Layers } from 'lucide-react';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
@@ -29,11 +29,19 @@ import {
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { FixedServiceConfigPanel } from '../service-configurations/FixedServiceConfigPanel';
 import type { IContractLineServiceRateTier } from '@alga-psa/types';
+import { PrepaidBlockConfigFields } from './PrepaidBlockConfigFields';
+import {
+  draftToInput,
+  emptyPrepaidBlockDraft,
+  type PrepaidBlockConfigDraft,
+  type PrepaidBlockDraftErrorCode,
+} from './prepaidBlockConfigDraft';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-type PlanType = 'Fixed' | 'Hourly' | 'Usage';
+// 'PrepaidBlock' is a UI-only choice: it saves an Hourly line plus a prepaid block config.
+type PlanType = 'Fixed' | 'Hourly' | 'Usage' | 'PrepaidBlock';
 
 interface CreateCustomContractLineDialogProps {
   isOpen: boolean;
@@ -88,6 +96,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   }>>([]);
   const [usageServiceRateInputs, setUsageServiceRateInputs] = useState<Record<number, string>>({});
 
+  const [prepaidBlockDraft, setPrepaidBlockDraft] = useState<PrepaidBlockConfigDraft>(emptyPrepaidBlockDraft());
+
   // Hourly plan state
   const [minimumBillableTime, setMinimumBillableTime] = useState<number | undefined>(undefined);
   const [roundUpToNearest, setRoundUpToNearest] = useState<number | undefined>(undefined);
@@ -108,6 +118,27 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
+    }
+  };
+
+  const prepaidBlockSoldAsRate = (): number | undefined => {
+    const priced = hourlyServices.filter((service) => service.service_id);
+    const target = priced.find((service) => service.service_id === prepaidBlockDraft.soldAsServiceId) ?? priced[0];
+    return target?.hourly_rate || undefined;
+  };
+
+  const prepaidBlockErrorText = (code: PrepaidBlockDraftErrorCode): string => {
+    switch (code) {
+      case 'hoursInvalid':
+        return t('prepaidBlock.errors.hoursInvalid', { defaultValue: 'Enter a block size greater than zero (fractions of an hour are allowed).' });
+      case 'priceInvalid':
+        return t('prepaidBlock.errors.priceInvalid', { defaultValue: 'Enter a block price of zero or more.' });
+      case 'expiryInvalid':
+        return t('prepaidBlock.errors.expiryInvalid', { defaultValue: 'Expiry must be a whole number of months from 1 to 120, or empty.' });
+      case 'thresholdInvalid':
+        return t('prepaidBlock.errors.thresholdInvalid', { defaultValue: 'The usage threshold must be a whole percentage from 1 to 99, or empty.' });
+      default:
+        return t('prepaidBlock.errors.serviceRequired', { defaultValue: 'The line needs at least one hourly service.' });
     }
   };
 
@@ -149,7 +180,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           }));
         }
       });
-    } else if (planType === 'Hourly') {
+    } else if (planType === 'Hourly' || planType === 'PrepaidBlock') {
       if (hourlyServices.length === 0) {
         errors.push(t('createCustomLine.validation.hourlyServiceRequired', {
           defaultValue: 'At least one hourly service is required',
@@ -169,6 +200,17 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           }));
         }
       });
+      if (planType === 'PrepaidBlock') {
+        if (!currencyCode) {
+          errors.push(t('createCustomLine.validation.prepaidBlockCurrencyRequired', {
+            defaultValue: 'The contract needs a currency before a prepaid block can be priced.',
+          }));
+        }
+        const parsed = draftToInput(prepaidBlockDraft, prepaidBlockSoldAsRate());
+        if ('errors' in parsed) {
+          parsed.errors.forEach((code) => errors.push(prepaidBlockErrorText(code)));
+        }
+      }
     } else if (planType === 'Usage') {
       if (usageServices.length === 0) {
         errors.push(t('createCustomLine.validation.usageServiceRequired', {
@@ -229,13 +271,13 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             });
           }
         });
-      } else if (planType === 'Hourly') {
+      } else if (planType === 'Hourly' || planType === 'PrepaidBlock') {
         hourlyServices.forEach(service => {
           if (service.service_id && service.hourly_rate) {
             serviceConfigs.push({
               service_id: service.service_id,
               custom_rate: service.hourly_rate,
-              bucket_overlay: service.bucket_overlay ? {
+              bucket_overlay: planType === 'Hourly' && service.bucket_overlay ? {
                 total_minutes: service.bucket_overlay.total_minutes ?? 0,
                 overage_rate: service.bucket_overlay.overage_rate ?? 0,
                 allow_rollover: service.bucket_overlay.allow_rollover ?? false,
@@ -266,9 +308,19 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         });
       }
 
+      let prepaidBlockInput: CreateCustomContractLineInput['prepaid_block'] = null;
+      if (planType === 'PrepaidBlock') {
+        const parsed = draftToInput(prepaidBlockDraft, prepaidBlockSoldAsRate());
+        if ('errors' in parsed) {
+          setValidationErrors(parsed.errors.map(prepaidBlockErrorText));
+          return;
+        }
+        prepaidBlockInput = parsed.input;
+      }
+
       const input: CreateCustomContractLineInput = {
         contract_line_name: planName,
-        contract_line_type: planType!,
+        contract_line_type: planType === 'PrepaidBlock' ? 'Hourly' : planType!,
         billing_frequency: billingFrequency,
         billing_timing: billingTiming,
         services: serviceConfigs,
@@ -277,10 +329,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           enable_proration: enableProration,
           billing_cycle_alignment: billingCycleAlignment,
         } : {}),
-        ...(planType === 'Hourly' ? {
+        ...(planType === 'Hourly' || planType === 'PrepaidBlock' ? {
           minimum_billable_time: minimumBillableTime ?? 15,
           round_up_to_nearest: roundUpToNearest ?? 15,
         } : {}),
+        ...(prepaidBlockInput ? { prepaid_block: prepaidBlockInput } : {}),
       };
 
       const result = await createCustomContractLine(contractId, input);
@@ -314,6 +367,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     setBillingCycleAlignment('start');
     setMinimumBillableTime(undefined);
     setRoundUpToNearest(undefined);
+    setPrepaidBlockDraft(emptyPrepaidBlockDraft());
     setFixedServices([]);
     setHourlyServices([]);
     setHourlyServiceRateInputs({});
@@ -646,7 +700,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   </p>
                 </div>
 
-                {/* Bucket Overlay Section */}
+                {/* Bucket Overlay Section: not offered on Prepaid Block lines (one ledger: hour blocks) */}
+                {planType !== 'PrepaidBlock' && (
                 <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
                     label={t('createCustomLine.addBucketOfHours', {
@@ -691,6 +746,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     />
                   )}
                 </div>
+                )}
               </div>
 
               <Button
@@ -1096,7 +1152,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 })}
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               {([
                 {
                   key: 'Fixed' as PlanType,
@@ -1117,6 +1173,15 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   accent: 'text-emerald-600',
                 },
                 {
+                  key: 'PrepaidBlock' as PlanType,
+                  title: t('createCustomLine.billingModel.prepaidBlockTitle', { defaultValue: 'Prepaid Block' }),
+                  description: t('createCustomLine.billingModel.prepaidBlockDescription', {
+                    defaultValue: 'Invoice a block of hours up front; time logged draws it down and the next block is invoiced when it runs out.',
+                  }),
+                  icon: Layers,
+                  accent: 'text-purple-600',
+                },
+                {
                   key: 'Usage' as PlanType,
                   title: t('createCustomLine.billingModel.usageTitle', { defaultValue: 'Usage-Based' }),
                   description: t('createCustomLine.billingModel.usageDescription', {
@@ -1128,6 +1193,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
               ] as const).map(({ key, title, description, icon: Icon, accent }) => (
                 <button
                   type="button"
+                  id={`custom-line-model-${key}`}
                   key={key}
                   onClick={() => {
                     setPlanType(key);
@@ -1229,7 +1295,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             </section>
           )}
 
-          {planType === 'Hourly' && (
+          {(planType === 'Hourly' || planType === 'PrepaidBlock') && (
             <section className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">
@@ -1242,6 +1308,47 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 </p>
               </div>
               {renderHourlyConfig()}
+            </section>
+          )}
+
+          {planType === 'PrepaidBlock' && (
+            <section className="space-y-4" id="custom-line-prepaid-block-section">
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {t('createCustomLine.prepaidBlockTitle', { defaultValue: 'Prepaid Block' })}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t('createCustomLine.prepaidBlockDescription', {
+                    defaultValue: 'Set the block size and price. The price defaults to hours x the service rate and is saved as an explicit amount.',
+                  })}
+                </p>
+              </div>
+              {currencyCode ? (
+                <PrepaidBlockConfigFields
+                  idPrefix="custom-line-prepaid-block"
+                  value={prepaidBlockDraft}
+                  onChange={(next) => {
+                    setPrepaidBlockDraft(next);
+                    clearErrorIfSubmitted();
+                  }}
+                  currencyCode={currencyCode}
+                  coveredServices={hourlyServices
+                    .filter((service) => service.service_id)
+                    .map((service) => ({
+                      service_id: service.service_id,
+                      service_name: service.service_name,
+                      hourly_rate: service.hourly_rate,
+                    }))}
+                />
+              ) : (
+                <Alert variant="destructive" id="custom-line-prepaid-block-currency-missing">
+                  <AlertDescription>
+                    {t('createCustomLine.validation.prepaidBlockCurrencyRequired', {
+                      defaultValue: 'The contract needs a currency before a prepaid block can be priced.',
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
             </section>
           )}
 

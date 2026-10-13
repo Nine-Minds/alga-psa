@@ -813,7 +813,9 @@
       "hourlyTitle": "Per timme",
       "usageDescription": "Fakturera för förbrukade enheter.",
       "usageTitle": "Förbrukningsbaserad",
-      "fixedSemantics": "Debitera ett paketpris eller återkommande antal × enhetstaxa varje period."
+      "fixedSemantics": "Debitera ett paketpris eller återkommande antal × enhetstaxa varje period.",
+      "prepaidBlockTitle": "Förbetalt block",
+      "prepaidBlockDescription": "Fakturera ett timblock i förväg; registrerad tid förbrukar det och nästa block faktureras när det tar slut."
     },
     "billingTiming": {
       "advance": "Förskott (debitera vid periodens början)",
@@ -881,13 +883,16 @@
       "usageServiceRequired": "Minst en förbrukningsbaserad tjänst krävs",
       "usageServiceSelectRequired": "Tjänst {{index}}: Välj en tjänst",
       "invalidQuantity": "Antalet måste vara noll eller större.",
-      "recurringUnitRateRequired": "Ange en enhetstaxa för varje återkommande tjänst."
+      "recurringUnitRateRequired": "Ange en enhetstaxa för varje återkommande tjänst.",
+      "prepaidBlockCurrencyRequired": "Avtalet behöver en valuta innan ett förbetalt block kan prissättas."
     },
     "fixedServicesPricingIntent": "Välj ett paketpris eller återkommande användarlicenser/enheter för varje tjänst.",
     "fixedServicesPricingExplanation": "Vid paketfördelning delas radens grundavgift. Återkommande användarlicenser debiteras med avtalat antal × enhetstaxa varje period utan förbrukningsposter.",
     "recurringQuantity": "Återkommande antal",
     "allocationQuantity": "Fördelningsantal",
-    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa."
+    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa.",
+    "prepaidBlockTitle": "Förbetalt block",
+    "prepaidBlockDescription": "Ange blockets storlek och pris. Priset är som standard timmar x tjänstens pris och sparas som ett uttryckligt belopp."
   },
   "pricingSchedules": {
     "list": {
@@ -2663,5 +2668,106 @@
   },
   "sellHourBlockNote": {
     "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott använder du Sälj timblock under Timblock på fliken Faktureringsöversikt för kunden."
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Ange en blockstorlek större än noll (delar av timmar är tillåtna).",
+      "priceInvalid": "Ange ett blockpris på noll eller mer.",
+      "expiryInvalid": "Förfallotiden måste vara ett helt antal månader från 1 till 120, eller tom.",
+      "thresholdInvalid": "Användningströskeln måste vara en hel procentsats från 1 till 99, eller tom.",
+      "serviceRequired": "Raden behöver minst en timtjänst."
+    },
+    "hoursValue": "{{hours}} tim",
+    "trigger": {
+      "initial": "Första blocket",
+      "exhaustion": "Blocket tog slut",
+      "threshold": "Användningströskel",
+      "expiry": "Blocket förföll",
+      "renewal": "Avtalsförnyelse",
+      "manual": "Utfärdat manuellt"
+    },
+    "loading": "Läser in information om förbetalt block...",
+    "heading": "Förbetalt block",
+    "actions": {
+      "edit": "Redigera",
+      "remove": "Ta bort blockkonfiguration",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "issueNext": "Utfärda nästa block"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} finns även på en annan aktiv rad ({{line}}). Tiden kan faktureras där i stället för att dras från detta block."
+    },
+    "summary": {
+      "block": "Block",
+      "expiry": "Förfallotid",
+      "neverExpires": "Förfaller aldrig",
+      "expiresAfterMonths": "{{months}} månader",
+      "soldAs": "Såld som",
+      "triggers": "Nästa block faktureras när",
+      "onExhaustion": "blocket tar slut",
+      "onThreshold": "{{percent}} % förbrukat",
+      "onExpiry": "blocket förfaller",
+      "onRenewal": "avtalet förnyas (policy väntar på bekräftelse)",
+      "tierAutoIssue": "Slutförs automatiskt",
+      "tierDraft": "Utkast för granskning"
+    },
+    "balance": {
+      "label": "Aktivt saldo",
+      "value": "{{remaining}} av {{total}} återstår",
+      "none": "Inget aktivt block ännu. Ett block aktiveras när dess faktura slutförs."
+    },
+    "pending": {
+      "heading": "Väntande block i väntan på att fakturan slutförs",
+      "draftInvoice": "Fakturautkast",
+      "noInvoice": "Ingen faktura kopplad",
+      "ageDays": "{{days}} dagar gammalt",
+      "held": "{{hours}} registrerad tid hålls tillbaka tills detta block aktiveras."
+    },
+    "next": {
+      "label": "Nästa schemalagda utfärdande",
+      "none": "Ingen"
+    },
+    "history": {
+      "heading": "Blockhistorik",
+      "empty": "Inga block har utfärdats ännu.",
+      "columns": {
+        "issued": "Utfärdat",
+        "reason": "Orsak",
+        "status": "Status",
+        "hours": "Återstår",
+        "amount": "Belopp",
+        "invoice": "Faktura"
+      }
+    },
+    "fields": {
+      "blockHours": "Blockstorlek (timmar)",
+      "blockHoursHelp": "Bråkdelar är tillåtna, till exempel 1,5 för 90 minuter.",
+      "blockPrice": "Blockpris ({{currency}})",
+      "blockPriceManualHelp": "Anges uttryckligen. Sparas som inmatat och följer inte timpriset.",
+      "blockPriceDefaultHelp": "Standard är timmar x tjänstens pris. Sparas som ett uttryckligt pris.",
+      "useRateTimesHours": "Använd timmar x pris",
+      "soldAs": "Fakturarad säljs som",
+      "soldAsHelp": "Styr skatt, huvudbok och mappning för bokföringsexport av blockets fakturarad.",
+      "expiryMonths": "Förfaller efter (månader)",
+      "neverExpires": "Förfaller aldrig",
+      "expiryMonthsHelp": "Lämna tomt för timmar som aldrig förfaller. Oanvända timmar förverkas vid förfall.",
+      "thresholdPercent": "Utfärda nästa block vid förbrukning (%)",
+      "noThreshold": "Ingen tröskel",
+      "triggersHeading": "Fakturera nästa block när",
+      "triggerExhaustion": "Blocket tar slut",
+      "triggerExpiry": "Blocket förfaller",
+      "triggerRenewal": "Avtalet förnyas",
+      "triggerRenewalPending": "Sparas med raden. Hur förnyelser utfärdar block väntar på policybekräftelse, så inget utfärdas ännu.",
+      "tier": "Uppföljningsfaktura",
+      "tierDraft": "Skapa ett utkast för granskning",
+      "tierAutoIssue": "Slutför och skicka automatiskt"
+    },
+    "status": {
+      "pending": "Väntande",
+      "active": "Aktiv",
+      "expired": "Förfallet",
+      "voided": "Annullerat"
+    }
   }
 }

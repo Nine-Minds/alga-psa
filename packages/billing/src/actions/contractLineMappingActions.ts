@@ -1,6 +1,7 @@
 // server/src/lib/actions/contractLineMappingActions.ts
 'use server'
 
+import { resolveContractLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import ContractLineMapping from '../models/contractLineMapping';
 import { IContractLineMapping } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -547,7 +548,19 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
       }
 
       const rows = await ContractLineMapping.getDetailedContractLines(contractId) as unknown as DetailedContractLineResultRow[];
-      return rows.map((row) => normalizeDetailedContractLine(row));
+      // Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched.
+      const displayKinds = await resolveContractLineDisplayKinds(
+        trx,
+        tenant,
+        rows.map((row) => ({
+          contract_line_id: String(row.contract_line_id),
+          contract_line_type: String(row.contract_line_type),
+        })),
+      );
+      return rows.map((row) => ({
+        ...normalizeDetailedContractLine(row),
+        display_kind: displayKinds.get(String(row.contract_line_id)) ?? row.contract_line_type,
+      }));
     });
   } catch (error) {
     console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);

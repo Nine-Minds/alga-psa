@@ -241,7 +241,8 @@
     "contractLineType": {
       "Fixed": "Vast",
       "Hourly": "Per uur",
-      "Usage": "Op verbruik"
+      "Usage": "Op verbruik",
+      "PrepaidBlock": "Prepaid blok"
     },
     "quoteStatus": {
       "draft": "Concept",

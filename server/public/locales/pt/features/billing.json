@@ -360,7 +360,8 @@
     "contractLineType": {
       "Fixed": "Fixo",
       "Hourly": "De hora em hora",
-      "Usage": "Baseado no uso"
+      "Usage": "Baseado no uso",
+      "PrepaidBlock": "Bloco pré-pago"
     },
     "quoteStatus": {
       "draft": "Rascunho",

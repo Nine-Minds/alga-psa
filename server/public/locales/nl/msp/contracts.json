@@ -813,7 +813,9 @@
       "hourlyTitle": "Per uur",
       "usageDescription": "Factureer voor verbruikte eenheden.",
       "usageTitle": "Op verbruik",
-      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid."
+      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid.",
+      "prepaidBlockTitle": "Prepaid blok",
+      "prepaidBlockDescription": "Factureer vooraf een blok uren; geregistreerde tijd put het uit en het volgende blok wordt gefactureerd wanneer het op is."
     },
     "billingTiming": {
       "advance": "Vooraf (factureren aan het begin van de periode)",
@@ -881,13 +883,16 @@
       "usageServiceRequired": "Minstens één verbruiksgebaseerde service is vereist",
       "usageServiceSelectRequired": "Service {{index}}: selecteer een service",
       "invalidQuantity": "Hoeveelheid moet nul of hoger zijn.",
-      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in."
+      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in.",
+      "prepaidBlockCurrencyRequired": "Het contract heeft een valuta nodig voordat een prepaid blok kan worden geprijsd."
     },
     "fixedServicesPricingIntent": "Kies per service een bundelprijs of terugkerende plaatsen/eenheden.",
     "fixedServicesPricingExplanation": "Bundelverdelingen delen het basistarief van de regel. Terugkerende plaatsen factureren elke periode het afgesproken aantal × tarief per eenheid, zonder verbruiksregistraties.",
     "recurringQuantity": "Terugkerend aantal",
     "allocationQuantity": "Verdeelaantal",
-    "bundleBaseRateHelp": "Terugkerende vergoeding voor services met bundelprijs. Terugkerende plaatsen worden apart gefactureerd tegen aantal × tarief per eenheid."
+    "bundleBaseRateHelp": "Terugkerende vergoeding voor services met bundelprijs. Terugkerende plaatsen worden apart gefactureerd tegen aantal × tarief per eenheid.",
+    "prepaidBlockTitle": "Prepaid blok",
+    "prepaidBlockDescription": "Stel de blokgrootte en prijs in. De prijs is standaard uren x tarief van de dienst en wordt opgeslagen als expliciet bedrag."
   },
   "pricingSchedules": {
     "list": {
@@ -2663,5 +2668,106 @@
   },
   "sellHourBlockNote": {
     "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+  },
+  "prepaidBlock": {
+    "errors": {
+      "hoursInvalid": "Voer een blokgrootte groter dan nul in (delen van een uur zijn toegestaan).",
+      "priceInvalid": "Voer een blokprijs van nul of meer in.",
+      "expiryInvalid": "De vervaldatum moet een geheel aantal maanden van 1 tot 120 zijn, of leeg.",
+      "thresholdInvalid": "De gebruiksdrempel moet een geheel percentage van 1 tot 99 zijn, of leeg.",
+      "serviceRequired": "De regel heeft minimaal één uurdienst nodig."
+    },
+    "hoursValue": "{{hours}} u",
+    "trigger": {
+      "initial": "Eerste blok",
+      "exhaustion": "Blok opgebruikt",
+      "threshold": "Gebruiksdrempel",
+      "expiry": "Blok verlopen",
+      "renewal": "Contractverlenging",
+      "manual": "Handmatig uitgegeven"
+    },
+    "loading": "Details van het prepaid blok laden...",
+    "heading": "Prepaid blok",
+    "actions": {
+      "edit": "Bewerken",
+      "remove": "Blokconfiguratie verwijderen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "issueNext": "Volgend blok uitgeven"
+    },
+    "warnings": {
+      "coveredServiceOnOtherLine": "{{service}} staat ook op een andere actieve regel ({{line}}). De tijd kan daar worden gefactureerd in plaats van van dit blok af te gaan."
+    },
+    "summary": {
+      "block": "Blok",
+      "expiry": "Vervaldatum",
+      "neverExpires": "Verloopt nooit",
+      "expiresAfterMonths": "{{months}} maanden",
+      "soldAs": "Verkocht als",
+      "triggers": "Het volgende blok wordt gefactureerd wanneer",
+      "onExhaustion": "het blok opgebruikt is",
+      "onThreshold": "{{percent}}% gebruikt",
+      "onExpiry": "het blok verloopt",
+      "onRenewal": "het contract wordt verlengd (beleid nog te bevestigen)",
+      "tierAutoIssue": "Automatisch afgerond",
+      "tierDraft": "Concept ter controle"
+    },
+    "balance": {
+      "label": "Actief saldo",
+      "value": "{{remaining}} van {{total}} resterend",
+      "none": "Nog geen actief blok. Een blok wordt actief zodra de factuur is afgerond."
+    },
+    "pending": {
+      "heading": "Openstaand blok wacht op afronding van de factuur",
+      "draftInvoice": "Conceptfactuur",
+      "noInvoice": "Geen factuur gekoppeld",
+      "ageDays": "{{days}} dagen oud",
+      "held": "{{hours}} geregistreerde tijd wordt vastgehouden tot dit blok actief wordt."
+    },
+    "next": {
+      "label": "Volgende geplande uitgifte",
+      "none": "Geen"
+    },
+    "history": {
+      "heading": "Blokgeschiedenis",
+      "empty": "Er zijn nog geen blokken uitgegeven.",
+      "columns": {
+        "issued": "Uitgegeven",
+        "reason": "Reden",
+        "status": "Status",
+        "hours": "Resterend",
+        "amount": "Bedrag",
+        "invoice": "Factuur"
+      }
+    },
+    "fields": {
+      "blockHours": "Blokgrootte (uren)",
+      "blockHoursHelp": "Breuken zijn toegestaan, bijvoorbeeld 1,5 voor 90 minuten.",
+      "blockPrice": "Blokprijs ({{currency}})",
+      "blockPriceManualHelp": "Expliciet ingesteld. Wordt opgeslagen zoals ingevoerd en volgt het uurtarief niet.",
+      "blockPriceDefaultHelp": "Standaard uren x tarief van de dienst. Wordt opgeslagen als expliciete prijs.",
+      "useRateTimesHours": "Uren x tarief gebruiken",
+      "soldAs": "Factuurregel wordt verkocht als",
+      "soldAsHelp": "Bepaalt de btw, het grootboek en de koppeling voor de boekhoudexport van de blokfactuurregel.",
+      "expiryMonths": "Verloopt na (maanden)",
+      "neverExpires": "Verloopt nooit",
+      "expiryMonthsHelp": "Laat leeg voor uren die nooit verlopen. Ongebruikte uren vervallen bij het verlopen.",
+      "thresholdPercent": "Volgend blok uitgeven bij gebruik (%)",
+      "noThreshold": "Geen drempel",
+      "triggersHeading": "Volgend blok factureren wanneer",
+      "triggerExhaustion": "Het blok opgebruikt is",
+      "triggerExpiry": "Het blok verloopt",
+      "triggerRenewal": "Het contract wordt verlengd",
+      "triggerRenewalPending": "Wordt met de regel opgeslagen. Hoe verlengingen blokken uitgeven is nog niet bevestigd, dus er wordt nog niets uitgegeven.",
+      "tier": "Vervolgfactuur",
+      "tierDraft": "Een concept ter controle aanmaken",
+      "tierAutoIssue": "Automatisch afronden en verzenden"
+    },
+    "status": {
+      "pending": "In behandeling",
+      "active": "Actief",
+      "expired": "Verlopen",
+      "voided": "Geannuleerd"
+    }
   }
 }

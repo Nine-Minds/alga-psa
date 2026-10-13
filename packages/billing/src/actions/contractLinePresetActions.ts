@@ -29,6 +29,12 @@ import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import {
+    copyPresetPrepaidBlockToLine,
+    upsertContractLinePrepaidBlockInTransaction,
+    upsertPresetPrepaidBlockInTransaction,
+    type PrepaidBlockConfigInput,
+} from '../services/prepaidBlockConfigService';
+import {
     getFixedServiceBasisIssue,
     hasBundleFixedService,
     isUnitFixedService,
@@ -60,6 +66,11 @@ function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetAc
 
     if (error instanceof Error && error.message.startsWith('Permission denied:')) {
         return permissionError(error.message);
+    }
+
+    // Validation failures from the shared prepaid block config service.
+    if (error instanceof Error && error.message.startsWith('Cannot save prepaid block')) {
+        return actionError(error.message);
     }
 
     const dbError = error as { code?: string; column?: string; constraint?: string };
@@ -141,7 +152,10 @@ export const getContractLinePresetById = withAuth(async (user, { tenant }, prese
 export const createContractLinePreset = withAuth(async (
     user,
     { tenant },
-    presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
+    presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'> & {
+        /** Hourly presets only: stores contract_line_preset_prepaid_blocks so lines copied from the preset are Prepaid Block lines. */
+        prepaid_block?: PrepaidBlockConfigInput | null;
+    }
 ): Promise<IContractLinePreset | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
@@ -151,9 +165,15 @@ export const createContractLinePreset = withAuth(async (
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract line presets');
             }
 
-            const { tenant: _, ...safePresetData } = presetData as any;
+            const { tenant: _, prepaid_block: prepaidBlock, ...safePresetData } = presetData as any;
+            if (prepaidBlock && safePresetData.contract_line_type !== 'Hourly') {
+                throw new ContractLinePresetDomainError('Only Hourly presets can be sold as prepaid blocks.');
+            }
             safePresetData.cadence_owner = safePresetData.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER;
             const preset = await ContractLinePreset.create(trx, tenant, safePresetData);
+            if (prepaidBlock) {
+                await upsertPresetPrepaidBlockInTransaction(trx, tenant, preset.preset_id, prepaidBlock);
+            }
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -707,6 +727,11 @@ export const copyPresetToContractLine = withAuth(async (
                 contract_id: contractId
             }, user.user_id);
 
+            // Presets with a contract_line_preset_prepaid_blocks row produce a Prepaid Block line.
+            if (preset.contract_line_type === 'Hourly') {
+                await copyPresetPrepaidBlockToLine(trx, tenantId, presetId, contractLineId);
+            }
+
             // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant: tenantId,
@@ -765,6 +790,11 @@ export interface CreateCustomContractLineInput {
     // Hourly-specific config
     minimum_billable_time?: number;
     round_up_to_nearest?: number;
+    /**
+     * Hourly only. Creates a Prepaid Block line: the Hourly line plus its block
+     * config in one transaction. Money is minor units of the contract currency.
+     */
+    prepaid_block?: PrepaidBlockConfigInput | null;
 }
 
 /**
@@ -794,6 +824,15 @@ export const createCustomContractLine = withAuth(async (
 
             if (!input.services || input.services.length === 0) {
                 throw new ContractLinePresetDomainError('At least one service is required');
+            }
+
+            if (input.prepaid_block) {
+                if (input.contract_line_type !== 'Hourly') {
+                    throw new ContractLinePresetDomainError('Only Hourly contract lines can be sold as prepaid blocks.');
+                }
+                if (input.services.some((service) => service.bucket_overlay)) {
+                    throw new ContractLinePresetDomainError('A Prepaid Block line cannot also carry bucket pools.');
+                }
             }
 
             for (const service of input.services) {
@@ -948,6 +987,11 @@ export const createCustomContractLine = withAuth(async (
                         null,
                     );
                 }
+            }
+
+            // Prepaid Block overlay: same transaction as the line and its services.
+            if (input.prepaid_block) {
+                await upsertContractLinePrepaidBlockInTransaction(trx, tenantId, contractLineId, input.prepaid_block);
             }
 
             // 5. Create type-specific config for Fixed type

@@ -360,7 +360,8 @@
     "contractLineType": {
       "Fixed": "⟦Ƒīẋḗḓ⟧",
       "Hourly": "⟦Ħȯŭřŀẏ⟧",
-      "Usage": "⟦Ŭşȧɠḗ Ɓȧşḗḓ⟧"
+      "Usage": "⟦Ŭşȧɠḗ Ɓȧşḗḓ⟧",
+      "PrepaidBlock": "⟦Ƥřḗƥȧīḓ Ɓŀȯƈķ⟧"
     },
     "quoteStatus": {
       "draft": "⟦Ḓřȧƒŧ⟧",

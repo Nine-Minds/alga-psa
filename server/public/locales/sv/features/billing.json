@@ -360,7 +360,8 @@
     "contractLineType": {
       "Fixed": "Fast",
       "Hourly": "Per timme",
-      "Usage": "Förbrukningsbaserad"
+      "Usage": "Förbrukningsbaserad",
+      "PrepaidBlock": "Förbetalt block"
     },
     "quoteStatus": {
       "draft": "Utkast",

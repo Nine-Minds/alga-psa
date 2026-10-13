@@ -44,6 +44,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
+import { PrepaidBlockPanel } from './PrepaidBlockPanel';
 import { RecurringUnitSchedulePanel } from './RecurringUnitSchedulePanel';
 import {
   listBucketBusinessHoursSchedules,
@@ -93,6 +94,8 @@ interface DetailedContractLineMapping {
   billing_timing?: 'arrears' | 'advance';
   cadence_owner?: 'client' | 'contract';
   contract_line_type: string;
+  /** Derived label kind: 'PrepaidBlock' for Hourly lines with a prepaid block config. */
+  display_kind?: string;
   default_rate?: number | null;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
@@ -1260,7 +1263,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                         <span>{t('contractLines.columns.type', { defaultValue: 'Type' })}:</span>
                         <Badge
                           variant={
-                            line.contract_line_type === 'Fixed'
+                            line.display_kind === 'PrepaidBlock'
+                              ? 'primary'
+                              : line.contract_line_type === 'Fixed'
                               ? 'info'
                               : line.contract_line_type === 'Hourly'
                               ? 'success'
@@ -1270,7 +1275,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           }
                           className="text-xs"
                         >
-                          {formatContractLineType(line.contract_line_type)}
+                          {formatContractLineType(line.display_kind ?? line.contract_line_type)}
                         </Badge>
                         <span>•</span>
                         <span>
@@ -2036,7 +2041,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           </div>
                         </div>
                       )}
-                      {/* Line-level bucket pools (weighted-burn model). */}
+                      {line.display_kind === 'PrepaidBlock' ? (
+                        <PrepaidBlockPanel
+                          contractLineId={line.contract_line_id}
+                          currencyCode={contract.currency_code}
+                          isReadOnly={isReadOnly}
+                          onChanged={() => {
+                            void loadServicesForLine(line.contract_line_id, true);
+                          }}
+                        />
+                      ) : (
+                      /* Line-level bucket pools (weighted-burn model). Not offered on Prepaid Block lines. */
                       <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
                         <BucketPoolEditor
                           contractLineId={line.contract_line_id}
@@ -2055,6 +2070,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           }}
                         />
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
