@@ -202,7 +202,7 @@ describe('suggestMappingTargets', () => {
       expect(suggestMappingTargets(algas, externals, taken('item:PBIP')).has('s1')).toBe(false);
     });
 
-    it('keeps ambiguous matches ambiguous and still fuzzy-eligible', () => {
+    it('keeps an exact match ambiguous when several available candidates remain', () => {
       const result = suggestMappingTargets(
         [svc('s1', 'Power BI Pro Annual')],
         [item('A', 'Power BI Pro Annual'), item('B', 'Power BI Pro Annual'), item('C', 'Power BI Pro Annual'), item('D', 'Power BI Pro Annual Plan')],
