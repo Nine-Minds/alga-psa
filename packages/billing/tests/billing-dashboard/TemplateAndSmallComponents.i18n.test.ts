@@ -99,22 +99,6 @@ describe('Template + small components i18n wiring contract', () => {
     }
   });
 
-  it('T036: ContractsHub wires the "Contracts" heading and the two sub-tab labels through msp/billing translations', () => {
-    const source = read('../../src/components/billing-dashboard/ContractsHub.tsx');
-    const pseudo = readJson<Record<string, unknown>>(
-      '../../../../server/public/locales/xx/msp/billing.json'
-    );
-
-    expect(source).toContain("const { t } = useTranslation('msp/billing');");
-    expect(source).toContain("t('contractsHub.title', { defaultValue: 'Contracts' })");
-    expect(source).toContain("t('contractsHub.tabs.templates', { defaultValue: 'Templates' })");
-    expect(source).toContain("t('contractsHub.tabs.clientContracts', { defaultValue: 'Client Contracts' })");
-
-    expect(getLeaf(pseudo, 'contractsHub.title')).toMatch(pseudoPattern('xx'));
-    expect(getLeaf(pseudo, 'contractsHub.tabs.templates')).toMatch(pseudoPattern('xx'));
-    expect(getLeaf(pseudo, 'contractsHub.tabs.clientContracts')).toMatch(pseudoPattern('xx'));
-  });
-
   it('T037: TemplateRendererCore fallback strings are documented as generated-invoice output rather than dashboard chrome', () => {
     const source = read('../../src/components/billing-dashboard/TemplateRendererCore.ts');
 

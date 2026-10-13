@@ -50,6 +50,7 @@ DNS_K3S_START_COMMAND="${ALGA_APPLIANCE_DNS_K3S_START_COMMAND:-systemctl show -p
 # StatefulSet and DaemonSet in each group is restarted and verified.
 DNS_NAMESPACE_GROUPS="${ALGA_APPLIANCE_DNS_NAMESPACE_GROUPS:-kube-system local-path-storage flux-system msp alga-system alga-appliance-control-plane}"
 DRY_RUN=false
+ROLLOUT_PLAN=false
 ACTIVATE_OVERRIDE=""
 INITIAL_MODE=false
 # Fingerprint of the configuration these files and the activation record describe.
@@ -69,6 +70,9 @@ Options:
   --activate           Write files, restart k3s if needed, roll out and record
   --no-activate        Write the files only (no restart, no activation record)
   --dry-run            Print planned actions without mutating anything
+  --rollout-plan       Read-only: list, per workload, whether its pods still
+                       carry the previous resolver (restart), are mid-rollout
+                       (wait) or are current
   --help               Show this help
 
 The default with no mode flag activates only when the content changed or a prior
@@ -298,6 +302,7 @@ write_status() {
   STATUS_RESOLVERS="${DESIRED_RESOLV:-}" \
   STATUS_RESTART_FROM="${RESTART_FROM:-}" \
   STATUS_RESTART_TOKEN="${RESTART_TOKEN:-}" \
+  STATUS_RESOLVER_LOADED_AT="${RESOLVER_LOADED_AT:-}" \
   STATUS_FILES_RESOLV="$K3S_RESOLV_CONF" \
   STATUS_FILES_DROPIN="$K3S_DNS_DROPIN" \
   node -e '
@@ -322,6 +327,9 @@ write_status() {
       resolvers: (process.env.STATUS_RESOLVERS || "").split("\n").filter(Boolean),
       restartFrom: process.env.STATUS_RESTART_FROM || (sameFingerprint ? previous.restartFrom : null) || null,
       restartToken: process.env.STATUS_RESTART_TOKEN || (sameFingerprint ? previous.restartToken : null) || null,
+      // When k3s began running with these resolver bytes: pods created after it
+      // already carry them, so a resumed rollout leaves those workloads alone.
+      resolverLoadedAt: process.env.STATUS_RESOLVER_LOADED_AT || (sameFingerprint ? previous.resolverLoadedAt : null) || null,
       error: process.env.STATUS_ERROR || null,
       files: { resolver: process.env.STATUS_FILES_RESOLV, dropin: process.env.STATUS_FILES_DROPIN },
       startedAt: (sameFingerprint && previous.startedAt) || now,
@@ -362,6 +370,32 @@ k3s_start_token() {
   bash -c "$DNS_K3S_START_COMMAND" 2>/dev/null || true
 }
 
+# True when k3s last started after both resolver files were last written, so
+# its kubelet is already running with them and a restart would change nothing.
+# Only systemd's ActiveEnterTimestamp format (e.g. "Mon 2026-10-05 22:00:25
+# UTC") is interpreted; any other token means "unknown" and returns false.
+systemd_timestamp_epoch() {
+  local token="$1"
+  [[ "$token" =~ ^[A-Z][a-z]{2}\ [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2} ]] || return 1
+  date -d "$token" +%s 2>/dev/null
+}
+
+epoch_to_iso() {
+  node -e 'process.stdout.write(new Date(Number(process.argv[1]) * 1000).toISOString())' "$1"
+}
+
+iso_to_epoch() {
+  node -e 'const t = Date.parse(process.argv[1]); if (!Number.isFinite(t)) process.exit(1); process.stdout.write(String(Math.floor(t / 1000)))' "$1" 2>/dev/null
+}
+
+k3s_started_after_files() {
+  local token="$1" started resolv_mtime dropin_mtime
+  started="$(systemd_timestamp_epoch "$token")" || return 1
+  resolv_mtime="$(stat -c %Y "$RESOLV_TARGET" 2>/dev/null)" || return 1
+  dropin_mtime="$(stat -c %Y "$DROPIN_TARGET" 2>/dev/null)" || return 1
+  [ -n "$started" ] && [ "$started" -gt "$resolv_mtime" ] && [ "$started" -gt "$dropin_mtime" ]
+}
+
 acquire_lock() {
   if $DRY_RUN; then
     return 0
@@ -394,12 +428,34 @@ acquire_lock() {
   trap 'rm -f "$DNS_LOCK_FILE" 2>/dev/null || true' EXIT INT TERM
 }
 
+# k3s is Type=notify, so without this drop-in systemd's default 90s start
+# timeout kills a k3s whose apiserver is slow to become ready (a large
+# datastore on a slow disk) and Restart=always starts it over, forever. Units
+# written by older appliance images have no TimeoutStartSec, so the helper
+# that restarts k3s ensures the drop-in first. Mirrors bootstrap-control-plane.sh.
+K3S_START_TIMEOUT_DROPIN="${ALGA_APPLIANCE_K3S_START_TIMEOUT_DROPIN:-/etc/systemd/system/${K3S_SERVICE}.service.d/10-start-timeout.conf}"
+
+ensure_k3s_start_timeout() {
+  local target desired=$'[Service]\nTimeoutStartSec=0'
+  target="$(rooted "$K3S_START_TIMEOUT_DROPIN")"
+  if [ -f "$target" ] && [ "$(cat "$target")" = "$desired" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$target")"
+  printf '%s\n' "$desired" > "$target"
+  log "Removed the systemd start timeout for ${K3S_SERVICE} so a slow apiserver start is not killed."
+  if [ -z "$ROOT_PREFIX" ] && command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload
+  fi
+}
+
 restart_k3s() {
   if [ -n "$DNS_RESTART_COMMAND" ]; then
     bash -c "$DNS_RESTART_COMMAND"
     return
   fi
   if command -v systemctl >/dev/null 2>&1; then
+    ensure_k3s_start_timeout
     systemctl restart "$K3S_SERVICE"
     return
   fi
@@ -421,48 +477,149 @@ wait_for_api() {
   done
 }
 
-# Restart and verify every workload in a namespace, in a stable order. Rollout
-# status proves the new pods (and their resolv.conf) actually became ready.
+# Epoch seconds from which new pods are known to carry the current resolver.
+# Prefers the recorded load time for these resolver bytes, then a k3s start
+# that provably came after the files were written; when neither is known every
+# existing pod is treated as stale.
+resolver_loaded_epoch() {
+  local iso epoch
+  iso="${RESOLVER_LOADED_AT:-}"
+  if [ -z "$iso" ] && [ "$(status_field fingerprint)" = "$DESIRED_FINGERPRINT" ]; then
+    iso="$(status_field resolverLoadedAt)"
+  fi
+  if [ -n "$iso" ] && epoch="$(iso_to_epoch "$iso")"; then
+    printf '%s' "$epoch"
+    return 0
+  fi
+  local token
+  token="$(k3s_start_token)"
+  if k3s_started_after_files "$token" && epoch="$(systemd_timestamp_epoch "$token")"; then
+    printf '%s' "$epoch"
+    return 0
+  fi
+  date +%s
+}
+
+# Decide, per workload in a namespace, what the resolver change still needs:
+#   restart <kind>/<name>  it still runs a pod created before the resolver loaded
+#   wait <kind>/<name>     a rollout is already under way (e.g. one an earlier,
+#                          timed-out attempt started); restarting it again would
+#                          only throw away its progress
+#   current <kind>/<name>  every pod was created with the current resolver
+# Only pods are evidence: a slow rollout that finished after an attempt gave up
+# needs nothing, so a resumed activation never recreates the whole cluster again.
 # Workload discovery errors must never be mistaken for an empty namespace: an
 # API/RBAC failure here would otherwise let activation be recorded `active`
 # without recreating the pods that still carry the old resolver.
-reconcile_namespace() {
-  local namespace="$1"
-  local resources status stderr_file message
+plan_namespace() {
+  local namespace="$1" loaded_epoch="$2"
+  local workloads_file pods_file status stderr_file message
+  # The lists go through files, not argv/env: a namespace's pod JSON easily
+  # exceeds the kernel's 128 KiB limit for a single argument or variable.
   stderr_file="$(mktemp)"
-  resources="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o name 2>"$stderr_file")" && status=0 || status=$?
+  workloads_file="$(mktemp)"
+  pods_file="$(mktemp)"
+  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o json >"$workloads_file" 2>"$stderr_file" && status=0 || status=$?
   message="$(cat "$stderr_file" 2>/dev/null || true)"
-  rm -f "$stderr_file"
   if [ "$status" -ne 0 ]; then
+    rm -f "$stderr_file" "$workloads_file" "$pods_file"
     # A namespace that does not exist yet (fresh install / not installed) is
     # legitimately empty; any other failure (RBAC, API down) must fail activation.
     if printf '%s' "$message" | grep -qiE 'not found|no resources found'; then
-      log "Namespace ${namespace} is not present yet; nothing to recreate."
+      echo "absent"
       return 0
     fi
     echo "Could not list workloads in ${namespace}: ${message:-kubectl exited ${status}}" >&2
     return 1
   fi
-  if [ -z "$resources" ]; then
+  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get pods -o json >"$pods_file" 2>"$stderr_file" && status=0 || status=$?
+  message="$(cat "$stderr_file" 2>/dev/null || true)"
+  rm -f "$stderr_file"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$workloads_file" "$pods_file"
+    echo "Could not list pods in ${namespace}: ${message:-kubectl exited ${status}}" >&2
+    return 1
+  fi
+  status=0
+  PLAN_LOADED_EPOCH="$loaded_epoch" node -e '
+    const fs = require("fs");
+    const parse = (file) => { try { return JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch { return null; } };
+    const workloads = parse(process.argv[1]);
+    const pods = parse(process.argv[2]);
+    if (!workloads || !pods) { console.error("Unparseable workload or pod list."); process.exit(1); }
+    const loadedAt = Number(process.env.PLAN_LOADED_EPOCH) * 1000;
+    const live = (pods.items || []).filter((pod) => !pod.metadata?.deletionTimestamp
+      && ["Running", "Pending"].includes(pod.status?.phase));
+    const ownedBy = (kind, name) => live.filter((pod) => (pod.metadata?.ownerReferences || []).some((owner) => {
+      if (kind === "Deployment") {
+        return owner.kind === "ReplicaSet" && owner.name === `${name}-${pod.metadata?.labels?.["pod-template-hash"]}`;
+      }
+      return owner.kind === kind && owner.name === name;
+    }));
+    const inProgress = (kind, item) => {
+      const st = item.status || {};
+      const want = item.spec?.replicas ?? 1;
+      if ((st.observedGeneration || 0) < (item.metadata?.generation || 0)) return true;
+      if (kind === "Deployment") return (st.updatedReplicas || 0) < want || (st.replicas || 0) > want || (st.availableReplicas || 0) < want;
+      if (kind === "StatefulSet") return (st.readyReplicas || 0) < want || Boolean(st.updateRevision && st.currentRevision && st.updateRevision !== st.currentRevision);
+      if (kind === "DaemonSet") return (st.updatedNumberScheduled || 0) < (st.desiredNumberScheduled || 0) || (st.numberAvailable || 0) < (st.desiredNumberScheduled || 0);
+      return false;
+    };
+    const items = [...(workloads.items || [])].sort((a, b) => `${a.kind}/${a.metadata?.name}`.localeCompare(`${b.kind}/${b.metadata?.name}`));
+    for (const item of items) {
+      const kind = item.kind;
+      const ref = `${String(kind).toLowerCase()}/${item.metadata?.name}`;
+      const stale = ownedBy(kind, item.metadata?.name).some((pod) => Date.parse(pod.metadata?.creationTimestamp || "") < loadedAt);
+      if (inProgress(kind, item)) console.log(`wait ${ref}`);
+      else if (stale) console.log(`restart ${ref}`);
+      else console.log(`current ${ref}`);
+    }
+  ' "$workloads_file" "$pods_file" || status=$?
+  rm -f "$workloads_file" "$pods_file"
+  return "$status"
+}
+
+# Bring a namespace onto the current resolver one workload at a time: on a
+# single small node, restarting a whole namespace at once starves the kubelet
+# (a field appliance went NotReady) and makes every rollout slower. A rollout
+# that does not finish in time is reported and the rest continue; the next
+# attempt waits for it instead of restarting it again. Returns 2 when the
+# namespace's workloads could not be discovered.
+reconcile_namespace() {
+  local namespace="$1" loaded_epoch="$2"
+  local plan
+  plan="$(plan_namespace "$namespace" "$loaded_epoch")" || return 2
+  if [ "$plan" = "absent" ]; then
+    log "Namespace ${namespace} is not present yet; nothing to recreate."
+    return 0
+  fi
+  if [ -z "$plan" ]; then
     log "No workloads found in ${namespace}."
     return 0
   fi
-  local resource
-  while IFS= read -r resource; do
+  local action resource failed=0 recreated=0
+  while read -r action resource; do
     [ -n "$resource" ] || continue
-    if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$resource" >/dev/null; then
-      echo "Could not restart ${resource} in ${namespace}." >&2
-      return 1
-    fi
-  done <<< "$resources"
-  local failed=0
-  while IFS= read -r resource; do
-    [ -n "$resource" ] || continue
+    case "$action" in
+      current) continue ;;
+      restart)
+        if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout restart "$resource" >/dev/null; then
+          echo "Could not restart ${resource} in ${namespace}." >&2
+          failed=1
+          continue
+        fi
+        recreated=$((recreated + 1))
+        ;;
+      wait) log "Waiting for the rollout already in progress for ${resource} in ${namespace}." ;;
+    esac
     if ! "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" rollout status "$resource" --timeout="${DNS_ROLLOUT_TIMEOUT_SECONDS}s" >/dev/null; then
-      echo "Rollout of ${resource} in ${namespace} did not complete within ${DNS_ROLLOUT_TIMEOUT_SECONDS}s." >&2
+      echo "Rollout of ${resource} in ${namespace} did not complete within ${DNS_ROLLOUT_TIMEOUT_SECONDS}s; the next attempt waits for it without restarting it again." >&2
       failed=1
     fi
-  done <<< "$resources"
+  done <<< "$plan"
+  if [ "$recreated" -eq 0 ] && [ "$failed" -eq 0 ]; then
+    log "Every workload in ${namespace} already runs with the current resolver."
+  fi
   return "$failed"
 }
 
@@ -496,14 +653,25 @@ report_unmanaged_pods() {
 }
 
 restart_existing_workloads() {
-  local namespace
+  local namespace loaded_epoch failed=0
+  loaded_epoch="$(resolver_loaded_epoch)"
+  log "Pods created before $(epoch_to_iso "$loaded_epoch") still carry the previous resolver."
   for namespace in $DNS_NAMESPACE_GROUPS; do
     log "Recreating workloads in ${namespace} so new pods adopt the resolver."
-    reconcile_namespace "$namespace" || return 1
+    # A discovery error aborts (the groups are ordered: CoreDNS before its
+    # clients); a slow rollout does not hold up the remaining namespaces.
+    local rc=0
+    reconcile_namespace "$namespace" "$loaded_epoch" || rc=$?
+    if [ "$rc" -eq 2 ]; then
+      return 1
+    elif [ "$rc" -ne 0 ]; then
+      failed=1
+    fi
   done
   for namespace in $DNS_NAMESPACE_GROUPS; do
     report_unmanaged_pods "$namespace"
   done
+  return "$failed"
 }
 
 activate() {
@@ -523,6 +691,15 @@ activate() {
     restart_already_done=true
   fi
 
+  # The same proof without a usable record (none yet, or one left by a failed
+  # attempt whose k3s came up later): k3s started after the files were written.
+  if ! $restart_already_done && k3s_started_after_files "$current_token"; then
+    log "k3s started (${current_token}) after the resolver files were written; it already uses them, so no restart is needed."
+    RESTART_TOKEN="$current_token"
+    RESOLVER_LOADED_AT="$(epoch_to_iso "$(systemd_timestamp_epoch "$current_token")")"
+    restart_already_done=true
+  fi
+
   if $restart_already_done; then
     log "Resuming a pending DNS activation; k3s was already restarted for fingerprint ${DESIRED_FINGERPRINT:0:12}."
     write_status restart-confirmed
@@ -539,7 +716,7 @@ activate() {
 
   write_status rolling-out
   if ! restart_existing_workloads; then
-    write_status failed "One or more workload rollouts did not become ready."
+    write_status failed "One or more workload rollouts did not become ready; the next attempt waits for them without restarting them again."
     return 1
   fi
   write_status active
@@ -551,12 +728,20 @@ do_restart() {
   log "Restarting k3s once to apply the resolver configuration."
   RESTART_FROM="$current_token"
   write_status restarting
+  # A non-zero exit does not mean k3s stayed down: systemctl reports failure
+  # when the start job times out, while Restart=always keeps starting k3s. The
+  # API and the start token decide whether the restart happened.
+  local restart_failed=false
   if ! restart_k3s; then
-    write_status failed "k3s restart command failed."
-    return 1
+    restart_failed=true
+    log "The k3s restart command reported failure; waiting for the Kubernetes API before deciding."
   fi
   if ! wait_for_api; then
-    write_status failed "Kubernetes API did not become ready after the k3s restart."
+    if $restart_failed; then
+      write_status failed "k3s restart command failed and the Kubernetes API did not become ready."
+    else
+      write_status failed "Kubernetes API did not become ready after the k3s restart."
+    fi
     return 1
   fi
   local after
@@ -566,6 +751,10 @@ do_restart() {
     return 1
   fi
   RESTART_TOKEN="$after"
+  # Taken once the API is back, so every pod created after it was created by
+  # the restarted kubelet (pods from the restart window are treated as stale,
+  # which only costs an extra recreate).
+  RESOLVER_LOADED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   write_status restart-confirmed
 }
 
@@ -592,6 +781,10 @@ while [ "$#" -gt 0 ]; do
       DRY_RUN=true
       shift
       ;;
+    --rollout-plan)
+      ROLLOUT_PLAN=true
+      shift
+      ;;
     --help|-h)
       usage
       exit 0
@@ -611,6 +804,22 @@ fi
 
 RESOLV_TARGET="$(rooted "$K3S_RESOLV_CONF")"
 DROPIN_TARGET="$(rooted "$K3S_DNS_DROPIN")"
+
+if $ROLLOUT_PLAN; then
+  read_setup_dns || exit 1
+  gather_resolvers || exit 1
+  render_files
+  loaded_epoch="$(resolver_loaded_epoch)"
+  log "Activation stage: $(status_field stage || true); resolver loaded at $(epoch_to_iso "$loaded_epoch")."
+  for namespace in $DNS_NAMESPACE_GROUPS; do
+    namespace_plan="$(plan_namespace "$namespace" "$loaded_epoch")" || exit 1
+    [ "$namespace_plan" = "absent" ] && namespace_plan=""
+    while read -r action resource; do
+      [ -n "$resource" ] && printf '%-8s %s/%s\n' "$action" "$namespace" "$resource"
+    done <<< "$namespace_plan"
+  done
+  exit 0
+fi
 
 if $DRY_RUN; then
   if ! read_setup_dns; then

@@ -68,6 +68,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -300,9 +301,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -618,44 +617,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     }
   }, [contractId, clientContractId]);
 
-  // Warn before leaving page with unsaved changes (browser navigation)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Intercept internal navigation (clicking links)
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        // Only intercept if navigating to a different page
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   // Initialize edit form when contract loads
   useEffect(() => {
@@ -920,20 +887,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setShowCancelConfirm(false);
   };
 
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      // Allow navigation
-      window.location.href = pendingNavigation;
-    }
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -1160,7 +1113,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
   };
-
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
