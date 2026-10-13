@@ -81,7 +81,7 @@ export default function UniFiIntegrationSettings() {
 
   const refresh = useCallback(async (background = false) => {
     if (!background) setIsLoading(true);
-    setError(null);
+    if (!background) setError(null);
     try {
       const [settingsResult, mappingResult, summaryResult, contactsResult, clientsResult] = await Promise.all([
         getUniFiSettings(),

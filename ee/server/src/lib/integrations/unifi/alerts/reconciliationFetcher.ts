@@ -22,7 +22,7 @@ import type {
   RmmActiveAlertFetcher,
 } from '@alga-psa/shared/rmm/alerts';
 import { tenantDb } from '@alga-psa/db';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import { classifyUniFiState, deriveDeviceKind, mapDeviceKindToNetworkType, resolveExternalDeviceId, severityForKind } from '../mappers/deviceMapper';
 import { createUniFiClient, UniFiApiError, type UniFiApiClient, type UniFiConnectionMode } from '../unifiApiClient';
 import { parseUniFiScopeKey, type MappedSite } from '../sync/syncEngine';

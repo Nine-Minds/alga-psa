@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const raw = vi.fn(async () => undefined);
-vi.mock('@alga-psa/db/admin.js', () => ({ getAdminConnection: async () => ({ raw }) }));
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ({ raw }) }));
 
 import { markUniFiReconnectRequired } from '../../../lib/integrations/unifi/reconnect';
 

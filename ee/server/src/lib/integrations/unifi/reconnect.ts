@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 const PROVIDER = 'unifi';
 
