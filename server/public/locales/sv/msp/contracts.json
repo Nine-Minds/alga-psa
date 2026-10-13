@@ -2497,7 +2497,8 @@
       "tieredPricing": "nivåbaserad prissättning",
       "timing": {
         "advance": "Debitera i förskott",
-        "arrears": "Debitera i efterskott"
+        "arrears": "Debitera i efterskott",
+        "arrearsOnly": "Debiteras i efterskott"
       },
       "types": {
         "bucket": "Pottillägg",

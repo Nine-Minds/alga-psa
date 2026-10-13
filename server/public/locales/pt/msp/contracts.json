@@ -2496,7 +2496,8 @@
       "tieredPricing": "preços por faixas",
       "timing": {
         "advance": "Faturar antecipadamente",
-        "arrears": "Faturar postecipadamente"
+        "arrears": "Faturar postecipadamente",
+        "arrearsOnly": "Faturado postecipadamente"
       },
       "title": "Alterações do contrato",
       "types": {

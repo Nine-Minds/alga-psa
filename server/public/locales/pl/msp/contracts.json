@@ -2502,7 +2502,8 @@
       "tieredPricing": "ceny progowe",
       "timing": {
         "advance": "Rozliczaj z góry",
-        "arrears": "Rozliczaj z dołu"
+        "arrears": "Rozliczaj z dołu",
+        "arrearsOnly": "Rozliczane z dołu"
       },
       "title": "Zmiany w kontrakcie",
       "columns": {

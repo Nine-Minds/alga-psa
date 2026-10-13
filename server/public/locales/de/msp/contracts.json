@@ -2496,7 +2496,8 @@
       "tieredPricing": "Staffelpreise",
       "timing": {
         "advance": "Im Voraus abrechnen",
-        "arrears": "Nachträglich abrechnen"
+        "arrears": "Nachträglich abrechnen",
+        "arrearsOnly": "Nachträglich abgerechnet"
       },
       "title": "Vertragsänderungen",
       "columns": {

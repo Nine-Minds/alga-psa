@@ -2496,7 +2496,8 @@
       "tieredPricing": "staffelprijzen",
       "timing": {
         "advance": "Vooraf factureren",
-        "arrears": "Achteraf factureren"
+        "arrears": "Achteraf factureren",
+        "arrearsOnly": "Achteraf gefactureerd"
       },
       "title": "Contractwijzigingen",
       "types": {

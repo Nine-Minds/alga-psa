@@ -2497,7 +2497,8 @@
       "tieredPricing": "tiered pricing",
       "timing": {
         "advance": "Bill in advance",
-        "arrears": "Bill in arrears"
+        "arrears": "Bill in arrears",
+        "arrearsOnly": "Billed in arrears"
       },
       "types": {
         "bucket": "Bucket overlay",

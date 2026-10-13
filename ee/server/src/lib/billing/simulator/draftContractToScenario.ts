@@ -12,6 +12,7 @@ import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
 import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
+import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { assumptionKey } from "./syntheticActivity";
 
 const midnight = (value: string): string =>
@@ -135,7 +136,8 @@ export async function draftContractToScenario(
     contract_line_name: name,
     contract_line_type: type,
     billing_frequency: frequency,
-    billing_timing: overrides.billing_timing ?? timing,
+    // Only Fixed lines may bill in advance; Hourly and Usage are always arrears.
+    billing_timing: resolveEffectiveBillingTiming(type, overrides.billing_timing ?? timing),
     cadence_owner: cadenceOwner,
     custom_rate: customRate,
     enable_proration: overrides.enable_proration ?? draft.enable_proration,

@@ -2496,7 +2496,8 @@
       "tieredPricing": "prezzi a scaglioni",
       "timing": {
         "advance": "Fatturazione anticipata",
-        "arrears": "Fatturazione posticipata"
+        "arrears": "Fatturazione posticipata",
+        "arrearsOnly": "Fatturato in posticipato"
       },
       "title": "Modifiche al contratto",
       "types": {

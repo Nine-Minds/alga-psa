@@ -2496,7 +2496,8 @@
       "tieredPricing": "precios por niveles",
       "timing": {
         "advance": "Facturar por adelantado",
-        "arrears": "Facturar a período vencido"
+        "arrears": "Facturar a período vencido",
+        "arrearsOnly": "Facturado a período vencido"
       },
       "title": "Cambios del contrato",
       "types": {
