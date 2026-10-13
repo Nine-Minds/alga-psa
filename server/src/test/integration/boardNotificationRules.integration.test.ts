@@ -219,7 +219,7 @@ describe('board notification rules: resolve + expand (integration)', () => {
         tenant, contact_name_id: extraContactId, full_name: 'Extra Contact', email: 'extra-primary@client.test', client_id: clientId,
       });
       await scoped.table('contact_additional_email_addresses').insert({
-        tenant, contact_name_id: extraContactId, email_address: 'extra-alt@client.test', display_order: 0,
+        tenant, contact_name_id: extraContactId, email_address: 'extra-alt@client.test', canonical_type: 'work', display_order: 0,
       });
       await scoped.table('client_locations').insert({
         tenant, location_id: uuidv4(), client_id: clientId, location_name: 'HQ', address_line1: '1 Way', city: 'X',

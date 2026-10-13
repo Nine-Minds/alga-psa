@@ -319,7 +319,7 @@ describe('board notification settings actions (integration)', () => {
       await scoped.table('contacts').insert({ tenant, contact_name_id: uuidv4(), full_name: 'Cara', email: 'cara@contact-co.example', client_id: contactClientId });
       const withAlt = uuidv4();
       await scoped.table('contacts').insert({ tenant, contact_name_id: withAlt, full_name: 'Alt', email: 'alt-primary@contact-co.example', client_id: contactClientId });
-      await scoped.table('contact_additional_email_addresses').insert({ tenant, contact_name_id: withAlt, email_address: 'Alt-Extra@contact-co.example', display_order: 0 });
+      await scoped.table('contact_additional_email_addresses').insert({ tenant, contact_name_id: withAlt, email_address: 'Alt-Extra@contact-co.example', canonical_type: 'work', display_order: 0 });
       await scoped.table('client_locations').insert({
         tenant, location_id: uuidv4(), client_id: contactClientId, location_name: 'HQ', address_line1: '1 Way', city: 'X',
         country_code: 'US', country_name: 'United States', email: 'hq@contact-co.example',
@@ -327,7 +327,7 @@ describe('board notification settings actions (integration)', () => {
       await scoped.table('client_inbound_email_domains').insert({ tenant, client_id: contactClientId, domain: 'bigclient.example' });
       await scoped.table('email_providers').insert({
         id: uuidv4(), tenant, provider_type: 'google', provider_name: 'Support box', mailbox: 'Support@msp-inbound.example',
-        is_active: true, status: 'connected', vendor_config: JSON.stringify({}),
+        is_active: true, status: 'connected',
       });
     }, HOOK_TIMEOUT);
 

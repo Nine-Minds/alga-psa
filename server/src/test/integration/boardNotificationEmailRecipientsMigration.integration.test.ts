@@ -70,7 +70,14 @@ describe('board notification email recipients migration (integration)', () => {
     await expectViolation({ recipient_type: 'email', email: 'x@msp.test', user_id: userId }, 'shape_check');
     await expectViolation({ recipient_type: 'user', user_id: userId, email: 'x@msp.test' }, 'shape_check');
     await expectViolation({ recipient_type: 'email' }, 'shape_check');
-    await expectViolation({ recipient_type: 'bogus', email: 'x@msp.test' }, 'type_check');
+    // An unknown type also fails the shape check, and Postgres evaluates CHECK constraints in name
+    // order (shape_check < type_check), so assert the violation and the type check's definition.
+    await expectViolation({ recipient_type: 'bogus', email: 'x@msp.test' });
+    const typeCheck = await knex.raw(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass`,
+      ['board_notification_rule_recipients_type_check', `public.${TABLE}`]
+    );
+    expect(typeCheck.rows[0]?.def).toMatch(/'user'.*'team'.*'email'/);
     await expectViolation({ recipient_type: 'email', email: ' Foo@X.com' }, 'email_normalized_check');
     await expectViolation({ recipient_type: 'email', email: 'FOO@x.com' }, 'email_normalized_check');
     await expectViolation({ recipient_type: 'email', email: '@x.com' }, 'email_normalized_check');
