@@ -908,6 +908,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setCloseRulesForm(createEmptyCloseRulesForm());
     setAutoCloseRulesForm([]);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
 
     await reloadBoardEditorData(board);
@@ -1473,6 +1474,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setIsLoadingBoardStatuses(false);
     setIsLoadingCloseRules(false);
     setNotificationRules([]);
+    setInvalidNotificationEmails({});
     setDefaultWatcherUserIds([]);
     setCollapsedSections(collapsedExceptFirstSection());
     setFormSnapshot(null);
