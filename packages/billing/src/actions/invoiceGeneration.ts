@@ -1201,9 +1201,13 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
           invoice_window_start: params.selectorInput.windowStart,
           invoice_window_end: params.selectorInput.windowEnd,
         });
-      const rows = (await periods().select('invoice_id', 'lifecycle_state')) as Array<{
+      const rows = (await periods().select(
+        'invoice_id', 'lifecycle_state', 'provenance_kind', 'reason_code',
+      )) as Array<{
         invoice_id: string | null;
         lifecycle_state?: string | null;
+        provenance_kind?: string | null;
+        reason_code?: string | null;
       }>;
       return {
         linkedRow: rows.find((row) => row.invoice_id) ?? null,
@@ -1211,12 +1215,14 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
         // happens when a repair adds an arrears catch-up row beside an advance period
         // that was already invoiced for the same window (arrears-only line repair).
         hasPendingRow: rows.some((row) => !row.invoice_id
+          && row.provenance_kind === 'repair'
+          && row.reason_code === 'stranded_advance_catch_up'
           && ['generated', 'edited', 'locked'].includes(String(row.lifecycle_state))),
       };
     });
 
     if (hasPendingRow) {
-      // The window is not fully invoiced: the sibling row still has to be billed.
+      // A repair catch-up sibling still has to be billed; the window is not a duplicate.
       return null;
     }
 

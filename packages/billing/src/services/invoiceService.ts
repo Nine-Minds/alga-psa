@@ -208,6 +208,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
     const rows = await query.select<{
       record_id: string; invoice_id: string | null; obligation_id: string;
       charge_family: string; service_period_start: string | Date; service_period_end: string | Date;
+      due_position: string | null; provenance_kind: string | null; reason_code: string | null;
     }[]>(
       'record_id',
       'invoice_id',
@@ -215,6 +216,9 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       'charge_family',
       'service_period_start',
       'service_period_end',
+      'due_position',
+      'provenance_kind',
+      'reason_code',
     );
 
     if (rows.length === 0) {
@@ -223,14 +227,21 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       );
     }
 
-    // A contract-cadence window can hold a billed advance period and an unbilled arrears
-    // catch-up period for the same line (arrears-only line repair). Only the unbilled
-    // sibling is claimed by this invoice; the earlier invoice keeps its own period.
-    const hasClaimableRow = executionWindow.kind === 'contract_cadence_window'
-      && rows.some((row) => !row.invoice_id || row.invoice_id === invoiceId);
+    // The arrears-only line repair adds an arrears catch-up row beside an advance period that
+    // was already billed for the same window. Only in that case is a row billed to another
+    // invoice skipped; everywhere else a period billed elsewhere is an integrity error.
+    const hasRepairCatchUpSibling = executionWindow.kind === 'contract_cadence_window'
+      && rows.some((row) => (!row.invoice_id || row.invoice_id === invoiceId)
+        && row.provenance_kind === 'repair'
+        && row.reason_code === 'stranded_advance_catch_up');
 
     for (const row of rows) {
-      if (hasClaimableRow && row.invoice_id && row.invoice_id !== invoiceId) {
+      if (
+        hasRepairCatchUpSibling
+        && row.invoice_id
+        && row.invoice_id !== invoiceId
+        && row.due_position === 'advance'
+      ) {
         continue;
       }
       if (row.charge_family === 'usage' && omitted.has(JSON.stringify([
