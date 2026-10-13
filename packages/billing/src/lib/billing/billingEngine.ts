@@ -68,6 +68,7 @@ import {
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
+import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import {
   ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
@@ -4925,9 +4926,8 @@ export class BillingEngine {
       contract_line_type?: "Fixed" | "Hourly" | "Usage" | string | null;
     },
   ): boolean {
-    return (
-      clientContractLine.contract_line_type !== "Hourly" &&
-      clientContractLine.contract_line_type !== "Usage"
+    return isAdvanceTimingAllowedForLineType(
+      clientContractLine.contract_line_type,
     );
   }
 

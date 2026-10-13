@@ -21,6 +21,10 @@ import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
+import {
+    ContractLineTimingNotAllowedError,
+    isAdvanceTimingAllowedForLineType,
+} from '@shared/billingClients/contractLineTimingRule';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -39,8 +43,8 @@ function contractLineActionErrorFrom(error: unknown): ContractLineActionError | 
         if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
             return actionError(error.message);
         }
-        if (error.message === 'Advance billing is only supported for fixed contract lines.') {
-            return actionError(error.message);
+        if (error instanceof ContractLineTimingNotAllowedError) {
+            return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
         }
         if (error.message.startsWith('Cannot update fixed')) {
             return actionError(error.message);
@@ -342,8 +346,8 @@ export const upsertContractLineTerms = withAuth(async (
             }
             await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
-            if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
-                throw new Error('Advance billing is only supported for fixed contract lines.');
+            if (billingTiming === 'advance' && !isAdvanceTimingAllowedForLineType(contractLine.contract_line_type)) {
+                throw new ContractLineTimingNotAllowedError();
             }
 
             await tenantDb(trx, tenant).table('contract_lines')
