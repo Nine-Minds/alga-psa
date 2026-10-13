@@ -498,3 +498,58 @@ rerun with `gh run rerun --failed`; as of this update the community image build
 is still in progress. No local app server was started. Record both browser
 edition results after that rerun reaches the production E2E jobs. Status remains
 **BLOCKED** for portal, app-to-Xero, and companion schedule-writer acceptance.
+
+### Exact-head verification — 2026-10-13 (`95aafcdd15e983d237d48ab15c4c0f69bd7d106e`)
+
+The current checkout was audited before changes. Its only source/test change
+after `4e7f457300` is the E2E service-combobox locator in
+`e2e-tests/tests/invoice-generation.spec.ts`; the remaining commit adds this
+evidence update. No invoice implementation change was needed in this pass.
+
+Fresh local verification on this exact HEAD:
+
+- Owned unbilled fixture audit passed against database `server` using
+  `PR3499_FIXTURE_DB_NAME=server node --import tsx
+  scripts/audit-pr3499-unbilled-fixture.ts`. Client
+  `5ba78228-ace1-4990-b42f-30739458299a`, assignment
+  `4921ceb2-72f5-4f0a-afdc-da256e932c41`; both September periods remain
+  generated and unclaimed, with invoice windows 2026-10-01 through 2026-11-01.
+  No retained or delivered invoice was changed. The isolated fixture and prior
+  preview are documented in `fixture-current-head.json`; recalculate before
+  walkthrough because the 24,460-minor-unit preview is historical.
+- Contract adjustment settlement DB suite: **66/66 passed**, exit 0, using the
+  isolated database `test_pr3499_95aafcdd15` and a temporary Vitest config that
+  disables the repository's nested environment projects and extends DB setup
+  timeout.
+- Companion quantity semantics DB suite: **121/121 passed**, exit 0, using
+  `test_pr3499_95aafcdd15_companion`. It exercises canonical companion source
+  revisions, increases/decreases, repeat generation, manual-line preservation,
+  and lifecycle/export protections. This is database evidence, not schedule
+  writer UI acceptance.
+- Complete Xero integration file: **5/5 passed**, exit 0, using
+  `test_pr3499_95aafcdd15_xero`. The missing-net-amount case reloads the durable
+  per-line error, confirms zero provider calls, and rejects stale-owner writes.
+  Transport remains mocked in this suite.
+- Billing package build: **passed**, exit 0. Billing package typecheck passed
+  with `NODE_OPTIONS=--max-old-space-size=12288`; the default-heap attempt
+  aborted at Node's ~4 GiB heap limit without a TypeScript diagnostic.
+
+Exact-HEAD CI run `38398955637` passed CE and EE server image builds, community
+and enterprise production-browser jobs, and the other listed regression lanes.
+The separate exact-HEAD Nx affected typecheck `38398954240` and translation
+workflow `38398954157` passed. The final **Production regression readiness**
+job failed only in the workspace lane: quarantined
+`teams-development-execution` had no `evidence.json`, and its aggregate
+`workspace-execution-gate` therefore reported failure. This does not represent
+a contract-invoice assertion failure; the overall CI gate is not green.
+
+The current PR head is `95aafcdd15e983d237d48ab15c4c0f69bd7d106e`, its base is
+current main `450070437d770ba651a63b4318a72a9de4e8fc7c`, and GitHub reports it
+mergeable with merge state **BLOCKED** by checks. The PR head matched local and
+upstream before this evidence commit. No app server was started or restarted.
+
+**Status remains BLOCKED.** Portal comparison, a real app-to-Xero-simulator
+delivery, current-build live walkthrough, and companion schedule-writer/browser
+acceptance still require the separately authorized smoke step. Do not mark the
+whole card accepted from DB suites, mocked transport, CI browser suites, old
+screenshots, or database-only fixture inspection.
