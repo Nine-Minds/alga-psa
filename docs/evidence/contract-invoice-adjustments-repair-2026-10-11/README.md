@@ -629,12 +629,12 @@ Fresh validation on `3a2df83175e40dbd440ba47108ad56fb10e1982b`:
   dynamic `headers()` warnings remain.
 
 Exact-head CI run `38439522644` is still in progress. The affected Nx unit job
-`115457524172` is currently marked failed, while its failure log is unavailable
-until the run concludes. Several server unit shards and the EE browser image
-build remain pending. Do not call this run green; inspect the completed log and
-classify/reproduce the failure before any source change. Other completed
-contract-relevant jobs, including affected typecheck, EE workflow build guard,
-integration, Citus and workspace execution gates, passed at the latest check.
+`115457524172` is currently marked failed. Its failure was investigated after
+the reviewer supplied the log; see **Scheduling CI failure investigation**
+below. Several server unit shards and browser jobs remained pending at this
+checkpoint. Do not call this run green. Other completed contract-relevant jobs,
+including affected typecheck, EE workflow build guard, integration, Citus and
+workspace execution gates, passed at the latest check.
 
 Commands and DB isolation used:
 
@@ -702,3 +702,43 @@ fixtures and all shared financial history remain untouched. Review the exact
 CI run and production recalculation regression first, then perform the separate
 authorized live walkthrough; implementation validation is complete, human
 review readiness is not.
+
+### Scheduling CI failure investigation — 2026-10-13
+
+The review log for CI job `115457524172` is available at
+`/tmp/pr3499-review-nx.log` in the review environment. It shows one failed test
+in scheduling: `tests/timeSheetApproval.test.ts`, “shows existing per-entry
+feedback in the manager approval drawer”, assertion at line 333 that the
+`[data-feedback-state="unresolved"]` marker exists. Scheduling reported 568 of
+569 tests passing; billing in the same Nx job passed all 2,021 tests. The
+failing test awaits `flushUi()`, which advances one zero-delay timer turn after
+the component's asynchronous work-item fetch effect.
+
+The PR base at the time of review is `ecd8a1644322ef39335d09097ae8bd8274d50cff`.
+There is no diff from that base to PR head `a2f6004ddd16fb7ae097f4348c2f6539293f023d`
+for the failing test, approval drawer component, or feedback component. This
+PR contains no scheduling source change on the failing path.
+
+Local comparison, using `VITEST_SEED=20260610`:
+
+- PR head: the failing test alone passed; the full five-test file passed; and
+  the complete scheduling package passed **93/93 files, 569/569 tests**.
+- Base `ecd8a1644322ef39335d09097ae8bd8274d50cff`: the full five-test file
+  passed; the complete scheduling package passed **93/93 files, 569/569 tests**.
+
+The CI failure is consistent with a timing-sensitive test under the parallel
+Nx library run, but it did not reproduce in either local package run. This
+evidence argues against an integration regression; it does not prove the same
+CI-only flake existed on base. No unrelated scheduling source or assertion was
+changed. CI run `38439522644` remains failed on this assertion and is a
+remaining automated CI blocker until an authorized rerun or separate
+scheduling repair establishes its status.
+
+On final PR head `a2f6004ddd16fb7ae097f4348c2f6539293f023d`, the evidence-only
+commit did not change application source. The latest `gh pr checks 3499` query
+showed circular-dependency, locale, translation, security and import guards
+passing; tenant-schema validation also passed. Affected typecheck, changed-file
+ESLint and EE workflow build guard were still pending. These checks are pending,
+not a green final-head CI result. Fresh browser, portal, real application-to-Xero
+simulator and companion schedule-writer acceptance remains **BLOCKED**; the
+app server remains stopped.
