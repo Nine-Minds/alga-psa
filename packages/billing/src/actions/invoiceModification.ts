@@ -1966,7 +1966,11 @@ async function addManualInvoiceItemsInternal(
 
 
 export interface DeleteInvoiceOptions {
-  /** Refuse (InvoiceNotDraftError) unless finalized_at IS NULL, checked after the row lock. */
+  /**
+   * Refuse (InvoiceNotDraftError) unless the invoice is a true draft:
+   * finalized_at IS NULL AND status === 'draft' AND no invoice_payments rows
+   * exist for it. Checked after the invoice row lock, inside the delete trx.
+   */
   requireDraft?: boolean;
   /** Runs inside the delete transaction just before commit. */
   onBeforeCommit?: (trx: Knex.Transaction) => Promise<void>;
@@ -2029,8 +2033,17 @@ export async function deleteInvoiceWithKnex(
         console.warn(`Invoice ${invoiceId} not found for deletion.`);
         return; // Exit if invoice doesn't exist
     }
-    if (options.requireDraft && invoice.finalized_at) {
-      throw new InvoiceNotDraftError(invoiceId);
+    if (options.requireDraft) {
+      if (invoice.finalized_at || invoice.status !== 'draft') {
+        throw new InvoiceNotDraftError(invoiceId);
+      }
+      // Never destroy recorded payments (the delete cascades to invoice_payments).
+      const recordedPayment = await tenantScopedTable(trx, tenant, 'invoice_payments')
+        .where({ invoice_id: invoiceId, tenant })
+        .first('invoice_id');
+      if (recordedPayment) {
+        throw new InvoiceNotDraftError(invoiceId);
+      }
     }
     deletedClientId = invoice.client_id ?? undefined;
 

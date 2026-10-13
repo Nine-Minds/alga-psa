@@ -19,12 +19,16 @@ export class ExpectedInvoiceActionError extends Error {
   }
 }
 
-/** Thrown by deleteInvoiceWithKnex({ requireDraft: true }) when the invoice is finalized. */
+/**
+ * Thrown by deleteInvoiceWithKnex({ requireDraft: true }) when the invoice is
+ * not a true draft: finalized_at is set, status is not 'draft', or recorded
+ * invoice_payments exist.
+ */
 export class InvoiceNotDraftError extends Error {
   readonly invoiceId: string;
 
   constructor(invoiceId: string) {
-    super(`Invoice ${invoiceId} is finalized and cannot be deleted; void it instead.`);
+    super(`Only draft invoices can be deleted; void the invoice instead.`);
     this.name = 'InvoiceNotDraftError';
     this.invoiceId = invoiceId;
   }

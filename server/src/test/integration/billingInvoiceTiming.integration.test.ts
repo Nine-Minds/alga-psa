@@ -2558,6 +2558,60 @@ it('T-REST-DEL-3: REST DELETE of a finalized invoice answers 409 and leaves the 
   expect(charges.sort()).toEqual([...chargeIds].sort());
 }, HOOK_TIMEOUT);
 
+async function expectRestDeleteRefused(
+  restDelete: (id: string) => Promise<Response>,
+  invoiceId: string,
+  chargeIds: string[],
+  expectedStatus: string,
+) {
+  const response = await restDelete(invoiceId);
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.error.code).toBe('CONFLICT');
+  expect(body.error.message).toMatch(/void/i);
+
+  const after = await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first();
+  expect(after).toBeTruthy();
+  expect(after.status).toBe(expectedStatus);
+  const charges = await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).pluck('item_id');
+  expect(charges.sort()).toEqual([...chargeIds].sort());
+}
+
+it.each([
+  ['T-REST-DEL-5', 'sent'],
+  ['T-REST-DEL-6', 'paid'],
+])('%s: REST DELETE of a %s invoice with NULL finalized_at answers 409 and leaves it untouched', async (_id, status) => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: `REST Delete ${status} Client` });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, invoice_id: invoiceId })
+    .update({ status, finalized_at: null });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, status);
+}, HOOK_TIMEOUT);
+
+it('T-REST-DEL-7: REST DELETE of a draft that has a recorded payment answers 409 and keeps the payment', async () => {
+  const { restDelete } = await createRestInvoiceHarness();
+  const { contextLike } = await createClientWithRecurringCycles({ clientName: 'REST Delete Paid Draft Client' });
+  const { invoiceId, chargeIds } = await insertPlainInvoice(contextLike.clientId);
+  const paymentId = uuidv4();
+  await tenantTable(db, tenantId, 'invoice_payments').insert({
+    payment_id: paymentId,
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    amount: 500,
+    payment_method: 'check',
+    status: 'completed',
+  });
+
+  await expectRestDeleteRefused(restDelete, invoiceId, chargeIds, 'draft');
+  const payment = await tenantTable(db, tenantId, 'invoice_payments')
+    .where({ tenant: tenantId, payment_id: paymentId })
+    .first();
+  expect(payment).toBeTruthy();
+}, HOOK_TIMEOUT);
+
 it('T-REST-DEL-4: REST DELETE of an unknown invoice id answers 404', async () => {
   const { restDelete, service, context, inTenant } = await createRestInvoiceHarness();
   const response = await restDelete(uuidv4());
