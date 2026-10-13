@@ -562,6 +562,120 @@ export async function reconcileClientAllocations(
 }
 
 /**
+ * Locks hour_blocks rows FOR UPDATE in canonical block_id order (the order
+ * every other hour_blocks check-then-act site uses). Returns the locked rows.
+ */
+async function lockBlocks(
+  trx: Knex.Transaction,
+  tenant: string,
+  scope: { clientId: string } | { contractLineId: string },
+): Promise<Array<{ block_id: string; status: string }>> {
+  const query = tenantDb(trx, tenant).table('hour_blocks as hb');
+  if ('contractLineId' in scope) {
+    query.where('hb.contract_line_id', scope.contractLineId);
+  } else {
+    query.where('hb.client_id', scope.clientId);
+  }
+  return await query.select('hb.block_id', 'hb.status').orderBy('hb.block_id', 'asc').forUpdate();
+}
+
+function sortEntryIdsByWorkDate(
+  ids: Set<string>,
+  entries: Map<string, BlockBurnTimeEntry>,
+): string[] {
+  const key = (id: string): string => {
+    const entry = entries.get(id);
+    const date = entry ? (toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time) ?? '') : '';
+    const start = entry?.start_time ? new Date(entry.start_time as string | Date).getTime() : 0;
+    return `${date}|${String(Number.isFinite(start) ? start : 0).padStart(16, '0')}|${id}`;
+  };
+  return [...ids].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+}
+
+/**
+ * Re-draw for one Prepaid Block line: reverses and re-allocates the line's
+ * uninvoiced time entries (approved or not) against the line's blocks, oldest
+ * work first. Call after a pending block is created (overflow already logged
+ * lands on it), after a pending block is voided/deleted (released minutes
+ * fall back to overage), and after a contract block expires.
+ *
+ * Idempotent: the result depends only on current entry state and block state.
+ * Locks ALL of the line's blocks in canonical block_id order up front (callers
+ * take issuance/config locks first). Invoiced entries are never touched, and
+ * entries drawn against an EXPIRED block are left as they are — that work was
+ * legitimately covered while the block was live. Returns the number of
+ * entries re-drawn.
+ */
+export async function reconcileLineAllocations(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<number> {
+  const db = tenantDb(trx, tenant);
+
+  const lockedBlocks = await lockBlocks(trx, tenant, { contractLineId });
+  if (lockedBlocks.length === 0) {
+    // No block ever issued for the line: nothing could be drawn or released.
+    return 0;
+  }
+  const expiredBlockIds = lockedBlocks.filter((b) => b.status === 'expired').map((b) => b.block_id);
+
+  const entries: Array<BlockBurnTimeEntry & { entry_id: string }> = await db.table('time_entries as te')
+    .where({ 'te.contract_line_id': contractLineId, 'te.invoiced': false })
+    .whereNotNull('te.service_id')
+    .where('te.billable_duration', '>', 0)
+    .select(
+      'te.entry_id',
+      'te.service_id',
+      'te.billable_duration',
+      'te.contract_line_id',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.work_date',
+      'te.start_time',
+    );
+
+  // Entries that carry an allocation against this line's blocks but no longer
+  // qualify (e.g. duration zeroed) still need their draw reversed.
+  const allocated: string[] = await db.table('hour_block_time_allocations as hba')
+    .whereIn('hba.block_id', lockedBlocks.map((b) => b.block_id))
+    .distinct('hba.time_entry_id')
+    .then((rows: any[]) => rows.map((r) => r.time_entry_id));
+
+  const entryById = new Map(entries.map((e) => [e.entry_id, e] as const));
+  const staleIds = allocated.filter((id) => !entryById.has(id));
+  if (staleIds.length > 0) {
+    const stale = await db.table('time_entries')
+      .whereIn('entry_id', staleIds)
+      .where('invoiced', false)
+      .select('entry_id', 'service_id', 'billable_duration', 'contract_line_id', 'work_item_id', 'work_item_type', 'work_date', 'start_time');
+    for (const row of stale) entryById.set(row.entry_id, row);
+  }
+
+  const pinnedToExpired = new Set<string>();
+  if (expiredBlockIds.length > 0) {
+    const rows = await db.table('hour_block_time_allocations')
+      .whereIn('block_id', expiredBlockIds)
+      .distinct('time_entry_id');
+    for (const row of rows) pinnedToExpired.add(row.time_entry_id);
+  }
+
+  let redrawn = 0;
+  for (const entryId of sortEntryIdsByWorkDate(new Set(entryById.keys()), entryById)) {
+    if (pinnedToExpired.has(entryId)) continue;
+    const entry = entryById.get(entryId)!;
+    await reverseTimeEntryAllocations(trx, tenant, entryId);
+    if (entry.contract_line_id !== contractLineId) continue;
+
+    const clientId = await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type);
+    if (!clientId) continue;
+    const { allocations } = await allocateTimeEntryDetailed(trx, tenant, clientId, entry);
+    if (allocations.length > 0) redrawn += 1;
+  }
+  return redrawn;
+}
+
+/**
  * Derived available block minutes for a client: the sum of `remaining_minutes`
  * over active, non-expired blocks, optionally filtered to blocks whose scope
  * includes `serviceId` (empty scope = all labor). Analog of creditBalance.
