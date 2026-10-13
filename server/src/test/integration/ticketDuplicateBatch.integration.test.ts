@@ -74,6 +74,8 @@ describe('Batch duplicate ticket (integration)', () => {
   let sourceTicketId: string;
   let contactIds: string[];
   let otherClientContactId: string;
+  let teamId: string;
+  let agentIds: string[];
 
   const tt = (table: string) => tenantDb(context.db, tenantId).table(table);
 
@@ -178,16 +180,47 @@ describe('Batch duplicate ticket (integration)', () => {
     narrowedUser = await loadUser(narrowedId);
     clientPortalUser = await loadUser(portalId);
 
+    teamId = uuidv4();
+    await tt('teams').insert({ tenant: tenantId, team_id: teamId, team_name: 'Batch Team', manager_id: ownerUser });
+    agentIds = [
+      await createUser(context.db, tenantId, { username: 'bd-agent-a', first_name: 'Ada', last_name: 'Agent', email: 'ada@example.com', user_type: 'internal' }),
+      await createUser(context.db, tenantId, { username: 'bd-agent-b', first_name: 'Bo', last_name: 'Agent', email: 'bo@example.com', user_type: 'internal' }),
+    ];
+
     sourceTicketId = uuidv4();
     await tt('tickets').insert({
       tenant: tenantId, ticket_id: sourceTicketId, ticket_number: 'BD-SOURCE', title: 'Onboard template',
       board_id: boardId, client_id: clientId, contact_name_id: contactIds[0], status_id: statusId, priority_id: priorityId,
-      assigned_to: ownerUser, entered_by: ownerUser, entered_at: new Date().toISOString(), is_closed: false,
-      attributes: JSON.stringify({ description: 'Original description', custom_fields: { shirt_size: 'L' } }),
+      assigned_to: ownerUser, assigned_team_id: teamId, entered_by: ownerUser, entered_at: new Date().toISOString(), is_closed: false,
+      attributes: JSON.stringify({
+        description: 'Original description',
+        custom_fields: { shirt_size: 'L' },
+        watch_list: [{ email: 'watcher@example.com' }],
+        sla_last_response_threshold_notified: 80,
+        source_reference: { message_id: 'm-1' },
+      }),
     });
+    await tt('ticket_resources').insert(
+      agentIds.map((agentId) => ({
+        tenant: tenantId, assignment_id: uuidv4(), ticket_id: sourceTicketId, assigned_to: ownerUser, additional_user_id: agentId, role: 'support',
+      }))
+    );
+    const tagIds = [uuidv4(), uuidv4()];
+    await tt('tag_definitions').insert([
+      { tenant: tenantId, tag_id: tagIds[0], tag_text: 'onboarding', tagged_type: 'ticket', background_color: '#112233', text_color: '#ffffff' },
+      { tenant: tenantId, tag_id: tagIds[1], tag_text: 'hardware', tagged_type: 'ticket', background_color: '#445566', text_color: '#000000' },
+    ]);
+    await tt('tag_mappings').insert(
+      tagIds.map((tagId) => ({ tenant: tenantId, mapping_id: uuidv4(), tag_id: tagId, tagged_id: sourceTicketId, tagged_type: 'ticket' }))
+    );
+    // Three checklist items; the first is completed on the source and must be copied unchecked.
     await tt('ticket_checklist_items').insert([
-      { tenant: tenantId, ticket_id: sourceTicketId, item_name: 'Order laptop', order_number: 0, is_required: true, source: 'manual', created_by: ownerUser },
+      {
+        tenant: tenantId, ticket_id: sourceTicketId, item_name: 'Order laptop', order_number: 0, is_required: true,
+        completed: true, completed_by: ownerUser, completed_at: new Date().toISOString(), source: 'manual', created_by: ownerUser,
+      },
       { tenant: tenantId, ticket_id: sourceTicketId, item_name: 'Create accounts', order_number: 1, is_required: false, source: 'manual', created_by: ownerUser },
+      { tenant: tenantId, ticket_id: sourceTicketId, item_name: 'Print badge', order_number: 2, is_required: true, source: 'manual', created_by: ownerUser },
     ]);
 
     actAs(creator);
@@ -213,7 +246,27 @@ describe('Batch duplicate ticket (integration)', () => {
         expect(copy.duplicated_from_ticket_id).toBe(sourceTicketId);
         expect(copy.ticket_origin).toBe('internal');
         expect(parse(copy.attributes).custom_fields).toEqual({ shirt_size: 'L' });
-        expect(await tt('ticket_checklist_items').where({ ticket_id: entry.ticketId })).toHaveLength(2);
+        expect(copy.status_id).toBe(statusId);
+        expect(copy.assigned_to).toBe(ownerUser);
+        expect(copy.assigned_team_id).toBe(teamId);
+        expect(parse(copy.attributes).description).toBe('Original description');
+        for (const denied of ['watch_list', 'sla_last_response_threshold_notified', 'source_reference']) {
+          expect(parse(copy.attributes), `attributes.${denied} must not be copied`).not.toHaveProperty(denied);
+        }
+
+        const items = await tt('ticket_checklist_items').where({ ticket_id: entry.ticketId }).orderBy('order_number', 'asc');
+        expect(items.map((item: any) => item.item_name)).toEqual(['Order laptop', 'Create accounts', 'Print badge']);
+        expect(items.every((item: any) => item.completed === false && item.completed_at === null)).toBe(true);
+
+        const agents = await tt('ticket_resources').where({ ticket_id: entry.ticketId }).select('additional_user_id');
+        expect(agents.map((row: any) => row.additional_user_id).sort()).toEqual([...agentIds].sort());
+        const tagRows = await tt('tag_mappings as tm')
+          .join('tag_definitions as td', function (this: any) {
+            this.on('td.tag_id', 'tm.tag_id').andOn('td.tenant', 'tm.tenant');
+          })
+          .where({ 'tm.tagged_id': entry.ticketId, 'tm.tagged_type': 'ticket' })
+          .select('td.tag_text');
+        expect(tagRows.map((row: any) => row.tag_text).sort()).toEqual(['hardware', 'onboarding']);
 
         const [from] = await tt('ticket_audit_logs').where({ ticket_id: entry.ticketId, event_type: TICKET_ACTIVITY_EVENT.DUPLICATED_FROM });
         expect(parse(from.details)).toMatchObject({ source_ticket_id: sourceTicketId, batch_id: result.batchId });
@@ -319,6 +372,8 @@ describe('Batch duplicate ticket (integration)', () => {
 
       await tt('ticket_audit_logs').where({ ticket_id: sourceTicketId }).delete();
       await tt('ticket_checklist_items').where({ ticket_id: sourceTicketId }).delete();
+      await tt('ticket_resources').where({ ticket_id: sourceTicketId }).delete();
+      await tt('tag_mappings').where({ tagged_id: sourceTicketId, tagged_type: 'ticket' }).delete();
       await tt('tickets').where({ duplicated_from_ticket_id: sourceTicketId }).update({ duplicated_from_ticket_id: null });
       await tt('tickets').where({ ticket_id: sourceTicketId }).delete();
 
