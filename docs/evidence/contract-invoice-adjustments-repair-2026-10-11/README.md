@@ -1,4 +1,4 @@
-# PR #3499 current-head handoff — 2026-10-11
+# PR #3499 repair handoff — 2026-10-13
 
 **Status: BLOCKED for human review.** The implementation can be reviewed, but
 the prior READY claim is withdrawn until repaired-HEAD browser acceptance is
@@ -8,6 +8,55 @@ build and its prior `add21274560c861a2d277582a518ae940a131795` evidence do not
 prove the merge result. The base conflict is resolved in this branch; portal
 output, real app-to-Xero-simulator delivery, and current-HEAD browser acceptance
 remain open.
+
+## Production reconciliation regression (2026-10-13)
+
+Commit `2778973d28143462f3107eb7de00102065ac014b` replaces the copied
+recalculation helper in the consolidated-period regression with
+`BillingEngine.recalculateInvoice`. It starts with pending canonical companion
+ledger entries, so the production path must materialize signed true-ups before
+reconciling configured discounts. Both fixed and percentage cases run that path
+before posting and twice after a manual credit edit.
+
+The fixture has January/February allocations of 10,000/20,000 minor units,
+a January-bound positive true-up of 2,000, and a February credit of −3,000.
+The January-only discount base stays 12,000. Tax starts at zero and the actual
+tax distribution pipeline calculates 300 on the taxable consolidated parent,
+using a deterministic 1% tax calculator. The true-up service is explicitly
+non-taxable. Canonical detail taxes are 100/200. A manual credit edit from
+−400 to −500 posts one −100 principal adjustment; repeating production
+recalculation adds no posting and retains manual, discount, and true-up IDs.
+This is database integration evidence, not browser acceptance of the schedule
+writer.
+
+Validation:
+
+- Full settlement suite: **66/66 passed**, exit 0, on the committed test source.
+  Command from `server`: `TEST_DB_NAME=test_pr3499_takeover DB_HOST=127.0.0.1
+  DB_PORT=5472 npx vitest run --config .vitest-pr3499-takeover.config.ts
+  ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts
+  --maxWorkers=1 --pool=forks --no-file-parallelism --reporter=dot`.
+  The temporary config inherited `vitest.config.ts`, disabled its nested
+  projects, and set hook/test timeouts to 600,000/120,000 ms. The ordinary
+  config's nested project ignored the CLI hook override and timed out during
+  migration setup under host I/O pressure; no assertion ran on that attempt.
+- Full Xero integration file: **5/5 passed**, exit 0, using the same temporary
+  config, `TEST_DB_NAME=test_pr3499_takeover_xero`, and
+  `src/test/integration/accounting/xeroLiveExport.integration.test.ts --retry=0`.
+  T020 reloads durable per-line validation errors, asserts zero provider calls,
+  and checks stale-owner rejection; successful delivery cases also pass.
+  Provider transport is mocked in this suite, not an app-to-simulator run.
+- Billing package build: **exit 0**. No application server was started.
+- Inherited application HEAD `24171dda2cf6433d17f1de03d71f9b8c98c6cc6f`:
+  TypeScript workflow `38369225414` passed; Citus migration/cleanup passed in
+  workflow `38369226307`. This takeover changes tests and documentation only.
+- Read-only retained fixture audit: **exit 0**. Both September service-period
+  rows remain unclaimed; their candidate invoice window is October 1–November 1.
+  Recalculate the historical 24,460 preview before the live walkthrough.
+
+The guide remains **BLOCKED** for current-build browser, portal, app-to-Xero,
+and companion schedule-writer acceptance. Existing delivered history was not
+changed. Prior results below remain dated evidence, not new acceptance claims.
 
 ## Takeover validation (2026-10-12)
 
