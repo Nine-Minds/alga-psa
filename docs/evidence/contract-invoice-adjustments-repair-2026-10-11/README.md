@@ -474,10 +474,12 @@ schedule-writer acceptance still requires the blocked live walkthrough.
 The new PR CI run for `082e9d8d38` is pending. The preceding exact-head run
 `38374648373` passed all non-browser checks; its community and enterprise
 browser jobs both reached the manual invoice E2E and failed on the stale
-`#service-select` locator. Commit `082e9d8d38` updates it to the rendered
-`[id^="service-select-"]` prefix. The app server was not started to exercise
-that browser test locally, so verify it in the rerun before marking browser
-acceptance complete.
+`#service-select` locator. Commit `082e9d8d38` initially switched to the ID
+prefix, but review found it also matches CustomSelect's wrapper. The follow-up
+repair targets `button[role="combobox"][id^="service-select-"]` and asserts
+exactly one match before clicking. The app server was not started to exercise
+that browser test locally; verify both browser editions on the new head before
+marking browser acceptance complete.
 
 **Status remains BLOCKED** for current-build browser walkthrough, portal
 comparison, real app-to-Xero-simulator delivery and companion schedule-writer
