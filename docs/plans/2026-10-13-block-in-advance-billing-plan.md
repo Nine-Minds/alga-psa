@@ -353,6 +353,52 @@ It is idempotent: a second run is a no-op.
 
 ---
 
+## Runbook: post-deploy repair of stranded Hourly/Usage advance periods
+
+Script: `server/scripts/repair-arrears-only-lines.ts`. One transaction per tenant, in this order: `repairArrearsOnlyLineSchedulesForTenant`, then `repairAllClientCadenceServicePeriodsForTenant`. Idempotent: a second run is a no-op.
+
+**Prerequisites**
+
+1. Migration A (`20261013120000_hourly_usage_lines_bill_in_arrears`) is applied. Migration B (CHECK constraints) is applied or not; the script does not depend on it.
+2. The new application build is deployed (the repair and the Generate-page "Fix all" use the same code).
+3. Run from a checkout of the deployed commit, with `DB_HOST`/`DB_PORT`/`DB_NAME_SERVER`, `DB_USER_ADMIN` and the `postgres_password` secret pointing at the target database (a direct Postgres connection; the script does not go through the app).
+
+**Which tenants.** With no `--tenant`, the script discovers them itself with the Q1 and Q2 predicates (§2.8.1): any tenant with an Hourly/Usage `contract_lines` row at `billing_timing = 'advance'`, or an `advance` `recurring_service_periods` row on an Hourly/Usage line. Discovery is a per-table scan plus one tenant-filtered join per tenant; there is no cross-tenant join. After Migration A, Q1 returns 0 rows and Q2 does the work. Run Q1/Q2 by hand first (§2.8.1) and keep the counts.
+
+**Commands** (from `server/`; `vite-node` rather than `tsx` because the `@alga-psa/*` workspace packages are ESM/webpack-targeted):
+
+```bash
+# 1. Dry run: executes the whole repair in the transaction, prints the summary, ROLLS BACK.
+npx vite-node --config vitest.config.ts scripts/repair-arrears-only-lines.ts --dry-run
+# 2. One tenant first (repeat --tenant for several):
+npx vite-node --config vitest.config.ts scripts/repair-arrears-only-lines.ts --tenant=<tenant-id>
+# 3. All flagged tenants:
+npx vite-node --config vitest.config.ts scripts/repair-arrears-only-lines.ts
+```
+
+**Reading the output.** Per tenant it prints `arrearsOnlyLines` (`linesScanned`, `timingFlipped`, `advanceRowsSuperseded`, `rowsRehomed`, `catchUpRowsCreated`, `manualReview[]`) and `clientCadence` counts. A line `!! N item(s) need MANUAL REVIEW` means periods the repair refused to touch (charged advance periods with a bucket overlay or `period_total` usage, or a catch-up window that cannot be derived); decide those by hand (§2.8.4, §6). A tenant that fails rolls back alone, is listed at the end, and the process exits 1; the other tenants are unaffected.
+
+**Verification** (per tenant, read-only, tenant-filtered):
+
+```sql
+-- no live advance periods left on Hourly/Usage lines (billed/superseded history is expected)
+SELECT count(*) FROM recurring_service_periods rsp
+  JOIN contract_lines cl ON cl.tenant = rsp.tenant AND cl.contract_line_id = rsp.obligation_id
+ WHERE rsp.tenant = :tenant AND cl.contract_line_type IN ('Hourly','Usage')
+   AND rsp.due_position = 'advance' AND rsp.lifecycle_state IN ('generated','locked','edited');
+-- expect 0
+-- no Hourly/Usage line still at advance
+SELECT count(*) FROM contract_lines WHERE tenant = :tenant
+   AND contract_line_type IN ('Hourly','Usage') AND billing_timing = 'advance';  -- expect 0
+```
+
+Then open Billing > Generate invoices for the tenant: the "service periods need repair" banner for stranded arrears-only lines must be gone, and the catch-up rows (`reason_code = 'stranded_advance_catch_up'`) appear as Ready arrears work. Re-running the script must report all zeros except `linesScanned`.
+
+**Rollback / abort.**
+
+- Abort before commit: `--dry-run` writes nothing; Ctrl-C mid-run rolls back the current tenant's transaction, and earlier tenants stay committed (they are independently valid).
+- After commit: there is no automatic undo. Superseded advance rows keep `reason_code = 'hourly_usage_arrears_repair'` and are never deleted; catch-up rows carry `reason_code = 'stranded_advance_catch_up'` and `provenance_kind = 'repair'`. If a catch-up row must be withdrawn before it is invoiced, set that row to `superseded` for the one tenant; do not touch billed rows. Reverting Migration A is not supported once arrears invoices have been issued.
+
 ## 4. Tests (high value only)
 
 ### 4.1 Integration
