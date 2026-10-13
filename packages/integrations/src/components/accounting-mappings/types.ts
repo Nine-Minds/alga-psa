@@ -118,6 +118,12 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
+   * Persisted `external_entity_id` for a catalog option id. This is the key the
+   * external-target unique index enforces, so it (not the option id) is what
+   * decides whether two options collide.
+   */
+  externalIdForOption: (optionId: string) => string;
+  /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid
    * legacy mappings.

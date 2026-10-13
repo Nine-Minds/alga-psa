@@ -19,7 +19,7 @@ import type {
   AccountingMappingModule
 } from './types';
 
-type MappedRow = { externalName?: string; alga_entity_id: string };
+type MappedRow = { externalName?: string; alga_entity_id: string; external_entity_id: string };
 
 type RowEdit = {
   ignored?: boolean;
@@ -88,13 +88,28 @@ export function AccountingMappingBulkGrid({
     [algaEntities, mappedByAlga]
   );
 
-  // Suggestions are computed once per catalog load, only for unmapped rows.
+  // Catalog options whose persisted external id an existing mapping already
+  // holds. Compared by persisted id (not option id) because that is what the
+  // server's unique index enforces: `item:200` and `account:200` collide.
+  const unavailableExternalIds = useMemo(() => {
+    const held = new Set(mappings.map((mapping) => mapping.external_entity_id));
+    const toExternalId = targetConfig?.externalIdForOption ?? ((optionId: string) => optionId);
+    return new Set(
+      externalEntities
+        .filter((entity) => held.has(toExternalId(entity.id)))
+        .map((entity) => entity.id)
+    );
+  }, [mappings, externalEntities, targetConfig]);
+
+  // Suggestions cover unmapped rows only and never offer a target an existing
+  // mapping holds; recomputed after a save reload so fresh mappings exclude theirs.
   const suggestions = useMemo(
     () =>
       suggestMappingTargets(unmappedAlga, externalEntities, {
-        preferredKind: targetConfig?.defaultKindId
+        preferredKind: targetConfig?.defaultKindId,
+        unavailableExternalIds
       }),
-    [unmappedAlga, externalEntities, targetConfig?.defaultKindId]
+    [unmappedAlga, externalEntities, targetConfig?.defaultKindId, unavailableExternalIds]
   );
 
   const externalById = useMemo(
