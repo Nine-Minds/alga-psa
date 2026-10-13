@@ -66,7 +66,10 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { BillingTimingField } from './BillingTimingField';
-import { resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+} from '@shared/billingClients/contractLineTimingRule';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ContractLinesProps {
@@ -1556,7 +1559,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                       ...editLineData,
                                       billing_timing: value
                                     })}
-                                    hideHelp
+                                    hideHelp={isAdvanceTimingAllowedForLineType(line.contract_line_type)}
                                     className="mt-1"
                                   />
                                 ) : (
