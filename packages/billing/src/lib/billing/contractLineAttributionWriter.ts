@@ -2,6 +2,10 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { joinTimeEntryBillingWorkContext } from './timeEntryWorkContext';
 import { toISODate, toPlainDate } from '@alga-psa/core';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import type { ISO8601String } from '@alga-psa/types';
 import {
   buildContractLineAttributionDecision,
@@ -118,6 +122,24 @@ async function loadWindowRecords(params: {
   // Reconciliation must see the same owner/type-qualified work and local
   // billing default as charge calculation, including retained MSP references.
   joinTimeEntryBillingWorkContext(trx, tenant, timeQuery);
+  // This writer runs inside the generation transaction immediately before the
+  // engine's loaders and repeats their fixed-price exclusion. The excluded
+  // project is therefore resolved through the one shared resolver (phase
+  // project for project-task time, the flagged link project for ticket time),
+  // or it would pre-write a contract line for ticket time the engine refuses
+  // to bill. Retained co-managed references carry no project, as before.
+  timeQuery.joinRaw(ticketProjectAttributionJoin('time_entries'));
+  db.tenantJoin(timeQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
+  db.tenantJoin(timeQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+  db.tenantJoin(
+    timeQuery,
+    'projects',
+    trx.raw(ticketProjectIdExpression('project_phases')) as unknown as string,
+    'projects.project_id',
+    // project_phases is null for ticket time, so the tenant predicate comes
+    // from the time entry rather than the (inferred) phase.
+    { type: 'left', rootTenantColumn: 'time_entries.tenant' },
+  );
 
   const timeEntriesQuery = timeQuery
       .where('time_entries.tenant', tenant)
@@ -131,8 +153,8 @@ async function loadWindowRecords(params: {
       .where('billing_work.client_id', clientId);
   if (fixedPriceProjectIds.length > 0) {
     timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
-      this.whereNull('billing_work.project_id').orWhereNotIn(
-        'billing_work.project_id',
+      this.whereNull('projects.project_id').orWhereNotIn(
+        'projects.project_id',
         fixedPriceProjectIds,
       );
     });

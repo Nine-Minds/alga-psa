@@ -9,7 +9,7 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
-import { assertCommentThreadAudience } from '../lib/commentAudience';
+import { assertCommentThreadAudience, resolveCommentAudience } from '../lib/commentAudience';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -1448,7 +1448,11 @@ export class TicketModel {
     trx: Knex.Transaction,
     eventPublisher?: IEventPublisher,
     analyticsTracker?: IAnalyticsTracker,
-    userId?: string
+    userId?: string,
+    // Retention-only publisher: used when `eventPublisher` is absent so a
+    // silent caller (workflow comment without Cc/Bcc) keeps its co-managed
+    // outbox, admission and redaction chain without publishing for others.
+    silentRetentionPublisher?: IEventPublisher
   ): Promise<CreateCommentOutput> {
     if (!trx?.isTransaction) throw new Error('Comment creation requires the owning transaction');
 
@@ -1593,7 +1597,12 @@ export class TicketModel {
       });
     }
 
-    const currentAudience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
+    // A root comment creates its own thread in this transaction: the row is not
+    // yet visible to anyone else, so there is nothing to lock or re-read. Only
+    // replies join an existing (lockable, possibly co-managed) thread.
+    const currentAudience = parentCommentId
+      ? await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId })
+      : resolveCommentAudience({ collaboration_audience: validatedData.collaboration_audience, is_internal: commentIsInternal });
     if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
     await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
@@ -1627,7 +1636,8 @@ export class TicketModel {
     }
 
     // Publish comment event if publisher provided
-    if (eventPublisher) {
+    const commentPublisher = eventPublisher ?? silentRetentionPublisher;
+    if (commentPublisher) {
       try {
         // Resolve a display name so notification templates render the author/body.
         // Inbound-email comments frequently match no contact and no user; the
@@ -1671,9 +1681,9 @@ export class TicketModel {
         // down persistCommentPublication instead, which stamps the row and
         // returns: no event, no outbox row, and none of those checks. The
         // catch below already treats the two markers as equivalent.
-        if ((eventPublisher as any).__inboundOutboxPublisher === true
-          || (eventPublisher as any).transactionalCommentEvents === true) {
-          await eventPublisher.publishCommentCreated(event);
+        if ((commentPublisher as any).__inboundOutboxPublisher === true
+          || (commentPublisher as any).transactionalCommentEvents === true) {
+          await commentPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
             tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
@@ -1683,7 +1693,7 @@ export class TicketModel {
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        if (eventPublisher.transactionalCommentEvents || (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if (commentPublisher.transactionalCommentEvents || (commentPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
       }

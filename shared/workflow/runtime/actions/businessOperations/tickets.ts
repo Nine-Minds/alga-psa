@@ -678,10 +678,16 @@ export function registerTicketActions(): void {
           // A workflow comment is silent by default. Explicit Cc/Bcc are an
           // instruction to mail someone, so the comment publishes
           // TICKET_COMMENT_ADDED and the normal subscriber delivery applies.
-          // Either way the comment is retained to a co-managed conversation.
-          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId, silentComments: !hasEmailRecipients }),
+          // Either way the comment is retained to a co-managed conversation:
+          // the silent path hands the model a retention-only publisher.
+          hasEmailRecipients
+            ? new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId })
+            : undefined,
           undefined,
-          tx.actorUserId
+          tx.actorUserId,
+          hasEmailRecipients
+            ? undefined
+            : new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId, silentComments: true })
         );
       } catch (error) {
         rethrowAsStandardError(ctx, error);
