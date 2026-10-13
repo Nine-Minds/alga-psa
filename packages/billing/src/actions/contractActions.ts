@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -53,6 +54,10 @@ class ContractActionDomainError extends Error {
 }
 
 function contractActionErrorFrom(error: unknown): ContractActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractActionDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);

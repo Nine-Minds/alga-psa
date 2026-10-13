@@ -8,6 +8,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 import { assertMspPermission } from '../lib/authHelpers';
@@ -21,6 +22,9 @@ import {
 export type ClientContractLineMutationResult = void | ActionMessageError | ActionPermissionError;
 
 function clientContractLineActionErrorFrom(error: unknown): ActionMessageError | ActionPermissionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:')) {

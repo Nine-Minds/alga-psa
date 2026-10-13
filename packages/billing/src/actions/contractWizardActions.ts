@@ -677,9 +677,19 @@ export const createContractTemplateFromWizard = withAuth(async (
     let nextDisplayOrder = 0;
     const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      // Fixed and Product lines: advance is allowed, so the contract-wide value applies.
+      lineType: 'Fixed',
       cadenceOwner: submission.cadence_owner,
       defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-      billingTiming: submission.billing_timing,
+      contractWideBillingTiming: submission.billing_timing,
+      enableProration: submission.enable_proration,
+    });
+    // Hourly and Usage lines bill in arrears whatever the contract-wide value is.
+    const arrearsOnlyLinePolicy = resolveRecurringAuthoringPolicy({
+      lineType: 'Hourly',
+      cadenceOwner: submission.cadence_owner,
+      defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+      contractWideBillingTiming: submission.billing_timing,
       enableProration: submission.enable_proration,
     });
 
@@ -873,8 +883,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdHourlyLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Hourly`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -959,8 +969,8 @@ export const createContractTemplateFromWizard = withAuth(async (
       const createdUsageLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Usage`,
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Usage',
@@ -1512,10 +1522,20 @@ export const createClientContractFromWizard = withAuth(async (
     let usagePlanId: string | undefined;
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+  // Products allow advance, so the contract-wide value applies to them.
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    lineType: 'Product',
     cadenceOwner: submission.cadence_owner,
     defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-    billingTiming: submission.billing_timing,
+    contractWideBillingTiming: submission.billing_timing,
+    enableProration: submission.enable_proration,
+  });
+  // Hourly and Usage lines bill in arrears whatever the contract-wide value is.
+  const arrearsOnlyLinePolicy = resolveRecurringAuthoringPolicy({
+    lineType: 'Hourly',
+    cadenceOwner: submission.cadence_owner,
+    defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    contractWideBillingTiming: submission.billing_timing,
     enableProration: submission.enable_proration,
   });
 
@@ -1574,9 +1594,11 @@ export const createClientContractFromWizard = withAuth(async (
     for (const [lineIndex, fixedLine] of writableFixedLines.entries()) {
       // Per-line timing and proration; cadence owner stays contract-level.
       const fixedLinePolicy = resolveRecurringAuthoringPolicy({
+        lineType: 'Fixed',
         cadenceOwner: submission.cadence_owner,
         defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-        billingTiming: fixedLine.billing_timing ?? submission.billing_timing,
+        billingTiming: fixedLine.billing_timing,
+        contractWideBillingTiming: submission.billing_timing,
         enableProration: fixedLine.enable_proration,
       });
       const createdFixedLine = await ContractLine.create(trx, {
@@ -1707,8 +1729,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       hourlyPlanId = createdHourlyLine.contract_line_id!;
@@ -1762,8 +1784,8 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       usagePlanId = createdUsageLine.contract_line_id!;

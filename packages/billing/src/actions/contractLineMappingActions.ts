@@ -14,6 +14,7 @@ import {
   resolveRecurringAuthoringPolicy,
 } from '@alga-psa/shared/billingClients/recurringAuthoringPolicy';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -31,6 +32,10 @@ class ContractLineMappingDomainError extends Error {
 }
 
 function contractLineMappingActionErrorFrom(error: unknown): ContractLineMappingActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractLineMappingDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -725,8 +730,9 @@ export const updateContractLineAssociation = withAuth(async (
             template_id: contractId,
             template_line_id: contractLineId,
           })
-          .first(['cadence_owner', 'billing_timing']);
+          .first(['cadence_owner', 'billing_timing', 'line_type']);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: existingTemplateLine?.line_type ?? null,
           cadenceOwner: dbUpdateData.cadence_owner,
           fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: dbUpdateData.billing_timing,

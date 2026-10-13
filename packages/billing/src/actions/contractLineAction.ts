@@ -212,6 +212,7 @@ export const createContractLine = withAuth(async (
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: safePlanData.contract_line_type ?? null,
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safePlanData.billing_timing,
@@ -277,6 +278,8 @@ export const updateContractLine = withAuth(async (
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                // Post-update type: a type change to Hourly/Usage resets inherited advance.
+                lineType: safeUpdateData.contract_line_type ?? existingPlan.contract_line_type ?? null,
                 cadenceOwner: safeUpdateData.cadence_owner,
                 fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safeUpdateData.billing_timing,

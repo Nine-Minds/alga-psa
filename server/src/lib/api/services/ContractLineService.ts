@@ -344,6 +344,7 @@ export class ContractLineService extends BaseService<IContractLine> {
           enableProration,
         });
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? planData.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner ?? planData.cadence_owner,
           defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -403,6 +404,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: (data as { billing_timing?: 'arrears' | 'advance' }).billing_timing,
@@ -454,6 +456,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Prepare update data
         const updateData = this.addUpdateAuditFields(data, context);
         const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+          lineType: (data as any).contract_line_type ?? existingPlan.contract_line_type ?? null,
           cadenceOwner: data.cadence_owner,
           fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
           billingTiming: data.billing_timing,
