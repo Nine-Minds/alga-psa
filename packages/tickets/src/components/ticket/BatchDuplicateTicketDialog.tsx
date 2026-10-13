@@ -243,9 +243,18 @@ export default function BatchDuplicateTicketDialog({
     );
   };
 
+  // Inserts at the caret (replacing any selection); appends when the input has no caret position.
   const insertToken = (token: string) => {
-    setTemplate((current) => `${current}{{${token}}}`);
-    templateRef.current?.focus();
+    const input = templateRef.current;
+    const text = `{{${token}}}`;
+    const start = input?.selectionStart ?? template.length;
+    const end = input?.selectionEnd ?? start;
+    setTemplate(`${template.slice(0, start)}${text}${template.slice(end)}`);
+    const caret = start + text.length;
+    requestAnimationFrame(() => {
+      templateRef.current?.focus();
+      templateRef.current?.setSelectionRange(caret, caret);
+    });
   };
 
   // "Onboard John Smith" with source contact "John Smith" -> "Onboard {{contact}}".

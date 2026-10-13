@@ -176,6 +176,16 @@ describe('BatchDuplicateTicketDialog', () => {
     expect(screen.getByLabelText('Title template')).toHaveValue('Onboard {{contact}}{{client}}');
   });
 
+  it('inserts a token at the caret, replacing the selection', async () => {
+    renderDialog();
+    await loaded();
+    const input = screen.getByLabelText('Title template') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Onboard X today' } });
+    input.setSelectionRange(8, 9); // select "X"
+    fireEvent.click(document.getElementById('batch-duplicate-token-contact')!);
+    expect(input).toHaveValue('Onboard {{contact}} today');
+  });
+
   it('template changes update unedited rows but not edited ones; reset returns a row to the template', async () => {
     renderDialog();
     await loaded();
