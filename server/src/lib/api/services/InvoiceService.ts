@@ -880,6 +880,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         requireDraft: true,
         // Audit row commits atomically with the delete.
         onBeforeCommit: async (trx) => {
+          // auditLog silently skips when the tenant GUC is unset; scope it to this trx.
+          await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', context.tenant]);
           await auditLog(trx, {
             userId: context.userId,
             operation: 'DELETE',

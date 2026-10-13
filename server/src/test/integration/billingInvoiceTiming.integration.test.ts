@@ -2478,6 +2478,13 @@ it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases it
   const response = await restDelete(invoiceId);
   expect(response.status).toBe(204);
 
+  // The audit row is written through onBeforeCommit, atomically with the delete.
+  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
+    .first();
+  expect(auditRow).toBeTruthy();
+  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+
   expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
   expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
   expect(
