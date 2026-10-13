@@ -7,6 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCalendarDate, formatDateOnly } from '@alga-psa/core';
 import type { IHourBlock, IHourBlockAllocation, IHourBlockAuditEntry } from '@alga-psa/types';
+import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import { getHourBlockDetail } from '@alga-psa/billing/actions/hourBlockActions';
 
 interface HourBlockDetailDrawerProps {
@@ -97,6 +98,14 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                 {data.block.service_name ?? data.block.service_id}
               </p>
             </div>
+
+            {data.block.contract_coverage && data.block.contract_coverage.length > 0 && (
+              <HourBlockCoverageNotice
+                variant="alert"
+                coverage={data.block.contract_coverage}
+                unscoped={(data.scopes ?? []).length === 0}
+              />
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-md bg-[rgb(var(--color-border-100))] p-3">

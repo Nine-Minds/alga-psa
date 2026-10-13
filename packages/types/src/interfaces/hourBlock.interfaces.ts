@@ -18,6 +18,32 @@ export type HourBlockAuditType =
   | 'void'
   | 'purchase_reversal';
 
+/** One contract line (through a client_contracts association) that covers a service. */
+export interface ContractLineCoverageLine {
+  contract_id: string;
+  contract_name: string;
+  client_contract_id: string;
+  contract_line_id: string;
+  contract_line_name: string;
+  /** YYYY-MM-DD of the client_contracts association. */
+  start_date: string;
+  /** YYYY-MM-DD, or null when open-ended. */
+  end_date: string | null;
+}
+
+export interface ServiceContractLineCoverage {
+  service_id: string;
+  service_name: string;
+  /**
+   * 'automatic': no two lines overlap in the window, so every entry on the
+   * service bills through its single line and never draws the block.
+   * 'when_assigned': at least two lines overlap, so only entries assigned to a
+   * contract line skip the block.
+   */
+  assignment: 'automatic' | 'when_assigned';
+  lines: ContractLineCoverageLine[];
+}
+
 export interface IHourBlock extends TenantEntity {
   block_id: string;
   tenant: string;
@@ -75,6 +101,8 @@ export interface IHourBlock extends TenantEntity {
   remaining_value?: number;
   /** True when the block has EVER been allocated (void guard; derived from `first_allocated_at IS NOT NULL`, not live allocation rows). */
   has_allocations?: boolean;
+  /** Display-only join: contract lines covering the block's services (contracts win over blocks). */
+  contract_coverage?: ServiceContractLineCoverage[];
 }
 
 export interface IHourBlockServiceScope extends TenantEntity {
