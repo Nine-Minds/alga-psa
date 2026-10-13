@@ -26,7 +26,10 @@ import { syncRecurringServicePeriodsForContractLine } from './recurringServicePe
  *  3. regenerates the schedule (arrears, from the billed boundary);
  *  4. re-homes `edited` / `skipped` advance rows onto the arrears schedule;
  *  5. adds a sibling arrears "catch-up" row for each billed advance period that may hold
- *     unbilled work. The billed advance row itself is never modified.
+ *     unbilled work. The billed advance row itself is never modified;
+ *  6. adds an arrears catch-up row for each retired (superseded) unbilled advance period
+ *     that the regenerated schedule does not cover, i.e. unbilled periods before the billed
+ *     boundary.
  *
  * Idempotent: a second run finds nothing to do.
  */
@@ -160,8 +163,8 @@ async function lineHasBucketOrPeriodTotal(
  * over-inclusive (no client scoping): a needless catch-up row bills nothing, a missing one
  * would leave work unbilled.
  */
-async function hasUninvoicedActivity(
-  trx: Knex.Transaction,
+export async function hasUninvoicedActivity(
+  trx: Knex | Knex.Transaction,
   tenant: string,
   contractLineId: string,
   chargeFamily: string,
@@ -259,6 +262,41 @@ async function loadArrearsCandidateForServicePeriod(
       record.servicePeriod.start.slice(0, 10) === start.slice(0, 10)
       && record.servicePeriod.end.slice(0, 10) === end,
   ) ?? null;
+}
+
+async function insertCatchUpRow(
+  trx: Knex.Transaction,
+  tenant: string,
+  line: LineRow,
+  candidate: IRecurringServicePeriodRecord,
+  nowIso: string,
+): Promise<void> {
+  await tenantDb(trx, tenant).table('recurring_service_periods').insert({
+    record_id: uuidv4(),
+    tenant,
+    schedule_key: candidate.scheduleKey,
+    period_key: candidate.periodKey,
+    revision: 1,
+    obligation_id: line.contract_line_id,
+    charge_family: candidate.sourceObligation.chargeFamily,
+    cadence_owner: candidate.cadenceOwner,
+    due_position: 'arrears',
+    lifecycle_state: 'generated',
+    service_period_start: candidate.servicePeriod.start.slice(0, 10),
+    service_period_end: candidate.servicePeriod.end.slice(0, 10),
+    invoice_window_start: candidate.invoiceWindow.start.slice(0, 10),
+    invoice_window_end: candidate.invoiceWindow.end.slice(0, 10),
+    activity_window_start: candidate.activityWindow?.start?.slice(0, 10) ?? null,
+    activity_window_end: candidate.activityWindow?.end?.slice(0, 10) ?? null,
+    timing_metadata: candidate.timingMetadata ?? null,
+    provenance_kind: 'repair',
+    source_rule_version: candidate.provenance.sourceRuleVersion,
+    reason_code: STRANDED_ADVANCE_CATCH_UP_REASON,
+    source_run_key: `${REPAIR_SOURCE_RUN_PREFIX}:${line.contract_line_id}:${nowIso}`,
+    supersedes_record_id: null,
+    created_at: nowIso,
+    updated_at: nowIso,
+  });
 }
 
 export async function repairArrearsOnlyLineSchedulesForTenant(
@@ -395,7 +433,6 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
     }
 
     // 5. Catch-up rows for billed advance periods.
-    if (billedRows.length === 0) continue;
     const coveredSpans = new Set((await arrearsRows()).map(periodSpanKey));
     const chargeFamily = resolveRecurringChargeFamily(line.contract_line_type);
     let bucketOrTotal: boolean | null = null;
@@ -436,32 +473,44 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
         continue;
       }
 
-      await db.table('recurring_service_periods').insert({
-        record_id: uuidv4(),
-        tenant,
-        schedule_key: candidate.scheduleKey,
-        period_key: candidate.periodKey,
-        revision: 1,
+      await insertCatchUpRow(trx, tenant, line, candidate, nowIso);
+      coveredSpans.add(span);
+      summary.catchUpRowsCreated += 1;
+    }
+
+    // 6. Unbilled advance periods that step 2 retired and the arrears sync did not cover.
+    //    The sync only generates arrears rows from the billed boundary, so an unbilled advance
+    //    period before that boundary (e.g. unbilled Aug beside a billed Sept) would otherwise be
+    //    left with no row and its work could never be invoiced. Superseded rows from an earlier
+    //    run are included, so the repair also heals lines an earlier pass left behind.
+    const billedSpans = new Set(billedRows.map(periodSpanKey));
+    const retiredAdvanceRows = (await db.table('recurring_service_periods')
+      .where({
         obligation_id: line.contract_line_id,
-        charge_family: candidate.sourceObligation.chargeFamily,
-        cadence_owner: candidate.cadenceOwner,
-        due_position: 'arrears',
-        lifecycle_state: 'generated',
-        service_period_start: candidate.servicePeriod.start.slice(0, 10),
-        service_period_end: candidate.servicePeriod.end.slice(0, 10),
-        invoice_window_start: candidate.invoiceWindow.start.slice(0, 10),
-        invoice_window_end: candidate.invoiceWindow.end.slice(0, 10),
-        activity_window_start: candidate.activityWindow?.start?.slice(0, 10) ?? null,
-        activity_window_end: candidate.activityWindow?.end?.slice(0, 10) ?? null,
-        timing_metadata: candidate.timingMetadata ?? null,
-        provenance_kind: 'repair',
-        source_rule_version: candidate.provenance.sourceRuleVersion,
-        reason_code: STRANDED_ADVANCE_CATCH_UP_REASON,
-        source_run_key: `${REPAIR_SOURCE_RUN_PREFIX}:${line.contract_line_id}:${nowIso}`,
-        supersedes_record_id: null,
-        created_at: nowIso,
-        updated_at: nowIso,
-      });
+        due_position: 'advance',
+        lifecycle_state: 'superseded',
+        reason_code: HOURLY_USAGE_ARREARS_REPAIR_REASON,
+      })
+      .whereNull('invoice_id')
+      .select('*')) as PeriodRow[];
+    for (const retired of [...retiredAdvanceRows].sort((a, b) =>
+      dateOnly(a.service_period_start).localeCompare(dateOnly(b.service_period_start)),
+    )) {
+      const span = periodSpanKey(retired);
+      if (coveredSpans.has(span) || billedSpans.has(span)) continue;
+
+      const candidate = await loadArrearsCandidateForServicePeriod(trx, tenant, line, retired, nowIso);
+      if (!candidate) {
+        summary.manualReview.push({
+          contractLineId: line.contract_line_id,
+          recordId: retired.record_id,
+          servicePeriodStart: dateOnly(retired.service_period_start),
+          servicePeriodEnd: dateOnly(retired.service_period_end),
+          reason: 'catch_up_window_unavailable',
+        });
+        continue;
+      }
+      await insertCatchUpRow(trx, tenant, line, candidate, nowIso);
       coveredSpans.add(span);
       summary.catchUpRowsCreated += 1;
     }
