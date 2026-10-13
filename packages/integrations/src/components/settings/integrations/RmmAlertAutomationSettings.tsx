@@ -1509,6 +1509,8 @@ export function RmmAlertAutomationSettings({
     setSavingRule(true);
     try {
       const { conditions, actions } = formToRuleInput(ruleForm);
+      // The reset-on-close switch is hidden for UniFi (alerts are derived, nothing to reset provider-side).
+      if (provider === "unifi") actions.resetAlertOnTicketClose = false;
       let res;
       if (editingRule) {
         res = await updateRmmAlertRule({

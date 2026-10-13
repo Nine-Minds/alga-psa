@@ -123,7 +123,7 @@ export default function UniFiIntegrationSettings() {
       }
     } catch (err) {
       console.error('Failed to load UniFi integration state:', err);
-      setError(t('integrations.rmm.unifi.errors.loadState', { defaultValue: 'Failed to load UniFi integration state' }));
+      setError((prev) => prev || t('integrations.rmm.unifi.errors.loadState', { defaultValue: 'Failed to load UniFi integration state' }));
     } finally {
       if (!background) setIsLoading(false);
     }

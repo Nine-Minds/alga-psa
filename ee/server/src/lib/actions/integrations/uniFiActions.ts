@@ -594,7 +594,12 @@ export const getUniFiConnectionSummary = withAdvancedAssetsAccess(async (user, {
         .where({ integration_id: integration.integration_id })
         .whereNotNull('client_id')
         .count<{ count: string }[]>('mapping_id as count'),
-      db.table('assets').where({ rmm_provider: PROVIDER }).count<{ count: string }[]>('asset_id as count'),
+      // Exclude retired (tombstoned) devices: their mapping carries metadata.deleted = true.
+      db
+        .table('tenant_external_entity_mappings')
+        .where({ integration_type: PROVIDER, alga_entity_type: 'asset' })
+        .whereRaw("COALESCE(metadata->>'deleted', 'false') <> 'true'")
+        .count<{ count: string }[]>('id as count'),
       db
         .table('rmm_alerts')
         .where({ integration_id: integration.integration_id, status: 'active' })
