@@ -86,7 +86,7 @@ describe('ContractTemplateDetail Manage Services', () => {
 
   afterEach(() => cleanup());
 
-  it('opens the services manager and formats the line rate currency-neutrally', async () => {
+  it('opens the services manager and formats the line rate in the template currency', async () => {
     render(
       <CurrencyFormatProvider currencyCode="USD" locale="en-US">
         <ContractTemplateDetail />
@@ -98,10 +98,10 @@ describe('ContractTemplateDetail Manage Services', () => {
 
     await waitFor(() => expect(screen.getByText('Manage Template Services')).toBeInTheDocument());
     expect(actions.getDetailedContractLines).toHaveBeenCalled();
-    // Templates are currency-neutral: the rate carries no symbol or code, even
-    // when the stored template row has a currency_code and the provider has another.
+    // Templates carry a base currency: the rate is formatted in the template's
+    // currency (EUR), not the surrounding provider's (USD).
     const rate = screen.getByText(/123\.45/);
-    expect(rate).toHaveTextContent("123.45 in the client's currency");
-    expect(rate.textContent).not.toMatch(/[$€£¥]|USD|EUR/);
+    expect(rate).toHaveTextContent('€123.45');
+    expect(rate.textContent).not.toMatch(/\$|USD/);
   });
 });

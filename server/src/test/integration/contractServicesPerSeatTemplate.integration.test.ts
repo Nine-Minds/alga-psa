@@ -111,6 +111,7 @@ async function createTemplate(fixedServices: Array<Record<string, unknown>>, ext
     await createContractTemplateFromWizard({
       contract_name: `Seat template ${uuidv4().slice(0, 6)}`,
       billing_frequency: 'monthly',
+      currency_code: 'USD',
       fixed_services: fixedServices as any,
       ...extra,
     } as any),
@@ -382,6 +383,7 @@ describe('contract templates: per-seat recurring services', () => {
         createContractTemplateFromWizard({
           contract_name: name,
           billing_frequency: 'monthly',
+          currency_code: 'USD',
           fixed_services: [{ service_id: catalog.user.serviceId, pricing_basis: 'unit', quantity, unit_rate: 10000 }],
         } as any),
       ).rejects.toThrow(/whole number|quantity/i);
