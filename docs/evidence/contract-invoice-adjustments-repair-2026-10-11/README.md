@@ -553,3 +553,20 @@ delivery, current-build live walkthrough, and companion schedule-writer/browser
 acceptance still require the separately authorized smoke step. Do not mark the
 whole card accepted from DB suites, mocked transport, CI browser suites, old
 screenshots, or database-only fixture inspection.
+
+### Main advancement and final candidate
+
+After the verification above, `main` advanced to
+`ecd8a1644322ef39335d09097ae8bd8274d50cff` (`chore: bump version to 1.6.11`).
+It merged without conflicts in merge commit `04bb04b53c61e11f4bcf751487bbe1a0ce831b5d`.
+That merge changes only the version fields in `packages/core/package.json` and
+`server/package.json`; no invoice source or test file changed. The settlement,
+companion, Xero, fixture, billing build and billing typecheck results above were
+run immediately before this metadata-only merge, on `62e413ada2`; they are not
+misreported as reruns on the merge commit.
+
+The full CI run `38431409531` was triggered for `62e413ada2` before the main
+merge and is not evidence for the post-merge candidate. The post-merge commit
+and this evidence update must be pushed and CI rechecked on that new head. Keep
+the review guide **BLOCKED** until those exact-head results and the separate
+live portal, Xero, and companion schedule-writer acceptance are complete.
