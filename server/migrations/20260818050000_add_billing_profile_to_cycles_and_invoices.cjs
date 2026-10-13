@@ -6,8 +6,9 @@
  *
  * This is the point at which invoice *production* changes, and therefore the
  * highest-risk gate in the whole effort. The design that keeps it safe is that
- * `generateInvoice(cycleId)` keeps its shape entirely — it simply runs once per
- * profile-cycle instead of once per client-cycle. Nothing about how an invoice
+ * recurring invoice generation keeps its shape entirely — it simply runs once per
+ * profile-cycle instead of once per client-cycle (the bridge `billingCycleId`
+ * feeds `getCycleBillingProfileId`). Nothing about how an invoice
  * is built changes; only how many cycles exist.
  *
  * Because the S1 backfill made every client single-profile, and this migration
