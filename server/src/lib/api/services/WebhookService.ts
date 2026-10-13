@@ -161,8 +161,7 @@ export class WebhookService {
         customActions: {
           test: { method: 'POST', path: 'test' },
           deliveries: { method: 'GET', path: 'deliveries' },
-          analytics: { method: 'GET', path: 'analytics' },
-          retry: { method: 'POST', path: 'retry' }
+          analytics: { method: 'GET', path: 'analytics' }
         },
         relationships: {
           subscriptions: { resource: 'webhook-subscriptions', many: true },
