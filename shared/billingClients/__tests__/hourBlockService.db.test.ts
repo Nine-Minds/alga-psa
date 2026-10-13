@@ -1158,6 +1158,42 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
     }
   });
 
+  it('reconcileLineAllocations keeps a null-line entry drawn via deterministic resolution, re-draws it onto a new pending block, and releases it on void', async () => {
+    const w = await setup();
+    try {
+      const active = await block(w, { line: w.lineA, remaining: 120 });
+      const explicit = await entry(w, w.svcA, 100, w.lineA, '2026-08-10', 0);
+      const nullLine = await entry(w, w.svcA, 100, null, '2026-08-11', 0);
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, w.tenant, w.clientId, explicit);
+        await allocateTimeEntry(trx, w.tenant, w.clientId, nullLine); // 20 left -> partial
+      });
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+
+      // Plain reconcile must not strip the null-line entry's coverage.
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+      expect(await allocatedFor(w, explicit.entry_id)).toEqual([{ block_id: active, minutes: 100 }]);
+
+      // A pending block appears: overflow of the null-line entry lands on it.
+      const pending = await block(w, { line: w.lineA, status: 'pending', total: 600 });
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual(
+        [{ block_id: active, minutes: 20 }, { block_id: pending, minutes: 80 }].sort((x, y) => (x.block_id < y.block_id ? -1 : 1)),
+      );
+      expect(await remaining(w, pending)).toBe(520);
+
+      // Void: released, back to the active block's 20 minutes only.
+      await w.db('hour_blocks').where({ tenant: w.tenant, block_id: pending }).update({ status: 'voided' });
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+      expect(await remaining(w, pending)).toBe(600);
+      expect(await remaining(w, active)).toBe(0);
+    } finally {
+      await teardown(w);
+    }
+  });
+
   it('nightly client reconcile covers block-line entries (incl. unattributed) without crossing lines, and stays idempotent', async () => {
     const w = await setup();
     try {

@@ -770,6 +770,41 @@ export async function reconcileLineAllocations(
       'te.start_time',
     );
 
+  // Entries with no stored contract_line_id whose burn target resolves to this
+  // line (the single deterministic line path in resolveBlockBurnTarget) belong
+  // to the line too: they were drawn from its blocks at save time, so a re-draw
+  // that ignored them would strip their coverage until the nightly reconcile.
+  {
+    const lineServiceIds: string[] = (await db.table('contract_line_services')
+      .where({ contract_line_id: contractLineId })
+      .distinct('service_id')).map((r: any) => r.service_id);
+    if (lineServiceIds.length > 0) {
+      const unassigned: Array<BlockBurnTimeEntry & { entry_id: string }> = await db.table('time_entries as te')
+        .whereNull('te.contract_line_id')
+        .where('te.invoiced', false)
+        .whereIn('te.service_id', lineServiceIds)
+        .where('te.billable_duration', '>', 0)
+        .select(
+          'te.entry_id',
+          'te.service_id',
+          'te.billable_duration',
+          'te.contract_line_id',
+          'te.work_item_id',
+          'te.work_item_type',
+          'te.work_date',
+          'te.start_time',
+        );
+      for (const candidate of unassigned) {
+        const candidateClientId = await resolveClientIdForWorkItem(trx, tenant, candidate.work_item_id, candidate.work_item_type);
+        if (!candidateClientId) continue;
+        const candidateTarget = await resolveBlockBurnTarget(trx, tenant, candidate, candidateClientId);
+        if (candidateTarget?.kind === 'contract' && candidateTarget.contractLineId === contractLineId) {
+          entries.push(candidate);
+        }
+      }
+    }
+  }
+
   // Entries that carry an allocation against this line's blocks but no longer
   // qualify (e.g. duration zeroed) still need their draw reversed.
   const allocated: string[] = await db.table('hour_block_time_allocations as hba')
@@ -800,10 +835,13 @@ export async function reconcileLineAllocations(
     if (pinnedToExpired.has(entryId)) continue;
     const entry = entryById.get(entryId)!;
     await reverseTimeEntryAllocations(trx, tenant, entryId);
-    if (entry.contract_line_id !== contractLineId) continue;
 
     const clientId = await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type);
     if (!clientId) continue;
+    // Re-allocate only when the entry's burn target is this line (explicit
+    // contract_line_id or the single deterministic line for null-line entries).
+    const target = await resolveBlockBurnTarget(trx, tenant, entry, clientId);
+    if (target?.kind !== 'contract' || target.contractLineId !== contractLineId) continue;
     const { allocations } = await allocateTimeEntryDetailed(trx, tenant, clientId, entry);
     if (allocations.length > 0) redrawn += 1;
   }
