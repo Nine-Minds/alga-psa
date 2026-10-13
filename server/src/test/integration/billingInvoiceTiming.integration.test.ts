@@ -1190,7 +1190,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     planName: 'Contract Hourly Window Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1204,7 +1204,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked:v1`,
     sourceRunKey: 'integration-approval-blocked-hourly',
     targetHorizonDays: 32,
@@ -1239,8 +1239,10 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
     clientId: contextLike.clientId,
     contractId: hourlyLine.contractId,
     contractLineId: hourlyLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Hourly lines always bill in arrears: the 02-08..03-07 service period is
+    // invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const billingResult = await calculateBillingForSelectionInputAction({
@@ -1261,7 +1263,7 @@ it('T069: hourly recurring charges bill approved time entries that fall inside a
   for (const charge of timeCharges) {
     expect(charge.servicePeriodStart).toBe('2025-02-08');
     expect(charge.servicePeriodEnd).toBe('2025-03-07');
-    expect(charge.billingTiming).toBe('advance');
+    expect(charge.billingTiming).toBe('arrears');
   }
 }, HOOK_TIMEOUT);
 
@@ -1281,7 +1283,7 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     planName: 'Contract Hourly Empty Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1295,7 +1297,7 @@ it('T070: hourly recurring charges with no billable time inside the service peri
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
     sourceRunKey: 'integration-approval-window-specific',
     targetHorizonDays: 32,
@@ -1323,8 +1325,10 @@ it('T070: hourly recurring charges with no billable time inside the service peri
     clientId: contextLike.clientId,
     contractId: hourlyLine.contractId,
     contractLineId: hourlyLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Hourly lines always bill in arrears: the 02-08..03-07 service period is
+    // invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const invoice = await generateInvoiceForSelectionInput(selectorInput);
@@ -1352,7 +1356,7 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
     planName: 'Approval Blocked Hourly Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1366,7 +1370,7 @@ it('T001/T004: recurring due-work marks a contract-hourly window as approval-blo
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-blocked-hourly:v1`,
     sourceRunKey: 'integration-approval-blocked-hourly',
     targetHorizonDays: 32,
@@ -1427,7 +1431,7 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
     planName: 'Approval Unique Unassigned Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1441,7 +1445,7 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-unique-unassigned:v1`,
     sourceRunKey: 'integration-approval-unique-unassigned',
     targetHorizonDays: 32,
@@ -1578,7 +1582,7 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
     planName: 'Approval Window Specific Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1592,7 +1596,7 @@ it('T002: recurring due-work does not block a window for unrelated non-approved 
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-window-specific:v1`,
     sourceRunKey: 'integration-approval-window-specific',
     targetHorizonDays: 32,
@@ -1659,12 +1663,15 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
     planName: 'Approval Mixed Hourly Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
+  // The hourly line bills in arrears, so its 02-08..03-07 service period is
+  // invoiced in the 03-08 window. Materialize the advance fixed line's 03-08
+  // period so both land in the same invoice window.
   const mixedFixedMaterializationPlan = materializeContractCadenceServicePeriods({
-    asOf: '2025-02-08T00:00:00Z',
+    asOf: '2025-03-08T00:00:00Z',
     materializedAt: '2026-04-12T00:10:00.000Z',
     billingCycle: 'monthly',
     anchorDate: '2025-02-08T00:00:00Z',
@@ -1690,7 +1697,7 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-mixed-hourly:v1`,
     sourceRunKey: 'integration-approval-mixed-hourly',
     targetHorizonDays: 32,
@@ -1753,7 +1760,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
     planName: 'Approval Transition Plan',
     baseRateCents: 12000,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1767,7 +1774,7 @@ it('T009/T011: server-side guard re-checks approval state at generation time and
       obligationId: hourlyLine.contractLineId,
       chargeFamily: 'hourly',
     },
-    duePosition: 'advance',
+    duePosition: 'arrears',
     sourceRuleVersion: `${hourlyLine.contractLineId}:approval-transition:v1`,
     sourceRunKey: 'integration-approval-transition',
     targetHorizonDays: 32,
@@ -1843,7 +1850,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
     planName: 'Contract Usage Window Plan',
     baseRateCents: 900,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1875,8 +1882,9 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
     clientId: contextLike.clientId,
     contractId: usageLine.contractId,
     contractLineId: usageLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Arrears: the 02-08..03-07 service period is invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   const billingResult = await calculateBillingForSelectionInputAction({
@@ -1897,7 +1905,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
   for (const charge of usageCharges) {
     expect(charge.servicePeriodStart).toBe('2025-02-08');
     expect(charge.servicePeriodEnd).toBe('2025-03-07');
-    expect(charge.billingTiming).toBe('advance');
+    expect(charge.billingTiming).toBe('arrears');
   }
 }, HOOK_TIMEOUT);
 
@@ -1917,7 +1925,7 @@ it('T072: usage recurring charges with no usage inside the service period refuse
     planName: 'Contract Usage Empty Plan',
     baseRateCents: 900,
     startDate: '2025-02-08',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'contract',
   });
@@ -1942,8 +1950,9 @@ it('T072: usage recurring charges with no usage inside the service period refuse
     clientId: contextLike.clientId,
     contractId: usageLine.contractId,
     contractLineId: usageLine.contractLineId,
-    windowStart: '2025-02-08T00:00:00Z',
-    windowEnd: '2025-03-08T00:00:00Z',
+    // Arrears: the 02-08..03-07 service period is invoiced in the window after it ends.
+    windowStart: '2025-03-08T00:00:00Z',
+    windowEnd: '2025-04-08T00:00:00Z',
   });
 
   // Usage billing is record-driven: neither seeded record falls inside the
@@ -1997,8 +2006,10 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     serviceName: 'Mixed Hourly Service',
     planName: 'Mixed Window Contract Hourly',
     baseRateCents: 12500,
-    startDate: currentPeriodStart,
-    billingTiming: 'advance',
+    // Hourly and usage always bill in arrears, so the February invoice cycle
+    // bills their January service period next to the advance fixed line.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
     contractId: fixedLine.contractId,
@@ -2008,8 +2019,8 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     serviceName: 'Mixed Usage Service',
     planName: 'Mixed Window Contract Usage',
     baseRateCents: 700,
-    startDate: currentPeriodStart,
-    billingTiming: 'advance',
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
     contractId: fixedLine.contractId,
@@ -2024,14 +2035,14 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
   });
   await createUsageRecordForContractLine({
     clientId: contextLike.clientId,
     serviceId: usageLine.serviceId,
     contractLineId: usageLine.contractLineId,
-    usageDate: '2025-02-20',
+    usageDate: '2025-01-20',
     quantity: 6,
   });
 
@@ -2060,7 +2071,17 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
       normalizeDateValue(row.service_period_start) === currentPeriodStart
       && normalizeDateValue(row.service_period_end) === currentPeriodEnd,
   );
-  expect(detailRowsForCurrentWindow).toHaveLength(3);
+  // The advance fixed line bills the current period; hourly and usage bill the
+  // January period that just ended.
+  expect(detailRowsForCurrentWindow.map((row) => row.service_id)).toEqual([fixedLine.serviceId]);
+  const detailRowsForPriorWindow = detailRows.filter(
+    (row) =>
+      normalizeDateValue(row.service_period_start) === '2025-01-01'
+      && normalizeDateValue(row.service_period_end) === '2025-01-31',
+  );
+  expect(new Set(detailRowsForPriorWindow.map((row) => row.service_id))).toEqual(
+    new Set([hourlyLine.serviceId, usageLine.serviceId]),
+  );
 }, HOOK_TIMEOUT);
 
 it('excludes zero-billable time entries from recurring hourly charges and leaves them uninvoiced', async () => {
@@ -2078,8 +2099,9 @@ it('excludes zero-billable time entries from recurring hourly charges and leaves
     serviceName: 'Zero Billable Service',
     planName: 'Zero Billable Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2089,8 +2111,8 @@ it('excludes zero-billable time entries from recurring hourly charges and leaves
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
     billableDuration: 0,
   });
 
@@ -2129,8 +2151,9 @@ it('charges billable minutes, not elapsed start/end time, for recurring hourly e
     serviceName: 'Billable Minutes Service',
     planName: 'Billable Minutes Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2141,8 +2164,8 @@ it('charges billable minutes, not elapsed start/end time, for recurring hourly e
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
     billableDuration: 45,
   });
 
@@ -2173,8 +2196,9 @@ it('invoices multiple approved hourly entries sharing one recurring period with 
     serviceName: 'Shared Period Hourly Service',
     planName: 'Shared Period Hourly Plan',
     baseRateCents: 12000,
-    startDate: '2025-02-01',
-    billingTiming: 'advance',
+    // Arrears: the February cycle invoice bills the January service period.
+    startDate: '2025-01-01',
+    billingTiming: 'arrears',
     billingFrequency: 'monthly',
     cadenceOwner: 'client',
   });
@@ -2184,15 +2208,15 @@ it('invoices multiple approved hourly entries sharing one recurring period with 
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-14T09:00:00.000Z',
-    endTime: '2025-02-14T11:00:00.000Z',
+    startTime: '2025-01-14T09:00:00.000Z',
+    endTime: '2025-01-14T11:00:00.000Z',
   });
   const secondEntry = await createApprovedTimeEntryForContractLine({
     clientId: contextLike.clientId,
     serviceId: hourlyLine.serviceId,
     contractLineId: hourlyLine.contractLineId,
-    startTime: '2025-02-15T09:00:00.000Z',
-    endTime: '2025-02-15T10:00:00.000Z',
+    startTime: '2025-01-15T09:00:00.000Z',
+    endTime: '2025-01-15T10:00:00.000Z',
   });
 
   const result = await generateInvoice(cycleId);
@@ -5248,21 +5272,21 @@ it('T155: real-schema classification keeps unique, ambiguous, and no-match billi
     planName: 'Unique Classification Plan',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   const ambiguousFirst = await createHourlyContractLine(ambiguousClient.contextLike, {
     serviceName: 'Ambiguous Classification Service',
     planName: 'Ambiguous Classification Plan A',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   const ambiguousSecond = await createHourlyContractLine(ambiguousClient.contextLike, {
     serviceName: 'Ambiguous Classification Service B',
     planName: 'Ambiguous Classification Plan B',
     baseRateCents: 10000,
     startDate: '2024-12-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
   });
   // Force the second line to cover the first line's service, creating the
   // exact multi-candidate case without introducing an arbitrary tie-break.
@@ -5336,7 +5360,7 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     planName: 'Same-Run Reconciliation Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5345,7 +5369,7 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     planName: 'Same-Run Reconciliation Usage Plan',
     baseRateCents: 2000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(usageLine.contractLineId);
@@ -5367,17 +5391,18 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
   const dueRow = dueRows
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01');
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01');
   const usageDueRow = dueRows
     .find((row) => row.contractLineId === usageLine.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01');
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01');
   expect(dueRow).toBeTruthy();
   expect(usageDueRow).toBeTruthy();
 
@@ -5424,7 +5449,7 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
     planName: 'Rollback Reconciliation Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5439,12 +5464,13 @@ it('T157: preview and PO-overage calculation reconcile for pricing but roll back
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Rollback Reconciliation Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01')?.selectorInput;
   expect(selectorInput).toBeTruthy();
 
   const preview = await withRealTransactions(() => previewInvoiceForSelectionInputAction(selectorInput!));
@@ -5473,7 +5499,7 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     planName: 'Failed Generation Retry Plan',
     baseRateCents: 10000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
@@ -5488,12 +5514,13 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
   // fixture window explicitly rather than assuming it remains on the first page.
   const dueWork = await getAvailableRecurringDueWorkAction({
     page: 1, pageSize: 20, searchTerm: 'Failed Generation Retry Client',
+    // Arrears: the February service period (ending 03-01) is invoiced in the March window.
     dateRange: { from: '2025-02-01', to: '2025-03-01' },
   });
   const selectorInput = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
     .find((row) => row.contractLineId === line.contractLineId
-      && row.invoiceWindowStart === '2025-02-01'
-      && row.invoiceWindowEnd === '2025-03-01')?.selectorInput;
+      && row.invoiceWindowStart === '2025-03-01'
+      && row.invoiceWindowEnd === '2025-04-01')?.selectorInput;
   expect(selectorInput).toBeTruthy();
 
   const calculationFailure = vi.spyOn(BillingEngine.prototype, 'calculateBillingForExecutionWindow')
@@ -5514,24 +5541,44 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     .toMatchObject({ contract_line_id: line.contractLineId });
 }, HOOK_TIMEOUT);
 
-it('T1: time logged after an empty advance hourly period is stranded (pre-fix stranding probe)', async () => {
+it('T1: time logged after an empty legacy advance hourly period is stranded (stranding probe; fixture for the repair)', async () => {
   setupCommonMocks({ tenantId, userId: 'stranding-probe-user', permissionCheck: () => true });
   const { contextLike, clientId } = await createClientWithRecurringCycles({
     clientName: 'Stranding Probe Client',
     currentPeriodStart: '2025-02-01',
     nextPeriodStart: '2025-03-01',
   });
-  // Advance Hourly at $110/hr, monthly, contract cadence (written straight into
-  // storage by the fixture, the way an existing bad row looks).
+  // Legacy state: an Hourly line stored as advance, with advance service periods
+  // (the way a row written before the arrears-only rule looks). The authoring
+  // policy and the engine now refuse to create this, so the periods are
+  // materialized by hand, exactly as T069 does.
   const line = await createHourlyContractLine(contextLike, {
     serviceName: 'Stranding Probe Service',
     planName: 'Stranding Probe Plan',
     baseRateCents: 11000,
     startDate: '2025-02-01',
-    billingTiming: 'advance',
+    billingTiming: 'arrears',
     cadenceOwner: 'contract',
   });
-  await syncContractLineRecurringPeriods(line.contractLineId);
+  await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId, contract_line_id: line.contractLineId })
+    .update({ billing_timing: 'advance' });
+  const legacyAdvancePlan = materializeContractCadenceServicePeriods({
+    asOf: '2025-02-01T00:00:00Z',
+    materializedAt: '2025-01-15T00:00:00.000Z',
+    billingCycle: 'monthly',
+    anchorDate: '2025-02-01T00:00:00Z',
+    sourceObligation: { tenant: tenantId, obligationId: line.contractLineId, chargeFamily: 'hourly' },
+    duePosition: 'advance',
+    sourceRuleVersion: `${line.contractLineId}:legacy-advance:v1`,
+    sourceRunKey: 'integration-legacy-advance-hourly',
+    targetHorizonDays: 70,
+    replenishmentThresholdDays: 15,
+    recordIdFactory: () => uuidv4(),
+  });
+  for (const record of legacyAdvancePlan.records) {
+    await upsertRecurringServicePeriodRecord(record);
+  }
 
   const findDueRow = async (windowStart: string, windowEnd: string) => {
     const dueWork = await getAvailableRecurringDueWorkAction({
@@ -5584,6 +5631,60 @@ it('T1: time logged after an empty advance hourly period is stranded (pre-fix st
   const billedLinks = await tenantTable(db, tenantId, 'invoice_time_entries')
     .where({ tenant: tenantId, entry_id: entry.entry_id });
   expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: false, links: 0 });
+}, HOOK_TIMEOUT);
+
+it('T4: a stored-advance Hourly or Usage line materializes arrears service periods (engine backstop)', async () => {
+  setupCommonMocks({ tenantId, userId: 'engine-backstop-user', permissionCheck: () => true });
+  const { contextLike } = await createClientWithRecurringCycles({
+    clientName: 'Engine Backstop Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  const hourly = await createHourlyContractLine(contextLike, {
+    serviceName: 'Engine Backstop Hourly Service',
+    planName: 'Engine Backstop Hourly Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const usage = await createUsageContractLine(contextLike, {
+    serviceName: 'Engine Backstop Usage Service',
+    planName: 'Engine Backstop Usage Plan',
+    baseRateCents: 900,
+    startDate: '2025-02-01',
+    billingTiming: 'arrears',
+    cadenceOwner: 'contract',
+  });
+  const fixed = await createFixedContractLine(contextLike, {
+    serviceName: 'Engine Backstop Fixed Service',
+    planName: 'Engine Backstop Fixed Plan',
+    baseRateCents: 500,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  // Legacy bad rows: advance stored on Hourly and Usage lines.
+  await tenantTable(db, tenantId, 'contract_lines')
+    .where({ tenant: tenantId })
+    .whereIn('contract_line_id', [hourly.contractLineId, usage.contractLineId])
+    .update({ billing_timing: 'advance' });
+
+  for (const lineId of [hourly.contractLineId, usage.contractLineId, fixed.contractLineId]) {
+    await syncContractLineRecurringPeriods(lineId);
+  }
+  const duePositions = async (lineId: string) => (await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: lineId })
+    .select('due_position')).map((row) => row.due_position);
+
+  const hourlyPositions = await duePositions(hourly.contractLineId);
+  const usagePositions = await duePositions(usage.contractLineId);
+  expect(hourlyPositions.length).toBeGreaterThan(0);
+  expect(usagePositions.length).toBeGreaterThan(0);
+  expect(new Set(hourlyPositions)).toEqual(new Set(['arrears']));
+  expect(new Set(usagePositions)).toEqual(new Set(['arrears']));
+  // A Fixed line is unaffected.
+  expect(new Set(await duePositions(fixed.contractLineId))).toEqual(new Set(['advance']));
 }, HOOK_TIMEOUT);
 
 it('T159: production schema has time-entry updated_at but no usage_tracking updated_at', async () => {
@@ -5851,6 +5952,9 @@ async function createHourlyContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions,
 ): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  if (options.billingTiming === 'advance') {
+    throw new Error('Hourly/Usage lines cannot bill in advance; use arrears (see contractLineTimingRule).');
+  }
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'hourly',
@@ -5894,6 +5998,9 @@ async function createUsageContractLine(
   contextLike: { db: Knex; tenantId: string; clientId: string },
   options: FixedLineOptions,
 ): Promise<{ serviceId: string; contractLineId: string; clientContractLineId: string; contractId: string; clientContractId: string }> {
+  if (options.billingTiming === 'advance') {
+    throw new Error('Hourly/Usage lines cannot bill in advance; use arrears (see contractLineTimingRule).');
+  }
   const serviceId = await createTestService(contextLike as any, {
     service_name: options.serviceName,
     billing_method: 'usage',

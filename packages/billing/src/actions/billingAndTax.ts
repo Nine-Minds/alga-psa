@@ -1,6 +1,7 @@
 'use server'
 
 import { Knex } from 'knex';
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
@@ -230,6 +231,7 @@ interface ClientCadenceRecurringLineActivityRow {
     cadence_owner?: 'client' | 'contract' | null;
     billing_frequency?: string | null;
     billing_timing?: string | null;
+    contract_line_type?: string | null;
 }
 
 type BillingQueryExecutor = Knex | Knex.Transaction;
@@ -507,6 +509,7 @@ async function fetchClientCadenceMaterializationGaps(
             'cl.cadence_owner',
             'cl.billing_frequency',
             'cl.billing_timing',
+            'cl.contract_line_type',
         ) as ClientCadenceRecurringLineActivityRow[];
 
     const recurringClientsById = new Map<string, ClientCadenceRecurringLineActivityRow[]>();
@@ -554,7 +557,7 @@ async function fetchClientCadenceMaterializationGaps(
         const previousPeriod = currentPeriodIndex > 0 ? clientPeriods[currentPeriodIndex - 1] ?? null : null;
 
         for (const row of recurringRows) {
-            const duePosition = row.billing_timing === 'arrears' ? 'arrears' : 'advance';
+            const duePosition = resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing ?? 'advance');
             const servicePeriodForGap = duePosition === 'arrears' ? previousPeriod : period;
             const invoiceWindowForGap = duePosition === 'arrears' ? period : period;
 

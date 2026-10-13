@@ -3312,10 +3312,13 @@ export class BillingEngine {
         ? toISODate(toPlainDate(plan.end_date))
         : null;
 
-      // Normalize billing_timing default
-      plan.billing_timing = (plan.billing_timing ?? "arrears") as
-        | "arrears"
-        | "advance";
+      // Normalize billing_timing. Hourly/Usage lines always bill in arrears, so a
+      // stale stored 'advance' can never reach the timing selection or the
+      // advance duplicate guard below.
+      plan.billing_timing = resolveEffectiveBillingTiming(
+        plan.contract_line_type,
+        plan.billing_timing,
+      );
       plan.cadence_owner = resolveCadenceOwner(plan.cadence_owner);
       plan.is_system_managed_default = plan.is_system_managed_default === true;
 

@@ -1,6 +1,9 @@
 'use server';
 
-import { resolveRecurringChargeFamily } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import {
+  resolveEffectiveBillingTiming,
+  resolveRecurringChargeFamily,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -511,7 +514,9 @@ async function loadLiveScheduleContext(input: {
     contract_line_type: row?.contract_line_type ?? null,
     cadence_owner: row?.cadence_owner ?? null,
     billing_frequency: row?.billing_frequency ?? null,
-    billing_timing: row?.billing_timing ?? null,
+    billing_timing: row?.billing_timing
+      ? resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing)
+      : null,
     assignment_start_date: row?.assignment_start_date ?? null,
     assignment_end_date: row?.assignment_end_date ?? null,
   };

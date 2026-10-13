@@ -1803,14 +1803,36 @@ async function calculateBillingWithReconciledAttribution(params: {
 }): Promise<IBillingResult> {
   const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
 
+  // Arrears periods are billed in a window AFTER the service period they cover,
+  // and the loaders read activity by service period. Reconcile the union of the
+  // invoice window and the service periods being billed, otherwise activity in
+  // an arrears period (every Hourly/Usage period) is never attributed.
+  const servicePeriodRows = await resolveApprovalBlockerRowsForSelectorInputs({
+    knex: params.knex,
+    tenant: params.tenant,
+    selectorInputs: params.selectorInputs,
+  });
+  const toDateOnlyString = (value: unknown): string =>
+    value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  const reconcileStarts = [
+    canonicalSelection.windowStart,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodStart)),
+  ].sort();
+  const reconcileEnds = [
+    canonicalSelection.windowEnd,
+    ...servicePeriodRows.map((row) => toDateOnlyString(row.servicePeriodEnd)),
+  ].sort();
+  const reconcileWindowStart = reconcileStarts[0];
+  const reconcileWindowEnd = reconcileEnds[reconcileEnds.length - 1];
+
   try {
     return await withTransaction(params.knex, async (trx: Knex.Transaction) => {
       await reconcileWindowAttribution({
         trx,
         tenant: params.tenant,
         clientId: canonicalSelection.clientId,
-        windowStart: canonicalSelection.windowStart,
-        windowEnd: canonicalSelection.windowEnd,
+        windowStart: reconcileWindowStart,
+        windowEnd: reconcileWindowEnd,
       });
 
       await lockTenantBilling(trx, params.tenant);
