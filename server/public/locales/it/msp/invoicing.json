@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotale",
-        "description": "Subtotale prima di imposte e sconti."
+        "description": "Subtotale della fattura dopo sconti e crediti, prima delle imposte."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotale prima degli sconti",
+        "description": "Subtotale della fattura prima di sconti e crediti e prima delle imposte."
+      },
+      "invoice_discountTotal": {
+        "label": "Sconti",
+        "description": "Totale delle righe di sconto e credito, mostrato come importo positivo."
       },
       "invoice_tax": {
         "label": "Imposta",
         "description": "Importo dell'imposta."
-      },
-      "invoice_discount": {
-        "label": "Sconto",
-        "description": "Importo dello sconto."
       },
       "invoice_total": {
         "label": "Totale",

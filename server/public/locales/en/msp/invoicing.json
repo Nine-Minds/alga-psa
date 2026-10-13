@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotal",
-        "description": "The invoice subtotal before tax and discounts."
+        "description": "The invoice subtotal after discounts and credits, before tax."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotal Before Discounts",
+        "description": "The invoice subtotal before discounts and credits, and before tax."
+      },
+      "invoice_discountTotal": {
+        "label": "Discounts",
+        "description": "The total of discount and credit lines, shown as a positive amount."
       },
       "invoice_tax": {
         "label": "Tax",
         "description": "The tax amount for the invoice."
-      },
-      "invoice_discount": {
-        "label": "Discount",
-        "description": "The invoice discount amount."
       },
       "invoice_total": {
         "label": "Total",

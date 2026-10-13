@@ -109,6 +109,8 @@ export default defineConfig({
       'src/components/invoice-designer/fields/documentBindingCatalog.test.ts',
       'src/components/invoice-designer/preview/previewBindings.test.ts',
       'src/components/invoice-designer/utils/documentKind.test.ts',
+      // Designer FIELDS-panel locale copy must match the field catalog in every locale.
+      'src/components/invoice-designer/fields/fieldLocaleParity.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
       // writes dates, whatever language it is written in.
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',

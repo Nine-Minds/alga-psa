@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Delsumma",
-        "description": "Fakturans delsumma före moms och rabatter."
+        "description": "Fakturans delsumma efter rabatter och krediter, före moms."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Delsumma före rabatter",
+        "description": "Fakturans delsumma före rabatter och krediter, och före moms."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabatter",
+        "description": "Summan av rabatt- och kreditrader, visad som ett positivt belopp."
       },
       "invoice_tax": {
         "label": "Moms",
         "description": "Fakturans momsbelopp."
-      },
-      "invoice_discount": {
-        "label": "Rabatt",
-        "description": "Fakturans rabattbelopp."
       },
       "invoice_total": {
         "label": "Att betala",
