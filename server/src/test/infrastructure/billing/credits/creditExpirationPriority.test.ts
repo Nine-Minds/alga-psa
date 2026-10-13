@@ -11,7 +11,6 @@ import {
   assignServiceTaxRate,
   createTestService,
   createFixedPlanAssignment,
-  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';

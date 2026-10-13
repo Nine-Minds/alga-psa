@@ -8,7 +8,6 @@ import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
-  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
