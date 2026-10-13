@@ -389,9 +389,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      // team_members is intentionally not a blocker: teams.manager_id is NOT NULL and the
-      // lead is always also a member, so a team could never reach zero members. Team.delete
-      // removes the member rows inside the deletion transaction.
+      // team_members is intentionally not a blocker: a team lead is optional (teams.manager_id
+      // is nullable), so a team can have any number of members, including none. Member rows
+      // are owned by the team; Team.delete removes them inside the deletion transaction.
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
       { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },
