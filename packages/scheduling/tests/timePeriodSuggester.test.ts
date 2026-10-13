@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { describe, expect, test } from 'vitest';
-import { TimePeriodSuggester, periodContaining, cellEnd, alignedPeriodStart, isSettingEffectiveOn, defaultEffectiveFrom } from '../src/lib/timePeriodSuggester';
+import { TimePeriodSuggester, periodContaining, cellEnd, alignedPeriodStart, isSettingEffectiveOn, defaultEffectiveFrom, clampDefaultPastEndedSettings } from '../src/lib/timePeriodSuggester';
 import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
 
 function makeSettings(overrides: Partial<ITimePeriodSettings>): ITimePeriodSettings {
@@ -258,6 +258,41 @@ describe('defaultEffectiveFrom (#3206)', () => {
     expect(defaultEffectiveFrom(odd, Temporal.PlainDate.from('2026-10-10')).toString()).toBe('2026-10-10');
   });
 
+});
+
+describe('clampDefaultPastEndedSettings (#3206 follow-up)', () => {
+  const aligned = Temporal.PlainDate.from('2026-10-04');
+  const clamp = (...ends: string[]) =>
+    clampDefaultPastEndedSettings(aligned, ends.map((effective_to) => ({ effective_to }))).toString();
+
+  test('no ended settings leaves aligned unchanged', () => {
+    expect(clamp()).toBe('2026-10-04');
+  });
+
+  test('setting that ended before aligned does not move it', () => {
+    expect(clamp('2026-10-03')).toBe('2026-10-04');
+  });
+
+  test('setting that ended on aligned starts the day after', () => {
+    expect(clamp('2026-10-04')).toBe('2026-10-05');
+  });
+
+  test('setting that ended mid-period starts the day after', () => {
+    expect(clamp('2026-10-06')).toBe('2026-10-07');
+  });
+
+  test('several ended settings: the latest wins', () => {
+    expect(clamp('2026-10-05', '2026-10-08')).toBe('2026-10-09');
+    expect(clamp('2026-10-08', '2026-10-05')).toBe('2026-10-09');
+  });
+
+  test('a setting ending in the future yields a future default', () => {
+    expect(clamp('2026-10-12')).toBe('2026-10-13');
+  });
+
+  test('ISO timestamp effective_to reduces to its date part', () => {
+    expect(clamp('2026-10-06T00:00:00.000Z')).toBe('2026-10-07');
+  });
 });
 
 describe('TimePeriodSuggester end dates', () => {
