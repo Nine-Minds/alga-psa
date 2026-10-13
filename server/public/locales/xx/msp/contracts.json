@@ -1258,7 +1258,8 @@
       "hourlyRateLabel": "⟦Ħȯŭřŀẏ řȧŧḗ:⟧",
       "unitRateFromCatalog": "⟦Ƈȧŧȧŀȯɠ ƥřīƈḗ īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ⟧",
       "unitAmountLabel": "⟦Řḗƈŭřřīƞɠ ȧḿȯŭƞŧ:⟧",
-      "unitAmountValue": "⟦{{count}} × {{rate}} = {{amount}}⟧"
+      "unitAmountValue": "⟦{{count}} × {{rate}} = {{amount}}⟧",
+      "prepaidBlockKind": "⟦Ƥřḗƥȧīḓ Ɓŀȯƈķ⟧"
     },
     "editBasicsTitle": "⟦Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɓȧşīƈş⟧",
     "editGuidanceTitle": "⟦Ḗḓīŧ Ŧḗḿƥŀȧŧḗ Ɠŭīḓȧƞƈḗ⟧",
@@ -1347,6 +1348,10 @@
       "add": "⟦Ȧḓḓ ḓḗƒȧŭŀŧ ḓīşƈȯŭƞŧ⟧",
       "chooseLine": "⟦Ƈħȯȯşḗ ȧ ŧḗḿƥŀȧŧḗ ŀīƞḗ⟧",
       "chooseService": "⟦Ƈħȯȯşḗ ȧ şḗřṽīƈḗ⟧"
+    },
+    "prepaidBlock": {
+      "setup": "⟦Şḗŀŀ ȧş ȧ ƥřḗƥȧīḓ ƀŀȯƈķ⟧",
+      "blockNeutral": "⟦{{hours}} ħ / {{price}} (īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ)⟧"
     }
   },
   "quickStart": {
@@ -1856,7 +1861,8 @@
       "products": "⟦Ƥřȯḓŭƈŧş⟧",
       "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
       "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
-      "fixedFeeServicesNumbered": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ({{number}})⟧"
+      "fixedFeeServicesNumbered": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş ({{number}})⟧",
+      "prepaidBlocks": "⟦Ƥřḗƥȧīḓ Ɓŀȯƈķ Ŀīƞḗş⟧"
     },
     "fields": {
       "client": "⟦Ƈŀīḗƞŧ⟧",
@@ -1985,6 +1991,14 @@
       "itemPo": "⟦Ƈȯƞƒīřḿ ƤȮ řḗʠŭīřḗḿḗƞŧş (īƒ ȧƞẏ)⟧",
       "itemDates": "⟦Ṽḗřīƒẏ ŧħḗ şŧȧřŧ ȧƞḓ ḗƞḓ ḓȧŧḗş⟧",
       "itemEditLater": "⟦Řḗḿḗḿƀḗř: ẏȯŭ ƈȧƞ ḗḓīŧ ŧħḗ ƈȯƞŧřȧƈŧ ŀȧŧḗř īƒ ƞḗḗḓḗḓ⟧"
+    },
+    "prepaid": {
+      "badgeCount_one": "⟦{{count}} ŀīƞḗ⟧",
+      "badgeCount_other": "⟦{{count}} ŀīƞḗş⟧",
+      "blockSummary": "⟦{{hours}} ħȯŭřş ƒȯř {{price}}⟧",
+      "expiresAfter_one": "⟦ḗẋƥīřḗş ȧƒŧḗř {{count}} ḿȯƞŧħ⟧",
+      "expiresAfter_other": "⟦ḗẋƥīřḗş ȧƒŧḗř {{count}} ḿȯƞŧħş⟧",
+      "neverExpires": "⟦ƞḗṽḗř ḗẋƥīřḗş⟧"
     }
   },
   "wizardTemplateLines": {
@@ -2212,7 +2226,8 @@
       "fixedFeeServices": "⟦Ƒīẋḗḓ Ƒḗḗ Şḗřṽīƈḗş⟧",
       "products": "⟦Ƥřȯḓŭƈŧş⟧",
       "hourlyServices": "⟦Ħȯŭřŀẏ Şḗřṽīƈḗş⟧",
-      "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧"
+      "usageBasedServices": "⟦Ŭşȧɠḗ-Ɓȧşḗḓ Şḗřṽīƈḗş⟧",
+      "prepaidBlocks": "⟦Ƥřḗƥȧīḓ Ɓŀȯƈķ Ŀīƞḗş⟧"
     },
     "fields": {
       "templateName": "⟦Ŧḗḿƥŀȧŧḗ Ƞȧḿḗ⟧",
@@ -2273,6 +2288,9 @@
       "unitSingular": "⟦ŭƞīŧ⟧",
       "rolloverEnabled": "⟦Řȯŀŀȯṽḗř ḗƞȧƀŀḗḓ⟧",
       "period": "⟦Ƥḗřīȯḓ: {{period}}⟧"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "⟦{{hours}} ħȯŭřş ƒȯř {{price}} (īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ)⟧"
     }
   },
   "templatePreview": {
@@ -2888,13 +2906,31 @@
       "triggerRenewalPending": "⟦Şȧṽḗḓ ẇīŧħ ŧħḗ ŀīƞḗ. Ħȯẇ řḗƞḗẇȧŀş īşşŭḗ ƀŀȯƈķş īş ƥḗƞḓīƞɠ ƥȯŀīƈẏ ƈȯƞƒīřḿȧŧīȯƞ, şȯ ŧħīş ḓȯḗş ƞȯŧ īşşŭḗ ȧƞẏŧħīƞɠ ẏḗŧ.⟧",
       "tier": "⟦Ƒȯŀŀȯẇ-ȯƞ īƞṽȯīƈḗ⟧",
       "tierDraft": "⟦Ƈřḗȧŧḗ ȧ ḓřȧƒŧ ƒȯř řḗṽīḗẇ⟧",
-      "tierAutoIssue": "⟦Ƒīƞȧŀīẑḗ ȧƞḓ şḗƞḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ⟧"
+      "tierAutoIssue": "⟦Ƒīƞȧŀīẑḗ ȧƞḓ şḗƞḓ ȧŭŧȯḿȧŧīƈȧŀŀẏ⟧",
+      "blockPriceNeutral": "⟦Ɓŀȯƈķ ƥřīƈḗ (īƞ ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ)⟧"
     },
     "status": {
       "pending": "⟦Ƥḗƞḓīƞɠ⟧",
       "active": "⟦Ȧƈŧīṽḗ⟧",
       "expired": "⟦Ḗẋƥīřḗḓ⟧",
       "voided": "⟦Ṽȯīḓḗḓ⟧"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "⟦Ƥřḗƥȧīḓ ƀŀȯƈķ ŀīƞḗş⟧",
+    "description": "⟦Şḗŀŀ ħȯŭřş īƞ ȧḓṽȧƞƈḗ. Ḗȧƈħ ŀīƞḗ īƞṽȯīƈḗş ȧ ƀŀȯƈķ ȯƒ ħȯŭřş ȧŧ ȧ ƒīẋḗḓ ƥřīƈḗ, ȧƞḓ ŧřȧƈķḗḓ ŧīḿḗ ḓřȧẇş ŧħḗ ƀŀȯƈķ ḓȯẇƞ; ħȯŭřş ƀḗẏȯƞḓ ŧħḗ ƀŀȯƈķ ƀīŀŀ ȧŧ ŧħḗ ħȯŭřŀẏ řȧŧḗ.⟧",
+    "templateDescription": "⟦Şḗŀŀ ħȯŭřş īƞ ȧḓṽȧƞƈḗ. Ḗȧƈħ ŀīƞḗ īƞṽȯīƈḗş ȧ ƀŀȯƈķ ȯƒ ħȯŭřş ȧŧ ȧ ƒīẋḗḓ ƥřīƈḗ, ȧƞḓ ŧřȧƈķḗḓ ŧīḿḗ ḓřȧẇş ŧħḗ ƀŀȯƈķ ḓȯẇƞ. Ŧħḗ ƥřīƈḗ ŧȧķḗş ŧħḗ ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ ẇħḗƞ ȧ ƈȯƞŧřȧƈŧ īş ƈřḗȧŧḗḓ ƒřȯḿ ŧħīş ŧḗḿƥŀȧŧḗ.⟧",
+    "lineName": "⟦Ŀīƞḗ ƞȧḿḗ (ȯƥŧīȯƞȧŀ)⟧",
+    "lineNamePlaceholder": "⟦Ƥřḗƥȧīḓ Ɓŀȯƈķ⟧",
+    "removeLine": "⟦Řḗḿȯṽḗ ƥřḗƥȧīḓ ƀŀȯƈķ ŀīƞḗ⟧",
+    "serviceItem": "⟦Şḗřṽīƈḗ {{index}}⟧",
+    "overageRate": "⟦Ħȯŭřŀẏ řȧŧḗ⟧",
+    "removeService": "⟦Řḗḿȯṽḗ şḗřṽīƈḗ⟧",
+    "addService": "⟦Ȧḓḓ şḗřṽīƈḗ ŧȯ ŧħīş ŀīƞḗ⟧",
+    "addLine": "⟦Ȧḓḓ Ƥřḗƥȧīḓ Ɓŀȯƈķ Ŀīƞḗ⟧",
+    "validation": {
+      "invalidBlock": "⟦Ƈȯḿƥŀḗŧḗ ŧħḗ ƀŀȯƈķ şīẑḗ, ƥřīƈḗ ȧƞḓ ŧřīɠɠḗř şḗŧŧīƞɠş ƒȯř ḗṽḗřẏ ƥřḗƥȧīḓ ƀŀȯƈķ ŀīƞḗ ƀḗƒȯřḗ ƒīƞīşħīƞɠ.⟧",
+      "rateRequired": "⟦Ƥřḗƥȧīḓ ƀŀȯƈķ şḗřṽīƈḗ \"{{serviceName}}\" ƞḗḗḓş ȧƞ ħȯŭřŀẏ řȧŧḗ ȧƀȯṽḗ ẑḗřȯ (ħȯŭřş ƀḗẏȯƞḓ ŧħḗ ƀŀȯƈķ ƀīŀŀ ȧŧ ŧħȧŧ řȧŧḗ).⟧"
     }
   }
 }

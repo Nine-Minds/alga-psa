@@ -33,6 +33,12 @@ interface PrepaidBlockConfigFieldsProps {
   disabled?: boolean;
   /** Show the validation messages (after a submit attempt). */
   errors?: string[];
+  /**
+   * Contract templates are currency-neutral: the price is a plain amount (scaled by
+   * `currencyCode`'s fraction digits) that takes the client's currency when a contract
+   * is created from the template, so the label names no currency.
+   */
+  neutralPrice?: boolean;
 }
 
 /**
@@ -48,6 +54,7 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
   coveredServices,
   disabled = false,
   errors = [],
+  neutralPrice = false,
 }) => {
   const { t } = useTranslation('msp/contracts');
 
@@ -85,7 +92,9 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
 
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-price`}>
-            {t('prepaidBlock.fields.blockPrice', { defaultValue: 'Block price ({{currency}})', currency: currencyCode })}
+            {neutralPrice
+              ? t('prepaidBlock.fields.blockPriceNeutral', { defaultValue: "Block price (in the client's currency)" })
+              : t('prepaidBlock.fields.blockPrice', { defaultValue: 'Block price ({{currency}})', currency: currencyCode })}
           </Label>
           <CurrencyInput
             id={`${idPrefix}-price`}

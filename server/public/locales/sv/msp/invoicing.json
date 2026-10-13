@@ -288,7 +288,7 @@
       "hourly": "Löpande",
       "usage": "Förbrukning",
       "bucket": "Timpott",
-      "prepaidBlock": "PRE"
+      "prepaidBlock": "Förbetalt"
     },
     "summary": {
       "selected": "Markerade: {{count}}",

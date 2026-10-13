@@ -1258,7 +1258,8 @@
       "hourlyRateLabel": "Hourly rate:",
       "unitRateFromCatalog": "Catalog price in the client's currency",
       "unitAmountLabel": "Recurring amount:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Prepaid Block"
     },
     "editBasicsTitle": "Edit Template Basics",
     "editGuidanceTitle": "Edit Template Guidance",
@@ -1347,6 +1348,10 @@
       "add": "Add default discount",
       "chooseLine": "Choose a template line",
       "chooseService": "Choose a service"
+    },
+    "prepaidBlock": {
+      "setup": "Sell as a prepaid block",
+      "blockNeutral": "{{hours}} h / {{price}} (in the client's currency)"
     }
   },
   "quickStart": {
@@ -1856,7 +1861,8 @@
       "products": "Products",
       "hourlyServices": "Hourly Services",
       "usageBasedServices": "Usage-Based Services",
-      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})"
+      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "client": "Client",
@@ -1985,6 +1991,14 @@
       "itemPo": "Confirm PO requirements (if any)",
       "itemDates": "Verify the start and end dates",
       "itemEditLater": "Remember: you can edit the contract later if needed"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} line",
+      "badgeCount_other": "{{count}} lines",
+      "blockSummary": "{{hours}} hours for {{price}}",
+      "expiresAfter_one": "expires after {{count}} month",
+      "expiresAfter_other": "expires after {{count}} months",
+      "neverExpires": "never expires"
     }
   },
   "wizardTemplateLines": {
@@ -2212,7 +2226,8 @@
       "fixedFeeServices": "Fixed Fee Services",
       "products": "Products",
       "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "usageBasedServices": "Usage-Based Services",
+      "prepaidBlocks": "Prepaid Block Lines"
     },
     "fields": {
       "templateName": "Template Name",
@@ -2273,6 +2288,9 @@
       "unitSingular": "unit",
       "rolloverEnabled": "Rollover enabled",
       "period": "Period: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} hours for {{price}} (in the client's currency)"
     }
   },
   "templatePreview": {
@@ -2888,13 +2906,31 @@
       "triggerRenewalPending": "Saved with the line. How renewals issue blocks is pending policy confirmation, so this does not issue anything yet.",
       "tier": "Follow-on invoice",
       "tierDraft": "Create a draft for review",
-      "tierAutoIssue": "Finalize and send automatically"
+      "tierAutoIssue": "Finalize and send automatically",
+      "blockPriceNeutral": "Block price (in the client's currency)"
     },
     "status": {
       "pending": "Pending",
       "active": "Active",
       "expired": "Expired",
       "voided": "Voided"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Prepaid block lines",
+    "description": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down; hours beyond the block bill at the hourly rate.",
+    "templateDescription": "Sell hours in advance. Each line invoices a block of hours at a fixed price, and tracked time draws the block down. The price takes the client's currency when a contract is created from this template.",
+    "lineName": "Line name (optional)",
+    "lineNamePlaceholder": "Prepaid Block",
+    "removeLine": "Remove prepaid block line",
+    "serviceItem": "Service {{index}}",
+    "overageRate": "Hourly rate",
+    "removeService": "Remove service",
+    "addService": "Add service to this line",
+    "addLine": "Add Prepaid Block Line",
+    "validation": {
+      "invalidBlock": "Complete the block size, price and trigger settings for every prepaid block line before finishing.",
+      "rateRequired": "Prepaid block service \"{{serviceName}}\" needs an hourly rate above zero (hours beyond the block bill at that rate)."
     }
   }
 }

@@ -77,6 +77,8 @@ import {
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+import TemplatePrepaidBlockPanel from "./TemplatePrepaidBlockPanel";
+
 const ContractSimulator = dynamic(
   async () => (await import("@product/billing/entry")).ContractSimulator,
   { ssr: false },
@@ -134,6 +136,8 @@ type TemplateContractLine = {
   billing_frequency: string;
   billing_timing: "arrears" | "advance";
   rate?: number | null;
+  /** 'PrepaidBlock' for an Hourly template line carrying a block config; otherwise the line type. */
+  display_kind?: string;
   services: TemplateLineService[];
 };
 
@@ -573,6 +577,7 @@ const ContractTemplateDetail: React.FC = () => {
                 | "arrears"
                 | "advance",
               rate: line.rate ?? null,
+              display_kind: (line as { display_kind?: string }).display_kind,
               services,
             } as TemplateContractLine;
           }),
@@ -1807,8 +1812,12 @@ const ContractTemplateDetail: React.FC = () => {
                             {line.contract_line_name}
                           </p>
                           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                            {humanize(line.contract_line_type)} •{" "}
-                            {humanize(line.billing_frequency)}
+                            {line.display_kind === "PrepaidBlock"
+                              ? t("templateDetail.composition.prepaidBlockKind", {
+                                  defaultValue: "Prepaid Block",
+                                })
+                              : humanize(line.contract_line_type)}{" "}
+                            • {humanize(line.billing_frequency)}
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -2001,6 +2010,20 @@ const ContractTemplateDetail: React.FC = () => {
                           ))
                         )}
                       </div>
+                      {line.contract_line_type === "Hourly" && (
+                        <TemplatePrepaidBlockPanel
+                          templateLineId={line.contract_line_id}
+                          onChanged={(hasConfig) =>
+                            setTemplateLines((prev) =>
+                              prev.map((candidate) =>
+                                candidate.contract_line_id === line.contract_line_id
+                                  ? { ...candidate, display_kind: hasConfig ? "PrepaidBlock" : "Hourly" }
+                                  : candidate,
+                              ),
+                            )
+                          }
+                        />
+                      )}
                     </div>
                   ))}
                 </CardContent>

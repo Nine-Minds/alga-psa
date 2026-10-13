@@ -379,3 +379,80 @@ export async function resolveContractLineDisplayKinds(
   for (const id of blockLineIds) result.set(id, PREPAID_BLOCK_DISPLAY_KIND);
   return result;
 }
+
+/** Template-line counterpart of {@link resolveContractLineDisplayKinds} (keys are template_line_id). */
+export async function resolveTemplateLineDisplayKinds(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  lines: Array<{ contract_line_id: string; contract_line_type: string }>,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>(lines.map((l) => [l.contract_line_id, l.contract_line_type]));
+  const hourlyIds = lines.filter((l) => l.contract_line_type === 'Hourly').map((l) => l.contract_line_id);
+  if (hourlyIds.length === 0) return result;
+  const blockLineIds: string[] = await tenantDb(trx, tenant).table('contract_template_line_prepaid_blocks')
+    .whereIn('template_line_id', hourlyIds)
+    .pluck('template_line_id');
+  for (const id of blockLineIds) result.set(id, PREPAID_BLOCK_DISPLAY_KIND);
+  return result;
+}
+
+/**
+ * Create or replace a TEMPLATE line's block config (contract_template_line_prepaid_blocks).
+ * Templates are currency-neutral and may carry no hourly rate yet, so only the structural
+ * rules are enforced here (Hourly template line, no template pools, sold-as service on the line);
+ * the rate rule is enforced when the config is cloned onto a contract line. Returns the stored row.
+ */
+export async function upsertTemplateLinePrepaidBlockInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateLineId: string,
+  input: PrepaidBlockConfigInput,
+): Promise<NormalizedPrepaidBlockConfig & { template_line_id: string }> {
+  const normalized = normalizePrepaidBlockConfigInput(input);
+  const db = tenantDb(trx, tenant);
+
+  const line = await db.table('contract_template_lines')
+    .where({ template_line_id: templateLineId })
+    .first('template_line_id', 'line_type');
+  if (!line) {
+    throw new Error('Cannot save prepaid block: the template line was not found.');
+  }
+  if (line.line_type !== 'Hourly') {
+    throw new Error('Cannot save prepaid block: only Hourly template lines can be sold as prepaid blocks.');
+  }
+
+  const pool = await db.table('contract_template_line_buckets').where({ template_line_id: templateLineId }).first('bucket_id');
+  if (pool) {
+    throw new Error('Cannot save prepaid block: this template line has bucket pools. A Prepaid Block line cannot also carry pools.');
+  }
+
+  const serviceIds: string[] = await db.table('contract_template_line_services')
+    .where({ template_line_id: templateLineId })
+    .orderBy('display_order', 'asc')
+    .pluck('service_id');
+  if (serviceIds.length === 0) {
+    throw new Error('Cannot save prepaid block: add at least one service to the template line first.');
+  }
+  const soldAs = normalized.sold_as_service_id ?? serviceIds[0];
+  if (!serviceIds.includes(soldAs)) {
+    throw new Error('Cannot save prepaid block: the block must be sold as one of the line\'s services.');
+  }
+
+  await db.table('contract_template_line_prepaid_blocks')
+    .insert({ tenant, template_line_id: templateLineId, ...normalized, sold_as_service_id: soldAs })
+    .onConflict(['tenant', 'template_line_id'])
+    .merge({ ...normalized, sold_as_service_id: soldAs, updated_at: new Date().toISOString() });
+
+  return { template_line_id: templateLineId, ...normalized, sold_as_service_id: soldAs };
+}
+
+export async function removeTemplateLinePrepaidBlockInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateLineId: string,
+): Promise<{ removed: boolean }> {
+  const removed = await tenantDb(trx, tenant).table('contract_template_line_prepaid_blocks')
+    .where({ template_line_id: templateLineId })
+    .delete();
+  return { removed: Number(removed) > 0 };
+}

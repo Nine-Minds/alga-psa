@@ -109,9 +109,9 @@
           "renewal": "Blocco prepagato: rinnovo",
           "manual": "Blocco prepagato: emesso manualmente"
         },
-        "stalePendingWarning": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono voci di tempo. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato.",
-        "stalePendingWarning_one": "{{count}} blocco prepagato in sospeso attende la finalizzazione da più di 14 giorni e trattiene voci di tempo. Finalizza o elimina la relativa fattura in bozza affinché il tempo trattenuto possa essere fatturato.",
-        "stalePendingWarning_other": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono voci di tempo. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato."
+        "stalePendingWarning": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono inserimenti ore. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato.",
+        "stalePendingWarning_one": "{{count}} blocco prepagato in sospeso attende la finalizzazione da più di 14 giorni e trattiene inserimenti ore. Finalizza o elimina la relativa fattura in bozza affinché il tempo trattenuto possa essere fatturato.",
+        "stalePendingWarning_other": "{{count}} blocchi prepagati in sospeso attendono la finalizzazione da più di 14 giorni e trattengono inserimenti ore. Finalizza o elimina le relative fatture in bozza affinché il tempo trattenuto possa essere fatturato."
       }
     },
     "actions": {

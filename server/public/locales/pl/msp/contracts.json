@@ -1258,7 +1258,8 @@
       "hourlyRateLabel": "Stawka godzinowa:",
       "unitRateFromCatalog": "Cena katalogowa w walucie klienta",
       "unitAmountLabel": "Kwota cykliczna:",
-      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}",
+      "prepaidBlockKind": "Blok przedpłacony"
     },
     "editBasicsTitle": "Edytuj podstawy szablonu",
     "editGuidanceTitle": "Edytuj wskazówki szablonu",
@@ -1347,6 +1348,10 @@
       "add": "Dodaj domyślny rabat",
       "chooseLine": "Wybierz pozycję szablonu",
       "chooseService": "Wybierz usługę"
+    },
+    "prepaidBlock": {
+      "setup": "Sprzedaj jako blok przedpłacony",
+      "blockNeutral": "{{hours}} godz. / {{price}} (w walucie klienta)"
     }
   },
   "quickStart": {
@@ -1860,7 +1865,8 @@
       "products": "Produkty",
       "hourlyServices": "Usługi godzinowe",
       "usageBasedServices": "Usługi rozliczane według zużycia",
-      "fixedFeeServicesNumbered": "Usługi o stałej opłacie ({{number}})"
+      "fixedFeeServicesNumbered": "Usługi o stałej opłacie ({{number}})",
+      "prepaidBlocks": "Pozycje bloków przedpłaconych"
     },
     "fields": {
       "client": "Klient",
@@ -1989,6 +1995,18 @@
       "itemPo": "Potwierdź wymagania dotyczące PO (jeśli istnieją)",
       "itemDates": "Zweryfikuj daty rozpoczęcia i zakończenia",
       "itemEditLater": "Pamiętaj: możesz edytować umowę później, jeśli będzie to potrzebne"
+    },
+    "prepaid": {
+      "badgeCount_one": "{{count}} pozycja",
+      "badgeCount_other": "{{count}} pozycji",
+      "blockSummary": "{{hours}} godz. za {{price}}",
+      "expiresAfter_one": "wygasa po {{count}} miesiącu",
+      "expiresAfter_other": "wygasa po {{count}} miesiącach",
+      "neverExpires": "nigdy nie wygasa",
+      "badgeCount_few": "{{count}} pozycje",
+      "badgeCount_many": "{{count}} pozycji",
+      "expiresAfter_few": "wygasa po {{count}} miesiącach",
+      "expiresAfter_many": "wygasa po {{count}} miesiącach"
     }
   },
   "wizardTemplateLines": {
@@ -2218,7 +2236,8 @@
       "fixedFeeServices": "Usługi z opłatą stałą",
       "products": "Produkty",
       "hourlyServices": "Usługi godzinowe",
-      "usageBasedServices": "Usługi rozliczane według zużycia"
+      "usageBasedServices": "Usługi rozliczane według zużycia",
+      "prepaidBlocks": "Pozycje bloków przedpłaconych"
     },
     "fields": {
       "templateName": "Nazwa szablonu",
@@ -2279,6 +2298,9 @@
       "unitSingular": "jednostka",
       "rolloverEnabled": "Przenoszenie włączone",
       "period": "Okres: {{period}}"
+    },
+    "prepaid": {
+      "blockSummaryNeutral": "{{hours}} godz. za {{price}} (w walucie klienta)"
     }
   },
   "templatePreview": {
@@ -2894,13 +2916,31 @@
       "triggerRenewalPending": "Zapisywane z pozycją. Sposób wystawiania bloków przy odnowieniach czeka na potwierdzenie polityki, więc na razie nic nie jest wystawiane.",
       "tier": "Faktura następna",
       "tierDraft": "Utwórz wersję roboczą do przeglądu",
-      "tierAutoIssue": "Finalizuj i wyślij automatycznie"
+      "tierAutoIssue": "Finalizuj i wyślij automatycznie",
+      "blockPriceNeutral": "Cena bloku (w walucie klienta)"
     },
     "status": {
       "pending": "Oczekujący",
       "active": "Aktywny",
       "expired": "Wygasły",
       "voided": "Anulowany"
+    }
+  },
+  "wizardPrepaidBlock": {
+    "heading": "Pozycje bloków przedpłaconych",
+    "description": "Sprzedawaj godziny z góry. Każda pozycja fakturuje blok godzin za stałą cenę, a zarejestrowany czas zużywa blok; godziny ponad blok są fakturowane według stawki godzinowej.",
+    "templateDescription": "Sprzedawaj godziny z góry. Każda pozycja fakturuje blok godzin za stałą cenę, a zarejestrowany czas zużywa blok. Cena przyjmuje walutę klienta, gdy z tego szablonu tworzona jest umowa.",
+    "lineName": "Nazwa pozycji (opcjonalnie)",
+    "lineNamePlaceholder": "Blok przedpłacony",
+    "removeLine": "Usuń pozycję bloku przedpłaconego",
+    "serviceItem": "Usługa {{index}}",
+    "overageRate": "Stawka godzinowa",
+    "removeService": "Usuń usługę",
+    "addService": "Dodaj usługę do tej pozycji",
+    "addLine": "Dodaj pozycję bloku przedpłaconego",
+    "validation": {
+      "invalidBlock": "Uzupełnij rozmiar, cenę i wyzwalacze każdej pozycji bloku przedpłaconego przed zakończeniem.",
+      "rateRequired": "Usługa bloku przedpłaconego \"{{serviceName}}\" wymaga stawki godzinowej powyżej zera (godziny ponad blok są fakturowane według tej stawki)."
     }
   }
 }
