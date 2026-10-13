@@ -7,7 +7,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../migrations/20261013120000_add_board_notification_email_recipients.cjs') as {
+const migration = require('../../../migrations/20261013020000_add_board_notification_email_recipients.cjs') as {
   up: (knex: Knex | Knex.Transaction) => Promise<void>;
   down: (knex: Knex | Knex.Transaction) => Promise<void>;
 };

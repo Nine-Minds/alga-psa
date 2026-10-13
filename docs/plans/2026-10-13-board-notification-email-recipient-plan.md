@@ -52,7 +52,7 @@ Facts from the inbound side that shape the design:
 
 ## 4. Schema and migration
 
-New migration `server/migrations/20261013120000_add_board_notification_email_recipients.cjs`, with `exports.config = { transaction: false }` like its parent. The table is already distributed by tenant. Each `ALTER TABLE` carries one subcommand (Citus). Every step is guarded so that the migration can be re-run (`hasColumn`, a `pg_constraint` lookup, `CREATE UNIQUE INDEX IF NOT EXISTS`). Read the `citus-migration-gotchas` skill before writing it.
+New migration `server/migrations/20261013020000_add_board_notification_email_recipients.cjs`, with `exports.config = { transaction: false }` like its parent. The table is already distributed by tenant. Each `ALTER TABLE` carries one subcommand (Citus). Every step is guarded so that the migration can be re-run (`hasColumn`, a `pg_constraint` lookup, `CREATE UNIQUE INDEX IF NOT EXISTS`). Read the `citus-migration-gotchas` skill before writing it.
 
 1. `ALTER TABLE board_notification_rule_recipients ADD COLUMN email text NULL`.
 2. Drop `board_notification_rule_recipients_type_check`. Re-add it as `CHECK (recipient_type IN ('user','team','email'))`.
