@@ -280,17 +280,18 @@ export const getContractLinePrepaidBlockSummary = withAuth(async (
           'iss.trigger_kind as trigger_kind',
         ) as Array<Record<string, any>>;
 
-      let totalMinutes = 0;
-      let remainingMinutes = 0;
-      let activeCount = 0;
-      for (const block of blocks) {
+      // The balance is the block currently being drawn. A drained block keeps status 'active' until it
+      // is replaced, so it must not be added to the follow-on's total ("37 h of 80 h"). With nothing
+      // left anywhere, show the newest active block (0 h of its total).
+      const activeBlocks = blocks.filter((block) => {
         const expiration = dateOnly(block.expiration_date);
-        if (block.status === 'active' && (!expiration || expiration >= today)) {
-          activeCount += 1;
-          totalMinutes += Number(block.total_minutes);
-          remainingMinutes += Number(block.remaining_minutes);
-        }
-      }
+        return block.status === 'active' && (!expiration || expiration >= today);
+      });
+      const drawable = activeBlocks.filter((block) => Number(block.remaining_minutes) > 0);
+      const balanceBlocks = drawable.length > 0 ? drawable : activeBlocks.slice(0, 1);
+      const activeCount = balanceBlocks.length;
+      const totalMinutes = balanceBlocks.reduce((sum, block) => sum + Number(block.total_minutes), 0);
+      const remainingMinutes = balanceBlocks.reduce((sum, block) => sum + Number(block.remaining_minutes), 0);
 
       const pendingRow = blocks.find((b) => b.status === 'pending');
       let pendingBlock: ContractLinePrepaidBlockSummary['pending_block'] = null;

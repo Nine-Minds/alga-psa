@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { IRecurringDueWorkRow, ISO8601String } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { buildRecurringDueWorkRow } from '@alga-psa/shared/billingClients/recurringDueWork';
+import { getClientBillingCycleAnchor } from '@alga-psa/shared/billingClients/billingSchedule';
+import { ensureUtcMidnightIsoDate, getBillingPeriodForDate } from '@alga-psa/shared/billingClients/billingCycleAnchors';
 import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 /**
@@ -13,24 +15,35 @@ import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingCli
  *
  * Each scheduled issuance becomes ONE row (chargeType 'PrepaidBlock', amount =
  * block_price) whose selector rides in a client_cadence_window carrying
- * `schedule:{tenant}:prepaid_block:{issuanceId}`. The window is:
- *  - client-cadence lines: the client billing cycle containing due_date if it is
- *    uninvoiced, else the earliest uninvoiced cycle after it (cycles are
- *    half-open [start, end), so "end > due_date" covers both);
- *  - contract-cadence lines: the earliest not-yet-invoiced contract-cadence
- *    invoice window of the same contract that ends after due_date.
+ * `schedule:{tenant}:prepaid_block:{issuanceId}`. The window is the invoice
+ * window CONTAINING the issuance's due date (half-open [start, end)), derived
+ * the way persisted recurring rows derive theirs, never from client_billing_cycles:
+ *  - client-cadence lines: a client-cadence recurring_service_periods invoice
+ *    window of the client that contains due_date; if the client has none
+ *    materialized (e.g. a client whose only live line is a Prepaid Block line),
+ *    the window the client's billing schedule (cycle type + anchor) yields for
+ *    due_date;
+ *  - contract-cadence lines: the contract-cadence recurring_service_periods
+ *    invoice window of the same contract that contains due_date (falling back to
+ *    the earliest not-yet-invoiced one ending after it).
+ *
+ * billing_cycle_id decision: block rows carry billingCycleId = null, so a block
+ * invoice is created without invoices.billing_cycle_id. A stamped cycle counts as
+ * "invoiced", which removed it from the candidate cycles the Invoices screen reads
+ * (hiding that window's recurring T&M / arrears work, and starving later
+ * issuances of an uninvoiced cycle). A block is a dated one-off that does not
+ * settle the cycle, so it must not claim it. The window dates on the invoice
+ * (billing_period_start/end) still record where it was issued.
+ *
+ * Listing filter: a block is ready once its window has started (windowStart <=
+ * asOf, enforced by buildRecurringDueWorkRow), and it is listed when windowStart
+ * <= dateRange.to, mirroring rsp.service_period_start for persisted rows. The
+ * range's `from` is not applied: a scheduled issuance stays open until invoiced
+ * and must not vanish because the user narrowed the lower bound.
  * The row carries the same grouping scope as the contract's persisted rows
  * (client contract, PO scope, currency, tax source) so it lands in the same
  * invoice candidate as the contract's in-advance Fixed rows.
  */
-
-export interface PrepaidBlockDueWorkPeriod {
-  client_id: string;
-  client_name: string;
-  billing_cycle_id?: string | null;
-  period_start_date: ISO8601String;
-  period_end_date: ISO8601String;
-}
 
 export interface PrepaidBlockDueWorkGroupingMetadata {
   clientContractId?: string | null;
@@ -46,13 +59,47 @@ const toDateOnly = (value: unknown): ISO8601String | null => {
   return String(value).slice(0, 10) as ISO8601String;
 };
 
+/**
+ * Client-cadence invoice window containing `dueDate`, without reading
+ * client_billing_cycles. Persisted client-cadence recurring_service_periods of the
+ * client are authoritative (the same windows its recurring rows invoice in); with
+ * none materialized, the client's billing schedule yields the window.
+ */
+// LEVERAGE: pattern client-cadence-window-for-date — due-work windows are re-derived per consumer (cycle rows here before, rsp rows, schedule anchors); a shared "client invoice window containing date" resolver is missing.
+async function resolveClientCadenceWindowContaining(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  dueDate: ISO8601String,
+): Promise<{ start: ISO8601String; end: ISO8601String }> {
+  const db = tenantDb(trx, tenant);
+  const q = db.table('recurring_service_periods as rsp');
+  db.tenantJoin(q, 'contract_lines as rcl', 'rcl.contract_line_id', 'rsp.obligation_id');
+  db.tenantJoin(q, 'contracts as rct', 'rct.contract_id', 'rcl.contract_id');
+  const persisted = await q
+    .where('rct.owner_client_id', clientId)
+    .where('rsp.cadence_owner', 'client')
+    .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+    .where('rsp.invoice_window_start', '<=', dueDate)
+    .where('rsp.invoice_window_end', '>', dueDate)
+    .orderBy('rsp.invoice_window_start', 'asc')
+    .orderBy('rsp.invoice_window_end', 'asc')
+    .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as
+    { invoice_window_start: unknown; invoice_window_end: unknown } | undefined;
+  if (persisted) {
+    return { start: toDateOnly(persisted.invoice_window_start)!, end: toDateOnly(persisted.invoice_window_end)! };
+  }
+
+  const { billingCycle, anchor } = await getClientBillingCycleAnchor(trx, tenant, clientId);
+  const period = getBillingPeriodForDate(ensureUtcMidnightIsoDate(dueDate), billingCycle, anchor);
+  return { start: toDateOnly(period.periodStartDate)!, end: toDateOnly(period.periodEndDate)! };
+}
+
 export async function fetchPrepaidBlockIssuanceDueWorkRows(
   trx: Knex | Knex.Transaction,
   params: {
     tenant: string;
     asOf: ISO8601String;
-    /** Uninvoiced client billing cycles that survived the screen's search/date filters. */
-    candidateBillingPeriods: PrepaidBlockDueWorkPeriod[];
     clientTaxSourceById?: Map<string, string | null>;
     options?: { searchTerm?: string; dateRange?: { from?: string; to?: string } };
     groupingMetadataByRecordId?: Map<string, PrepaidBlockDueWorkGroupingMetadata>;
@@ -89,7 +136,6 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
   if (issuances.length === 0) return [];
 
   const searchTerm = params.options?.searchTerm?.trim().toLowerCase() ?? '';
-  const rangeFrom = params.options?.dateRange?.from ?? null;
   const rangeTo = params.options?.dateRange?.to ?? null;
   const rows: IRecurringDueWorkRow[] = [];
 
@@ -100,52 +146,42 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
 
     let windowStart: ISO8601String | null = null;
     let windowEnd: ISO8601String | null = null;
-    let billingCycleId: string | null = null;
-    let clientName: string | null = issuance.client_name ?? null;
+    const clientName: string | null = issuance.client_name ?? null;
 
     if (contractCadence) {
-      const rspQuery = db.table('recurring_service_periods as rsp');
-      db.tenantJoin(rspQuery, 'contract_lines as rcl', 'rcl.contract_line_id', 'rsp.obligation_id');
-      const window = await rspQuery
-        .where('rcl.contract_id', issuance.contract_id)
-        .where('rsp.cadence_owner', 'contract')
-        .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
-        .whereNull('rsp.invoice_charge_detail_id')
+      const baseQuery = () => {
+        const q = db.table('recurring_service_periods as rsp');
+        db.tenantJoin(q, 'contract_lines as rcl', 'rcl.contract_line_id', 'rsp.obligation_id');
+        return q
+          .where('rcl.contract_id', issuance.contract_id)
+          .where('rsp.cadence_owner', 'contract')
+          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+          .orderBy('rsp.invoice_window_start', 'asc')
+          .orderBy('rsp.invoice_window_end', 'asc');
+      };
+      type WindowRow = { invoice_window_start: unknown; invoice_window_end: unknown } | undefined;
+      // The window containing the due date, even when its Fixed rows are already invoiced.
+      let window = await baseQuery()
+        .where('rsp.invoice_window_start', '<=', dueDate)
         .where('rsp.invoice_window_end', '>', dueDate)
-        .orderBy('rsp.invoice_window_start', 'asc')
-        .orderBy('rsp.invoice_window_end', 'asc')
-        .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as
-        { invoice_window_start: unknown; invoice_window_end: unknown } | undefined;
+        .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as WindowRow;
+      if (!window) {
+        window = await baseQuery()
+          .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
+          .whereNull('rsp.invoice_charge_detail_id')
+          .where('rsp.invoice_window_end', '>', dueDate)
+          .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as WindowRow;
+      }
       // Contract cadence not materialized yet: no window to list under.
       if (!window) continue;
       windowStart = toDateOnly(window.invoice_window_start);
       windowEnd = toDateOnly(window.invoice_window_end);
-      if (windowEnd && ((rangeFrom && windowEnd < rangeFrom) || (rangeTo && windowEnd > rangeTo))) continue;
     } else {
-      // Earliest uninvoiced cycle ending after the due date. Resolved against ALL
-      // uninvoiced cycles (not only the screen-filtered candidates) so a filtered
-      // range cannot make a later cycle masquerade as the block's window.
-      const cycleQuery = db.table('client_billing_cycles as cbc');
-      db.tenantJoin(cycleQuery, 'invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id', { type: 'left' });
-      const cycle = await cycleQuery
-        .where('cbc.client_id', issuance.client_id)
-        .whereNotNull('cbc.period_end_date')
-        .whereNull('i.invoice_id')
-        .where('cbc.period_end_date', '>', dueDate)
-        .orderBy('cbc.period_start_date', 'asc')
-        .orderBy('cbc.billing_cycle_id', 'asc')
-        .first('cbc.billing_cycle_id', 'cbc.period_start_date', 'cbc.period_end_date') as
-        { billing_cycle_id: string; period_start_date: unknown; period_end_date: unknown } | undefined;
-      if (!cycle) continue;
-      const candidate = params.candidateBillingPeriods.find(
-        (period) => period.billing_cycle_id === cycle.billing_cycle_id,
-      );
-      if (!candidate) continue;
-      windowStart = toDateOnly(cycle.period_start_date);
-      windowEnd = toDateOnly(cycle.period_end_date);
-      billingCycleId = cycle.billing_cycle_id;
-      clientName = candidate.client_name ?? clientName;
+      const window = await resolveClientCadenceWindowContaining(trx, tenant, issuance.client_id, dueDate);
+      windowStart = window.start;
+      windowEnd = window.end;
     }
+    if (windowStart && rangeTo && windowStart > rangeTo) continue;
     if (!windowStart || !windowEnd) continue;
 
     const scheduleKey = `schedule:${tenant}:prepaid_block:${issuance.issuance_id}`;
@@ -173,7 +209,8 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
       selectorInput,
       cadenceSource: contractCadence ? 'contract_anniversary' : 'client_schedule',
       duePosition: 'advance',
-      billingCycleId,
+      // Deliberately null: see the billing_cycle_id decision in the header.
+      billingCycleId: null,
       // A block is a dated one-off: its "service period" is the invoice window.
       servicePeriodStart: windowStart,
       servicePeriodEnd: windowEnd,

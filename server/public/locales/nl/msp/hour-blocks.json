@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Urenblokken",
-    "description": "Eenmalige vooruitbetaalde urenblokken. Tijd die niet onder een contractregel valt, wordt afgeboekt van deze blokken, het blok met de oudste vervaldatum eerst.",
+    "description": "Eenmalige vooruitbetaalde urenblokken. Ze vangen alleen tijd op die onder geen enkele contractregel valt. Blokken die door een contractregel Vooruitbetaald blok worden uitgegeven, worden alleen afgeboekt met de tijd van die regel zelf.",
     "availableBalance": "{{hours}} uur beschikbaar",
     "noBlocks": "Nog geen urenblokken. Verkoop een blok aan deze klant of ken kosteloos uren toe.",
     "loadFailed": "Kan urenblokken niet laden. Probeer het opnieuw."

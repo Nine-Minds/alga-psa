@@ -2731,7 +2731,7 @@
     "done": "Concluído"
   },
   "sellHourBlockNote": {
-    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, use Vender bloco em Blocos de horas, na guia Painel de faturamento do cliente."
+    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
   },
   "billingTimingField": {
     "arrears": "Pós-pago",

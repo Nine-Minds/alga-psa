@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Hour Blocks",
-    "description": "One-time prepaid hour blocks. Time that isn't covered by a contract line draws down these blocks, oldest expiration first.",
+    "description": "Ad-hoc prepaid hour blocks. They catch only time that no contract line covers. Blocks issued by a Prepaid Block contract line are drawn only by that line's own time.",
     "availableBalance": "{{hours}} hrs available",
     "noBlocks": "No hour blocks yet. Sell a block to this client or grant comped hours.",
     "loadFailed": "Failed to load hour blocks. Try again."

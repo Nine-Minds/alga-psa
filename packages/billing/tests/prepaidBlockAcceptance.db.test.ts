@@ -8,6 +8,8 @@ import { persistInvoiceCharges } from '../src/services/invoiceService';
 import { syncPrepaidBlockIssuancesForContractLine } from '../src/services/prepaidBlockIssuanceSync';
 import { fetchPrepaidBlockIssuanceDueWorkRows } from '../src/lib/prepaidBlockDueWork';
 import { handlePrepaidBlockUsageChanged } from '../../../server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber';
+import { EventSchemas } from '@alga-psa/event-schemas';
+import { buildPrepaidBlockUsageChangedPayload } from '../../scheduling/src/lib/timeEntryWriteCore';
 import { expiredHourBlocksHandler } from '../../jobs/src/lib/handlers/expiredHourBlocksHandler';
 import { expiringHourBlocksNotificationHandler } from '../../jobs/src/lib/handlers/expiringHourBlocksNotificationHandler';
 
@@ -186,7 +188,7 @@ afterEach(async () => {
   for (const table of [
     'notifications', 'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts', 'hour_block_time_allocations', 'hour_block_audit',
     'hour_block_service_scopes', 'hour_blocks', 'contract_line_block_issuances', 'recurring_service_periods', 'transactions',
-    'invoice_charge_details', 'invoice_charges', 'invoices', 'client_billing_cycles', 'time_entries', 'tickets',
+    'invoice_time_entries', 'invoice_charge_details', 'invoice_charges', 'invoices', 'client_billing_cycles', 'client_tax_rates', 'client_tax_settings', 'tax_rates', 'tax_regions', 'time_entries', 'tickets',
     'contract_line_prepaid_blocks', 'contract_line_services', 'client_billing_profiles', 'contract_lines', 'client_contracts',
     'contracts', 'service_prices', 'service_catalog', 'service_types', 'users', 'clients', 'next_number', 'tenant_settings',
     'default_billing_settings', 'client_billing_settings', 'tenants',
@@ -207,10 +209,13 @@ let hourCursor = 0;
 /** PREPAID_BLOCK_USAGE_CHANGED as the event bus delivers it to the subscriber (after the save commits). */
 async function publishUsageChanged(tenantId: string, clientId: string, contractLineId: string) {
   const now = new Date().toISOString();
-  await handlePrepaidBlockUsageChanged({
-    id: uuidv4(), eventType: 'PREPAID_BLOCK_USAGE_CHANGED', timestamp: now,
-    payload: { tenantId, clientId, contractLineId, timestamp: now, occurredAt: now },
-  });
+  // The payload is what the time-entry save publishes, and it must pass the bus's schema.
+  const event = {
+    id: uuidv4(), eventType: 'PREPAID_BLOCK_USAGE_CHANGED' as const, timestamp: now,
+    payload: buildPrepaidBlockUsageChangedPayload(tenantId, { clientId, contractLineId }),
+  };
+  EventSchemas.PREPAID_BLOCK_USAGE_CHANGED.parse(event);
+  await handlePrepaidBlockUsageChanged(event);
 }
 
 /** Logs time like the save hook: insert the entry, burn blocks, publish the usage event after commit. */
@@ -307,14 +312,9 @@ async function assertPartition(w: World, opts: { expectHeld?: number } = {}) {
   }
 }
 
-async function dueWorkRows(w: World, period: { start: string; end: string; cycleId: string }, asOf: string) {
-  return fetchPrepaidBlockIssuanceDueWorkRows(db, {
-    tenant, asOf,
-    candidateBillingPeriods: [{
-      client_id: w.clientId, client_name: 'PBA Client', billing_cycle_id: period.cycleId,
-      period_start_date: period.start, period_end_date: period.end,
-    }],
-  });
+/** The Invoices screen's default view: `to` = the as-of day. Block rows never depend on cycle rows. */
+async function dueWorkRows(_w: World, _period: unknown, asOf: string) {
+  return fetchPrepaidBlockIssuanceDueWorkRows(db, { tenant, asOf, options: { dateRange: { to: asOf } } });
 }
 
 async function generateAndMaybeFinalize(w: World, issuanceId: string, invoiceDate: string, finalizeIt: boolean) {
@@ -428,6 +428,12 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect(openExpiry).toHaveLength(1);
     expect(openExpiry[0].source_block_id).toBe(followOn.block_id);
 
+    // The panel's balance is the block being drawn (37 of 40 h), not the drained first block added to it.
+    const { getContractLinePrepaidBlockSummary } = await import('../src/actions/prepaidBlockActions');
+    expect(await getContractLinePrepaidBlockSummary(w.blockLineId)).toMatchObject({
+      balance: { total_minutes: 2400, remaining_minutes: 2220, active_block_count: 1 },
+    });
+
     // Step 5: 27 h more leaves 10 h unused at the anniversary.
     await logTime(w, w.remoteServiceId, w.blockLineId, 27 * 60);
     expect((await db('hour_blocks').where({ tenant, block_id: followOn.block_id }).first()).remaining_minutes).toBe(600);
@@ -454,14 +460,8 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     await assertPartition(w);
 
     // A new $4,400 issuance row is due (in the cycle containing today).
-    const monthStart = `${today().slice(0, 7)}-01`;
-    const nextMonth = new Date(Date.UTC(Number(monthStart.slice(0, 4)), Number(monthStart.slice(5, 7)), 1)).toISOString().slice(0, 10);
-    const currentCycleId = uuidv4();
-    await db('client_billing_cycles').insert({
-      tenant, billing_profile_id: w.profileId, billing_cycle_id: currentCycleId, client_id: w.clientId, billing_cycle: 'monthly',
-      period_start_date: monthStart, period_end_date: nextMonth, effective_date: monthStart,
-    });
-    const dueRows = await dueWorkRows(w, { start: monthStart, end: nextMonth, cycleId: currentCycleId }, today());
+    // No client_billing_cycles row exists for the current month: the row must not depend on one.
+    const dueRows = await dueWorkRows(w, null, today());
     expect(dueRows).toHaveLength(1);
     expect(dueRows[0]).toMatchObject({ chargeType: 'PrepaidBlock', amountCents: 440000, blockTriggerKind: 'expiry' });
 
@@ -480,8 +480,14 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     const first = await startContractAndIssueFirstBlock(w);
     const { overflow, followOn, followOnInvoiceId } = await logToExhaustionAndDraftFollowOn(w, first.blockId);
 
+    // While the follow-on draft exists it replaces the source block's expiry issuance.
+    const sourceExpiry = () => db('contract_line_block_issuances').where({ tenant, trigger_kind: 'expiry', source_block_id: first.blockId }).first();
+    expect((await sourceExpiry()).status).toBe('superseded');
+
     const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
     expect(await hardDeleteInvoice(followOnInvoiceId)).toEqual({ success: true });
+    // Discarding the draft puts the source block's anniversary forfeiture back on the schedule.
+    expect(await sourceExpiry()).toMatchObject({ status: 'scheduled', cancel_reason: null });
     expect((await db('hour_blocks').where({ tenant, block_id: followOn.block_id }).first()).status).toBe('voided');
 
     // The 3 h that were held now bill as overage at 110.00; the 2 h stay covered.
@@ -497,5 +503,118 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect(await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'exhaustion', status: 'scheduled' })).toHaveLength(0);
     expect((await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'exhaustion' }).first()).status).toBe('cancelled');
     expect((await alerts())[0].replenishment_status).toBeNull();
+  });
+});
+
+// ------------------------------------------------- deploy-fix: real generation path
+
+describe.runIf(enabled)('Prepaid Block deploy fixes: generation through the real action path', () => {
+  async function materialize(w: World) {
+    const { syncRecurringServicePeriodsForContractLine } = await import('../src/actions/recurringServicePeriodSync');
+    for (const lineId of [w.blockLineId, w.otherLineId]) {
+      await db.transaction((trx) => syncRecurringServicePeriodsForContractLine(trx, {
+        tenant, contractLineId: lineId, sourceRunPrefix: 'pba-deploy-fix',
+      }));
+    }
+  }
+
+  async function logUnapprovedTime(w: World) {
+    const entryId = uuidv4();
+    await db('time_entries').insert({
+      entry_id: entryId, tenant, user_id: userId, service_id: w.onsiteServiceId,
+      work_item_id: w.ticketId, work_item_type: 'ticket',
+      start_time: '2026-03-02T08:00:00Z', end_time: '2026-03-02T09:30:00Z',
+      work_date: '2026-03-02', work_timezone: 'UTC', billable_duration: 90,
+      approval_status: 'DRAFT', invoiced: false, contract_line_id: w.otherLineId,
+    });
+    return entryId;
+  }
+
+  async function prepareClientForGeneration(w: World) {
+    await db('clients').where({ tenant, client_id: w.clientId }).update({ billing_email: 'billing@pba.test' });
+    // Hourly lines bill T&M in arrears; that is what gives the window its recurring (T&M) due-work row.
+    await db('contract_lines').where({ tenant, contract_id: w.contractId }).update({ billing_timing: 'arrears', cadence_owner: 'client' });
+    await db('contracts').where({ tenant, contract_id: w.contractId }).update({ owner_client_id: w.clientId });
+    // Generation needs a default tax region (0% keeps totals equal to the block price).
+    const taxRateId = uuidv4();
+    await db('tax_regions').insert({ tenant, region_code: 'PBA-R', region_name: 'PBA Region', is_active: true });
+    await db('tax_rates').insert({ tenant, tax_rate_id: taxRateId, region_code: 'PBA-R', tax_percentage: 0, start_date: '2020-01-01' });
+    await db('client_tax_rates').insert({ tenant, client_id: w.clientId, tax_rate_id: taxRateId, is_default: true });
+  }
+
+  it('generates the block invoice without claiming the cycle, despite unapproved time on another line, and the T&M invoice stays blocked until approval and is then generated exactly once', async () => {
+    const w = await setup();
+    await prepareClientForGeneration(w);
+    await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.blockLineId));
+    await materialize(w);
+    const entryId = await logUnapprovedTime(w);
+    // March work bills in arrears in the April window. Put the block's due date in that same window and give
+    // the client its April cycle, so the block row and the T&M row compete for one window.
+    await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'contract_start' }).update({ due_date: '2026-04-01' });
+    const aprilCycleId = uuidv4();
+    await db('client_billing_cycles').insert({
+      tenant, billing_profile_id: w.profileId, billing_cycle_id: aprilCycleId, client_id: w.clientId, billing_cycle: 'monthly',
+      period_start_date: '2026-04-01', period_end_date: '2026-05-01', effective_date: '2026-04-01',
+    });
+
+    // Default view (to = the as-of day): the block due at contract start is Ready.
+    const [row] = await dueWorkRows(w, null, '2026-04-01');
+    expect(row).toMatchObject({ chargeType: 'PrepaidBlock', billingCycleId: null, canGenerate: true, isEarly: false });
+
+    // Approval gate: only the block row is selected -> not blocked by the other line's draft time.
+    const { generateInvoiceForSelectionInput, generateInvoice } = await import('../src/actions/invoiceGeneration');
+    const blockInvoice: any = await generateInvoiceForSelectionInput(row.selectorInput, {}, undefined);
+    expect(blockInvoice?.error, JSON.stringify(blockInvoice)).toBeUndefined();
+    const blockInvoiceRow = await db('invoices').where({ tenant, invoice_id: blockInvoice.invoiceId ?? blockInvoice.invoice_id }).first();
+    expect(blockInvoiceRow.billing_cycle_id).toBeNull();
+    expect(Number(blockInvoiceRow.total_amount)).toBe(440000);
+
+    // The cycle is still uninvoiced, so the window's T&M (arrears) invoice is unaffected by the block invoice.
+    // A selection that includes the T&M row is still blocked by the unapproved entry.
+    const blocked: any = await generateInvoice(aprilCycleId, {});
+    expect(blocked?.error ?? blocked?.message ?? JSON.stringify(blocked)).toMatch(/approv|TIME_APPROVAL_REQUIRED/i);
+    expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(0);
+
+    await db('time_entries').where({ tenant, entry_id: entryId }).update({ approval_status: 'APPROVED' });
+    const arrears: any = await generateInvoice(aprilCycleId, {});
+    expect(arrears?.error, JSON.stringify(arrears)).toBeUndefined();
+    expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(1);
+    // Exactly once: a second run for the same cycle is rejected as a duplicate, not re-invoiced.
+    const again: any = await generateInvoice(aprilCycleId, {});
+    expect(again?.error ?? again?.message ?? again).toBeTruthy();
+    expect(await db('invoices').where({ tenant, billing_cycle_id: aprilCycleId })).toHaveLength(1);
+    // The block was issued exactly once.
+    expect(await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'contract_start', status: 'invoiced' })).toHaveLength(1);
+  });
+
+  it('after generate + finalize, "Issue next block" lists a row in the same window without creating a cycle', async () => {
+    const w = await setup();
+    await prepareClientForGeneration(w);
+    await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.blockLineId));
+    await materialize(w);
+    const [row] = await dueWorkRows(w, null, '2026-03-01');
+    const { generateInvoiceForSelectionInput } = await import('../src/actions/invoiceGeneration');
+    const invoice: any = await generateInvoiceForSelectionInput(row.selectorInput, {}, undefined);
+    expect(invoice?.error, JSON.stringify(invoice)).toBeUndefined();
+    const { finalizeInvoiceWithKnex } = await import('../src/actions/invoiceModification');
+    await finalizeInvoiceWithKnex((invoice.invoiceId ?? invoice.invoice_id), db, tenant, userId, { skipAutoApply: true });
+
+    // The contract's own next (expiry) issuance is open; "Issue next block" is for a line with none scheduled.
+    await db('contract_line_block_issuances').where({ tenant, contract_line_id: w.blockLineId, status: 'scheduled' }).update({ status: 'cancelled' });
+    const cyclesBefore = await db('client_billing_cycles').where({ tenant, client_id: w.clientId }).count({ n: '*' }).first() as any;
+    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    await issueNextPrepaidBlock(w.blockLineId);
+
+    // Due today; the client has only the March cycle, so the window cannot come from a cycle row.
+    const monthStart = `${today().slice(0, 7)}-01`;
+    const nextMonth = new Date(Date.UTC(Number(monthStart.slice(0, 4)), Number(monthStart.slice(5, 7)), 1)).toISOString().slice(0, 10);
+    const rows = await dueWorkRows(w, null, today());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      chargeType: 'PrepaidBlock', blockTriggerKind: 'manual', billingCycleId: null,
+      invoiceWindowStart: monthStart, invoiceWindowEnd: nextMonth, canGenerate: true, isEarly: false,
+    });
+    const cyclesAfter = await db('client_billing_cycles').where({ tenant, client_id: w.clientId }).count({ n: '*' }).first() as any;
+    expect(cyclesAfter.n).toEqual(cyclesBefore.n);
   });
 });

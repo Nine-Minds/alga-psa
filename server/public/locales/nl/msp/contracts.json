@@ -2731,7 +2731,7 @@
     "done": "Klaar"
   },
   "sellHourBlockNote": {
-    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
+    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, voeg dan een regel Vooruitbetaald blok toe aan dit contract."
   },
   "billingTimingField": {
     "arrears": "Achteraf",

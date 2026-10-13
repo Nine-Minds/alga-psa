@@ -2731,7 +2731,7 @@
     "done": "Fine"
   },
   "sellHourBlockNote": {
-    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, usa Vendi blocco in Blocchi ore, nella scheda Pannello di fatturazione del cliente."
+    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, aggiungi a questo contratto una linea Blocco prepagato."
   },
   "billingTimingField": {
     "arrears": "Posticipata",

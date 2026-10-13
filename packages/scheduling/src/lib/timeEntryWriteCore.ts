@@ -97,6 +97,25 @@ export interface PersistedTimeEntry {
 }
 
 /**
+ * The PREPAID_BLOCK_USAGE_CHANGED payload. `occurredAt` is required by
+ * BaseDomainEventPayloadSchema; without it EventBus.publish throws and the
+ * best-effort catch below swallows it, so the follow-on block invoice is never drafted.
+ */
+export function buildPrepaidBlockUsageChangedPayload(
+  tenantId: string,
+  usage: { clientId: string; contractLineId: string },
+) {
+  const now = new Date().toISOString();
+  return {
+    tenantId,
+    clientId: usage.clientId,
+    contractLineId: usage.contractLineId,
+    occurredAt: now,
+    timestamp: now,
+  };
+}
+
+/**
  * Publish the events a persisted entry owes AFTER its transaction committed.
  * Best-effort, exactly like saveTimeEntry always was: a publish failure is
  * logged and never fails the save.
@@ -120,12 +139,7 @@ export async function publishPersistedTimeEntryEvents(persisted: PersistedTimeEn
     try {
       await publishEvent({
         eventType: 'PREPAID_BLOCK_USAGE_CHANGED',
-        payload: {
-          tenantId: persisted.searchEvent.payload.tenantId,
-          clientId: usage.clientId,
-          contractLineId: usage.contractLineId,
-          timestamp: new Date().toISOString(),
-        },
+        payload: buildPrepaidBlockUsageChangedPayload(persisted.searchEvent.payload.tenantId, usage),
       });
     } catch (eventError) {
       console.error('[TimeEntryActions] Failed to publish PREPAID_BLOCK_USAGE_CHANGED event', eventError);

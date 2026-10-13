@@ -2741,7 +2741,7 @@
     "done": "Gotowe"
   },
   "sellHourBlockNote": {
-    "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, użyj opcji Sprzedaj pakiet w sekcji Pakiety godzin na karcie Panel rozliczeniowy klienta."
+    "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, dodaj do tej umowy linię Przedpłacony pakiet."
   },
   "billingTimingField": {
     "arrears": "Z dołu",

@@ -305,7 +305,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
           <div>
             <CardTitle>{t('section.title', { defaultValue: 'Hour Blocks' })}</CardTitle>
             <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-              {t('section.description', { defaultValue: 'One-time prepaid hour blocks. Time that isn\'t covered by a contract line draws down these blocks, oldest expiration first.' })}
+              {t('section.description', { defaultValue: 'Ad-hoc prepaid hour blocks. They catch only time that no contract line covers. Blocks issued by a Prepaid Block contract line are drawn only by that line\'s own time.' })}
             </p>
           </div>
           <div className="flex items-center gap-2">

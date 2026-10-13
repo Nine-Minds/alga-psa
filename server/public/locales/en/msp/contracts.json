@@ -2731,7 +2731,7 @@
     "done": "Done"
   },
   "sellHourBlockNote": {
-    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
+    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to this contract."
   },
   "billingTimingField": {
     "arrears": "In Arrears",

@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createPrepaidReplenishmentInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
 import { finalizeInvoiceWithKnex } from '@alga-psa/billing/actions/invoiceModification';
 import { enqueueImmediateJob } from '@alga-psa/core';
-import { supersedeExpiryIssuancesForLine } from '@alga-psa/billing/services/prepaidBlockLifecycleService';
+import { EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON, supersedeExpiryIssuancesForLine } from '@alga-psa/billing/services/prepaidBlockLifecycleService';
 
 type AlertRow = {
   alert_id: string;
@@ -236,7 +236,7 @@ async function processAlert(
       if (openIssuance) {
         // The usage trigger replaces the old block's expiry re-issue.
         await supersedeExpiryIssuancesForLine(trx, tenant, lineId, {
-          reason: 'A usage-triggered block replaces the expiry issuance',
+          reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON,
         });
       }
       issuanceId = randomUUID();

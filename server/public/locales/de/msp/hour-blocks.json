@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Stundenblöcke",
-    "description": "Einmalig im Voraus bezahlte Stundenblöcke. Zeit, die nicht durch eine Vertragslinie abgedeckt ist, wird von diesen Blöcken abgebucht – zuerst vom Block mit dem frühesten Ablaufdatum.",
+    "description": "Einmalige Stundenblöcke im Voraus. Sie erfassen nur Zeit, die keine Vertragslinie abdeckt. Von einer Prepaid-Block-Vertragslinie ausgegebene Blöcke werden nur durch die Zeit dieser Linie abgebucht.",
     "availableBalance": "{{hours}} Std. verfügbar",
     "noBlocks": "Noch keine Stundenblöcke. Verkaufen Sie diesem Kunden einen Block oder gewähren Sie kostenlose Stunden.",
     "loadFailed": "Stundenblöcke konnten nicht geladen werden. Versuchen Sie es erneut."
