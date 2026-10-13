@@ -25,6 +25,8 @@ test('control-plane state files are host-backed and used by setup, status, and s
 
   assert.match(server, /const releaseSelectionFile = process\.env\.ALGA_APPLIANCE_RELEASE_SELECTION_FILE/);
   assert.match(server, /'--release-selection-file', releaseSelectionFile/);
-  assert.match(server, /collectStatusSnapshotAsync\(\{\n\s+stateFile,\n\s+setupInputsFile,\n\s+releaseSelectionFile,/);
+  // Every status collection is built from the same options (host-backed state files).
+  assert.match(server, /function statusSnapshotOptions\(\) \{[\s\S]*?return \{\n\s+stateFile,\n\s+setupInputsFile,\n\s+releaseSelectionFile,/);
+  assert.match(server, /collectStatusSnapshotAsync\(statusSnapshotOptions\(\)\)/);
   assert.match(server, /generateSupportBundle\(\{ stateFile, setupInputsFile, releaseSelectionFile \}\)/);
 });
