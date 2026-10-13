@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocchi ore",
-    "description": "Blocchi di ore prepagate una tantum. Il tempo non coperto da una linea contrattuale viene scalato da questi blocchi, a partire da quello con la scadenza più vicina.",
+    "description": "Blocchi di ore prepagate una tantum. Ricevono solo il tempo che nessuna linea contrattuale copre. I blocchi emessi da una linea contrattuale Blocco prepagato vengono scalati solo dal tempo di quella stessa linea.",
     "availableBalance": "{{hours}} ore disponibili",
     "noBlocks": "Ancora nessun blocco ore. Vendi un blocco a questo cliente o concedi ore in omaggio.",
     "loadFailed": "Impossibile caricare i blocchi ore. Riprova."

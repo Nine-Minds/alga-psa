@@ -2685,7 +2685,7 @@
     "done": "Terminé"
   },
   "sellHourBlockNote": {
-    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, utilisez Vendre un bloc sous Blocs d'heures, dans l'onglet Tableau de bord de facturation du client."
+    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, ajoutez une ligne Bloc prépayé à ce contrat."
   },
   "prepaidBlock": {
     "errors": {

@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Bloques de horas",
-    "description": "Bloques de horas de prepago de compra única. El tiempo que no cubre una línea de contrato se descuenta de estos bloques por fecha de vencimiento (primero los más antiguos).",
+    "description": "Bloques de horas de prepago puntuales. Solo reciben el tiempo que no cubre ninguna línea de contrato. Los bloques emitidos por una línea de contrato de Bloque prepagado solo se descuentan con el tiempo de esa misma línea.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aún no hay bloques de horas. Venda un bloque a este cliente u otorgue horas de cortesía.",
     "loadFailed": "No se pudieron cargar los bloques de horas. Inténtelo de nuevo."

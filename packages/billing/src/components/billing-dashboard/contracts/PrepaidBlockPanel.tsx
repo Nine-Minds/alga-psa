@@ -378,7 +378,7 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             <div className="text-xs">
               {t('prepaidBlock.pending.held', {
                 defaultValue: '{{hours}} of logged time is held until this block activates.',
-                hours: minutesToHoursText(summary.pending_block.held_minutes),
+                hours: hours(summary.pending_block.held_minutes),
               })}
             </div>
           )}

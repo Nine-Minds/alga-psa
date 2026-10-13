@@ -21,6 +21,12 @@ function table(conn: Knex | Knex.Transaction, tenant: string, name: string) {
 /** Date-driven kinds are still owed after their invoice goes away; usage-driven and manual ones are not. */
 const REDUE_TRIGGER_KINDS = new Set(['contract_start', 'expiry', 'renewal']);
 
+/**
+ * `cancel_reason` stamped on a source block's expiry issuance when a usage-triggered follow-on
+ * (exhaustion/threshold) replaces it. Reversal matches on it so only that supersession is undone.
+ */
+export const EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON = 'A usage-triggered block replaces the expiry issuance';
+
 export interface InvoiceLinkedContractBlockOwners {
   contractLineIds: string[];
   issuanceIds: string[];
@@ -202,7 +208,9 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
  *    returns to `scheduled` (re-due), unless the line's config is gone or
  *    another issuance is already scheduled for the line (then `superseded`/
  *    `cancelled` respectively, never violating the one-open-follow-on index);
- *  - exhaustion / threshold: usage-triggered, cancelled. The prepaid alert
+ *  - exhaustion / threshold: usage-triggered, cancelled; the source block's expiry issuance that the
+ *    follow-on superseded goes back to `scheduled` (the source block still expires on its anniversary).
+ *    The prepaid alert
  *    keeps the episode suppressed (captain decision 4, unconfirmed) via
  *    suppressPrepaidReplenishmentForVoidedInvoice / clearPrepaidReplenishmentForInvoice;
  *  - manual: cancelled. A manual issuance is an on-demand MSP action, not an
@@ -210,6 +218,33 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
  *
  * Caller holds the issuance/config locks.
  */
+async function restoreSourceBlockExpiryIssuance(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  sourceBlockId: string | null,
+): Promise<void> {
+  if (!sourceBlockId) return;
+  const sourceBlock = await table(trx, tenant, 'hour_blocks')
+    .where({ block_id: sourceBlockId })
+    .first('status');
+  // An expired/voided source block no longer has an anniversary to forfeit at.
+  if (!sourceBlock || sourceBlock.status !== 'active') return;
+  const open = await table(trx, tenant, 'contract_line_block_issuances')
+    .where({ contract_line_id: contractLineId, status: 'scheduled' })
+    .first('issuance_id');
+  if (open) return;
+  await table(trx, tenant, 'contract_line_block_issuances')
+    .where({
+      contract_line_id: contractLineId,
+      trigger_kind: 'expiry',
+      status: 'superseded',
+      source_block_id: sourceBlockId,
+      cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON,
+    })
+    .update({ status: 'scheduled', cancel_reason: null, updated_at: new Date().toISOString() });
+}
+
 async function restoreIssuanceAfterBlockVoid(
   trx: Knex.Transaction,
   tenant: string,
@@ -218,7 +253,7 @@ async function restoreIssuanceAfterBlockVoid(
 ): Promise<void> {
   const issuance = await table(trx, tenant, 'contract_line_block_issuances')
     .where({ issuance_id: issuanceId })
-    .first('issuance_id', 'status', 'trigger_kind', 'contract_line_id');
+    .first('issuance_id', 'status', 'trigger_kind', 'contract_line_id', 'source_block_id');
   if (!issuance || issuance.status !== 'invoiced') return;
 
   const now = new Date().toISOString();
@@ -228,6 +263,9 @@ async function restoreIssuanceAfterBlockVoid(
     await table(trx, tenant, 'contract_line_block_issuances')
       .where({ issuance_id: issuanceId })
       .update({ ...cleared, status: 'cancelled', cancel_reason: reason });
+    if (issuance.trigger_kind === 'exhaustion' || issuance.trigger_kind === 'threshold') {
+      await restoreSourceBlockExpiryIssuance(trx, tenant, issuance.contract_line_id, issuance.source_block_id);
+    }
     return;
   }
 

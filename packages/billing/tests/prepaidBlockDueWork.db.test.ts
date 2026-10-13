@@ -107,10 +107,6 @@ async function listRows(w: World, groupingMetadataByRecordId = new Map<string, a
   return fetchPrepaidBlockIssuanceDueWorkRows(w.db, {
     tenant: w.tenant,
     asOf: '2026-03-15',
-    candidateBillingPeriods: [{
-      client_id: w.clientId, client_name: 'PBD Client', billing_cycle_id: w.cycleId,
-      period_start_date: '2026-03-01', period_end_date: '2026-04-01',
-    }],
     groupingMetadataByRecordId,
   });
 }
@@ -198,7 +194,7 @@ describe.runIf(enabled)('Prepaid Block due-work rows', () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({
         chargeType: 'PrepaidBlock', amountCents: 440000, clientId: w.clientId, contractId: w.contractId,
-        blockTriggerKind: 'contract_start', billingCycleId: w.cycleId,
+        blockTriggerKind: 'contract_start', billingCycleId: null,
         invoiceWindowStart: '2026-03-01', invoiceWindowEnd: '2026-04-01',
       });
       expect(rows[0].blockDueDate).toBe('2026-03-01');
@@ -216,37 +212,54 @@ describe.runIf(enabled)('Prepaid Block due-work rows', () => {
     }
   });
 
-  it('moves a block due in an invoiced cycle to the earliest uninvoiced later cycle, and an expiry issuance appears on its date', async () => {
+  it('keeps a block in the window containing its due date even when that cycle is already invoiced, and lists an expiry issuance on its date', async () => {
     const w = await setup({ lineCreatedAt: '2026-01-01T00:00:00Z' });
     try {
-      const nextCycleId = uuidv4();
-      await w.db('client_billing_cycles').insert({
-        tenant: w.tenant, billing_profile_id: w.profileId, billing_cycle_id: nextCycleId, client_id: w.clientId, billing_cycle: 'monthly',
-        period_start_date: '2026-04-01', period_end_date: '2026-05-01', effective_date: '2026-04-01',
-      });
       await w.db('invoices').insert({
         tenant: w.tenant, invoice_id: uuidv4(), client_id: w.clientId, invoice_number: `PBD-${uuidv4().slice(0, 8)}`,
         invoice_date: '2026-04-01', due_date: '2026-04-15', subtotal: 0, tax: 0, total_amount: 0, status: 'draft',
         currency_code: 'EUR', billing_cycle_id: w.cycleId, billing_profile_id: w.profileId,
       });
-      // expiry issuance due in the second cycle
-      const expiryId = uuidv4();
+      // expiry issuance due in April; NO April client_billing_cycles row exists.
       await w.db('contract_line_block_issuances').insert({
-        tenant: w.tenant, issuance_id: expiryId, contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+        tenant: w.tenant, issuance_id: uuidv4(), contract_line_id: w.lineId, client_contract_id: w.clientContractId,
         client_id: w.clientId, trigger_kind: 'expiry', due_date: '2026-04-10', status: 'scheduled',
       });
       await sync(w);
-      const rows = await fetchPrepaidBlockIssuanceDueWorkRows(w.db, {
-        tenant: w.tenant, asOf: '2026-04-15',
-        candidateBillingPeriods: [{
-          client_id: w.clientId, client_name: 'PBD Client', billing_cycle_id: nextCycleId,
-          period_start_date: '2026-04-01', period_end_date: '2026-05-01',
-        }],
-      });
-      // sync() found a scheduled issuance (the expiry one) and added no start block.
+      const rows = await fetchPrepaidBlockIssuanceDueWorkRows(w.db, { tenant: w.tenant, asOf: '2026-04-15', options: { dateRange: { to: '2026-04-15' } } });
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ blockTriggerKind: 'expiry', billingCycleId: nextCycleId, invoiceWindowStart: '2026-04-01' });
+      expect(rows[0]).toMatchObject({ blockTriggerKind: 'expiry', billingCycleId: null, invoiceWindowStart: '2026-04-01', invoiceWindowEnd: '2026-05-01', isEarly: false, canGenerate: true });
       expect(rows[0].blockDueDate).toBe('2026-04-10');
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('lists a block due today as Ready under the default view (to = today) while its cycle is still open', async () => {
+    const w = await setup({ startDate: '2026-03-15', lineCreatedAt: '2026-01-01T00:00:00Z' });
+    try {
+      await sync(w);
+      const rows = await fetchPrepaidBlockIssuanceDueWorkRows(w.db, {
+        tenant: w.tenant, asOf: '2026-03-15', options: { dateRange: { to: '2026-03-15' } },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ blockDueDate: '2026-03-15', invoiceWindowStart: '2026-03-01', invoiceWindowEnd: '2026-04-01', canGenerate: true, isEarly: false });
+      // The cycle's end (2026-04-01) is after `to`: the old cycle-end filter would have hidden it.
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('derives the window from the client schedule when no cycle rows or persisted periods exist', async () => {
+    const w = await setup({ startDate: '2026-03-15', lineCreatedAt: '2026-01-01T00:00:00Z' });
+    try {
+      await w.db('client_billing_cycles').where({ tenant: w.tenant }).delete();
+      await sync(w);
+      const rows = await fetchPrepaidBlockIssuanceDueWorkRows(w.db, {
+        tenant: w.tenant, asOf: '2026-03-15', options: { dateRange: { to: '2026-03-15' } },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ invoiceWindowStart: '2026-03-01', invoiceWindowEnd: '2026-04-01', billingCycleId: null });
     } finally {
       await teardown(w);
     }

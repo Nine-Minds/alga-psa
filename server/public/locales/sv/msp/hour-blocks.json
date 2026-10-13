@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Timblock",
-    "description": "Förbetalda timblock som köps vid ett tillfälle. Tid som inte täcks av en avtalsrad dras från dessa timblock, med början i det som löper ut först.",
+    "description": "Förbetalda timblock som köps vid ett tillfälle. De fångar bara tid som ingen avtalsrad täcker. Block som utfärdas av en avtalsrad av typen Förbetalt block dras endast av den radens egen tid.",
     "availableBalance": "Tillgänglig tid: {{hours}} h",
     "noBlocks": "Inga timblock ännu. Sälj ett timblock till den här kunden eller bevilja kostnadsfria timmar.",
     "loadFailed": "Det gick inte att läsa in timblocken. Försök igen."

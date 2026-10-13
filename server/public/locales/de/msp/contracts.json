@@ -2685,7 +2685,7 @@
     "done": "Fertig"
   },
   "sellHourBlockNote": {
-    "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, verwenden Sie „Block verkaufen“ unter „Stundenblöcke“ auf dem Tab „Abrechnungs-Dashboard“ des Kunden."
+    "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, fügen Sie diesem Vertrag eine Prepaid-Block-Linie hinzu."
   },
   "prepaidBlock": {
     "errors": {

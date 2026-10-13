@@ -103,7 +103,7 @@ describe('PrepaidBlockPanel', () => {
     expect(document.getElementById('prepaid-block-line-1-pending-invoice-link')!.getAttribute('href'))
       .toBe('/msp/billing?tab=invoicing&subtab=drafts&invoiceId=inv-2');
     expect(document.getElementById('prepaid-block-line-1-pending-age')!.textContent).toBe('16 days old');
-    expect(screen.getByText('1.5 of logged time is held until this block activates.')).toBeTruthy();
+    expect(screen.getByText('1.5 h of logged time is held until this block activates.')).toBeTruthy();
     expect((document.getElementById('prepaid-block-line-1-issue-next') as HTMLButtonElement).disabled).toBe(true);
   });
 

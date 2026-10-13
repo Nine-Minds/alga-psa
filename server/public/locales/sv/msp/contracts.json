@@ -2685,7 +2685,7 @@
     "done": "Klar"
   },
   "sellHourBlockNote": {
-    "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott använder du Sälj timblock under Timblock på fliken Faktureringsöversikt för kunden."
+    "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott lägger du till en rad för Förbetalt block i det här avtalet."
   },
   "prepaidBlock": {
     "errors": {

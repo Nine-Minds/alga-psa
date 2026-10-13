@@ -1974,7 +1974,6 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
             tenant,
             asOf,
-            candidateBillingPeriods,
             clientTaxSourceById: new Map(
                 Array.from(clientMetadataById.entries()).map(([clientId, meta]) => [clientId, meta.taxSource] as const),
             ),

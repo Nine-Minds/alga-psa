@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocos de horas",
-    "description": "Blocos de horas pré-pagos avulsos. O tempo que não é coberto por uma linha de contrato consome esses blocos, começando pelo que expira primeiro.",
+    "description": "Blocos de horas pré-pagos avulsos. Recebem apenas o tempo que nenhuma linha de contrato cobre. Os blocos emitidos por uma linha de contrato de Bloco pré-pago são consumidos somente pelo tempo dessa própria linha.",
     "availableBalance": "{{hours}} h disponíveis",
     "noBlocks": "Ainda não há blocos de horas. Venda um bloco para este cliente ou conceda horas de cortesia.",
     "loadFailed": "Falha ao carregar os blocos de horas. Tente novamente."

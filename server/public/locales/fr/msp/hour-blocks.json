@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Blocs d'heures",
-    "description": "Blocs d'heures prépayés à achat unique. Le temps non couvert par une ligne de contrat est décompté de ces blocs, en commençant par l'expiration la plus proche.",
+    "description": "Blocs d'heures prépayés ponctuels. Ils ne reçoivent que le temps qu'aucune ligne de contrat ne couvre. Les blocs émis par une ligne de contrat Bloc prépayé ne sont décomptés que par le temps de cette ligne.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aucun bloc d'heures pour l'instant. Vendez un bloc à ce client ou accordez des heures offertes.",
     "loadFailed": "Échec du chargement des blocs d'heures. Réessayez."

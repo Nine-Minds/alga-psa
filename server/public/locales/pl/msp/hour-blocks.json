@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Pakiety godzin",
-    "description": "Jednorazowe przedpłacone pakiety godzin. Czas nieobjęty linią umowy jest pobierany z tych pakietów, począwszy od najwcześniej wygasającego.",
+    "description": "Jednorazowe przedpłacone pakiety godzin. Obejmują tylko czas, którego nie pokrywa żadna linia umowy. Pakiety wystawione przez linię umowy Przedpłacony pakiet są pobierane wyłącznie na podstawie czasu tej linii.",
     "availableBalance": "Dostępne: {{hours}} godz.",
     "noBlocks": "Brak pakietów godzin. Sprzedaj temu klientowi pakiet lub przyznaj godziny bezpłatnie.",
     "loadFailed": "Nie udało się załadować pakietów godzin. Spróbuj ponownie."

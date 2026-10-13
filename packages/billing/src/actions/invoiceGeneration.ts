@@ -1733,11 +1733,28 @@ async function resolveApprovalBlockerRowsForSelectorInputs(params: {
     scheduleKey?: string | null;
   }> = [];
 
-  const persistedWindowRows = await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+  // Only the SELECTED rows' own obligations can owe approved time. Source-record
+  // selectors (unresolved time/usage, prepaid_block issuances) select no persisted
+  // period; a block charge in particular does not depend on time, so a selection of
+  // block rows alone must not inherit the window's other lines' unapproved entries.
+  const selectedPeriodObligationIds = Array.from(new Set(
+    params.selectorInputs
+      .filter((selectorInput) => !isNonPeriodSelectorInput(selectorInput))
+      .map(getSelectedRecurringObligationIdFromSelectorInput),
+  ));
+
+  // Unresolved time is attributed to lines only at reconciliation, so a selection
+  // carrying it keeps checking the whole window.
+  const checksWholeWindow = params.selectorInputs.some(isUnresolvedSelectorInput);
+  const persistedWindowRows = !checksWholeWindow && selectedPeriodObligationIds.length === 0 ? [] : await withTransaction(params.knex, async (trx: Knex.Transaction) => {
     const db = tenantDb(trx, params.tenant);
     const query = db.table('recurring_service_periods as rsp');
     db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
     db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+
+    if (!checksWholeWindow) {
+      query.whereIn('rsp.obligation_id', selectedPeriodObligationIds);
+    }
 
     return query
       .where('ct.owner_client_id', canonicalSelection.clientId)

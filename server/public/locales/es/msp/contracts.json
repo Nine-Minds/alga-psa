@@ -2685,7 +2685,7 @@
     "done": "Listo"
   },
   "sellHourBlockNote": {
-    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, use Vender bloque en Bloques de horas, en la pestaña Panel de facturación del cliente."
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, agregue una línea de Bloque prepagado a este contrato."
   },
   "prepaidBlock": {
     "errors": {
