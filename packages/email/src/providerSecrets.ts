@@ -186,10 +186,11 @@ export async function persistProviderSecrets(
       configs.push({ ...config, config: nextConfig });
     }
 
-    // Provider configs dropped by this save no longer reference their secrets.
-    const incomingIds = new Set(incoming.map(config => config.providerId));
+    // Provider configs dropped by this save, or re-saved under the same id with a
+    // different provider type, no longer reference their secrets.
+    const incomingTypeById = new Map(incoming.map(config => [config.providerId, config.providerType]));
     for (const prior of existing ?? []) {
-      if (incomingIds.has(prior.providerId)) continue;
+      if (incomingTypeById.get(prior.providerId) === prior.providerType) continue;
       for (const spec of PROVIDER_SECRET_FIELDS[prior.providerType] ?? []) {
         const ref = getRef(prior.config, spec.field);
         if (ref) staleRefs.push(ref);

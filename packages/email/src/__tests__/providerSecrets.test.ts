@@ -142,6 +142,15 @@ describe('providerSecrets', () => {
       expect(second.staleRefs).toEqual([old]);
     });
 
+    it('queues refs when a providerId is re-saved under a different provider type', async () => {
+      const store = makeStore();
+      const first = await persistProviderSecrets(TENANT, [smtp({ password: 'p' }, 'shared-id')], undefined, store);
+      const old = first.configs[0].config.secretRefs.password;
+      const second = await persistProviderSecrets(TENANT, [resend({ apiKey: 'k' }, 'shared-id')], first.configs, store);
+      expect(second.staleRefs).toEqual([old]);
+      expect(second.configs[0].config.secretRefs.apiKey).toMatch(NAME_PATTERN);
+    });
+
     it('deletes already-written refs if a later write fails', async () => {
       const store = makeStore();
       store.setTenantSecret.mockImplementationOnce(async (_t, name, value) => { store.data.set(name, value as string); });
