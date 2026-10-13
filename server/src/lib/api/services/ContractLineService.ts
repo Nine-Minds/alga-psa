@@ -361,7 +361,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         delete (planData as any).base_rate;
 
-        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+        const [contractLine] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
 
         return {
           contractLineId: contractLine.contract_line_id,
@@ -425,7 +425,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
@@ -477,7 +477,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         // Update the plan
         const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
           .where('contract_line_id', id)
-          .update(updateData)
+          .update(await this.filterAuditFields(trx, updateData))
           .returning('*');
         
         if (!updatedPlan) {
@@ -1216,7 +1216,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       }, context);
 
       const [newContractLine] = await tenantDb(trx, context.tenant).table('contract_lines')
-        .insert(contractLineData)
+        .insert(await this.filterAuditFields(trx, contractLineData))
         .returning('*');
 
       // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
@@ -1276,7 +1276,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
       await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', clientContractLineId)
-        .update(updateData);
+        .update(await this.filterAuditFields(trx, updateData));
     });
   }
 
@@ -1313,7 +1313,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       const [updatedPlan] = await tenantDb(trx, context.tenant).table('contract_lines')
         .where('contract_line_id', planId)
-        .update(updateData)
+        .update(await this.filterAuditFields(trx, updateData))
         .returning('*');
       
       return addHateoasLinks(
@@ -1357,7 +1357,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       delete newPlanData.tenant; // Will be set by addCreateAuditFields
       const auditedData = this.addCreateAuditFields(newPlanData, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
       
       // Copy services if requested
       if (data.copy_services) {
@@ -1438,7 +1438,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         is_custom: true
       }, context);
       
-      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(planData).returning('*');
+      const [newPlan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, planData)).returning('*');
       
       // Add template services
       const templateServices = await tenantDb(trx, context.tenant).table('template_services')
@@ -1579,7 +1579,7 @@ export class ContractLineService extends BaseService<IContractLine> {
             ...planData
           }, context);
           
-          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(auditedData).returning('*');
+          const [plan] = await tenantDb(trx, context.tenant).table('contract_lines').insert(await this.filterAuditFields(trx, auditedData)).returning('*');
           results.push(addHateoasLinks(plan, this.generatePlanLinks(plan.contract_line_id, context)) as ContractLineResponse);
         }
         

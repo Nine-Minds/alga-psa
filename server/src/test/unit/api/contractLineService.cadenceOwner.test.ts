@@ -16,6 +16,11 @@ class MockBaseService<T> {
     };
   }
 
+  // Real BaseService drops audit columns the table lacks (contract_lines has no created_by/updated_by).
+  async filterAuditFields(_conn: unknown, data: Record<string, unknown>) {
+    return data;
+  }
+
   addUpdateAuditFields(data: Record<string, unknown>) {
     return { ...data };
   }
