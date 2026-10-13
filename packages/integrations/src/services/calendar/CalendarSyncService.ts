@@ -8,6 +8,7 @@
  */
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { IEditScope } from '@alga-psa/types';
 import type { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult, ExternalCalendarEvent, IScheduleEntry } from '@alga-psa/types';
 import { CalendarProviderService } from './CalendarProviderService';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
@@ -680,41 +681,38 @@ export class CalendarSyncService {
       const adapter = await this.createAdapter(provider);
       await adapter.connect();
 
-      const result = await withTransaction(knex, async (trx) => {
-        if (resolution === 'alga') {
-          // Use Alga's version - sync to external
-          return await this.syncScheduleEntryToExternal(entry.entry_id, mapping.calendar_provider_id, true);
-        } else if (resolution === 'external') {
-          // Use external version - sync from external
-          return await this.syncExternalEventToSchedule(mapping.external_event_id, mapping.calendar_provider_id, true);
-        } else {
-          // Merge - use merge data if provided, otherwise use external version
-          const mergedEntry = {
-            ...entry,
-            ...mergeData,
-            entry_id: entry.entry_id
+      // LEVERAGE: pattern calendar-sync-service-triplicate — same CalendarSyncService body in ee/, server/, packages/integrations; fixes must be applied three times
+      // The sync callees acquire their own connections/transactions, so they must not run
+      // inside an outer transaction here.
+      let result: CalendarSyncResult;
+      if (resolution === 'alga') {
+        // Use Alga's version - sync to external
+        result = await this.syncScheduleEntryToExternal(entry.entry_id, mapping.calendar_provider_id, true, tenant);
+      } else if (resolution === 'external') {
+        // Use external version - sync from external
+        result = await this.syncExternalEventToSchedule(mapping.external_event_id, mapping.calendar_provider_id, true, tenant);
+      } else {
+        // Merge - use merge data if provided, otherwise use external version
+        const mergedEntry = {
+          ...entry,
+          ...mergeData,
+          entry_id: entry.entry_id
+        };
+
+        const updatedEntry = await withTransaction(knex, (trx) =>
+          ScheduleEntry.update(trx, tenant, entry.entry_id, mergedEntry, IEditScope.ALL)
+        );
+
+        if (!updatedEntry) {
+          return {
+            success: false,
+            error: 'Failed to merge schedule entry'
           };
-
-          const updatedEntry = await ScheduleEntry.update(
-            trx,
-            entry.entry_id,
-            mergedEntry,
-            'all' as any
-          );
-
-          if (!updatedEntry) {
-            return {
-              success: false,
-              error: 'Failed to merge schedule entry'
-            };
-          }
-
-          // Sync merged version to external
-          const syncResult = await this.syncScheduleEntryToExternal(entry.entry_id, mapping.calendar_provider_id, true);
-
-          return syncResult;
         }
-      });
+
+        // Merge is committed; the push reads the merged row on its own connection.
+        result = await this.syncScheduleEntryToExternal(entry.entry_id, mapping.calendar_provider_id, true, tenant);
+      }
       if (result.success) {
         await this.markProviderConnected(provider.id, adapter);
       }
