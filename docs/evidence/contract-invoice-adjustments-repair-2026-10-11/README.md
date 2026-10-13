@@ -328,6 +328,26 @@ the authorized browser, portal, real app-to-Xero, and combined companion
 acceptance are demonstrated. Those acceptance paths need an application server;
 this implementation step must leave it stopped.
 
+### Follow-up durable-error and posted-tax regression
+
+Follow-up commits `c760c2f61235aa68aae601a16c24e5e4da86c42c` and
+`8423482e2ca14e83182d830fdb110f8bdc2dcb78` address review findings. On exact
+source HEAD `8423482e2ca14e83182d830fdb110f8bdc2dcb78`:
+
+| Command / check | Result |
+| --- | --- |
+| T020 using `--pool=forks` on `test_pr3499_aa75047` | Exit 0, 1 passed / 4 skipped. It reloads `accounting_export_errors` after failed execution, asserts `missing_net_amount` on the exact line, verifies zero Xero provider calls, then proves a stale attempt cannot change a replacement execution owner or append stale errors. |
+| Targeted settlement DB test with `.vitest-pr3499-review.config.ts` (600s hook timeout) and `--pool=forks` | Exit 0, 2 passed / 64 skipped. Both percentage and fixed cases execute `calculateAndDistributeTax` (calculated total 320), update totals, record generation principal, then repeat posted recalculation after a −100 manual-credit edit. They assert stable discount settlement identity, canonical detail allocations/tax, one `invoice_adjustment` of −100, no posting on the repeat, and manual-line preservation. |
+| Fresh Citus cleanup CI on preceding repair HEAD `6763d79dbacfe2672aa3c6afb62ca43184074c40` | `citus / Combined migrations on single-node Citus` passed. The exact current HEAD `8423482e2ca14e83182d830fdb110f8bdc2dcb78` has a new production regression CI run in progress; its Citus job is pending. |
+| Server `tsc --noEmit -p tsconfig.json` using the successful production-build route types referenced by `next-env.d.ts` | Attempted on the local host but interrupted with exit 130 after prolonged filesystem I/O stalls; it emitted no TypeScript diagnostic. The exact-HEAD GitHub TypeScript workflow is in progress. |
+
+An earlier settlement retry exposed PostgreSQL numeric values as strings in
+test assertions; the test now normalizes numeric database columns before
+comparing. The default 120s migration hook also timed out under host pressure,
+so the passing targeted run used the longer temporary config; that config is
+removed after execution. Keep the review guide **BLOCKED** while exact-HEAD CI
+and authorized live browser, portal, and app-to-Xero acceptance remain open.
+
 ### Review continuation from `aa75047e8a`
 
 The owned unbilled walkthrough fixture was re-audited read-only on 2026-10-13
