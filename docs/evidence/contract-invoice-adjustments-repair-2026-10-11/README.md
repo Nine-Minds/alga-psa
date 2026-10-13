@@ -591,3 +591,114 @@ The existing candidate is `REVIEW-3499-UNBILLED-20261012-dcd6e36f`, client `5ba7
 At that smoke step, first rerun the read-only audit, open **Billing → Invoicing → Automatic Invoices**, and select candidate key `invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01`. Capture the displayed period and preview before generation; verify the contract-wide 12% base, the Cabling-only 10% base (A$12, not the historical defect's A$32), fixed discount, and A$244.60 subtotal. Then generate exactly once from this candidate and record the resulting invoice ID, persisted line/source IDs, tax and total; refresh/reopen to establish idempotency without generating a second invoice. Preserve the generated draft and fixture until reviewer sign-off. Never unlock or regenerate delivered history. Use separate disposable databases for any automated generation reruns.
 
 CI run `38431581711` on `d590c84da1` was still in progress. Its `temporal / fast-readiness` check passed, including the previously quarantined workspace check; Citus, browser image/build and other workflow jobs were still running. Keep this guide **BLOCKED** until current-head CI is complete and the separate fresh browser, portal, real application-to-Xero-simulator, and companion schedule-writer walkthroughs pass. No app server was started or restarted. Direct simulator replay was not performed; mocked adapter results do not count as delivery.
+
+### Builder mitigation — 2026-10-13 (`3a2df83175e40dbd440ba47108ad56fb10e1982b`)
+
+The worktree was already at the published PR head; the PR head and upstream
+branch both matched `3a2df83175e40dbd440ba47108ad56fb10e1982b`. GitHub reported
+PR #3499 open and mergeable, with no merge conflicts. The new exact-head CI run
+is `38439522644`. `Nx affected typecheck` and `ee-workflows-build-guard` passed.
+The run was still active at the time of this handoff; later checks and their
+failure status are recorded at the end of this section. Recheck the run before
+human review; do not treat pending checks as passed.
+
+No source repair was indicated by the current-head evidence: the production
+recalculation regression already calls `BillingEngine.recalculateInvoice` with
+canonical companion ledger fixtures, the source wizard identity repair and
+shared preview evaluator are present, and there is no reproduced failing
+assertion at this head. No application source was changed in this round.
+
+Fresh validation on `3a2df83175e40dbd440ba47108ad56fb10e1982b`:
+
+- Contract adjustment settlement DB suite: **66/66 passed**, isolated DB
+  `test_pr3499_step_20261013_settlement`.
+- Companion quantity/history/true-up DB suite: **121/121 passed**, isolated DB
+  `test_pr3499_step_20261013_companion`.
+- Xero integration file: **5/5 passed**, isolated DB
+  `test_pr3499_step_20261013_xero`. It verifies the durable per-line
+  `missing_net_amount` error, zero provider calls on failure and stale-owner
+  fencing; transport is mocked and does not establish simulator delivery.
+- Expanded manual-row save and percentage-total UI regressions: **20/20 passed**.
+- Billing typecheck, server TypeScript check, and billing package build: passed.
+- Owned fixture audit: passed read-only; both September service periods remain
+  unclaimed and unlinked.
+- Isolated enterprise production build: **passed**, exit 0, in
+  `server/.next-pr3499-step-20261013-prod`, with `NEXT_BUILD_CPUS=1` and a
+  12 GiB Node heap. It compiled, generated all 74 static pages and collected
+  traces. Existing scheduling export, dynamic dependency, Edge Runtime and
+  dynamic `headers()` warnings remain.
+
+Exact-head CI run `38439522644` is still in progress. The affected Nx unit job
+`115457524172` is currently marked failed, while its failure log is unavailable
+until the run concludes. Several server unit shards and the EE browser image
+build remain pending. Do not call this run green; inspect the completed log and
+classify/reproduce the failure before any source change. Other completed
+contract-relevant jobs, including affected typecheck, EE workflow build guard,
+integration, Citus and workspace execution gates, passed at the latest check.
+
+Commands and DB isolation used:
+
+```sh
+cd server
+TEST_DB_NAME=test_pr3499_step_20261013_settlement DB_HOST=127.0.0.1 DB_PORT=5472 \
+  npx vitest run --config .vitest-tmp-review/pr3499-validation.config.ts \
+  ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts \
+  --maxWorkers=1 --pool=forks --no-file-parallelism --reporter=dot
+TEST_DB_NAME=test_pr3499_step_20261013_companion DB_HOST=127.0.0.1 DB_PORT=5472 \
+  npx vitest run --config .vitest-tmp-review/pr3499-validation.config.ts \
+  src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts \
+  --maxWorkers=1 --pool=forks --no-file-parallelism --reporter=dot
+TEST_DB_NAME=test_pr3499_step_20261013_xero DB_HOST=127.0.0.1 DB_PORT=5472 \
+  npx vitest run --config .vitest-tmp-review/pr3499-validation.config.ts \
+  src/test/integration/accounting/xeroLiveExport.integration.test.ts \
+  --retry=0 --maxWorkers=1 --pool=forks --no-file-parallelism --reporter=dot
+```
+
+The read-only setup check for the owned generation fixture is:
+
+```sh
+PR3499_FIXTURE_DB_NAME=server node --import tsx scripts/audit-pr3499-unbilled-fixture.ts
+```
+
+The fixture is `REVIEW-3499-UNBILLED-20261012-dcd6e36f`, client
+`5ba78228-ace1-4990-b42f-30739458299a`, assignment
+`4921ceb2-72f5-4f0a-afdc-da256e932c41`. It contains Managed Workstation
+A$200 and Cabling A$120, with independent copied terms: 12% contract-wide,
+fixed A$25 contract-wide, and 10% Cabling-line-only. The September 1–October 1
+service periods feed the October 1–November 1 arrears window. Expected preview
+is gross A$320.00, discounts −A$38.40, −A$12.00 and −A$25.00, subtotal
+A$244.60 before tax. Navigate through **Billing → Invoicing → Automatic
+Invoices**, select candidate
+`invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01`,
+capture preview, then generate exactly once only during the separately
+authorized smoke. Capture resulting invoice/line/source IDs, tax and total,
+reload and verify stable identities and totals. Keep the draft for review.
+
+There is no SQL reset for this candidate. Do not delete claims or delivered
+history to make it eligible again. If an authorized walkthrough generates the
+draft, preserve it through review; only use the supported **Reverse Draft**
+action after reviewer sign-off, then rerun the audit and document the resulting
+period state before any further attempt. Never reset or re-export delivered
+QBO/Xero history.
+
+For the companion live acceptance, use an isolated monthly contract and an
+unbilled 30-day period. In the supported **Schedule recurring change & history**
+UI, default to boundary-only, opt in to the mid-period true-up, increase 10 to
+13 seats at $100 on day 16, preview one signed `3 × $100 × 15/30 = $150`
+true-up, then generate/refresh through the app and repeat generation. Confirm
+one canonical revision-linked source row, already-prorated amount consumed once,
+shared 10% discount/tax treatment, unchanged retry IDs and posted ledger delta,
+then verify next-period standing gross is $1,300 with no repeated true-up.
+Also cover a decrease/cancellation and protected finalized history. Capture
+revision/version, affected half-open period, invoice/ledger IDs, preview, PDF and
+portal parity. The Xero gate requires initiating export from the application
+against the simulator and retaining captured simulator requests and response;
+direct payload replay and mocked adapter tests do not qualify.
+
+**Status remains BLOCKED** for current-head browser freshness, customer portal
+parity, real application-to-Xero-simulator delivery, and companion schedule
+writer UI acceptance. The app server stayed stopped. Existing delivered QBO
+fixtures and all shared financial history remain untouched. Review the exact
+CI run and production recalculation regression first, then perform the separate
+authorized live walkthrough; implementation validation is complete, human
+review readiness is not.
