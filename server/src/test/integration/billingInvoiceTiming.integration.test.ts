@@ -5514,6 +5514,78 @@ it('T158: failed generation rolls back reconciliation and a corrected retry can 
     .toMatchObject({ contract_line_id: line.contractLineId });
 }, HOOK_TIMEOUT);
 
+it('T1: time logged after an empty advance hourly period is stranded (pre-fix stranding probe)', async () => {
+  setupCommonMocks({ tenantId, userId: 'stranding-probe-user', permissionCheck: () => true });
+  const { contextLike, clientId } = await createClientWithRecurringCycles({
+    clientName: 'Stranding Probe Client',
+    currentPeriodStart: '2025-02-01',
+    nextPeriodStart: '2025-03-01',
+  });
+  // Advance Hourly at $110/hr, monthly, contract cadence (written straight into
+  // storage by the fixture, the way an existing bad row looks).
+  const line = await createHourlyContractLine(contextLike, {
+    serviceName: 'Stranding Probe Service',
+    planName: 'Stranding Probe Plan',
+    baseRateCents: 11000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(line.contractLineId);
+
+  const findDueRow = async (windowStart: string, windowEnd: string) => {
+    const dueWork = await getAvailableRecurringDueWorkAction({
+      page: 1, pageSize: 20, searchTerm: 'Stranding Probe Client',
+      dateRange: { from: windowStart, to: windowEnd },
+    });
+    return dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+      .find((row) => row.contractLineId === line.contractLineId
+        && row.invoiceWindowStart === windowStart
+        && row.invoiceWindowEnd === windowEnd);
+  };
+
+  // 1. February advance invoice on Feb 1: no time exists yet.
+  const februaryRow = await findDueRow('2025-02-01', '2025-03-01');
+  expect(februaryRow).toBeTruthy();
+  const februaryResult = await generateInvoiceForSelectionInput(februaryRow!.selectorInput);
+  expect(februaryResult).toMatchObject({ invoice_id: expect.any(String) });
+  const februaryPeriods = await tenantTable(db, tenantId, 'recurring_service_periods')
+    .where({ tenant: tenantId, obligation_id: line.contractLineId })
+    .orderBy('service_period_start')
+    .select('service_period_start', 'service_period_end', 'lifecycle_state', 'invoice_id', 'invoice_charge_detail_id', 'due_position');
+  // The empty February advance period was claimed anyway: billed, linked to an
+  // invoice, with no charge detail behind it.
+  expect(februaryPeriods[0]).toMatchObject({
+    lifecycle_state: 'billed',
+    due_position: 'advance',
+    invoice_charge_detail_id: null,
+  });
+  expect(februaryPeriods[0].invoice_id).toBeTruthy();
+
+  // 2. Time logged on Feb 15, after the empty invoice.
+  const entry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: line.serviceId,
+    contractLineId: line.contractLineId,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
+
+  // 3. March invoice.
+  const marchRow = await findDueRow('2025-03-01', '2025-04-01');
+  expect(marchRow).toBeTruthy();
+  const marchResult = await generateInvoiceForSelectionInput(marchRow!.selectorInput);
+  expect(marchResult).toMatchObject({ invoice_id: expect.any(String) });
+
+  // 4. Was the Feb 15 entry billed anywhere?
+  const persisted = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id })
+    .first('invoiced');
+  const billedLinks = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id });
+  expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: false, links: 0 });
+}, HOOK_TIMEOUT);
+
 it('T159: production schema has time-entry updated_at but no usage_tracking updated_at', async () => {
   const columns = await schemaTable(db, 'information_schema.columns', 'recurring attribution schema conformance')
     .where({ table_schema: 'public' })
