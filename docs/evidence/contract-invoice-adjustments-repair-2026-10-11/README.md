@@ -570,3 +570,24 @@ merge and is not evidence for the post-merge candidate. The post-merge commit
 and this evidence update must be pushed and CI rechecked on that new head. Keep
 the review guide **BLOCKED** until those exact-head results and the separate
 live portal, Xero, and companion schedule-writer acceptance are complete.
+
+### Exact-head revalidation — 2026-10-13 (`d590c84da1`)
+
+The worktree started at the published PR head `d590c84da1246ffb310d519c62046b4ae5b7ce4a`, with base `ecd8a1644322ef39335d09097ae8bd8274d50cff`. The remote PR head matched; no merge conflict remains. This head adds the post-merge handoff only; implementation source is unchanged from the already reviewed merge. The owned fixture was audited read-only again against database `server`: both September 1–October 1 service periods remain unclaimed, with the October 1–November 1 invoice window. It remains reserved for later UI generation.
+
+Current local validation on `d590c84da1`:
+
+- Contract adjustment settlement DB suite: **66/66 passed** in disposable database `test_pr3499_d590_settlement`. The consolidated-period tests call `BillingEngine.recalculateInvoice` with canonical companion ledger fixtures and cover settlement identity, tax/totals, the single ledger delta, and no-op repeat.
+- Companion quantity/history/true-up DB suite: **121/121 passed** in `test_pr3499_d590_companion`. This does not establish schedule-writer UI acceptance.
+- Xero integration file: **5/5 passed** in `test_pr3499_d590_xero`. The adapter is mocked; tests verify persisted per-line errors after rollback, zero provider calls on failure, and stale-owner fencing. This is distinct from direct simulator replay and real app-to-simulator delivery.
+- Focused expanded-save and percentage-total UI regressions: **20/20 passed** using `ManualInvoices.expandedSave.test.tsx` and `manualInvoiceTotals.test.ts`.
+- Billing package typecheck and package build: **passed**.
+- Server TypeScript check: **passed** using `NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit -p server/tsconfig.json`.
+- Enterprise production build: **passed** in isolated output `server/.next-pr3499-d590-validation-20261013-1655`; compilation completed with existing scheduling star-export, dynamic-dependency, Edge Runtime `process.cwd()`, and dynamic `headers()` warnings, all 74 static pages generated, and build traces collected. Exit 0. The first attempt was stopped with exit 130 before completion when I noticed it shared a pre-existing output directory; the successful retry used the unique path above.
+- Read-only owned fixture audit: **passed**. No invoice was generated and no delivered/shared fixture or billed/locked history was changed.
+
+The existing candidate is `REVIEW-3499-UNBILLED-20261012-dcd6e36f`, client `5ba78228-ace1-4990-b42f-30739458299a`, assignment `4921ceb2-72f5-4f0a-afdc-da256e932c41`. Expected preview remains gross A$320.00 less 12% contract discount A$38.40, Cabling-only 10% discount A$12.00, and fixed contract discount A$25.00: subtotal A$244.60 before tax. The baseline queries, exact recurring-period IDs, domain-action preparation record, and cleanup boundary are above. Automated generation ran only in disposable test databases. Do not generate this review candidate until the separately authorized smoke step.
+
+At that smoke step, first rerun the read-only audit, open **Billing → Invoicing → Automatic Invoices**, and select candidate key `invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01`. Capture the displayed period and preview before generation; verify the contract-wide 12% base, the Cabling-only 10% base (A$12, not the historical defect's A$32), fixed discount, and A$244.60 subtotal. Then generate exactly once from this candidate and record the resulting invoice ID, persisted line/source IDs, tax and total; refresh/reopen to establish idempotency without generating a second invoice. Preserve the generated draft and fixture until reviewer sign-off. Never unlock or regenerate delivered history. Use separate disposable databases for any automated generation reruns.
+
+CI run `38431581711` on `d590c84da1` was still in progress. Its `temporal / fast-readiness` check passed, including the previously quarantined workspace check; Citus, browser image/build and other workflow jobs were still running. Keep this guide **BLOCKED** until current-head CI is complete and the separate fresh browser, portal, real application-to-Xero-simulator, and companion schedule-writer walkthroughs pass. No app server was started or restarted. Direct simulator replay was not performed; mocked adapter results do not count as delivery.
