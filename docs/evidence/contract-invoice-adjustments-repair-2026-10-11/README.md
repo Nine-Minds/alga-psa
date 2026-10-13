@@ -455,14 +455,29 @@ E2E selector failure, not evidence that the invoice editor control was absent.
 The enterprise and community browser runs otherwise reached that same test
 failure. Do not mark browser acceptance complete from this repair.
 
-On this exact checkout, a fresh enterprise production build was started with
-isolated output `server/.next-pr3499-builder-20261013`, one build worker and a
-12 GiB Node heap. At handoff it was still compiling under host pressure; record
-its final exit/result before treating production build validation as complete.
-The settlement suite passed. A local Xero-suite retry was terminated by the
-host with signal 15 before tests began; the preceding exact-head run recorded
-in this handoff remains 5/5. Companion automation coverage is recorded above;
-real schedule-writer acceptance still requires the blocked live walkthrough.
+On this checkout, the fresh enterprise production build completed with exit 0
+using isolated output `server/.next-pr3499-builder-20261013`, one build worker
+and a 12 GiB Node heap. It compiled, generated all 74 static pages, and
+collected traces. The app source is identical in commit `082e9d8d38`; that
+commit changes only this E2E locator and the handoff. Next reported existing
+warnings for conflicting scheduling star exports, dynamic dependencies,
+Edge Runtime `process.cwd()`, and dynamic `headers()` in `/_global-error`.
+
+Fresh local results on the merged app source: contract adjustment settlement
+DB suite 66/66; companion quantity semantics DB suite 121/121; complete Xero
+integration file 5/5; billing package typecheck; billing package build. The
+companion suite took 573.99 seconds under host pressure. One earlier Xero retry
+was terminated with signal 15 before tests began; the subsequent full retry
+passed all five tests. Companion automation coverage is green, while real
+schedule-writer acceptance still requires the blocked live walkthrough.
+
+The new PR CI run for `082e9d8d38` is pending. The preceding exact-head run
+`38374648373` passed all non-browser checks; its community and enterprise
+browser jobs both reached the manual invoice E2E and failed on the stale
+`#service-select` locator. Commit `082e9d8d38` updates it to the rendered
+`[id^="service-select-"]` prefix. The app server was not started to exercise
+that browser test locally, so verify it in the rerun before marking browser
+acceptance complete.
 
 **Status remains BLOCKED** for current-build browser walkthrough, portal
 comparison, real app-to-Xero-simulator delivery and companion schedule-writer
