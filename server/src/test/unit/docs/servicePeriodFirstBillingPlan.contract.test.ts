@@ -259,6 +259,8 @@ const servicePeriodPostInventoryRefs = new Set([
   // period a new contract will bill; it landed after the pass-0 snapshot.
   'packages/billing/src/lib/firstInvoiceDate.ts',
   'packages/billing/src/lib/firstInvoiceDate.test.ts',
+  // The notice renders the first service period resolved by firstInvoiceDate.
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FirstInvoiceNotice.tsx',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
