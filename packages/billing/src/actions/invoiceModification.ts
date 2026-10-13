@@ -12,6 +12,7 @@ import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdow
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
+import { ExpectedInvoiceActionError, InvoiceNotDraftError } from '../lib/invoiceDeletionErrors';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -664,8 +665,6 @@ export interface DraftInvoicePropertiesUpdateResult {
   billingProfileName: string | null;
 }
 
-class ExpectedInvoiceActionError extends Error {}
-
 type InvoiceActionError = ActionMessageError | ActionPermissionError;
 type InvoiceActionSuccess = { success: true };
 
@@ -676,13 +675,13 @@ export type DraftInvoicePropertiesUpdateActionResult =
 export type InvoiceMutationActionResult = InvoiceActionSuccess | InvoiceActionError;
 export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
-function expectedInvoiceActionError(message: string): ExpectedInvoiceActionError {
-  return new ExpectedInvoiceActionError(message);
+function expectedInvoiceActionError(message: string, i18nKey?: string): ExpectedInvoiceActionError {
+  return new ExpectedInvoiceActionError(message, i18nKey);
 }
 
 function toInvoiceActionError(error: unknown): InvoiceActionError | null {
   if (error instanceof ExpectedInvoiceActionError) {
-    return actionError(error.message);
+    return actionError(error.message, error.i18nKey);
   }
 
   return null;
@@ -1966,29 +1965,38 @@ async function addManualInvoiceItemsInternal(
 }
 
 
-export const hardDeleteInvoice = withAuth(async (
-  user,
-  { tenant },
-  invoiceId: string
-): Promise<InvoiceMutationActionResult> => {
-  if (!await hasPermission(user, 'invoice', 'delete')) {
-    return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
-  }
-  const { knex } = await createTenantKnex();
+export interface DeleteInvoiceOptions {
+  /** Refuse (InvoiceNotDraftError) unless finalized_at IS NULL, checked after the row lock. */
+  requireDraft?: boolean;
+  /** Runs inside the delete transaction just before commit. */
+  onBeforeCommit?: (trx: Knex.Transaction) => Promise<void>;
+}
 
-  try {
-    // Guard: block deletion if invoice is already exported to an accounting system
-    const existingMapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
-      .where({
-        tenant: tenant,
-        integration_type: 'quickbooks_online',
-        alga_entity_type: 'invoice',
-        alga_entity_id: invoiceId
-      })
-      .first('id');
-    if (existingMapping) {
-      return actionError('This invoice is synced to an accounting system — void it instead of deleting.', 'msp/invoicing:errors.invoice.syncedVoidInstead');
-    }
+/**
+ * Auth-free invoice hard-delete engine shared by the UI action and the REST
+ * service. Throws ExpectedInvoiceActionError for engine refusals and
+ * InvoiceNotDraftError when requireDraft fails; returns { deleted: false }
+ * when the invoice does not exist.
+ */
+export async function deleteInvoiceWithKnex(
+  knex: Knex,
+  tenant: string,
+  invoiceId: string,
+  userId: string,
+  options: DeleteInvoiceOptions = {},
+): Promise<{ deleted: boolean }> {
+  // Guard: block deletion if invoice is already exported to an accounting system
+  const existingMapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
+    .where({
+      tenant: tenant,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'invoice',
+      alga_entity_id: invoiceId
+    })
+    .first('id');
+  if (existingMapping) {
+    throw expectedInvoiceActionError('This invoice is synced to an accounting system — void it instead of deleting.', 'msp/invoicing:errors.invoice.syncedVoidInstead');
+  }
 
   let voidedCreditNotes: Array<{
     creditNoteId: string;
@@ -2020,6 +2028,9 @@ export const hardDeleteInvoice = withAuth(async (
     if (!invoice) {
         console.warn(`Invoice ${invoiceId} not found for deletion.`);
         return; // Exit if invoice doesn't exist
+    }
+    if (options.requireDraft && invoice.finalized_at) {
+      throw new InvoiceNotDraftError(invoiceId);
     }
     deletedClientId = invoice.client_id ?? undefined;
 
@@ -2085,7 +2096,7 @@ export const hardDeleteInvoice = withAuth(async (
     // credits to the pool through the canonical primitive (repeat-safe, all
     // application transactions, credit rows locked in stable order) BEFORE the
     // transaction-history cleanup below deletes the provenance it reads.
-    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_deleted');
+    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, userId, 'invoice_deleted');
 
     // Handle credit issued *from* this invoice (if it was negative)
     const creditIssuanceTransaction = await tenantScopedTable(trx, tenant, 'transactions')
@@ -2116,7 +2127,7 @@ export const hardDeleteInvoice = withAuth(async (
                 voidedCreditNotes.push({
                   creditNoteId: creditTrackingEntry.credit_id,
                   voidedAt: now,
-                  voidedByUserId: user.user_id,
+                  voidedByUserId: userId,
                   reason: 'invoice_deleted',
                 });
                 // Deleting the tracking row removes it from the derived balance.
@@ -2136,7 +2147,7 @@ export const hardDeleteInvoice = withAuth(async (
     await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);
     // Void pending hour blocks minted by this draft purchase invoice before the
     // invoice row is deleted (the FK nulls source_invoice_id on delete).
-    await voidPendingHourBlocksForDeletedInvoice(trx, tenant, invoiceId, user.user_id, now);
+    await voidPendingHourBlocksForDeletedInvoice(trx, tenant, invoiceId, userId, now);
 
     // 4. Unmark time entries
     await tenantScopedTable(trx, tenant, 'time_entries')
@@ -2270,6 +2281,11 @@ export const hardDeleteInvoice = withAuth(async (
       .delete();
     deletedInvoice = true;
 
+    // Caller-supplied work (e.g. the REST audit row) commits atomically with the delete.
+    if (options.onBeforeCommit) {
+      await options.onBeforeCommit(trx);
+    }
+
      // TODO: Recalculate client balance after all deletions/reversals
   });
 
@@ -2296,7 +2312,7 @@ export const hardDeleteInvoice = withAuth(async (
     const ctx = {
       tenantId: tenant,
       occurredAt,
-      actor: { actorType: 'USER', actorUserId: user.user_id },
+      actor: { actorType: 'USER', actorUserId: userId },
     };
 
     for (const itemId of deletedItemIds) {
@@ -2305,7 +2321,7 @@ export const hardDeleteInvoice = withAuth(async (
         payload: {
           invoiceId,
           itemId,
-          userId: user.user_id,
+          userId,
           timestamp: occurredAt,
         },
         ctx,
@@ -2319,7 +2335,7 @@ export const hardDeleteInvoice = withAuth(async (
         payload: {
           invoiceId,
           annotationId,
-          userId: user.user_id,
+          userId,
           timestamp: occurredAt,
         },
         ctx,
@@ -2332,7 +2348,7 @@ export const hardDeleteInvoice = withAuth(async (
       payload: {
         invoiceId,
         clientId: deletedClientId,
-        userId: user.user_id,
+        userId,
         timestamp: occurredAt,
       },
       ctx,
@@ -2340,6 +2356,21 @@ export const hardDeleteInvoice = withAuth(async (
     });
   }
 
+  return { deleted: deletedInvoice };
+}
+
+export const hardDeleteInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<InvoiceMutationActionResult> => {
+  if (!await hasPermission(user, 'invoice', 'delete')) {
+    return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
+  }
+  const { knex } = await createTenantKnex();
+
+  try {
+    await deleteInvoiceWithKnex(knex, tenant, invoiceId, user.user_id);
   } catch (error) {
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
