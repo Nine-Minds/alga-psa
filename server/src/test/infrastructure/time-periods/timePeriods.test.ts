@@ -553,20 +553,144 @@ describe('Time Periods Infrastructure', () => {
         expect((await storedPeriods())[0]).toEqual(['2026-10-18', '2026-10-25']);
       });
 
-      it('23. back-dated default overlapping a setting that ended earlier this week is rejected', async () => {
+      const oldSunday = (effectiveTo: string) => ({
+        ...sundayWeekly('2026-09-01T00:00:00.000Z'),
+        effective_to: effectiveTo,
+      });
+      const monthlyInput = { frequency: 1, frequency_unit: 'month' as const, start_day: 1, end_day: 0 };
+      const monthlySetting = (overrides: Partial<ITimePeriodSettings>): ITimePeriodSettings => ({
+        ...sundayWeekly('2026-01-01T00:00:00.000Z'),
+        frequency_unit: 'month',
+        start_day: 1,
+        end_day: 0,
+        ...overrides,
+      });
+      const settingRowCount = async () => {
+        const rows = await tenantTable(context, 'time_period_settings');
+        return rows.length;
+      };
+      const ymd = (value: unknown) => String((value as any)?.effective_from).slice(0, 10);
+
+      it('23. default hand-off: a setting that ended mid-week is followed by a bridging period', async () => {
         await useUserTimeZone('UTC');
         freezeTime('2026-10-10T15:00:00.000Z');
-        // Existing weekly setting ended 10/06 (mid-week). Old default (10/10) would not overlap;
-        // the aligned default (10/04) does, and weekly overlap semantics are date-range based.
-        const existing = { ...sundayWeekly('2026-09-01T00:00:00.000Z'), effective_to: '2026-10-06T00:00:00.000Z' };
+        // Existing weekly setting ended 10/06 (mid-week); the aligned default (10/04) would overlap it,
+        // so the new setting starts the day after it ended.
+        const existing = oldSunday('2026-10-06T00:00:00.000Z');
         await insertSetting(existing);
+
+        const created: any = await createTimePeriodSettings(weeklyInput);
+        expect(ymd(created)).toBe('2026-10-07');
+
+        const today = Temporal.PlainDate.from('2026-10-10');
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual([['2026-10-07', '2026-10-11']]);
+
+        await runWithTenant(tenantId, () => createNextTimePeriod([existing, created], 7, { today }));
+        expect(await storedPeriods()).toEqual([
+          ['2026-10-07', '2026-10-11'],
+          ['2026-10-11', '2026-10-18'],
+        ]);
+      });
+
+      it('24. hand-off with the old setting\'s periods already stored', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z');
+        const existing = oldSunday('2026-10-06T00:00:00.000Z');
+        await insertSetting(existing);
+        await tenantTable(context, 'time_periods').insert([
+          { period_id: uuidv4(), tenant: tenantId, start_date: '2026-09-27', end_date: '2026-10-04' },
+          { period_id: uuidv4(), tenant: tenantId, start_date: '2026-10-04', end_date: '2026-10-11' },
+        ]);
+
+        const created: any = await createTimePeriodSettings(weeklyInput);
+        expect(ymd(created)).toBe('2026-10-07');
+
+        const stored = [
+          ['2026-09-27', '2026-10-04'],
+          ['2026-10-04', '2026-10-11'],
+        ];
+        const today = Temporal.PlainDate.from('2026-10-10');
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual(stored);
+
+        await runWithTenant(tenantId, () => createNextTimePeriod([existing, created], 7, { today }));
+        const periods = await storedPeriods();
+        expect(periods).toEqual([...stored, ['2026-10-11', '2026-10-18']]);
+        // contiguous: no gap and no double coverage
+        for (let k = 1; k < periods.length; k++) expect(periods[k][0]).toBe(periods[k - 1][1]);
+      });
+
+      it('25. hand-off on the start day', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z');
+        const today = Temporal.PlainDate.from('2026-10-10');
+
+        // (a) ended Sat 10/03, before the aligned start: clamp is a no-op.
+        await insertSetting(oldSunday('2026-10-03T00:00:00.000Z'));
+        const a: any = await createTimePeriodSettings(weeklyInput);
+        expect(ymd(a)).toBe('2026-10-04');
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual([['2026-10-04', '2026-10-11']]);
+
+        // (b) ended Sun 10/04, on the aligned start: the new setting starts 10/05.
+        await tenantTable(context, 'time_periods').delete();
+        await tenantTable(context, 'time_period_settings').delete();
+        await insertSetting(oldSunday('2026-10-04T00:00:00.000Z'));
+        const b: any = await createTimePeriodSettings(weeklyInput);
+        expect(ymd(b)).toBe('2026-10-05');
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual([['2026-10-05', '2026-10-11']]);
+      });
+
+      it('26. monthly hand-off, and a disjoint semi-monthly partner does not clamp', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-13T15:00:00.000Z');
+        const today = Temporal.PlainDate.from('2026-10-13');
+
+        const existing = monthlySetting({ effective_to: '2026-10-05T00:00:00.000Z' });
+        await insertSetting(existing);
+        const created: any = await createTimePeriodSettings(monthlyInput);
+        expect(ymd(created)).toBe('2026-10-06');
+
+        await ensureTimePeriodCoversDate(context.db, tenantId, today);
+        expect(await storedPeriods()).toEqual([['2026-10-06', '2026-11-01']]);
+        await runWithTenant(tenantId, () => createNextTimePeriod([existing, created], 31, { today }));
+        expect(await storedPeriods()).toEqual([
+          ['2026-10-06', '2026-11-01'],
+          ['2026-11-01', '2026-12-01'],
+        ]);
+
+        // Semi-monthly partner: 16-end, ended 10/20. A new 1-15 setting must not be clamped around it.
+        await tenantTable(context, 'time_periods').delete();
+        await tenantTable(context, 'time_period_settings').delete();
+        await insertSetting(monthlySetting({ start_day: 16, end_day: 0, effective_to: '2026-10-20T00:00:00.000Z' }));
+        const half: any = await createTimePeriodSettings({ ...monthlyInput, start_day: 1, end_day: 15 });
+        // doPeriodsOverlap(new 1-15, existing 16-end) is false (ranges are disjoint), so no clamp.
+        expect(ymd(half)).toBe('2026-10-01');
+      });
+
+      it('27. explicit overlapping effective_from is still rejected and inserts nothing', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z');
+        await insertSetting(oldSunday('2026-10-06T00:00:00.000Z'));
+        const before = await settingRowCount();
+
+        const result: any = await createTimePeriodSettings({ ...weeklyInput, effective_from: '2026-10-04' });
+        expect(result.actionError).toMatch(/overlaps/i);
+        expect(await settingRowCount()).toBe(before);
+      });
+
+      it('28. open-ended conflict is still rejected (no clamp)', async () => {
+        await useUserTimeZone('UTC');
+        freezeTime('2026-10-10T15:00:00.000Z');
+        await insertSetting(sundayWeekly('2026-09-01T00:00:00.000Z'));
+        const before = await settingRowCount();
 
         const result: any = await createTimePeriodSettings(weeklyInput);
         expect(result.effective_from).toBeUndefined();
         expect(result.actionError).toMatch(/overlaps/i);
-
-        const explicit: any = await createTimePeriodSettings({ ...weeklyInput, effective_from: '2026-10-10' });
-        expect(String(explicit.effective_from).slice(0, 10)).toBe('2026-10-10');
+        expect(await settingRowCount()).toBe(before);
       });
     });
   });

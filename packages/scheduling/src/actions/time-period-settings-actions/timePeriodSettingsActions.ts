@@ -9,7 +9,7 @@ import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { resolveUserTimeZone } from '@alga-psa/db';
-import { defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
+import { clampDefaultPastEndedSettings, defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
 import { withAuth } from '@alga-psa/auth';
 import {
   actionError,
@@ -174,11 +174,14 @@ export const createTimePeriodSettings = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     let effectiveFrom: string;
+    let alignedDefault: Temporal.PlainDate | null = null;
     if (settings.effective_from) {
       effectiveFrom = formatUtcDateNoTime(new Date(settings.effective_from));
     } else {
       // Default: start of the period containing today in the creating user's timezone, so the
       // current period is fully covered and an evening save in the Americas isn't a day ahead.
+      // If an earlier setting ended on or after that start, the new setting hands off the day after
+      // it ended (see the clamp inside the transaction below); the default may then be in the future.
       const userId = user?.user_id || null;
       let timeZone = 'UTC';
       if (userId) {
@@ -195,7 +198,8 @@ export const createTimePeriodSettings = withAuth(async (
         console.warn(`Unknown timezone "${timeZone}" for effective_from default; using UTC`);
         localToday = Temporal.Now.plainDateISO('UTC');
       }
-      effectiveFrom = defaultEffectiveFrom(settings as ITimePeriodSettings, localToday).toString();
+      alignedDefault = defaultEffectiveFrom(settings as ITimePeriodSettings, localToday);
+      effectiveFrom = alignedDefault.toString();
     }
 
     const now = formatISO(new Date());
@@ -216,6 +220,20 @@ export const createTimePeriodSettings = withAuth(async (
     };
 
     const insertedSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (alignedDefault) {
+        // Read the conflicting ended settings in the same transaction as the validation below, with the
+        // validator's filter (active rows) plus doPeriodsOverlap, so the clamp and the check see the same rows.
+        // Open-ended settings are not clamped around; validation still rejects them.
+        const endedRows = await tenantScopedTable<TimePeriodSettingsRow>(trx, 'time_period_settings', tenant)
+          .where('is_active', true)
+          .whereNotNull('effective_to')
+          .andWhere('effective_to', '>=', new Date(alignedDefault.toString()));
+        const conflicting = endedRows
+          .filter((row) => doPeriodsOverlap(newSettings as unknown as ITimePeriodSettings, row as unknown as ITimePeriodSettings))
+          .map((row) => ({ effective_to: formatUtcDateNoTime(new Date(row.effective_to as string | Date)) }));
+        newSettings.effective_from = clampDefaultPastEndedSettings(alignedDefault, conflicting).toString();
+      }
+
       // Validate the business rules and check for overlaps before database insertion
       await validateTimePeriodSettings(newSettings, trx);
 
@@ -407,6 +425,8 @@ async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>
         .andWhere(builder => {
           builder
             .whereNull('effective_to')
+            // LEVERAGE: friction effective-to-inclusivity — treated as exclusive here, inclusive in
+            // isSettingEffectiveOn; createTimePeriodSettings' default hand-off starts the day after effective_to.
             .orWhere('effective_to', '>', effectiveFrom);
         });
     });
