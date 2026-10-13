@@ -93,7 +93,8 @@ export default function CreateWorkflowFromTicketDialog({
     let cancelled = false;
     (async () => {
       try {
-        const result = await listEventCatalogOptionsV2Action({});
+        // Same page size as the designer's trigger picker; the action's default (500) can truncate.
+        const result = await listEventCatalogOptionsV2Action({ limit: 1000 });
         if (cancelled) return;
         if (isActionPermissionError(result) || isActionMessageError(result)) return;
         setEvents(
