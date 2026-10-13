@@ -185,6 +185,15 @@ describe('TimeSheetService time periods (API)', () => {
       await expect(service.reopenTimePeriod(uuidv4(), ctx)).rejects.toMatchObject({ statusCode: 404 });
     });
 
+    it('returns 404 for another tenant\'s period and leaves it untouched', async () => {
+      const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
+      const otherCtx = { ...ctx, tenant: uuidv4() };
+
+      await expect(service.closeTimePeriod(period.period_id, otherCtx)).rejects.toMatchObject({ statusCode: 404 });
+      await expect(service.reopenTimePeriod(period.period_id, otherCtx)).rejects.toMatchObject({ statusCode: 404 });
+      expect((await dbRow(period.period_id)).is_closed).toBe(false);
+    });
+
     it('rejects PUT and DELETE on a closed period with 409, and allows them after reopen', async () => {
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
       await service.closeTimePeriod(period.period_id, ctx);
