@@ -90,15 +90,19 @@ import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin'
 import {
   copyChecklistFromSource,
   countDuplicableCustomFields,
-  insertChecklistItemsReplacingTemplates,
   pickDuplicableAttributes,
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import {
   descriptionHasInlineImages,
-  templateChecklistToItems,
   ticketToTemplateDraft,
 } from '../lib/ticketTemplates';
+import {
+  applyTemplateToCreatedTicket,
+  loadTemplateForInstantiation,
+  templateTicketProvenance,
+  type TemplateForInstantiation,
+} from '../lib/instantiateTicketTemplate';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
@@ -648,11 +652,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
 
       // Template path: authorize and load the template before creating anything, so a refused
       // request rolls back with nothing written.
-      let sourceTemplate: {
-        template_id: string;
-        name: string;
-        custom_fields: Record<string, unknown>;
-      } | null = null;
+      let sourceTemplate: TemplateForInstantiation | null = null;
       if (ticketTemplateId) {
         if (user.user_type !== 'internal') {
           throw new Error('Permission denied: operation not available in client portal');
@@ -660,21 +660,19 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         if (!await hasPermission(user, 'ticket_template', 'read', trx)) {
           throw new Error('Permission denied: Cannot use ticket templates');
         }
-        const templateRow = UUID_PATTERN.test(ticketTemplateId)
+        // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        const offered = UUID_PATTERN.test(ticketTemplateId)
           ? await tenantScopedTable(trx, 'ticket_templates', tenant)
-              .where({ template_id: ticketTemplateId, is_active: true })
-              .first('template_id', 'name', 'custom_fields')
+              .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .first('template_id')
           : undefined;
-        if (!templateRow) {
+        sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;
+        if (!sourceTemplate) {
           throw new Error('Ticket template not found');
         }
-        sourceTemplate = {
-          template_id: templateRow.template_id,
-          name: templateRow.name,
-          custom_fields: asJsonColumn<Record<string, unknown>>(templateRow.custom_fields ?? {}),
-        };
-        createTicketInput.created_from_template_id = sourceTemplate.template_id;
-        createTicketInput.attributes = pickDuplicableAttributes({ custom_fields: sourceTemplate.custom_fields });
+        const provenance = templateTicketProvenance(sourceTemplate);
+        createTicketInput.created_from_template_id = provenance.created_from_template_id;
+        createTicketInput.attributes = provenance.attributes;
       }
 
       // Server-specific: Create adapters for dependency injection.
@@ -683,7 +681,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
+      // LEVERAGE: friction ticket-create-composition — the template-specific parts share applyTemplateToCreatedTicket with the recurring generator, but this action still composes the generic create (single asset, form-driven ITIL priority mapping, analytics tracker, activity row) by hand around TicketModel instead of createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -814,36 +812,12 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       }
 
       if (sourceTemplate) {
-        const templateItems = copyChecklistFromTemplate
-          ? await tenantScopedTable(trx, 'ticket_template_checklist_items', tenant)
-              .where({ template_id: sourceTemplate.template_id })
-              .orderBy('order_number', 'asc')
-              .orderBy('created_at', 'asc')
-              .select('item_name', 'description', 'is_required', 'checklist_template_id')
-          : [];
-        const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
-          targetTicketId: ticketResult.ticket_id,
-          items: templateChecklistToItems(templateItems),
-          userId: user.user_id,
-        });
-
-        await writeTicketActivity(trx, {
-          tenant,
+        await applyTemplateToCreatedTicket(trx, tenant, {
           ticketId: ticketResult.ticket_id,
-          eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
-          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-          entityId: ticketResult.ticket_id,
-          actor: {
-            actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
-          },
-          source: TICKET_ACTIVITY_SOURCE.UI,
-          details: {
-            template_id: sourceTemplate.template_id,
-            template_name: sourceTemplate.name,
-            checklist_items_copied: checklistItemsCopied,
-            custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
-          },
+          template: sourceTemplate,
+          checklist: copyChecklistFromTemplate ? sourceTemplate.checklist : [],
+          customFieldsCopied: countDuplicableCustomFields(createTicketInput.attributes),
+          actor: { type: 'user', userId: user.user_id },
         });
       }
 
