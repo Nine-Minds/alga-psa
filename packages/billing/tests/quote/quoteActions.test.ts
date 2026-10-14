@@ -74,6 +74,10 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
+  withOptionalAuth:
+    (fn: any) =>
+    (...args: any[]) =>
+      fn(currentUser, { tenant: TENANT_ID }, ...args),
   withAuth:
     (fn: any) =>
     (...args: any[]) =>
