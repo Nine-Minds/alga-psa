@@ -16335,6 +16335,117 @@ it('T021 signal counts keep two customer workspaces with the same ticket number 
   expect(oversight.items.map((item: any) => `${item.tenant}:${item.ticketId}`).sort()).toEqual([`${resource.tenant}:${resource.id}`, `${second.actor.tenant}:${resource.id}`].sort());
 }));
 
+// Second customer workspace for the same sponsor, with one oversight-only ticket that reuses the first ticket's number and id.
+// LEVERAGE: pattern second-customer-queue-fixture — the same provisioning block appears in three queue cases.
+async function addSecondQueueWorkspace({ principal, sponsor, operation, resource }: any) {
+  await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+  const clientId = randomUUID();
+  await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: clientId, client_name: 'Second customer' });
+  const provisioned = await prepareCoManagedProvisioning(db, { sponsorTenant: principal.tenant, clientId, requestedBy: principal.userId,
+    escalationBoardId: operation.request.escalationBoardId, operationId: randomUUID(), seats: 1, visibilityMode: 'board_scope', workspaceName: 'Second customer IT',
+    administrator: { firstName: 'Second', lastName: 'Admin', email: `admin-${randomUUID()}@example.test` } });
+  const second = await readyForAcceptance('board_scope', provisioned);
+  await acceptCoManagedRelationship(db, second.actor, second.input);
+  const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
+  await replaceCoManagedStaffAssignments(db, principal, { customerTenant: second.actor.tenant, relationshipId: provisioned.relationship_id }, 2,
+    [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+  const status = await second.customer.table('statuses').where({ board_id: provisioned.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+  await second.customer.table('tickets').insert({ tenant: second.actor.tenant, ticket_id: resource.id, ticket_number: 'SHARED-1', title: 'B customer issue',
+    client_id: provisioned.customer_client_id, board_id: provisioned.customer_board_id, status_id: status.status_id, entered_by: second.actor.userId });
+  return { second, clientId };
+}
+
+it('T003 working is responsibility OR assignment on one relation: assignment-only stays, unassigned customer work leaves, and client narrowing scopes the workspace options', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, operation, selected, list }: any) => {
+  const { second, clientId } = await addSecondQueueWorkspace({ principal, sponsor, operation, resource });
+  const key = (item: any) => `${item.tenant}:${item.ticketId}`;
+  const mine = key({ tenant: resource.tenant, ticketId: resource.id }), theirs = key({ tenant: second.actor.tenant, ticketId: resource.id });
+  // MSP-responsible: working. The second customer's merely visible ticket is oversight only, though its number and id are the same.
+  expect((await list(db, principal, { view: 'working' })).items.map(key)).toEqual([mine]);
+  expect((await list(db, principal, { view: 'oversight', sort: 'number' })).items.map(key).sort()).toEqual([mine, theirs].sort());
+  // Customer-responsible but assigned to the viewer: assignment alone keeps it in working.
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ responsibility: 'customer' });
+  const assignmentOnly = await list(db, principal, { view: 'working' });
+  expect(assignmentOnly.items.map(key)).toEqual([mine]);
+  expect(assignmentOnly.items[0].fields).toMatchObject({ responsibility: 'customer', has_msp_assignment: true });
+  expect(assignmentOnly.totalCount).toBe(1);
+  expect((await queueSignals(list, principal)).counts.escalatedUnassigned).toBe(0);
+  // Customer-responsible and unassigned: out of working, still in oversight, with page totals following the relation.
+  await sponsor.table('co_managed_ticket_references').where({ customer_tenant: resource.tenant, ticket_id: resource.id }).update({ assigned_to: null, assigned_team_id: null });
+  expect(await list(db, principal, { view: 'working' })).toMatchObject({ items: [], totalCount: 0 });
+  const oversight = await list(db, principal, { view: 'oversight', pageSize: 1, page: 2, sort: 'number' });
+  expect(oversight).toMatchObject({ totalCount: 2, page: 2, pageSize: 1 }); expect(oversight.items).toHaveLength(1);
+  // Client narrowing derives the workspace chooser from the narrowed authorized relation, not from every workspace.
+  const narrowed = await list(db, principal, { view: 'oversight', clientId });
+  expect(narrowed.items.map(key)).toEqual([theirs]);
+  expect(narrowed.workspaces.map((item: any) => item.tenant)).toEqual([second.actor.tenant]);
+  const other = await list(db, principal, { view: 'oversight', clientId: operation.request.clientId });
+  expect(other.workspaces.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+  expect(await list(db, principal, { view: 'oversight', clientId: randomUUID() })).toMatchObject({ items: [], workspaces: [], totalCount: 0 });
+  // The full filtered export is the same relation, regardless of page controls.
+  const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
+  expect((await exportCoManagedTicketQueue(db, principal, { view: 'oversight', clientId })).map(key)).toEqual([theirs]);
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'working' })).toEqual([]);
+}), 120000);
+
+it('T004 a redacted assignment is omitted rather than false and leaks neither membership nor signal; sibling-client and revoked rows stay out', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, operation, selected, list }: any) => {
+  // Visible and unassigned: the field is present and false (different from omitted).
+  const visibleUnassigned = await list(db, principal, { view: 'oversight' });
+  expect(visibleUnassigned.items[0].fields).toHaveProperty('has_msp_assignment', false);
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ responsibility: 'customer' });
+  expect((await list(db, principal, { view: 'working' })).items[0].fields.has_msp_assignment).toBe(true);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Hide assignment', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['assigned_to', 'assigned_team_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const oversight = await list(db, principal, { view: 'oversight' });
+  expect(oversight.totalCount).toBe(1);
+  expect(oversight.items[0].fields).not.toHaveProperty('has_msp_assignment');
+  expect(oversight.items[0].fields).toHaveProperty('responsibility', 'customer');
+  // Assignment-only membership cannot be decided without the hidden field, so the row is not disclosed as working.
+  expect(await list(db, principal, { view: 'working' })).toMatchObject({ items: [], totalCount: 0, workspaces: [] });
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  // A sibling client's shared ticket and a revoked grant add nothing, even by search or workspace option.
+  expect(await list(db, principal, { view: 'oversight', clientId: randomUUID(), search: 'Customer' })).toMatchObject({ items: [], workspaces: [], totalCount: 0 });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  expect(await list(db, principal, { view: 'oversight' })).toMatchObject({ items: [], workspaces: [], totalCount: 0 });
+  expect(sponsor).toBeDefined();
+}));
+
+it('T014 bulk handback: one receipt per success, stale and forbidden items reported per item, exact retry replays, and working/oversight are re-queried', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, customer, list }: any) => {
+  const { bulkHandBackCoManagedTickets, escalateCoManagedTicket } = await import('@alga-psa/co-managed');
+  const { title_index, ...copy } = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const stale = { ...resource, id: randomUUID() }, readOnly = { ...resource, id: randomUUID() };
+  for (const [target, number] of [[stale, 'BULK-STALE'], [readOnly, 'BULK-FORBID']] as const) {
+    await customer.table('tickets').insert({ ...copy, ticket_id: target.id, ticket_number: number });
+    await escalateCoManagedTicket(db, customerPrincipal, target, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared' });
+  }
+  const foreign = (await ticketHandoffFixture()).resource;
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(3);
+  const input = { note: 'Customer IT continues', items: [
+    { resource, operationId: randomUUID(), expectedRevision: 1 },
+    { resource: stale, operationId: randomUUID(), expectedRevision: 5 },
+    { resource: foreign, operationId: randomUUID(), expectedRevision: 1 },
+  ] };
+  const results = await bulkHandBackCoManagedTickets(db, principal, input);
+  expect(results).toMatchObject([{ index: 0, ok: true, receipt: { transition: 'handed_back', appliedRevision: 2 } }, { index: 1, ok: false, code: 'changed' }, { index: 2, ok: false, code: 'forbidden' }]);
+  expect(await bulkHandBackCoManagedTickets(db, principal, input)).toEqual(results);
+  expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(1);
+  expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: stale.id, transition: 'handed_back' })).toHaveLength(0);
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ responsibility: 'customer', revision: 2 });
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', stale.id).first()).toMatchObject({ responsibility: 'msp', revision: 1 });
+  // Re-queried membership: the handed-back ticket leaves working and stays in oversight; the unsent ones remain.
+  const working = await list(db, principal, { view: 'working' });
+  expect(working.items.map((item: any) => item.ticketId).sort()).toEqual([stale.id, readOnly.id].sort());
+  expect(working.totalCount).toBe(2);
+  const oversight = await list(db, principal, { view: 'oversight' });
+  expect(oversight.totalCount).toBe(3);
+  expect(oversight.items.find((item: any) => item.ticketId === resource.id).fields).toMatchObject({ responsibility: 'customer', work_revision: 2 });
+}), 120000);
+
 it('shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, selected }: any) => {
   const before = await customer.table('tickets').where('ticket_id', resource.id).first();
   expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'user')).options.map((option: any) => option.id)).toEqual([principal.userId]);

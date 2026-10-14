@@ -590,6 +590,8 @@
       "loadError": "Impossibile caricare i ticket. Aggiorna per verificare il tuo accesso.",
       "counts": "{{total}} ticket · {{open}} aperti · {{closed}} chiusi",
       "empty": "Nessun ticket consentito corrisponde a questi filtri.",
+      "emptyUnfiltered": "Non ci sono ancora ticket dei clienti da mostrare.",
+      "retry": "Riprova",
       "page": "Pagina {{page}}",
       "sortFields": {
         "updated": "Ultimo aggiornamento",

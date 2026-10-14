@@ -588,6 +588,8 @@
       "loadError": "Unable to load tickets. Refresh to check your current access.",
       "counts": "{{total}} tickets · {{open}} open · {{closed}} closed",
       "empty": "No permitted tickets match these filters.",
+      "emptyUnfiltered": "No customer tickets to show yet.",
+      "retry": "Retry",
       "page": "Page {{page}}",
       "sortFields": {
         "updated": "Last updated",

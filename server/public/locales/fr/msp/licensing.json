@@ -590,6 +590,8 @@
       "loadError": "Impossible de charger les tickets. Actualisez pour vérifier votre accès.",
       "counts": "{{total}} tickets · {{open}} ouverts · {{closed}} fermés",
       "empty": "Aucun ticket autorisé ne correspond à ces filtres.",
+      "emptyUnfiltered": "Aucun ticket client à afficher pour le moment.",
+      "retry": "Réessayer",
       "page": "Page {{page}}",
       "sortFields": {
         "updated": "Dernière modification",

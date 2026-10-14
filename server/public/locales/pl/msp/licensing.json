@@ -592,6 +592,8 @@
       "loadError": "Nie udało się wczytać zgłoszeń. Odśwież, aby sprawdzić dostęp.",
       "counts": "{{total}} zgłoszeń · {{open}} otwartych · {{closed}} zamkniętych",
       "empty": "Brak dostępnych zgłoszeń pasujących do tych filtrów.",
+      "emptyUnfiltered": "Nie ma jeszcze zgłoszeń klientów do wyświetlenia.",
+      "retry": "Spróbuj ponownie",
       "page": "Strona {{page}}",
       "sortFields": {
         "updated": "Ostatnia aktualizacja",

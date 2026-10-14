@@ -588,6 +588,8 @@
       "loadError": "Tickets konnten nicht geladen werden. Aktualisieren Sie die Ansicht, um Ihren Zugriff zu prüfen.",
       "counts": "{{total}} Tickets · {{open}} offen · {{closed}} geschlossen",
       "empty": "Keine zugänglichen Tickets entsprechen diesen Filtern.",
+      "emptyUnfiltered": "Es gibt noch keine Kundentickets.",
+      "retry": "Erneut versuchen",
       "page": "Seite {{page}}",
       "sortFields": {
         "updated": "Zuletzt aktualisiert",

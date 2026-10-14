@@ -65,3 +65,28 @@ nothing to load for a sponsor tenant.
 - **Release-flag-off rendering.** The new
   `TicketListQualifiedFallback` (qualified URL + flag off → redirect to the
   native list) is code- and typecheck-verified only.
+
+## Amendment finishing pass (2026-10-14)
+
+Everything is under `amendment-2026-10-14/`. Shots were taken on the running app
+(port 3374) against `server_co_managed`, before and after merging main.
+
+| shots | shows |
+|---|---|
+| `shots/01`–`06` | Alice (customer IT) takes back a shared ticket, then escalates it |
+| `shots/10`, `51` | qa on All Tickets: callout (counts from the authorized reader) |
+| `shots/12`, `52` | qa follows the callout to `/msp/tickets/customer`; filter applied, row count matches |
+| `shots/13`, `14` | shared ticket detail, then back on Customer Tickets |
+| `shots/16` | legacy `queueView` URL redirected |
+| `shots/17` | client record Tickets tab: still the native list |
+| `shots/21`, `22`, `53` | handback composer, selected row, post-handback state |
+| `shots/40`–`44` | noassign: no entry points, ordinary empty state |
+| `db-*.txt` | routing events and ticket-work rows after handback |
+| `reader-reverted-fail.log` | reader reverted to red (earlier round) |
+| `mutation-red.log` | this round: reader mutated, T003 and T004 go red |
+| `realdb-*.log` | real-DB runs |
+
+Not captured in a browser this round (covered by unit tests only):
+Retry after a load failure, the unfiltered-empty message, narrow-width,
+keyboard, theme and translated-locale checks (F036/F038), and an explicit
+Back-restores-filters pass (F006).

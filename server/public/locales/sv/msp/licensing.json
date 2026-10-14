@@ -588,6 +588,8 @@
       "loadError": "Det gick inte att läsa in ärenden. Uppdatera för att kontrollera din aktuella åtkomst.",
       "counts": "{{total}} ärenden · {{open}} öppna · {{closed}} stängda",
       "empty": "Inga tillåtna ärenden matchar de här filtren.",
+      "emptyUnfiltered": "Det finns inga kundärenden att visa än.",
+      "retry": "Försök igen",
       "page": "Sida {{page}}",
       "sortFields": {
         "updated": "Senast uppdaterad",

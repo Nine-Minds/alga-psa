@@ -55,4 +55,34 @@ describe('co-managed T21 boundary inventory', () => {
       expect(read(file), file).not.toContain('release-v1-6-feature');
     }
   });
+
+  // T018 (amendment): the ticket-list destinations and their compatibility navigation are
+  // presentation only. No route, redirect, action or reader may depend on the release flag.
+  it('keeps the ticket-list reader, actions, redirects and pure URL contract free of the release flag', () => {
+    for (const file of [
+      'packages/co-managed/src/ticketQueue.ts',
+      'packages/co-managed/src/ticketBulkHandback.ts',
+      'server/src/lib/actions/coManagedTicketQueueActions.ts',
+      'server/src/app/msp/tickets/page.tsx',
+      'server/src/app/msp/tickets/customer/page.tsx',
+      'server/src/app/msp/co-managed/tickets/page.tsx',
+      'packages/tickets/src/lib/ticketListScope.ts',
+    ]) {
+      expect(read(file), file).not.toContain('release-v1-6-feature');
+    }
+  });
+
+  it('keeps the legacy queue redirect ahead of every flag-dependent branch on All Tickets', () => {
+    const page = read('server/src/app/msp/tickets/page.tsx');
+    expect(page.indexOf('resolveLegacyQueueRedirect(')).toBeGreaterThan(-1);
+    expect(page.indexOf('redirect(legacyTarget)')).toBeLessThan(page.indexOf('try {'));
+    // The only co-managed mount on All Tickets is the lazy callout slot, itself behind the boundary.
+    expect(page.match(/<CoManaged[A-Za-z]*/g)).toEqual(['<CoManagedCalloutStrip']);
+    expect(read('server/src/components/co-managed/CoManagedCalloutStrip.tsx')).toContain('<CoManagedFeatureBoundary><WorkCallout />');
+  });
+
+  it('gates the Customer Tickets route as presentation with an explicit unavailable fallback', () => {
+    const page = read('server/src/app/msp/tickets/customer/page.tsx');
+    expect(page).toContain('<CoManagedFeatureBoundary fallback={<CustomerTicketsUnavailable />}>');
+  });
 });

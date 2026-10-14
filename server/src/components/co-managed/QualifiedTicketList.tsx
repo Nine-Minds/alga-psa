@@ -491,9 +491,13 @@ export default function QualifiedTicketList({
       )}
       {toolbar}
       {error ? (
-        <p role="alert" className="mt-4 text-destructive">
-          {t(error === 'export' ? 'coManaged.queue.exportError' : 'coManaged.queue.loadError')}
-        </p>
+        <div role="alert" className="mt-4 flex flex-wrap items-center gap-3 text-destructive">
+          <span>{t(error === 'export' ? 'coManaged.queue.exportError' : 'coManaged.queue.loadError')}</span>
+          {/* Retry re-reads under the same applied filters; it never widens an explicit workspace or fixed client. */}
+          <Button id={`${idPrefix}-retry`} type="button" variant="outline" size="sm" onClick={() => setRefresh(value => value + 1)}>
+            {t('coManaged.queue.retry', 'Retry')}
+          </Button>
+        </div>
       ) : !result ? (
         <p role="status" className="mt-4">{t('coManaged.ticket.loading', 'Loading tickets…')}</p>
       ) : (
@@ -510,7 +514,9 @@ export default function QualifiedTicketList({
             />
           </div>
           {!result.items.length ? (
-            <p className="mt-4">{t('coManaged.queue.empty', 'No permitted tickets match these filters.')}</p>
+            <p className="mt-4">{isFiltered
+              ? t('coManaged.queue.empty', 'No permitted tickets match these filters.')
+              : t('coManaged.queue.emptyUnfiltered', 'No customer tickets to show yet.')}</p>
           ) : (
             <div className="mt-3">
               <DataTable
