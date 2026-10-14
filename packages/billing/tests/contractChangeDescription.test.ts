@@ -3,7 +3,7 @@ import { describeContractChange } from '../src/lib/billing/contractChangeDescrip
 
 describe('automatic contract change customer description', () => {
   const source = {
-    adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+    adjustment_period_start: '2026-10-01', mid_period_effective_date: '2026-10-13', adjustment_period_end: '2026-11-01',
     unit_rate_cents: 12000, covered_days: 19, full_period_days: 31,
   };
 
@@ -20,6 +20,12 @@ describe('automatic contract change customer description', () => {
 
   it('does not invent missing legacy source calculations', () => {
     expect(describeContractChange('Cabling', {}, undefined)).toBe('Mid-period quantity change: Cabling');
+  });
+
+  it('safely falls back when a canonical effective date is an invalid Date', () => {
+    expect(describeContractChange('Cabling', {
+      ...source, mid_period_effective_date: new Date(Number.NaN), quantity_delta: 1, amount_cents: 7355,
+    }, 'AUD')).toBe('Mid-period quantity change: Cabling');
   });
 
   it.each([

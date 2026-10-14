@@ -7008,6 +7008,7 @@ export class BillingEngine {
         serviceName: describeContractChange(service?.service_name ?? "recurring item", {
           adjustment_period_start: row.adjustment_period_start,
           adjustment_period_end: row.adjustment_period_end,
+          mid_period_effective_date: row.mid_period_effective_date,
           quantity_delta: row.quantity_delta,
           unit_rate_cents: row.unit_rate_cents,
           covered_days: row.covered_days,

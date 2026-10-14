@@ -3474,9 +3474,11 @@ describe('accounting adjustment export matrix', () => {
     const { describeContractChange } = await import('../lib/billing/contractChangeDescription');
     const sourceService = await db('service_catalog').where({ tenant, service_id: serviceId }).first('service_name');
     const sourceDescription = describeContractChange(sourceService.service_name, {
-      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      adjustment_period_start: '2026-10-01', mid_period_effective_date: '2026-10-13', adjustment_period_end: '2026-11-01',
       quantity_delta: 1, unit_rate_cents: 12000, covered_days: 19, full_period_days: 31, amount_cents: 7355,
     }, 'USD');
+    expect(sourceDescription).toContain('2026-10-13 through 2026-11-01 (end date exclusive)');
+    expect(sourceDescription).toContain('19/31 days');
     const sourceRevisionId = uuidv4();
     const sourceChargeId = uuidv4();
     await db('invoice_charges').insert({ tenant, item_id: sourceChargeId, invoice_id: fixture.invoiceId,
@@ -3485,14 +3487,14 @@ describe('accounting adjustment export matrix', () => {
       tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
       adjustment_source_kind: 'contract_change', adjustment_source_id: sourceRevisionId,
       adjustment_source_revision: 1, adjustment_scope: 'service',
-      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      adjustment_period_start: '2026-10-01', adjustment_period_end: '2026-11-01',
     });
     const sourceAdjustmentId = uuidv4();
     await db('contract_recurring_unit_adjustments').insert({
       tenant, adjustment_id: sourceAdjustmentId, revision_id: sourceRevisionId, revision_version: 1,
       contract_line_id: contractLineId, client_contract_id: clientContractId, client_id: clientId,
       service_id: serviceId, config_id: uuidv4(), currency_code: 'USD',
-      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      adjustment_period_start: '2026-10-01', adjustment_period_end: '2026-11-01',
       mid_period_effective_date: '2026-10-13', previous_quantity: 0, new_quantity: 1,
       quantity_delta: 1, unit_rate_cents: 12000, covered_days: 19, full_period_days: 31,
       amount_cents: 7355, price_policy: 'override', reason: 'fixture true-up', status: 'settled',

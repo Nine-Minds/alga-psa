@@ -32,7 +32,7 @@ export async function expandAccountingExportCharges<T extends Charge>(
       const sources = await sourceQuery.whereIn('c.item_id', sourceIds)
         .where('c.adjustment_source_kind', 'contract_change')
         .select('c.item_id', 's.service_name', 'a.service_id', 'a.currency_code',
-          'a.adjustment_period_start', 'a.adjustment_period_end', 'a.quantity_delta',
+          'a.adjustment_period_start', 'a.adjustment_period_end', 'a.mid_period_effective_date', 'a.quantity_delta',
           'a.unit_rate_cents', 'a.covered_days', 'a.full_period_days', 'a.amount_cents');
       const projected = applyContractChangeDescriptionSources([...expanded.values()], sources);
       expanded = new Map(projected.map((charge) => [charge.item_id, charge]));

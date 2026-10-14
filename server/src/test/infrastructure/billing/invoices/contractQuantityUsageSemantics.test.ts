@@ -11,6 +11,7 @@ import { getConfigurationWithDetails, updateConfiguration, deleteConfiguration }
 import knexFactory from 'knex';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import * as invoiceService from '@alga-psa/billing/services/invoiceService';
+import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import * as tenantDbModule from '@alga-psa/db';
 import { generateGroupedInvoicesAsRecurringBillingRun, generateInvoicesAsRecurringBillingRun } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { updateContractLineService } from '@alga-psa/billing/actions/contractLineServiceActions';
@@ -2260,7 +2261,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(preview.success).toBe(true);
         if (!preview.success) throw new Error('True-up preview failed unexpectedly');
         const previewTrueUp = preview.data!.items.find((item: any) => item.description.includes('Users: increase (+3 units)'));
-        expect(previewTrueUp?.description).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(previewTrueUp?.description).toContain('2023-01-16 through 2023-02-01 (end date exclusive)');
         expect(previewTrueUp?.description).toContain('USD $100.00');
         expect(previewTrueUp?.description).toContain('16/31 days');
         expect(previewTrueUp?.total).toBe(15484);
@@ -2285,7 +2286,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         // The recurrence itself bills the old quantity in the affected period;
         // the customer text uses the same canonical source values as preview.
         expect(String(adjustment.description)).toContain('Users: increase (+3 units)');
-        expect(String(adjustment.description)).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(String(adjustment.description)).toContain('2023-01-16 through 2023-02-01 (end date exclusive)');
         expect(String(adjustment.description)).toContain('USD $100.00');
         expect(String(adjustment.description)).toContain('16/31 days');
         expect(Number(adjustment.quantity)).toBe(3);
@@ -2301,6 +2302,42 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           .first();
         expect(ledger.status).toBe('settled');
         expect(String(ledger.settled_invoice_id)).toBe(january.invoice_id);
+      });
+
+      it('uses the October effective date for the 19/31 preview and persisted true-up', async () => {
+        const setup = await setupProductLine();
+        const scheduled = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 23,
+          allow_mid_period: true,
+          mid_period_effective_date: '2026-10-13',
+          effective_period_start: '2026-11-01',
+        }));
+        const octoberCycle = await setupInvoiceCycle(2026, 11, 1);
+        const preview = await previewInvoice(octoberCycle);
+        expect(preview.success).toBe(true);
+        if (!preview.success) throw new Error('October true-up preview failed unexpectedly');
+        const previewTrueUp = preview.data!.items.find((item: any) => item.description.includes('Users: increase (+3 units)'));
+        expect(previewTrueUp?.description).toContain('2026-10-13 through 2026-11-01 (end date exclusive)');
+        expect(previewTrueUp?.description).toContain('19/31 days');
+        expect(previewTrueUp?.total).toBe(18388);
+
+        const octoberInvoice = unwrapInvoiceResult<any>(await generateInvoice(octoberCycle));
+        const settledCharge = await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: octoberInvoice.invoice_id, adjustment_source_kind: 'contract_change' })
+          .first();
+        expect(settledCharge).toBeTruthy();
+        expect(String(settledCharge.description)).toContain('2026-10-13 through 2026-11-01 (end date exclusive)');
+        expect(String(settledCharge.description)).toContain('19/31 days');
+        expect(Number(settledCharge.net_amount)).toBe(18388);
+        expect(String(settledCharge.adjustment_source_id)).toBe(scheduled.revision_id);
+
+        await context.db('invoice_charges').where({ tenant: context.tenantId, item_id: settledCharge.item_id })
+          .update({ description: 'Mid-period quantity change: Users' });
+        const invoiceProjection: any = await getInvoiceForRendering(octoberInvoice.invoice_id);
+        const projectedTrueUp = invoiceProjection.invoice_charges.find((charge: any) => charge.item_id === settledCharge.item_id);
+        expect(projectedTrueUp.description).toBe(previewTrueUp.description);
+        expect((await context.db('invoice_charges').where({ tenant: context.tenantId, item_id: settledCharge.item_id }).first()).description)
+          .toBe('Mid-period quantity change: Users');
       });
 
       it('describes a decrease as a source-linked credit without changing its settled amount', async () => {
@@ -2319,7 +2356,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           .where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, adjustment_source_kind: 'contract_change' })
           .first();
         expect(String(adjustment.description)).toContain('Users: credit (-1 units)');
-        expect(String(adjustment.description)).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(String(adjustment.description)).toContain('2023-01-16 through 2023-02-01 (end date exclusive)');
         expect(String(adjustment.description)).toContain('USD $100.00');
         expect(String(adjustment.description)).toContain('16/31 days');
         expect(Number(adjustment.quantity)).toBe(1);

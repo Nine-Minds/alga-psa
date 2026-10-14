@@ -11,6 +11,7 @@ export function applyContractChangeDescriptionSources<T extends {
   currency_code?: string | null;
   adjustment_period_start?: unknown;
   adjustment_period_end?: unknown;
+  mid_period_effective_date?: unknown;
   quantity_delta?: unknown;
   unit_rate_cents?: unknown;
   covered_days?: unknown;

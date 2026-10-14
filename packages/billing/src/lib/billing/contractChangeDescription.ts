@@ -1,6 +1,7 @@
 export interface ContractChangeDescriptionSource {
   adjustment_period_start?: unknown;
   adjustment_period_end?: unknown;
+  mid_period_effective_date?: unknown;
   quantity_delta?: unknown;
   unit_rate_cents?: unknown;
   covered_days?: unknown;
@@ -9,7 +10,11 @@ export interface ContractChangeDescriptionSource {
 }
 
 const dateOnly = (value: unknown): string | null => {
-  const raw = value instanceof Date ? value.toISOString().slice(0, 10) : value;
+  let raw = value;
+  if (value instanceof Date) {
+    if (!Number.isFinite(value.getTime())) return null;
+    raw = value.toISOString().slice(0, 10);
+  }
   if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
   const [year, month, day] = raw.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -30,7 +35,10 @@ export function describeContractChange(
   source: ContractChangeDescriptionSource,
   currencyCode: unknown,
 ): string {
-  const start = dateOnly(source.adjustment_period_start);
+  const periodStart = dateOnly(source.adjustment_period_start);
+  const start = source.mid_period_effective_date == null
+    ? dateOnly(source.adjustment_period_start)
+    : dateOnly(source.mid_period_effective_date);
   const end = dateOnly(source.adjustment_period_end);
   const delta = canonicalNumber(source.quantity_delta);
   const rateCents = canonicalNumber(source.unit_rate_cents);
@@ -47,7 +55,7 @@ export function describeContractChange(
       validCurrency = false;
     }
   }
-  const hasCanonicalCalculation = Boolean(start && end && start < end && validNumbers && validCurrency &&
+  const hasCanonicalCalculation = Boolean(start && end && periodStart && periodStart <= start && start < end && validNumbers && validCurrency &&
     delta !== null && rateCents !== null && covered !== null && full !== null && amount !== null &&
     delta !== 0 && rateCents >= 0 && Number.isInteger(covered) &&
     Number.isInteger(full) && covered > 0 && full >= covered &&

@@ -244,7 +244,7 @@ async function enrichContractChangeDescriptions(
       this.on('s.service_id', '=', 'a.service_id').andOn('s.tenant', '=', 'a.tenant');
     })
     .where('c.invoice_id', invoiceId)
-    .select('c.item_id', 's.service_name', 'a.service_id', 'a.adjustment_period_start', 'a.adjustment_period_end',
+    .select('c.item_id', 's.service_name', 'a.service_id', 'a.adjustment_period_start', 'a.adjustment_period_end', 'a.mid_period_effective_date',
       'a.quantity_delta', 'a.unit_rate_cents', 'a.covered_days', 'a.full_period_days', 'a.amount_cents', 'a.currency_code');
   return {
     ...invoice,

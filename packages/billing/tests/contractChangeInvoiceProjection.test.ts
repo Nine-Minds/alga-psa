@@ -12,7 +12,7 @@ describe('source-linked true-up invoice projection', () => {
     };
     const source = {
       item_id: 'settled-charge', service_name: 'Cabling', currency_code: 'USD',
-      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      adjustment_period_start: '2026-10-01', mid_period_effective_date: '2026-10-13', adjustment_period_end: '2026-11-01',
       quantity_delta: 1, unit_rate_cents: '12000', covered_days: 19, full_period_days: 31, amount_cents: '7355',
     };
     const [projected] = applyContractChangeDescriptionSources([persisted], [source]);
