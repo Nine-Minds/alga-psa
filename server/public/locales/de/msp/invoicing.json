@@ -347,7 +347,9 @@
       "processing": "Wird verarbeitet...",
       "generateSalesOrderInvoice": "Kundenauftragsrechnung erstellen",
       "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen",
-      "addPartialPeriodCharge": "Gebühr für Teilzeitraum hinzufügen"
+      "addPartialPeriodCharge": "Gebühr für Teilzeitraum hinzufügen",
+      "reauthenticate": "Erneut anmelden",
+      "retrySave": "Speichern erneut versuchen"
     },
     "labels": {
       "total": "Gesamt",
@@ -398,7 +400,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
       "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu.",
       "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
-      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
+      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut.",
+      "sessionExpired": "Ihre Sitzung ist abgelaufen. Ihre Änderungen sind noch hier, wurden aber nicht gespeichert. Melden Sie sich in einem neuen Tab wieder an und versuchen Sie anschließend erneut zu speichern.",
+      "saveRefreshFailed": "Ihre Änderungen wurden gespeichert, aber die Rechnungsseite konnte nicht vollständig aktualisiert werden. Laden Sie die Seite neu, um die gespeicherte Rechnung anzuzeigen."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."

@@ -347,7 +347,9 @@
       "processing": "Traitement...",
       "generateSalesOrderInvoice": "Générer la facture de la commande client",
       "clearSalesOrderSource": "Effacer la commande client source",
-      "addPartialPeriodCharge": "Ajouter des frais de période partielle"
+      "addPartialPeriodCharge": "Ajouter des frais de période partielle",
+      "reauthenticate": "Se reconnecter",
+      "retrySave": "Réessayer l’enregistrement"
     },
     "labels": {
       "total": "Total",
@@ -398,7 +400,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
       "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
       "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
-      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
+      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
+      "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
+      "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."

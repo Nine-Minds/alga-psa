@@ -347,7 +347,9 @@
       "processing": "Procesando...",
       "generateSalesOrderInvoice": "Generar factura de la orden de venta",
       "clearSalesOrderSource": "Quitar la orden de venta de origen",
-      "addPartialPeriodCharge": "Agregar cargo de período parcial"
+      "addPartialPeriodCharge": "Agregar cargo de período parcial",
+      "reauthenticate": "Iniciar sesión de nuevo",
+      "retrySave": "Reintentar guardado"
     },
     "labels": {
       "total": "Total",
@@ -398,7 +400,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "El contrato seleccionado no pertenece al cliente de esta factura.",
       "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
       "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
-      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
+      "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo.",
+      "sessionExpired": "Su sesión ha caducado. Sus cambios siguen aquí, pero no se guardaron. Inicie sesión de nuevo en otra pestaña y luego vuelva a intentar guardar.",
+      "saveRefreshFailed": "Sus cambios se guardaron, pero la página de la factura no pudo actualizarse por completo. Recargue la página para ver la factura guardada."
     },
     "warnings": {
       "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."

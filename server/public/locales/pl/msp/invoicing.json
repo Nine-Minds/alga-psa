@@ -365,7 +365,9 @@
       "processing": "Przetwarzanie...",
       "generateSalesOrderInvoice": "Utwórz fakturę z zamówienia sprzedaży",
       "clearSalesOrderSource": "Wyczyść źródłowe zamówienie sprzedaży",
-      "addPartialPeriodCharge": "Dodaj opłatę za częściowy okres"
+      "addPartialPeriodCharge": "Dodaj opłatę za częściowy okres",
+      "reauthenticate": "Zaloguj się ponownie",
+      "retrySave": "Ponów zapis"
     },
     "labels": {
       "total": "Razem",
@@ -416,7 +418,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury.",
       "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem.",
       "RECURRING_PRICING_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć bieżące wartości, a następnie wygeneruj ponownie.",
-      "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie."
+      "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie.",
+      "sessionExpired": "Sesja wygasła. Twoje zmiany nadal są tutaj, ale nie zostały zapisane. Zaloguj się ponownie w nowej karcie, a następnie ponów zapis.",
+      "saveRefreshFailed": "Zmiany zostały zapisane, ale strona faktury nie odświeżyła się w pełni. Odśwież stronę, aby wyświetlić zapisaną fakturę."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."

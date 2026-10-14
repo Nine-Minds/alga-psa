@@ -35,7 +35,7 @@ const invoice: any = {
   invoice_charges: [{ item_id: 'generated-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Recurring', quantity: 1, unit_price: 390000, total_price: 390000, net_amount: 390000, tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false }],
 };
 const services: any[] = [{ service_id: 'svc-1', service_name: 'Support', item_kind: 'service', is_active: true, default_rate: 5000, prices: [{ currency_code: 'USD', rate: 5000 }] }];
-const renderDraft = (draft = invoice) => render(<ManualInvoices clients={[]} services={services} invoice={draft} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
+const renderDraft = (draft = invoice, onSaved?: () => void | Promise<void>) => render(<ManualInvoices clients={[]} services={services} invoice={draft} variant="draftAdjustments" onSaved={onSaved} onGenerateSuccess={vi.fn()} />);
 const fillCharge = async (description: string) => {
   await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
   fireEvent.click(document.getElementById('add-line-item-button')!);
@@ -88,9 +88,23 @@ describe('expanded invoice adjustment global save', () => {
     expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
   });
 
-  it('keeps edits visible and offers explicit reauthentication when a save expires', async () => {
-    const expired = Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' });
-    mocks.update.mockRejectedValue(expired);
+  it('preserves edits and the operation identity for an explicit retry after reauthentication', async () => {
+    const unauthenticated = JSON.parse(JSON.stringify({
+      success: false,
+      code: 'UNAUTHENTICATED',
+      params: {},
+      message: 'Authentication required',
+      error: 'Authentication required',
+    }));
+    mocks.update.mockResolvedValueOnce(unauthenticated).mockResolvedValueOnce({
+      ...invoice,
+      draft_adjustment_revision: 8,
+      invoice_charges: [...invoice.invoice_charges, {
+        item_id: 'saved-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Unsaved charge',
+        quantity: 3, unit_price: 5000, total_price: 15000, net_amount: 15000, tax_amount: 0,
+        is_manual: true, is_discount: false, is_taxable: false,
+      }],
+    });
     renderDraft();
     await fillCharge('Unsaved charge');
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -99,13 +113,50 @@ describe('expanded invoice adjustment global save', () => {
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Unsaved charge');
     expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
 
-    const reauthenticate = screen.getByRole('link', { name: 'Reauthenticate' }) as HTMLAnchorElement;
+    const reauthenticate = screen.getByRole('link', { name: 'Sign in again' }) as HTMLAnchorElement;
     expect(reauthenticate.href).toContain('/auth/signin?callbackUrl=');
     expect(reauthenticate.target).toBe('_blank');
-    expect((screen.getByRole('button', { name: 'Save Changes' }) as HTMLButtonElement).disabled).toBe(true);
-
+    const operationId = mocks.update.mock.calls[0][2].operationId;
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     expect(mocks.update).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry save' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update.mock.calls[1][2]).toEqual({ operationId, expectedRevision: 7 });
+    expect(screen.queryByText(/Your session expired before this save completed/)).toBeNull();
+  });
+
+  it('reports a post-save callback failure as saved instead of an auth rejection', async () => {
+    const onSaved = vi.fn(async () => { throw Object.assign(new Error('refresh failed'), { name: 'AuthenticationError' }); });
+    mocks.update.mockResolvedValue({
+      ...invoice,
+      draft_adjustment_revision: 8,
+      invoice_charges: [...invoice.invoice_charges, {
+        item_id: 'saved-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Saved charge',
+        quantity: 3, unit_price: 5000, total_price: 15000, net_amount: 15000, tax_amount: 0,
+        is_manual: true, is_discount: false, is_taxable: false,
+      }],
+    });
+    renderDraft(invoice, onSaved);
+    await fillCharge('Saved charge');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(await screen.findByText(/Your changes were saved, but the invoice page could not finish refreshing/)).toBeTruthy();
+    expect(screen.queryByText(/Your session expired/)).toBeNull();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports an authoritative line refresh failure as saved after the mutation commits', async () => {
+    mocks.lineItems.mockResolvedValueOnce([]).mockResolvedValueOnce({ actionError: 'refresh denied' } as any);
+    mocks.update.mockResolvedValue({ ...invoice, draft_adjustment_revision: 8, invoice_charges: undefined });
+    renderDraft();
+    await fillCharge('Saved before refresh failed');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(await screen.findByText(/Your changes were saved, but the invoice page could not finish refreshing/)).toBeTruthy();
+    expect(screen.queryByText(/Your session expired/)).toBeNull();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(mocks.lineItems).toHaveBeenCalledTimes(2);
   });
 
   it('submits edits to an existing charge while its row remains expanded', async () => {

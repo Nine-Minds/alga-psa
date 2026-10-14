@@ -347,7 +347,9 @@
       "processing": "Elaborazione...",
       "generateSalesOrderInvoice": "Genera fattura dell'ordine di vendita",
       "clearSalesOrderSource": "Cancella ordine di vendita di origine",
-      "addPartialPeriodCharge": "Aggiungi addebito per periodo parziale"
+      "addPartialPeriodCharge": "Aggiungi addebito per periodo parziale",
+      "reauthenticate": "Accedi di nuovo",
+      "retrySave": "Riprova a salvare"
     },
     "labels": {
       "total": "Totale",
@@ -398,7 +400,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "Il contratto selezionato non appartiene al cliente di questa fattura.",
       "SERVICE_REQUIRED": "Assegna un servizio a questo addebito prima di salvare.",
       "RECURRING_PRICING_STALE": "L'anteprima non è aggiornata: {{details}}. Esegui di nuovo l'anteprima per vedere i valori attuali, quindi genera di nuovo.",
-      "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
+      "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova.",
+      "sessionExpired": "La sessione è scaduta. Le modifiche sono ancora qui, ma non sono state salvate. Accedi di nuovo in una nuova scheda, poi riprova a salvare.",
+      "saveRefreshFailed": "Le modifiche sono state salvate, ma la pagina della fattura non è stata aggiornata completamente. Ricarica la pagina per vedere la fattura salvata."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."

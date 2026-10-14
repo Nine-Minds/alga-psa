@@ -347,7 +347,9 @@
       "processing": "Bearbetar…",
       "generateSalesOrderInvoice": "Skapa faktura från försäljningsorder",
       "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder",
-      "addPartialPeriodCharge": "Lägg till avgift för delperiod"
+      "addPartialPeriodCharge": "Lägg till avgift för delperiod",
+      "reauthenticate": "Logga in igen",
+      "retrySave": "Försök spara igen"
     },
     "labels": {
       "total": "Totalt",
@@ -398,7 +400,9 @@
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
       "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
       "CLIENT_CONTRACT_NOT_FOUND": "Det valda avtalet tillhör inte fakturans kund.",
-      "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar."
+      "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar.",
+      "sessionExpired": "Din session har gått ut. Dina ändringar finns kvar här men har inte sparats. Logga in igen på en ny flik och försök sedan spara igen.",
+      "saveRefreshFailed": "Dina ändringar sparades, men fakturasidan kunde inte uppdateras helt. Läs in sidan igen för att visa den sparade fakturan."
     },
     "warnings": {
       "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."

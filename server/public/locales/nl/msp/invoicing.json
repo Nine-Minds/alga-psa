@@ -347,7 +347,9 @@
       "processing": "Verwerken...",
       "generateSalesOrderInvoice": "Verkooporderfactuur genereren",
       "clearSalesOrderSource": "Bronverkooporder wissen",
-      "addPartialPeriodCharge": "Kosten voor deelperiode toevoegen"
+      "addPartialPeriodCharge": "Kosten voor deelperiode toevoegen",
+      "reauthenticate": "Opnieuw aanmelden",
+      "retrySave": "Opslaan opnieuw proberen"
     },
     "labels": {
       "total": "Totaal",
@@ -398,7 +400,9 @@
       "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
       "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat.",
       "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
-      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw.",
+      "sessionExpired": "Uw sessie is verlopen. Uw wijzigingen staan hier nog, maar zijn niet opgeslagen. Meld u opnieuw aan in een nieuw tabblad en probeer daarna opnieuw op te slaan.",
+      "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."

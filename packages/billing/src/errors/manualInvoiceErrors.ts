@@ -28,6 +28,7 @@ export type ManualInvoiceErrorCode =
   | 'SOURCE_NOT_ELIGIBLE'
   | 'SOURCE_CURRENCY_MISMATCH'
   | 'PERMISSION_DENIED'
+  | 'UNAUTHENTICATED'
   | 'UNEXPECTED';
 
 export type HandledManualInvoiceErrorCode = Exclude<ManualInvoiceErrorCode, 'UNEXPECTED'>;

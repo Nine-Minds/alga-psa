@@ -46,7 +46,7 @@ import {
   settlePrepaidReplenishmentInvoice as settlePrepaidReplenishmentInvoiceCore,
 } from '../services/prepaidReplenishmentSettlement';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
-import { withAuth } from '@alga-psa/auth';
+import { AuthenticationError, withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
@@ -1660,7 +1660,7 @@ export const unfinalizeInvoice = withAuth(async (
   return { success: true };
 });
 
-export const updateInvoiceManualItems = withAuth(async (
+const updateInvoiceManualItemsWithAuth = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
@@ -1751,6 +1751,31 @@ export const updateInvoiceManualItems = withAuth(async (
     return unexpectedManualInvoiceUpdateFailure(error, context);
   }
 });
+
+/**
+ * Keep the authentication rejection on the serializable action-result path.
+ * Next production sanitizes thrown server-action errors, so client code cannot
+ * reliably identify AuthenticationError by its class or message.
+ */
+export async function updateInvoiceManualItems(
+  invoiceId: string,
+  changes: ManualItemsUpdate,
+  submission?: ManualAdjustmentSubmission,
+): Promise<InvoiceManualItemsUpdateActionResult> {
+  try {
+    return await updateInvoiceManualItemsWithAuth(invoiceId, changes, submission);
+  } catch (error) {
+    if (!(error instanceof AuthenticationError)) throw error;
+    const message = 'Authentication required';
+    return {
+      success: false,
+      code: 'UNAUTHENTICATED',
+      params: {},
+      message,
+      error: message,
+    };
+  }
+}
 
 // Internal helper function to avoid recursive export/import loop
 async function updateManualInvoiceItemsInternal(

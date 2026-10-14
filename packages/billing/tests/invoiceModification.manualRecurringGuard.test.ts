@@ -17,6 +17,7 @@ const state = {
   // as the database would.
   manualCharges: new Map<string, Record<string, any>>(),
   queriedTables: [] as string[],
+  unauthenticated: false,
 };
 
 interface CapturedUpdate {
@@ -88,11 +89,22 @@ function createMockTrx() {
   }) as any;
 }
 
-vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => (...args: any[]) =>
-    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
-  getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
-}));
+vi.mock('@alga-psa/auth', () => {
+  class TestAuthenticationError extends Error {
+    constructor() {
+      super('User not authenticated');
+      this.name = 'AuthenticationError';
+    }
+  }
+  return {
+    AuthenticationError: TestAuthenticationError,
+    withAuth: (fn: any) => (...args: any[]) => {
+      if (state.unauthenticated) throw new TestAuthenticationError();
+      return fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args);
+    },
+    getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
+  };
+});
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn().mockResolvedValue(true),
@@ -155,6 +167,28 @@ vi.mock('../src/actions/taxSourceActions', () => ({
 }));
 
 describe('manual invoice edits preserve recurring provenance', () => {
+  it('returns a JSON-safe unauthenticated result before entering the mutation action', async () => {
+    state.unauthenticated = true;
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    const result = await updateInvoiceManualItems('invoice-1', {
+      newItems: [],
+      updatedItems: [],
+      removedItemIds: [],
+    } as any);
+    const serializedResult = JSON.parse(JSON.stringify(result));
+
+    expect(serializedResult).toEqual({
+      success: false,
+      code: 'UNAUTHENTICATED',
+      params: {},
+      message: 'Authentication required',
+      error: 'Authentication required',
+    });
+    expect(state.queriedTables).toEqual([]);
+    expect(recalculateInvoiceMock).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     state.invoice = {
       invoice_id: 'invoice-1',
@@ -175,6 +209,7 @@ describe('manual invoice edits preserve recurring provenance', () => {
     ];
     state.manualCharges = new Map();
     state.queriedTables = [];
+    state.unauthenticated = false;
     updateCalls.length = 0;
     recalculateInvoiceMock.mockClear();
   });

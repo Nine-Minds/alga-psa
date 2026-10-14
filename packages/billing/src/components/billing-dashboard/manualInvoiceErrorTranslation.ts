@@ -32,6 +32,7 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'SOURCE_NOT_ELIGIBLE',
   'SOURCE_CURRENCY_MISMATCH',
   'PERMISSION_DENIED',
+  'UNAUTHENTICATED',
   'UNEXPECTED',
 ]);
 
@@ -45,6 +46,11 @@ export function translateManualInvoiceFailure(
   result: Partial<ManualInvoiceFailure>,
 ): string {
   const message = result.message ?? result.error ?? 'Error generating invoice';
+  if (result.code === 'UNAUTHENTICATED') {
+    return t('manualInvoices.errors.sessionExpired', {
+      defaultValue: 'Your session expired before this save completed. Your edits remain in this editor and were not saved. Sign in again in a new tab, then retry the save here.',
+    });
+  }
   if (result.code === 'TIME_APPROVAL_REQUIRED') {
     return t('automaticInvoices.executionRows.blockedUntilApproval', {
       count: Number(result.params?.count), defaultValue: message,

@@ -356,6 +356,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // values in a ref so Save can synchronously snapshot them without collapsing
   // the row or relying on a just-scheduled React state update.
   const pendingLineItemDraftsRef = useRef(new Map<number, LineItemEditableItem>());
+  const invoiceFormRef = useRef<HTMLFormElement>(null);
+  const authenticationExpiredRef = useRef(false);
+  const reauthenticationRetryRequestedRef = useRef(false);
 
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -902,7 +905,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authenticationExpired) return;
+    if (authenticationExpiredRef.current) {
+      if (!reauthenticationRetryRequestedRef.current) return;
+      reauthenticationRetryRequestedRef.current = false;
+      authenticationExpiredRef.current = false;
+      setAuthenticationExpired(false);
+    }
     const itemsForSubmit = items.map((item, index) => {
       const draft = pendingLineItemDraftsRef.current.get(index);
       return draft ? mergeLineItemDraft(item, draft) : item;
@@ -942,6 +950,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       }
     }
 
+    let saveCommitted = false;
     try {
       if (!currentInvoiceData && selectedSalesOrderId && !selectedSalesOrder) {
         setError(t('manualInvoices.errors.salesOrderNotInvoiceable', {
@@ -1126,6 +1135,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
 
         if (isManualInvoiceFailure(updateResult)) {
+          if (updateResult.code === 'UNAUTHENTICATED') {
+            authenticationExpiredRef.current = true;
+            setAuthenticationExpired(true);
+            setError(null);
+            return;
+          }
           setError(translateManualInvoiceError(updateResult));
           return;
         }
@@ -1135,14 +1150,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           return;
         }
 
+        // From this point forward the server confirmed that the write committed.
+        // Refresh/callback errors must never be described as an unsaved edit.
+        saveCommitted = true;
+
         // The save succeeded; authoritative refreshed rows now own these values.
         pendingLineItemDraftsRef.current.clear();
         setExpandedItems(new Set());
 
         if (!currentInvoiceData) {
           console.error('[Submit] Cannot refresh items: currentInvoiceData became undefined after update.');
-          setError(t('manualInvoices.errors.refresh', {
-            defaultValue: 'An error occurred while refreshing invoice data.',
+          setError(t('manualInvoices.errors.saveRefreshFailed', {
+            defaultValue: 'Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice.',
           }));
           setIsGenerating(false);
           return;
@@ -1163,7 +1182,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         const refreshedItems = authoritativeInvoice?.invoice_charges
           ?? await getInvoiceLineItems(currentInvoiceData.invoice_id);
         if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
-          setError(getErrorMessage(refreshedItems));
+          setError(t('manualInvoices.errors.saveRefreshFailed', {
+            defaultValue: 'Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice.',
+          }));
           return;
         }
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
@@ -1261,13 +1282,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     } catch (err: unknown) {
        if (IS_DEVELOPMENT) console.error('Error with invoice:', err);
-       if (err instanceof Error && (
-         err.name === 'AuthenticationError'
-         || err.message === 'User not authenticated'
-         || err.message === 'Authentication required'
-       )) {
-         setAuthenticationExpired(true);
-         setError(null);
+       if (saveCommitted) {
+         setError(t('manualInvoices.errors.saveRefreshFailed', {
+           defaultValue: 'Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice.',
+         }));
          return;
        }
        const errorMode = currentInvoiceData ? 'update' : 'generate';
@@ -1514,7 +1532,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <Alert variant="destructive" className="mb-4" role="alert">
                 <AlertDescription>
                   <p>{t('manualInvoices.errors.sessionExpired', {
-                    defaultValue: 'Your session expired before this save completed. Your edits remain in this editor and were not saved or replayed. Reauthenticate in a new tab, then copy or note your edits before reloading.',
+                    defaultValue: 'Your session expired before this save completed. Your edits remain in this editor and were not saved. Sign in again in a new tab, then retry the save here.',
                   })}</p>
                   <a
                     id="manual-invoice-reauthenticate-link"
@@ -1523,8 +1541,20 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {t('manualInvoices.actions.reauthenticate', { defaultValue: 'Reauthenticate' })}
+                    {t('manualInvoices.actions.reauthenticate', { defaultValue: 'Sign in again' })}
                   </a>
+                  <Button
+                    id="manual-invoice-retry-save-button"
+                    type="button"
+                    className="ml-3"
+                    onClick={() => {
+                      reauthenticationRetryRequestedRef.current = true;
+                      invoiceFormRef.current?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                      reauthenticationRetryRequestedRef.current = false;
+                    }}
+                  >
+                    {t('manualInvoices.actions.retrySave', { defaultValue: 'Retry save' })}
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}
@@ -1535,7 +1565,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form ref={invoiceFormRef} onSubmit={handleSubmit} className="space-y-6">
               {!invoice && !currentInvoiceData && invoiceableSalesOrders.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
