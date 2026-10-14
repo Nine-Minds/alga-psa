@@ -182,8 +182,6 @@ export function TemplateUsageBasedServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    // A usage line bills anything but a fixed-method service.
-                    billingMethods={['hourly', 'usage']}
                     placeholder={t('templateUsage.placeholders.selectService', {
                       defaultValue: 'Select a service',
                     })}

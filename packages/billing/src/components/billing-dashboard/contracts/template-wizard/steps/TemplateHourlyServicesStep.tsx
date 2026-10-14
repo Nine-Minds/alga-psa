@@ -239,8 +239,6 @@ export function TemplateHourlyServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
-                    // An hourly line bills anything but a fixed-method service.
-                    billingMethods={['hourly', 'usage']}
                     placeholder={t('templateHourly.placeholders.selectService', {
                       defaultValue: 'Select a service',
                     })}

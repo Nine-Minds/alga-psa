@@ -4,10 +4,11 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * A template line can only bill services its own type understands: a fixed fee
- * line needs a fixed-method service, an hourly/usage line needs a non-fixed
- * one. The wizard pickers used to list every service, which is how an hourly
- * service ended up seeded on a Fixed template line as a Fixed configuration.
+ * Template authoring takes its billing mode from the line, not from catalog
+ * billing_method: every template step offers the same services and gates only
+ * on item_kind. The render-level counterpart to T012 in
+ * server/src/test/unit/fixedWizardPickerPolicy.static.test.ts (see
+ * ee/docs/plans/2026-03-21-service-catalog-billing-mode-decoupling, F007).
  */
 
 const pickerProps: Array<Record<string, unknown>> = [];
@@ -62,34 +63,36 @@ const baseData = {
   usage_services: [{ service_id: '', service_name: '', unit_of_measure: '' }],
 };
 
-describe('template wizard service pickers filter by billing method', () => {
+describe('template wizard service pickers do not gate on catalog billing method', () => {
   afterEach(() => {
     pickerProps.length = 0;
     cleanup();
   });
 
-  it('offers only fixed-method services on the fixed fee step', () => {
+  it('offers every service on the fixed fee step', () => {
     render(<TemplateFixedFeeServicesStep data={baseData as any} updateData={vi.fn()} />);
 
     const picker = pickerProps.find((props) => String(props.id).startsWith('template-fixed-service-'));
     expect(picker).toBeDefined();
-    expect(picker!.billingMethods).toEqual(['fixed']);
+    expect(picker!.billingMethods).toBeUndefined();
     expect(picker!.itemKinds).toEqual(['service']);
   });
 
-  it('offers only non-fixed services on the hourly step', () => {
+  it('offers every service on the hourly step', () => {
     render(<TemplateHourlyServicesStep data={baseData as any} updateData={vi.fn()} />);
 
     const picker = pickerProps.find((props) => String(props.id).startsWith('template-hourly-service-'));
     expect(picker).toBeDefined();
-    expect(picker!.billingMethods).toEqual(['hourly', 'usage']);
+    expect(picker!.billingMethods).toBeUndefined();
+    expect(picker!.itemKinds).toEqual(['service']);
   });
 
-  it('offers only non-fixed services on the usage step', () => {
+  it('offers every service on the usage step', () => {
     render(<TemplateUsageBasedServicesStep data={baseData as any} updateData={vi.fn()} />);
 
     const picker = pickerProps.find((props) => String(props.id).startsWith('template-usage-service-'));
     expect(picker).toBeDefined();
-    expect(picker!.billingMethods).toEqual(['hourly', 'usage']);
+    expect(picker!.billingMethods).toBeUndefined();
+    expect(picker!.itemKinds).toEqual(['service']);
   });
 });
