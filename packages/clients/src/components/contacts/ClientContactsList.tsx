@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
 import { getContactsByClient } from '@alga-psa/clients/actions';
+import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -106,9 +107,13 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const filteredContacts = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
     if (!needle) return contacts;
+    // Phones are formatted for display, so match them digits-only across every
+    // number on the contact rather than the default number's literal text.
+    const searchDigits = phoneSearchDigits(needle);
     return contacts.filter((contact) =>
-      [contact.full_name, contact.email, contact.role, contact.default_phone_number]
+      [contact.full_name, contact.email, contact.role]
         .some((field) => field && field.toLowerCase().includes(needle))
+      || (searchDigits !== null && contactMatchesPhoneDigits(contact, searchDigits))
     );
   }, [contacts, searchTerm]);
 
