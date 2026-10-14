@@ -580,7 +580,8 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'tax_amount',
         'is_taxable',
         'is_discount',
-        'tax_region'
+        'tax_region',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 

@@ -2256,6 +2256,15 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(dateOnly(revision.effective_period_start)).toBe('2023-02-01');
         expect(dateOnly(revision.mid_period_effective_date)).toBe('2023-01-16');
 
+        const preview = await previewInvoice(setup.billingCycleId);
+        expect(preview.success).toBe(true);
+        if (!preview.success) throw new Error('True-up preview failed unexpectedly');
+        const previewTrueUp = preview.data!.items.find((item: any) => item.description.includes('Users: increase (+3 units)'));
+        expect(previewTrueUp?.description).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(previewTrueUp?.description).toContain('USD $100.00');
+        expect(previewTrueUp?.description).toContain('16/31 days');
+        expect(previewTrueUp?.total).toBe(15484);
+
         const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
         // 20/30/2 at $3,900 + 3 x $100 x 16/31 days = +$154.84
         expect(january.subtotal).toBe(405484);
@@ -2273,8 +2282,16 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(Number(adjustment.adjustment_source_revision)).toBe(1);
         expect(dateOnly(adjustment.adjustment_period_start)).toBe('2023-01-01');
         expect(dateOnly(adjustment.adjustment_period_end)).toBe('2023-02-01');
-        // The recurrence itself bill the old quantity in the affected period.
-        expect(String(adjustment.description)).toContain('Mid-period quantity change');
+        // The recurrence itself bills the old quantity in the affected period;
+        // the customer text uses the same canonical source values as preview.
+        expect(String(adjustment.description)).toContain('Users: increase (+3 units)');
+        expect(String(adjustment.description)).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(String(adjustment.description)).toContain('USD $100.00');
+        expect(String(adjustment.description)).toContain('16/31 days');
+        expect(Number(adjustment.quantity)).toBe(3);
+        expect(Number(adjustment.unit_price)).toBe(10000);
+        expect(Number(adjustment.net_amount)).toBe(15484);
+        expect(String(adjustment.adjustment_source_id)).toBe(scheduled.revision_id);
 
         const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
         expect(february.subtotal).toBe(420000);
@@ -2284,6 +2301,31 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           .first();
         expect(ledger.status).toBe('settled');
         expect(String(ledger.settled_invoice_id)).toBe(january.invoice_id);
+      });
+
+      it('describes a decrease as a source-linked credit without changing its settled amount', async () => {
+        const setup = await setupProductLine();
+        const scheduled = expectScheduled(await scheduleProduct(setup, setup.users, {
+          quantity: 19, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
+        }));
+        const preview = await previewInvoice(setup.billingCycleId);
+        expect(preview.success).toBe(true);
+        if (!preview.success) throw new Error('True-up credit preview failed unexpectedly');
+        const previewCredit = preview.data!.items.find((item: any) => item.description.includes('Users: credit (-1 units)'));
+        expect(previewCredit?.description).toContain('16/31 days');
+        expect(previewCredit?.total).toBe(-5162);
+        const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const adjustment = await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, adjustment_source_kind: 'contract_change' })
+          .first();
+        expect(String(adjustment.description)).toContain('Users: credit (-1 units)');
+        expect(String(adjustment.description)).toContain('2023-01-01 through 2023-02-01 (end date exclusive)');
+        expect(String(adjustment.description)).toContain('USD $100.00');
+        expect(String(adjustment.description)).toContain('16/31 days');
+        expect(Number(adjustment.quantity)).toBe(1);
+        expect(Number(adjustment.unit_price)).toBe(10000);
+        expect(Number(adjustment.net_amount)).toBe(-5162);
+        expect(String(adjustment.adjustment_source_id)).toBe(scheduled.revision_id);
       });
 
       it('reconciles an edited pending version on the same revision instead of duplicating the adjustment', async () => {
@@ -2320,7 +2362,35 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(adjustments).toHaveLength(1);
         // 5 x $100 x 16/31 = 25806.45 -> 25807
         expect(Number(adjustments[0].net_amount)).toBe(25807);
+        expect(String(adjustments[0].description)).toContain('Users: increase (+5 units)');
+        expect(String(adjustments[0].description)).toContain('16/31 days');
         expect(january.subtotal).toBe(390000 + 25807);
+        const chargeId = adjustments[0].item_id;
+        const manualItemId = uuidv4();
+        await context.db('invoice_charges').insert({
+          tenant: context.tenantId, item_id: manualItemId, invoice_id: january.invoice_id,
+          service_id: setup.users.serviceId, client_contract_id: setup.clientContractId,
+          description: 'Retained manual fixture line', quantity: 1, unit_price: 500,
+          net_amount: 500, total_price: 500, tax_amount: 0, tax_rate: 0,
+          is_manual: true, is_discount: false, is_taxable: false,
+        });
+        await new BillingEngine().recalculateInvoice(january.invoice_id);
+        await new BillingEngine().recalculateInvoice(january.invoice_id);
+        const retried = await context.db('invoice_charges').where({
+          tenant: context.tenantId, invoice_id: january.invoice_id, adjustment_source_kind: 'contract_change',
+        });
+        expect(retried).toHaveLength(1);
+        expect(retried[0].item_id).toBe(chargeId);
+        expect(Number(retried[0].net_amount)).toBe(25807);
+        expect(String(retried[0].adjustment_source_id)).toBe(first.revision_id);
+        const retainedManual = await context.db('invoice_charges').where({
+          tenant: context.tenantId, invoice_id: january.invoice_id, item_id: manualItemId,
+        }).first();
+        expect(retainedManual).toMatchObject({ description: 'Retained manual fixture line', is_manual: true });
+        expect(Number(retainedManual.net_amount)).toBe(500);
+        const refreshedInvoice = await context.db('invoices')
+          .where({ tenant: context.tenantId, invoice_id: january.invoice_id }).first();
+        expect(Number(refreshedInvoice.subtotal)).toBe(390000 + 25807 + 500);
       });
 
       it('records a credit for a mid-period decrease and stops the item with a larger credit', async () => {

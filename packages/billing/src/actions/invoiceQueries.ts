@@ -19,6 +19,7 @@ import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { applyContractChangeDescriptionSources } from '../lib/billing/contractChangeInvoiceProjection';
 
 type InvoiceQueryUser = {
   user_id: string;
@@ -142,6 +143,10 @@ async function enrichInvoiceWithProjectRenderingData(
   invoice: InvoiceViewModel,
 ): Promise<InvoiceViewModel> {
   const db = tenantDb(knex, tenant);
+  // Delivered rows are never rewritten for a presentation repair. Where the
+  // canonical companion ledger still exists, derive their display text at read
+  // time; legacy rows without source data keep their honest stored wording.
+  invoice = await enrichContractChangeDescriptions(knex, tenant, invoiceId, invoice);
   const projectQuery = db.table('invoices as invoice');
   db.tenantJoin(projectQuery, 'projects as project', 'invoice.project_id', 'project.project_id', { type: 'left' });
   const project = await projectQuery
@@ -220,6 +225,31 @@ async function enrichInvoiceWithProjectRenderingData(
         project_number: project.project_number,
       }
     : enrichedInvoice;
+}
+
+async function enrichContractChangeDescriptions(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  invoice: InvoiceViewModel,
+): Promise<InvoiceViewModel> {
+  const db = tenantDb(knex, tenant);
+  if (!(await knex.schema.hasTable('contract_recurring_unit_adjustments'))) return invoice;
+  const charges = invoice.invoice_charges ?? [];
+  const sourceRows = await db.table('contract_recurring_unit_adjustments as a')
+    .join('invoice_charges as c', function () {
+      this.on('c.item_id', '=', 'a.settled_charge_id').andOn('c.tenant', '=', 'a.tenant');
+    })
+    .leftJoin('service_catalog as s', function () {
+      this.on('s.service_id', '=', 'a.service_id').andOn('s.tenant', '=', 'a.tenant');
+    })
+    .where('c.invoice_id', invoiceId)
+    .select('c.item_id', 's.service_name', 'a.service_id', 'a.adjustment_period_start', 'a.adjustment_period_end',
+      'a.quantity_delta', 'a.unit_rate_cents', 'a.covered_days', 'a.full_period_days', 'a.amount_cents', 'a.currency_code');
+  return {
+    ...invoice,
+    invoice_charges: applyContractChangeDescriptionSources(charges as any[], sourceRows as any[]),
+  };
 }
 
 // Helper function to create basic invoice view model

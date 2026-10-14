@@ -912,7 +912,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         'net_amount',
         'tax_amount',
         'tax_region',
-        'is_discount'
+        'is_discount',
+        'adjustment_source_kind'
       )
       .whereIn('item_id', chargeIds);
 

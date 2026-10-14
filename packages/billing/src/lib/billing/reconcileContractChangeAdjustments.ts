@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients/clientTax';
 import { resolveContractLineChargeProfile } from './billingProfileLookup';
 import { inspectInvoiceEditable } from '../../services/invoiceAdjustmentEditability';
+import { describeContractChange } from './contractChangeDescription';
 
 /**
  * Transactional reconciliation of mid-period recurring-unit true-ups onto an
@@ -417,7 +418,7 @@ function buildChargeValues(
   return {
     service_id: adjustment.service_id,
     client_contract_id: adjustment.client_contract_id ?? null,
-    description: `Mid-period quantity change: ${serviceName}`,
+    description: describeContractChange(serviceName, adjustment, adjustment.currency_code),
     quantity: Math.abs(delta),
     unit_price: Math.round(Number(adjustment.unit_rate_cents) || 0),
     net_amount: netAmount,

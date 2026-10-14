@@ -160,6 +160,7 @@ import {
   resolveContractChangeChargesForWindow,
   type ContractChangeLedgerRow,
 } from "./reconcileContractChangeAdjustments";
+import { describeContractChange } from "./contractChangeDescription";
 import { reconcileAutomaticInvoiceAdjustments } from "./reconcileAutomaticInvoiceDiscounts";
 // Workflow imports removed as event emission is moved back to the calling action
 
@@ -7004,7 +7005,15 @@ export class BillingEngine {
         billing_profile_source: profile?.source,
         config_id: String(row.config_id),
         client_contract_line_id: contractLineId,
-        serviceName: `Mid-period quantity change: ${service?.service_name ?? "recurring item"}`,
+        serviceName: describeContractChange(service?.service_name ?? "recurring item", {
+          adjustment_period_start: row.adjustment_period_start,
+          adjustment_period_end: row.adjustment_period_end,
+          quantity_delta: row.quantity_delta,
+          unit_rate_cents: row.unit_rate_cents,
+          covered_days: row.covered_days,
+          full_period_days: row.full_period_days,
+          amount_cents: row.amount_cents,
+        }, billingCurrency),
         quantity: Math.abs(Number(row.quantity_delta)),
         rate: Number(row.unit_rate_cents),
         total,

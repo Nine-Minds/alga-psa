@@ -396,7 +396,20 @@ afterAll(async () => {
   await db?.destroy().catch(() => undefined);
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(async () => {
+  // The Xero source-projection case owns these synthetic settlement rows and
+  // charge fixtures. Clean them even when an assertion fails mid-transform.
+  if (db && tenant) {
+    const fixtureSettlements = await db('contract_recurring_unit_adjustments')
+      .where({ tenant, reason: 'fixture true-up' })
+      .select('adjustment_id', 'settled_charge_id');
+    const chargeIds = fixtureSettlements.map((row: any) => row.settled_charge_id).filter(Boolean);
+    if (chargeIds.length) await db('invoice_charges').where({ tenant }).whereIn('item_id', chargeIds).delete();
+    if (fixtureSettlements.length) await db('contract_recurring_unit_adjustments')
+      .where({ tenant, reason: 'fixture true-up' }).delete();
+  }
+  vi.restoreAllMocks();
+});
 
 describe('contract invoice adjustments (DB-backed)', () => {
   const dateOnly = (value: unknown) => value instanceof Date
@@ -3458,6 +3471,33 @@ describe('accounting adjustment export matrix', () => {
       await db('invoice_charge_details').insert({ tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId, service_id: service, config_id: configId, quantity: 1, rate: 195000 });
       await db('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId, base_rate: 195000, allocated_amount: 195000, tax_amount: 0, enable_proration: false, fmv: 195000, proportion: 0.5 });
     }
+    const { describeContractChange } = await import('../lib/billing/contractChangeDescription');
+    const sourceService = await db('service_catalog').where({ tenant, service_id: serviceId }).first('service_name');
+    const sourceDescription = describeContractChange(sourceService.service_name, {
+      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      quantity_delta: 1, unit_rate_cents: 12000, covered_days: 19, full_period_days: 31, amount_cents: 7355,
+    }, 'USD');
+    const sourceRevisionId = uuidv4();
+    const sourceChargeId = uuidv4();
+    await db('invoice_charges').insert({ tenant, item_id: sourceChargeId, invoice_id: fixture.invoiceId,
+      service_id: serviceId, client_contract_id: clientContractId, description: 'Mid-period quantity change: Cabling',
+      quantity: 1, unit_price: 12000, net_amount: 7355, total_price: 7355, tax_amount: 0,
+      tax_rate: 0, is_manual: false, is_discount: false, is_taxable: false,
+      adjustment_source_kind: 'contract_change', adjustment_source_id: sourceRevisionId,
+      adjustment_source_revision: 1, adjustment_scope: 'service',
+      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+    });
+    const sourceAdjustmentId = uuidv4();
+    await db('contract_recurring_unit_adjustments').insert({
+      tenant, adjustment_id: sourceAdjustmentId, revision_id: sourceRevisionId, revision_version: 1,
+      contract_line_id: contractLineId, client_contract_id: clientContractId, client_id: clientId,
+      service_id: serviceId, config_id: uuidv4(), currency_code: 'USD',
+      adjustment_period_start: '2026-10-13', adjustment_period_end: '2026-11-01',
+      mid_period_effective_date: '2026-10-13', previous_quantity: 0, new_quantity: 1,
+      quantity_delta: 1, unit_rate_cents: 12000, covered_days: 19, full_period_days: 31,
+      amount_cents: 7355, price_policy: 'override', reason: 'fixture true-up', status: 'settled',
+      settled_invoice_id: fixture.invoiceId, settled_charge_id: sourceChargeId,
+    });
     const charges = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId }).orderBy('description');
     const context: any = { batch: { tenant, batch_id: uuidv4(), adapter_type: adapterType, target_realm: realm, export_type: 'invoice', created_at: '2026-09-01' },
       lines: charges.map(charge => ({ tenant, line_id: uuidv4(), document_id: fixture.invoiceId, document_line_id: charge.item_id,
@@ -3468,6 +3508,11 @@ describe('accounting adjustment export matrix', () => {
       : adapterType === 'xero_csv' ? new (await import('../adapters/accounting/xeroCsvAdapter')).XeroCsvAdapter()
       : new (await import('../adapters/accounting/quickBooksDesktopAdapter')).QuickBooksDesktopAdapter();
     const transformed = await adapter.transform(context);
+    expect(charges.find((charge: any) => charge.item_id === sourceChargeId)).toMatchObject({
+      description: 'Mid-period quantity change: Cabling', adjustment_source_kind: 'contract_change', adjustment_source_id: sourceRevisionId,
+      adjustment_source_revision: 1,
+    });
+    expect(Number(charges.find((charge: any) => charge.item_id === sourceChargeId).net_amount)).toBe(7355);
     if (adapterType === 'quickbooks_csv') {
       const delivery = await adapter.deliver(transformed, context);
       expect(delivery.failedDocuments).toBeUndefined();
@@ -3484,14 +3529,18 @@ describe('accounting adjustment export matrix', () => {
       expect(invoice.Line.every((line: any) => line.DetailType === 'SalesItemLineDetail')).toBe(true);
       expect(discountLines.every((line: any) => line.Amount < 0)).toBe(true);
       expect(Math.round(invoice.Line.reduce((sum: number, line: any) => sum + line.Amount, 0) * 100)).toBe(net);
-      expect(invoice.Line).toHaveLength(7);
+      expect(invoice.Line).toHaveLength(8);
       evidence = invoice;
     } else if (adapterType === 'xero') {
+      const projectedDescription = (transformed.documents[0].payload as any).invoice.lines
+        .find((line: any) => line.description === sourceDescription)?.description;
+      expect(projectedDescription).toBe(sourceDescription);
       const { XeroClientService } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
       const client = new (XeroClientService as any)(tenant, { scope: 'accounting.invoices', connectionId: 'mock' }, {}, {});
       const request = vi.spyOn(client, 'request').mockResolvedValue({ Invoices: [{ InvoiceID: 'mock-export' }] });
       await client.createInvoices([(transformed.documents[0].payload as any).invoice]);
       const serialized = (request.mock.calls[0][0] as any).data.Invoices[0];
+      expect(serialized.LineItems).toContainEqual(expect.objectContaining({ Description: sourceDescription }));
       expect(serialized.LineItems.filter((line: any) => line.AccountCode === 'DISCOUNT'),
         JSON.stringify(serialized.LineItems.map((line: any) => ({ description: line.Description, accountCode: line.AccountCode, itemCode: line.ItemCode, quantity: line.Quantity, unitAmount: line.UnitAmount, lineAmount: line.LineAmount })))).toHaveLength(4);
       for (const line of serialized.LineItems) expect(Math.round(line.Quantity * line.UnitAmount * 100)).toBe(Math.round(line.LineAmount * 100));
@@ -3512,6 +3561,7 @@ describe('accounting adjustment export matrix', () => {
         expect(Math.round(rows.reduce((sum: number, row: any) => sum + Number(row[quantityKey]) * Number(row[rateKey]), 0) * 100)).toBe(net);
       }
     }
+    await db('contract_recurring_unit_adjustments').where({ tenant, adjustment_id: sourceAdjustmentId }).delete();
     await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'discount', alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID }).delete();
     await expect(adapter.transform(context)).rejects.toThrow(/discount.*mapping|mapping.*discount/i);
     if (process.env.ACCOUNTING_EVIDENCE_DIR) {
