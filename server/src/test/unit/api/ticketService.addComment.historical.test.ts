@@ -23,8 +23,8 @@ describe('TicketService.addComment historical branch', () => {
 
   it.each([
     ['applyCommentResponseState', /if \(!scheduledPublication && !isHistoricalComment\) \{\s*await applyCommentResponseState/],
-    ['maybeReopenBundleMasterFromChildReply', /!isHistoricalComment\) \{\s*await maybeReopenBundleMasterFromChildReply/],
-    ['persistCommentPublication', /\} else if \(!isHistoricalComment\) \{\s*await persistCommentPublication/],
+    ['maybeReopenBundleMasterFromChildReply', /if \(isHistoricalComment\) \{[^}]*\} else if \(!comment\.is_internal && !scheduledPublication\) \{\s*await maybeReopenBundleMasterFromChildReply/],
+    ['persistCommentPublication', /\} else if \(isHistoricalComment\) \{[^}]*\} else \{\s*await persistCommentPublication/],
   ])('skips %s for a historical comment', (_name, pattern) => {
     expect(addComment).toMatch(pattern);
   });

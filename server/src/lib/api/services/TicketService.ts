@@ -1916,12 +1916,7 @@ export class TicketService extends BaseService<ITicket> {
    * then does a caller-supplied closed_at / closed_by replace now / context.userId
    * on an open -> closed crossing. Generic update always derives closure.
    */
-  async update(
-    id: string,
-    data: UpdateTicketData,
-    context: ServiceContext,
-    options: { honorSuppliedClosure?: boolean } = {}
-  ): Promise<ITicket> {
+  async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
