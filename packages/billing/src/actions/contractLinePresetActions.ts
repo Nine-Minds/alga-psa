@@ -18,6 +18,7 @@ import {
     DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     resolveRecurringAuthoringPolicy,
 } from '@shared/billingClients/recurringAuthoringPolicy';
+import { isContractLineTimingNotAllowedError } from '@shared/billingClients/contractLineTimingRule';
 
 
 
@@ -50,6 +51,10 @@ class ContractLinePresetDomainError extends Error {
 }
 
 function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetActionError | null {
+    if (isContractLineTimingNotAllowedError(error)) {
+        return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+    }
+
     if (error instanceof ContractLinePresetDomainError) {
         if (error.message.startsWith('Permission denied:')) {
             return permissionError(error.message);
@@ -490,8 +495,11 @@ export const copyPresetToContractLine = withAuth(async (
                     ? await ContractLinePresetFixedConfig.getByPresetId(trx, presetId)
                     : null;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: preset.contract_line_type ?? null,
                 cadenceOwner: overrides?.cadence_owner ?? preset.cadence_owner,
-                billingTiming: preset.billing_timing,
+                // The preset's timing is a stored value being copied, not a user choice:
+                // a stale advance on an Hourly/Usage preset normalizes to arrears.
+                fallbackBillingTiming: preset.billing_timing,
                 enableProration: presetFixedConfig?.enable_proration,
                 billingCycleAlignment: presetFixedConfig?.billing_cycle_alignment,
             });
@@ -819,6 +827,7 @@ export const createCustomContractLine = withAuth(async (
                 ? (input.round_up_to_nearest ?? 15)
                 : undefined;
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: input.contract_line_type ?? null,
                 cadenceOwner: input.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: input.billing_timing,

@@ -12,6 +12,7 @@ import {
 import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
+  normalizeRecurringStorageForLineType,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
@@ -256,7 +257,8 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
-  const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const baseRecurringStorage = normalizeRecurringStorageForLineType(baseLine, baseLine.contract_line_type);
 
   await tenantScopedTable(knex, tenant, 'contract_template_lines').insert({
     tenant,
@@ -561,10 +563,11 @@ export async function cloneTemplateLineToContract(
     billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
     enableProration: templateFixedConfig?.enable_proration,
   });
-  const templateRecurringStorage = normalizeTemplateRecurringStorage({
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const templateRecurringStorage = normalizeRecurringStorageForLineType({
     billing_timing: templateLine.billing_timing,
     cadence_owner: templateLine.cadence_owner,
-  });
+  }, lineType);
 
   const minimumBillableTime =
     edits.minimum_billable_time !== undefined ? edits.minimum_billable_time : templateLine.minimum_billable_time ?? null;
@@ -1132,8 +1135,9 @@ export async function updateContractLine(
   if (template) {
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
-      .first(['cadence_owner', 'billing_timing']);
+      .first(['cadence_owner', 'billing_timing', 'line_type']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: existingTemplateLine?.line_type ?? null,
       cadenceOwner: payload.cadence_owner,
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: payload.billing_timing,
@@ -1169,8 +1173,9 @@ export async function updateContractLine(
 
   const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
-    .first(['cadence_owner', 'billing_timing']);
+    .first(['cadence_owner', 'billing_timing', 'contract_line_type']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    lineType: existingLine?.contract_line_type ?? null,
     cadenceOwner: payload.cadence_owner,
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming: payload.billing_timing,
@@ -1233,8 +1238,9 @@ export async function updateContractLineRate(
   if (template) {
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
-      .first(['billing_timing', 'cadence_owner']);
+      .first(['billing_timing', 'cadence_owner', 'line_type']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: existingTemplateLine?.line_type ?? null,
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming,
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
@@ -1252,8 +1258,9 @@ export async function updateContractLineRate(
 
   const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
-    .first(['billing_timing', 'cadence_owner']);
+    .first(['billing_timing', 'cadence_owner', 'contract_line_type']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    lineType: existingLine?.contract_line_type ?? null,
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming,
     fallbackBillingTiming: existingLine?.billing_timing,

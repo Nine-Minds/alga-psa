@@ -63,6 +63,8 @@ import { useTemplateNeutralRate } from "./templateNeutralRate";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
+import { BillingTimingField } from "./BillingTimingField";
+import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -2113,6 +2115,22 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   )}
                 </div>
               </div>
+              {!isAdvanceTimingAllowedForLineType(line.contract_line_type) && (
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("billing.labels.timing", {
+                      defaultValue: "Billing Timing",
+                    })}
+                  </p>
+                  {/* Hourly/Usage template lines have no editor; show the fixed value and why. */}
+                  <BillingTimingField
+                    id={`template-billing-timing-${line.contract_line_id}`}
+                    lineType={line.contract_line_type}
+                    value="arrears"
+                    onChange={() => {}}
+                  />
+                </div>
+              )}
               <div className="mt-4">
                 <GenericPlanServicesList
                   contractLineId={line.contract_line_id}
@@ -2131,6 +2149,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            contract_line_type: editingLine.contract_line_type,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}

@@ -238,7 +238,8 @@
       "fixAllResult": "Se reconstruyeron {{schedules}} programación(es) en {{clients}} cliente(s).",
       "fixAllNoop": "Todas las programaciones de facturación ya están actualizadas. Todo lo que siga apareciendo abajo requiere revisión individual.",
       "fixAllError": "No se pudieron reconstruir los períodos de servicio. Inténtelo de nuevo.",
-      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio."
+      "fixAllDenied": "No tiene permiso para reconstruir los períodos de servicio.",
+      "fixAllManualReview": "{{count}} período(s) por horas o de uso requieren revisión individual."
     },
     "errors": {
       "title": "Se produjeron errores al finalizar las facturas:",

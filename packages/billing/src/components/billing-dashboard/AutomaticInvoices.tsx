@@ -1053,16 +1053,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }));
         return;
       }
-      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded;
-      setRepairAllMessage(repairedCount > 0
+      const arrearsOnly = result.arrearsOnlyLines;
+      const arrearsOnlyRepairedCount = arrearsOnly
+        ? arrearsOnly.timingFlipped + arrearsOnly.advanceRowsSuperseded + arrearsOnly.rowsRehomed + arrearsOnly.catchUpRowsCreated
+        : 0;
+      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded
+        + arrearsOnlyRepairedCount;
+      const manualReviewCount = arrearsOnly?.manualReview.length ?? 0;
+      const baseMessage = repairedCount > 0
         ? t('automaticInvoices.materializationGap.fixAllResult', {
-          schedules: result.schedulesRepaired,
+          schedules: result.schedulesRepaired + (arrearsOnly?.linesScanned ?? 0),
           clients: result.clientsRepaired,
           defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
         })
         : t('automaticInvoices.materializationGap.fixAllNoop', {
           defaultValue: 'All billing schedules are already up to date. Anything still listed below needs individual review.',
-        }));
+        });
+      setRepairAllMessage(manualReviewCount > 0
+        ? `${baseMessage} ${t('automaticInvoices.materializationGap.fixAllManualReview', {
+          count: manualReviewCount,
+          defaultValue: '{{count}} hourly or usage period(s) need individual review.',
+        })}`
+        : baseMessage);
       onRefreshNeeded?.();
     } catch (error) {
       console.error('Error rebuilding recurring service periods:', error);

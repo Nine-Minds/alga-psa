@@ -819,7 +819,7 @@
       "advance": "Förskott (debitera vid periodens början)",
       "arrears": "Efterskott (debitera vid periodens slut)"
     },
-    "billingTimingHelp": "Förskottsfakturering är vanlig för fasta avgifter, efterskottsfakturering för tids- och förbrukningsbaserade tjänster.",
+    "billingTimingHelp": "Fasta rader kan faktureras i förskott eller i efterskott. Timbaserade rader och användningsrader faktureras alltid i efterskott, efter att arbetet har utförts.",
     "chooseBillingModel": "Välj debiteringsmodell *",
     "chooseBillingModelDescription": "Välj den debiteringsmodell som passar erbjudandet.",
     "contractLineNameLabel": "Avtalsradsnamn *",
@@ -2049,7 +2049,7 @@
       "advance": "Förskott – fakturera vid periodens början"
     },
     "fields": {
-      "billingTiming": "Faktureringstidpunkt",
+      "billingTiming": "Faktureringstidpunkt för fastprisrader",
       "adjustPartialPeriods": "Justera för delperioder",
       "services": "Tjänster",
       "serviceNumber": "Tjänst {{index}}",
@@ -2497,7 +2497,8 @@
       "tieredPricing": "nivåbaserad prissättning",
       "timing": {
         "advance": "Debitera i förskott",
-        "arrears": "Debitera i efterskott"
+        "arrears": "Debitera i efterskott",
+        "arrearsOnly": "Debiteras i efterskott"
       },
       "types": {
         "bucket": "Pottillägg",
@@ -2663,5 +2664,14 @@
   },
   "sellHourBlockNote": {
     "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott använder du Sälj timblock under Timblock på fliken Faktureringsöversikt för kunden."
+  },
+  "billingTimingField": {
+    "arrears": "I efterskott",
+    "fixedHelp": "Fasta rader kan faktureras i förskott eller i efterskott.",
+    "nonFixedHelp": "Timbaserade rader och användningsrader faktureras alltid i efterskott, efter att arbetet har utförts.",
+    "options": {
+      "advance": "I förskott (fakturera vid periodens början)",
+      "arrears": "I efterskott (fakturera vid periodens slut)"
+    }
   }
 }

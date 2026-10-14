@@ -819,7 +819,7 @@
       "advance": "Anticipato (fatturazione all'inizio del periodo)",
       "arrears": "Posticipato (fatturazione alla fine del periodo)"
     },
-    "billingTimingHelp": "La fatturazione anticipata è tipica per le tariffe fisse; quella posticipata per i servizi basati su tempo/utilizzo.",
+    "billingTimingHelp": "Le righe fisse possono essere fatturate in anticipo o in modo posticipato. Le righe a ore e a consumo vengono sempre fatturate in modo posticipato, dopo l’esecuzione del lavoro.",
     "chooseBillingModel": "Scegli un modello di fatturazione *",
     "chooseBillingModelDescription": "Seleziona il comportamento di fatturazione adatto a questa offerta.",
     "contractLineNameLabel": "Nome della linea contrattuale *",
@@ -2049,7 +2049,7 @@
       "advance": "Anticipato - fatturazione all'inizio del periodo"
     },
     "fields": {
-      "billingTiming": "Tempistiche di fatturazione",
+      "billingTiming": "Momento di fatturazione per le righe a tariffa fissa",
       "adjustPartialPeriods": "Adegua per periodi parziali",
       "services": "Servizi",
       "serviceNumber": "Servizio {{index}}",
@@ -2496,7 +2496,8 @@
       "tieredPricing": "prezzi a scaglioni",
       "timing": {
         "advance": "Fatturazione anticipata",
-        "arrears": "Fatturazione posticipata"
+        "arrears": "Fatturazione posticipata",
+        "arrearsOnly": "Fatturato in posticipato"
       },
       "title": "Modifiche al contratto",
       "types": {
@@ -2663,5 +2664,14 @@
   },
   "sellHourBlockNote": {
     "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, usa Vendi blocco in Blocchi ore, nella scheda Pannello di fatturazione del cliente."
+  },
+  "billingTimingField": {
+    "arrears": "Posticipata",
+    "fixedHelp": "Le righe fisse possono essere fatturate in anticipo o in modo posticipato.",
+    "nonFixedHelp": "Le righe a ore e a consumo vengono sempre fatturate in modo posticipato, dopo l’esecuzione del lavoro.",
+    "options": {
+      "advance": "Anticipata (fattura a inizio periodo)",
+      "arrears": "Posticipata (fattura a fine periodo)"
+    }
   }
 }

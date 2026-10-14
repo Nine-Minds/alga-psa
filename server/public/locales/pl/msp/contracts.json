@@ -819,7 +819,7 @@
       "advance": "Z góry (rozliczenie na początku okresu)",
       "arrears": "Z dołu (rozliczenie na końcu okresu)"
     },
-    "billingTimingHelp": "Rozliczanie z góry jest typowe dla opłat stałych; z dołu dla usług rozliczanych według czasu/zużycia.",
+    "billingTimingHelp": "Pozycje stałe mogą być rozliczane z góry lub z dołu. Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy.",
     "chooseBillingModel": "Wybierz model rozliczeń *",
     "chooseBillingModelDescription": "Wybierz zachowanie rozliczeń pasujące do tej oferty.",
     "contractLineNameLabel": "Nazwa linii kontraktowej *",
@@ -2055,7 +2055,7 @@
       "advance": "Z góry — faktura na początku okresu"
     },
     "fields": {
-      "billingTiming": "Termin rozliczeń",
+      "billingTiming": "Moment rozliczania pozycji o stałej opłacie",
       "adjustPartialPeriods": "Dostosuj do okresów częściowych",
       "services": "Usługi",
       "serviceNumber": "Usługa {{index}}",
@@ -2502,7 +2502,8 @@
       "tieredPricing": "ceny progowe",
       "timing": {
         "advance": "Rozliczaj z góry",
-        "arrears": "Rozliczaj z dołu"
+        "arrears": "Rozliczaj z dołu",
+        "arrearsOnly": "Rozliczane z dołu"
       },
       "title": "Zmiany w kontrakcie",
       "columns": {
@@ -2669,5 +2670,14 @@
   },
   "sellHourBlockNote": {
     "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, użyj opcji Sprzedaj pakiet w sekcji Pakiety godzin na karcie Panel rozliczeniowy klienta."
+  },
+  "billingTimingField": {
+    "arrears": "Z dołu",
+    "fixedHelp": "Pozycje stałe mogą być rozliczane z góry lub z dołu.",
+    "nonFixedHelp": "Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy.",
+    "options": {
+      "advance": "Z góry (rozlicz na początku okresu)",
+      "arrears": "Z dołu (rozlicz na końcu okresu)"
+    }
   }
 }
