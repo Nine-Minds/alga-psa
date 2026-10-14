@@ -565,7 +565,8 @@
       "exportCsv": "Exportera CSV",
       "exportJson": "Exportera JSON",
       "close": "Stäng",
-      "viewRunDetails": "Visa körningsdetaljer"
+      "viewRunDetails": "Visa körningsdetaljer",
+      "backToEvents": "Tillbaka till händelser"
     },
     "table": {
       "schemaConflict": "katalog ≠ inskickat",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Uppdatera",
-      "loadMore": "Läs in fler"
+      "loadMore": "Läs in fler",
+      "backToList": "Tillbaka till dead letter"
     },
     "table": {
       "columns": {

@@ -565,7 +565,8 @@
       "exportCsv": "Esporta CSV",
       "exportJson": "Esporta JSON",
       "close": "Chiudi",
-      "viewRunDetails": "Visualizza dettagli esecuzione"
+      "viewRunDetails": "Visualizza dettagli esecuzione",
+      "backToEvents": "Torna agli eventi"
     },
     "table": {
       "schemaConflict": "catalogo ≠ invio",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "Aggiorna",
-      "loadMore": "Carica altri"
+      "loadMore": "Carica altri",
+      "backToList": "Torna ai messaggi non recapitabili"
     },
     "table": {
       "columns": {

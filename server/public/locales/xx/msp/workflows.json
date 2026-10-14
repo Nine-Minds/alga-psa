@@ -565,7 +565,8 @@
       "exportCsv": "⟦Ḗẋƥȯřŧ ƇŞṼ⟧",
       "exportJson": "⟦Ḗẋƥȯřŧ ĴŞȮȠ⟧",
       "close": "⟦Ƈŀȯşḗ⟧",
-      "viewRunDetails": "⟦Ṽīḗẇ řŭƞ ḓḗŧȧīŀş⟧"
+      "viewRunDetails": "⟦Ṽīḗẇ řŭƞ ḓḗŧȧīŀş⟧",
+      "backToEvents": "⟦Ɓȧƈķ ŧȯ ḗṽḗƞŧş⟧"
     },
     "table": {
       "schemaConflict": "⟦ƈȧŧȧŀȯɠ ≠ şŭƀḿīşşīȯƞ⟧",
@@ -627,7 +628,8 @@
     },
     "actions": {
       "refresh": "⟦Řḗƒřḗşħ⟧",
-      "loadMore": "⟦Ŀȯȧḓ ḿȯřḗ⟧"
+      "loadMore": "⟦Ŀȯȧḓ ḿȯřḗ⟧",
+      "backToList": "⟦Ɓȧƈķ ŧȯ ḓḗȧḓ ŀḗŧŧḗř⟧"
     },
     "table": {
       "columns": {
