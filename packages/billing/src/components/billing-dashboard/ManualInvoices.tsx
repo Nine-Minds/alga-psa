@@ -13,7 +13,7 @@ import {
   type InvoiceManualItemsUpdateActionResult,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
-import { getActiveClientLocationsForBilling } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { getActiveClientLocationsForBillingRecoverable } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
@@ -366,6 +366,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [authenticationExpired, setAuthenticationExpired] = useState(false);
   const [readAuthenticationExpired, setReadAuthenticationExpired] = useState(false);
+  const [attributionAuthenticationExpired, setAttributionAuthenticationExpired] = useState(false);
   const [readRetry, setReadRetry] = useState(0);
   const readAuthenticationExpiredRef = useRef(false);
   const lastInvoiceReadIdRef = useRef<string | null>(null);
@@ -385,6 +386,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // client. The standard manual-invoice generator leaves these undefined.
   const [locationOptions, setLocationOptions] = useState<SelectOption[]>([]);
   const [billingProfileOptions, setBillingProfileOptions] = useState<SelectOption[]>([]);
+  const lastAttributionClientIdRef = useRef<string | null>(null);
   // Tenant tax rates for the per-line tax treatment control. Loaded once; an
   // empty list simply hides the control rather than defaulting a line to a
   // taxability the operator did not choose.
@@ -694,17 +696,43 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     if (!attributionClientId) {
       setLocationOptions([]);
       setBillingProfileOptions([]);
+      setAttributionAuthenticationExpired(false);
+      lastAttributionClientIdRef.current = null;
       return;
+    }
+    const attributionIdentity = `${invoice?.invoice_id ?? ''}:${attributionClientId}`;
+    if (lastAttributionClientIdRef.current !== attributionIdentity) {
+      lastAttributionClientIdRef.current = attributionIdentity;
+      setLocationOptions([]);
+      setBillingProfileOptions([]);
+      setAttributionAuthenticationExpired(false);
     }
     let cancelled = false;
     const loadAttributionOptions = async () => {
       try {
         const [locationsResult, profilesResult] = await Promise.all([
-          getActiveClientLocationsForBilling(attributionClientId),
+          getActiveClientLocationsForBillingRecoverable(attributionClientId),
           getClientBillingProfilesForBilling(attributionClientId),
         ]);
         if (cancelled) return;
+        if (isAuthenticationFailure(locationsResult) || isAuthenticationFailure(profilesResult)) {
+          readAuthenticationExpiredRef.current = true;
+          setReadAuthenticationExpired(true);
+          setAttributionAuthenticationExpired(true);
+          return;
+        }
+        if (isActionMessageError(locationsResult) || isActionPermissionError(locationsResult)) {
+          setAttributionAuthenticationExpired(false);
+          setError(getErrorMessage(locationsResult));
+          return;
+        }
+        if (isActionMessageError(profilesResult) || isActionPermissionError(profilesResult)) {
+          setAttributionAuthenticationExpired(false);
+          setError(getErrorMessage(profilesResult));
+          return;
+        }
         if (Array.isArray(locationsResult)) {
+          setAttributionAuthenticationExpired(false);
           setLocationOptions(locationsResult.map((location) => ({
             value: location.location_id,
             label: location.location_name || location.address_line1 || location.location_id,
@@ -718,7 +746,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
       } catch (error) {
         if (!cancelled) {
-          console.warn('[ManualInvoices] Failed to load attribution options', error);
+          if (isAuthenticationFailure(error)) {
+            readAuthenticationExpiredRef.current = true;
+            setReadAuthenticationExpired(true);
+            setAttributionAuthenticationExpired(true);
+          } else {
+            setAttributionAuthenticationExpired(false);
+            setError(t('manualInvoices.errors.loadItems', {
+              defaultValue: 'Error loading invoice items',
+            }));
+          }
         }
       }
     };
@@ -726,7 +763,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [attributionClientId]);
+  }, [attributionClientId, invoice?.invoice_id, readRetry]);
 
   // Tax treatments are tenant-wide, so they are loaded once. Only the
   // draft-adjustment editor exposes the control; the manual generator keeps its
@@ -1635,7 +1672,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </Alert>
             )}
 
-            {readAuthenticationExpired && (
+            {(readAuthenticationExpired || attributionAuthenticationExpired) && (
               <Alert variant="warning" className="mb-4">
                 <AlertDescription>
                   {t('draftInvoiceAdjustments.sessionExpired', { defaultValue: 'Your session expired while loading invoice details. Your current edits remain here. Sign in again, then retry loading.' })}

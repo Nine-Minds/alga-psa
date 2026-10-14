@@ -3,15 +3,18 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async (): Promise<any> => []) }));
+const mocks = vi.hoisted(() => ({
+  update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async (): Promise<any> => []),
+  locations: vi.fn(async (): Promise<any> => []), profiles: vi.fn(async (): Promise<any> => []),
+}));
 vi.mock('../../actions/invoiceExportWarnings', () => ({ getInvoiceAdjustmentExportWarnings: mocks.warnings }));
 vi.mock('@alga-psa/billing/actions/manualInvoiceActions', () => ({ generateManualInvoice: vi.fn(), getClientBillingEmailStatus: vi.fn(async () => ({ hasBillingEmail: true })) }));
 vi.mock('@alga-psa/billing/actions/salesOrderInvoicingActions', () => ({ generateInvoiceForSalesOrder: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ updateInvoiceManualItems: mocks.update }));
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({ getInvoiceLineItems: mocks.lineItems }));
-vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({ getActiveClientLocationsForBilling: vi.fn(async () => []) }));
+vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({ getActiveClientLocationsForBillingRecoverable: mocks.locations }));
 vi.mock('@alga-psa/billing/actions/taxRateActions', () => ({ getTaxRates: vi.fn(async () => []) }));
-vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({ getClientBillingProfilesForBilling: vi.fn(async () => []) }));
+vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({ getClientBillingProfilesForBilling: mocks.profiles }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@alga-psa/ui/context', () => ({ useQuickAddClient: () => ({ renderQuickAddClient: () => null }) }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
@@ -27,7 +30,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k
 
 import ManualInvoices from './ManualInvoices';
 afterEach(cleanup);
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.locations.mockResolvedValue([]);
+  mocks.profiles.mockResolvedValue([]);
+});
 
 const invoice: any = {
   invoice_id: 'invoice-1', client_id: 'client-1', invoice_number: 'INV-1', currencyCode: 'USD', is_manual: false,
@@ -152,6 +159,33 @@ describe('expanded invoice adjustment global save', () => {
     expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep edit after denied retry');
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['location', () => mocks.locations.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' })],
+    ['billing profile', () => mocks.profiles.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' })],
+  ])('recovers from %s attribution expiry and keeps edits when retrying attribution reads', async (_kind, expireRead) => {
+    expireRead();
+    mocks.lineItems.mockResolvedValue(invoice.invoice_charges);
+    renderDraft();
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    await fillCharge('Keep attribution edit');
+    expect(mocks.update).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(mocks.locations).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.profiles).toHaveBeenCalledTimes(2));
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep attribution edit');
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+  });
+
+  it('keeps attribution permission denial visible and separate from session recovery', async () => {
+    mocks.locations.mockResolvedValueOnce({ permissionError: 'Permission denied: client read required' });
+    mocks.lineItems.mockResolvedValue(invoice.invoice_charges);
+    renderDraft();
+    expect(await screen.findByText('Permission denied: client read required')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
   });
 
   it('ignores a late detail response after selecting another invoice', async () => {

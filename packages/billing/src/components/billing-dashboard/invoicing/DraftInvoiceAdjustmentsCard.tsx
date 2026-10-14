@@ -6,8 +6,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IService, InvoiceViewModel } from '@alga-psa/types';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getServices } from '@alga-psa/billing/actions/serviceActions';
+import { getAllClientsForBillingRecoverable } from '@alga-psa/billing/actions/billingClientsActions';
+import { getServicesRecoverable } from '@alga-psa/billing/actions/serviceActions';
 import {
   getInvoiceAdjustmentCapability,
   type InvoiceAdjustmentCapability,
@@ -59,8 +59,8 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
       setCapability(null);
       try {
         const [clientsResult, servicesResult, capabilityResult] = await Promise.all([
-          getAllClientsForBilling(),
-          getServices(1, 999, { item_kind: 'any' }),
+          getAllClientsForBillingRecoverable(),
+          getServicesRecoverable(1, 999, { item_kind: 'any' }),
           getInvoiceAdjustmentCapability(invoice.invoice_id),
         ]);
         if (cancelled) return;
