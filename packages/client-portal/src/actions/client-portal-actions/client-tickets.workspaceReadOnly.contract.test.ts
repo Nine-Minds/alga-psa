@@ -21,7 +21,7 @@ const conversationSource = fs.readFileSync(
 describe('shared-workspace tickets are read-only in the portal', () => {
   it('the details action computes can_interact with the in-memory matcher', () => {
     expect(source).toContain('ticketMatchesVisibility');
-    expect(source).toContain('extractActiveWatcherContactIds(ticket.attributes)');
+    expect(source).toMatch(/extractActiveWatcherContactIds\(ticket(Row)?\.attributes\)/);
     expect(source).toContain('can_interact: result.canInteract');
   });
 

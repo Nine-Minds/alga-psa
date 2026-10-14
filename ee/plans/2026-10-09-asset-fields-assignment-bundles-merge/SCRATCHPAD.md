@@ -441,3 +441,23 @@ F085 (billing-profile validation on every writer) and T059 (no cost or vendor
 fields in the portal payload) were marked implemented while neither was true
 of the RMM mapping actions or the portal payload. Both are true now, so the
 flags stand as they are; nothing was flipped back.
+
+## Round 4 — test repair (2026-10-14)
+
+Round 3's code was right; three of its tests were not runnable and one
+asserted a variable name.
+
+`retireVanishedTacticalAssets` queries with `whereNotIn` and `whereNot`, which
+the hand-rolled fake knex in `tacticalDeviceSync.fullSync` and
+`…paginationSmoke` did not implement — the sync threw, swallowed it into
+`errors`, and every assertion on `success` failed. Both fakes understand the
+two clauses now, and the retire path finally has a behavioural test beside its
+source contract: with agent `a1` still listed and `a_gone` absent, the vanished
+device becomes `retired` / `offline`, its mapping row is flagged deleted, and
+the device Tactical still reports keeps its lifecycle status. The existing
+"empty listing retires nothing" test is what makes that pair meaningful.
+
+The FR-E7b contract test pinned `extractActiveWatcherContactIds(ticket.attributes)`
+while the action reads through its `ticketRow` alias; it matches either name
+now, so the contract is about where the watcher ids come from rather than what
+the local variable is called.
