@@ -1,0 +1,35 @@
+# git diff origin/main -- TicketingDashboard.tsx TicketingDashboardContainer.tsx server/src/app/msp/tickets/page.tsx (added/removed lines only)
++  /** App-owned slot rendered between the board tabs and the list (co-managed callout). */
++  listCallout?: React.ReactNode;
++  listCallout,
++      {listCallout}
++  /** App-owned slot rendered between the board tabs and the list. */
++  listCallout?: React.ReactNode;
++  listCallout,
++        listCallout={listCallout}
++import { redirect } from 'next/navigation';
++import { resolveLegacyQueueRedirect } from '@alga-psa/tickets/lib';
++import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
++  // Legacy `?queueView=…` links belong to Customer Tickets; `workspace=msp` (retired)
++  // lands here with the qualified params stripped. Outside the try so the redirect isn't swallowed.
++  const legacyTarget = resolveLegacyQueueRedirect(new URLSearchParams(
++    Object.entries(await searchParams ?? {}).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v] as [string, string]] : [])),
++  ));
++  if (legacyTarget) {
++    redirect(legacyTarget);
++  }
++
++          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
+
+# git diff 391e83112e (same files): extra lines are main's 'Create template from ticket' work merged into this branch (useTicketTemplatePermissions, onCreateTemplate, canCreateTemplate); not ours
+
+# DataTable.tsx vs 391e83112e: columnFitMode only
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+# projection(actor.tenant in packages/co-managed:
+packages/co-managed/src/projectTaskQueue.ts:117:    if (request.view === 'working') projection(actor.tenant, workspace.client_name, localRelationship, false);
+# ticketQueue.ts matches:
+0
+
+# task queue vs e65b297c2a~ (server/src/app/msp/co-management/tasks, CoManagedProjectTaskQueue.tsx, packages/co-managed/src/projectTaskQueue.ts):
+(empty = unchanged)

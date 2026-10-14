@@ -110,6 +110,7 @@ const TWO = [
 const mount = () => render(<QualifiedTicketList scope={SCOPE} actorScope={ACTOR} />);
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/');
   vi.resetAllMocks();
   window.sessionStorage.clear();
   mocks.load.mockResolvedValue(page(TWO));
@@ -194,5 +195,75 @@ describe('T013 — handback of one row leaves the other untouched', () => {
     expect(sent.items).toHaveLength(1);
     expect(sent.items[0].expectedRevision).toBe(5);
     expect(sent.items[0].resource).toEqual({ kind: 'ticket', tenant: 'b', relationshipId: 'rel-b', id: 'same-id' });
+  });
+});
+
+describe('T013 — an uncertain handback cannot be replaced by a new command', () => {
+  const failOnce = () => mocks.submit.mockRejectedValueOnce(new Error('transport lost'))
+    .mockResolvedValue([{ index: 0, ok: true, receipt: {} }]);
+  const submitFirst = async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Printer A' });
+    fireEvent.click(screen.getAllByRole('checkbox').filter(box => !box.id.endsWith('select-all'))[0]);
+    fireEvent.change(await screen.findByLabelText('coManaged.ticket.note'), { target: { value: 'Original note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.handback' }));
+    await screen.findByText('coManaged.ticket.uncertain');
+  };
+
+  it('locks the note and replays the identical command on retry', async () => {
+    failOnce();
+    await submitFirst();
+    const note = screen.getByLabelText('coManaged.ticket.note') as HTMLTextAreaElement;
+    expect(note.disabled).toBe(true);
+    fireEvent.change(note, { target: { value: 'Edited note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' }));
+    await screen.findByRole('status');
+    expect(mocks.submit).toHaveBeenCalledTimes(2);
+    expect(mocks.submit.mock.calls[1][0]).toEqual(mocks.submit.mock.calls[0][0]);
+    expect(mocks.submit.mock.calls[1][0].note).toBe('Original note');
+  });
+
+  it('does not send a different row if the selection changes while the result is uncertain', async () => {
+    failOnce();
+    await submitFirst();
+    const other = screen.getAllByRole('checkbox').filter(box => !box.id.endsWith('select-all'))[1];
+    fireEvent.click(other);
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' }));
+    await screen.findByRole('status');
+    const retried = mocks.submit.mock.calls[1][0];
+    expect(retried.items).toHaveLength(1);
+    expect(retried.items[0].resource.tenant).toBe('a');
+    expect(retried.items[0].operationId).toBe(mocks.submit.mock.calls[0][0].items[0].operationId);
+  });
+
+  it('keeps the frozen command for a reload after a filter change, and never auto-submits it', async () => {
+    failOnce();
+    await submitFirst();
+    const stored = Object.keys(window.sessionStorage).filter(key => key.startsWith('co-managed:handback-intent:'));
+    expect(stored).toHaveLength(1);
+    cleanup();
+    mocks.submit.mockClear();
+    mount();
+    expect(await screen.findByText('coManaged.queue.bulkHandback.resume')).toBeTruthy();
+    expect(mocks.submit).not.toHaveBeenCalled();
+  });
+});
+
+describe('F006 — the address bar wins when Back restores the route as first rendered', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('adopts the applied filters from the URL instead of the stale server-rendered presentation', async () => {
+    window.history.replaceState(null, '', '/msp/tickets/customer?queueView=working&workspace=all&searchQuery=Printer&queueState=closed');
+    mount(); // the server-supplied presentation is the default, as after Back
+    await waitFor(() => expect(mocks.load.mock.calls.map(call => call[0]).filter(request => 'sort' in request).at(-1))
+      .toMatchObject({ search: 'Printer', state: 'closed' }));
+    expect((screen.getByLabelText('coManaged.queue.search') as HTMLInputElement).value).toBe('Printer');
+  });
+
+  it('leaves the defaults alone when the URL carries no filters', async () => {
+    window.history.replaceState(null, '', '/msp/tickets/customer');
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Printer A' });
+    expect(mocks.load.mock.calls.map(call => call[0]).filter(request => 'sort' in request)).toHaveLength(1);
   });
 });

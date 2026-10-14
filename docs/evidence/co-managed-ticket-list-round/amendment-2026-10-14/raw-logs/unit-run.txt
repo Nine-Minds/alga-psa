@@ -1,0 +1,12 @@
+# cd server && npx vitest run <6 files>
+ ✓ |node| src/test/unit/product/coManagedT21Boundary.contract.test.ts (6 tests) 6ms 14 MB heap used
+ ✓ |jsdom| src/test/unit/product/customerTicketsRows.test.tsx (13 tests) 307ms 152 MB heap used
+ ✓ |jsdom| src/test/unit/app/msp/tickets/page.customerTickets.test.tsx (9 tests) 7ms 178 MB heap used
+ ✓ |jsdom| src/test/unit/product/coManagedCallout.test.tsx (20 tests) 6123ms 203 MB heap used
+ ✓ |jsdom| src/test/unit/product/customerTicketsFlagOff.test.tsx (3 tests) 76ms 223 MB heap used
+ ✓ |jsdom| src/test/unit/product/qualifiedTicketList.test.tsx (23 tests) 551ms 178 MB heap used
+ Test Files  6 passed (6)
+      Tests  74 passed (74)
+# cd packages/ui && npx vitest run src/components/DataTable.columnFitMode.test.tsx
+ Test Files  1 passed (1)
+      Tests  3 passed (3)

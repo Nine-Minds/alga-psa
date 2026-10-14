@@ -88,6 +88,9 @@ export default function CoManagedTicketHandbackComposer({
   const [restored, setRestored] = useState<PersistedIntent | null>(null);
   const saved = useRef<PersistedIntent | null>(null);
   const mounted = useRef(false);
+  const resultsRef = useRef<HTMLUListElement>(null);
+  // Focus return: the submit button disables once results land, so move focus to the outcome list.
+  useEffect(() => { if (results) resultsRef.current?.focus(); }, [results]);
   const inFlight = useRef(false);
 
   useEffect(() => {
@@ -198,7 +201,7 @@ export default function CoManagedTicketHandbackComposer({
         {!storageAvailable && <p className="text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.queue.bulkHandback.noReloadRecovery', 'Reload recovery is unavailable in this browser; you can still retry in this session.')}</p>}
         {uncertain && <p role="alert" className="text-destructive">{t('coManaged.ticket.uncertain')}</p>}
         {results && (
-          <ul role="status" className="space-y-1">
+          <ul ref={resultsRef} tabIndex={-1} role="status" className="space-y-1 outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))]">
             {results.map(result => (
               <li key={result.index}>
                 {activeIntent?.labels[result.index]}: {t(result.ok ? 'coManaged.queue.bulkHandback.returned' : result.code === 'readOnly' ? 'coManaged.ticket.readOnly' : `coManaged.queue.bulkHandback.${result.code}`)}

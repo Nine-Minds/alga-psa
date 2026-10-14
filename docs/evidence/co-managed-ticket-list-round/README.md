@@ -69,24 +69,88 @@ nothing to load for a sponsor tenant.
 ## Amendment finishing pass (2026-10-14)
 
 Everything is under `amendment-2026-10-14/`. Shots were taken on the running app
-(port 3374) against `server_co_managed`, before and after merging main.
+(port 3374) against `server_co_managed`. The directory's `.gitignore` rules drop
+`*.png` and `*.log`, so shots are force-added and logs are committed as
+`raw-logs/*.txt` (same convention as `docs/evidence/co-managed-completion/`).
+Verify with `git ls-files docs/evidence/co-managed-ticket-list-round/amendment-2026-10-14`.
+
+Data caveats, stated plainly:
+- The dev DB holds ONE shared ticket (000001). Pagination, page size and
+  duplicate-identity rows therefore cannot be shown in a browser; they are
+  proven by unit and real-DB tests only (see "Not shown in a browser").
+- Shots `97`/`98` follow a delegated grant created through Alice's UI so the
+  "shown" half of Delegated administration could be captured. That grant stays in the dev DB.
+- The German shots used a temporary `user_preferences` locale row for qa
+  (the user preference beats the cookie); the row was deleted afterwards.
 
 | shots | shows |
 |---|---|
-| `shots/01`–`06` | Alice (customer IT) takes back a shared ticket, then escalates it |
-| `shots/10`, `51` | qa on All Tickets: callout (counts from the authorized reader) |
-| `shots/12`, `52` | qa follows the callout to `/msp/tickets/customer`; filter applied, row count matches |
-| `shots/13`, `14` | shared ticket detail, then back on Customer Tickets |
-| `shots/16` | legacy `queueView` URL redirected |
-| `shots/17` | client record Tickets tab: still the native list |
-| `shots/21`, `22`, `53` | handback composer, selected row, post-handback state |
-| `shots/40`–`44` | noassign: no entry points, ordinary empty state |
+| `01`–`06` | Alice (customer IT) takes back a shared ticket, then escalates it |
+| `10`, `51`, `62` | qa on All Tickets: callout (counts from the authorized reader) |
+| `12`, `52`, `63` | qa follows the callout to `/msp/tickets/customer`; row count matches |
+| `13`, `14`, `71` | shared ticket detail opened from Customer Tickets, then back |
+| `16` | legacy `queueView` URL redirected |
+| `17`, `92` | client record Tickets tab: still the native `MspClientTickets` |
+| `21`, `22`, `53` | handback composer, selected row, post-handback state (earlier pass) |
+| `40`–`44`, `94`, `95` | noassign: no entry points, ordinary native list |
+| `64`, `65` | customer oversight, with filters |
+| `70`, `71`, `72` | F006: filters applied, open a row, Back: search box and filters restored |
+| `74`, `75` | F032: forced load failure shows Retry, then a successful Retry |
+| `76`, `96` | F032: filtered no-match message vs the unfiltered-empty message (noassign) |
+| `77`, `78` | client options and client narrowing |
+| `79` | F021: sort by header (direction toggles) |
+| `73` | F021: table |
+| `80` | F036/F038: 768px, toolbar wraps, table scrolls inside its frame |
+| `81` | F038: 390px, see the open note: the app's expanded sidebar leaves the list about 134px |
+| `82`, `83` | F036: dark theme |
+| `84`, `85` | F038: de locale (translated title, tabs, toolbar, columns, counts) |
+| `86`, `87` | F036/F038: keyboard-only tab through the toolbar, focus ring on Filters |
+| `90`, `109` | `/msp/tickets?workspace=msp` and `?workspace=msp&queueView=working` land on native with no qualified params |
+| `91`, `97`, `98` | Delegated administration: shown for qa after a grant and for alice; hidden for noassign (`95`) |
+| `93` | co-management task queue unchanged |
+| `111`–`116` | T019 handback by keyboard: row selected with Space, composer opened with Enter, note typed, submit; focus lands on the outcome list; Reload lands on the counts line; All Tickets after |
 | `db-*.txt` | routing events and ticket-work rows after handback |
-| `reader-reverted-fail.log` | reader reverted to red (earlier round) |
-| `mutation-red.log` | this round: reader mutated, T003 and T004 go red |
-| `realdb-*.log` | real-DB runs |
 
-Not captured in a browser this round (covered by unit tests only):
-Retry after a load failure, the unfiltered-empty message, narrow-width,
-keyboard, theme and translated-locale checks (F036/F038), and an explicit
-Back-restores-filters pass (F006).
+### Step-2 parity checks (`raw-logs/step2-parity.txt`)
+- Against `origin/main`, `server/src/app/msp/tickets/page.tsx`, `TicketingDashboard.tsx` and
+  `TicketingDashboardContainer.tsx` differ only by the `listCallout` slot and the legacy `queueView` redirect.
+  (Against the older `391e83112e` the diff also shows main's template-menu work, which is not ours.)
+  `DataTable.tsx` differs from `391e83112e` only by `columnFitMode`.
+- `ticketQueue.ts` has no `projection(actor.tenant` branch; the only hit in `packages/co-managed`
+  is the unrelated project-task queue (`projectTaskQueue.ts:117`).
+- `/msp/tickets?workspace=msp` stays at that URL and renders native (`resolveLegacyQueueRedirect` only
+  redirects on an explicit `queueView`); with `queueView` it redirects to `/msp/tickets` with the
+  qualified params stripped (`90`, `109`).
+- Client Tickets tab renders `MspClientTickets` (`92`).
+- Delegated administration: hidden for noassign, shown for qa once a grant exists (`91`, `95`, `97`).
+  By design, a PSA tenant's entry appears only when the delegated directory returns a workspace with a grant.
+- `/msp/co-management/tasks` and the task-queue sources are unchanged against `e65b297c2a~`.
+
+### Mutation / revert checks
+- `raw-logs/mutation-t003-t004-red.txt`: reader mutated, T003 and T004 red, restored.
+- `raw-logs/t014-mutation-red.txt`: per-item stale/forbidden reporting broken in `ticketBulkHandback.ts`, T014 red, restored.
+- `raw-logs/f006-revert-red.txt`: F006 mount-adoption effect removed, test red, restored.
+- `raw-logs/reader-reverted-fail.txt`: reader reverted to red (earlier round).
+
+### Run results (this commit)
+| run | result |
+|---|---|
+| unit: customerTicketsRows (13), customerTicketsFlagOff (3), coManagedT21Boundary (6), qualifiedTicketList (23), page.customerTickets (9), coManagedCallout (20) | 6 files, 74 tests pass (`raw-logs/unit-run.txt`) |
+| unit: `packages/ui` DataTable.columnFitMode | 1 file, 3 tests pass |
+| real DB coManagedBootstrap T003, T004, T014 and the five T021 cases | 8 passed, 1422 skipped (`raw-logs/realdb-final-T003-T004-T014-T021.txt`) |
+| `cd server && NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit` | exit 0, no output (`raw-logs/tsc-full-server.txt`) |
+
+The real-DB harness clones the schema of `DB_NAME_SERVER`; run it against
+`DB_PORT=5376 DB_NAME_SERVER=server_co_managed` (the shared test DB on 5472 predates the routing-notification migration and fails the seed).
+
+One test change worth review: `coManagedCallout.test.tsx` "returns when a count changes" asserted the
+dismissed segment's absence synchronously and failed intermittently (1 in 3 runs); it now uses `waitFor`.
+
+### Fixes made this pass
+- F006: `QualifiedTicketList` adopts the address bar on mount, because `history.replaceState` writes are not restored by the router on Back.
+- F038 focus return: after a handback, focus moves to the outcome list; after "Reload current state" it moves to the counts line (previously it fell to `<body>`).
+
+### Not shown in a browser
+- F021 pagination and page size: one shared ticket in the dev DB. Unit-tested in `qualifiedTicketList.test.tsx`.
+- Duplicate-identity open (T019): same-id rows from two customers are proven by `customerTicketsRows.test.tsx` and the real-DB `realdb-same-number` run; the dev DB has no such pair.
+- 390px: the shell's expanded sidebar leaves the list about 134px (`81`); the list itself was not judged at that width.

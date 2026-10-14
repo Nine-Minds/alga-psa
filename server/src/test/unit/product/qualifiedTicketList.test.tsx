@@ -111,19 +111,19 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 const SCOPE = { kind: 'qualified', view: 'working', workspace: 'all' } as const;
 const ACTOR = 'msp-tenant:user-1';
 
-/** Two rows sharing one ticket id: one native MSP row, one shared handback-eligible row. */
+/** Two shared rows from different customer workspaces that happen to share one ticket id. */
 const page = (overrides: Record<string, unknown> = {}) => ({
   page: 1,
   pageSize: 10,
   totalCount: 51,
   openCount: 50,
   closedCount: 1,
-  workspaces: [{ tenant: 'msp', name: 'MSP' }, { tenant: 'customer', name: 'Customer IT' }],
+  workspaces: [{ tenant: 'alpha', name: 'Customer Alpha' }, { tenant: 'customer', name: 'Customer IT' }],
   items: [
-    { tenant: 'msp', relationshipId: null, ticketId: 'same-id', workspaceName: 'MSP',
-      fields: { title: 'Local ticket', ticket_number: 'T-1', responsibility: 'msp' } },
+    { tenant: 'alpha', relationshipId: 'relationship-alpha', ticketId: 'same-id', workspaceName: 'Customer Alpha',
+      fields: { title: 'Alpha ticket', ticket_number: 'T-1', responsibility: 'customer', work_revision: 2 } },
     { tenant: 'customer', relationshipId: 'relationship', ticketId: 'same-id', workspaceName: 'Customer IT',
-      fields: { title: 'Customer ticket', ticket_number: 'T-1', responsibility: 'msp', work_revision: 4 } },
+      fields: { title: 'Beta ticket', ticket_number: 'T-1', responsibility: 'msp', work_revision: 4 } },
   ],
   ...overrides,
 });
@@ -153,6 +153,7 @@ const listRequests = () => mocks.load.mock.calls.map(call => call[0]).filter(req
 const lastListRequest = () => listRequests().at(-1);
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/');
   vi.resetAllMocks();
   window.sessionStorage.clear();
   // Echo the requested page back, the way a real server does: a stand-in that
@@ -167,13 +168,13 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe('T007 — applied filters, sort and pagination reach the server', () => {
   it('issues the default qualified request for its scope', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     expect(listRequests()).toEqual([DEFAULT_REQUEST]);
   });
 
   it('sends the submitted search and each toolbar filter, resetting to page 1 every time', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
     // Typing alone must not query: the search is applied on submit.
     fireEvent.change(screen.getByLabelText('coManaged.queue.search'), { target: { value: 'literal 100%' } });
@@ -193,7 +194,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
 
   it('resets to page 1 when a filter changes, so page 3 of the old filter is never asked for', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
     // Leave page 1 first — otherwise "resets to page 1" is trivially true.
     fireEvent.click(screen.getByRole('button', { name: 'next-page' }));
@@ -208,7 +209,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
 
   it('returns every filter to its default on reset', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'all' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'all' }));
@@ -219,7 +220,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
 
   it('pages and sorts through the server, carrying the applied filters and never paging a stale filter', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
     fireEvent.click(screen.getByRole('button', { name: 'next-page' }));
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, page: 2 }));
@@ -230,11 +231,11 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, sort: 'title', direction: 'asc', page: 1 }));
   });
 
-  it('links identical ids to their qualified native and shared routes and shows the server totals', async () => {
+  it('links identical ids to their own qualified routes and shows the server totals', async () => {
     mount();
-    expect(await screen.findByRole('link', { name: 'T-1 · Local ticket' }))
-      .toHaveAttribute('href', '/msp/tickets/same-id');
-    expect(screen.getByRole('link', { name: 'T-1 · Customer ticket' }))
+    expect(await screen.findByRole('link', { name: 'T-1 · Alpha ticket' }))
+      .toHaveAttribute('href', '/msp/co-management/tickets/alpha/relationship-alpha/same-id');
+    expect(screen.getByRole('link', { name: 'T-1 · Beta ticket' }))
       .toHaveAttribute('href', '/msp/co-management/tickets/customer/relationship/same-id');
     // The counts come from the server response, not from the rows on screen.
     expect(screen.getByText('coManaged.queue.counts:{"total":51,"open":50,"closed":1}')).toBeInTheDocument();
@@ -249,7 +250,7 @@ describe('T010 — export uses the applied filters and never outlives them', () 
     Object.defineProperty(URL, 'createObjectURL', { value: vi.fn(() => 'blob:q'), configurable: true });
     Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'all' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'all' }));
@@ -273,7 +274,7 @@ describe('T010 — export uses the applied filters and never outlives them', () 
       .mockImplementation(function (this: HTMLAnchorElement) { downloaded.push(this.download); });
 
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
 
     await waitFor(() => expect(click).toHaveBeenCalledOnce());
@@ -288,13 +289,13 @@ describe('T010 — export uses the applied filters and never outlives them', () 
     Object.defineProperty(URL, 'createObjectURL', { value: createUrl, configurable: true });
 
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
 
     // Leave the scope the export was requested for.
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     await act(async () => resolveExport({ filename: 'old.csv', csv: 'Old data', rowCount: 2 }));
 
     // The rows on screen are no longer the rows this CSV describes.
@@ -304,7 +305,7 @@ describe('T010 — export uses the applied filters and never outlives them', () 
   it('drops the visible rows when export authority is lost, rather than leaving protected rows on screen', async () => {
     mocks.export.mockRejectedValue(new Error('Revoked'));
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.queue.exportError');
@@ -335,20 +336,20 @@ describe('T015 — a read that lost its race never lands', () => {
     mount();
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
     await act(async () => resolveOld(page({
-      items: [{ tenant: 'msp', relationshipId: null, ticketId: 'stale', workspaceName: 'MSP',
-        fields: { title: 'Stale data', ticket_number: 'T-9', responsibility: 'msp' } }],
+      items: [{ tenant: 'alpha', relationshipId: 'relationship-alpha', ticketId: 'stale', workspaceName: 'Customer Alpha',
+        fields: { title: 'Stale data', ticket_number: 'T-9', responsibility: 'msp', work_revision: 1 } }],
     })));
 
     expect(screen.queryByText('Stale data')).toBeNull();
-    expect(screen.getByRole('link', { name: 'T-1 · Local ticket' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'T-1 · Alpha ticket' })).toBeInTheDocument();
   });
 
   it('clears rows and counts when a refresh loses access', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     mocks.load.mockRejectedValue(new Error('Revoked'));
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
@@ -361,22 +362,22 @@ describe('T015 — a read that lost its race never lands', () => {
 
 // --- T012: selection column feeds the single composer ---------------------
 
+const BETA_BOX = /^co-managed-ticket-list-select-shared\|customer\|/;
 describe('T012 — selection offers exactly the handback-eligible shared rows', () => {
-  it('offers a checkbox only for eligible shared rows, never for native or revision-masked ones', async () => {
+  it('offers a checkbox only for MSP-held rows with a revision, never customer-held or revision-masked ones', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
-    // Two rows are on screen; only the shared, MSP-held, revision-bearing one
-    // may be handed back. Plus the select-all in the column header.
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    // Alpha is customer-held; only Beta (MSP-held, revision-bearing) may be handed back.
     expect(screen.getByRole('checkbox', { name: 'co-managed-ticket-list-select-all' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ })).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: /^co-managed-ticket-list-select-native\|/ })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: BETA_BOX })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|alpha\|/ })).toBeNull();
   });
 
   it('offers no selection at all when nothing on the page is eligible', async () => {
     mocks.load.mockResolvedValue(page({
       items: [
-        { tenant: 'msp', relationshipId: null, ticketId: 'native-only', workspaceName: 'MSP',
-          fields: { title: 'Local ticket', ticket_number: 'T-1', responsibility: 'msp' } },
+        { tenant: 'alpha', relationshipId: 'relationship-alpha', ticketId: 'customer-held-2', workspaceName: 'Customer Alpha',
+          fields: { title: 'Alpha ticket', ticket_number: 'T-1', responsibility: 'customer', work_revision: 2 } },
         // Shared, but the customer holds it.
         { tenant: 'customer', relationshipId: 'relationship', ticketId: 'customer-held', workspaceName: 'Customer IT',
           fields: { title: 'Customer ticket', ticket_number: 'T-2', responsibility: 'customer', work_revision: 4 } },
@@ -386,24 +387,24 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
       ],
     }));
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     expect(screen.queryAllByRole('checkbox')).toEqual([]);
   });
 
   it('hands the selected eligible rows to one composer, which freezes the exact command', async () => {
     mocks.submit.mockResolvedValue([{ index: 0, ok: true, receipt: {} }]);
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: BETA_BOX }));
     fireEvent.change(screen.getByLabelText('coManaged.ticket.note'), { target: { value: 'Continue locally' } });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.handback' }));
 
     await screen.findByRole('status');
     const request = mocks.submit.mock.lastCall![0];
     expect(request.note).toBe('Continue locally');
-    // Exactly the one eligible row — the native sibling sharing its ticket id
-    // must not be swept in.
+    // Exactly the one eligible row — the same-id sibling in another
+    // workspace must not be swept in.
     expect(request.items).toHaveLength(1);
     expect(request.items[0].resource).toMatchObject({ kind: 'ticket', tenant: 'customer', relationshipId: 'relationship', id: 'same-id' });
     expect(request.items[0].expectedRevision).toBe(4);
@@ -412,8 +413,8 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
   it('select-all takes every eligible row and no others', async () => {
     mocks.load.mockResolvedValue(page({
       items: [
-        { tenant: 'msp', relationshipId: null, ticketId: 'native', workspaceName: 'MSP',
-          fields: { title: 'Local ticket', ticket_number: 'T-1', responsibility: 'msp' } },
+        { tenant: 'alpha', relationshipId: 'relationship-alpha', ticketId: 'held', workspaceName: 'Customer Alpha',
+          fields: { title: 'Alpha ticket', ticket_number: 'T-1', responsibility: 'customer', work_revision: 2 } },
         { tenant: 'a', relationshipId: 'rel-a', ticketId: 'ticket-a', workspaceName: 'Customer A',
           fields: { title: 'A', ticket_number: 'T-2', responsibility: 'msp', work_revision: 1 } },
         { tenant: 'b', relationshipId: 'rel-b', ticketId: 'ticket-b', workspaceName: 'Customer B',
@@ -422,7 +423,7 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
     }));
     mocks.submit.mockResolvedValue([{ index: 0, ok: true, receipt: {} }, { index: 1, ok: true, receipt: {} }]);
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'co-managed-ticket-list-select-all' }));
     fireEvent.change(screen.getByLabelText('coManaged.ticket.note'), { target: { value: 'Returning both' } });
@@ -438,16 +439,16 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
 
   it('drops the selection when the filters change, so a handback cannot target rows that left the page', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
-    fireEvent.click(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ }));
-    expect(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ })).toBeChecked();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    fireEvent.click(screen.getByRole('checkbox', { name: BETA_BOX }));
+    expect(screen.getByRole('checkbox', { name: BETA_BOX })).toBeChecked();
 
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'closed' }));
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
-    expect(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: BETA_BOX })).not.toBeChecked();
   });
 });
 
@@ -456,7 +457,7 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
 describe('T022 — Customer Tickets owns its toolbar and carries no native chrome', () => {
   it('shows its own heading, search, collapsed Filters, View and Share, and no Add Ticket or Bundled toggle', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     expect(screen.getByRole('heading', { level: 1, name: 'coManaged.customerTickets.title' })).toBeInTheDocument();
     expect(screen.getByLabelText('coManaged.queue.search')).toBeInTheDocument();
     expect(screen.getByTestId('view-menu')).toBeInTheDocument();
@@ -469,7 +470,7 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
 
   it('offers All workspaces plus the reader\'s own workspaces — never a "This MSP" option', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     openFilters();
     const workspace = screen.getByLabelText('coManaged.queue.workspace') as HTMLSelectElement;
     const values = Array.from(workspace.options).map(option => option.value);
@@ -480,7 +481,7 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
 
   it('applies a workspace filter and a client filter to the request', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.workspace'), { target: { value: 'customer' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'customer' }));
@@ -492,7 +493,7 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
 
   it('sends a callout signal with the request and clears it from the chip', async () => {
     mount({ initialPresentation: { signal: 'escalated_unassigned' } });
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, signal: 'escalated_unassigned' });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.customerTickets.clearSignal' }));
     await waitFor(() => expect(lastListRequest()).toEqual(DEFAULT_REQUEST));
@@ -500,7 +501,7 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
 
   it('switches Working and Oversight by navigating to the Customer Tickets route', async () => {
     mount();
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.oversight' }));
     expect(mocks.push).toHaveBeenCalledOnce();
     expect(mocks.push.mock.calls[0][0]).toMatch(/^\/msp\/tickets\/customer\?.*queueView=oversight/);
@@ -508,7 +509,7 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
 
   it('keeps a fixed client fixed and hides the client chooser (embedded client section)', async () => {
     mount({ fixedClientId: 'client-1', embedded: true });
-    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
     expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, clientId: 'client-1' });
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
     openFilters();

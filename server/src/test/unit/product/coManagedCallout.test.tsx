@@ -94,7 +94,7 @@ describe('T023 — callout strip', () => {
     mocks.signals.mockResolvedValue({ assignedRelationshipCount: 1, signals: { escalatedUnassigned: 0, awaitingReply: 2 } });
     mount();
     expect(await screen.findByRole('link', { name: 'coManaged.callout.awaitingReply:2' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /escalatedUnassigned/ })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('link', { name: /escalatedUnassigned/ })).toBeNull());
   });
 });
 

@@ -12,6 +12,9 @@ import type {
 import {
   buildTicketListHref,
   isQualifiedHandbackEligible,
+  isQualifiedTicketListScope,
+  parseTicketListPresentation,
+  parseTicketListScope,
   switchTicketListView,
   ticketListWorkspaceToken,
   type TicketQueueView,
@@ -100,6 +103,30 @@ export default function QualifiedTicketList({
   const [refresh, setRefresh] = useState(0);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const generation = useRef(0);
+  // Focus return: a handback refresh unmounts the composer, so land on the counts line when the new page arrives.
+  const countsRef = useRef<HTMLParagraphElement>(null);
+  const returnFocus = useRef(false);
+  useEffect(() => {
+    if (result && returnFocus.current) {
+      returnFocus.current = false;
+      countsRef.current?.focus();
+    }
+  }, [result]);
+
+  // Filters are written with history.replaceState, which the router does not
+  // snapshot: after Back from a ticket it restores the route as first rendered,
+  // so the server-supplied presentation is older than the address bar. The
+  // address bar is the source of truth for the applied filters; adopt it once.
+  useEffect(() => {
+    if (embedded || !window.location.search) return;
+    const liveScope = parseTicketListScope(window.location.search);
+    setPresentation(current => {
+      const next = { ...parseTicketListPresentation(window.location.search, current), ...(fixedClientId ? { clientId: fixedClientId } : {}) };
+      return JSON.stringify(next) === JSON.stringify(current) ? current : next;
+    });
+    if (isQualifiedTicketListScope(liveScope)) setWorkspace(liveScope.workspace);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- adopt the address bar once per mount
+  }, []);
 
   // Keep the search box in step with a scope/history-driven presentation change.
   useEffect(() => { setSearchDraft(presentation.searchQuery); }, [presentation.searchQuery]);
@@ -502,7 +529,7 @@ export default function QualifiedTicketList({
         <p role="status" className="mt-4">{t('coManaged.ticket.loading', 'Loading tickets…')}</p>
       ) : (
         <>
-          <p role="status" className="mt-4 text-sm text-[rgb(var(--color-text-500))]">
+          <p ref={countsRef} tabIndex={-1} role="status" className="mt-4 text-sm text-[rgb(var(--color-text-500))] outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))]">
             {t('coManaged.queue.counts', { total: result.totalCount, open: result.openCount, closed: result.closedCount })}
           </p>
           <div className="mt-3">
@@ -510,7 +537,7 @@ export default function QualifiedTicketList({
               idPrefix={idPrefix}
               actorScope={actorScope}
               selectedItems={eligibleSelected}
-              onDone={() => setRefresh(value => value + 1)}
+              onDone={() => { returnFocus.current = true; setRefresh(value => value + 1); }}
             />
           </div>
           {!result.items.length ? (

@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-co-managed-it/server
+      Running tests with seed "20260610"
+
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-co-managed-it/.env.localtest
+ ✓ |node| ../ee/temporal-workflows/src/__tests__/integration/coManagedBootstrap.integration.test.ts (1427 tests | 1426 skipped) 4406ms 197 MB heap used
+   ✓ keeps same-number same-UUID tickets from two customers separate in global ordering and workspace options  638ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1426 skipped (1427)
+   Start at  15:30:22
+   Duration  12.15s (transform 2.76s, setup 72ms, collect 4.02s, tests 4.41s, environment 0ms, prepare 35ms)
+
