@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, IService, InvoiceViewModel } from '@alga-psa/types';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
@@ -44,12 +45,17 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [capability, setCapability] = useState<InvoiceAdjustmentCapability | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [authenticationExpired, setAuthenticationExpired] = useState(false);
+
+  const retryLoad = useCallback(() => setLoadAttempt((attempt) => attempt + 1), []);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setIsLoading(true);
       setLoadError(null);
+      setAuthenticationExpired(false);
       setCapability(null);
       try {
         const [clientsResult, servicesResult, capabilityResult] = await Promise.all([
@@ -58,8 +64,16 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
           getInvoiceAdjustmentCapability(invoice.invoice_id),
         ]);
         if (cancelled) return;
+        if (isAuthenticationFailure(clientsResult)) {
+          setAuthenticationExpired(true);
+          return;
+        }
         if (isActionMessageError(clientsResult) || isActionPermissionError(clientsResult)) {
           setLoadError(getErrorMessage(clientsResult));
+          return;
+        }
+        if (isAuthenticationFailure(servicesResult)) {
+          setAuthenticationExpired(true);
           return;
         }
         if (isActionMessageError(servicesResult) || isActionPermissionError(servicesResult)) {
@@ -75,10 +89,15 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
           setLoadError(getErrorMessage(capabilityResult));
           return;
         }
+        if (isAuthenticationFailure(capabilityResult)) {
+          setAuthenticationExpired(true);
+          return;
+        }
         setCapability(capabilityResult);
       } catch (error) {
         if (!cancelled) {
-          setLoadError(error instanceof Error ? error.message : 'Failed to load adjustment data.');
+          if (isAuthenticationFailure(error)) setAuthenticationExpired(true);
+          else setLoadError(error instanceof Error ? error.message : 'Failed to load adjustment data.');
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -88,7 +107,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
     return () => {
       cancelled = true;
     };
-  }, [invoice.invoice_id]);
+  }, [invoice.invoice_id, loadAttempt]);
 
   // The server capability is authoritative: a draft that is already posted to an
   // accounting system, or one a permission check rejects, is blocked here even
@@ -137,6 +156,26 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
     );
   }
 
+  if (authenticationExpired) {
+    return (
+      <Card className="mb-4" id="draft-invoice-adjustments-card">
+        <div className="p-6">
+          <Alert variant="warning">
+            <AlertDescription>{t('draftInvoiceAdjustments.sessionExpired', { defaultValue: 'Your session expired while loading invoice adjustments. Sign in again, then retry loading this invoice.' })}</AlertDescription>
+          </Alert>
+          <div className="mt-3 flex gap-2">
+            <a id="draft-adjustments-sign-in" href="/auth/msp/signin" target="_blank" rel="noreferrer" className="text-primary underline">
+              {t('draftInvoiceAdjustments.signIn', { defaultValue: 'Sign in' })}
+            </a>
+            <Button id="draft-adjustments-retry" type="button" variant="secondary" onClick={retryLoad}>
+              {t('draftInvoiceAdjustments.retry', { defaultValue: 'Retry loading' })}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div id="draft-invoice-adjustments-section">
       <ManualInvoices
@@ -152,3 +191,10 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
 };
 
 export default DraftInvoiceAdjustmentsCard;
+
+function isAuthenticationFailure(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const error = value as { name?: string; message?: string; code?: string };
+  return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'
+    || error.message === 'User not authenticated';
+}

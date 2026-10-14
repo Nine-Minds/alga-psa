@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Votre session a expiré pendant le chargement de cette facture. Reconnectez-vous, puis rechargez l’aperçu.",
     "title": "Aperçu de la facture",
     "templatePlaceholder": "Sélectionnez le modèle de facture...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des détails de la facture. Reconnectez-vous, puis rechargez les détails.",
     "title": "Détails de la facture",
     "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Enregistrer"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des ajustements de facture. Reconnectez-vous, puis rechargez cette facture.",
+    "signIn": "Se connecter",
+    "retry": "Recharger",
     "blockedTitle": "Ajustements de facture indisponibles",
     "blocked": {
       "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",

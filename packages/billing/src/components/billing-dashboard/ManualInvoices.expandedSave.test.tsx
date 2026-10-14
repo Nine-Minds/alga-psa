@@ -125,6 +125,35 @@ describe('expanded invoice adjustment global save', () => {
     expect(screen.queryByText(/Your session expired before this save completed/)).toBeNull();
   });
 
+  it('keeps invoice drafts and performs only an explicit read retry after line loading expires', async () => {
+    const authError = Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' });
+    mocks.lineItems.mockRejectedValueOnce(authError).mockResolvedValueOnce(invoice.invoice_charges);
+    renderDraft();
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    await fillCharge('Keep this after read retry');
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.lineItems).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(2));
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep this after read retry');
+    expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+  });
+
+  it('ignores a late detail response after selecting another invoice', async () => {
+    let resolveOld!: (value: any) => void;
+    const oldLine = { item_id: 'old-row', invoice_id: 'invoice-1', description: 'Old invoice row', service_id: 'svc-1', quantity: 1, unit_price: 100, is_manual: true, is_taxable: false };
+    const newLine = { ...oldLine, item_id: 'new-row', invoice_id: 'invoice-2', description: 'New invoice row' };
+    mocks.lineItems.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; })).mockResolvedValueOnce([newLine] as any);
+    const view = renderDraft({ ...invoice, invoice_charges: [oldLine] });
+    await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(1));
+    view.rerender(<ManualInvoices clients={[]} services={services} invoice={{ ...invoice, invoice_id: 'invoice-2', invoice_charges: [newLine] }} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
+    await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(2));
+    resolveOld([oldLine]);
+    await waitFor(() => expect(screen.getByText('New invoice row')).toBeTruthy());
+    expect(screen.queryByText('Old invoice row')).toBeNull();
+  });
+
   it('keeps collapsed pending values and removals through auth rejection and explicit retry', async () => {
     const existingCharge = {
       item_id: 'manual-to-remove', invoice_id: 'invoice-1', service_id: 'svc-1',

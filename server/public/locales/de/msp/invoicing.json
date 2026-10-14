@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden dieser Rechnung abgelaufen. Melden Sie sich erneut an und laden Sie anschließend die Vorschau erneut.",
     "title": "Rechnungsvorschau",
     "templatePlaceholder": "Rechnungsvorlage auswählen...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsdetails abgelaufen. Melden Sie sich erneut an und laden Sie die Details erneut.",
     "title": "Rechnungsdetails",
     "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Speichern"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsanpassungen abgelaufen. Melden Sie sich erneut an und laden Sie diese Rechnung anschließend erneut.",
+    "signIn": "Anmelden",
+    "retry": "Erneut laden",
     "blockedTitle": "Rechnungsanpassungen nicht verfügbar",
     "blocked": {
       "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",

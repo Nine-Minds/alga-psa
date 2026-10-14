@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Sessionen gick ut när fakturan lästes in. Logga in igen och läs sedan in förhandsvisningen på nytt.",
     "title": "Förhandsgranskning av faktura",
     "templatePlaceholder": "Välj fakturamall…",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Sessionen gick ut när fakturauppgifterna lästes in. Logga in igen och läs sedan in uppgifterna på nytt.",
     "title": "Fakturauppgifter",
     "description": "Redigera fakturautkastets metadata innan det fastställs.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Spara"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Sessionen gick ut när fakturajusteringarna lästes in. Logga in igen och läs sedan in fakturan på nytt.",
+    "signIn": "Logga in",
+    "retry": "Läs in igen",
     "blockedTitle": "Fakturajusteringar är inte tillgängliga",
     "blocked": {
       "exported": "Den här fakturan är synkroniserad med ett bokföringssystem. Makulera den eller utfärda en separat kreditfaktura i stället för att redigera raderna.",

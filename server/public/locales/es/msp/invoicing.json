@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "La sesión expiró mientras se cargaba esta factura. Inicie sesión de nuevo y vuelva a cargar la vista previa.",
     "title": "Vista previa de factura",
     "templatePlaceholder": "Seleccionar plantilla de factura...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los detalles de la factura. Inicie sesión de nuevo y vuelva a cargar los detalles.",
     "title": "Detalles de la factura",
     "description": "Edite los metadatos del borrador de factura antes de finalizarlo.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Guardar"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "La sesión expiró mientras se cargaban los ajustes de la factura. Inicie sesión de nuevo y vuelva a cargar esta factura.",
+    "signIn": "Iniciar sesión",
+    "retry": "Volver a cargar",
     "blockedTitle": "Ajustes de factura no disponibles",
     "blocked": {
       "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",

@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van deze factuur. Meld u opnieuw aan en laad daarna het voorbeeld opnieuw.",
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van de factuurgegevens. Meld u opnieuw aan en laad de gegevens opnieuw.",
     "title": "Factuurgegevens",
     "description": "Bewerk de metagegevens van de conceptfactuur voordat u deze definitief maakt.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Opslaan"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van factuuraanpassingen. Meld u opnieuw aan en laad deze factuur opnieuw.",
+    "signIn": "Aanmelden",
+    "retry": "Opnieuw laden",
     "blockedTitle": "Factuuraanpassingen niet beschikbaar",
     "blocked": {
       "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",

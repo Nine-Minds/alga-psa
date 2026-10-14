@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "La sessione è scaduta durante il caricamento di questa fattura. Accedi di nuovo e ricarica l’anteprima.",
     "title": "Anteprima della fattura",
     "templatePlaceholder": "Seleziona il modello di fattura...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "La sessione è scaduta durante il caricamento dei dettagli della fattura. Accedi di nuovo e ricarica i dettagli.",
     "title": "Dettagli della fattura",
     "description": "Modifica i metadati della bozza di fattura prima di finalizzarla.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Salva"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "La sessione è scaduta durante il caricamento delle rettifiche della fattura. Accedi di nuovo e ricarica questa fattura.",
+    "signIn": "Accedi",
+    "retry": "Ricarica",
     "blockedTitle": "Rettifiche fattura non disponibili",
     "blocked": {
       "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci.",

@@ -789,6 +789,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Your session expired while loading this invoice. Sign in again, then retry the preview.",
     "title": "Invoice Preview",
     "templatePlaceholder": "Select invoice template...",
     "labels": {
@@ -2372,6 +2373,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Your session expired while loading invoice details. Sign in again, then retry loading.",
     "title": "Invoice Details",
     "description": "Edit draft invoice metadata before finalizing.",
     "actions": {
@@ -2540,6 +2542,9 @@
     "save": "Save"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Your session expired while loading invoice adjustments. Sign in again, then retry loading this invoice.",
+    "signIn": "Sign in",
+    "retry": "Retry loading",
     "blockedTitle": "Invoice adjustments unavailable",
     "blocked": {
       "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.",

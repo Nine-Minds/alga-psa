@@ -815,6 +815,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Sesja wygasła podczas wczytywania tej faktury. Zaloguj się ponownie, a następnie ponów ładowanie podglądu.",
     "title": "Podgląd faktury",
     "templatePlaceholder": "Wybierz szablon faktury...",
     "labels": {
@@ -2422,6 +2423,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Sesja wygasła podczas wczytywania szczegółów faktury. Zaloguj się ponownie, a następnie ponów ładowanie szczegółów.",
     "title": "Szczegóły faktury",
     "description": "Przed finalizacją edytuj metadane wersji roboczej faktury.",
     "actions": {
@@ -2590,6 +2592,9 @@
     "save": "Zapisz"
   },
   "draftInvoiceAdjustments": {
+    "sessionExpired": "Sesja wygasła podczas wczytywania korekt faktury. Zaloguj się ponownie, a następnie ponów ładowanie tej faktury.",
+    "signIn": "Zaloguj się",
+    "retry": "Wczytaj ponownie",
     "blockedTitle": "Korekty faktury niedostępne",
     "blocked": {
       "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje.",

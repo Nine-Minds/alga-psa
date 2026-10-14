@@ -365,6 +365,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [authenticationExpired, setAuthenticationExpired] = useState(false);
+  const [readAuthenticationExpired, setReadAuthenticationExpired] = useState(false);
+  const [readRetry, setReadRetry] = useState(0);
+  const readAuthenticationExpiredRef = useRef(false);
+  const lastInvoiceReadIdRef = useRef<string | null>(null);
   // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
   // server returns the already-applied result instead of appending twice.
   const pendingOperationIdRef = useRef<string>(uuidv4());
@@ -525,14 +529,67 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   // Effect to fetch items when the invoice prop initially changes
   useEffect(() => {
+    let active = true;
     const fetchItems = async () => {
+      const recoveringReadFailure = readAuthenticationExpiredRef.current;
       // Use the invoice prop ID for the initial fetch trigger
       const invoiceIdToFetch = invoice?.invoice_id;
       if (invoiceIdToFetch) {
+        if (lastInvoiceReadIdRef.current !== invoiceIdToFetch) {
+          lastInvoiceReadIdRef.current = invoiceIdToFetch;
+          readAuthenticationExpiredRef.current = false;
+          setReadAuthenticationExpired(false);
+          // Switch the editor identity immediately, before any asynchronous
+          // fetch can finish. This prevents a late response from the previous
+          // selection from being displayed or submitted against the new one.
+          setCurrentInvoiceData(invoice);
+          const initialManualItems = invoice?.invoice_charges?.filter((item) => item.is_manual) ?? [];
+          setItems(initialManualItems.length ? initialManualItems.map((item) => ({
+            item_id: item.item_id,
+            invoice_id: item.invoice_id,
+            service_id: item.service_id || '',
+            quantity: item.quantity,
+            description: item.description,
+            rate: item.unit_price,
+            is_discount: Boolean(item.is_discount),
+            discount_type: item.is_discount ? (item.discount_type || 'fixed') as DiscountType : undefined,
+            discount_percentage: item.discount_percentage,
+            applies_to_item_id: item.applies_to_item_id,
+            applies_to_service_id: item.applies_to_service_id,
+            client_contract_id: item.client_contract_id,
+            contract_name: item.contract_name,
+            is_bundle_header: (item as any).is_bundle_header,
+            parent_item_id: item.parent_item_id,
+            is_manual: true,
+            is_taxable: item.is_taxable,
+            tax_region: item.tax_region ?? undefined,
+            manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+            location_id: item.location_id ?? null,
+            billing_profile_id: item.billing_profile_id ?? null,
+            is_manual_credit: item.is_manual_credit ?? false,
+            isExisting: true,
+            isRemoved: false,
+          })) : [{ ...baseDefaultItem, service_id: defaultManualServiceId, item_id: uuidv4(), invoice_id: invoiceIdToFetch }]);
+        }
         try {
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
+          setReadAuthenticationExpired(false);
           const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          if (!active) return;
+          if (isAuthenticationFailure(fetchedItems)) {
+            readAuthenticationExpiredRef.current = true;
+            setReadAuthenticationExpired(true);
+            return;
+          }
+          // A successful retry proves the read path is available again. Keep
+          // the existing editor snapshot because the operator may have edited
+          // rows while the session was unavailable.
+          if (recoveringReadFailure) {
+            readAuthenticationExpiredRef.current = false;
+            setReadAuthenticationExpired(false);
+            return;
+          }
           if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
             setError(getErrorMessage(fetchedItems));
             return;
@@ -596,12 +653,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           }]);
 
         } catch (error) {
+          if (!active) return;
+          if (isAuthenticationFailure(error)) {
+            readAuthenticationExpiredRef.current = true;
+            setReadAuthenticationExpired(true);
+            return;
+          }
           console.error('Error loading invoice items:', error);
           setError(t('manualInvoices.errors.loadItems', {
             defaultValue: 'Error loading invoice items',
           }));
         } finally {
-          setLoading(false);
+          if (active) setLoading(false);
         }
       } else {
         // Reset local state if invoice prop becomes null/undefined
@@ -617,8 +680,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     };
 
     fetchItems();
-    // Run effect only when the invoice prop itself changes
-  }, [invoice]);
+    return () => { active = false; };
+    // Keep unsaved row state when the parent refreshes the same invoice object.
+  }, [invoice?.invoice_id, readRetry]);
 
   // Attribution options for the draft-adjustment editor. Loaded only for an
   // existing contract draft, where the client is fixed and the operator needs
@@ -1467,7 +1531,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   return (
     <Card>
       <div className="p-6">
-        {loading ? (
+        {loading && !isDraftAdjustments ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[rgb(var(--color-border-900))]"></div>
           </div>
@@ -1562,6 +1626,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             {error && !authenticationExpired && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {readAuthenticationExpired && (
+              <Alert variant="warning" className="mb-4">
+                <AlertDescription>
+                  {t('draftInvoiceAdjustments.sessionExpired', { defaultValue: 'Your session expired while loading invoice details. Your current edits remain here. Sign in again, then retry loading.' })}
+                  <span className="ml-3 inline-flex gap-3">
+                    <a id="manual-invoice-read-sign-in" href="/auth/msp/signin" target="_blank" rel="noreferrer" className="underline">{t('draftInvoiceAdjustments.signIn', { defaultValue: 'Sign in' })}</a>
+                    <Button id="manual-invoice-read-retry" type="button" variant="secondary" onClick={() => setReadRetry((value) => value + 1)}>{t('draftInvoiceAdjustments.retry', { defaultValue: 'Retry loading' })}</Button>
+                  </span>
+                </AlertDescription>
               </Alert>
             )}
 
@@ -2018,3 +2094,10 @@ const ManualInvoices: React.FC<ManualInvoicesProps> = (props) => {
 };
 
 export default ManualInvoices;
+
+function isAuthenticationFailure(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const error = value as { name?: string; message?: string; code?: string };
+  return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'
+    || error.message === 'User not authenticated';
+}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InvoicePreviewPanel from './InvoicePreviewPanel';
@@ -180,5 +180,30 @@ describe('InvoicePreviewPanel', () => {
 
     expect(await screen.findByText('INV-1001::tpl-first')).toBeTruthy();
     expect(templateRendererMock.mock.calls.at(-1)?.[0]?.template?.template_id).toBe('tpl-first');
+  });
+
+  it('offers sign-in and explicit preview retry after an authentication failure', async () => {
+    getEnrichedInvoiceViewModelMock.mockRejectedValueOnce(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    render(<InvoicePreviewPanel invoiceId="inv-1" templates={defaultTemplates as any} selectedTemplateId={null} onTemplateChange={vi.fn()} isFinalized={false} />);
+
+    expect(await screen.findByText(/Your session expired while loading this invoice/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('target')).toBe('_blank');
+    getEnrichedInvoiceViewModelMock.mockResolvedValue(defaultViewModel);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
+    expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores an invoice preview response after the operator selects a different invoice', async () => {
+    let resolvePrevious!: (value: any) => void;
+    getEnrichedInvoiceViewModelMock.mockImplementationOnce(() => new Promise((resolve) => { resolvePrevious = resolve; }));
+    const props = { templates: defaultTemplates as any, selectedTemplateId: null, onTemplateChange: vi.fn(), isFinalized: false };
+    const view = render(<InvoicePreviewPanel {...props} invoiceId="inv-old" />);
+    await waitFor(() => expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(1));
+    view.rerender(<InvoicePreviewPanel {...props} invoiceId="inv-new" />);
+    await waitFor(() => expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(2));
+    resolvePrevious({ ...defaultViewModel, invoiceNumber: 'STALE-OLD' });
+    expect(await screen.findByText('INV-1001::tpl-resolved')).toBeTruthy();
+    expect(screen.queryByText('STALE-OLD::tpl-resolved')).toBeNull();
   });
 });

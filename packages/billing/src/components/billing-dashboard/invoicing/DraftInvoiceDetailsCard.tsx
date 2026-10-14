@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
@@ -67,8 +67,6 @@ const normalizeDateInputValue = (value: DraftInvoiceDetailsSummary['invoice_date
   }
 };
 
-const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
-
 const EMPTY_FORM_STATE: DraftInvoiceDetailsFormState = {
   invoiceNumber: '',
   invoiceDate: '',
@@ -108,6 +106,18 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [invoiceNumberError, setInvoiceNumberError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [profileAuthenticationExpired, setProfileAuthenticationExpired] = useState(false);
+  const [profileRetry, setProfileRetry] = useState(0);
+
+  const loadBillingProfiles = useCallback(async (clientId: string) => {
+    setProfileAuthenticationExpired(false);
+    try {
+      return await getClientBillingProfilesForBilling(clientId);
+    } catch (error) {
+      if (isAuthenticationFailure(error)) setProfileAuthenticationExpired(true);
+      throw error;
+    }
+  }, []);
 
   useEffect(() => {
     if (!initialState) {
@@ -329,6 +339,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
             <div className="space-y-1" id="draft-invoice-billing-profile">
               <BillingProfilePicker
                 id="draft-invoice-billing-profile-select"
+                key={`draft-invoice-billing-profile-${profileRetry}`}
                 clientId={invoice.client_id}
                 loadProfiles={loadBillingProfiles}
                 value={formState.billingProfileId}
@@ -344,6 +355,17 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
                 })}
                 disabled={isSaving}
               />
+              {profileAuthenticationExpired ? (
+                <Alert variant="warning" className="mt-2">
+                  <AlertDescription>
+                    {t('draftInvoiceDetails.sessionExpired', { defaultValue: 'Your session expired while loading invoice details. Sign in again, then retry loading.' })}
+                    <span className="ml-3 inline-flex gap-3">
+                      <a id="draft-invoice-details-sign-in" href="/auth/msp/signin" target="_blank" rel="noreferrer" className="underline">{t('draftInvoiceAdjustments.signIn', { defaultValue: 'Sign in' })}</a>
+                      <Button id="draft-invoice-details-retry" type="button" variant="secondary" onClick={() => setProfileRetry((attempt) => attempt + 1)}>{t('draftInvoiceAdjustments.retry', { defaultValue: 'Retry loading' })}</Button>
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -372,3 +394,10 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
 };
 
 export default DraftInvoiceDetailsCard;
+
+function isAuthenticationFailure(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const error = value as { name?: string; message?: string; code?: string };
+  return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'
+    || error.message === 'User not authenticated';
+}

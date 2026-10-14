@@ -105,6 +105,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [resolvedTemplateId, setResolvedTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewAuthenticationExpired, setPreviewAuthenticationExpired] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
@@ -121,6 +122,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidLoading, setVoidLoading] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const previewInvoiceIdentityRef = React.useRef(invoiceId);
   const isReturnedActionError = (value: unknown) =>
     isActionMessageError(value) || isActionPermissionError(value);
 
@@ -179,16 +181,24 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     const loadInvoiceData = async () => {
       if (!invoiceId) {
         setDetailedInvoiceData(null);
+        setPoSummary(null);
+        setResolvedTemplateId(null);
         setTaxSource('internal');
         setResolvedTemplateId(null);
         setIsLoading(false);
         return;
       }
 
+      if (previewInvoiceIdentityRef.current !== invoiceId) {
+        previewInvoiceIdentityRef.current = invoiceId;
+        setDetailedInvoiceData(null);
+        setPoSummary(null);
+        setResolvedTemplateId(null);
+      }
+
       setIsLoading(true);
       setError(null);
-      setDetailedInvoiceData(null);
-      setPoSummary(null);
+      setPreviewAuthenticationExpired(false);
 
       try {
         const [viewModel, summary, templateId] = await Promise.all([
@@ -199,9 +209,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         if (cancelled) return;
 
+        if (isAuthenticationFailure(viewModel)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
         if (isReturnedActionError(viewModel)) {
           throw new Error(getErrorMessage(viewModel));
         }
+        if (isAuthenticationFailure(summary)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
         if (isReturnedActionError(summary)) {
           throw new Error(getErrorMessage(summary));
         }
@@ -218,15 +230,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setDetailedInvoiceData(viewModel);
       } catch (err) {
         if (cancelled) return;
+        if (isAuthenticationFailure(err)) {
+          setPreviewAuthenticationExpired(true);
+          setError(null);
+          return;
+        }
         console.error(`Error fetching detailed data for invoice ${invoiceId}:`, err);
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
         setError(t('invoicePreview.errors.loadFailed', {
           message,
           defaultValue: 'Failed to load preview: {{message}}',
         }));
-        setDetailedInvoiceData(null);
-        setPoSummary(null);
-        setResolvedTemplateId(null);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -262,7 +276,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         setSourceQuote(null);
       } catch (sourceQuoteError) {
-        console.error(`Error fetching source quote for invoice ${invoiceId}:`, sourceQuoteError);
+        if (isAuthenticationFailure(sourceQuoteError)) setPreviewAuthenticationExpired(true);
+        else console.error(`Error fetching source quote for invoice ${invoiceId}`);
         if (isMounted) {
           setSourceQuote(null);
         }
@@ -274,7 +289,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [invoiceId]);
+  }, [invoiceId, previewRefreshCounter]);
 
   useEffect(() => {
     if (!detailedInvoiceData || typeof window === 'undefined') {
@@ -319,8 +334,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         }
       })
       .catch((annotationError) => {
-        console.error(`Error fetching annotations for invoice ${invoiceId}:`, annotationError);
         if (isMounted) {
+          if (isAuthenticationFailure(annotationError)) setPreviewAuthenticationExpired(true);
+          else console.error(`Error fetching annotations for invoice ${invoiceId}`);
           setInvoiceAnnotations([]);
         }
       });
@@ -328,7 +344,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [invoiceId]);
+  }, [invoiceId, previewRefreshCounter]);
 
   const handleAction = async (action: () => Promise<void>, actionLabel: string) => {
     setIsActionLoading(true);
@@ -412,6 +428,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   return (
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
+        {previewAuthenticationExpired ? (
+          <Alert variant="warning" className="mb-4">
+            <AlertDescription>
+              {t('invoicePreview.sessionExpired', { defaultValue: 'Your session expired while loading this invoice. Sign in again, then retry the preview.' })}
+              <span className="ml-3 inline-flex gap-3">
+                <a id="invoice-preview-sign-in" href="/auth/msp/signin" target="_blank" rel="noreferrer" className="underline">{t('draftInvoiceAdjustments.signIn', { defaultValue: 'Sign in' })}</a>
+                <Button id="invoice-preview-retry" type="button" variant="secondary" onClick={() => setPreviewRefreshCounter((count) => count + 1)}>{t('draftInvoiceAdjustments.retry', { defaultValue: 'Retry loading' })}</Button>
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {!readOnly && !isFinalized && draftInvoiceEditorSummary ? (
           <DraftInvoiceDetailsCard
             invoice={draftInvoiceEditorSummary}
@@ -892,3 +920,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 };
 
 export default InvoicePreviewPanel;
+
+function isAuthenticationFailure(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const error = value as { name?: string; message?: string; code?: string };
+  return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'
+    || error.message === 'User not authenticated';
+}

@@ -8,6 +8,10 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
+vi.mock('next/headers', () => ({
+  headers: vi.fn(async () => new Headers({ 'x-request-id': 'req-safe-1' })),
+}));
+
 vi.mock('../nextauth/edge-auth', () => ({
   auth: vi.fn(),
 }));
@@ -19,6 +23,7 @@ vi.mock('../nextauth/auth', () => ({
 vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevokedOrIdentityMismatch: vi.fn(),
+    getRejectionReason: vi.fn(),
   },
 }));
 
@@ -43,6 +48,7 @@ beforeEach(() => {
   vi.mocked(edgeAuth).mockReset();
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
+  vi.mocked(UserSession.getRejectionReason).mockReset();
 });
 
 afterEach(() => {
@@ -58,12 +64,12 @@ afterEach(() => {
 describe('getSession', () => {
   it('returns the edge-decoded session once the sessions table confirms it is live', async () => {
     vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockResolvedValue(false);
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue(null);
 
     const session = await getSession();
 
     expect(session).toBe(trackedSession);
-    expect(UserSession.isRevokedOrIdentityMismatch).toHaveBeenCalledWith(
+    expect(UserSession.getRejectionReason).toHaveBeenCalledWith(
       'tenant-1',
       'session-1',
       { userId: 'user-1', userType: 'internal' }
@@ -72,7 +78,7 @@ describe('getSession', () => {
 
   it('rejects a revoked session even though the edge decoder accepts its JWT', async () => {
     vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockResolvedValue(true);
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue('revoked');
 
     await expect(getSession()).resolves.toBeNull();
   });
@@ -98,7 +104,7 @@ describe('getSession', () => {
 
   it('fails closed when the revocation lookup throws', async () => {
     vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockRejectedValue(new Error('connection refused'));
+    vi.mocked(UserSession.getRejectionReason).mockRejectedValue(new Error('connection refused'));
 
     await expect(getSession()).resolves.toBeNull();
   });
@@ -106,7 +112,7 @@ describe('getSession', () => {
   it('still enforces revocation on the full-auth fallback path', async () => {
     vi.mocked(edgeAuth).mockResolvedValue(null);
     vi.mocked(fullAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockResolvedValue(true);
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue('revoked');
 
     await expect(getSession()).resolves.toBeNull();
     expect(fullAuth).toHaveBeenCalled();
@@ -116,7 +122,7 @@ describe('getSession', () => {
 describe('getSessionWithRevocationCheck', () => {
   it('returns a live session decoded by full auth', async () => {
     vi.mocked(fullAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockResolvedValue(false);
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue(null);
 
     await expect(getSessionWithRevocationCheck()).resolves.toBe(trackedSession);
   });
@@ -125,7 +131,7 @@ describe('getSessionWithRevocationCheck', () => {
     process.env.NODE_ENV = 'development';
     vi.mocked(fullAuth).mockResolvedValue(null);
     vi.mocked(edgeAuth).mockResolvedValue(trackedSession);
-    vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockResolvedValue(true);
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue('revoked');
 
     await expect(getSessionWithRevocationCheck()).resolves.toBeNull();
   });

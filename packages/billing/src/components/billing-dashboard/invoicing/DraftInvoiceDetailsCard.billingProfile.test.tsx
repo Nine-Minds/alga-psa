@@ -70,6 +70,7 @@ const segmented = [
 describe('draft invoice details — the profile it bills', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
     mocks.loadProfiles.mockResolvedValue(segmented);
     mocks.updateDraftInvoiceProperties.mockResolvedValue({
       invoiceId: 'invoice-1',
@@ -167,5 +168,17 @@ describe('draft invoice details — the profile it bills', () => {
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => expect(mocks.updateDraftInvoiceProperties).toHaveBeenCalled());
     expect(mocks.updateDraftInvoiceProperties.mock.calls[0][1]).not.toHaveProperty('billingProfileId');
+  });
+
+  it('offers sign-in and explicit retry when invoice profile details lose authentication', async () => {
+    mocks.loadProfiles.mockRejectedValueOnce(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    render(<DraftInvoiceDetailsCard invoice={invoice({ client_has_multiple_billing_profiles: true })} />);
+
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('target')).toBe('_blank');
+    mocks.loadProfiles.mockResolvedValueOnce(segmented);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(mocks.loadProfiles).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('combobox')).toBeTruthy();
   });
 });
