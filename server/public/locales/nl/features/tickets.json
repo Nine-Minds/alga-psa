@@ -2338,7 +2338,7 @@
       "columns": {
         "name": "Naam",
         "title": "Tickettitel",
-        "board": "Board",
+        "board": "Bord",
         "checklist": "Checklistitems",
         "status": "Status"
       }
@@ -2358,7 +2358,7 @@
     "sections": {
       "details": "Sjabloon",
       "ticket": "Ticket",
-      "checklist": "Checklist",
+      "checklist": "Controlelijst",
       "customFields": "Aangepaste velden"
     },
     "fields": {
@@ -2400,7 +2400,7 @@
     "errors": {
       "notFound": "Ticketsjabloon niet gevonden",
       "duplicateName": "Er bestaat al een sjabloon met de naam {{name}}",
-      "invalidReferences": "Het sjabloon verwijst naar een board, categorie of prioriteit die niet beschikbaar is",
+      "invalidReferences": "Het sjabloon verwijst naar een bord, categorie of prioriteit die niet beschikbaar is",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
       "subcategoryNeedsCategory": "Een subcategorie vereist een categorie"
     }

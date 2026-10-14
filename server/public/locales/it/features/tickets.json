@@ -2338,7 +2338,7 @@
       "columns": {
         "name": "Nome",
         "title": "Titolo del ticket",
-        "board": "Board",
+        "board": "Bacheca",
         "checklist": "Voci della checklist",
         "status": "Stato"
       }
@@ -2358,7 +2358,7 @@
     "sections": {
       "details": "Modello",
       "ticket": "Ticket",
-      "checklist": "Checklist",
+      "checklist": "Lista di controllo",
       "customFields": "Campi personalizzati"
     },
     "fields": {
@@ -2400,7 +2400,7 @@
     "errors": {
       "notFound": "Modello di ticket non trovato",
       "duplicateName": "Esiste già un modello chiamato {{name}}",
-      "invalidReferences": "Il modello fa riferimento a una board, una categoria o una priorità non disponibile",
+      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
       "notAvailable": "I modelli di ticket non sono disponibili",
       "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria"
     }

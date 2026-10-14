@@ -2358,7 +2358,7 @@
     "sections": {
       "details": "Modelo",
       "ticket": "Ticket",
-      "checklist": "Checklist",
+      "checklist": "Lista de verificação",
       "customFields": "Campos personalizados"
     },
     "fields": {
