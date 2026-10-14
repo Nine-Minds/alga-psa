@@ -4448,27 +4448,29 @@ async function withTicketQueueFixture(work: (fixture: Awaited<ReturnType<typeof 
   await work({ ...fixture, nativeId, list });
 }
 
-it('combines authorized native and customer tickets before queue search, sorting, pagination and counts', async () => withTicketQueueFixture(async ({ principal, resource, nativeId, customer, sponsor, list }) => {
+it('builds working from shared tickets only, never the home tenant native tickets, before queue search, sorting, pagination and counts', async () => withTicketQueueFixture(async ({ principal, resource, nativeId, customer, sponsor, list }) => {
   const first = await list(db, principal, { view: 'working', sort: 'title', direction: 'asc', pageSize: 1 });
-  expect(first).toMatchObject({ totalCount: 2, openCount: 2, closedCount: 0, page: 1, pageSize: 1 });
-  expect(first.items).toEqual([expect.objectContaining({ tenant: principal.tenant, ticketId: nativeId, relationshipId: null, fields: expect.objectContaining({ title: 'A native issue' }) })]);
-  const second = await list(db, principal, { view: 'working', sort: 'title', direction: 'asc', pageSize: 1, page: 2 });
-  expect(second.totalCount).toBe(2); expect(second.items).toEqual([expect.objectContaining({ tenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id })]);
-  expect((await list(db, principal, { view: 'working', search: 'SHARED-1' })).totalCount).toBe(2);
-  expect((await list(db, principal, { view: 'working', search: 'native' })).items.map(item => item.ticketId)).toEqual([nativeId]);
+  expect(first).toMatchObject({ totalCount: 1, openCount: 1, closedCount: 0, page: 1, pageSize: 1 });
+  expect(first.items).toEqual([expect.objectContaining({ tenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id })]);
+  expect(first.items.map(item => item.ticketId)).not.toContain(nativeId);
+  expect((await list(db, principal, { view: 'working', pageSize: 1, page: 2 })).items).toEqual([]);
+  expect((await list(db, principal, { view: 'working', search: 'SHARED-1' })).totalCount).toBe(1);
+  expect((await list(db, principal, { view: 'working', search: 'native' }))).toMatchObject({ items: [], totalCount: 0 });
   expect((await list(db, principal, { view: 'oversight' })).items.map(item => item.ticketId)).toEqual([resource.id]);
   expect((await list(db, principal, { view: 'working', workspaceTenant: resource.tenant })).items.map(item => item.ticketId)).toEqual([resource.id]);
-  expect(await list(db, principal, { view: 'working', page: 10 })).toMatchObject({ items: [], totalCount: 2 });
+  expect((await list(db, principal, { view: 'working', workspaceTenant: principal.tenant }))).toMatchObject({ items: [], totalCount: 0 });
+  expect((await list(db, principal, { view: 'working' })).workspaces.map(item => item.tenant)).toEqual([resource.tenant]);
+  expect(await list(db, principal, { view: 'working', page: 10 })).toMatchObject({ items: [], totalCount: 1 });
   await customer.table('tickets').where('ticket_id', resource.id).update({ title: 'Literal 100% issue' });
   await sponsor.table('tickets').where('ticket_id', nativeId).update({ title: 'Literal 100X issue' });
   expect((await list(db, principal, { view: 'working', search: '100%' })).items.map(item => item.tenant)).toEqual([resource.tenant]);
   const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('status_id');
   await customer.table('statuses').where('status_id', ticket.status_id).update({ is_closed: true });
-  expect(await list(db, principal, { view: 'working', state: 'all' })).toMatchObject({ totalCount: 2, openCount: 1, closedCount: 1 });
+  expect(await list(db, principal, { view: 'working', state: 'all' })).toMatchObject({ totalCount: 1, openCount: 0, closedCount: 1 });
   expect((await list(db, principal, { view: 'working', state: 'closed' })).items.map(item => item.tenant)).toEqual([resource.tenant]);
 }));
 
-it('filters native and shared work by the sponsor client before search, counts and pagination', async () => withTicketQueueFixture(async ({ principal, sponsor, operation, resource, nativeId, list }) => {
+it('filters shared work by the sponsor client before search, counts and pagination', async () => withTicketQueueFixture(async ({ principal, sponsor, operation, resource, nativeId, list }) => {
   const otherClient = randomUUID();
   await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: otherClient, client_name: 'Sibling client' });
   const status = await sponsor.table('statuses').where({ board_id: operation.request.escalationBoardId }).first();
@@ -4477,18 +4479,20 @@ it('filters native and shared work by the sponsor client before search, counts a
     client_id: otherClient, board_id: operation.request.escalationBoardId, status_id: status.status_id, entered_by: principal.userId,
     entered_at: '2026-01-02T00:00:00Z', updated_at: '2026-01-02T00:00:00Z' });
   const scoped = await list(db, principal, { view: 'working', clientId: operation.request.clientId, state: 'all' });
-  expect(scoped.totalCount).toBe(2);
-  expect(scoped.items.map(item => item.ticketId).sort()).toEqual([nativeId, resource.id].sort());
+  expect(scoped.totalCount).toBe(1);
+  expect(scoped.items.map(item => item.ticketId)).toEqual([resource.id]);
+  expect(scoped.items.map(item => item.ticketId)).not.toContain(nativeId);
   const sibling = await list(db, principal, { view: 'working', clientId: otherClient, state: 'all' });
-  expect(sibling.totalCount).toBe(1);
-  expect(sibling.items.map(item => item.ticketId)).toEqual([otherTicket]);
-  expect(scoped.openCount + scoped.closedCount).toBe(2);
+  expect(sibling).toMatchObject({ totalCount: 0, items: [] });
+  expect(otherTicket).toBeDefined();
+  expect(scoped.openCount + scoped.closedCount).toBe(1);
 }));
 
 it('removes handed-back tickets from working while retaining oversight, and removes revoked explicit access from all queue results', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, resource, nativeId, list }) => {
   const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
   await handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer IT continues' });
-  expect((await list(db, principal, { view: 'working' })).items.map(item => item.ticketId)).toEqual([nativeId]);
+  expect(await list(db, principal, { view: 'working' })).toMatchObject({ items: [], totalCount: 0 });
+  expect(nativeId).toBeDefined();
   expect((await list(db, principal, { view: 'oversight' })).items[0].fields.responsibility).toBe('customer');
   await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Remove explicit access' });
   expect(await list(db, principal, { view: 'oversight' })).toMatchObject({ items: [], totalCount: 0 });
@@ -4505,14 +4509,15 @@ it('excludes unshared tickets and another MSP customer from queue searches and t
   await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ visibility_mode: 'board_scope' });
   await customer.table('co_management_board_scopes').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, board_id: source.board_id, can_collaborate: false });
   expect((await list(db, principal, { view: 'oversight' })).totalCount).toBe(2);
-  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(2);
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(1);
 }));
 
 it('keeps permitted queue reads during license lapse and rejects stale sessions and removed staff assignments', async () => withTicketQueueFixture(async ({ principal, sponsor, resource, nativeId, list }) => {
   await expireCoManagedEntitlement(principal.tenant);
-  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(2);
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(1);
   await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).del();
-  expect((await list(db, principal, { view: 'working' })).items.map(item => item.ticketId)).toEqual([nativeId]);
+  expect(await list(db, principal, { view: 'working' })).toMatchObject({ items: [], totalCount: 0, assignedRelationshipCount: 0 });
+  expect(nativeId).toBeDefined();
   await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() - 1) });
   await expect(list(db, principal, { view: 'working' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   await expect(list(db, { ...principal, kind: 'api' } as any, { view: 'working' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
@@ -4525,11 +4530,11 @@ it('applies MSP client and queue policy projections before counts and never comp
     config: { selectedBoardIds: [operation.request.escalationBoardId] } });
   await publishBundleRevision(db, { tenant: principal.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: principal.userId });
   await createBundleAssignment(db, { tenant: principal.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: principal.userId });
-  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(2);
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(1);
   await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundle.bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedBoardIds: [operation.customer_board_id] } });
   expect(await list(db, principal, { view: 'working' })).toMatchObject({ items: [], totalCount: 0 });
   await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundle.bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedBoardIds: [operation.request.escalationBoardId], constraints: [{ field: 'owner_user_id', operator: 'eq', value: principal.userId }] } });
-  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(1);
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(0);
   await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundle.bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedBoardIds: [operation.request.escalationBoardId], constraints: [{ field: 'unmapped_field', operator: 'eq', value: principal.userId }] } });
   expect((await list(db, principal, { view: 'working' })).totalCount).toBe(0);
 }));
@@ -4547,7 +4552,7 @@ it('redacts queue fields before search, sorting, state filters and dashboard cou
   expect(page.items[0].fields).not.toHaveProperty('responsibility');
   expect(await list(db, principal, { view: 'oversight', state: 'all', search: 'Customer issue' })).toMatchObject({ items: [], totalCount: 0 });
   expect(await list(db, principal, { view: 'oversight', state: 'open' })).toMatchObject({ items: [], totalCount: 0 });
-  expect((await list(db, principal, { view: 'working', state: 'all' })).totalCount).toBe(1);
+  expect((await list(db, principal, { view: 'working', state: 'all' })).totalCount).toBe(0);
 }));
 
 it('keeps same-number same-UUID tickets from two customers separate in global ordering and workspace options', async () => withTicketQueueFixture(async ({ principal, sponsor, operation, resource, list }) => {
@@ -16122,18 +16127,28 @@ it('customer interaction lifecycle rolls back insertion and deletion when creden
   expect(await customer.table('interactions').where('interaction_id', id).first()).toBeDefined();
 }));
 
-it('consolidated ticket export returns every matching row in global order regardless of page controls', async () => withTicketQueueFixture(async ({ principal, sponsor, nativeId, resource }: any) => {
+it('consolidated ticket export returns every matching shared row in global order regardless of page controls and never native tickets', async () => withTicketQueueFixture(async ({ principal, customerPrincipal, sponsor, customer, nativeId, resource }: any) => {
   const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
-  const source = await sponsor.table('tickets').where('ticket_id', nativeId).first();
-  await sponsor.table('tickets').insert(Array.from({ length: 105 }, (_, n) => ({ tenant: principal.tenant, ticket_id: randomUUID(), ticket_number: `EXPORT-${String(n).padStart(3, '0')}`, title: `Export row ${String(n).padStart(3, '0')}`, client_id: source.client_id, board_id: source.board_id, status_id: source.status_id, entered_by: principal.userId })));
+  const { escalateCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  const source = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const { title_index, ...copy } = source;
+  const ids: string[] = [];
+  for (let n = 0; n < 105; n++) {
+    const id = randomUUID(); ids.push(id);
+    await customer.table('tickets').insert({ ...copy, ticket_id: id, ticket_number: `EXPORT-${String(n).padStart(3, '0')}`, title: `Export row ${String(n).padStart(3, '0')}` });
+    await escalateCoManagedTicket(db, customerPrincipal, { ...resource, id }, { operationId: randomUUID(), expectedRevision: 0, note: 'Export escalation' });
+  }
   const rows = await exportCoManagedTicketQueue(db, principal, { view: 'working', state: 'all', sort: 'title', direction: 'asc', page: 100, pageSize: 1 } as any);
-  expect(rows).toHaveLength(107); expect(rows[0].ticketId).toBe(nativeId);
-  expect(new Set(rows.map(row => `${row.tenant}:${row.ticketId}`)).size).toBe(107);
+  expect(rows).toHaveLength(106); expect(rows[0].ticketId).toBe(resource.id);
+  expect(rows.map(row => row.ticketId)).not.toContain(nativeId);
+  expect(new Set(rows.map(row => `${row.tenant}:${row.ticketId}`)).size).toBe(106);
   expect(rows.find(row => row.ticketId === resource.id)).toMatchObject({ tenant: resource.tenant, relationshipId: resource.relationshipId });
   const filtered = await exportCoManagedTicketQueue(db, principal, { view: 'working', search: 'Export row 10', sort: 'number', direction: 'desc' });
   expect(filtered.map(row => row.fields.ticket_number)).toEqual(['EXPORT-104', 'EXPORT-103', 'EXPORT-102', 'EXPORT-101', 'EXPORT-100']);
   expect(await exportCoManagedTicketQueue(db, principal, { view: 'working', workspaceTenant: randomUUID() })).toEqual([]);
-}));
+  expect(await exportCoManagedTicketQueue(db, principal, { view: 'working', workspaceTenant: principal.tenant })).toEqual([]);
+  expect(sponsor).toBeDefined();
+}), 120000);
 
 it('consolidated ticket export applies current field restrictions and removes revoked work from the downloadable relation', async () => withTicketQueueFixture(async ({ principal, resource, customerPrincipal, operation }: any) => {
   const { exportCoManagedTicketQueue } = await import('../../../../../packages/co-managed/src/ticketQueue');
@@ -16219,6 +16234,105 @@ async function withTicketAssignmentFixture(work: (fixture: any) => Promise<void>
   return withTicketQueueFixture(async fixture => work({ ...fixture, assignments: await import('../../../../../packages/co-managed/src/ticketAssignments'),
     selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } }));
 }
+
+const queueSignals = async (list: any, principal: any, extra: Record<string, unknown> = {}) => {
+  const page = await list(db, principal, { view: 'working', state: 'open', page: 1, pageSize: 1, ...extra });
+  return { counts: page.signals, assigned: page.assignedRelationshipCount };
+};
+const signalRows = async (list: any, principal: any, signal: string, extra: Record<string, unknown> = {}) =>
+  list(db, principal, { view: 'working', state: 'open', signal, pageSize: 100, ...extra });
+
+it('T021 signal counts equal exactly the rows their authorized filters return and working never contains native tickets', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, nativeId, selected, list }: any) => {
+  expect(await queueSignals(list, principal)).toEqual({ counts: { escalatedUnassigned: 1, awaitingReply: 0 }, assigned: 1 });
+  const unassigned = await signalRows(list, principal, 'escalated_unassigned');
+  expect(unassigned.items.map((item: any) => item.ticketId)).toEqual([resource.id]); expect(unassigned.totalCount).toBe(1);
+  expect(unassigned.items.map((item: any) => item.ticketId)).not.toContain(nativeId);
+  expect((await signalRows(list, principal, 'awaiting_reply')).totalCount).toBe(0);
+  // Assigned to the viewer, owner replied: moves from escalated-unassigned to awaiting-reply.
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  const after = await queueSignals(list, principal);
+  expect(after.counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 1 });
+  expect((await signalRows(list, principal, 'escalated_unassigned')).totalCount).toBe(0);
+  const awaiting = await signalRows(list, principal, 'awaiting_reply');
+  expect(awaiting.items.map((item: any) => item.ticketId)).toEqual([resource.id]); expect(awaiting.totalCount).toBe(after.counts.awaitingReply);
+  // Not awaiting the MSP any more, or closed: contributes nothing.
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_client' });
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('status_id');
+  await customer.table('statuses').where('status_id', ticket.status_id).update({ is_closed: true });
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  expect(sponsor).toBeDefined();
+}));
+
+it('T021 handed-back tickets and a viewer without a staff assignment contribute no signal', async () => withTicketAssignmentFixture(async ({ principal, resource, sponsor, list }: any) => {
+  const { handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
+  await handBackCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Back to customer' });
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).del();
+  expect(await queueSignals(list, principal)).toEqual({ counts: { escalatedUnassigned: 0, awaitingReply: 0 }, assigned: 0 });
+  expect(await signalRows(list, principal, 'escalated_unassigned')).toMatchObject({ items: [], totalCount: 0 });
+}));
+
+it('T021 a redacted driving field excludes the row from its signal and the count follows the filter', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, operation, selected, list }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const redact = async (name: string, fields: string[]) => {
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name, actorUserId: principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: fields } });
+    await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+    return bundleId;
+  };
+  expect((await queueSignals(list, principal)).counts.escalatedUnassigned).toBe(1);
+  const bundleId = await redact('Hide responsibility', ['responsibility']);
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  expect(await signalRows(list, principal, 'escalated_unassigned')).toMatchObject({ items: [], totalCount: 0 });
+  await db('authorization_bundle_assignments').where({ tenant: principal.tenant, bundle_id: bundleId }).del();
+  expect((await queueSignals(list, principal)).counts.escalatedUnassigned).toBe(1);
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  expect((await queueSignals(list, principal)).counts.awaitingReply).toBe(1);
+  await redact('Hide response state', ['response_state']);
+  expect((await queueSignals(list, principal)).counts).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  expect(await signalRows(list, principal, 'awaiting_reply')).toMatchObject({ items: [], totalCount: 0 });
+}));
+
+it('T021 revoked and ended relationships contribute nothing to options, rows or signal counts, and a second customer with the same ticket id stays isolated', async () => withTicketQueueFixture(async ({ principal, resource, customer, list }: any) => {
+  const before = await list(db, principal, { view: 'working' });
+  expect(before.workspaces.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+  expect((await queueSignals(list, principal)).counts.escalatedUnassigned).toBe(1);
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  const after = await list(db, principal, { view: 'working' });
+  expect(after).toMatchObject({ items: [], totalCount: 0, workspaces: [], assignedRelationshipCount: 0 });
+  expect(after.signals).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+  expect(await signalRows(list, principal, 'escalated_unassigned')).toMatchObject({ items: [], totalCount: 0 });
+}));
+
+it('T021 signal counts keep two customer workspaces with the same ticket number and id isolated', async () => withTicketQueueFixture(async ({ principal, sponsor, operation, resource, list }: any) => {
+  await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+  const clientId = randomUUID();
+  await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: clientId, client_name: 'Second customer' });
+  const provisioned = await prepareCoManagedProvisioning(db, { sponsorTenant: principal.tenant, clientId, requestedBy: principal.userId,
+    escalationBoardId: operation.request.escalationBoardId, operationId: randomUUID(), seats: 1, visibilityMode: 'board_scope', workspaceName: 'Second customer IT',
+    administrator: { firstName: 'Second', lastName: 'Admin', email: `admin-${randomUUID()}@example.test` } });
+  const second = await readyForAcceptance('board_scope', provisioned);
+  await acceptCoManagedRelationship(db, second.actor, second.input);
+  const { replaceCoManagedStaffAssignments } = await import('../../../../../packages/co-managed/src/policy');
+  await replaceCoManagedStaffAssignments(db, principal, { customerTenant: second.actor.tenant, relationshipId: provisioned.relationship_id }, 2,
+    [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+  const status = await second.customer.table('statuses').where({ board_id: provisioned.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+  await second.customer.table('tickets').insert({ tenant: second.actor.tenant, ticket_id: resource.id, ticket_number: 'SHARED-1', title: 'B customer issue',
+    client_id: provisioned.customer_client_id, board_id: provisioned.customer_board_id, status_id: status.status_id, entered_by: second.actor.userId });
+  // Second customer's ticket is merely visible (oversight); only the first customer's escalated ticket drives the signal.
+  expect((await queueSignals(list, principal)).counts.escalatedUnassigned).toBe(1);
+  expect((await queueSignals(list, principal)).assigned).toBe(2);
+  const rows = await signalRows(list, principal, 'escalated_unassigned');
+  expect(rows.items.map((item: any) => `${item.tenant}:${item.ticketId}`)).toEqual([`${resource.tenant}:${resource.id}`]);
+  expect((await signalRows(list, principal, 'escalated_unassigned', { workspaceTenant: second.actor.tenant })).totalCount).toBe(0);
+  const oversight = await list(db, principal, { view: 'oversight' });
+  expect(oversight.items.map((item: any) => `${item.tenant}:${item.ticketId}`).sort()).toEqual([`${resource.tenant}:${resource.id}`, `${second.actor.tenant}:${resource.id}`].sort());
+}));
 
 it('shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, selected }: any) => {
   const before = await customer.table('tickets').where('ticket_id', resource.id).first();
