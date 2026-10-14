@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
@@ -184,6 +184,13 @@ function createMockTrx(tickets: Map<string, Record<string, any>>) {
 }
 
 describe('ticketActions moveTicketsToBoard', () => {
+  // ticketActions statically pulls in @alga-psa/co-managed and @alga-psa/licensing. The first
+  // dynamic import pays that transform cost; under Nx parallel load in CI it exceeded the
+  // per-test timeout and failed T009 (the first test). Pay it once here with its own budget.
+  beforeAll(async () => {
+    await import('./ticketActions');
+  }, 120_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
     createTenantKnexMock.mockResolvedValue({ knex: {} });
