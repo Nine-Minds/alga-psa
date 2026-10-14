@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { setAssetAssignee } from './assetAssignmentModel';
+import { isMissingAssetGroupTable, setAssetAssignee } from './assetAssignmentModel';
 
 /**
  * FR-E6: contact deletion cleanup for asset groups.
@@ -27,8 +27,10 @@ export async function clearGroupContactLinksForContact(
     ownedGroupIds = await (db.table('asset_group_contacts') as Knex.QueryBuilder<any, any>)
       .where({ contact_name_id: contactId, role: 'owner' })
       .pluck('group_id');
-  } catch {
-    // The group tables arrive in a later migration; nothing to clean up.
+  } catch (error) {
+    // Before the group migration there is nothing to clean up; any other
+    // error must reach the contact-deletion caller.
+    if (!isMissingAssetGroupTable(error)) throw error;
     return;
   }
 

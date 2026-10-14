@@ -56,6 +56,18 @@ function table(trx: Knex | Knex.Transaction, tenant: string, name: string): Knex
 }
 
 /**
+ * The group tables arrive in a later migration than this helper, so a lookup
+ * against them can legitimately fail with `undefined_table`. Anything else is
+ * a real failure — swallowing it inside a transaction only hides an abort.
+ */
+export function isMissingAssetGroupTable(error: unknown): boolean {
+  const dbError = error as { code?: string; table?: string; message?: string } | null;
+  if (dbError?.code !== '42P01') return false;
+  const named = dbError.table ?? dbError.message ?? '';
+  return named === '' || /asset_group/.test(named);
+}
+
+/**
  * Whether the asset is a member of a shared workspace. Tolerates the group
  * tables not existing yet so this helper lands before the groups migration.
  */
@@ -72,10 +84,11 @@ async function sharedWorkspaceGroupId(
       .where({ 'm.asset_id': assetId, 'g.kind': 'shared_workspace' })
       .first<{ group_id: string }>('g.group_id');
     return row?.group_id ?? null;
-  } catch {
-    // The groups tables arrive in a later migration; before then nothing is a
-    // workspace member.
-    return null;
+  } catch (error) {
+    // Before the groups migration nothing is a workspace member; any other
+    // error belongs to the caller.
+    if (isMissingAssetGroupTable(error)) return null;
+    throw error;
   }
 }
 

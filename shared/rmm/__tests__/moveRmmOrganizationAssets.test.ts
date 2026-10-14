@@ -246,6 +246,22 @@ describe('moveRmmOrganizationAssets', () => {
     expect(h.dbState.assets.find((row) => row.asset_id === 'other-tenant')?.client_id).toBe(OLD_CLIENT);
   });
 
+  it('still records the move when there is no actor', async () => {
+    h.dbState.assets.push(asset('a1'));
+
+    await moveRmmOrganizationAssets(h.knexMock, TENANT, {
+      integrationId: 'integration-1',
+      provider: 'tacticalrmm',
+      externalOrganizationId: 'org-1',
+      newClientId: NEW_CLIENT,
+      actorUserId: null,
+    });
+
+    const move_history = h.dbState.asset_history.find((row) => row.change_type === 'updated');
+    expect(move_history).toMatchObject({ changed_by: null });
+    expect(move_history?.changes).toMatchObject({ source: 'rmm_organization_move' });
+  });
+
   it('skips an asset already on the new client', async () => {
     h.dbState.assets.push(asset('already', { client_id: NEW_CLIENT }));
     expect(await move()).toEqual({ moved: 0, assetIds: [] });

@@ -227,14 +227,27 @@ describe('setAssetAssignee', () => {
     expect(h.dbState.assets[0].contact_name_id).toBeNull();
   });
 
-  it('skips the history row when there is no actor (sessionless RMM sync)', async () => {
+  it('still writes history when there is no actor (sessionless RMM sync)', async () => {
     await setAssetAssignee(h.knexMock as any, TENANT, ASSET, CONTACT_A, {
       actorUserId: null,
       source: 'rmm',
+      provider: 'levelio',
       note: 'CORP\\jdoe',
     });
     expect(h.dbState.asset_assignments).toHaveLength(1);
     expect(h.dbState.asset_assignments[0].note).toBe('CORP\\jdoe');
-    expect(h.dbState.asset_history).toHaveLength(0);
+    // `asset_history.changed_by` is nullable since 20261009127000, so the
+    // auto-assignment is visible on the timeline and names its provider.
+    expect(h.dbState.asset_history).toHaveLength(1);
+    expect(h.dbState.asset_history[0]).toMatchObject({
+      change_type: 'assignee_changed',
+      changed_by: null,
+    });
+    expect(h.dbState.asset_history[0].changes).toMatchObject({
+      source: 'rmm',
+      provider: 'levelio',
+      note: 'CORP\\jdoe',
+      contact_name_id: CONTACT_A,
+    });
   });
 });

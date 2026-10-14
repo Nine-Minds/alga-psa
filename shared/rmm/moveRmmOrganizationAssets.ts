@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { setAssetAssignee } from '../models/assetAssignmentModel';
+import { isMissingAssetGroupTable, setAssetAssignee } from '../models/assetAssignmentModel';
 
 /**
  * FR-G4: re-point an RMM organization's assets when its mapped client changes.
@@ -103,15 +103,19 @@ export async function moveRmmOrganizationAssets(
           .first<{ group_id: string; name: string; kind: string }>('group_id', 'name', 'kind');
         await table(trx, tenant, 'asset_group_members').where({ asset_id: assetId }).delete();
       }
-    } catch {
-      // The group tables arrive in a later migration.
+    } catch (error) {
+      // The group tables arrive in a later migration; anything else aborts
+      // the move rather than moving the asset half way.
+      if (!isMissingAssetGroupTable(error)) throw error;
     }
 
-    if (removedGroup && args.actorUserId) {
+    // `asset_history.changed_by` is nullable since 20261009127000, so a move
+    // triggered without a session still shows on the asset's timeline.
+    if (removedGroup) {
       await table(trx, tenant, 'asset_history').insert({
         tenant,
         asset_id: assetId,
-        changed_by: args.actorUserId,
+        changed_by: args.actorUserId ?? null,
         change_type: 'group_removed',
         changes: {
           group_id: removedGroup.group_id,
@@ -134,21 +138,19 @@ export async function moveRmmOrganizationAssets(
         updated_at: new Date().toISOString(),
       });
 
-    if (args.actorUserId) {
-      await table(trx, tenant, 'asset_history').insert({
-        tenant,
-        asset_id: assetId,
-        changed_by: args.actorUserId,
-        change_type: 'updated',
-        changes: {
-          source: 'rmm_organization_move',
-          previous_client_id: asset.client_id,
-          client_id: args.newClientId,
-          external_organization_id: args.externalOrganizationId,
-        },
-        changed_at: new Date().toISOString(),
-      });
-    }
+    await table(trx, tenant, 'asset_history').insert({
+      tenant,
+      asset_id: assetId,
+      changed_by: args.actorUserId ?? null,
+      change_type: 'updated',
+      changes: {
+        source: 'rmm_organization_move',
+        previous_client_id: asset.client_id,
+        client_id: args.newClientId,
+        external_organization_id: args.externalOrganizationId,
+      },
+      changed_at: new Date().toISOString(),
+    });
 
     moved.push(assetId);
   }
