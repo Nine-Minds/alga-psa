@@ -2103,7 +2103,7 @@
       "schedule": "Planning",
       "behaviour": "Gedrag",
       "overrides": "Overschrijvingen voor dit schema",
-      "dispatch": "Dispatch"
+      "dispatch": "Toewijzing"
     },
     "fields": {
       "board": "Bord",

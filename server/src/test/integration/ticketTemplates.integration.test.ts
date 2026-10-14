@@ -141,6 +141,7 @@ describe('Ticket templates (integration)', () => {
   async function insertTemplate(opts: {
     name?: string;
     isActive?: boolean;
+    offerForManualUse?: boolean;
     boardId?: string | null;
     items?: Array<{ name: string; required?: boolean; checklistTemplateId?: string | null }>;
     customFields?: Record<string, unknown>;
@@ -158,6 +159,7 @@ describe('Ticket templates (integration)', () => {
       tags: JSON.stringify([]),
       custom_fields: JSON.stringify(opts.customFields ?? { department: 'Sales', shirt_size: 'M' }),
       is_active: opts.isActive ?? true,
+      offer_for_manual_use: opts.offerForManualUse ?? true,
     });
     const items = opts.items ?? [{ name: 'Create accounts' }, { name: 'Order laptop', required: false }];
     if (items.length) {
@@ -582,7 +584,7 @@ describe('Ticket templates (integration)', () => {
       expect(await countTickets()).toBe(before);
     });
 
-    it('reports "Ticket template not found" for inactive, missing, malformed and other-tenant templates', async () => {
+    it('reports "Ticket template not found" for inactive, scheduled-only, missing, malformed and other-tenant templates', async () => {
       const inactive = await insertTemplate({ isActive: false });
       const otherTenant = uuidv4();
       const otherTemplate = uuidv4();
@@ -593,7 +595,10 @@ describe('Ticket templates (integration)', () => {
         tenant: otherTenant, template_id: otherTemplate, name: 'Foreign', title: 'Foreign',
       });
 
-      for (const id of [inactive, uuidv4(), 'not-a-uuid', otherTemplate]) {
+      // R5: a template kept for schedules only (offer_for_manual_use = false) is not offered for manual create either.
+      const scheduledOnly = await insertTemplate({ offerForManualUse: false });
+
+      for (const id of [inactive, scheduledOnly, uuidv4(), 'not-a-uuid', otherTemplate]) {
         const before = await countTickets();
         const add = await attempt(() => ticketActions.addTicket(ticketForm(id)));
         expect(refusalMessage(add)).toMatch(/ticket template not found/i);

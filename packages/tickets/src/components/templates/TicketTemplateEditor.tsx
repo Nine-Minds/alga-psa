@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -182,6 +182,10 @@ export interface TicketTemplateEditorProps {
 export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplateEditorProps) {
   const { t } = useTranslation('features/tickets');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // "New template" from a schedule passes the schedule it came from; after the first save we go back to it with the new template picked.
+  const rawScheduleReturn = searchParams?.get('scheduleReturn') ?? null;
+  const scheduleReturn = rawScheduleReturn && (rawScheduleReturn === 'new' || /^[0-9a-f-]{36}$/i.test(rawScheduleReturn)) ? rawScheduleReturn : null;
   const reference = useTicketFieldReferenceData();
   const permissions = useTicketTemplatePermissions();
   // "Schedule this template…" creates a recurring ticket, so it follows `recurring_ticket:create`.
@@ -294,7 +298,10 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         if (message !== null) { setErrors([message]); return; }
         savedRef.current = true;
         toast.success(t('templates.editor.created', 'Template created'));
-        router.replace(`/msp/tickets/templates/${(result as { template_id: string }).template_id}`);
+        const createdId = (result as { template_id: string }).template_id;
+        router.replace(scheduleReturn
+          ? `/msp/tickets/recurring/${scheduleReturn}?template=${createdId}`
+          : `/msp/tickets/templates/${createdId}`);
       } else {
         const message = recurringErrorMessage(await updateTicketTemplate(templateId, parsed.data));
         if (message !== null) { setErrors([message]); return; }

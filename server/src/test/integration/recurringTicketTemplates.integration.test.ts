@@ -396,6 +396,11 @@ describe('recurring tickets on ticket templates (integration)', () => {
       const scheduledOnly = await insertTemplate(f, { name: 'Scheduled only', offer_for_manual_use: false });
       const inactive = await insertTemplate(f, { name: 'Inactive', offer_for_manual_use: true, is_active: false });
 
+      // Migrated (scheduled-only) templates stay visible to admins even without includeInactive.
+      const defaultList: any = await templates.listTicketTemplates({} as any);
+      expect(defaultList.map((row: any) => row.template_id)).toEqual(expect.arrayContaining([visible, scheduledOnly]));
+      expect(defaultList.find((row: any) => row.template_id === scheduledOnly).offer_for_manual_use).toBe(false);
+
       const admin: any = await templates.listTicketTemplates({ includeInactive: true } as any);
       const adminIds = admin.map((row: any) => row.template_id);
       expect(adminIds).toEqual(expect.arrayContaining([visible, scheduledOnly, inactive]));
@@ -523,16 +528,30 @@ describe('recurring tickets on ticket templates (integration)', () => {
       session.user = { user_id: technicianId, tenant: f.tenant, user_type: 'internal' };
       expect(((await recurring.updateRecurringTicketDefinition(definitionId, input({ name: 'Nope' }) as any)) as any).permissionError).toBeTruthy();
       expect(((await templates.updateTicketTemplate(templateId, { name: 'x', title: 'x' } as any)) as any).permissionError).toBeTruthy();
+
+      // Read-only on both entities: it can read the template and the schedule, and write neither.
+      const readTemplate: any = await templates.getTicketTemplate(templateId);
+      expect(readTemplate.template_id).toBe(templateId);
+      const readSchedule: any = await recurring.getRecurringTicketDefinition(definitionId);
+      expect(readSchedule.definition?.definition_id).toBe(definitionId);
+      expect(((await recurring.createRecurringTicketDefinition(input({ name: 'New' }) as any)) as any).permissionError).toBeTruthy();
+      expect(((await templates.deleteTicketTemplate(templateId)) as any).permissionError).toBeTruthy();
     });
   });
 
   it('#9 custom fields and ITIL values on the template reach the generated ticket', async () => {
-    const templateId = await insertTemplate(f, { itil_impact: 2, itil_urgency: 3, custom_fields: JSON.stringify({}) });
+    const templateId = await insertTemplate(f, {
+      itil_impact: 2,
+      itil_urgency: 3,
+      custom_fields: JSON.stringify({ department: 'Sales', shirt_size: 'M' }),
+    });
     const { definitionClientId } = await insertDefinition(f, templateId);
     await sweep(f, '2026-03-01T14:00:00Z');
     const [occurrence] = await occurrenceOf(f, definitionClientId);
     const ticket = await ticketOf(f, occurrence.ticket_id);
     expect(ticket).toMatchObject({ itil_impact: 2, itil_urgency: 3, created_from_template_id: templateId });
+    const attributes = typeof ticket.attributes === 'string' ? JSON.parse(ticket.attributes) : ticket.attributes;
+    expect(attributes.custom_fields).toEqual({ department: 'Sales', shirt_size: 'M' });
     const activity = await tenantDb(db, f.tenant)
       .table('ticket_audit_logs')
       .where({ ticket_id: occurrence.ticket_id, event_type: 'TICKET_CREATED_FROM_TEMPLATE' })

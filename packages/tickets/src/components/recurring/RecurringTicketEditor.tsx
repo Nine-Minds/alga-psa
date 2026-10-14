@@ -49,6 +49,7 @@ import {
   CategoryField,
   PriorityField,
 } from './RecurringFieldGroups';
+import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { useTicketFieldReferenceData } from '../useTicketFieldReferenceData';
 import { useRecurringTicketPermissions } from './useRecurringTicketPermissions';
 import {
@@ -160,6 +161,7 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
   const searchParams = useSearchParams();
   const reference = useTicketFieldReferenceData();
   const permissions = useRecurringTicketPermissions();
+  const templatePermissions = useTicketTemplatePermissions();
   const isNew = definitionId === 'new';
 
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
@@ -204,7 +206,9 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
     void (async () => {
       const result = await load();
       if (result) {
-        setForm(formFromDetail(result));
+        // Coming back from "New template": the freshly created template replaces the stored one (saved on Save).
+        const returned = searchParams?.get('template');
+        setForm(returned ? { ...formFromDetail(result), ticket_template_id: returned } : formFromDetail(result));
       }
     })();
     // The form is seeded once per definition; later refreshes must not overwrite unsaved edits.
@@ -474,12 +478,16 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
               </p>
             )}
             <div className="flex gap-4 pt-1">
-              <Link id={`${ID}-template-edit`} href={`/msp/tickets/templates/${template.template_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
-                {t('recurring.template.edit', 'Edit template')}
-              </Link>
-              <Link id={`${ID}-template-new`} href="/msp/tickets/templates/new" className="text-[rgb(var(--color-primary-600))] hover:underline">
-                {t('recurring.template.new', 'New template')}
-              </Link>
+              {templatePermissions.update && (
+                <Link id={`${ID}-template-edit`} href={`/msp/tickets/templates/${template.template_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                  {t('recurring.template.edit', 'Edit template')}
+                </Link>
+              )}
+              {templatePermissions.create && (
+                <Link id={`${ID}-template-new`} href={`/msp/tickets/templates/new?scheduleReturn=${isNew ? 'new' : definitionId}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                  {t('recurring.template.new', 'New template')}
+                </Link>
+              )}
             </div>
           </div>
         )}
