@@ -1,5 +1,34 @@
 # Contract invoice adjustments
 
+## Repair round 6: coherent editor snapshots (2026-10-14)
+
+Candidate: `28ad9721a786ea7f8845bfd753fe7cab6af5c283` (PR #3499). The
+adjustment editor now reads invoice metadata and charges through
+`getInvoiceAdjustmentSnapshot` in a repeatable-read transaction, then uses the
+returned revision for optimistic writes. Authentication read recovery still
+retains pending edits; it does not overwrite the expected revision. After a
+committed save, the preview host refreshes the DraftsTab invoice list before
+refreshing the preview. A rendered reselection regression uses a stale list row
+and current server snapshot; a separate conflict case confirms stale writes are
+not replayed. Existing tests cover explicit auth retry and delayed detail reads.
+
+Checks on this candidate: ManualInvoices and InvoicePreviewPanel rendered tests
+(34 passed), DraftInvoiceAdjustmentsCard auth recovery tests (7 passed), billing
+package typecheck (8 GiB heap) and tsup build passed, and server typecheck
+(11 GiB heap) passed. The server production webpack build failed with Node heap
+exhaustion at the 8 GiB limit; it is not a pass. No app server was started.
+
+Runtime acceptance remains pending. The registered service is the board-owned
+`dev-server`; retained evidence last observed the direct port-23185 session
+serving build/revision `4571290674`, which is historical and must be reverified.
+A supervised restart must replace that serving process with this candidate and
+verify the build stamp. Open Review must reach its exact intended pane/session.
+Still outstanding: authenticated runtime recovery with safe correlated cookie
+configuration/rejection-stage diagnostics, customer PDF and portal totals, and
+finalized/paid/cancelled/exporting/exported lifecycle checks. Neither HTTP 200
+nor a changed service metadata record establishes deployment.
+
+
 ## Repair round 5: safe auth diagnostics and current candidate (2026-10-14)
 
 Current code candidate: `622bf81a760a271383c52a0194fb5708b41b5deb` (`fix(auth): attribute decoder rejection stages accurately`).
