@@ -560,6 +560,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       is_active: false,
       status: 'draft',
       is_template: false,
+      // Durable renewal marker (the source's created_draft_contract_id link is nulled on cycle change).
+      renewal_of_contract_id: (source as any).contract_id,
       created_at: nowIso,
       updated_at: nowIso,
     });

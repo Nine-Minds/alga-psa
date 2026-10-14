@@ -27,6 +27,13 @@ const REDUE_TRIGGER_KINDS = new Set(['contract_start', 'expiry', 'renewal']);
  */
 export const EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON = 'A usage-triggered block replaces the expiry issuance';
 
+/**
+ * Same, for a `renewal` issuance (cycle rollover, or the first block of a renewal contract) that
+ * replaces the line's scheduled expiry issuance: the renewal block is the newer block. Voiding the
+ * renewal block restores the expiry issuance (restoreSourceBlockExpiryIssuance).
+ */
+export const EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON = 'A renewal block replaces the expiry issuance';
+
 export interface InvoiceLinkedContractBlockOwners {
   contractLineIds: string[];
   issuanceIds: string[];
@@ -228,7 +235,25 @@ export async function supersedeScheduledExpiryForManualIssue(
   return { superseded: true, sourceBlockId: expiry.source_block_id ?? null };
 }
 
-/** Undoes the supersession of a source block's expiry issuance by a usage-triggered follow-on. */
+/**
+ * Supersedes the line's scheduled expiry issuance because a `renewal` issuance is about to be
+ * inserted (it carries the returned `sourceBlockId` so a void can restore the expiry). Caller holds
+ * the config and issuance locks and inserts the renewal issuance afterwards.
+ */
+export async function supersedeScheduledExpiryForRenewal(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<{ superseded: boolean; sourceBlockId: string | null }> {
+  const expiry = await table(trx, tenant, 'contract_line_block_issuances')
+    .where({ contract_line_id: contractLineId, trigger_kind: 'expiry', status: 'scheduled' })
+    .first('source_block_id');
+  if (!expiry) return { superseded: false, sourceBlockId: null };
+  await supersedeExpiryIssuancesForLine(trx, tenant, contractLineId, { reason: EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON });
+  return { superseded: true, sourceBlockId: expiry.source_block_id ?? null };
+}
+
+/** Undoes the supersession of a source block's expiry issuance by a usage-triggered follow-on or a renewal block. */
 async function restoreSourceBlockExpiryIssuance(
   trx: Knex.Transaction,
   tenant: string,
@@ -251,8 +276,8 @@ async function restoreSourceBlockExpiryIssuance(
       trigger_kind: 'expiry',
       status: 'superseded',
       source_block_id: sourceBlockId,
-      cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON,
     })
+    .whereIn('cancel_reason', [EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON, EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON])
     .update({ status: 'scheduled', cancel_reason: null, updated_at: new Date().toISOString() });
 }
 
@@ -288,13 +313,16 @@ async function restoreIssuanceAfterBlockVoid(
   const now = new Date().toISOString();
   const cleared = { block_id: null, invoice_id: null, invoice_charge_id: null, updated_at: now };
 
-  if (!REDUE_TRIGGER_KINDS.has(issuance.trigger_kind)) {
+  // A `renewal` issuance that replaced an expiry issuance (source_block_id set) is not re-due on
+  // void: the line goes back to its expiry obligation, like after a voided usage follow-on.
+  const replacedExpiry = issuance.trigger_kind === 'renewal' && Boolean(issuance.source_block_id);
+  if (!REDUE_TRIGGER_KINDS.has(issuance.trigger_kind) || replacedExpiry) {
     await table(trx, tenant, 'contract_line_block_issuances')
       .where({ issuance_id: issuanceId })
       .update({ ...cleared, status: 'cancelled', cancel_reason: reason });
     // A manual issuance carries source_block_id only when it superseded a scheduled expiry issuance
     // (issueNextPrepaidBlock); voiding its block gives that expiry obligation back.
-    if (['exhaustion', 'threshold', 'manual'].includes(issuance.trigger_kind)) {
+    if (['exhaustion', 'threshold', 'manual', 'renewal'].includes(issuance.trigger_kind)) {
       await restoreSourceBlockExpiryIssuance(trx, tenant, issuance.contract_line_id, issuance.source_block_id);
     }
     return;

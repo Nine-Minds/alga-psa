@@ -210,12 +210,19 @@ A block's `currency_code` is the contract's `contracts.currency_code`, passed ex
    never cross to unrelated contracts. If no matching line exists, the blocks follow rule 2.
    **CONFIRMED by the captain: (a)+(b) and the re-ownership rule.** Implemented rules:
    - **(a) Cycle rollover** (`processRenewalQueueHandler` -> `scheduleRenewalIssuancesForRolledCycle`
-     in `prepaidBlockRenewalService.ts`). A real rollover (previous `renewal_cycle_start` known, new
-     one later) of an assignment that continues (evergreen, or `end_date` after the new cycle
-     start) inserts one `renewal` issuance per block line with `trigger_on_renewal`, due on the new
-     `renewal_cycle_start`, under the line's config lock. One open issuance per line: if one is
-     already scheduled nothing is inserted and it is logged. Idempotent per (line, assignment,
-     cycle start) in any issuance status.
+     in `prepaidBlockRenewalService.ts`). The job detects the rollover from the assignment dates
+     alone, independent of the decision-date horizon and of the stored `renewal_cycle_*` columns: an
+     active assignment that continues (evergreen, or `end_date` after the cycle start) whose
+     normalized `renewal_cycle_start` is after its `start_date` and on or before the tenant business
+     date gets one `renewal` issuance per block line with `trigger_on_renewal`, due on that cycle
+     start, inserted under the line's config lock. Idempotent per (line, assignment, cycle start) in
+     any issuance status, so it runs every night. A line whose block config (or the line) was
+     created on or after the cycle start is skipped (no back-fill at deploy). A scheduled `expiry`
+     issuance does not block it: the renewal block is the newer block, so the expiry issuance is
+     superseded (`EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON`, the source block is recorded on the
+     renewal issuance) and **restored if the renewal block is voided** (the renewal issuance is then
+     cancelled). Any other open issuance (exhaustion, threshold, manual, contract_start, renewal) or
+     a pending block on the line makes it skip and log; the next run retries.
    - **(b) Draft activation** (`completeRenewalQueueItemForActivation` ->
      `reownBlocksForRenewalActivation`). Unexpired source blocks (active, or pending with an
      unexpired date) move to the new contract's block line with an equal covered-service set:
@@ -223,13 +230,18 @@ A block's `currency_code` is the contract's `contracts.currency_code`, passed ex
      config rows, then blocks in `block_id` order, then `reconcileLineAllocations`. Unfinished draws by
      the source line's uninvoiced entries are released by that re-draw (contract A's time never
      draws a block now owned by contract B). A scheduled expiry issuance follows its block when the
-     new line has `trigger_on_expiry` and no open issuance, else it is superseded. Lines with no
-     match keep their blocks, which the contract-end pass forfeits.
-   - **No double start block.** A renewal contract (a contract some assignment links through
-     `client_contracts.created_draft_contract_id`) issues its first block only with
-     `trigger_on_renewal`, as a `renewal` issuance, never `contract_start`; a line that inherited
-     blocks issues none (the start-type issuance scheduled at activation is cancelled at
-     re-ownership).
+     new line has `trigger_on_expiry` and no open issuance; when the new line has an open `renewal`
+     issuance it is superseded with the renewal reason (restorable); else it is superseded. Lines
+     with no match keep their blocks, which the contract-end pass forfeits.
+   - **Renewal-contract start block.** "At contract renewal" is an explicit trigger: a renewal
+     contract's block line with `trigger_on_renewal` schedules exactly one `renewal` issuance due on
+     the renewal assignment's `start_date`, **whether or not it inherited blocks** (inherited blocks
+     keep running; an inherited expiry issuance is superseded as above). With the trigger off it
+     issues nothing and the inherited blocks run. `contract_start` is never issued on a renewal
+     contract. A renewal contract is identified by the durable marker
+     `contracts.renewal_of_contract_id` (written when the renewal draft is created, back-filled by the
+     migration); `client_contracts.created_draft_contract_id` is also honoured but is nulled by the
+     renewal job on every cycle change, so it alone is not durable.
    - **No reset or extension.** `expiration_date` and `remaining_minutes` are never written by renewal.
 2. **Contract end without renewal.** Proposed: a contract block's remaining minutes are forfeited at
    the end of the assignment's `end_date`, with a `'contract_end_expiration'` audit row. No

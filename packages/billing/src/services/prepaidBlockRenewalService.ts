@@ -3,14 +3,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
 import { resolvePrepaidBlockBusinessDate, toDateOnly } from '../lib/prepaidBlockDates';
-import { supersedeExpiryIssuancesForLine } from './prepaidBlockLifecycleService';
+import {
+  EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON,
+  supersedeExpiryIssuancesForLine,
+  supersedeScheduledExpiryForRenewal,
+} from './prepaidBlockLifecycleService';
 
 /**
  * Renewal behaviour of Prepaid Block lines (plan section 6 "Renewal trigger", captain decision 1).
  *
- *  (a) scheduleRenewalIssuancesForRolledCycle: the renewal queue job rolled the renewal cycle of an
- *      assignment that continues -> one `renewal` issuance per block line with trigger_on_renewal,
- *      due on the new cycle start.
+ *  (a) scheduleRenewalIssuancesForRolledCycle: the renewal cycle of an assignment that continues
+ *      rolled (the job detects it from the assignment dates) -> one `renewal` issuance per block
+ *      line with trigger_on_renewal, due on the new cycle start. A scheduled expiry issuance does
+ *      not block it: the renewal block is the newer block, so the expiry issuance is superseded
+ *      (restored if the renewal block is voided). Any other open issuance, or a pending block,
+ *      makes it skip and report.
  *  (b) reownBlocksForRenewalActivation: a renewal draft was activated -> the source assignment's
  *      unexpired contract blocks move to the matching block line of the new contract.
  *
@@ -44,7 +51,9 @@ async function blockLineIds(
 export type RenewalIssuanceOutcome =
   | { contractLineId: string; action: 'scheduled'; issuanceId: string; dueDate: string }
   | { contractLineId: string; action: 'already_issued' }
-  | { contractLineId: string; action: 'skipped_open_issuance'; openKind: string; openDueDate: string | null };
+  | { contractLineId: string; action: 'skipped_open_issuance'; openKind: string; openDueDate: string | null }
+  | { contractLineId: string; action: 'skipped_pending_block' }
+  | { contractLineId: string; action: 'skipped_line_started_after_cycle' };
 
 export interface RolledRenewalCycle {
   clientContractId: string;
@@ -59,7 +68,11 @@ export interface RolledRenewalCycle {
 /**
  * Inserts the `renewal` issuance for every block line of the rolled assignment's contract that has
  * trigger_on_renewal. Runs inside the caller's transaction. Never throws for an open issuance (the
- * partial unique index allows one `scheduled` row per line): it reports `skipped_open_issuance`.
+ * partial unique index allows one `scheduled` row per line): an open `expiry` issuance is superseded
+ * (EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON, source block carried on the renewal issuance); any other
+ * kind is reported as `skipped_open_issuance`, a pending block as `skipped_pending_block`. A line whose
+ * block config (or the line itself) was created on or after the cycle start never owed that renewal
+ * (`skipped_line_started_after_cycle`), which keeps a deploy from back-filling old cycles.
  *
  * Idempotent per (line, assignment, cycle start): a `renewal` issuance already recorded for that
  * due date in any status (including `invoiced`, after the block was already issued) is not repeated.
@@ -81,8 +94,19 @@ export async function scheduleRenewalIssuancesForRolledCycle(
     const config = await table(trx, tenant, 'contract_line_prepaid_blocks')
       .where({ contract_line_id: contractLineId })
       .forUpdate()
-      .first('trigger_on_renewal');
+      .first('trigger_on_renewal', 'created_at');
     if (!config?.trigger_on_renewal) continue;
+
+    const line = await table(trx, tenant, 'contract_lines')
+      .where({ contract_line_id: contractLineId })
+      .first('created_at');
+    const startedOn = await Promise.all(
+      [config.created_at, line?.created_at].map((at) => (at ? resolvePrepaidBlockBusinessDate(trx, tenant, at) : null)),
+    );
+    if (startedOn.some((day) => day && day >= cycle.newCycleStart)) {
+      outcomes.push({ contractLineId, action: 'skipped_line_started_after_cycle' });
+      continue;
+    }
 
     const already = await table(trx, tenant, 'contract_line_block_issuances')
       .where({
@@ -100,7 +124,7 @@ export async function scheduleRenewalIssuancesForRolledCycle(
     const open = await table(trx, tenant, 'contract_line_block_issuances')
       .where({ contract_line_id: contractLineId, status: 'scheduled' })
       .first('trigger_kind', 'due_date');
-    if (open) {
+    if (open && open.trigger_kind !== 'expiry') {
       outcomes.push({
         contractLineId,
         action: 'skipped_open_issuance',
@@ -109,7 +133,15 @@ export async function scheduleRenewalIssuancesForRolledCycle(
       });
       continue;
     }
+    const pending = await table(trx, tenant, 'hour_blocks')
+      .where({ contract_line_id: contractLineId, status: 'pending' })
+      .first('block_id');
+    if (pending) {
+      outcomes.push({ contractLineId, action: 'skipped_pending_block' });
+      continue;
+    }
 
+    const replaced = open ? await supersedeScheduledExpiryForRenewal(trx, tenant, contractLineId) : null;
     const issuanceId = uuidv4();
     await table(trx, tenant, 'contract_line_block_issuances').insert({
       tenant,
@@ -120,6 +152,7 @@ export async function scheduleRenewalIssuancesForRolledCycle(
       trigger_kind: 'renewal',
       due_date: cycle.newCycleStart,
       status: 'scheduled',
+      source_block_id: replaced?.sourceBlockId ?? null,
     });
     outcomes.push({ contractLineId, action: 'scheduled', issuanceId, dueDate: cycle.newCycleStart });
   }
@@ -150,10 +183,13 @@ async function lineServiceSet(trx: Knex.Transaction, tenant: string, lineIds: st
  * the renewal contract whose covered-service set equals the source line's. Moves only ownership:
  * hour_blocks.client_contract_id / contract_line_id change, with a `reassignment` audit row each.
  *
- *  - The new line's scheduled start-type issuance (`contract_start` / `renewal` of the new assignment)
- *    is cancelled: the line inherited live blocks, so it issues no first block.
+ *  - A line that inherits blocks still issues a new block on the renewal date when its
+ *    trigger_on_renewal is on (the `renewal` start issuance of the new assignment stays; the inherited
+ *    blocks keep running). A `contract_start` issuance on it is cancelled (never issued on a renewal).
  *  - A scheduled expiry issuance triggered by a moved block follows it to the new line when the new
- *    line has trigger_on_expiry and no other open issuance; otherwise it is superseded.
+ *    line has trigger_on_expiry and no other open issuance; when the new line has an open renewal
+ *    issuance it is superseded with the renewal reason (restored if the renewal block is voided);
+ *    otherwise it is superseded.
  *  - Time drawn from a moved block by the source line's still-uninvoiced entries is released by the
  *    reconcile of the new line (a block of contract A is never drawn by other-contract time); the
  *    entries then bill normally and the block gets the minutes back. Invoiced draws are untouched.
@@ -248,7 +284,7 @@ export async function reownBlocksForRenewalActivation(
     movedByTargetLine.set(toLineId, [...(movedByTargetLine.get(toLineId) ?? []), block.block_id]);
   }
 
-  // 3. Issuances: no first block on a line that inherited blocks; expiry issuances follow their block.
+  // 3. Issuances: no contract_start on a renewal contract; expiry issuances follow their block.
   for (const toLineId of [...movedByTargetLine.keys()].sort()) {
     await table(trx, tenant, 'contract_line_block_issuances')
       .where({
@@ -256,10 +292,10 @@ export async function reownBlocksForRenewalActivation(
         client_contract_id: target.client_contract_id,
         status: 'scheduled',
       })
-      .whereIn('trigger_kind', ['contract_start', 'renewal'])
+      .where({ trigger_kind: 'contract_start' })
       .update({
         status: 'cancelled',
-        cancel_reason: 'The line inherited live blocks through renewal re-ownership',
+        cancel_reason: 'A renewal contract never issues a contract_start block',
         updated_at: now,
       });
   }
@@ -275,7 +311,7 @@ export async function reownBlocksForRenewalActivation(
       .first('trigger_on_expiry');
     const open = await table(trx, tenant, 'contract_line_block_issuances')
       .where({ contract_line_id: move.toLineId, status: 'scheduled' })
-      .first('issuance_id');
+      .first('issuance_id', 'trigger_kind', 'source_block_id');
     if (toConfig?.trigger_on_expiry && !open) {
       await table(trx, tenant, 'contract_line_block_issuances')
         .where({ issuance_id: expiry.issuance_id })
@@ -285,6 +321,24 @@ export async function reownBlocksForRenewalActivation(
           client_id: target.client_id,
           updated_at: now,
         });
+    } else if (open?.trigger_kind === 'renewal') {
+      // The renewal block is the newer block: the moved block's expiry issuance is superseded on the
+      // new line (so a void of the renewal block restores it there) and recorded on the renewal.
+      await table(trx, tenant, 'contract_line_block_issuances')
+        .where({ issuance_id: expiry.issuance_id })
+        .update({
+          contract_line_id: move.toLineId,
+          client_contract_id: target.client_contract_id,
+          client_id: target.client_id,
+          status: 'superseded',
+          cancel_reason: EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON,
+          updated_at: now,
+        });
+      if (!open.source_block_id) {
+        await table(trx, tenant, 'contract_line_block_issuances')
+          .where({ issuance_id: open.issuance_id })
+          .update({ source_block_id: move.blockId, updated_at: now });
+      }
     } else {
       await supersedeExpiryIssuancesForLine(trx, tenant, move.fromLineId, {
         reason: 'The source block was re-owned by a renewal and the new line does not carry its expiry issuance',
