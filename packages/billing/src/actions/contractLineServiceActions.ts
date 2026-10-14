@@ -75,8 +75,6 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
       error.message === 'Products can only be added to fixed-fee contract lines.' ||
       error.message === TEMPLATE_RATE_TIERS_UNSUPPORTED ||
       error.message.includes('cannot be attached to contract lines') ||
-      // Billing-method mismatch from the shared configuration policy.
-      error.message.includes('cannot be added to') ||
       error.message.includes('does not have') ||
       error.message.includes('requires an hourly rate') ||
       error.message.includes('must be a numeric value') ||
@@ -314,7 +312,7 @@ async function addServiceToTemplateLine(
   }
 
   // Same policy resolver the live-line path uses: one place decides the
-  // configuration type, the billing-method match and the per-type defaults.
+  // configuration type and the per-type defaults.
   const { configurationType, typeConfig: policyTypeConfig } = resolveContractLineServiceConfig(
     lineType,
     configType,

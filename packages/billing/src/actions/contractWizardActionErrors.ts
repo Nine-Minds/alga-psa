@@ -55,8 +55,6 @@ export function contractWizardActionErrorFrom(error: unknown): ContractWizardAct
     error.message === 'Submit either fixed_lines or the legacy fixed_services/fixed_base_rate fields, not both' ||
     error.message.startsWith('Catalog item "') ||
     error.message.startsWith('Product "') ||
-    // Billing-method mismatch from the shared contract-line service policy.
-    error.message.includes('cannot be added to') ||
     error.message.startsWith('Cannot create contract in') ||
     error.message.includes('Mixed-currency contracts for the same client are not supported') ||
     error.message === 'Contract start date is required' ||

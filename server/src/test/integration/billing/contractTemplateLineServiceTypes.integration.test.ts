@@ -333,7 +333,9 @@ describe('contract template lines: hourly, usage and bucket service management',
     expect(await typeConfigRow('contract_template_line_service_usage_config', configId)).toBeUndefined();
   }, 60_000);
 
-  it('rejects a service whose billing method the template line cannot bill', async () => {
+  it('bills a service by the template line type, not its catalog billing method', async () => {
+    // The line is the billing mode; catalog billing_method only supplies the
+    // default rate (ee/docs/plans/2026-03-21-service-catalog-billing-mode-decoupling).
     const hourlyLineId = await insertTemplateLine('Hourly');
     const fixedServiceId = await insertService({
       name: 'Fixed Bundle',
@@ -342,21 +344,17 @@ describe('contract template lines: hourly, usage and bucket service management',
       defaultRate: 40000,
     });
 
-    const onHourly = await addServiceToContractLine(hourlyLineId, fixedServiceId, 1);
-    expect(isActionError(onHourly)).toBe(true);
-    expect((onHourly as { actionError: string }).actionError).toMatch(
-      /cannot be added to an hourly contract line/,
-    );
-    expect(await t('contract_template_line_services').where({ template_line_id: hourlyLineId })).toHaveLength(0);
+    const onHourlyConfigId = ok(await addServiceToContractLine(hourlyLineId, fixedServiceId, 1)) as string;
+    const onHourlyConfig = await templateConfig(hourlyLineId, fixedServiceId);
+    expect(onHourlyConfig.configuration_type).toBe('Hourly');
+    const onHourlyRow = await typeConfigRow('contract_template_line_service_hourly_config', onHourlyConfigId);
+    expect(Number(onHourlyRow.hourly_rate)).toBe(40000);
 
     const fixedLineId = await insertTemplateLine('Fixed');
     const hourlyServiceId = await insertService({ name: 'Hourly Desk', defaultRate: 15000 });
 
-    const onFixed = await addServiceToContractLine(fixedLineId, hourlyServiceId, 1);
-    expect(isActionError(onFixed)).toBe(true);
-    expect((onFixed as { actionError: string }).actionError).toMatch(
-      /cannot be added to a fixed fee contract line/,
-    );
+    ok(await addServiceToContractLine(fixedLineId, hourlyServiceId, 1));
+    expect((await templateConfig(fixedLineId, hourlyServiceId)).configuration_type).toBe('Fixed');
 
     // A product is allowed on a fixed fee line even though it bills as usage.
     const productId = await insertService({

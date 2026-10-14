@@ -146,25 +146,24 @@ describe('template line service management for non-Fixed lines', () => {
     expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({ quantity: null });
   });
 
-  it('rejects a service whose billing method the line cannot bill', async () => {
+  it('bills a service by the line type, not its catalog billing method', async () => {
+    // The template line is the billing mode: a fixed-method service added to an
+    // Hourly line lands as Hourly, an hourly one on a Fixed line lands as Fixed
+    // (ee/docs/plans/2026-03-21-service-catalog-billing-mode-decoupling).
     const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
 
     seed('Hourly', { billing_method: 'fixed', service_name: 'Managed Bundle' });
-    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
-      actionError: expect.stringContaining('cannot be added to an hourly contract line'),
+    expect(typeof (await addServiceToContractLine('tl-1', 'svc-1'))).toBe('string');
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Hourly',
     });
-    expect(rowsOf('contract_template_line_service_configuration')).toHaveLength(0);
-
-    seed('Usage', { billing_method: 'fixed' });
-    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
-      actionError: expect.stringContaining('cannot be added to a usage-based contract line'),
-    });
+    expect(rowsOf('contract_template_line_service_hourly_config')[0]).toMatchObject({ hourly_rate: 12500 });
 
     seed('Fixed', { billing_method: 'hourly', service_name: 'Basic Support' });
-    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
-      actionError: expect.stringContaining('cannot be added to a fixed fee contract line'),
+    expect(typeof (await addServiceToContractLine('tl-1', 'svc-1'))).toBe('string');
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Fixed',
     });
-    expect(rowsOf('contract_template_line_services')).toHaveLength(0);
   });
 
   it('allows a product on a Fixed template line despite its usage billing method', async () => {

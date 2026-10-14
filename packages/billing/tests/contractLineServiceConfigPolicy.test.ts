@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  assertServiceMatchesConfigurationType,
-  resolveContractLineServiceConfig,
-} from '../src/lib/contractLineServiceConfigPolicy';
+import { resolveContractLineServiceConfig } from '../src/lib/contractLineServiceConfigPolicy';
 
 /**
- * One policy decides the configuration type, the billing-method match and the
- * per-type defaults for both live contract lines and contract template lines.
+ * One policy decides the configuration type and the per-type defaults for both
+ * live contract lines and contract template lines. The line's type is the
+ * billing mode, so catalog billing_method never gates the attach — see
+ * ee/docs/plans/2026-03-21-service-catalog-billing-mode-decoupling.
  */
 
 const service = (overrides: Record<string, unknown> = {}) => ({
@@ -18,43 +17,16 @@ const service = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('contract line service configuration policy', () => {
-  it('rejects a fixed-method service on hourly, usage and bucket configurations', () => {
-    const fixedService = service({ service_name: 'Managed Bundle', billing_method: 'fixed' });
-
-    for (const configurationType of ['Hourly', 'Usage', 'Bucket'] as const) {
-      expect(() => assertServiceMatchesConfigurationType(configurationType, fixedService)).toThrow(
-        /"Managed Bundle" is a fixed-fee service and cannot be added to/,
-      );
-    }
-  });
-
-  it('rejects a non-fixed service on a fixed configuration', () => {
-    expect(() => assertServiceMatchesConfigurationType('Fixed', service())).toThrow(
-      '"Basic Support" is an hourly service and cannot be added to a fixed fee contract line.',
-    );
-    expect(() =>
-      assertServiceMatchesConfigurationType('Fixed', service({ billing_method: 'usage' })),
-    ).toThrow(/is a usage-based service and cannot be added to a fixed fee contract line/);
-  });
-
-  it('allows a product on a fixed configuration, since products carry usage by design', () => {
-    expect(() =>
-      assertServiceMatchesConfigurationType('Fixed', service({ billing_method: 'usage', item_kind: 'product' })),
-    ).not.toThrow();
-  });
-
-  it('allows the matching billing method on every configuration type', () => {
-    expect(() => assertServiceMatchesConfigurationType('Hourly', service())).not.toThrow();
-    expect(() =>
-      assertServiceMatchesConfigurationType('Usage', service({ billing_method: 'usage' })),
-    ).not.toThrow();
-    expect(() =>
-      assertServiceMatchesConfigurationType('Fixed', service({ billing_method: 'fixed' })),
-    ).not.toThrow();
-    // A catalog row with no billing method is left to the line's own type.
-    expect(() =>
-      assertServiceMatchesConfigurationType('Fixed', service({ billing_method: null })),
-    ).not.toThrow();
+  it('resolves any catalog billing method against the line type', () => {
+    // A fixed-method service billed hourly, and an hourly one billed fixed:
+    // the line decides the mode, the catalog only supplies the default rate.
+    expect(
+      resolveContractLineServiceConfig('Hourly', undefined, service({ billing_method: 'fixed' })),
+    ).toMatchObject({ configurationType: 'Hourly', typeConfig: { hourly_rate: 15000 } });
+    expect(resolveContractLineServiceConfig('Fixed', undefined, service()).configurationType).toBe('Fixed');
+    expect(
+      resolveContractLineServiceConfig('Usage', undefined, service({ billing_method: 'fixed' })).configurationType,
+    ).toBe('Usage');
   });
 
   it('defaults the hourly rate and min/round from the catalog rate', () => {

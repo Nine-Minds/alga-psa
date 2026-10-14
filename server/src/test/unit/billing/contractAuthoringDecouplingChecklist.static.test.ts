@@ -28,10 +28,9 @@ describe('contract authoring decoupling checklist guards', () => {
   });
 
   it('T005: contract-line service attach validates by target line mode instead of service-type billing coupling', () => {
-    // Live and template lines share one policy resolver
-    // (resolveContractLineServiceConfig wraps
-    // resolveContractLineServiceConfigurationType plus the per-type defaults
-    // and the billing-method guard).
+    // Live and template lines share one policy resolver:
+    // resolveContractLineServiceConfig wraps
+    // resolveContractLineServiceConfigurationType plus the per-type defaults.
     expect(contractLineServiceActionsSource).toMatch(/resolveContractLineServiceConfig(?:urationType)?\(/);
     expect(contractLineServiceActionsSource).not.toContain('service_type_billing_method');
     expect(contractLineServiceActionsSource).not.toContain('Only fixed billing method services can be attached to this template line.');
