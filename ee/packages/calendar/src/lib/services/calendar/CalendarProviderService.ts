@@ -138,6 +138,7 @@ export class CalendarProviderService {
     return `${baseUrl}${path}`;
   }
 
+  // LEVERAGE: pattern calendar-provider-service-triplicate — same service is copied in server/src, packages/integrations and ee/packages/calendar; fixes must be applied 3x
   /**
    * Get calendar providers based on filters
    */
@@ -165,18 +166,10 @@ export class CalendarProviderService {
 
       const providers = await query;
 
-      // Load vendor configs for each provider
-      const providersWithConfig = await Promise.all(providers.map(async (provider) => {
-        const vendorConfig = await this.getVendorConfig(
-          db,
-          provider.provider_type,
-          provider.id,
-          filters.tenant,
-        );
-        return this.buildProviderConfig(provider, vendorConfig, { includeSecrets: false });
-      }));
-
-      return providersWithConfig;
+      // Vendor config (tokens, webhook state) is deliberately not loaded here: list callers receive
+      // provider_config: undefined and must call getProvider(id, tenant, { includeSecrets: true })
+      // for the full config.
+      return providers.map((provider) => this.toProviderSummary(provider));
     } catch (error: any) {
       console.error('Error fetching calendar providers:', error);
       throw new Error(`Failed to fetch calendar providers: ${error.message}`);
@@ -516,6 +509,10 @@ export class CalendarProviderService {
       ? await this.toVendorConfig(row.provider_type, row.tenant, vendorConfig)
       : undefined;
 
+    return { ...this.toProviderSummary(row), provider_config: providerConfig };
+  }
+
+  private toProviderSummary(row: any): CalendarProviderConfig {
     return {
       id: row.id,
       tenant: row.tenant,
@@ -528,7 +525,7 @@ export class CalendarProviderService {
       connection_status: row.status || 'configuring',
       last_sync_at: row.last_sync_at || undefined,
       error_message: row.error_message || undefined,
-      provider_config: providerConfig,
+      provider_config: undefined,
       created_at: row.created_at,
       updated_at: row.updated_at
     };
