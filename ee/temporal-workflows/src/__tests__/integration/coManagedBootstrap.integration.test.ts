@@ -4575,7 +4575,8 @@ it('keeps same-number same-UUID tickets from two customers separate in global or
   expect(page.workspaces.map(item => item.tenant).sort()).toEqual([resource.tenant, second.actor.tenant].sort());
   const filtered = await list(db, principal, { view: 'oversight', workspaceTenant: resource.tenant });
   expect(filtered.totalCount).toBe(1); expect(filtered.workspaces).toHaveLength(2);
-  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(2);
+  // Amendment A3: working is shared-only (no native home tickets) — only the escalated shared ticket remains.
+  expect((await list(db, principal, { view: 'working' })).totalCount).toBe(1);
 }));
 
 it('rechecks revoked queue scope and session expiry after waiting for lifecycle locks', async () => withTicketQueueFixture(async ({ principal, sponsor, customer, resource, list }) => {
