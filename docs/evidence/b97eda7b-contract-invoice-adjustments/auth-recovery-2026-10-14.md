@@ -133,9 +133,11 @@ Live acceptance remains pending until these checks pass on the repaired head.
 
 ## Mitigation round 5 — correlated safe diagnostics (2026-10-14)
 
-Published candidate: `9614087b1a` (`fix(auth): correlate safe session decode diagnostics`).
-This commit adds the diagnostic hardening and current-source evidence below; it
-does not claim the earlier invoice recovery fixes were authored in this round.
+Published candidate: `622bf81a76` (`fix(auth): attribute decoder rejection stages accurately`).
+This mitigation commit series adds the diagnostic hardening and current-source
+evidence below; it does not claim the earlier invoice recovery fixes were
+authored in this round. The follow-up also ensures a `null` edge result followed
+by a full-auth exception is attributed only to the full decoder.
 
 The mounted invoice read and edit repairs described above were re-audited on
 the current branch. Capability, client/service initialization, invoice details
@@ -161,7 +163,7 @@ became empty.
 Fresh-source verification on this mitigation round:
 
 - `packages/auth`: `npx vitest run src/lib/getSession.test.ts
-  src/lib/session.test.ts` — 16 passed; auth typecheck and package build passed.
+  src/lib/session.test.ts` — 17 passed; auth typecheck and package build passed.
 - `packages/billing`: six focused editor/action/capability/attribution/
   lifecycle files — 60 passed; billing typecheck and package build passed.
 - `server`: `InvoicePreviewPanel.test.tsx` — 6 passed.

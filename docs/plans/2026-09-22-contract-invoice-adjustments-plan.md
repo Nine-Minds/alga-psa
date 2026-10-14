@@ -2,7 +2,7 @@
 
 ## Repair round 5: safe auth diagnostics and current candidate (2026-10-14)
 
-Current code candidate: `9614087b1a` (`fix(auth): correlate safe session decode diagnostics`).
+Current code candidate: `622bf81a76` (`fix(auth): attribute decoder rejection stages accurately`).
 The invoice read-recovery and repeated-retry draft-preservation repairs were
 audited on this source and remain present. Decoder exceptions now log only
 reason codes with the existing validated request/correlation ID; behavioral
