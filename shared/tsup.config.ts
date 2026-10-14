@@ -77,6 +77,7 @@ export default defineConfig({
     'rmm/moveRmmOrganizationAssets': 'rmm/moveRmmOrganizationAssets.ts',
     'rmm/signedInUserMappings': 'rmm/signedInUserMappings.ts',
     'rmm/autoAssignFromSignedInUser': 'rmm/autoAssignFromSignedInUser.ts',
+    'rmm/mappingBillingProfile': 'rmm/mappingBillingProfile.ts',
     'models/assetAssignmentModel': 'models/assetAssignmentModel.ts',
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',

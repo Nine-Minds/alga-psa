@@ -56,9 +56,14 @@ describe('asset billing profile reaches tickets from assets', () => {
   it('T128: the alert-ticket creator prefers the mapping profile, then the asset', () => {
     const text = source('shared/rmm/alerts/ticketCreator.ts');
 
-    expect(text).toContain("import { resolveAssetBillingProfileId } from '../../models/assetBillingProfileModel';");
+    expect(text).toContain("resolveAssetBillingProfileId,\n} from '../../models/assetBillingProfileModel';");
     // Guarded by assetId, so an alert with no asset passes nothing (T129).
-    expect(text).toMatch(/\?\? \(params\.assetId \? await resolveAssetBillingProfileId\(trx, tenantId, params\.assetId\) : null\)/);
+    expect(text).toMatch(/params\.assetId\s*\?\s*await profileForClient\(/);
+    expect(text).toContain('await resolveAssetBillingProfileId(trx, tenantId, params.assetId)');
+    // Each candidate is checked against the ticket's client: FR-G5 lets a
+    // device be moved by hand, so a mapping may still name the old client.
+    expect(text).toContain('assertBillingProfileForClient');
+    expect(text).toContain('profileForClient(trx, tenantId, params.clientId, params.mappingBillingProfileId ?? null)');
   });
 
   it('T126: AssetForm clears the billing profile when the client changes', () => {

@@ -304,3 +304,140 @@ every open; it is a `<div>` now.
 The status *filter* keeps its two options and its "active = not inactive"
 meaning: that is what the server-side counts and the `status` parameter mean,
 and FR-B5's kind-based metrics are an MSP surface.
+
+## Review round 3 (2026-10-14)
+
+An operator review of the whole diff, plus two verifier rounds and a browser
+pass. Everything below is a defect the shipped feature set still carried; no
+scope was added.
+
+### The portal was shipping the MSP's commercial columns
+
+`withAssigneeName` selected `assets.*`, so `purchase_cost`,
+`purchase_cost_currency`, `vendor_id`, `order_number` and
+`billing_profile_id` travelled to every portal browser in `listClientAssets`,
+`getClientAssets` and `getClientAssetById` — the procurement fields this very
+plan added. Reads go through `PORTAL_ASSET_COLUMNS`, an allow-list, and the
+contract test (T059's second half) asserts none of those keys can come back.
+
+### Billing profiles were stored on trust
+
+All five RMM mapping actions wrote whatever `billing_profile_id` arrived, and
+the clear-on-client-change branch was skipped whenever the same call also
+carried one — so moving a mapping to client B could keep client A's profile.
+`shared/rmm/mappingBillingProfile.ts` is now the one rule: a client change
+clears the profile whatever else the patch holds, and any chosen profile has
+to belong to the client the mapping *lands on* and be active.
+
+`createTicketForAlert` then validated nothing: `mapping.billing_profile_id`
+went straight into `tickets.billing_profile_id`, while the ticket's client
+comes from the device — and FR-G5 now lets a device be moved by hand. A device
+moved to client B was billed to client A's profile. Both candidates (the
+mapping's and the asset's) are checked against the ticket's client and fall
+back to null, which is the client default, rather than failing the ticket.
+
+### The signed-in-user follow-along reached into other clients
+
+`mapSignedInUserToContact` walked **every** `auto` organization of the
+integration. An integration covering several clients will report the same
+`CORP\jdoe` on another client's device; `setAssetAssignee` rejects a contact
+from another client, the throw rolled back the whole transaction, and the
+operator lost both the explicit mapping and the assignment they had clicked —
+with no error, because neither the action nor the dialog converted it. It now
+follows along only inside the contact's own client, skips a device the
+assignment helper refuses, and the action returns a typed error the row
+toasts.
+
+While here: `matchContactForRmmUser` loaded every contact of the client once
+per synced device. The three match rules are a SQL predicate now (a superset,
+so ambiguity stays visible and the precedence decisions are unchanged).
+
+### Statuses could be archived but not brought back
+
+Archiving a custom status left it greyed out with only Rename, and
+re-creating it by name answered `duplicate_slug` — a one-way door. There is a
+Restore action, and creating a status whose slug matches an archived row
+revives that row. The edit form stopped offering archived statuses at all
+(the server refuses them anyway) while still showing the one an asset already
+sits on, by label. Archive is disabled with the in-use count instead of
+promising the status "stays on assets", a refusal closes the dialog, and the
+registry's messages are localized by code rather than shown in server English.
+
+Renaming a builtin was invisible: every surface did
+`t('…statuses.<slug>', { defaultValue: label })`, and the key existed. The
+registry label is the source of truth now; only an untouched builtin is
+translated.
+
+### Writes that moved an asset said nothing
+
+Assignment and group mutations changed `contact_name_id`, `location_id` and
+membership without publishing `ASSET_UPDATED`, so an automation watching
+assets saw an edit-form save and missed a bundle reassigning five machines.
+Both paths publish per affected asset after commit; the group actions
+snapshot membership either side of the transaction, because the members
+before and after a write are not the same set.
+
+`asset_history.changed_by` was NOT NULL, so the one caller without a session —
+RMM sync — got its assignment row and no timeline entry at all. The column is
+nullable (20261009127000) and the entry carries the provider, so
+"Auto-assigned to Jane from levelio" finally appears. Location propagation got
+its own change type instead of rendering as "Updated — Group id, Group name".
+
+### FR-E7b admitted readers it then refused
+
+A shared-workspace colleague could open a hot-desk ticket and see the comment
+box and the status control; the write paths resolve a ticket *without* the
+workspace clause and answered "Ticket not found". `getClientTicketDetails`
+returns `can_interact` (same in-memory matcher), the portal disables the
+controls and says why, and `TicketConversation` grew a `readOnly` prop that
+hides the composer, the reply affordance and the per-comment edit/delete.
+
+### Tactical was offered a People mode it never honoured
+
+Tactical writes assets through its own sync rather than the shared ingestion
+service, so `auto` did nothing. Both the bulk sync and the single-agent
+refresh now call `applyRmmSignedInUserAssignment` after the extension row,
+matching against the client the device is on (FR-G5). Create no longer
+hard-codes `active` — an agent already offline arrives `inactive` — and a
+**full** sync retires devices Tactical no longer lists. That last one is
+guarded twice: an incremental page or an empty agent list retires nothing,
+because Tactical has no deletion signal and "I could not see the fleet" must
+never read as "the fleet is gone".
+
+### Smaller repairs
+
+- Bulk "Add to group" confirms before a shared workspace unassigns anything,
+  creates the group and its members in one call (no orphaned empty group on
+  failure) and shows the real error.
+- The asset list's Group filter resets when its client leaves scope, instead
+  of filtering from a control nobody can see.
+- `AssetForm` stops re-submitting a billing profile the client no longer
+  offers, which had made such an asset permanently unsaveable.
+- Accepting a Live-vitals suggestion invalidates the asset cache, so the
+  Identity tile stops contradicting the row above it.
+- Money parsing reads the decimal separator from the value ("1.234,56" was
+  saved as 123 cents) and clamps negatives to zero.
+- The group drawer selects `client_name`, only warns about unassigning when
+  something would be unassigned, and the asset page's Group tab steps back
+  when the group is deleted.
+- REST: groups follow asset `create`/`delete` for those verbs, `not_found` is
+  a 404 everywhere, and removing a bundle contact honours the id it was given.
+- Merge preview counts only the source client's devices per RMM organization
+  (and those matched through the mapping table), so the rows add up again.
+- A contact's assigned asset is reported but no longer blocks deleting them;
+  blocking it meant FR-C5's cleanup could never run. `blocking: false` is a
+  new, general facility on the deletion config.
+- `bulkUpdateAssets` accepts the procurement fields (FR-A4); the vendor and
+  billing-profile lookups check `asset:read`; three dead exports are gone.
+- Migrations: `20261009120000.down()` puts manufacturer and model back into
+  `attributes`; `20261009121000` folds a legacy `" Active"` onto the builtin
+  instead of creating a second, undeployable one.
+- The migration importer checks an imported assignee against the asset's
+  client and warns, instead of failing the whole asset import.
+
+### features.json / tests.json
+
+F085 (billing-profile validation on every writer) and T059 (no cost or vendor
+fields in the portal payload) were marked implemented while neither was true
+of the RMM mapping actions or the portal payload. Both are true now, so the
+flags stand as they are; nothing was flipped back.
