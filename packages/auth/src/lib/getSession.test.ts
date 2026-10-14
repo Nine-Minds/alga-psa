@@ -51,6 +51,8 @@ beforeEach(() => {
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
   vi.mocked(UserSession.getRejectionReason).mockReset();
+  vi.mocked(logger.warn).mockReset();
+  vi.mocked(logger.error).mockReset();
   requestHeaders.current = new Headers({ 'x-request-id': 'req-safe-1' });
 });
 
@@ -139,6 +141,20 @@ describe('getSession', () => {
       vi.mocked(logger.error).mock.calls,
     ]);
     expect(serializedLogs).not.toContain('never-log-this');
+  });
+
+  it('attributes an empty edge result followed by a full-auth throw only to the full decoder', async () => {
+    vi.mocked(edgeAuth).mockResolvedValue(null);
+    vi.mocked(fullAuth).mockRejectedValue(new Error('full decoder failed'));
+
+    await expect(getSession()).resolves.toBeNull();
+
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'full_session_decode_failed', requestId: 'req-safe-1',
+    });
+    expect(logger.warn).not.toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'edge_session_decode_failed', requestId: 'req-safe-1',
+    });
   });
 
   it('still enforces revocation on the full-auth fallback path', async () => {

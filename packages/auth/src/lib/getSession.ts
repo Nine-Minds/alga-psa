@@ -82,23 +82,21 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
 }
 
 async function decodeSession(): Promise<Session | null> {
+  let edgeSession: Session | null = null;
   try {
-    const edgeSession = await edgeAuth();
-    if (edgeSession) {
-      return edgeSession;
-    }
-
-    // Edge auth can legitimately return null (or fail) in dev / after hot reloads.
-    // Fall back to the full Node.js helper which is more tolerant.
-    return await fullAuth();
+    edgeSession = await edgeAuth();
   } catch {
     await logSessionRejection('edge_session_decode_failed');
-    try {
-      return await fullAuth();
-    } catch {
-      await logSessionRejection('full_session_decode_failed');
-      return null;
-    }
+  }
+  if (edgeSession) return edgeSession;
+
+  // Edge auth can legitimately return null (or fail) in dev / after hot reloads.
+  // Fall back to the full Node.js helper which is more tolerant.
+  try {
+    return await fullAuth();
+  } catch {
+    await logSessionRejection('full_session_decode_failed');
+    return null;
   }
 }
 
