@@ -104,7 +104,8 @@
     "emailLogs": "E-postloggar",
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
-    "ticketsRecurring": "Återkommande ärenden"
+    "ticketsRecurring": "Återkommande ärenden",
+    "ticketsTemplates": "Ärendemallar"
   },
   "marketing": {
     "dialogs": {

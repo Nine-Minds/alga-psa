@@ -104,7 +104,8 @@
     "emailLogs": "Email Logs",
     "extensions": "Extensions",
     "ticketsAll": "All Tickets",
-    "ticketsRecurring": "Recurring Tickets"
+    "ticketsRecurring": "Recurring Tickets",
+    "ticketsTemplates": "Ticket Templates"
   },
   "marketing": {
     "dialogs": {

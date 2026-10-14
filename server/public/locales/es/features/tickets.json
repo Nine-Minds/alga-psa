@@ -215,7 +215,8 @@
     "duplicate": "Duplicar",
     "rowActions": "Acciones",
     "openMenu": "Abrir menú",
-    "more": "Más",
+    "moreActions": "Más acciones",
+    "createTemplate": "Crear plantilla desde el ticket",
     "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket"
   },
   "messages": {
@@ -843,7 +844,16 @@
     "duplicateChecklistHeading": "Lista de verificación de #{{number}}",
     "duplicateChecklistRequired": "(obligatorio)",
     "duplicateCopyChecklist": "Copiar elementos de la lista de verificación (sin marcar)",
-    "duplicateCustomFieldsNote": "Los valores de los campos personalizados se copian de #{{number}}."
+    "duplicateCustomFieldsNote": "Los valores de los campos personalizados se copian de #{{number}}.",
+    "templateLabel": "Plantilla",
+    "templateNone": "Ninguna",
+    "templateLoadFailed": "No se pudo cargar la plantilla. Inténtelo de nuevo.",
+    "fromTemplatePill": "De la plantilla: {{name}}",
+    "templateChecklistHeading": "Lista de verificación de la plantilla: {{name}}",
+    "templateCustomFieldsNote": "Los valores de los campos personalizados se copian de la plantilla.",
+    "templateReplaceTitle": "¿Reemplazar sus cambios?",
+    "templateReplaceMessage": "Aplicar una plantilla reemplaza el título, la descripción y otros campos que ha introducido.",
+    "templateReplaceConfirm": "Aplicar plantilla"
   },
   "itil": {
     "calculatedPriority": "Prioridad (calculada)",
@@ -1587,7 +1597,8 @@
     },
     "autoClose": "Se cerrará automáticamente el {{date}} salvo que haya nueva actividad.",
     "autoCloseWarned": "Se ha avisado al cliente.",
-    "duplicatedFrom": "Duplicado de #{{number}}"
+    "duplicatedFrom": "Duplicado de #{{number}}",
+    "fromTemplate": "De la plantilla: {{name}}"
   },
   "invalidTicketData": "Datos del ticket no válidos",
   "timeEntries": {
@@ -1898,7 +1909,8 @@
       "noStatusChange": "No cambiar el estado",
       "showAllActivity": "Mostrar toda la actividad",
       "collapseActivity": "Contraer actividad anterior",
-      "replyingToComment": "Respondiendo a {{name}}"
+      "replyingToComment": "Respondiendo a {{name}}",
+      "createdFromTemplate": "{{actor}} creó este ticket desde la plantilla \"{{name}}\""
     }
   },
   "notifications": {
@@ -2313,5 +2325,85 @@
     "pausedHint": "En pausa. Reanude para seguir registrando o detenga para guardar el tiempo.",
     "workDescription": "Descripción del trabajo",
     "whatAreYouWorkingOn": "¿En qué está trabajando?"
+  },
+  "templates": {
+    "loading": "Cargando…",
+    "list": {
+      "title": "Plantillas de tickets",
+      "new": "Nueva plantilla",
+      "empty": "Aún no hay plantillas de tickets. Abra un ticket y elija \"Crear plantilla desde el ticket\", o cree una desde cero.",
+      "showInactive": "Mostrar inactivas",
+      "deleted": "Plantilla eliminada",
+      "deleteTitle": "Eliminar plantilla",
+      "deleteMessage": "¿Eliminar \"{{name}}\"? Los tickets ya creados con ella no se modifican.",
+      "columns": {
+        "name": "Nombre",
+        "title": "Título del ticket",
+        "board": "Tablero",
+        "checklist": "Elementos de la lista",
+        "status": "Estado"
+      }
+    },
+    "status": {
+      "active": "Activa",
+      "inactive": "Inactiva"
+    },
+    "actions": {
+      "edit": "Editar",
+      "newTicket": "Nuevo ticket desde plantilla",
+      "activate": "Activar",
+      "deactivate": "Desactivar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "sections": {
+      "details": "Plantilla",
+      "ticket": "Ticket",
+      "checklist": "Lista de verificación",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "name": "Nombre de la plantilla",
+      "notes": "Notas",
+      "notesHelp": "Solo para su equipo. No se copian a los tickets.",
+      "title": "Título del ticket",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción"
+    },
+    "checklist": {
+      "empty": "Sin elementos de lista.",
+      "itemName": "Elemento de la lista",
+      "required": "Obligatorio",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "remove": "Quitar elemento",
+      "add": "Añadir elemento"
+    },
+    "customFields": {
+      "empty": "Sin valores de campos personalizados.",
+      "name": "Nombre del campo",
+      "value": "Valor",
+      "remove": "Quitar campo",
+      "add": "Añadir campo"
+    },
+    "editor": {
+      "back": "Plantillas de tickets",
+      "newTitle": "Nueva plantilla de ticket",
+      "created": "Plantilla creada",
+      "saved": "Plantilla guardada",
+      "saving": "Guardando…",
+      "save": "Guardar",
+      "fromTicket": "Rellenado desde el ticket #{{number}}. No se guarda nada hasta que haga clic en Guardar.",
+      "inlineImages": "La descripción contiene imágenes que pertenecen al ticket de origen. Pueden dejar de mostrarse si ese ticket se elimina. Quítelas o vuelva a subirlas si la plantilla debe sobrevivir al ticket.",
+      "viewOnly": "Puede ver esta plantilla pero no modificarla.",
+      "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:"
+    },
+    "errors": {
+      "notFound": "Plantilla de ticket no encontrada",
+      "duplicateName": "Ya existe una plantilla llamada {{name}}",
+      "invalidReferences": "La plantilla hace referencia a un tablero, una categoría o una prioridad que no está disponible",
+      "notAvailable": "Las plantillas de tickets no están disponibles",
+      "subcategoryNeedsCategory": "Una subcategoría requiere una categoría"
+    }
   }
 }

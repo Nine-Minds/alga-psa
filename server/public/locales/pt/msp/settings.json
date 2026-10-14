@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Digite o nome da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
-        "selectUserToAdd": "Selecione um usuário para adicionar"
+        "selectUserToAdd": "Selecione um usuário para adicionar",
+        "noTeamLead": "Não atribuído"
       },
       "alert": {
         "unsavedChanges": "Você tem alterações não salvas"

@@ -130,8 +130,10 @@ for (const missing of [false, true]) test(`artifact collector→core ${missing ?
   const collected = await collectBrowserMetricExecutions({ repository: 'Nine-Minds/alga-psa', runId: '123', revisionMode: 'artifact',
     sheetId: 'sheet', githubToken: 'secret-token', sheetsToken: 'sheet-token', request });
   const reconciled = reconcileBrowserMetricExecutions(collected);
-  assert.equal(reconciled.status, missing ? 'incomplete' : 'passed');
+  // A cancelled lane with no export anomaly is the gate's finding, not a
+  // reconciliation gap: reported, never trusted, and not blocking.
+  assert.equal(reconciled.status, missing ? 'lane-unsuccessful' : 'passed');
   if (missing) assert.ok(reconciled.records.every(record => record.revision === null && record.status === 'cancelled'
-    && record.exportStatus === 'tested-revision-unknown'));
+    && record.exportStatus === 'tested-revision-unknown' && record.blocking === false));
   else assert.ok(reconciled.records.every(record => record.revision === revision && record.revisionEvidence === 'candidate-artifact'));
 });

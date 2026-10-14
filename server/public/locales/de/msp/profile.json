@@ -500,6 +500,8 @@
         "sending": "Wird gesendet…",
         "rotateSecret": "Geheimnis rotieren",
         "rotating": "Wird rotiert…",
+        "retryFailed": "Fehlgeschlagene Zustellungen wiederholen",
+        "retryingFailed": "Wird wiederholt…",
         "back": "Zurück zu Webhooks"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "Webhook-Status konnte nicht aktualisiert werden.",
         "retryQueued": "Wiederholung für Ereignis {{eventId}} eingereiht.",
         "retryFailed": "Wiederholung der Zustellung fehlgeschlagen.",
+        "retryFailedQueued": "{{queued}} Zustellungen zur Wiederholung eingereiht, {{skipped}} übersprungen.",
+        "retryFailedFailed": "Wiederholung der fehlgeschlagenen Zustellungen fehlgeschlagen.",
         "invalidHeaderLine": "Ungültige Header-Zeile: \"{{line}}\"",
         "invalidRetryConfig": "Die Retry-Konfiguration muss ein JSON-Objekt sein"
       },

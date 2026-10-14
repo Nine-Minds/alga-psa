@@ -341,8 +341,8 @@ describe('TicketDetails create workflow from ticket', () => {
         renderCreateWorkflowFromTicket={renderSlot}
       />
     );
-    expect(document.getElementById('ticket-details-more-actions-menu')
-      ?? document.querySelector('[id$="-more-actions-menu"]')).not.toBeNull();
+    // The header's single More menu; its trigger id is the one the base branch ships.
+    expect(document.querySelector('[id$="-more-actions-button"]')).not.toBeNull();
     expect(screen.getByTestId('cwft-slot').getAttribute('data-open')).toBe('false');
 
     fireEvent.click(document.getElementById('create-workflow-from-ticket-menu-item')!);

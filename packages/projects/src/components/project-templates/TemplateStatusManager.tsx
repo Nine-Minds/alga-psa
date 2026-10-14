@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, Trash, GripVertical, Circle } from 'lucide-react';
+import { Plus, Circle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { IProjectTemplatePhase, IProjectTemplateStatusMapping } from '@alga-psa/types';
 import {
@@ -26,6 +26,12 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
+import {
+  DeleteStatusColumnDialog,
+  StatusColumnName,
+  StatusColumnsEditor,
+  type DeleteStatusColumnRequest,
+} from '../status-columns';
 import {
   getEffectiveTemplateStatusMappings,
   getTemplateDefaultStatusMappings,
@@ -80,15 +86,9 @@ export function TemplateStatusManager({
   const { t } = useTranslation(['features/projects', 'common']);
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
   const [localAvailableStatuses, setLocalAvailableStatuses] = useState(availableStatuses);
-  const [removeConfirmation, setRemoveConfirmation] = useState<{
-    mappingId: string;
-    statusName: string;
-    taskCount: number;
-    moveToMappingId: string;
-  } | null>(null);
+  const [removeConfirmation, setRemoveConfirmation] = useState<DeleteStatusColumnRequest | null>(null);
   const [resetToDefaultsConfirmation, setResetToDefaultsConfirmation] = useState(false);
   const [selectedScope, setSelectedScope] = useState<string>(TEMPLATE_DEFAULT_SCOPE);
 
@@ -145,23 +145,18 @@ export function TemplateStatusManager({
 
   const initiateRemove = (mappingId: string) => {
     const mapping = sortedMappings.find(m => m.template_status_mapping_id === mappingId);
-    const statusName = mapping?.status_name || mapping?.custom_status_name || 'Status';
-    const taskCount = taskCountByMapping[mappingId] || 0;
-    const otherMappings = sortedMappings.filter(m => m.template_status_mapping_id !== mappingId);
     setRemoveConfirmation({
-      mappingId,
-      statusName,
-      taskCount,
-      moveToMappingId: otherMappings[0]?.template_status_mapping_id || '',
+      id: mappingId,
+      name: mapping?.status_name || mapping?.custom_status_name || 'Status',
+      taskCount: taskCountByMapping[mappingId] || 0,
     });
   };
 
-  const handleRemoveStatus = async () => {
+  const handleRemoveStatus = async (moveToMappingId?: string) => {
     if (!removeConfirmation) return;
     try {
-      const moveTarget = removeConfirmation.taskCount > 0 ? removeConfirmation.moveToMappingId : undefined;
-      unwrapTemplateActionResult(await removeTemplateStatusMapping(removeConfirmation.mappingId));
-      onStatusRemoved(removeConfirmation.mappingId, moveTarget);
+      unwrapTemplateActionResult(await removeTemplateStatusMapping(removeConfirmation.id));
+      onStatusRemoved(removeConfirmation.id, moveToMappingId);
       toast.success(t('templates.statuses.removed'));
     } catch (error) {
       handleError(error, 'Failed to remove status column');
@@ -170,34 +165,15 @@ export function TemplateStatusManager({
     }
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) return;
-
-    const items = [...sortedMappings];
-    const draggedItem = items[draggedIndex];
-    items.splice(draggedIndex, 1);
-    items.splice(targetIndex, 0, draggedItem);
-
-    const orderedIds = items.map((m) => m.template_status_mapping_id);
+  const handleReorder = (orderedIds: string[]) => {
     onStatusReordered(orderedIds, selectedTemplatePhaseId);
-    setDraggedIndex(targetIndex);
   };
 
-  const handleDragEnd = async () => {
-    if (draggedIndex === null) return;
-
+  const handleReorderCommit = async (orderedIds: string[]) => {
     try {
-      const orderedIds = sortedMappings.map((m) => m.template_status_mapping_id);
       unwrapTemplateActionResult(await reorderTemplateStatusMappings(templateId, orderedIds, selectedTemplatePhaseId));
     } catch (error) {
       handleError(error, 'Failed to reorder status columns');
-    } finally {
-      setDraggedIndex(null);
     }
   };
 
@@ -293,57 +269,18 @@ export function TemplateStatusManager({
         />
       )}
 
-      {removeConfirmation && (
-        <Dialog
-          isOpen={true}
-          onClose={() => setRemoveConfirmation(null)}
-          title={t('templates.statuses.remove_title')}
-          className="max-w-sm"
-        >
-          <div className="space-y-4">
-            {removeConfirmation.taskCount > 0 ? (
-              <>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings.statuses.delete_has_tasks', {
-                    statusName: removeConfirmation.statusName,
-                    count: removeConfirmation.taskCount,
-                  })}
-                </p>
-                <CustomSelect
-                  value={removeConfirmation.moveToMappingId}
-                  onValueChange={(val) => setRemoveConfirmation({ ...removeConfirmation, moveToMappingId: val })}
-                  options={sortedMappings
-                    .filter(m => m.template_status_mapping_id !== removeConfirmation.mappingId)
-                    .map(m => ({
-                      value: m.template_status_mapping_id,
-                      label: m.status_name || m.custom_status_name || 'Status',
-                    }))}
-                />
-              </>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('settings.statuses.confirm_delete', { statusName: removeConfirmation.statusName })}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button id="cancel-remove-template-status" variant="outline" size="sm" onClick={() => setRemoveConfirmation(null)}>
-                {t('common:actions.cancel')}
-              </Button>
-              <Button
-                id="confirm-remove-template-status"
-                variant="destructive"
-                size="sm"
-                onClick={handleRemoveStatus}
-                disabled={removeConfirmation.taskCount > 0 && !removeConfirmation.moveToMappingId}
-              >
-                {removeConfirmation.taskCount > 0
-                  ? t('settings.statuses.delete_and_move')
-                  : t('templates.statuses.remove_confirm')}
-              </Button>
-            </div>
-          </div>
-        </Dialog>
-      )}
+      <DeleteStatusColumnDialog
+        request={removeConfirmation}
+        moveTargets={sortedMappings
+          .filter(m => m.template_status_mapping_id !== removeConfirmation?.id)
+          .map(m => ({
+            id: m.template_status_mapping_id,
+            name: m.status_name || m.custom_status_name || 'Status',
+          }))}
+        onCancel={() => setRemoveConfirmation(null)}
+        onConfirm={handleRemoveStatus}
+        idPrefix="template-status"
+      />
 
       <Dialog
         isOpen={open}
@@ -408,102 +345,79 @@ export function TemplateStatusManager({
             )}
 
             {/* Current Status Columns */}
-            <div className="space-y-2">
-              {sortedMappings.length === 0 ? (
+            <StatusColumnsEditor
+              items={sortedMappings.map((mapping) => ({
+                id: mapping.template_status_mapping_id,
+                name: mapping.status_name || mapping.custom_status_name || 'Status',
+                isClosed: localAvailableStatuses.find((s) => s.status_id === mapping.status_id)?.is_closed,
+                color: mapping.color || null,
+              }))}
+              editable={editableMappings}
+              showColor
+              idPrefix="template-status"
+              onReorder={handleReorder}
+              onReorderCommit={handleReorderCommit}
+              onRequestDelete={(item) => initiateRemove(item.id)}
+              canDelete={() => sortedMappings.length > 1}
+              renderRowBody={(item, index) => {
+                const mapping = sortedMappings[index];
+                if (mapping?.statusSource !== 'unresolved') {
+                  return <StatusColumnName name={item.name} isClosed={item.isClosed} className="font-medium" />;
+                }
+                return (
+                  <div>
+                    <span className="font-medium text-destructive">
+                      {t('templates.statuses.status_no_longer_exists')}
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {mapping.unresolved_reason === 'ambiguous'
+                        ? t('templates.statuses.ambiguous_status')
+                        : t('templates.statuses.missing_status')}
+                    </p>
+                  </div>
+                );
+              }}
+              renderRowExtra={(item, index) => {
+                if (sortedMappings[index]?.statusSource !== 'unresolved') return null;
+                return (
+                  <div className="mt-2 flex items-center gap-2 pl-8">
+                    <CustomSelect
+                      value={replaceTargetByMapping[item.id] || ''}
+                      onValueChange={(value) => setReplaceTargetByMapping((prev) => ({
+                        ...prev,
+                        [item.id]: value,
+                      }))}
+                      options={[
+                        { value: '', label: t('templates.statuses.replace_placeholder') },
+                        ...localAvailableStatuses.map((s) => ({
+                          value: s.status_id,
+                          label: `${s.name}${s.is_closed ? ` ${t('settings.statuses.closed_badge')}` : ''}`,
+                        })),
+                      ]}
+                      disabled={replacingMappingId === item.id}
+                      className="flex-1"
+                    />
+                    <Button
+                      id={`replace-status-${item.id}`}
+                      size="sm"
+                      onClick={() => handleReplaceStatus(item.id)}
+                      disabled={!replaceTargetByMapping[item.id] || replacingMappingId === item.id}
+                    >
+                      {replacingMappingId === item.id
+                        ? t('templates.statuses.replacing')
+                        : t('templates.statuses.replace_status')}
+                    </Button>
+                  </div>
+                );
+              }}
+              emptyState={(
                 <div className="text-center py-6 bg-gray-50 dark:bg-[rgb(var(--color-border-50))] rounded-lg border-2 border-dashed">
                   <Circle className="w-10 h-10 mx-auto text-gray-400 mb-2" />
                   <p className="text-gray-600 dark:text-gray-400">{t('templates.statuses.empty')}</p>
                   <p className="text-sm text-gray-500">{t('templates.statuses.empty_hint')}</p>
                 </div>
-              ) : (
-                sortedMappings.map((mapping, index) => {
-                  const isUnresolved = mapping.statusSource === 'unresolved';
-
-                  return (
-                  <div
-                    key={mapping.template_status_mapping_id}
-                    draggable={editableMappings}
-                    onDragStart={() => editableMappings && handleDragStart(index)}
-                    onDragOver={(e) => editableMappings && handleDragOver(e, index)}
-                    onDragEnd={editableMappings ? handleDragEnd : undefined}
-                    className={`${isUnresolved ? 'space-y-2' : 'flex items-center gap-3'} p-3 bg-white dark:bg-[rgb(var(--color-card))] border rounded-lg ${
-                      draggedIndex === index ? 'opacity-50' : ''
-                    } ${isUnresolved ? 'border-destructive/40' : ''}`}
-                  >
-                    <div className={`${isUnresolved ? 'flex items-center gap-3' : ''}`}>
-                      <div className={`cursor-grab ${!editableMappings ? 'opacity-40' : ''}`}>
-                        <GripVertical className="w-4 h-4 text-gray-400" />
-                      </div>
-                      <Circle
-                        className="w-5 h-5"
-                        fill={mapping.color || '#6B7280'}
-                        stroke={mapping.color || '#6B7280'}
-                      />
-                      {isUnresolved ? (
-                        <div className="flex-1">
-                          <span className="font-medium text-destructive">
-                            {t('templates.statuses.status_no_longer_exists')}
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            {mapping.unresolved_reason === 'ambiguous'
-                              ? t('templates.statuses.ambiguous_status')
-                              : t('templates.statuses.missing_status')}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="flex-1 font-medium">
-                          {mapping.status_name || mapping.custom_status_name || 'Status'}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-500">#{index + 1}</span>
-                      <Button
-                        id={`remove-status-${mapping.template_status_mapping_id}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => initiateRemove(mapping.template_status_mapping_id)}
-                        disabled={!editableMappings || sortedMappings.length <= 1}
-                      >
-                        <Trash className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                    {isUnresolved && (
-                      <div className="flex items-center gap-2 pl-8">
-                        <CustomSelect
-                          value={replaceTargetByMapping[mapping.template_status_mapping_id] || ''}
-                          onValueChange={(value) => setReplaceTargetByMapping((prev) => ({
-                            ...prev,
-                            [mapping.template_status_mapping_id]: value,
-                          }))}
-                          options={[
-                            { value: '', label: t('templates.statuses.replace_placeholder') },
-                            ...localAvailableStatuses.map((s) => ({
-                              value: s.status_id,
-                              label: `${s.name}${s.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
-                            })),
-                          ]}
-                          disabled={replacingMappingId === mapping.template_status_mapping_id}
-                          className="flex-1"
-                        />
-                        <Button
-                          id={`replace-status-${mapping.template_status_mapping_id}`}
-                          size="sm"
-                          onClick={() => handleReplaceStatus(mapping.template_status_mapping_id)}
-                          disabled={
-                            !replaceTargetByMapping[mapping.template_status_mapping_id] ||
-                            replacingMappingId === mapping.template_status_mapping_id
-                          }
-                        >
-                          {replacingMappingId === mapping.template_status_mapping_id
-                            ? t('templates.statuses.replacing')
-                            : t('templates.statuses.replace_status')}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  );
-                })
               )}
-            </div>
+            />
 
             {/* Add Status */}
             {editableMappings && (
@@ -519,7 +433,7 @@ export function TemplateStatusManager({
                           { value: '', label: t('templates.statuses.select_placeholder') },
                           ...unusedStatuses.map((s) => ({
                             value: s.status_id,
-                            label: `${s.name}${s.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
+                            label: `${s.name}${s.is_closed ? ` ${t('settings.statuses.closed_badge')}` : ''}`,
                           })),
                         ]}
                         disabled={isAdding}
@@ -530,7 +444,7 @@ export function TemplateStatusManager({
                         onClick={handleAddStatus}
                         disabled={!selectedStatusId || isAdding}
                       >
-                        {t('common:actions.create')}
+                        {t('settings.statuses.add_existing', 'Add Existing')}
                       </Button>
                     </>
                   ) : (

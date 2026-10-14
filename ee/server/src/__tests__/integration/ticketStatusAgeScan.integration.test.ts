@@ -18,7 +18,7 @@ import { ticketStatusClockPatch } from '../../../../../shared/lib/ticketStatusCl
 /**
  * "Ticket in status for N days" against a real database: dedup across scans, clock resets, board
  * scope, repeats, the no-activity condition and the payload. Every test runs in a transaction that is
- * rolled back. Status-change timing uses the real DB clock (ticketStatusClockPatch writes now()), so
+ * rolled back. Status-change timing uses the app clock (ticketStatusClockPatch binds new Date()), so
  * those tests anchor their scan dates on the current time.
  */
 

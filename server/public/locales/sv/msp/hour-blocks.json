@@ -154,5 +154,16 @@
       "missingField": "Ett obligatoriskt fält för timblocket saknas. Kontrollera formuläret och försök igen.",
       "referenceMissing": "Den valda kunden, tjänsten eller fakturan finns inte längre. Ladda om sidan och försök igen."
     }
+  },
+  "coverage": {
+    "oneLine": "Tid på {{service}} faktureras via {{contract}} / {{line}} och dras inte från detta timblock.",
+    "manyLines": "Tid på {{service}} som är tilldelad en avtalsrad dras inte från detta timblock.",
+    "linesLabel": "Avtalsrader som täcker {{service}}:",
+    "unscopedIntro": "Detta timblock täcker allt arbete, men tid på dessa tjänster faktureras via en avtalsrad och dras inte från det:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — när den är tilldelad en avtalsrad",
+    "more": "och {{count}} till",
+    "badge": "Avtalsöverlappning",
+    "viewContract": "Visa avtal"
   }
 }

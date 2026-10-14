@@ -5149,6 +5149,8 @@ components:
           enum:
             - "true"
             - "false"
+          description: Filters to inactive clients when true and active clients when
+            false; omit to include all clients.
         is_tax_exempt:
           type: string
           enum:
@@ -5256,6 +5258,12 @@ components:
           format: uuid
         is_inactive:
           type: boolean
+        lifecycle_status:
+          type: string
+          enum:
+            - prospect
+            - active
+            - former
         tags:
           type: array
           items:
@@ -6278,6 +6286,12 @@ components:
               type:
                 - string
                 - "null"
+            lifecycle_status:
+              type: string
+              enum:
+                - prospect
+                - active
+                - former
             logoUrl:
               type:
                 - string
@@ -6483,6 +6497,12 @@ components:
                 type:
                   - string
                   - "null"
+              lifecycle_status:
+                type: string
+                enum:
+                  - prospect
+                  - active
+                  - former
               logoUrl:
                 type:
                   - string
@@ -14123,8 +14143,11 @@ components:
                   - status_id
                   - status_name
                   - is_closed
+                  - response_state
                   - previous_status_id
                   - previous_status_name
+                  - previous_response_state
+                  - new_response_state
                   - priority_id
                   - priority_name
                   - client_id
@@ -31455,7 +31478,11 @@ paths:
             enum:
               - "true"
               - "false"
+            description: Filters to inactive clients when true and active clients when
+              false; omit to include all clients.
           required: false
+          description: Filters to inactive clients when true and active clients when
+            false; omit to include all clients.
           name: is_inactive
           in: query
         - schema:
@@ -31751,6 +31778,12 @@ paths:
                   format: uuid
                 is_inactive:
                   type: boolean
+                lifecycle_status:
+                  type: string
+                  enum:
+                    - prospect
+                    - active
+                    - former
                 tags:
                   type: array
                   items:
@@ -67424,7 +67457,9 @@ paths:
   /api/v1/time-periods:
     get:
       summary: List time periods
-      description: Lists time periods via ApiTimeSheetController.listTimePeriods().
+      description: "Lists time periods via ApiTimeSheetController.listTimePeriods().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67509,7 +67544,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time period
-      description: Creates time period via ApiTimeSheetController.createTimePeriod().
+      description: "Creates time period via ApiTimeSheetController.createTimePeriod().
+        end_date is exclusive: the first day after the period (a period covering
+        Aug 16–22 has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67726,7 +67763,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     get:
       summary: Get time period
-      description: Gets time period UUID via getTimePeriod().
+      description: "Gets time period UUID via getTimePeriod(). end_date is exclusive:
+        the first day after the period (a period covering Aug 16–22 has end_date
+        2026-08-23)."
       tags:
         - Work Management v1
       security:
@@ -67787,7 +67826,9 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     put:
       summary: Update time period
-      description: Updates time period UUID via updateTimePeriod().
+      description: "Updates time period UUID via updateTimePeriod(). end_date is
+        exclusive: the first day after the period (a period covering Aug 16–22
+        has end_date 2026-08-23)."
       tags:
         - Work Management v1
       security:

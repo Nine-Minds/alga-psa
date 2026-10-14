@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Ange teamnamn",
         "selectTeamLead": "Välj en teamledare",
-        "selectUserToAdd": "Välj en användare att lägga till"
+        "selectUserToAdd": "Välj en användare att lägga till",
+        "noTeamLead": "Inte tilldelad"
       },
       "alert": {
         "unsavedChanges": "Du har osparade ändringar"
