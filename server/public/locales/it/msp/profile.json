@@ -500,6 +500,8 @@
         "sending": "Invio…",
         "rotateSecret": "Ruota segreto",
         "rotating": "Rotazione…",
+        "retryFailed": "Riprova le consegne fallite",
+        "retryingFailed": "Nuovo tentativo…",
         "back": "Torna ai webhook"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "Impossibile aggiornare lo stato del webhook.",
         "retryQueued": "Ritentativo in coda per l'evento {{eventId}}.",
         "retryFailed": "Impossibile riprovare la consegna.",
+        "retryFailedQueued": "{{queued}} consegne in coda per il nuovo tentativo, {{skipped}} ignorate.",
+        "retryFailedFailed": "Impossibile riprovare le consegne fallite.",
         "invalidHeaderLine": "Riga di intestazione non valida: \"{{line}}\"",
         "invalidRetryConfig": "La configurazione dei tentativi deve essere un oggetto JSON"
       },

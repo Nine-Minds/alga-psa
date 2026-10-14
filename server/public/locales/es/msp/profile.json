@@ -500,6 +500,8 @@
         "sending": "Enviando…",
         "rotateSecret": "Rotar secreto",
         "rotating": "Rotando…",
+        "retryFailed": "Reintentar entregas fallidas",
+        "retryingFailed": "Reintentando…",
         "back": "Volver a webhooks"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "No se pudo actualizar el estado del webhook.",
         "retryQueued": "Reintento en cola para el evento {{eventId}}.",
         "retryFailed": "No se pudo reintentar la entrega.",
+        "retryFailedQueued": "{{queued}} entregas en cola para reintento, {{skipped}} omitidas.",
+        "retryFailedFailed": "No se pudieron reintentar las entregas fallidas.",
         "invalidHeaderLine": "Línea de encabezado no válida: \"{{line}}\"",
         "invalidRetryConfig": "La configuración de reintentos debe ser un objeto JSON"
       },
