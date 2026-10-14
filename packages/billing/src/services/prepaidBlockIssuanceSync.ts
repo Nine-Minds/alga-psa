@@ -17,10 +17,13 @@ import { resolvePrepaidBlockBusinessDate, toDateOnly } from '../lib/prepaidBlock
  *  - First block: config present, a live assignment, the line has never issued
  *    a block (no invoiced issuance, no non-voided block) and no scheduled
  *    issuance exists -> insert `contract_start` due at
- *    max(client_contracts.start_date, the business date the line was created on).
- *    The business date is the calendar day of line.created_at in the tenant's
- *    effective time zone (resolvePrepaidBlockBusinessDate), never the UTC slice of
- *    the timestamp: a line created at 20:00 EDT is created that EDT day.
+ *    client_contracts.start_date, unless the line was added to an already-running
+ *    contract (line.created_at more than a short tolerance after the contract's own
+ *    created_at), in which case max(start_date, the business date it was added).
+ *    A line created with its contract never depends on created_at, so a 20:00 EDT
+ *    contract with that day's start date is due on the start date even when the
+ *    tenant has no time zone (UTC fallback). The added date is the calendar day of
+ *    line.created_at in the tenant's effective time zone (resolvePrepaidBlockBusinessDate).
  *  - A scheduled `contract_start` issuance follows later edits to the start
  *    date / owning assignment.
  *  - Cancellation: scheduled issuances are cancelled (expiry ones superseded)
@@ -36,6 +39,17 @@ import { resolvePrepaidBlockBusinessDate, toDateOnly } from '../lib/prepaidBlock
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string) {
   return tenantDb(conn, tenant).table(name);
+}
+
+/** A wizard/API save creates the contract and its lines within moments of each other. */
+const LINE_WITH_CONTRACT_TOLERANCE_MS = 10 * 60 * 1000;
+
+function isAddedAfterContract(lineCreatedAt: unknown, contractCreatedAt: unknown): boolean {
+  if (!lineCreatedAt || !contractCreatedAt) return false;
+  const line = new Date(lineCreatedAt as any).getTime();
+  const contract = new Date(contractCreatedAt as any).getTime();
+  if (Number.isNaN(line) || Number.isNaN(contract)) return false;
+  return line - contract > LINE_WITH_CONTRACT_TOLERANCE_MS;
 }
 
 export type PrepaidBlockIssuanceSyncResult =
@@ -83,7 +97,7 @@ export async function syncPrepaidBlockIssuancesForContractLine(
   db.tenantJoin(lineQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id', { type: 'left' });
   const line = await lineQuery
     .andWhere('cl.contract_line_id', contractLineId)
-    .first('cl.contract_line_id as contract_line_id', 'cl.contract_id as contract_id', 'cl.created_at as created_at', 'ct.status as contract_status');
+    .first('cl.contract_line_id as contract_line_id', 'cl.contract_id as contract_id', 'cl.created_at as created_at', 'ct.created_at as contract_created_at', 'ct.status as contract_status');
 
   if (!config) {
     const count = await cancelScheduledIssuances(trx, tenant, contractLineId, 'Prepaid block configuration removed from the line');
@@ -120,7 +134,11 @@ export async function syncPrepaidBlockIssuancesForContractLine(
     .first('issuance_id', 'trigger_kind', 'due_date', 'client_contract_id');
 
   const startDate = toDateOnly(assignment.start_date);
-  const createdDate = line.created_at ? await resolvePrepaidBlockBusinessDate(trx, tenant, line.created_at) : null;
+  // Only a line added to an already-running contract is due on the day it was added.
+  // A line that came with the contract (created with it, within the tolerance, or before it)
+  // is due on the contract start date, whatever business date its created_at falls on.
+  const addedToRunningContract = isAddedAfterContract(line.created_at, line.contract_created_at);
+  const createdDate = addedToRunningContract ? await resolvePrepaidBlockBusinessDate(trx, tenant, line.created_at) : null;
   const firstDue = [startDate, createdDate].filter((d): d is string => !!d).sort().pop() ?? null;
 
   if (scheduled) {
