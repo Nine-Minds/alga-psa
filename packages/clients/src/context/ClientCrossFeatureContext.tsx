@@ -150,10 +150,11 @@ export interface ClientCoManagedSlots {
   /** The stable `co-managed` entry registered in the client tab registry. */
   tab: TabContent;
   /**
-   * Replaces the Tickets tab content with the authorized native-plus-shared
-   * queue scoped to this client. Absent keeps the native ticket list.
+   * Rendered above the native client ticket list (never in place of it), e.g. a
+   * callout when this client's shared tickets need MSP action. The Tickets tab
+   * always keeps the native list.
    */
-  ticketsContent?: ReactNode;
+  ticketsCallout?: ReactNode;
 }
 
 export interface ClientCoManagedIntegrationProps {

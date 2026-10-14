@@ -569,7 +569,7 @@
     },
     "queue": {
       "title": "Co-managed ticket queues",
-      "workingDescription": "MSP tickets and customer tickets currently handled by your team.",
+      "workingDescription": "Shared tickets where your team is responsible or assigned.",
       "oversightDescription": "Customer tickets within your approved access, including work handled by customer IT.",
       "view": "View",
       "working": "Working queue",
@@ -621,10 +621,8 @@
         "resume": "A return to customer IT was interrupted. Resume it to confirm the result.",
         "noReloadRecovery": "Reload recovery is unavailable in this browser; you can still retry in this session."
       },
-      "thisMsp": "This MSP",
       "scopeUnavailable": "Opening the ticket list…",
       "searchPlaceholder": "Search by number or title",
-      "addMspTicket": "Add MSP ticket",
       "mspAlsoAssigned": "MSP also assigned"
     },
     "conversation": {
@@ -954,7 +952,9 @@
       "viewHistory": "View history",
       "work": "Work",
       "workHint": "Client projects and shared task queues stay in the MSP shell with their qualified identities.",
-      "workspace": "Customer workspace"
+      "workspace": "Customer workspace",
+      "sharedTickets": "Shared tickets",
+      "openCustomerTickets": "Open in Customer Tickets"
     },
     "overview": {
       "clients": "Co-managed clients",
@@ -986,6 +986,31 @@
     "directory": {
       "prompt": "Select the co-managed workspace to manage.",
       "empty": "No co-managed workspaces are available to manage."
+    },
+    "customerTickets": {
+      "title": "Customer Tickets",
+      "view": "View",
+      "columns": "Columns",
+      "density": "Density",
+      "filters": "Filters",
+      "client": "Client",
+      "allClients": "All clients",
+      "share": "Share",
+      "clearSignal": "Clear",
+      "unavailable": "This view is not available for your account yet.",
+      "allTickets": "All Tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalated, unassigned",
+        "awaitingReply": "Awaiting your reply"
+      }
+    },
+    "callout": {
+      "title": "Customer tickets need you",
+      "escalatedUnassigned_one": "{{count}} escalated ticket, unassigned",
+      "escalatedUnassigned_other": "{{count}} escalated tickets, unassigned",
+      "awaitingReply_one": "{{count}} ticket awaiting your reply",
+      "awaitingReply_other": "{{count}} tickets awaiting your reply",
+      "dismiss": "Dismiss"
     }
   },
   "actions": {

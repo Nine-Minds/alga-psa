@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
 import type { MenuItem } from '@/config/menuConfig';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { useCoManagedWorkSignals } from '@/components/co-managed/CoManagedWorkSignalsProvider';
 
 interface SidebarSubMenuItemProps {
   item: MenuItem;
@@ -24,6 +25,10 @@ const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
     parentId
   });
 
+  // Presentation-only count; the provider is empty (zero) unless the flag, tenant and assignments allow it.
+  const signals = useCoManagedWorkSignals();
+  const badge = item.badgeSource === 'co-managed-work' && signals.available ? signals.total : 0;
+
   return (
     <Link prefetch={false}
       href={item.href || '#'}
@@ -33,6 +38,15 @@ const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
     >
       <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />
       <span className="truncate">{item.name}</span>
+      {badge > 0 && (
+        <span
+          data-testid="co-managed-work-badge"
+          aria-label={String(badge)}
+          className="ml-auto rounded-full bg-[rgb(var(--color-primary-500))] px-1.5 text-xs font-semibold leading-5 text-white"
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   );
 };

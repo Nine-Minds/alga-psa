@@ -16,11 +16,9 @@ vi.mock('../../../components/co-managed/CoManagedClientSummary', () => ({
 vi.mock('../../../components/co-managed/CoManagedClientView', () => ({
   default: () => <div data-testid="view" />,
 }));
-// The client Tickets slot renders the qualified list, not the retired standalone
-// queue. Mocking the old module would silently pull the real component (and its
-// server actions) into this render.
-vi.mock('../../../components/co-managed/QualifiedTicketList', () => ({
-  default: () => <div data-testid="tickets" />,
+// The Tickets tab keeps the native list; the integration only adds a callout above it.
+vi.mock('../../../components/co-managed/CoManagedCalloutStrip', () => ({
+  CoManagedClientCalloutStrip: ({ clientId }: { clientId: string }) => <div data-testid="client-callout" data-client={clientId} />,
 }));
 
 const view = (over: Record<string, unknown> = {}) => ({
@@ -45,8 +43,10 @@ function Harness(props: { clientId?: string; relationshipId?: string | null }) {
     <ClientCoManagedIntegration clientId={props.clientId ?? 'client'} clientName="Customer" idPrefix="instance"
       relationshipId={props.relationshipId}>
       {(slots) => (
-        <div data-testid="slots" data-tab={slots?.tab?.id ?? 'none'}>
+        <div data-testid="slots" data-tab={slots?.tab?.id ?? 'none'}
+          data-replaces-native-list={slots && 'ticketsContent' in slots ? 'yes' : 'no'}>
           {slots?.summary}
+          {slots?.ticketsCallout}
         </div>
       )}
     </ClientCoManagedIntegration>
@@ -79,6 +79,20 @@ describe('app-owned co-managed client integration', () => {
     await waitFor(() => expect(screen.getByTestId('slots')).toHaveAttribute('data-tab', 'co-managed'));
     expect(mocks.load).toHaveBeenCalledWith('client', undefined);
     expect(screen.getByTestId('summary')).toBeInTheDocument();
+  });
+
+  it('never replaces the native client ticket list; it only adds a client-scoped callout above it', async () => {
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('slots')).toHaveAttribute('data-tab', 'co-managed'));
+    expect(screen.getByTestId('slots')).toHaveAttribute('data-replaces-native-list', 'no');
+    expect(screen.getByTestId('client-callout')).toHaveAttribute('data-client', 'client');
+  });
+
+  it('adds no callout for a client without a co-managed relationship', async () => {
+    mocks.load.mockResolvedValue(view({ relationships: [] }));
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByTestId('slots')).toHaveAttribute('data-tab', 'co-managed'));
+    expect(screen.queryByTestId('client-callout')).toBeNull();
   });
 
   it('falls back to the ordinary client when client read authority is denied or the read fails', async () => {

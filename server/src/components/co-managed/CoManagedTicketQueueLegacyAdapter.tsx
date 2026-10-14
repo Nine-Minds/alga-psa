@@ -2,13 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { buildTicketListHref, parseTicketListPresentation } from '@alga-psa/tickets/lib';
+import { buildTicketListHref, isQualifiedTicketListScope, parseTicketListPresentation, parseTicketListScope } from '@alga-psa/tickets/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * Client-gated compatibility adapter for the retired standalone queue route
  * (`/msp/co-managed/tickets`). It carries supported client/filter intent from a
- * bookmarked URL onto the canonical explicit `/msp/tickets` qualified scope.
+ * bookmarked URL onto the Customer Tickets route (`/msp/tickets/customer`).
  *
  * It is an adapter, not a second list: the same scope parser/serializer and the
  * same target as every other co-managed entry link. The inherited UI release
@@ -27,6 +27,9 @@ export default function CoManagedTicketQueueLegacyAdapter() {
     // contract without inventing any behavior it did not have.
     const normalized = new URLSearchParams();
     const passthrough: Array<[string, string]> = [
+      ['queueView', 'queueView'],
+      ['workspace', 'workspace'],
+      ['signal', 'signal'],
       ['clientId', 'clientId'],
       ['search', 'searchQuery'],
       ['searchQuery', 'searchQuery'],
@@ -44,8 +47,9 @@ export default function CoManagedTicketQueueLegacyAdapter() {
       if (value && !normalized.has(to)) normalized.set(to, value);
     }
     const presentation = parseTicketListPresentation(normalized.toString());
+    const parsedScope = parseTicketListScope(normalized.toString());
     router.replace(buildTicketListHref(
-      { kind: 'qualified', view: 'working', workspace: 'all' },
+      isQualifiedTicketListScope(parsedScope) ? parsedScope : { kind: 'qualified', view: 'working', workspace: 'all' },
       presentation,
       { includeClient: Boolean(presentation.clientId) },
     ));

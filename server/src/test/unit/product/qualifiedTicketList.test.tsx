@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   export: vi.fn(),
   submit: vi.fn(),
   push: vi.fn(),
+  clients: vi.fn(),
 }));
 
 vi.mock('../../../lib/actions/coManagedTicketQueueActions', () => ({
@@ -41,6 +42,21 @@ vi.mock('../../../lib/actions/coManagedTicketQueueActions', () => ({
   bulkHandBackCoManagedTicketsAction: mocks.submit,
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push, replace: vi.fn() }) }));
+vi.mock('@alga-psa/clients/actions', () => ({ getAllClients: mocks.clients }));
+// Share/View are dropdowns; flatten them so the actions they hold are reachable without a portal.
+vi.mock('@alga-psa/ui/components/ShareActionsMenu', () => ({
+  ShareActionsMenu: ({ id, actions, disabled }: any) => (
+    <div id={id} data-disabled={disabled ? 'true' : 'false'}>
+      {actions.map((action: any) => (
+        <button key={action.id} type="button" onClick={action.onSelect} disabled={action.disabled}>{action.label}</button>
+      ))}
+    </div>
+  ),
+}));
+vi.mock('../../../components/co-managed/CoManagedTicketListViewMenu', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../components/co-managed/CoManagedTicketListViewMenu')>()),
+  default: ({ id }: any) => <div id={id} data-testid="view-menu" />,
+}));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata() {}, updateActions() {} }),
 }));
@@ -128,6 +144,11 @@ const DEFAULT_REQUEST = {
  * presentation keys only the list sends keeps these assertions about the
  * subject.
  */
+/** Filters are collapsed by default; open them to reach workspace/client/status. */
+const openFilters = () => {
+  const toggle = screen.getByRole('button', { name: /coManaged\.customerTickets\.filters/ });
+  if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+};
 const listRequests = () => mocks.load.mock.calls.map(call => call[0]).filter(request => 'sort' in request);
 const lastListRequest = () => listRequests().at(-1);
 
@@ -137,6 +158,7 @@ beforeEach(() => {
   // Echo the requested page back, the way a real server does: a stand-in that
   // always answers `page: 1` would make "go to the next page" untestable.
   mocks.load.mockImplementation(async (request: any) => page({ page: request?.page ?? 1 }));
+  mocks.clients.mockResolvedValue([{ client_id: 'client-1', client_name: 'White Rabbit IT' }]);
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
@@ -160,14 +182,13 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.search' }));
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'literal 100%' }));
 
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'literal 100%', state: 'closed' }));
 
-    fireEvent.change(screen.getByLabelText('coManaged.queue.sort'), { target: { value: 'title' } });
-    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'literal 100%', state: 'closed', sort: 'title' }));
-
-    fireEvent.change(screen.getByLabelText('coManaged.queue.direction'), { target: { value: 'asc' } });
-    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'literal 100%', state: 'closed', sort: 'title', direction: 'asc' }));
+    // Sort is a column-header concern here; the toolbar has no sort/direction selects.
+    expect(screen.queryByLabelText('coManaged.queue.sort')).toBeNull();
+    expect(screen.queryByLabelText('coManaged.queue.direction')).toBeNull();
   });
 
   it('resets to page 1 when a filter changes, so page 3 of the old filter is never asked for', async () => {
@@ -180,6 +201,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
     fireEvent.click(screen.getByRole('button', { name: 'next-page' }));
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, page: 3 }));
 
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'closed', page: 1 }));
   });
@@ -187,6 +209,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
   it('returns every filter to its default on reset', async () => {
     mount();
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'all' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'all' }));
 
@@ -227,6 +250,7 @@ describe('T010 — export uses the applied filters and never outlives them', () 
     Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
     mount();
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'all' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'all' }));
 
@@ -268,6 +292,7 @@ describe('T010 — export uses the applied filters and never outlives them', () 
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.export' }));
 
     // Leave the scope the export was requested for.
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
     await act(async () => resolveExport({ filename: 'old.csv', csv: 'Old data', rowCount: 2 }));
@@ -308,6 +333,7 @@ describe('T015 — a read that lost its race never lands', () => {
       return page({ page: request.page ?? 1 });
     });
     mount();
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
 
@@ -324,6 +350,7 @@ describe('T015 — a read that lost its race never lands', () => {
     mount();
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
     mocks.load.mockRejectedValue(new Error('Revoked'));
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.queue.loadError');
@@ -415,10 +442,76 @@ describe('T012 — selection offers exactly the handback-eligible shared rows', 
     fireEvent.click(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ }));
     expect(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ })).toBeChecked();
 
+    openFilters();
     fireEvent.change(screen.getByLabelText('coManaged.queue.state'), { target: { value: 'closed' } });
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, state: 'closed' }));
     await screen.findByRole('link', { name: 'T-1 · Local ticket' });
 
     expect(screen.getByRole('checkbox', { name: /^co-managed-ticket-list-select-shared\|/ })).not.toBeChecked();
+  });
+});
+
+// --- T022: the Customer Tickets toolbar and page surface -------------------
+
+describe('T022 — Customer Tickets owns its toolbar and carries no native chrome', () => {
+  it('shows its own heading, search, collapsed Filters, View and Share, and no Add Ticket or Bundled toggle', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    expect(screen.getByRole('heading', { level: 1, name: 'coManaged.customerTickets.title' })).toBeInTheDocument();
+    expect(screen.getByLabelText('coManaged.queue.search')).toBeInTheDocument();
+    expect(screen.getByTestId('view-menu')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'coManaged.queue.export' })).toBeInTheDocument();
+    // Filters are collapsed until asked for.
+    expect(screen.queryByLabelText('coManaged.queue.state')).toBeNull();
+    expect(screen.queryByText(/addMspTicket|Add Ticket|bundle/i)).toBeNull();
+    expect(screen.queryByText('coManaged.queue.thisMsp')).toBeNull();
+  });
+
+  it('offers All workspaces plus the reader\'s own workspaces — never a "This MSP" option', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    openFilters();
+    const workspace = screen.getByLabelText('coManaged.queue.workspace') as HTMLSelectElement;
+    const values = Array.from(workspace.options).map(option => option.value);
+    expect(values).toContain('all');
+    expect(values).not.toContain('msp-own');
+    expect(Array.from(workspace.options).map(option => option.textContent)).not.toContain('coManaged.queue.thisMsp');
+  });
+
+  it('applies a workspace filter and a client filter to the request', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    openFilters();
+    fireEvent.change(screen.getByLabelText('coManaged.queue.workspace'), { target: { value: 'customer' } });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'customer' }));
+    await waitFor(() => expect(mocks.clients).toHaveBeenCalledWith(false));
+    await screen.findByRole('option', { name: 'White Rabbit IT' });
+    fireEvent.change(screen.getByLabelText('coManaged.customerTickets.client'), { target: { value: 'client-1' } });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'customer', clientId: 'client-1' }));
+  });
+
+  it('sends a callout signal with the request and clears it from the chip', async () => {
+    mount({ initialPresentation: { signal: 'escalated_unassigned' } });
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, signal: 'escalated_unassigned' });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.customerTickets.clearSignal' }));
+    await waitFor(() => expect(lastListRequest()).toEqual(DEFAULT_REQUEST));
+  });
+
+  it('switches Working and Oversight by navigating to the Customer Tickets route', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.oversight' }));
+    expect(mocks.push).toHaveBeenCalledOnce();
+    expect(mocks.push.mock.calls[0][0]).toMatch(/^\/msp\/tickets\/customer\?.*queueView=oversight/);
+  });
+
+  it('keeps a fixed client fixed and hides the client chooser (embedded client section)', async () => {
+    mount({ fixedClientId: 'client-1', embedded: true });
+    await screen.findByRole('link', { name: 'T-1 · Local ticket' });
+    expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, clientId: 'client-1' });
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    openFilters();
+    expect(screen.queryByLabelText('coManaged.customerTickets.client')).toBeNull();
   });
 });

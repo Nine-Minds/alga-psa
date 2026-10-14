@@ -569,7 +569,7 @@
     },
     "queue": {
       "title": "Co-Managed-Ticketwarteschlangen",
-      "workingDescription": "MSP-Tickets und Kundentickets, die Ihr Team derzeit bearbeitet.",
+      "workingDescription": "Gemeinsame Tickets, für die Ihr Team verantwortlich oder zuständig ist.",
       "oversightDescription": "Kundentickets in Ihrem genehmigten Zugriff, einschließlich der Arbeit der Kunden-IT.",
       "view": "Ansicht",
       "working": "Arbeitswarteschlange",
@@ -621,10 +621,8 @@
         "resume": "Eine Rückgabe an die Kunden-IT wurde unterbrochen. Fortsetzen, um das Ergebnis zu bestätigen.",
         "noReloadRecovery": "Die Wiederherstellung nach dem Neuladen ist in diesem Browser nicht verfügbar; ein erneuter Versuch in dieser Sitzung ist weiterhin möglich."
       },
-      "thisMsp": "Dieser MSP",
       "scopeUnavailable": "Ticketliste wird geöffnet…",
       "searchPlaceholder": "Nach Nummer oder Titel suchen",
-      "addMspTicket": "MSP-Ticket hinzufügen",
       "mspAlsoAssigned": "MSP ebenfalls zugewiesen"
     },
     "conversation": {
@@ -954,7 +952,9 @@
       "viewHistory": "Verlauf anzeigen",
       "work": "Arbeit",
       "workHint": "Kundenprojekte und gemeinsame Aufgabenwarteschlangen bleiben in der MSP-Shell mit ihren qualifizierten Identitäten.",
-      "workspace": "Kundenarbeitsbereich"
+      "workspace": "Kundenarbeitsbereich",
+      "sharedTickets": "Gemeinsame Tickets",
+      "openCustomerTickets": "In Kundentickets öffnen"
     },
     "overview": {
       "clients": "Co-Managed-Kunden",
@@ -986,6 +986,31 @@
     "directory": {
       "prompt": "Wählen Sie den zu verwaltenden Co-Managed-Workspace aus.",
       "empty": "Es sind keine Co-Managed-Workspaces zur Verwaltung verfügbar."
+    },
+    "customerTickets": {
+      "title": "Kundentickets",
+      "view": "Ansicht",
+      "columns": "Spalten",
+      "density": "Dichte",
+      "filters": "Filter",
+      "client": "Kunde",
+      "allClients": "Alle Kunden",
+      "share": "Teilen",
+      "clearSignal": "Zurücksetzen",
+      "unavailable": "Diese Ansicht ist für Ihr Konto noch nicht verfügbar.",
+      "allTickets": "Alle Tickets",
+      "signals": {
+        "escalatedUnassigned": "Eskaliert, nicht zugewiesen",
+        "awaitingReply": "Wartet auf Ihre Antwort"
+      }
+    },
+    "callout": {
+      "title": "Kundentickets brauchen Sie",
+      "escalatedUnassigned_one": "{{count}} eskaliertes Ticket, nicht zugewiesen",
+      "escalatedUnassigned_other": "{{count}} eskalierte Tickets, nicht zugewiesen",
+      "awaitingReply_one": "{{count}} Ticket wartet auf Ihre Antwort",
+      "awaitingReply_other": "{{count}} Tickets warten auf Ihre Antwort",
+      "dismiss": "Schließen"
     }
   },
   "actions": {

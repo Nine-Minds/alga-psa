@@ -107,7 +107,10 @@
     "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧",
     "coManaged": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ⟧",
     "coManagedDelegation": "⟦Ḓḗŀḗɠȧŧḗḓ ȧḓḿīƞīşŧřȧŧīȯƞ⟧",
-    "coManagedAccess": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş⟧"
+    "coManagedAccess": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş⟧",
+    "ticketsCustomer": "⟦Ƈŭşŧȯḿḗř Ŧīƈķḗŧş⟧",
+    "projectsSharedTasks": "⟦Şħȧřḗḓ Ŧȧşķş⟧",
+    "coManagedOverview": "⟦Ȯṽḗřṽīḗẇ⟧"
   },
   "marketing": {
     "dialogs": {

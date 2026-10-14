@@ -569,7 +569,7 @@
     },
     "queue": {
       "title": "Köer för samförvaltade ärenden",
-      "workingDescription": "MSP-ärenden och kundärenden som ditt team för närvarande hanterar.",
+      "workingDescription": "Delade ärenden som ditt team ansvarar för eller är tilldelat.",
       "oversightDescription": "Kundärenden inom din godkända åtkomst, inklusive arbete som kundens IT hanterar.",
       "view": "Vy",
       "working": "Arbetskö",
@@ -621,10 +621,8 @@
         "resume": "En återlämning till kundens IT avbröts. Återuppta den för att bekräfta resultatet.",
         "noReloadRecovery": "Återställning vid omladdning är inte tillgänglig i den här webbläsaren; du kan fortfarande försöka igen i den här sessionen."
       },
-      "thisMsp": "Den här MSP:n",
       "scopeUnavailable": "Öppnar ärendelistan…",
       "searchPlaceholder": "Sök efter nummer eller titel",
-      "addMspTicket": "Lägg till MSP-ärende",
       "mspAlsoAssigned": "MSP också tilldelad"
     },
     "conversation": {
@@ -954,7 +952,9 @@
       "viewHistory": "Visa historik",
       "work": "Arbete",
       "workHint": "Kundens projekt och delade uppgiftsköer finns kvar i MSP-gränssnittet med sina kvalificerade identiteter.",
-      "workspace": "Kundarbetsyta"
+      "workspace": "Kundarbetsyta",
+      "sharedTickets": "Delade ärenden",
+      "openCustomerTickets": "Öppna i Kundärenden"
     },
     "overview": {
       "clients": "Samhanterade kunder",
@@ -986,6 +986,31 @@
     "directory": {
       "prompt": "Välj den samhanterade arbetsyta som ska hanteras.",
       "empty": "Inga samhanterade arbetsytor finns att hantera."
+    },
+    "customerTickets": {
+      "title": "Kundärenden",
+      "view": "Vy",
+      "columns": "Kolumner",
+      "density": "Täthet",
+      "filters": "Filter",
+      "client": "Kund",
+      "allClients": "Alla kunder",
+      "share": "Dela",
+      "clearSignal": "Rensa",
+      "unavailable": "Den här vyn är inte tillgänglig för ditt konto ännu.",
+      "allTickets": "Alla ärenden",
+      "signals": {
+        "escalatedUnassigned": "Eskalerade, otilldelade",
+        "awaitingReply": "Väntar på ditt svar"
+      }
+    },
+    "callout": {
+      "title": "Kundärenden behöver dig",
+      "escalatedUnassigned_one": "{{count}} eskalerat ärende, otilldelat",
+      "escalatedUnassigned_other": "{{count}} eskalerade ärenden, otilldelade",
+      "awaitingReply_one": "{{count}} ärende väntar på ditt svar",
+      "awaitingReply_other": "{{count}} ärenden väntar på ditt svar",
+      "dismiss": "Stäng"
     }
   },
   "actions": {

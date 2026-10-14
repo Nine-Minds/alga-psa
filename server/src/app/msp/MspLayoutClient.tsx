@@ -22,6 +22,7 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { CoManagedWorkSignalsProvider } from '@/components/co-managed/CoManagedWorkSignalsProvider';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
@@ -225,11 +226,13 @@ export function MspLayoutClient({
                     )
                   ) : (
                     <AIChatContextProvider>
+                      <CoManagedWorkSignalsProvider viewerId={session?.user?.id ?? null}>
                       <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
                         {productCode === 'co_managed' && routeBehavior !== 'allowed'
                           ? <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
                           : children}
                       </DefaultLayout>
+                      </CoManagedWorkSignalsProvider>
                     </AIChatContextProvider>
                   )
                   }

@@ -13,6 +13,8 @@ import CoManagedPolicyPanel from './CoManagedPolicyPanel';
 import CoManagedSlaPolicyPanel from './CoManagedSlaPolicyPanel';
 import CoManagedDelegatedAdministration from './CoManagedDelegatedAdministration';
 import CoManagedDeparture from './CoManagedDeparture';
+import QualifiedTicketList from './QualifiedTicketList';
+import { CUSTOMER_TICKETS_PATHNAME } from '@alga-psa/tickets/lib';
 
 /** Embeddable client-relationship sections: status/setup, capacity, access and
  * SLA, delegation, and history/departure. Detailed settings mount only while
@@ -150,6 +152,24 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
           <CoManagedSlaPolicyPanel operationId={selected.operationId} />
           {selected.canManage && <CoManagedDelegatedAdministration operationId={selected.operationId} />}
         </>
+      )}
+
+      {selected && !selected.ended && (
+        <Card aria-labelledby={`${idPrefix}-tickets-title`}>
+          <CardHeader><CardTitle id={`${idPrefix}-tickets-title`}>{t('coManaged.client.sharedTickets', { defaultValue: 'Shared tickets' })}</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <QualifiedTicketList
+              scope={{ kind: 'qualified', view: 'working', workspace: 'all' }}
+              fixedClientId={clientId}
+              embedded
+              actorScope={`client:${clientId}`}
+              idPrefix={`${idPrefix}-shared-tickets`}
+            />
+            <Button id={`${idPrefix}-shared-tickets-open`} variant="outline" size="sm" asChild>
+              <Link href={`${CUSTOMER_TICKETS_PATHNAME}?clientId=${encodeURIComponent(clientId)}`}>{t('coManaged.client.openCustomerTickets', { defaultValue: 'Open in Customer Tickets' })}</Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {selected && !selected.ended && (

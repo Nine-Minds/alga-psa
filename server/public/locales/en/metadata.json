@@ -638,6 +638,9 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "customerTickets": {
+      "title": "Customer Tickets"
     }
   },
   "share": {

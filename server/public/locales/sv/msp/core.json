@@ -107,7 +107,10 @@
     "ticketsRecurring": "Återkommande ärenden",
     "coManaged": "Samhanterad IT",
     "coManagedDelegation": "Delegerad administration",
-    "coManagedAccess": "Samhanterad åtkomst"
+    "coManagedAccess": "Samhanterad åtkomst",
+    "ticketsCustomer": "Kundärenden",
+    "projectsSharedTasks": "Delade uppgifter",
+    "coManagedOverview": "Översikt"
   },
   "marketing": {
     "dialogs": {

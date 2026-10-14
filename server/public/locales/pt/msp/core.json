@@ -107,7 +107,10 @@
     "ticketsRecurring": "Tickets recorrentes",
     "coManaged": "TI cogerida",
     "coManagedDelegation": "Administração delegada",
-    "coManagedAccess": "Acesso cogerido"
+    "coManagedAccess": "Acesso cogerido",
+    "ticketsCustomer": "Tickets de clientes",
+    "projectsSharedTasks": "Tarefas compartilhadas",
+    "coManagedOverview": "Visão geral"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",

@@ -573,7 +573,7 @@
     },
     "queue": {
       "title": "Kolejki współzarządzanych zgłoszeń",
-      "workingDescription": "Zgłoszenia MSP i klientów obsługiwane obecnie przez Twój zespół.",
+      "workingDescription": "Wspólne zgłoszenia, za które odpowiada lub do których jest przypisany Twój zespół.",
       "oversightDescription": "Zgłoszenia klientów w zatwierdzonym zakresie dostępu, także obsługiwane przez ich zespoły IT.",
       "view": "Widok",
       "working": "Kolejka pracy",
@@ -625,10 +625,8 @@
         "resume": "Zwrot do działu IT klienta został przerwany. Wznów, aby potwierdzić wynik.",
         "noReloadRecovery": "Odzyskiwanie po odświeżeniu jest niedostępne w tej przeglądarce; nadal możesz ponowić próbę w tej sesji."
       },
-      "thisMsp": "Ten MSP",
       "scopeUnavailable": "Otwieranie listy zgłoszeń…",
       "searchPlaceholder": "Szukaj według numeru lub tytułu",
-      "addMspTicket": "Dodaj zgłoszenie MSP",
       "mspAlsoAssigned": "MSP również przypisany"
     },
     "conversation": {
@@ -958,7 +956,9 @@
       "viewHistory": "Zobacz historię",
       "work": "Praca",
       "workHint": "Projekty klienta i współdzielone kolejki zadań pozostają w powłoce MSP z ich kwalifikowanymi tożsamościami.",
-      "workspace": "Obszar roboczy klienta"
+      "workspace": "Obszar roboczy klienta",
+      "sharedTickets": "Wspólne zgłoszenia",
+      "openCustomerTickets": "Otwórz w Zgłoszeniach klientów"
     },
     "overview": {
       "clients": "Współzarządzani klienci",
@@ -990,6 +990,35 @@
     "directory": {
       "prompt": "Wybierz współzarządzany obszar roboczy do zarządzania.",
       "empty": "Brak współzarządzanych obszarów roboczych do zarządzania."
+    },
+    "customerTickets": {
+      "title": "Zgłoszenia klientów",
+      "view": "Widok",
+      "columns": "Kolumny",
+      "density": "Gęstość",
+      "filters": "Filtry",
+      "client": "Klient",
+      "allClients": "Wszyscy klienci",
+      "share": "Udostępnij",
+      "clearSignal": "Wyczyść",
+      "unavailable": "Ten widok nie jest jeszcze dostępny dla Twojego konta.",
+      "allTickets": "Wszystkie zgłoszenia",
+      "signals": {
+        "escalatedUnassigned": "Eskalowane, nieprzypisane",
+        "awaitingReply": "Czeka na Twoją odpowiedź"
+      }
+    },
+    "callout": {
+      "title": "Zgłoszenia klientów wymagają Twojej uwagi",
+      "escalatedUnassigned_one": "{{count}} eskalowane zgłoszenie, nieprzypisane",
+      "escalatedUnassigned_few": "{{count}} eskalowane zgłoszenia, nieprzypisane",
+      "escalatedUnassigned_many": "{{count}} eskalowanych zgłoszeń, nieprzypisanych",
+      "escalatedUnassigned_other": "{{count}} eskalowanego zgłoszenia, nieprzypisanego",
+      "awaitingReply_one": "{{count}} zgłoszenie czeka na Twoją odpowiedź",
+      "awaitingReply_few": "{{count}} zgłoszenia czekają na Twoją odpowiedź",
+      "awaitingReply_many": "{{count}} zgłoszeń czeka na Twoją odpowiedź",
+      "awaitingReply_other": "{{count}} zgłoszenia czeka na Twoją odpowiedź",
+      "dismiss": "Zamknij"
     }
   },
   "actions": {

@@ -569,7 +569,7 @@
     },
     "queue": {
       "title": "Wachtrijen voor gezamenlijk beheerde tickets",
-      "workingDescription": "MSP-tickets en klanttickets die uw team momenteel behandelt.",
+      "workingDescription": "Gedeelde tickets waarvoor uw team verantwoordelijk of toegewezen is.",
       "oversightDescription": "Klanttickets binnen uw goedgekeurde toegang, inclusief werk van de IT-afdeling van de klant.",
       "view": "Weergave",
       "working": "Werkwachtrij",
@@ -621,10 +621,8 @@
         "resume": "Een terugzetting naar de klant-IT is onderbroken. Hervat om het resultaat te bevestigen.",
         "noReloadRecovery": "Herstel na herladen is niet beschikbaar in deze browser; u kunt het in deze sessie nog steeds opnieuw proberen."
       },
-      "thisMsp": "Deze MSP",
       "scopeUnavailable": "Ticketlijst wordt geopend…",
       "searchPlaceholder": "Zoeken op nummer of titel",
-      "addMspTicket": "MSP-ticket toevoegen",
       "mspAlsoAssigned": "MSP ook toegewezen"
     },
     "conversation": {
@@ -954,7 +952,9 @@
       "viewHistory": "Geschiedenis bekijken",
       "work": "Werk",
       "workHint": "Klantprojecten en gedeelde taakwachtrijen blijven in de MSP-shell met hun gekwalificeerde identiteiten.",
-      "workspace": "Klantwerkruimte"
+      "workspace": "Klantwerkruimte",
+      "sharedTickets": "Gedeelde tickets",
+      "openCustomerTickets": "Openen in Klanttickets"
     },
     "overview": {
       "clients": "Gezamenlijk beheerde klanten",
@@ -986,6 +986,31 @@
     "directory": {
       "prompt": "Selecteer de co-managed werkruimte die u wilt beheren.",
       "empty": "Er zijn geen co-managed werkruimtes beschikbaar om te beheren."
+    },
+    "customerTickets": {
+      "title": "Klanttickets",
+      "view": "Weergave",
+      "columns": "Kolommen",
+      "density": "Dichtheid",
+      "filters": "Filters",
+      "client": "Klant",
+      "allClients": "Alle klanten",
+      "share": "Delen",
+      "clearSignal": "Wissen",
+      "unavailable": "Deze weergave is nog niet beschikbaar voor uw account.",
+      "allTickets": "Alle tickets",
+      "signals": {
+        "escalatedUnassigned": "Geëscaleerd, niet toegewezen",
+        "awaitingReply": "Wacht op uw antwoord"
+      }
+    },
+    "callout": {
+      "title": "Klanttickets hebben u nodig",
+      "escalatedUnassigned_one": "{{count}} geëscaleerd ticket, niet toegewezen",
+      "escalatedUnassigned_other": "{{count}} geëscaleerde tickets, niet toegewezen",
+      "awaitingReply_one": "{{count}} ticket wacht op uw antwoord",
+      "awaitingReply_other": "{{count}} tickets wachten op uw antwoord",
+      "dismiss": "Sluiten"
     }
   },
   "actions": {

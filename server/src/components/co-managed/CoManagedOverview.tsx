@@ -64,10 +64,10 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
 function SharedWorkTile() {
   const { t } = useTranslation('msp/licensing');
   const links = [
-    // Canonical combined scope on the one ticket list. /msp/co-managed/tickets
-    // still resolves here through the legacy adapter, but product-owned links
-    // point at the destination rather than the compatibility route.
-    { id: 'co-managed-ticket-queues', href: '/msp/tickets?queueView=working&workspace=all', label: t('coManaged.queue.title'), icon: LifeBuoy },
+    // Customer Tickets is its own page. /msp/co-managed/tickets still resolves
+    // there through the legacy adapter, but product-owned links point at the
+    // destination rather than the compatibility route.
+    { id: 'co-managed-ticket-queues', href: '/msp/tickets/customer', label: t('coManaged.queue.title'), icon: LifeBuoy },
     { id: 'co-managed-task-queues', href: '/msp/co-management/tasks', label: t('coManaged.projects.queue.title'), icon: ListChecks },
     { id: 'co-managed-archive-link', href: '/msp/co-managed/archive', label: t('coManaged.archive.title'), icon: Archive },
   ];

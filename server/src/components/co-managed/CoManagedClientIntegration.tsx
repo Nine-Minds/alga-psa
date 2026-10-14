@@ -7,7 +7,7 @@ import type { ClientCoManagedIntegrationProps, ClientCoManagedSlots } from '@alg
 import { getCoManagedClientManagement } from '@/lib/actions/coManagedActions';
 import CoManagedClientSummary from './CoManagedClientSummary';
 import CoManagedClientView from './CoManagedClientView';
-import QualifiedTicketList from './QualifiedTicketList';
+import { CoManagedClientCalloutStrip } from './CoManagedCalloutStrip';
 
 type View = Awaited<ReturnType<typeof getCoManagedClientManagement>>;
 
@@ -96,20 +96,11 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const slots: ClientCoManagedSlots = {
     summary: <CoManagedClientSummary view={view} clientId={clientId} idPrefix={idPrefix}
       selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
-    // Only a co-managed client replaces its native ticket list. The refactored
-    // combined list body is embedded with the client fixed to this record; it
-    // matches native MSP tickets and every authorized shared relationship for
-    // the client, without a second page heading or global client selector.
+    // The Tickets tab keeps the native client list. A client-scoped callout
+    // above it points at the co-managed section, where this client's shared
+    // tickets are listed.
     ...(view.relationships.length > 0 ? {
-      ticketsContent: (
-        <QualifiedTicketList
-          scope={{ kind: 'qualified', view: 'working', workspace: 'all' }}
-          fixedClientId={clientId}
-          embedded
-          actorScope={`client:${clientId}`}
-          idPrefix={`co-managed-client-${clientId}`}
-        />
-      ),
+      ticketsCallout: <CoManagedClientCalloutStrip clientId={clientId} onOpen={onOpenTab ? () => onOpenTab('co-managed') : undefined} />,
     } : {}),
     tab: {
       id: 'co-managed',

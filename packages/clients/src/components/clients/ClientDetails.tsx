@@ -1824,10 +1824,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   // `co-managed` tab once the release flag and client read authority resolve.
   // Until then (and when unavailable) the ordinary client renders unchanged.
   const renderClientBody = (coManagedSlots: ClientCoManagedSlots | null) => {
-    // Co-managed clients combine native and authorized shared work in the
-    // Tickets tab before paging/counts/export; otherwise the native list stays.
-    const scopedTabs = coManagedSlots?.ticketsContent
-      ? tabContent.map((tab) => (tab.id === 'tickets' ? { ...tab, content: coManagedSlots.ticketsContent } : tab))
+    // The Tickets tab always shows the native client list; co-managed only adds
+    // an optional callout above it. Shared tickets live in the co-managed tab.
+    const scopedTabs = coManagedSlots?.ticketsCallout
+      ? tabContent.map((tab) => (tab.id === 'tickets'
+        ? { ...tab, content: <>{coManagedSlots.ticketsCallout}{tab.content}</> }
+        : tab))
       : tabContent;
     const clientTabs = coManagedSlots?.tab ? [...scopedTabs, coManagedSlots.tab] : scopedTabs;
     return (

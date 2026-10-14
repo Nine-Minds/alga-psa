@@ -107,7 +107,10 @@
     "ticketsRecurring": "Terugkerende tickets",
     "coManaged": "Gezamenlijk beheerde IT",
     "coManagedDelegation": "Gedelegeerd beheer",
-    "coManagedAccess": "Toegang voor gezamenlijk beheer"
+    "coManagedAccess": "Toegang voor gezamenlijk beheer",
+    "ticketsCustomer": "Klanttickets",
+    "projectsSharedTasks": "Gedeelde taken",
+    "coManagedOverview": "Overzicht"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

@@ -72,6 +72,10 @@ vi.mock('@/context/TierContext', () => ({
   useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),
 }));
 
+vi.mock('@/components/co-managed/CoManagedWorkSignalsProvider', () => ({
+  CoManagedWorkSignalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@/context/ProductContext', () => ({
   ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

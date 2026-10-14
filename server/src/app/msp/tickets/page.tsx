@@ -1,14 +1,4 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
-import QualifiedTicketList from '@/components/co-managed/QualifiedTicketList';
-import TicketListScopeBar from '@/components/tickets/TicketListScopeBar';
-import TicketListQualifiedFallback from '@/components/tickets/TicketListQualifiedFallback';
-import {
-  NATIVE_TICKET_LIST_SCOPE,
-  isQualifiedTicketListScope,
-  parseTicketListPresentation,
-  parseTicketListScope,
-} from '@alga-psa/tickets/lib';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
@@ -35,6 +25,9 @@ import {
 } from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { redirect } from 'next/navigation';
+import { resolveLegacyQueueRedirect } from '@alga-psa/tickets/lib';
+import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -62,6 +55,15 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 }
 
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
+  // Legacy `?queueView=…` links belong to Customer Tickets; `workspace=msp` (retired)
+  // lands here with the qualified params stripped. Outside the try so the redirect isn't swallowed.
+  const legacyTarget = resolveLegacyQueueRedirect(new URLSearchParams(
+    Object.entries(await searchParams ?? {}).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v] as [string, string]] : [])),
+  ));
+  if (legacyTarget) {
+    redirect(legacyTarget);
+  }
+
   try {
     const user = await getCurrentUser();
     const productCode = await getCurrentTenantProduct();
@@ -84,24 +86,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Await searchParams as required in Next.js 15
     const params = await searchParams;
 
-    const searchString = new URLSearchParams(
-      Object.entries(params ?? {}).flatMap(([key, value]): [string, string][] => {
-        if (value === undefined) return [];
-        return Array.isArray(value) ? value.map(item => [key, item]) : [[key, value]];
-      })
-    ).toString();
-
-    // Parse the source scope before any native board-memory logic. Explicit
-    // qualified scope outranks remembered board/default restoration; the bare
-    // route (and the explicit working/This MSP encoding) keeps native behavior.
-    const requestedScope = parseTicketListScope(searchString);
-    const isThisMspQualified = requestedScope.kind === 'qualified'
-      && requestedScope.view === 'working'
-      && requestedScope.workspace === 'msp';
-    const qualifiedScope = isQualifiedTicketListScope(requestedScope) && !isThisMspQualified
-      ? requestedScope
-      : null;
-
     // Parse pagination parameters
     const page = params?.page && typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
     let pageSize = 10;
@@ -117,25 +101,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       if (typeof saved === 'number' && Number.isFinite(saved) && saved > 0) {
         pageSize = saved;
       }
-    }
-
-    // Explicit qualified entry: mount the client-gated qualified list and skip
-    // the native bootstrap entirely. A product that cannot sponsor co-managed
-    // work falls through to the ordinary native list.
-    if (qualifiedScope && productCode === 'psa') {
-      const presentation = parseTicketListPresentation(searchString, { pageSize });
-      return (
-        <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
-          <CoManagedFeatureBoundary fallback={<TicketListQualifiedFallback />}>
-            <QualifiedTicketList
-              scope={qualifiedScope}
-              initialPresentation={presentation}
-              actorScope={`${user!.tenant ?? ''}:${user!.user_id}`}
-              idPrefix="msp-tickets-co-managed"
-            />
-          </CoManagedFeatureBoundary>
-        </div>
-      );
     }
 
     // Parse search parameters into filter values
@@ -276,6 +241,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // A URL that names a board still wins outright, and a URL carrying filter
     // intent still outranks the board's stored view: a shared link is about
     // *these tickets*, not about the board's usual way of looking at them.
+    const searchString = new URLSearchParams(
+      Object.entries(params ?? {}).flatMap(([key, value]): [string, string][] => {
+        if (value === undefined) return [];
+        return Array.isArray(value) ? value.map(item => [key, item]) : [[key, value]];
+      })
+    ).toString();
+
     // Hoisted out of the list fetch below: the board's stored view resolves
     // through the tenant layer, so both must be in hand before the filters the
     // list is fetched with are decided.
@@ -387,17 +359,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       return <div id="tickets-error-message">{message}</div>;
     }
 
-    const scopeControls = productCode === 'psa' ? (
-      <CoManagedFeatureBoundary>
-        <TicketListScopeBar
-          scope={requestedScope.kind === 'qualified' ? requestedScope : NATIVE_TICKET_LIST_SCOPE}
-          clientId={typeof params.clientId === 'string' ? params.clientId : undefined}
-          presentation={{ page, pageSize }}
-          idPrefix="msp-tickets-scope"
-        />
-      </CoManagedFeatureBoundary>
-    ) : undefined;
-
     return (
       <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
         <MspTicketsPageClient
@@ -413,7 +374,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           allowSlaStatusFilter={allowSlaStatusFilter}
           smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
-          scopeControls={scopeControls}
+          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
         />
       </div>
     );

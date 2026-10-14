@@ -571,7 +571,7 @@
     },
     "queue": {
       "title": "Colas de tickets cogestionados",
-      "workingDescription": "Tickets del MSP y de clientes que su equipo gestiona actualmente.",
+      "workingDescription": "Tickets compartidos de los que su equipo es responsable o a los que está asignado.",
       "oversightDescription": "Tickets de clientes dentro del acceso aprobado, incluidos los gestionados por su equipo de TI.",
       "view": "Vista",
       "working": "Cola de trabajo",
@@ -623,10 +623,8 @@
         "resume": "Se interrumpió una devolución al TI del cliente. Reanúdala para confirmar el resultado.",
         "noReloadRecovery": "La recuperación al recargar no está disponible en este navegador; aún puede reintentar en esta sesión."
       },
-      "thisMsp": "Este MSP",
       "scopeUnavailable": "Abriendo la lista de tickets…",
       "searchPlaceholder": "Buscar por número o título",
-      "addMspTicket": "Añadir ticket MSP",
       "mspAlsoAssigned": "MSP también asignado"
     },
     "conversation": {
@@ -956,7 +954,9 @@
       "viewHistory": "Ver historial",
       "work": "Trabajo",
       "workHint": "Los proyectos del cliente y las colas de tareas compartidas permanecen en el shell del MSP con sus identidades cualificadas.",
-      "workspace": "Espacio de trabajo del cliente"
+      "workspace": "Espacio de trabajo del cliente",
+      "sharedTickets": "Tickets compartidos",
+      "openCustomerTickets": "Abrir en Tickets de clientes"
     },
     "overview": {
       "clients": "Clientes cogestionados",
@@ -988,6 +988,31 @@
     "directory": {
       "prompt": "Seleccione el espacio de trabajo cogestionado que desea administrar.",
       "empty": "No hay espacios de trabajo cogestionados disponibles para administrar."
+    },
+    "customerTickets": {
+      "title": "Tickets de clientes",
+      "view": "Vista",
+      "columns": "Columnas",
+      "density": "Densidad",
+      "filters": "Filtros",
+      "client": "Cliente",
+      "allClients": "Todos los clientes",
+      "share": "Compartir",
+      "clearSignal": "Quitar",
+      "unavailable": "Esta vista aún no está disponible para su cuenta.",
+      "allTickets": "Todos los tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalados sin asignar",
+        "awaitingReply": "Esperando su respuesta"
+      }
+    },
+    "callout": {
+      "title": "Hay tickets de clientes que le necesitan",
+      "escalatedUnassigned_one": "{{count}} ticket escalado sin asignar",
+      "escalatedUnassigned_other": "{{count}} tickets escalados sin asignar",
+      "awaitingReply_one": "{{count}} ticket esperando su respuesta",
+      "awaitingReply_other": "{{count}} tickets esperando su respuesta",
+      "dismiss": "Descartar"
     }
   },
   "actions": {

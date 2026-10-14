@@ -8,6 +8,7 @@ import {
   parseTicketListPresentation,
   parseTicketListScope,
   resetQualifiedTicketListPresentation,
+  resolveLegacyQueueRedirect,
   serializeTicketListQuery,
   switchTicketListView,
   ticketListScopesEqual,
@@ -29,16 +30,11 @@ describe('parseTicketListScope', () => {
     expect(parseTicketListScope('?queueView=')).toEqual({ kind: 'native' });
   });
 
-  it('parses working/all and working/this-msp explicitly', () => {
+  it('parses working/all explicitly', () => {
     expect(parseTicketListScope('?queueView=working&workspace=all')).toEqual({
       kind: 'qualified',
       view: 'working',
       workspace: 'all',
-    });
-    expect(parseTicketListScope('?queueView=working&workspace=msp')).toEqual({
-      kind: 'qualified',
-      view: 'working',
-      workspace: 'msp',
     });
   });
 
@@ -50,12 +46,10 @@ describe('parseTicketListScope', () => {
     });
   });
 
-  it('normalizes This MSP out of oversight instead of carrying a scope that does not exist there', () => {
-    expect(parseTicketListScope('?queueView=oversight&workspace=msp')).toEqual({
-      kind: 'qualified',
-      view: 'oversight',
-      workspace: 'all',
-    });
+  it('has no This MSP workspace: the retired token normalizes to all in either view', () => {
+    for (const view of ['working', 'oversight']) {
+      expect(parseTicketListScope(`?queueView=${view}&workspace=msp`)).toEqual({ kind: 'qualified', view, workspace: 'all' });
+    }
   });
 
   it('does not invent a workspace from a malformed token', () => {
@@ -112,9 +106,11 @@ describe('serializeTicketListQuery / buildTicketListHref', () => {
   });
 
   it('builds an href without a dangling question mark for native', () => {
-    expect(buildTicketListHref({ kind: 'native' })).toBe('/msp/tickets');
+    expect(buildTicketListHref({ kind: 'native' })).toBe('/msp/tickets/customer');
     expect(buildTicketListHref({ kind: 'qualified', view: 'working', workspace: 'all' }))
-      .toBe('/msp/tickets?queueView=working&workspace=all');
+      .toBe('/msp/tickets/customer?queueView=working&workspace=all');
+    expect(buildTicketListHref({ kind: 'qualified', view: 'working', workspace: 'all' }, { signal: 'awaiting_reply' }))
+      .toBe('/msp/tickets/customer?queueView=working&workspace=all&signal=awaiting_reply');
   });
 
   it('carries clientId only when asked', () => {
@@ -133,6 +129,11 @@ describe('parseTicketListPresentation', () => {
     expect(parseTicketListPresentation('?pageSize=abc').pageSize).toBe(10);
   });
 
+  it('parses a callout signal and ignores unknown ones', () => {
+    expect(parseTicketListPresentation('?signal=escalated_unassigned').signal).toBe('escalated_unassigned');
+    expect(parseTicketListPresentation('?signal=sla_at_risk').signal).toBeUndefined();
+  });
+
   it('ignores unsupported qualified state/sort values', () => {
     const parsed = parseTicketListPresentation('?queueState=weird&queueSort=assignee&queueDirection=sideways');
     expect(parsed.state).toBe('open');
@@ -146,8 +147,8 @@ describe('parseTicketListPresentation', () => {
 });
 
 describe('scope transitions', () => {
-  it('moves This MSP to oversight by selecting All workspaces', () => {
-    const working: QualifiedTicketListScope = { kind: 'qualified', view: 'working', workspace: 'msp' };
+  it('moves All workspaces between views unchanged', () => {
+    const working: QualifiedTicketListScope = { kind: 'qualified', view: 'working', workspace: 'all' };
     expect(switchTicketListView(working, 'oversight')).toEqual({
       kind: 'qualified',
       view: 'oversight',
@@ -174,7 +175,6 @@ describe('scope transitions', () => {
 
   it('keeps workspace tokens stable', () => {
     expect(ticketListWorkspaceToken('all')).toBe('all');
-    expect(ticketListWorkspaceToken('msp')).toBe('msp');
     expect(ticketListWorkspaceToken({ tenant: TENANT_A })).toBe(TENANT_A);
   });
 
@@ -189,5 +189,26 @@ describe('scope transitions', () => {
   it('type-narrows on qualified scopes', () => {
     expect(isQualifiedTicketListScope(parseTicketListScope('?queueView=working'))).toBe(true);
     expect(isQualifiedTicketListScope(parseTicketListScope(''))).toBe(false);
+  });
+});
+
+describe('resolveLegacyQueueRedirect', () => {
+  it('leaves ordinary native URLs alone', () => {
+    expect(resolveLegacyQueueRedirect('')).toBeNull();
+    expect(resolveLegacyQueueRedirect('?boardIds=abc&statusId=open')).toBeNull();
+    expect(resolveLegacyQueueRedirect('?queueView=bogus')).toBeNull();
+  });
+
+  it('sends a qualified legacy URL to Customer Tickets with the supported params', () => {
+    expect(resolveLegacyQueueRedirect('?queueView=working&workspace=all'))
+      .toBe('/msp/tickets/customer?queueView=working&workspace=all');
+    expect(resolveLegacyQueueRedirect(`?queueView=oversight&workspace=${TENANT_A}&clientId=${TENANT_B}&queueState=closed&searchQuery=vpn&page=2`))
+      .toBe(`/msp/tickets/customer?queueView=oversight&workspace=${TENANT_A}&clientId=${TENANT_B}&searchQuery=vpn&queueState=closed&page=2`);
+  });
+
+  it('sends the retired This MSP workspace to native All Tickets with no qualified params', () => {
+    expect(resolveLegacyQueueRedirect('?queueView=working&workspace=msp')).toBe('/msp/tickets');
+    expect(resolveLegacyQueueRedirect('?queueView=working&workspace=msp&queueState=closed&boardIds=abc'))
+      .toBe('/msp/tickets?boardIds=abc');
   });
 });

@@ -1,32 +1,26 @@
 /**
- * The ticket list's source scope, separated from native filter state.
+ * The Customer Tickets list's scope, separated from native filter state.
  *
- * `/msp/tickets` is one destination with two data sources: the native MSP
- * ticket dashboard, and the qualified co-managed working/oversight queue. The
- * distinction has to survive a page reload, a shared link, a Back/Forward step
- * and a client-drawer entry, so it is encoded in the URL as a discriminated
- * scope rather than inferred from which filters happen to be present.
+ * `/msp/tickets` (All Tickets) is the native MSP dashboard and carries no
+ * co-managed state. The qualified co-managed working/oversight queue lives on
+ * its own route, `/msp/tickets/customer`, and this module is the single parser
+ * and serializer for that route's URL contract:
  *
- * This module is deliberately pure (no JSX, no server imports) so the
- * precedence rules — explicit qualified scope outranks remembered native board
- * state; malformed values do not silently widen authority; oversight has no
- * "This MSP" workspace — can be tested without mounting the dashboard. It
- * matches the shape of `boardTabs.ts`, `ticketViewSettings.ts` and
- * `ticketListUrlSync.ts`.
+ *     /msp/tickets/customer?queueView=working&workspace=all
+ *     /msp/tickets/customer?queueView=oversight&workspace=<owner-tenant-id>
+ *     /msp/tickets/customer?queueView=working&signal=escalated_unassigned
  *
- * URL contract (proposed names, implemented here):
+ * There is no "This MSP" workspace: the home tenant's native tickets are not
+ * part of the qualified relation. A legacy `workspace=msp` normalizes to `all`
+ * here; the page-level redirect sends such URLs to the native list instead.
  *
- *     /msp/tickets?queueView=working&workspace=all
- *     /msp/tickets?queueView=working&workspace=msp
- *     /msp/tickets?queueView=oversight&workspace=<owner-tenant-id>
- *
- * An ordinary `/msp/tickets` — with or without native filter params — has no
- * `queueView` and is therefore native. That is the compatibility rule: the
- * absence of the new parameter is the signal to keep the old behavior,
- * including remembered board and page-size preference restoration.
+ * This module is deliberately pure (no JSX, no server imports).
  */
 
-import { TICKET_LIST_PATHNAME } from './ticketListUrlSync';
+/** The Customer Tickets route (a static segment beside `recurring`). */
+export const CUSTOMER_TICKETS_PATHNAME = '/msp/tickets/customer';
+/** All Tickets: the native dashboard, which carries no co-managed state. */
+const NATIVE_TICKET_LIST_PATHNAME = '/msp/tickets';
 
 /** The list's per-view context. */
 export type TicketQueueView = 'working' | 'oversight';
@@ -44,13 +38,14 @@ export type TicketQueueDirection = 'asc' | 'desc';
  *
  * - `all`: every workspace currently authorized for the view (never "all
  *   tenants" — the reader's authorization still bounds it).
- * - `msp`: the authenticated home workspace. Working queue only; it is
- *   workspace narrowing within Working queue, not a peer view.
  * - `{ tenant }`: one explicit owner workspace. Kept verbatim even if it later
  *   becomes unavailable, so the reader can surface an unavailable result and a
  *   reset instead of silently widening to `all`.
  */
-export type TicketListWorkspace = 'all' | 'msp' | { tenant: string };
+export type TicketListWorkspace = 'all' | { tenant: string };
+
+/** Callout signals that can be applied as an authorized reader filter. */
+export type TicketQueueSignal = 'escalated_unassigned' | 'awaiting_reply';
 
 export type NativeTicketListScope = { kind: 'native' };
 export type QualifiedTicketListScope = {
@@ -73,6 +68,8 @@ export interface TicketListPresentation {
   sort: TicketQueueSort;
   /** Qualified-only sort direction. */
   direction: TicketQueueDirection;
+  /** Qualified-only callout filter (an authorized reader filter, not a client one). */
+  signal?: TicketQueueSignal;
 }
 
 export const TICKET_LIST_QUEUE_VIEW_PARAM = 'queueView';
@@ -80,6 +77,7 @@ export const TICKET_LIST_WORKSPACE_PARAM = 'workspace';
 export const TICKET_LIST_STATE_PARAM = 'queueState';
 export const TICKET_LIST_SORT_PARAM = 'queueSort';
 export const TICKET_LIST_DIRECTION_PARAM = 'queueDirection';
+export const TICKET_LIST_SIGNAL_PARAM = 'signal';
 export const TICKET_LIST_CLIENT_PARAM = 'clientId';
 export const TICKET_LIST_SEARCH_PARAM = 'searchQuery';
 export const TICKET_LIST_PAGE_PARAM = 'page';
@@ -106,6 +104,7 @@ const QUEUE_VIEWS: readonly TicketQueueView[] = ['working', 'oversight'];
 const QUEUE_STATES: readonly TicketQueueState[] = ['open', 'closed', 'all'];
 const QUEUE_SORTS: readonly TicketQueueSort[] = ['updated', 'created', 'title', 'number'];
 const QUEUE_DIRECTIONS: readonly TicketQueueDirection[] = ['asc', 'desc'];
+const QUEUE_SIGNALS: readonly TicketQueueSignal[] = ['escalated_unassigned', 'awaiting_reply'];
 
 function toSearchParams(search: string | URLSearchParams): URLSearchParams {
   return typeof search === 'string' ? new URLSearchParams(search) : search;
@@ -140,6 +139,10 @@ export function isTicketQueueDirection(value: unknown): value is TicketQueueDire
   return typeof value === 'string' && (QUEUE_DIRECTIONS as readonly string[]).includes(value);
 }
 
+export function isTicketQueueSignal(value: unknown): value is TicketQueueSignal {
+  return typeof value === 'string' && (QUEUE_SIGNALS as readonly string[]).includes(value);
+}
+
 export function isQualifiedTicketListScope(scope: TicketListScope): scope is QualifiedTicketListScope {
   return scope.kind === 'qualified';
 }
@@ -152,22 +155,16 @@ export function ticketListWorkspaceToken(workspace: TicketListWorkspace): string
   return typeof workspace === 'object' ? workspace.tenant : workspace;
 }
 
-function parseWorkspace(view: TicketQueueView, raw: string | undefined): TicketListWorkspace {
+function parseWorkspace(raw: string | undefined): TicketListWorkspace {
   if (!raw || raw === 'all') {
     return 'all';
-  }
-  if (raw === 'msp') {
-    // "This MSP" is not a valid oversight workspace. An explicit transition
-    // away from This MSP must select All workspaces, not carry a scope that
-    // does not exist there; normalizing here keeps that rule in one place.
-    return view === 'working' ? 'msp' : 'all';
   }
   if (isWorkspaceTenantId(raw)) {
     return { tenant: raw.toLowerCase() };
   }
-  // Unknown token: fall back to the authorized `all` rather than inventing a
-  // workspace id. `all` is still bounded by the reader's authorization, so this
-  // does not widen authority — it only declines to guess at malformed input.
+  // Unknown token (including the retired `msp`): fall back to the authorized
+  // `all` rather than inventing a workspace id. `all` is still bounded by the
+  // reader's authorization, so this does not widen authority.
   return 'all';
 }
 
@@ -181,7 +178,7 @@ export function parseTicketListScope(search: string | URLSearchParams): TicketLi
   return {
     kind: 'qualified',
     view,
-    workspace: parseWorkspace(view, firstNonEmpty(params.get(TICKET_LIST_WORKSPACE_PARAM))),
+    workspace: parseWorkspace(firstNonEmpty(params.get(TICKET_LIST_WORKSPACE_PARAM))),
   };
 }
 
@@ -224,6 +221,7 @@ export function parseTicketListPresentation(
   const state = firstNonEmpty(params.get(TICKET_LIST_STATE_PARAM));
   const sort = firstNonEmpty(params.get(TICKET_LIST_SORT_PARAM));
   const direction = firstNonEmpty(params.get(TICKET_LIST_DIRECTION_PARAM));
+  const signal = firstNonEmpty(params.get(TICKET_LIST_SIGNAL_PARAM));
   const searchQuery = (params.get(TICKET_LIST_SEARCH_PARAM) ?? '').slice(0, TICKET_LIST_MAX_SEARCH_LENGTH);
   return {
     clientId: firstNonEmpty(params.get(TICKET_LIST_CLIENT_PARAM)) ?? fallback.clientId,
@@ -233,6 +231,7 @@ export function parseTicketListPresentation(
     state: isTicketQueueState(state) ? state : fallback.state ?? 'open',
     sort: isTicketQueueSort(sort) ? sort : fallback.sort ?? 'updated',
     direction: isTicketQueueDirection(direction) ? direction : fallback.direction ?? 'desc',
+    signal: isTicketQueueSignal(signal) ? signal : fallback.signal,
   };
 }
 
@@ -272,6 +271,9 @@ export function serializeTicketListQuery(
   if (presentation.direction && presentation.direction !== 'desc') {
     params.set(TICKET_LIST_DIRECTION_PARAM, presentation.direction);
   }
+  if (presentation.signal) {
+    params.set(TICKET_LIST_SIGNAL_PARAM, presentation.signal);
+  }
   const page = normalizeTicketListPage(presentation.page);
   const pageSize = normalizeTicketListPageSize(presentation.pageSize);
   if (page !== TICKET_LIST_DEFAULT_PAGE) {
@@ -290,7 +292,7 @@ export function buildTicketListHref(
   options: SerializeTicketListOptions = {},
 ): string {
   const query = serializeTicketListQuery(scope, presentation, options);
-  return query ? `${TICKET_LIST_PATHNAME}?${query}` : TICKET_LIST_PATHNAME;
+  return query ? `${CUSTOMER_TICKETS_PATHNAME}?${query}` : CUSTOMER_TICKETS_PATHNAME;
 }
 
 /** Structural equality for two scopes, ignoring presentation. */
@@ -301,13 +303,11 @@ export function ticketListScopesEqual(a: TicketListScope, b: TicketListScope): b
 }
 
 /**
- * The scope produced by an explicit view switch. Moving This MSP → oversight
- * selects All workspaces explicitly (it cannot carry the home token over); any
- * explicit customer workspace is retained unchanged so the customer can be
- * followed between the two views.
+ * The scope produced by an explicit view switch. The selected customer
+ * workspace is retained so the customer can be followed between the two views.
  */
 export function switchTicketListView(scope: QualifiedTicketListScope, view: TicketQueueView): QualifiedTicketListScope {
-  return { kind: 'qualified', view, workspace: parseWorkspace(view, ticketListWorkspaceToken(scope.workspace)) };
+  return { kind: 'qualified', view, workspace: scope.workspace };
 }
 
 /**
@@ -323,4 +323,39 @@ export function resetQualifiedTicketListPresentation(
     ...DEFAULT_TICKET_LIST_PRESENTATION,
     clientId: options.keepClient ? presentation.clientId : undefined,
   };
+}
+
+/** Params owned by the qualified list; they never belong to a native URL. */
+const QUALIFIED_ONLY_PARAMS = [
+  TICKET_LIST_QUEUE_VIEW_PARAM,
+  TICKET_LIST_WORKSPACE_PARAM,
+  TICKET_LIST_STATE_PARAM,
+  TICKET_LIST_SORT_PARAM,
+  TICKET_LIST_DIRECTION_PARAM,
+  TICKET_LIST_SIGNAL_PARAM,
+] as const;
+
+/**
+ * Where a legacy `/msp/tickets?queueView=…` URL should go, or `null` when the
+ * URL is an ordinary native one.
+ *
+ * - Valid `queueView` (and a workspace other than the retired `msp`) → the
+ *   Customer Tickets route with the supported params.
+ * - Retired `workspace=msp` → native All Tickets with every qualified param
+ *   stripped (native filters it carried are kept).
+ * - No/invalid `queueView` → `null`: the native page renders untouched.
+ */
+export function resolveLegacyQueueRedirect(search: string | URLSearchParams): string | null {
+  const params = new URLSearchParams(toSearchParams(search).toString());
+  if (!hasExplicitQualifiedScope(params)) {
+    return null;
+  }
+  if (firstNonEmpty(params.get(TICKET_LIST_WORKSPACE_PARAM)) === 'msp') {
+    for (const name of QUALIFIED_ONLY_PARAMS) params.delete(name);
+    const query = params.toString();
+    return query ? `${NATIVE_TICKET_LIST_PATHNAME}?${query}` : NATIVE_TICKET_LIST_PATHNAME;
+  }
+  const scope = parseTicketListScope(params);
+  const presentation = parseTicketListPresentation(params);
+  return buildTicketListHref(scope, presentation, { includeClient: Boolean(presentation.clientId) });
 }

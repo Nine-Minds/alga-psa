@@ -571,7 +571,7 @@
     },
     "queue": {
       "title": "Code dei ticket cogestiti",
-      "workingDescription": "Ticket del MSP e dei clienti attualmente gestiti dal tuo team.",
+      "workingDescription": "Ticket condivisi di cui il tuo team è responsabile o a cui è assegnato.",
       "oversightDescription": "Ticket dei clienti entro gli accessi approvati, inclusi quelli gestiti dal loro team IT.",
       "view": "Vista",
       "working": "Coda di lavoro",
@@ -623,10 +623,8 @@
         "resume": "Un rinvio all'IT del cliente è stato interrotto. Riprendilo per confermare l'esito.",
         "noReloadRecovery": "Il recupero dopo il ricaricamento non è disponibile in questo browser; puoi comunque riprovare in questa sessione."
       },
-      "thisMsp": "Questo MSP",
       "scopeUnavailable": "Apertura dell'elenco dei ticket…",
       "searchPlaceholder": "Cerca per numero o titolo",
-      "addMspTicket": "Aggiungi ticket MSP",
       "mspAlsoAssigned": "MSP assegnato anche"
     },
     "conversation": {
@@ -956,7 +954,9 @@
       "viewHistory": "Visualizza cronologia",
       "work": "Lavoro",
       "workHint": "I progetti del cliente e le code di attività condivise restano nella shell MSP con le loro identità qualificate.",
-      "workspace": "Area di lavoro del cliente"
+      "workspace": "Area di lavoro del cliente",
+      "sharedTickets": "Ticket condivisi",
+      "openCustomerTickets": "Apri in Ticket dei clienti"
     },
     "overview": {
       "clients": "Clienti cogestiti",
@@ -988,6 +988,31 @@
     "directory": {
       "prompt": "Seleziona l'area di lavoro cogestita da gestire.",
       "empty": "Nessuna area di lavoro cogestita disponibile per la gestione."
+    },
+    "customerTickets": {
+      "title": "Ticket dei clienti",
+      "view": "Vista",
+      "columns": "Colonne",
+      "density": "Densità",
+      "filters": "Filtri",
+      "client": "Cliente",
+      "allClients": "Tutti i clienti",
+      "share": "Condividi",
+      "clearSignal": "Rimuovi",
+      "unavailable": "Questa vista non è ancora disponibile per il tuo account.",
+      "allTickets": "Tutti i ticket",
+      "signals": {
+        "escalatedUnassigned": "Escalation non assegnati",
+        "awaitingReply": "In attesa della tua risposta"
+      }
+    },
+    "callout": {
+      "title": "Alcuni ticket dei clienti hanno bisogno di te",
+      "escalatedUnassigned_one": "{{count}} ticket in escalation non assegnato",
+      "escalatedUnassigned_other": "{{count}} ticket in escalation non assegnati",
+      "awaitingReply_one": "{{count}} ticket in attesa della tua risposta",
+      "awaitingReply_other": "{{count}} ticket in attesa della tua risposta",
+      "dismiss": "Chiudi"
     }
   },
   "actions": {

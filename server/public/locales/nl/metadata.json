@@ -556,6 +556,9 @@
       "upgrade": {
         "title": "Upgraden naar AlgaPSA"
       }
+    },
+    "customerTickets": {
+      "title": "Klanttickets"
     }
   },
   "auth": {

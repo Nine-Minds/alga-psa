@@ -107,7 +107,10 @@
     "ticketsRecurring": "Recurring Tickets",
     "coManaged": "Co-managed IT",
     "coManagedDelegation": "Delegated administration",
-    "coManagedAccess": "Co-managed access"
+    "coManagedAccess": "Co-managed access",
+    "ticketsCustomer": "Customer Tickets",
+    "projectsSharedTasks": "Shared Tasks",
+    "coManagedOverview": "Overview"
   },
   "marketing": {
     "dialogs": {

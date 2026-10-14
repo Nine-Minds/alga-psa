@@ -196,12 +196,8 @@ interface TicketingDashboardProps {
   /** Controlled column widths for the ticket table (named views capture and apply them). */
   columnSizing?: Record<string, number>;
   onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
-  /**
-   * App-owned source scope control (working/oversight + workspace). Injected as
-   * a slot so this package component never imports the app's co-managed actions
-   * or feature boundary. Rendered below the heading, above the board strip.
-   */
-  scopeControls?: React.ReactNode;
+  /** App-owned slot rendered between the board tabs and the list (co-managed callout). */
+  listCallout?: React.ReactNode;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -357,7 +353,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   listViewPicker,
   columnSizing,
   onColumnSizingChange,
-  scopeControls,
+  listCallout,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -2300,13 +2296,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </div>
       </div>
-      {scopeControls}
       <BoardTabStrip
         id={`${id}-board-tabs`}
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
       />
+      {listCallout}
       <div className="bg-[rgb(var(--color-card))] shadow rounded-lg">
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the

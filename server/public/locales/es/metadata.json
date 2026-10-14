@@ -556,6 +556,9 @@
       "upgrade": {
         "title": "Actualizar a AlgaPSA"
       }
+    },
+    "customerTickets": {
+      "title": "Tickets de clientes"
     }
   },
   "auth": {

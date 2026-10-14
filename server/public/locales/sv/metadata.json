@@ -638,6 +638,9 @@
     },
     "layout": {
       "defaultTitle": "Översikt | AlgaPSA"
+    },
+    "customerTickets": {
+      "title": "Kundärenden"
     }
   },
   "share": {
