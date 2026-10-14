@@ -6,6 +6,8 @@ import { buildRecurringDueWorkRow } from '@alga-psa/shared/billingClients/recurr
 import { getClientBillingCycleAnchor } from '@alga-psa/shared/billingClients/billingSchedule';
 import { ensureUtcMidnightIsoDate, getBillingPeriodForDate } from '@alga-psa/shared/billingClients/billingCycleAnchors';
 import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
+import { Temporal } from '@js-temporal/polyfill';
+import { dateOnlyToUtcMidnightIso, toDateOnly as toDateOnlyValue } from './prepaidBlockDates';
 
 /**
  * Due-work listing for scheduled Prepaid Block issuances
@@ -35,9 +37,11 @@ import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingCli
  * settle the cycle, so it must not claim it. The window dates on the invoice
  * (billing_period_start/end) still record where it was issued.
  *
- * Readiness is keyed on the issuance's DUE DATE, not the window start: the window
+ * Readiness is keyed on the issuance's DUE DATE against `asOf`, which callers set to
+ * the tenant business date (resolvePrepaidBlockBusinessDate, the same source as
+ * issuance due dates and the server guard), not the window start: the window
  * only groups and selects the row. A row is Ready (dueState 'due', canGenerate)
- * only when due_date <= asOf; while due_date > asOf it is 'early' and not
+ * only when due_date <= asOf; while later it is 'early' and not
  * generatable, shaped exactly like an early persisted row. So an expiry/renewal
  * issuance due late in its window is not issuable from the first day of the
  * window (that would start the new block's expiry clock while the old block still
@@ -64,11 +68,15 @@ export interface PrepaidBlockDueWorkGroupingMetadata {
   exportShapeKey?: string | null;
 }
 
-const toDateOnly = (value: unknown): ISO8601String | null => {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10) as ISO8601String;
-  return String(value).slice(0, 10) as ISO8601String;
-};
+const toDateOnly = (value: unknown): ISO8601String | null => toDateOnlyValue(value) as ISO8601String | null;
+
+/**
+ * Longest invoice window the listing can resolve (annual cycle, plus slack). A
+ * window containing a due date starts at most this many days before it, so a due
+ * date further out than `to` + this can never pass the `windowStart <= to` filter
+ * and needs no window resolution at all.
+ */
+const MAX_INVOICE_WINDOW_DAYS = 370;
 
 /**
  * Client-cadence invoice window containing `dueDate`, without reading
@@ -102,7 +110,12 @@ async function resolveClientCadenceWindowContaining(
   }
 
   const { billingCycle, anchor } = await getClientBillingCycleAnchor(trx, tenant, clientId);
-  const period = getBillingPeriodForDate(ensureUtcMidnightIsoDate(dueDate), billingCycle, anchor);
+  const period = getBillingPeriodForDate(
+    // A bare date parses as server-local midnight; ensureUtcMidnightIsoDate then throws on a non-UTC host.
+    ensureUtcMidnightIsoDate(dateOnlyToUtcMidnightIso(dueDate)),
+    billingCycle,
+    anchor,
+  );
   return { start: toDateOnly(period.periodStartDate)!, end: toDateOnly(period.periodEndDate)! };
 }
 
@@ -149,116 +162,136 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
   const searchTerm = params.options?.searchTerm?.trim().toLowerCase() ?? '';
   const rangeTo = params.options?.dateRange?.to ?? null;
   const rows: IRecurringDueWorkRow[] = [];
+  // `asOf` is the business date (callers pass resolvePrepaidBlockBusinessDate, the
+  // source the issuance due dates and the billing engine's "not due until" guard
+  // use), not the user-chosen range end.
+  const businessToday = toDateOnly(asOf)!;
 
   for (const issuance of issuances) {
     if (searchTerm && !String(issuance.client_name ?? '').toLowerCase().includes(searchTerm)) continue;
-    const dueDate = toDateOnly(issuance.due_date)!;
-    const contractCadence = issuance.cadence_owner === 'contract';
+    const dueDate = toDateOnly(issuance.due_date);
+    if (!dueDate) {
+      console.error(`[prepaidBlockDueWork] skipping issuance ${issuance.issuance_id}: unreadable due date`);
+      continue;
+    }
+    // Cheap pre-filter: no window containing this due date can start by `to`.
+    if (rangeTo && Temporal.PlainDate.from(dueDate).subtract({ days: MAX_INVOICE_WINDOW_DAYS }).toString() > rangeTo) continue;
 
-    let windowStart: ISO8601String | null = null;
-    let windowEnd: ISO8601String | null = null;
-    const clientName: string | null = issuance.client_name ?? null;
+    // One bad issuance (unresolvable window, bad anchor data) must not fail the whole
+    // Invoices -> Generate list for the tenant: log it and skip the row.
+    try {
+      const contractCadence = issuance.cadence_owner === 'contract';
 
-    if (contractCadence) {
-      const baseQuery = () => {
-        const q = db.table('recurring_service_periods as rsp');
-        db.tenantJoin(q, 'contract_lines as rcl', 'rcl.contract_line_id', 'rsp.obligation_id');
-        return q
-          .where('rcl.contract_id', issuance.contract_id)
-          .where('rsp.cadence_owner', 'contract')
-          .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
-          .orderBy('rsp.invoice_window_start', 'asc')
-          .orderBy('rsp.invoice_window_end', 'asc');
-      };
-      type WindowRow = { invoice_window_start: unknown; invoice_window_end: unknown } | undefined;
-      // The window containing the due date, even when its Fixed rows are already invoiced.
-      let window = await baseQuery()
-        .where('rsp.invoice_window_start', '<=', dueDate)
-        .where('rsp.invoice_window_end', '>', dueDate)
-        .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as WindowRow;
-      if (!window) {
-        window = await baseQuery()
-          .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
-          .whereNull('rsp.invoice_charge_detail_id')
+      let windowStart: ISO8601String | null = null;
+      let windowEnd: ISO8601String | null = null;
+      const clientName: string | null = issuance.client_name ?? null;
+
+      if (contractCadence) {
+        const baseQuery = () => {
+          const q = db.table('recurring_service_periods as rsp');
+          db.tenantJoin(q, 'contract_lines as rcl', 'rcl.contract_line_id', 'rsp.obligation_id');
+          return q
+            .where('rcl.contract_id', issuance.contract_id)
+            .where('rsp.cadence_owner', 'contract')
+            .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+            .orderBy('rsp.invoice_window_start', 'asc')
+            .orderBy('rsp.invoice_window_end', 'asc');
+        };
+        type WindowRow = { invoice_window_start: unknown; invoice_window_end: unknown } | undefined;
+        // The window containing the due date, even when its Fixed rows are already invoiced.
+        let window = await baseQuery()
+          .where('rsp.invoice_window_start', '<=', dueDate)
           .where('rsp.invoice_window_end', '>', dueDate)
           .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as WindowRow;
+        if (!window) {
+          window = await baseQuery()
+            .whereIn('rsp.lifecycle_state', [...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES])
+            .whereNull('rsp.invoice_charge_detail_id')
+            .where('rsp.invoice_window_end', '>', dueDate)
+            .first('rsp.invoice_window_start', 'rsp.invoice_window_end') as WindowRow;
+        }
+        // Contract cadence not materialized yet: no window to list under.
+        if (!window) continue;
+        windowStart = toDateOnly(window.invoice_window_start);
+        windowEnd = toDateOnly(window.invoice_window_end);
+      } else {
+        const window = await resolveClientCadenceWindowContaining(trx, tenant, issuance.client_id, dueDate);
+        windowStart = window.start;
+        windowEnd = window.end;
       }
-      // Contract cadence not materialized yet: no window to list under.
-      if (!window) continue;
-      windowStart = toDateOnly(window.invoice_window_start);
-      windowEnd = toDateOnly(window.invoice_window_end);
-    } else {
-      const window = await resolveClientCadenceWindowContaining(trx, tenant, issuance.client_id, dueDate);
-      windowStart = window.start;
-      windowEnd = window.end;
+      if (windowStart && rangeTo && windowStart > rangeTo) continue;
+      if (!windowStart || !windowEnd) continue;
+
+      const scheduleKey = `schedule:${tenant}:prepaid_block:${issuance.issuance_id}`;
+      const periodKey = `period:${windowStart}:${windowEnd}:prepaid_block:${issuance.issuance_id}`;
+      const recordId = `prepaid_block:${issuance.issuance_id}`;
+      const selectorInput = buildClientCadenceDueSelectionInput({
+        clientId: issuance.client_id,
+        scheduleKey,
+        periodKey,
+        windowStart,
+        windowEnd,
+      });
+      const taxSource = params.clientTaxSourceById?.get(issuance.client_id) ?? null;
+      const purchaseOrderScopeKey = issuance.po_required ? issuance.client_contract_id : null;
+
+      params.groupingMetadataByRecordId?.set(recordId, {
+        clientContractId: issuance.client_contract_id ?? issuance.contract_id ?? null,
+        purchaseOrderScopeKey,
+        currencyCode: issuance.currency_code ?? null,
+        taxSource,
+        exportShapeKey: null,
+      });
+
+      const dueWorkRow = buildRecurringDueWorkRow({
+        selectorInput,
+        cadenceSource: contractCadence ? 'contract_anniversary' : 'client_schedule',
+        duePosition: 'advance',
+        // Deliberately null: see the billing_cycle_id decision in the header.
+        billingCycleId: null,
+        // A block is a dated one-off: its "service period" is the invoice window.
+        servicePeriodStart: windowStart,
+        servicePeriodEnd: windowEnd,
+        clientName,
+        asOf,
+        scheduleKey,
+        periodKey,
+        recordId,
+        contractName: issuance.contract_name ?? null,
+        contractLineName: issuance.contract_line_name ?? null,
+        purchaseOrderScopeKey,
+        currencyCode: issuance.currency_code ?? null,
+        taxSource,
+        exportShapeKey: null,
+        attribution: {
+          source: 'explicit_contract',
+          label: 'Explicit contract',
+          isComplete: true,
+          missingFields: [],
+        },
+      });
+
+      // Readiness follows the due date, not the window start (see header).
+      const notYetDue = dueDate > businessToday;
+      rows.push({
+        ...dueWorkRow,
+        ...(notYetDue ? { dueState: 'early' as const, isEarly: true, canGenerate: false } : {}),
+        // The client-cadence selector carries no contract identity; attribute it
+        // here so the candidate header can name the contract. contractLineId stays
+        // null on purpose: approval blockers scope hourly time by it and a block
+        // charge does not depend on time approval.
+        contractId: issuance.contract_id ?? null,
+        amountCents: Number(issuance.block_price),
+        chargeType: 'PrepaidBlock',
+        blockDueDate: dueDate,
+        blockTriggerKind: issuance.trigger_kind,
+      } as IRecurringDueWorkRow);
+    } catch (error) {
+      console.error(
+        `[prepaidBlockDueWork] skipping issuance ${issuance.issuance_id}: could not resolve its invoice window`,
+        error,
+      );
     }
-    if (windowStart && rangeTo && windowStart > rangeTo) continue;
-    if (!windowStart || !windowEnd) continue;
-
-    const scheduleKey = `schedule:${tenant}:prepaid_block:${issuance.issuance_id}`;
-    const periodKey = `period:${windowStart}:${windowEnd}:prepaid_block:${issuance.issuance_id}`;
-    const recordId = `prepaid_block:${issuance.issuance_id}`;
-    const selectorInput = buildClientCadenceDueSelectionInput({
-      clientId: issuance.client_id,
-      scheduleKey,
-      periodKey,
-      windowStart,
-      windowEnd,
-    });
-    const taxSource = params.clientTaxSourceById?.get(issuance.client_id) ?? null;
-    const purchaseOrderScopeKey = issuance.po_required ? issuance.client_contract_id : null;
-
-    params.groupingMetadataByRecordId?.set(recordId, {
-      clientContractId: issuance.client_contract_id ?? issuance.contract_id ?? null,
-      purchaseOrderScopeKey,
-      currencyCode: issuance.currency_code ?? null,
-      taxSource,
-      exportShapeKey: null,
-    });
-
-    const dueWorkRow = buildRecurringDueWorkRow({
-      selectorInput,
-      cadenceSource: contractCadence ? 'contract_anniversary' : 'client_schedule',
-      duePosition: 'advance',
-      // Deliberately null: see the billing_cycle_id decision in the header.
-      billingCycleId: null,
-      // A block is a dated one-off: its "service period" is the invoice window.
-      servicePeriodStart: windowStart,
-      servicePeriodEnd: windowEnd,
-      clientName,
-      asOf,
-      scheduleKey,
-      periodKey,
-      recordId,
-      contractName: issuance.contract_name ?? null,
-      contractLineName: issuance.contract_line_name ?? null,
-      purchaseOrderScopeKey,
-      currencyCode: issuance.currency_code ?? null,
-      taxSource,
-      exportShapeKey: null,
-      attribution: {
-        source: 'explicit_contract',
-        label: 'Explicit contract',
-        isComplete: true,
-        missingFields: [],
-      },
-    });
-
-    // Readiness follows the due date, not the window start (see header).
-    const notYetDue = dueDate > toDateOnly(asOf)!;
-    rows.push({
-      ...dueWorkRow,
-      ...(notYetDue ? { dueState: 'early' as const, isEarly: true, canGenerate: false } : {}),
-      // The client-cadence selector carries no contract identity; attribute it
-      // here so the candidate header can name the contract. contractLineId stays
-      // null on purpose: approval blockers scope hourly time by it and a block
-      // charge does not depend on time approval.
-      contractId: issuance.contract_id ?? null,
-      amountCents: Number(issuance.block_price),
-      chargeType: 'PrepaidBlock',
-      blockDueDate: dueDate,
-      blockTriggerKind: issuance.trigger_kind,
-    } as IRecurringDueWorkRow);
   }
 
   return rows;

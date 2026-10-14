@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { resolvePrepaidBlockBusinessDate, toDateOnly } from '../lib/prepaidBlockDates';
 
 /**
  * Keeps contract_line_block_issuances in step with a Prepaid Block line's
@@ -16,7 +17,10 @@ import { tenantDb } from '@alga-psa/db';
  *  - First block: config present, a live assignment, the line has never issued
  *    a block (no invoiced issuance, no non-voided block) and no scheduled
  *    issuance exists -> insert `contract_start` due at
- *    max(client_contracts.start_date, line created date).
+ *    max(client_contracts.start_date, the business date the line was created on).
+ *    The business date is the calendar day of line.created_at in the tenant's
+ *    effective time zone (resolvePrepaidBlockBusinessDate), never the UTC slice of
+ *    the timestamp: a line created at 20:00 EDT is created that EDT day.
  *  - A scheduled `contract_start` issuance follows later edits to the start
  *    date / owning assignment.
  *  - Cancellation: scheduled issuances are cancelled (expiry ones superseded)
@@ -32,13 +36,6 @@ import { tenantDb } from '@alga-psa/db';
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string) {
   return tenantDb(conn, tenant).table(name);
-}
-
-function toDateOnly(value: unknown): string | null {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  const s = String(value);
-  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null;
 }
 
 export type PrepaidBlockIssuanceSyncResult =
@@ -123,7 +120,7 @@ export async function syncPrepaidBlockIssuancesForContractLine(
     .first('issuance_id', 'trigger_kind', 'due_date', 'client_contract_id');
 
   const startDate = toDateOnly(assignment.start_date);
-  const createdDate = toDateOnly(line.created_at);
+  const createdDate = line.created_at ? await resolvePrepaidBlockBusinessDate(trx, tenant, line.created_at) : null;
   const firstDue = [startDate, createdDate].filter((d): d is string => !!d).sort().pop() ?? null;
 
   if (scheduled) {

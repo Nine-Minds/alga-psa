@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   computePrepaidBlockAnniversaryDate,
   computePrepaidBlockExpirationDate,
+  dateOnlyToUtcMidnightIso,
+  toBusinessDate,
+  toDateOnly,
 } from './prepaidBlockDates';
 
 describe('prepaid block date arithmetic (plan D6)', () => {
@@ -38,5 +41,28 @@ describe('prepaid block date arithmetic (plan D6)', () => {
   it('rejects non-positive or fractional months', () => {
     expect(() => computePrepaidBlockExpirationDate('2026-03-15', 0)).toThrow();
     expect(() => computePrepaidBlockAnniversaryDate('2026-03-15', 1.5)).toThrow();
+  });
+});
+
+describe('prepaid block date-only helpers (server-zone independent)', () => {
+  it('reads strings and UTC-midnight / local-midnight Dates as the same calendar day', () => {
+    expect(toDateOnly('2026-10-13')).toBe('2026-10-13');
+    expect(toDateOnly('2026-10-13T04:00:00.000Z')).toBe('2026-10-13');
+    expect(toDateOnly(new Date('2026-10-13T00:00:00Z'))).toBe('2026-10-13');
+    // pg hydrates a `date` column as LOCAL midnight; whatever the host zone, it is that day.
+    expect(toDateOnly(new Date(2026, 9, 13))).toBe('2026-10-13');
+    expect(toDateOnly(null)).toBeNull();
+    expect(toDateOnly('garbage')).toBeNull();
+  });
+
+  it('normalizes a date-only value to UTC midnight regardless of host zone', () => {
+    expect(dateOnlyToUtcMidnightIso('2026-10-13')).toBe('2026-10-13T00:00:00Z');
+    expect(new Date(dateOnlyToUtcMidnightIso('2026-10-13')).getUTCHours()).toBe(0);
+  });
+
+  it('takes the calendar day of an instant in the business time zone, not UTC', () => {
+    // 20:00 EDT on 10/13 is already 10/14 in UTC.
+    expect(toBusinessDate('2026-10-14T00:00:00Z', 'America/New_York')).toBe('2026-10-13');
+    expect(toBusinessDate(new Date('2026-10-14T00:00:00Z'), 'UTC')).toBe('2026-10-14');
   });
 });
