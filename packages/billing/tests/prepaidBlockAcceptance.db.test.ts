@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import knexLib from 'knex';
 import type { Knex } from 'knex';
 import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON } from '../src/services/prepaidBlockLifecycleService';
 import { BillingEngine } from '../src/lib/billing/billingEngine';
 import { persistInvoiceCharges } from '../src/services/invoiceService';
 import { syncPrepaidBlockIssuancesForContractLine } from '../src/services/prepaidBlockIssuanceSync';
@@ -521,6 +522,104 @@ describe.runIf(enabled)('Prepaid Block acceptance: Ryan\'s scenario', () => {
     expect(outcome).toEqual({ ok: true });
     expect((await db('hour_blocks').where({ tenant, block_id: followOn.block_id }).first()).status).toBe('voided');
     expect(await sourceExpiry()).toMatchObject({ status: 'scheduled', cancel_reason: null });
+  });
+});
+
+// ------------------------- deploy-fix: manual "Issue next block" over a scheduled expiry issuance
+
+describe.runIf(enabled)('Prepaid Block: manual issue supersedes a scheduled expiry issuance (alga-2026-0002695)', () => {
+  const sourceExpiry = (blockId: string) =>
+    db('contract_line_block_issuances').where({ tenant, trigger_kind: 'expiry', source_block_id: blockId }).first();
+
+  /** First block, 43 h logged, follow-on draft created then discarded, +1 h logged. Returns the source block + the 4 h entries. */
+  async function stuckLine() {
+    const w = await setup();
+    const first = await startContractAndIssueFirstBlock(w);
+    // Step 1: the finalized block has its expiry issuance scheduled.
+    expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'scheduled' });
+    const { overflow, followOn, followOnInvoiceId } = await logToExhaustionAndDraftFollowOn(w, first.blockId);
+    // Step 2 asserted in the helper: 180 min held on the pending follow-on.
+    expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON });
+
+    // Step 3: discard the draft: allocations released, expiry issuance scheduled again, 3 h bill as overage.
+    const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+    expect(await hardDeleteInvoice(followOnInvoiceId)).toEqual({ success: true });
+    expect(await db('hour_block_time_allocations').where({ tenant, block_id: followOn.block_id })).toHaveLength(0);
+    expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'scheduled', cancel_reason: null });
+    expect((await billedHourly(w, w.blockLineId)).map((b) => b.billable_duration)).toEqual([180]);
+
+    // Step 4: 1 h more. The block is empty, the episode stays suppressed: nothing is drafted.
+    const extra = await logTime(w, w.remoteServiceId, w.blockLineId, 60);
+    expect(await pendingBlocks()).toHaveLength(0);
+    expect((await sourceExpiry(first.blockId)).status).toBe('scheduled');
+    expect(await alerts()).toHaveLength(1);
+    return { w, first, overflow, extra };
+  }
+
+  const billedMinutes = async (w: World) => (await billedHourly(w, w.blockLineId)).reduce((s, b) => s + b.billable_duration, 0);
+
+  it('steps 1-6: manual issue is allowed, supersedes the expiry issuance, and the 4 h are drawn from the new block exactly once', async () => {
+    const { w, first, overflow, extra } = await stuckLine();
+    expect(await billedMinutes(w)).toBe(240); // 3 h released + 1 h new, billed as overage while no block exists
+
+    // Step 5: the action accepts and supersedes the expiry issuance with the usage reason.
+    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const issued = await issueNextPrepaidBlock(w.blockLineId) as { issuanceId: string };
+    expect(issued.issuanceId).toBeTruthy();
+    expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON });
+    const manual = await db('contract_line_block_issuances').where({ tenant, issuance_id: issued.issuanceId }).first();
+    expect(manual).toMatchObject({ trigger_kind: 'manual', status: 'scheduled', source_block_id: first.blockId });
+    // Exactly one scheduled issuance for the line.
+    expect(await db('contract_line_block_issuances').where({ tenant, contract_line_id: w.blockLineId, status: 'scheduled' })).toHaveLength(1);
+    // A second click is rejected: now a manual issuance is scheduled.
+    expect(await issueNextPrepaidBlock(w.blockLineId)).toMatchObject({ actionError: expect.stringContaining('already scheduled') });
+
+    // Step 6: generate + finalize. 4 h drawn from the new block, none billed as overage.
+    const manualBlock = await generateAndMaybeFinalize(w, issued.issuanceId, today(), true);
+    const block = await db('hour_blocks').where({ tenant, block_id: manualBlock.blockId }).first();
+    expect(block).toMatchObject({ status: 'active', total_minutes: 2400, remaining_minutes: 2160 }); // 36 h
+    const drawn = await db('hour_block_time_allocations').where({ tenant, block_id: manualBlock.blockId });
+    const byEntry = (id: string) => drawn.filter((a) => a.time_entry_id === id).reduce((sum, a) => sum + Number(a.minutes), 0);
+    expect(byEntry(overflow)).toBe(180);
+    expect(byEntry(extra)).toBe(60);
+    expect(drawn.reduce((s, a) => s + Number(a.minutes), 0)).toBe(240);
+    expect(await billedHourly(w, w.blockLineId)).toEqual([]);
+    await assertPartition(w);
+  });
+
+  it('variant: voiding the manual draft restores the expiry issuance and the 4 h bill once as overage', async () => {
+    const { w, first, overflow, extra } = await stuckLine();
+    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    const issued = await issueNextPrepaidBlock(w.blockLineId) as { issuanceId: string };
+    const manualDraft = await generateAndMaybeFinalize(w, issued.issuanceId, today(), false);
+    // While the manual draft exists the 4 h are held on its pending block, not billed.
+    expect(await billedHourly(w, w.blockLineId)).toEqual([]);
+    // (held counts whole entries: the 5 h overflow entry, 2 h of it drawn from the first block, plus the 1 h entry)
+    await assertPartition(w, { expectHeld: 360 });
+    expect((await sourceExpiry(first.blockId)).status).toBe('superseded');
+
+    const invoice = await db('hour_blocks').where({ tenant, block_id: manualDraft.blockId }).first();
+    const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+    expect(await hardDeleteInvoice(invoice.source_invoice_id)).toEqual({ success: true });
+
+    expect(await sourceExpiry(first.blockId)).toMatchObject({ status: 'scheduled', cancel_reason: null });
+    expect((await db('contract_line_block_issuances').where({ tenant, issuance_id: issued.issuanceId }).first()).status).toBe('cancelled');
+    expect(await pendingBlocks()).toHaveLength(0);
+    const billed = await billedHourly(w, w.blockLineId);
+    expect(billed.map((b) => [b.entry_id, b.billable_duration]).sort()).toEqual([[extra, 60], [overflow, 180]].sort());
+    await assertPartition(w);
+    // Exactly one scheduled issuance, so "Issue next block" works again.
+    expect(await db('contract_line_block_issuances').where({ tenant, contract_line_id: w.blockLineId, status: 'scheduled' })).toHaveLength(1);
+  });
+
+  it('negative: while a block is pending (follow-on draft) or a usage issuance is scheduled, the action still rejects', async () => {
+    const w = await setup();
+    const first = await startContractAndIssueFirstBlock(w);
+    await logToExhaustionAndDraftFollowOn(w, first.blockId);
+    const { issueNextPrepaidBlock } = await import('../src/actions/prepaidBlockActions');
+    expect(await issueNextPrepaidBlock(w.blockLineId)).toMatchObject({ actionError: expect.stringContaining('pending block') });
+    expect(await pendingBlocks()).toHaveLength(1);
+    expect(await db('contract_line_block_issuances').where({ tenant, trigger_kind: 'manual' })).toHaveLength(0);
   });
 });
 

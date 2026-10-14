@@ -107,6 +107,21 @@ describe('PrepaidBlockPanel', () => {
     expect((document.getElementById('prepaid-block-line-1-issue-next') as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('keeps Issue next block enabled for a scheduled expiry issuance, and disabled for a usage or manual one', async () => {
+    const next = (trigger_kind: string) => ({ issuance_id: 'i1', trigger_kind, due_date: '2027-03-01' });
+    actionMocks.getContractLinePrepaidBlockSummary.mockResolvedValue(summary({ next_issuance: next('expiry') }));
+    await renderPanel();
+    expect(document.getElementById('prepaid-block-line-1-next-issuance')!.textContent).toContain('Next scheduled issuance');
+    expect((document.getElementById('prepaid-block-line-1-issue-next') as HTMLButtonElement).disabled).toBe(false);
+    cleanup();
+    for (const kind of ['manual', 'exhaustion']) {
+      actionMocks.getContractLinePrepaidBlockSummary.mockResolvedValue(summary({ next_issuance: next(kind) }));
+      await renderPanel();
+      expect((document.getElementById('prepaid-block-line-1-issue-next') as HTMLButtonElement).disabled).toBe(true);
+      cleanup();
+    }
+  });
+
   it('issues the next block when nothing is open and refreshes', async () => {
     const onChanged = vi.fn();
     await renderPanel({ onChanged });

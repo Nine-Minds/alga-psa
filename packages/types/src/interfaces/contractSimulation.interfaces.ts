@@ -338,6 +338,23 @@ export interface ContractDraftDiscount {
   end_date?: string | null;
 }
 
+/** A wizard Prepaid Block line: its own Hourly services plus the block config (minor units of the draft currency). */
+export interface ContractDraftPrepaidBlockLine {
+  name?: string;
+  services: Array<{ service_id: string; service_name?: string; hourly_rate?: number }>;
+  block: {
+    block_minutes: number;
+    block_price: number;
+    sold_as_service_id?: string | null;
+    expiry_months?: number | null;
+    trigger_on_exhaustion?: boolean;
+    trigger_threshold_percent?: number | null;
+    trigger_on_expiry?: boolean;
+    trigger_on_renewal?: boolean;
+    replenishment_tier?: "draft" | "auto_issue";
+  };
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -375,6 +392,8 @@ export interface ContractDraftSimulationInput {
   usage_billing_frequency?: string;
   /** Contract-wide discounts authored in the wizard, priced by the simulator. */
   discounts?: ContractDraftDiscount[];
+  /** Prepaid Block lines (validated wizard drafts); each simulates its block issue like a saved block line. */
+  prepaid_block_lines?: ContractDraftPrepaidBlockLine[];
 }
 
 /* ----------------------------- results ----------------------------- */

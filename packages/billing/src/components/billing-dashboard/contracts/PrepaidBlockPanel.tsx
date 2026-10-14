@@ -212,7 +212,10 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
   const usedPercent = balance.total_minutes > 0
     ? Math.min(100, Math.max(0, Math.round(((balance.total_minutes - balance.remaining_minutes) / balance.total_minutes) * 100)))
     : 0;
-  const hasOpenFollowOn = Boolean(summary.pending_block || summary.next_issuance);
+  // A scheduled expiry issuance is a date obligation, not an open follow-on: a manual block may replace it.
+  const hasOpenFollowOn = Boolean(
+    summary.pending_block || (summary.next_issuance && summary.next_issuance.trigger_kind !== 'expiry'),
+  );
   const soldAsName = summary.covered_services.find((s) => s.service_id === config.sold_as_service_id)?.service_name;
 
   return (
