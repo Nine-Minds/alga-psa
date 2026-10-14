@@ -12,10 +12,10 @@ refreshing the preview. A rendered reselection regression uses a stale list row
 and current server snapshot; a separate conflict case confirms stale writes are
 not replayed. Existing tests cover explicit auth retry and delayed detail reads.
 
-Checks on this candidate: ManualInvoices and InvoicePreviewPanel rendered tests
-(34 passed), DraftInvoiceAdjustmentsCard auth recovery tests (7 passed), billing
-package typecheck (8 GiB heap) and tsup build passed, and server typecheck
-(11 GiB heap) passed. The server production webpack build failed with Node heap
+Checks on this candidate: focused ManualInvoices, authentication-recovery, and
+lifecycle suites (40 passed across three files; the card suite's 7 auth cases
+also passed independently), billing package typecheck (8 GiB heap) and tsup
+build passed, and server typecheck (11 GiB heap) passed. The server production webpack build failed with Node heap
 exhaustion at the 8 GiB limit; it is not a pass. No app server was started.
 
 Runtime acceptance remains pending. The registered service is the board-owned
