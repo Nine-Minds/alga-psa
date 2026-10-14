@@ -1230,6 +1230,7 @@
       "usageBasedPlans": "Nutzungsbasierte Pläne",
       "recurringQuantityLabel": "Wiederkehrende Menge:",
       "unitRateLabel": "Stückpreis:",
+      "hourlyRateLabel": "Stundensatz:",
       "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
       "unitAmountLabel": "Wiederkehrender Betrag:",
       "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
