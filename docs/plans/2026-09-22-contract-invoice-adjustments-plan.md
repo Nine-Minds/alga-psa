@@ -8,16 +8,16 @@ metadata/revision baseline while pending expanded/collapsed rows, removals, and
 validation state remain local. If a successful read had already established a
 baseline, later recovery does not advance its revision, preserving stale-writer
 rejection. Regression coverage exercises initial auth rejection → read retry at
-revision 8 → explicit save at revision 8. The reselection test now performs a
-successful save, asserts parent summary revision/total/charges refresh,
-deselects, reselects, and saves at the refreshed revision. A rendered preview
-callback test verifies the DraftsTab refresh callback runs after adjustment
-save.
+revision 8 → explicit save at revision 8. The reselection interaction now
+performs a successful save, asserts parent summary revision/total/charges
+refresh, deselects, reselects, and saves at the refreshed revision. A rendered
+preview callback test verifies the DraftsTab refresh callback runs after save.
+The initial-recovery and parent-callback tests each failed on pre-repair source
+`8e9e81571d` and pass on this candidate.
 
 Validation: focused editor/auth-recovery/concurrency/lifecycle suites passed
-(48 tests across four files); InvoicePreviewPanel callback suite passed (7
-tests). Both new regressions failed on pre-repair source `8e9e81571d` and pass
-on this candidate. Billing typecheck (8 GiB) and build passed; server typecheck
+(48 tests across four files); InvoicePreviewPanel suite passed (7 tests). Billing
+typecheck (8 GiB) and build passed; server typecheck
 (11 GiB) passed. The server production build previously failed with heap
 exhaustion at 8 GiB and was not retried: current capacity was 2.9 GiB free RAM,
 7.8 GiB free swap, and 6.2 GiB free disk (95% used). No app server was started.
