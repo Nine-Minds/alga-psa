@@ -9,6 +9,7 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { reownBlocksForRenewalActivation } from '../services/prepaidBlockRenewalService';
 import {
   RENEWAL_TICKET_MANUAL_RETRY_SOURCE,
   buildRenewalTicketIdempotencyKey,
@@ -855,14 +856,14 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       throw new Error('Activated renewal contract was not found in active status');
     }
 
-    // TODO(captain-decision-1): Prepaid Block re-ownership belongs here. Once the
-    // renewal contract is confirmed active, unexpired contract blocks
-    // (hour_blocks.client_contract_id = this source client contract) on lines
-    // that continue into the renewal contract would be re-owned to the new
-    // client_contract_id / matching new contract_line_id (config locks first,
-    // then blocks in block_id order, then reconcileLineAllocations per line),
-    // so remaining hours carry across the renewal. Not implemented pending the
-    // captain's decision on carry-over semantics.
+    // Prepaid Block carry-over (captain decision 1b): the source assignment's unexpired contract
+    // blocks move to the matching block line of the renewal contract (equal covered-service set).
+    // Unmatched lines keep their blocks, which the contract-end pass forfeits when the term ends.
+    await reownBlocksForRenewalActivation(trx, tenant, {
+      sourceClientContractId: clientContractId,
+      renewalContractId: resolvedActivatedContractId,
+      userId: actorUserId,
+    });
 
     const updatedAt = new Date().toISOString();
     await db.table('client_contracts')

@@ -4,6 +4,9 @@ import { runWithTenant, getConnection, tenantDb, resolveEffectiveTimeZone } from
 import { IHourBlock } from '@alga-psa/types';
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { deriveClientContractStatus } from '@alga-psa/shared/billingClients/clientContractStatus';
+import { resolvePrepaidBlockBusinessDate, toDateOnly } from '@alga-psa/billing/lib/prepaidBlockDates';
+import { cancelScheduledIssuances } from '@alga-psa/billing/services/prepaidBlockIssuanceSync';
 
 export interface ExpiredHourBlocksJobData extends Record<string, unknown> {
   tenantId: string;
@@ -13,6 +16,66 @@ export interface ExpiredHourBlocksJobData extends Record<string, unknown> {
 const tenantScopedTable = (trx: Knex.Transaction, table: string, tenant: string) =>
   tenantDb(trx, tenant).table(table);
 
+interface ContractEndBlock {
+  block_id: string;
+  contract_line_id: string;
+  client_contract_id: string;
+  end_date: string | null;
+  assignment_status: 'expired' | 'terminated';
+}
+
+/**
+ * Active contract blocks (with minutes left) whose owning assignment ended without renewal:
+ * end_date passed in the tenant business date, or the assignment is inactive
+ * (deriveClientContractStatus 'expired' / 'terminated'). Ended assignments whose renewal contract
+ * is already active but not yet completed are skipped: completion re-owns their blocks.
+ */
+async function findContractEndBlocks(
+  trx: Knex.Transaction,
+  tenant: string,
+  businessDate: string,
+  clientId?: string,
+): Promise<ContractEndBlock[]> {
+  const db = tenantDb(trx, tenant);
+  const query = db.table('hour_blocks as hb');
+  db.tenantJoin(query, 'client_contracts as cc', 'cc.client_contract_id', 'hb.client_contract_id');
+  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id', { type: 'left' });
+  db.tenantJoin(query, 'contracts as rc', 'rc.contract_id', 'cc.created_draft_contract_id', { type: 'left' });
+  query
+    .where('hb.status', 'active')
+    .whereNotNull('hb.contract_line_id')
+    .where('hb.remaining_minutes', '>', 0)
+    .where((qb: Knex.QueryBuilder) => qb
+      .where('cc.is_active', false)
+      .orWhere((ended: Knex.QueryBuilder) => ended.whereNotNull('cc.end_date').where('cc.end_date', '<', businessDate)));
+  if (clientId) query.where('hb.client_id', clientId);
+  const rows: Array<Record<string, any>> = await query.select(
+    'hb.block_id', 'hb.contract_line_id', 'cc.client_contract_id', 'cc.is_active', 'cc.start_date', 'cc.end_date',
+    'cc.status as renewal_status', 'ct.status as contract_status', 'rc.status as renewal_contract_status',
+  );
+
+  const result: ContractEndBlock[] = [];
+  for (const row of rows) {
+    if (row.renewal_status === 'renewing' && row.renewal_contract_status === 'active') continue;
+    const status = deriveClientContractStatus({
+      isActive: row.is_active === true,
+      startDate: toDateOnly(row.start_date),
+      endDate: toDateOnly(row.end_date),
+      contractStatus: row.contract_status ?? undefined,
+      now: businessDate,
+    });
+    if (status !== 'expired' && status !== 'terminated') continue;
+    result.push({
+      block_id: row.block_id,
+      contract_line_id: row.contract_line_id,
+      client_contract_id: row.client_contract_id,
+      end_date: toDateOnly(row.end_date),
+      assignment_status: status,
+    });
+  }
+  return result;
+}
+
 /**
  * Job handler for expiring hour blocks whose expiration date has passed.
  *
@@ -20,6 +83,20 @@ const tenantScopedTable = (trx: Knex.Transaction, table: string, tenant: string)
  * for display ("expired with 3.5 hrs unused") — the audit row records the
  * amount. Balance/eligibility queries filter on status, so keeping the minutes
  * is display-only and never lets an expired block burn.
+ *
+ * Contract-end pass (captain decision 2): an ACTIVE contract block whose assignment has ended
+ * without renewal (end_date passed in the tenant business date, or the assignment is no longer
+ * active) is expired the same way, with a `contract_end_expiration` audit row, and the line's
+ * scheduled issuances are cancelled (expiry ones superseded). Not forfeited:
+ *  - blocks a renewal re-owned (their client_contract_id is the new, live assignment), nor blocks
+ *    of an ended assignment whose renewal contract is already active but not yet completed (the
+ *    re-ownership happens at completion);
+ *  - `pending` blocks (a draft invoice not yet finalized): the customer may still be invoiced for
+ *    them, and voiding one would leave an invoice line with no block. They stay pending; if the
+ *    invoice is finalized after the end date the block activates and the next pass forfeits it
+ *    (audit row included), so nothing active outlives its contract.
+ * Time that already drew a forfeited block keeps its allocations (the re-draw never moves entries
+ * pinned to an expired block), so it stays billed exactly once.
  */
 export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): Promise<void> {
   const { tenantId, clientId } = data;
@@ -64,10 +141,17 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         if (clientId) {
           peek = peek.where('client_id', clientId);
         }
-        const peekedLineIds: string[] = (await peek).map((r: { contract_line_id: string }) => r.contract_line_id).sort();
-        if (peekedLineIds.length > 0) {
+        const peekedLineIds: string[] = (await peek).map((r: { contract_line_id: string }) => r.contract_line_id);
+
+        // Contract-end candidates (unlocked peek, re-verified on the locked rows below).
+        const businessDate = await resolvePrepaidBlockBusinessDate(trx, tenantId);
+        const contractEndCandidates = await findContractEndBlocks(trx, tenantId, businessDate, clientId);
+        const contractEndByBlock = new Map(contractEndCandidates.map((c) => [c.block_id, c] as const));
+
+        const lockLineIds = [...new Set([...peekedLineIds, ...contractEndCandidates.map((c) => c.contract_line_id)])].sort();
+        if (lockLineIds.length > 0) {
           await tenantScopedTable(trx, 'contract_line_prepaid_blocks', tenantId)
-            .whereIn('contract_line_id', peekedLineIds)
+            .whereIn('contract_line_id', lockLineIds)
             .orderBy('contract_line_id', 'asc')
             .forUpdate()
             .select('contract_line_id');
@@ -83,9 +167,11 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         // this check and the update below (review run b2b3038e).
         let query = (tenantScopedTable(trx, 'hour_blocks', tenantId) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
           .where('status', 'active')
-          .whereNotNull('expiration_date')
-          .where('expiration_date', '<', today)
           .where('remaining_minutes', '>', 0)
+          .where((qb: Knex.QueryBuilder) => {
+            qb.where((expired: Knex.QueryBuilder) => expired.whereNotNull('expiration_date').where('expiration_date', '<', today));
+            if (contractEndByBlock.size > 0) qb.orWhereIn('block_id', [...contractEndByBlock.keys()]);
+          })
           .orderBy('block_id', 'asc')
           .forUpdate();
 
@@ -95,11 +181,46 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
 
         const expiredBlocks: IHourBlock[] = await query;
 
-        console.log(`Found ${expiredBlocks.length} expired hour blocks to process`);
+        console.log(`Found ${expiredBlocks.length} hour blocks to expire`);
 
         const now = new Date().toISOString();
         const expiredLineIds = new Set<string>();
+        const contractEndLineIds = new Set<string>();
+        let contractEndCount = 0;
         for (const block of expiredBlocks) {
+          const contractEnd = contractEndByBlock.get(block.block_id);
+          // Re-verify on the locked row: a renewal may have re-owned the block since the peek.
+          if (contractEnd && block.contract_line_id === contractEnd.contract_line_id
+            && block.client_contract_id === contractEnd.client_contract_id) {
+            expiredLineIds.add(block.contract_line_id);
+            contractEndLineIds.add(block.contract_line_id);
+            contractEndCount += 1;
+            await tenantScopedTable(trx, 'hour_blocks', tenantId)
+              .where({ tenant: tenantId, block_id: block.block_id })
+              .update({ status: 'expired', updated_at: now });
+
+            await tenantScopedTable(trx, 'hour_block_audit', tenantId).insert({
+              audit_id: uuidv4(),
+              tenant: tenantId,
+              block_id: block.block_id,
+              type: 'contract_end_expiration',
+              minutes_delta: null,
+              reason: 'Contract ended without renewal; unused prepaid minutes forfeited',
+              created_by: null,
+              metadata: {
+                client_contract_id: contractEnd.client_contract_id,
+                assignment_end_date: contractEnd.end_date,
+                assignment_status: contractEnd.assignment_status,
+                expiration_date: block.expiration_date ? toCalendarDateString(block.expiration_date) : null,
+                remaining_minutes_at_expiration: Number(block.remaining_minutes),
+              },
+            });
+            console.log(`Forfeited hour block ${block.block_id} at contract end (${contractEnd.assignment_status}), remaining: ${block.remaining_minutes}`);
+            continue;
+          }
+          // Not a contract-end block after all: only a date-expired one belongs in the loop below.
+          const expirationDay = block.expiration_date ? toCalendarDateString(block.expiration_date) : null;
+          if (!expirationDay || expirationDay >= today) continue;
           if (block.contract_line_id) expiredLineIds.add(block.contract_line_id);
           await tenantScopedTable(trx, 'hour_blocks', tenantId)
             .where({ tenant: tenantId, block_id: block.block_id })
@@ -126,17 +247,17 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         // work that was only covered by the expired block's remainder falls to
         // overage (entries already drawn against the expired block stay as they
         // were). The audit rows above are kept as-is.
-        // TODO(captain-decision-2): contract-end forfeiture belongs here. When a
-        // contract ends (client_contracts.end_date passed / terminated), active
-        // contract blocks on its lines would be force-expired with a distinct
-        // audit reason (e.g. 'contract_end_forfeiture') in this same pass, before
-        // the re-draw below. Not implemented pending the captain's decision on
-        // whether unused prepaid hours are forfeited at contract end.
+        // An ended contract owes nothing further: cancel the line's scheduled issuances (config row is
+        // already locked above) before the re-draw.
+        for (const lineId of [...contractEndLineIds].sort()) {
+          await cancelScheduledIssuances(trx, tenantId, lineId, 'Contract ended; the line\'s blocks were forfeited');
+        }
+
         for (const lineId of [...expiredLineIds].sort()) {
           await reconcileLineAllocations(trx, tenantId, lineId);
         }
 
-        console.log(`Successfully processed ${expiredBlocks.length} expired hour blocks`);
+        console.log(`Successfully processed ${expiredBlocks.length} hour blocks (${contractEndCount} forfeited at contract end)`);
       });
     } catch (error: any) {
       console.error(`Error processing expired hour blocks: ${error.message}`, error);
