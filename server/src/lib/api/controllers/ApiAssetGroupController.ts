@@ -17,6 +17,7 @@ import {
   addGroupUser,
   createGroup,
   deleteGroupRow,
+  getGroupOwnerId,
   getGroupWithDetails,
   isAssetGroupError,
   listGroupsForClient,
@@ -60,7 +61,10 @@ export const assetGroupContactSchema = z.object({
 });
 
 export class ApiAssetGroupController {
-  private async requireContext(req: NextRequest, action: 'read' | 'update'): Promise<ApiContext | NextResponse> {
+  private async requireContext(
+    req: NextRequest,
+    action: 'read' | 'create' | 'update' | 'delete'
+  ): Promise<ApiContext | NextResponse> {
     const context = requireRequestContext(req);
     if (!context.user) {
       return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
@@ -79,7 +83,10 @@ export class ApiAssetGroupController {
       return createApiResponse(result);
     } catch (error) {
       if (isAssetGroupError(error)) {
-        return createErrorResponse(error.message, 400, error.code.toUpperCase());
+        // A group that is not there is a 404 wherever it is asked for, not
+        // only on GET.
+        const status = error.code === 'not_found' ? 404 : 400;
+        return createErrorResponse(error.message, status, error.code.toUpperCase());
       }
       if (error instanceof Error && error.name === 'AssetAssigneeError') {
         return createErrorResponse(error.message, 400, 'ASSIGNEE_NOT_ALLOWED');
@@ -105,7 +112,7 @@ export class ApiAssetGroupController {
 
   /** POST /api/v1/asset-groups */
   async create(req: NextRequest): Promise<NextResponse> {
-    const context = await this.requireContext(req, 'update');
+    const context = await this.requireContext(req, 'create');
     if (context instanceof NextResponse) return context;
 
     const parsed = createAssetGroupSchema.safeParse(await req.json());
@@ -171,7 +178,7 @@ export class ApiAssetGroupController {
 
   /** DELETE /api/v1/asset-groups/{id} */
   async delete(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = await this.requireContext(req, 'update');
+    const context = await this.requireContext(req, 'delete');
     if (context instanceof NextResponse) return context;
 
     return this.run(context, async (trx) => {
@@ -251,11 +258,23 @@ export class ApiAssetGroupController {
       return createErrorResponse('contact_name_id is required', 400, 'VALIDATION_ERROR');
     }
 
+    const knex = await getConnection(context.tenant);
+    const group = await tenantDb(knex, context.tenant).table('asset_groups')
+      .where({ group_id: params.id })
+      .first('kind');
+    const isBundle = group?.kind === 'bundle';
+    if (isBundle) {
+      // A bundle has one owner, but the caller still has to name the right
+      // one: silently clearing whoever happens to be there is not what
+      // "remove this contact" asked for.
+      const owner = await getGroupOwnerId(knex, context.tenant, params.id);
+      if (owner && owner !== contactId.data) {
+        return createErrorResponse('contact_name_id is not the owner of this bundle', 400, 'VALIDATION_ERROR');
+      }
+    }
+
     return this.run(context, async (trx) => {
-      const group = await tenantDb(trx, context.tenant).table('asset_groups')
-        .where({ group_id: params.id })
-        .first('kind');
-      if (group?.kind === 'bundle') {
+      if (isBundle) {
         await setGroupOwner(trx, context.tenant, params.id, null, { actorUserId: context.userId ?? null });
       } else {
         await removeGroupUser(trx, context.tenant, params.id, contactId.data);

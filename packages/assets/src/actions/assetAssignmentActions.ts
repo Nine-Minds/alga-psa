@@ -9,6 +9,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { setAssetAssignee } from '../lib/assetAssignment';
+import { publishAssetChanged } from '../lib/assetChangeEvents';
 import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string): Knex.QueryBuilder<any, any> {
@@ -132,8 +133,8 @@ export const assignAssetContact = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await setAssetAssignee(trx, tenant, assetId, contactId, {
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const applied = await setAssetAssignee(trx, tenant, assetId, contactId, {
         actorUserId: user.user_id,
         source: 'manual',
       });
@@ -144,8 +145,26 @@ export const assignAssetContact = withAuth(async (
             .first<{ full_name?: string | null }>('full_name')
         : null;
 
-      return { contact_name_id: contactId, contact_name: contact?.full_name ?? null };
+      return {
+        changed: applied.changed,
+        previousContactId: applied.previousContactId,
+        contact_name_id: contactId,
+        contact_name: contact?.full_name ?? null,
+      };
     });
+
+    // The edit form publishes ASSET_UPDATED for the same column; an assignment
+    // made from the Identity tile has to look the same to a workflow.
+    if (result.changed) {
+      await publishAssetChanged(tenant, [assetId], {
+        before: { contact_name_id: result.previousContactId },
+        after: { contact_name_id: contactId },
+        updatedPaths: ['contact_name_id'],
+        actorUserId: user.user_id,
+      });
+    }
+
+    return { contact_name_id: result.contact_name_id, contact_name: result.contact_name };
   } catch (error) {
     const expected = assetActionErrorFrom(error);
     if (expected) return expected;

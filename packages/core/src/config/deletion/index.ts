@@ -251,9 +251,16 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countAssetAssociations('contact')
       },
       // FR-C5: the assignee link is a NO ACTION composite FK that
-      // clearContactLinksBeforeDelete nulls, so the operator sees it listed
-      // before a hard delete instead of meeting it as a constraint error.
-      { type: 'assigned_asset', table: 'assets', foreignKey: 'contact_name_id', label: 'assigned asset' }
+      // clearContactLinksBeforeDelete nulls and whose open assignment the
+      // delete closes. Reported so the operator can see the laptop, never
+      // blocking — blocking it would stop that cleanup from ever running.
+      {
+        type: 'assigned_asset',
+        table: 'assets',
+        foreignKey: 'contact_name_id',
+        label: 'assigned asset',
+        blocking: false
+      }
     ]
   },
   ticket: {

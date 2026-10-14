@@ -368,15 +368,18 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [asset] = await scopedTable(knex, context.tenant, this.tableName)
-      .insert(assetRecord)
-      .returning('*');
+    // One transaction: a rejected assignee must not leave an asset behind
+    // without the contact the caller asked for.
+    const asset = await knex.transaction(async (trx) => {
+      const [created] = await scopedTable(trx, context.tenant, this.tableName)
+        .insert(assetRecord)
+        .returning('*');
 
-    if (requestedContactId) {
-      await knex.transaction(async (trx) => {
-        await this.applyAssignee(trx, context, asset.asset_id, requestedContactId);
-      });
-    }
+      if (requestedContactId) {
+        await this.applyAssignee(trx, context, created.asset_id, requestedContactId);
+      }
+      return created;
+    });
 
     // Handle extension data if provided
     if (extension_data && Object.keys(extension_data).length > 0) {
@@ -513,31 +516,34 @@ export class AssetService extends BaseService<any> {
       .where({ [this.primaryKey]: id })
       .first();
 
-    const [after] = await scopedTable(knex, context.tenant, this.tableName)
-      .where({ [this.primaryKey]: id })
-      .update(updateData)
-      .returning('*');
+    // One transaction for the columns, the group removal and the assignee:
+    // separately, a failed assignment left the client move committed without
+    // its FR-E5 group removal, or the other way round.
+    const after = await knex.transaction(async (trx) => {
+      const [updated] = await scopedTable(trx, context.tenant, this.tableName)
+        .where({ [this.primaryKey]: id })
+        .update(updateData)
+        .returning('*');
 
-    if (!after) {
-      throw new NotFoundError('Asset not found');
-    }
+      if (!updated) {
+        throw new NotFoundError('Asset not found');
+      }
 
-    if (
-      data.client_id &&
-      current?.client_id &&
-      data.client_id !== current.client_id
-    ) {
-      // FR-E5: the group belongs to the old client.
-      await knex.transaction(async (trx) => {
+      if (
+        data.client_id &&
+        current?.client_id &&
+        data.client_id !== current.client_id
+      ) {
+        // FR-E5: the group belongs to the old client.
         await removeAssetFromAnyGroup(trx, context.tenant, id, { actorUserId: context.userId });
-      });
-    }
+      }
 
-    if (nextContactId !== undefined) {
-      await knex.transaction(async (trx) => {
+      if (nextContactId !== undefined) {
         await this.applyAssignee(trx, context, id, nextContactId);
-      });
-    }
+      }
+
+      return updated;
+    });
 
     // Publish event
     const updatePayload = buildAssetUpdatedPayload({

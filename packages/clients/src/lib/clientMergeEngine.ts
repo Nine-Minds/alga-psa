@@ -957,6 +957,35 @@ export async function executeClientMerge(
   };
 }
 
+/** The source client's devices belonging to one RMM organization. */
+async function countAssetsOfRmmOrganization(
+  trx: Knex.Transaction,
+  tenant: string,
+  args: { clientId: string; provider: string; externalOrganizationId: string },
+): Promise<number> {
+  const mapped: string[] = await scoped(trx, tenant, 'tenant_external_entity_mappings')
+    .where({
+      integration_type: args.provider,
+      alga_entity_type: 'asset',
+      external_realm_id: args.externalOrganizationId,
+    })
+    .pluck('alga_entity_id');
+
+  const row = await scoped(trx, tenant, 'assets')
+    .where({ client_id: args.clientId })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.where({
+        rmm_provider: args.provider,
+        rmm_organization_id: args.externalOrganizationId,
+      });
+      if (mapped.length > 0) builder.orWhereIn('asset_id', mapped);
+    })
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(row?.count ?? 0);
+}
+
 /**
  * FR-G1: the devices that move and the RMM organizations they came from.
  *
@@ -984,10 +1013,19 @@ async function readMergeAssetsPreview(
       .where({ integration_id: mapping.integration_id })
       .first('provider');
     const provider = String(integration?.provider ?? '');
+    // Only this client's devices: FR-G5 lets a device be moved to another
+    // client by hand and keeps it there, so counting the organization's whole
+    // fleet promised to move machines that are not the source client's — and
+    // made the per-organization rows disagree with the total.
+    //
+    // Devices are found by column or by the external mapping row, the same
+    // two routes `moveRmmOrganizationAssets` uses: an older asset may predate
+    // `rmm_organization_id` being written.
     const deviceCount = provider
-      ? await countRows(trx, tenant, 'assets', {
-          rmm_provider: provider,
-          rmm_organization_id: mapping.external_organization_id,
+      ? await countAssetsOfRmmOrganization(trx, tenant, {
+          clientId: sourceClientId,
+          provider,
+          externalOrganizationId: String(mapping.external_organization_id),
         })
       : 0;
 
