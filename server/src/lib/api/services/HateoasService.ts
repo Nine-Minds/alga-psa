@@ -167,7 +167,8 @@ export class HateoasService {
         customActions: {
           test: { method: 'POST', path: 'test' },
           deliveries: { method: 'GET', path: 'deliveries' },
-          analytics: { method: 'GET', path: 'analytics' }
+          analytics: { method: 'GET', path: 'analytics' },
+          'retry-failed': { method: 'POST', path: 'retry-failed' }
         }
       },
 
