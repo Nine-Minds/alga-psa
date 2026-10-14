@@ -2423,7 +2423,7 @@
       "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:",
       "inactiveWarning": "Inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
       "sharedWarning": "As alterações aplicam-se a todos os agendamentos recorrentes que usam este modelo, a partir do próximo ticket criado.",
-      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite."
+      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}."
     },
     "errors": {
       "notFound": "Modelo de ticket não encontrado",

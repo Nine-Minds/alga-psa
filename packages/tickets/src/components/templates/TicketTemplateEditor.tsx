@@ -189,7 +189,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   const isNew = templateId === 'new';
 
   const [template, setTemplate] = useState<(ITicketTemplate & TicketTemplateUsage) | null>(null);
-  const [schedules, setSchedules] = useState<Array<{ definition_id: string; name: string; is_active: boolean }>>([]);
+  const [schedules, setSchedules] = useState<Array<{ definition_id: string; name: string; is_active: boolean; pins_status: boolean }>>([]);
+  // Only schedules that pin a dispatch status can break when the template's board changes (status belongs to a board).
+  const pinnedStatusSchedules = schedules.filter((schedule) => schedule.pins_status);
   const [referenceProblems, setReferenceProblems] = useState<TicketTemplateReferenceProblem[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
@@ -482,10 +484,10 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             ...(value.board_id !== form.board_id ? { priority_id: '', category_id: null, subcategory_id: null } : {}),
           })}
         />
-        {template && template.schedule_count > 0 && template.board_id && form.board_id !== template.board_id && (
+        {template && pinnedStatusSchedules.length > 0 && template.board_id && form.board_id !== template.board_id && (
           <Alert id={`${ID}-board-change-warning`} variant="warning">
             <AlertDescription>
-              {t('templates.editor.boardChangeWarning', 'Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them.')}
+              {t('templates.editor.boardChangeWarning', 'Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.', { schedules: pinnedStatusSchedules.map((schedule) => schedule.name).join(', ') })}
             </AlertDescription>
           </Alert>
         )}

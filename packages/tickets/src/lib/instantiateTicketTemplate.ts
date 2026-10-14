@@ -1,21 +1,15 @@
 // The one place a ticket template becomes a ticket. Deliberately NOT a 'use server' module.
 //
 // Two consumers: the recurring-ticket generator (`instantiateTicketTemplate`, the whole thing) and
-// `addTicket`'s create-from-template branch (`templateTicketProvenance` + `applyTemplateToCreatedTicket`,
-// the template-specific parts only: that action still takes the user's edited form values).
+// `addTicket`'s create-from-template branch (`templateTicketProvenance` + the shared
+// `applyCreatedFromTemplateEffects`; that action still takes the user's edited form values).
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
   createTicketWithSideEffects,
-  resolveActorEffects,
   type CreateTicketActor,
 } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
-import {
-  TICKET_ACTIVITY_ENTITY,
-  TICKET_ACTIVITY_EVENT,
-  writeTicketActivity,
-} from '@alga-psa/shared/lib/ticketActivity';
 import type { TicketOrigin } from '@alga-psa/types';
 import { asJsonColumn } from './recurring/jsonColumn';
 import {
@@ -25,12 +19,7 @@ import {
 } from './recurring/effectiveFields';
 import { findTicketFieldReferenceProblems } from './ticketFieldReferences';
 import { renderTitleTemplate, type TitleTokenContext } from './ticketTitleTokens';
-import {
-  countDuplicableCustomFields,
-  insertChecklistItemsReplacingTemplates,
-  pickDuplicableAttributes,
-} from './ticketDuplicate';
-import { templateChecklistToItems } from './ticketTemplates';
+import { countDuplicableCustomFields, pickDuplicableAttributes } from './ticketDuplicate';
 
 /** A template could not become a ticket. The message is the user-facing reason (stored on a failed occurrence). */
 export class TicketTemplateInstantiationError extends Error {
@@ -131,46 +120,6 @@ export function templateTicketProvenance(template: Pick<TemplateForInstantiation
   };
 }
 
-/**
- * The parts of "created from a template" that happen after the ticket row exists: the template's owned
- * checklist items (a snapshot, R6; they replace auto-applied rows for the same checklist template) and
- * the TICKET_CREATED_FROM_TEMPLATE activity.
- */
-export async function applyTemplateToCreatedTicket(
-  trx: Knex.Transaction,
-  tenant: string,
-  args: {
-    ticketId: string;
-    template: Pick<TemplateForInstantiation, 'template_id' | 'name'>;
-    checklist: TemplateForInstantiation['checklist'];
-    customFieldsCopied: number;
-    actor: CreateTicketActor;
-  }
-): Promise<{ checklistItemsCopied: number }> {
-  const { actorUserId, activityActor, activitySource } = resolveActorEffects(args.actor);
-  const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
-    targetTicketId: args.ticketId,
-    items: templateChecklistToItems(args.checklist),
-    userId: actorUserId,
-  });
-  await writeTicketActivity(trx, {
-    tenant,
-    ticketId: args.ticketId,
-    eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
-    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
-    entityId: args.ticketId,
-    actor: activityActor,
-    source: activitySource,
-    details: {
-      template_id: args.template.template_id,
-      template_name: args.template.name,
-      checklist_items_copied: checklistItemsCopied,
-      custom_fields_copied: args.customFieldsCopied,
-    },
-  });
-  return { checklistItemsCopied };
-}
-
 export interface InstantiateTicketTemplateInput {
   templateId: string;
   client: {
@@ -247,14 +196,18 @@ export async function instantiateTicketTemplate(
     tags: template.tags,
     assetIds,
     notificationSuppression: input.suppression,
-  });
-
-  await applyTemplateToCreatedTicket(trx, tenant, {
-    ticketId,
-    template,
-    checklist: template.checklist,
-    customFieldsCopied: countDuplicableCustomFields(provenance.attributes),
-    actor: input.actor,
+    // R6: the template's items are a snapshot the ticket owns; the create layer applies the replacement rule.
+    checklistItems: template.checklist.map((item) => ({
+      item_name: item.item_name,
+      description: item.description,
+      is_required: item.is_required,
+      checklist_template_id: item.checklist_template_id,
+    })),
+    fromTemplate: {
+      template_id: template.template_id,
+      template_name: template.name,
+      custom_fields_copied: countDuplicableCustomFields(provenance.attributes),
+    },
   });
 
   return { ticketId, ticketNumber };

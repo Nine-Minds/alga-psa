@@ -86,6 +86,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { applyCreatedFromTemplateEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
   copyChecklistFromSource,
@@ -98,7 +99,6 @@ import {
   ticketToTemplateDraft,
 } from '../lib/ticketTemplates';
 import {
-  applyTemplateToCreatedTicket,
   loadTemplateForInstantiation,
   templateTicketProvenance,
   type TemplateForInstantiation,
@@ -681,7 +681,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: friction ticket-create-composition — the template-specific parts share applyTemplateToCreatedTicket with the recurring generator, but this action still composes the generic create (single asset, form-driven ITIL priority mapping, analytics tracker, activity row) by hand around TicketModel instead of createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
+      // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -812,12 +812,22 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       }
 
       if (sourceTemplate) {
-        await applyTemplateToCreatedTicket(trx, tenant, {
+        await applyCreatedFromTemplateEffects(trx, tenant, {
           ticketId: ticketResult.ticket_id,
-          template: sourceTemplate,
-          checklist: copyChecklistFromTemplate ? sourceTemplate.checklist : [],
-          customFieldsCopied: countDuplicableCustomFields(createTicketInput.attributes),
           actor: { type: 'user', userId: user.user_id },
+          checklistItems: copyChecklistFromTemplate
+            ? sourceTemplate.checklist.map((item) => ({
+                item_name: item.item_name,
+                description: item.description,
+                is_required: item.is_required,
+                checklist_template_id: item.checklist_template_id,
+              }))
+            : [],
+          fromTemplate: {
+            template_id: sourceTemplate.template_id,
+            template_name: sourceTemplate.name,
+            custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
+          },
         });
       }
 

@@ -159,7 +159,7 @@ async function listBlockingSchedules(trx: Knex.Transaction, tenant: string, temp
     .where({ ticket_template_id: templateId })
     .whereNull('archived_at')
     .orderBy('name', 'asc')
-    .select('definition_id', 'name', 'is_active');
+    .select('definition_id', 'name', 'is_active', 'status_id');
 }
 
 function duplicateNameError(name: string): TicketTemplateError {
@@ -498,12 +498,20 @@ export const getTicketTemplateForCreate = withAuth(async (
   }
 });
 
+/** A non-archived schedule using a template. `pins_status`: it dispatches into a fixed status that belongs to one board. */
+export interface TicketTemplateScheduleUse {
+  definition_id: string;
+  name: string;
+  is_active: boolean;
+  pins_status: boolean;
+}
+
 /** Non-archived schedules using a template, for the editor's "Used by" panel. */
 export const listSchedulesForTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<{ definition_id: string; name: string; is_active: boolean }[] | TicketTemplateActionError> => {
+): Promise<TicketTemplateScheduleUse[] | TicketTemplateActionError> => {
   try {
     requireInternal(user);
     const { knex } = await createTenantKnex();
@@ -514,6 +522,7 @@ export const listSchedulesForTemplate = withAuth(async (
         definition_id: row.definition_id as string,
         name: row.name as string,
         is_active: row.is_active as boolean,
+        pins_status: row.status_id !== null && row.status_id !== undefined,
       }));
     });
   } catch (error) {

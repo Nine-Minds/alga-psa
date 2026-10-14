@@ -2423,7 +2423,7 @@
       "referenceProblems": "Algunos campos de esta plantilla apuntan a elementos que ya no existen. Se dejan en blanco al usar la plantilla. Corríjalos y guarde:",
       "inactiveWarning": "Inactiva: oculta en el selector de plantillas; todavía la usan {{count}} programaciones.",
       "sharedWarning": "Los cambios se aplican a cada programación recurrente que use esta plantilla, a partir del siguiente ticket que cree.",
-      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite."
+      "boardChangeWarning": "Cambiar el tablero borra la prioridad y la categoría, y puede invalidar el estado de las programaciones que usan esta plantilla. Esas programaciones fallan hasta que las edite. Programaciones afectadas: {{schedules}}."
     },
     "errors": {
       "notFound": "Plantilla de ticket no encontrada",
