@@ -26,6 +26,25 @@ export function calloutHref(signal: TicketQueueSignal, clientId?: string): strin
   );
 }
 
+/** In-memory fallback for the life of the page when browser storage is missing or throws. */
+const memoryDismissals = new Map<string, Dismissed>();
+
+function readDismissed(key: string): Dismissed {
+  // No window during the server render; the strip only renders after client-side signals resolve anyway.
+  if (typeof window === 'undefined') return memoryDismissals.get(key) ?? {};
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Dismissed) : {};
+  } catch {
+    return memoryDismissals.get(key) ?? {};
+  }
+}
+
+function writeDismissed(key: string, counts: Counts): void {
+  memoryDismissals.set(key, counts);
+  try { window.localStorage.setItem(key, JSON.stringify(counts)); } catch { /* in-memory only */ }
+}
+
 /**
  * Dismissal is remembered per viewer and per count in browser storage, so a
  * dismissed segment returns when its count changes. Storage that is missing or
@@ -33,18 +52,20 @@ export function calloutHref(signal: TicketQueueSignal, clientId?: string): strin
  */
 export function useCalloutDismissal(viewerId: string | null, scopeKey: string): [Dismissed, (counts: Counts) => void] {
   const key = `${DISMISS_PREFIX}${viewerId ?? 'anonymous'}:${scopeKey}`;
-  const [dismissed, setDismissed] = useState<Dismissed>({});
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(key);
-      setDismissed(raw ? (JSON.parse(raw) as Dismissed) : {});
-    } catch { setDismissed({}); }
-  }, [key]);
+  // The state remembers which key it was read for. A different key is re-read
+  // during render, so a dismissed strip never paints and one key's dismissal is
+  // never applied to another.
+  const [state, setState] = useState<{ key: string; value: Dismissed }>(() => ({ key, value: readDismissed(key) }));
+  let value = state.value;
+  if (state.key !== key) {
+    value = readDismissed(key);
+    setState({ key, value });
+  }
   const dismiss = useCallback((counts: Counts) => {
-    setDismissed(counts);
-    try { window.localStorage.setItem(key, JSON.stringify(counts)); } catch { /* in-memory only */ }
+    setState({ key, value: counts });
+    writeDismissed(key, counts);
   }, [key]);
-  return [dismissed, dismiss];
+  return [value, dismiss];
 }
 
 /** A segment deep-links to Customer Tickets; on a client screen it opens the co-managed section instead. */

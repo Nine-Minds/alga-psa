@@ -1,0 +1,29 @@
+# cd server && VITEST_SEED=<seed> npx vitest run (alone)
+seed=1 exit=0  Tests 20 passed (20)
+seed=2 exit=0  Tests 20 passed (20)
+seed=3 exit=0  Tests 20 passed (20)
+seed=4 exit=0  Tests 20 passed (20)
+seed=5 exit=0  Tests 20 passed (20)
+seed=6 exit=0  Tests 20 passed (20)
+seed=7 exit=0  Tests 20 passed (20)
+seed=8 exit=0  Tests 20 passed (20)
+seed=9 exit=1  Tests 1 failed | 19 passed (20)
+--- seed 9 failure detail
+   × T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed 524ms
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed
+AssertionError: expected <a …(3)></a> to be null
+seed=10 exit=1  Tests 1 failed | 19 passed (20)
+--- seed 10 failure detail
+   × T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed 524ms
+ FAIL  |jsdom| src/test/unit/product/coManagedCallout.test.tsx > T023 — dismissal is per viewer and per count > returns when a count changes, only for the segment that changed
+AssertionError: expected <a …(3)></a> to be null
+seed=11 exit=0  Tests 20 passed (20)
+seed=12 exit=0  Tests 20 passed (20)
+seed=13 exit=0  Tests 20 passed (20)
+seed=14 exit=0  Tests 20 passed (20)
+seed=15 exit=0  Tests 20 passed (20)
+seed=16 exit=0  Tests 20 passed (20)
+seed=17 exit=0  Tests 20 passed (20)
+seed=18 exit=0  Tests 20 passed (20)
+seed=19 exit=0  Tests 20 passed (20)
+seed=20 exit=0  Tests 20 passed (20)

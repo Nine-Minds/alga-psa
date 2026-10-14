@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -27,7 +27,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
 }));
 
 import { CoManagedWorkSignalsProvider } from '../../../components/co-managed/CoManagedWorkSignalsProvider';
-import { CoManagedCalloutStrip, CoManagedClientCalloutStrip, calloutHref } from '../../../components/co-managed/CoManagedCalloutStrip';
+import { CoManagedCalloutStrip, CoManagedClientCalloutStrip, calloutHref, useCalloutDismissal } from '../../../components/co-managed/CoManagedCalloutStrip';
 import SidebarSubMenuItem from '../../../components/layout/SidebarSubMenuItem';
 
 const READY = { assignedRelationshipCount: 2, signals: { escalatedUnassigned: 3, awaitingReply: 4 } };
@@ -44,7 +44,12 @@ beforeEach(() => {
   mocks.product.mockReturnValue({ productCode: 'psa' });
   mocks.signals.mockResolvedValue(READY);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  // Restores storage spies even when an assertion threw before an inline restore.
+  vi.restoreAllMocks();
+  window.localStorage.clear();
+});
 
 describe('T023 — callout strip', () => {
   it('shows each signal as a deep link to Customer Tickets with the matching filter', async () => {
@@ -132,13 +137,83 @@ describe('T023 — dismissal is per viewer and per count', () => {
   });
 
   it('still dismisses for the page when browser storage is unavailable', async () => {
-    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
-    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied'); });
-    mount();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied'); });
+    mount('viewer-unavailable');
     await screen.findByTestId('co-managed-callout');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByTestId('co-managed-callout')).toBeNull();
-    setItem.mockRestore(); getItem.mockRestore();
+  });
+
+  it('keeps an in-memory dismissal across a remount for the life of the page when storage throws', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied'); });
+    const { result, unmount } = renderHook(() => useCalloutDismissal('viewer-memory', 'all'));
+    act(() => result.current[1]({ escalatedUnassigned: 3, awaitingReply: 4 }));
+    unmount();
+    const again = renderHook(() => useCalloutDismissal('viewer-memory', 'all'));
+    expect(again.result.current[0]).toEqual({ escalatedUnassigned: 3, awaitingReply: 4 });
+  });
+});
+
+describe('T023 — dismissal is correct on the first render and per key', () => {
+  const COUNTS = { escalatedUnassigned: 3, awaitingReply: 4 };
+  const keyFor = (viewer: string) => `alga.coManaged.callout.dismissed:${viewer}:all`;
+
+  it('never renders a dismissed strip, not even for one commit, once the signals resolve', async () => {
+    window.localStorage.setItem(keyFor('viewer-1'), JSON.stringify(COUNTS));
+    // A transient commit is invisible to a final-state assertion, so record every node insertion.
+    const appeared: Node[] = [];
+    const observer = new MutationObserver(records => {
+      for (const record of records) {
+        record.addedNodes.forEach(node => {
+          if (node instanceof Element && (node.matches('[data-testid="co-managed-callout"]') || node.querySelector('[data-testid="co-managed-callout"]'))) appeared.push(node);
+        });
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    mount();
+    await waitFor(() => expect(mocks.signals).toHaveBeenCalled());
+    // Let the resolved signals commit; a strip that painted would have been inserted by now.
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+    observer.disconnect();
+    expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+    expect(appeared).toEqual([]);
+  });
+
+  it('reads the stored dismissal on the hook\'s very first render', () => {
+    window.localStorage.setItem(keyFor('viewer-1'), JSON.stringify(COUNTS));
+    const seen: unknown[] = [];
+    renderHook(() => { const [dismissed] = useCalloutDismissal('viewer-1', 'all'); seen.push(dismissed); return dismissed; });
+    expect(seen[0]).toEqual(COUNTS);
+  });
+
+  it('applies the new key\'s dismissal, never the previous key\'s, when the viewer changes on a mounted component', () => {
+    window.localStorage.setItem(keyFor('viewer-1'), JSON.stringify(COUNTS));
+    const seen: Array<{ viewer: string | null; value: unknown }> = [];
+    const { rerender } = renderHook(({ viewer }: { viewer: string | null }) => {
+      const [dismissed] = useCalloutDismissal(viewer, 'all');
+      seen.push({ viewer, value: dismissed });
+      return dismissed;
+    }, { initialProps: { viewer: 'viewer-1' as string | null } });
+    seen.length = 0;
+    rerender({ viewer: 'viewer-2' });
+    rerender({ viewer: 'viewer-1' });
+    // viewer-2 has nothing stored: every render for it is empty; viewer-1 is dismissed on every render for it.
+    for (const entry of seen) {
+      expect(entry.value).toEqual(entry.viewer === 'viewer-1' ? COUNTS : {});
+    }
+    expect(seen.some(entry => entry.viewer === 'viewer-2')).toBe(true);
+  });
+
+  it('shows the strip for a second viewer after the mounted viewer switches', async () => {
+    window.localStorage.setItem(keyFor('viewer-1'), JSON.stringify(COUNTS));
+    const view = render(<CoManagedWorkSignalsProvider viewerId="viewer-1"><CoManagedCalloutStrip /></CoManagedWorkSignalsProvider>);
+    await waitFor(() => expect(mocks.signals).toHaveBeenCalled());
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+    view.rerender(<CoManagedWorkSignalsProvider viewerId="viewer-2"><CoManagedCalloutStrip /></CoManagedWorkSignalsProvider>);
+    expect(await screen.findByTestId('co-managed-callout')).toBeInTheDocument();
   });
 });
 
