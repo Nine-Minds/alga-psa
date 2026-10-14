@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'react-hot-toast';
 import type { IContact } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { assignAssetContact } from '../actions/assetAssignmentActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
 import { getClientContactsForAssets } from '../actions/clientLookupActions';
 import { mapRmmUserToContact, suggestAssigneeFromRmmUser } from '../actions/rmmUserAssignmentActions';
+import { matchAssetCacheKeys } from '../lib/assetCacheKeys';
 
 /**
  * FR-D5 / FR-D6: the Live vitals "Signed in" row.
@@ -34,6 +34,7 @@ export function AssetSignedInUserRow({
   onAssigned?: () => void;
 }) {
   const { t } = useTranslation('msp/assets');
+  const { mutate: mutateCache } = useSWRConfig();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [saving, setSaving] = useState(false);
@@ -43,7 +44,7 @@ export function AssetSignedInUserRow({
     assetId && signedInUser ? ['asset', assetId, 'rmm-user-suggestion'] : null,
     async ([, aid]) => {
       const result = await suggestAssigneeFromRmmUser(aid);
-      return isActionPermissionError(result) ? null : result;
+      return isAssetActionError(result) ? null : result;
     }
   );
 
@@ -69,6 +70,10 @@ export function AssetSignedInUserRow({
       setDismissed(true);
       onAssigned?.();
       void mutate();
+      // The Identity tile and the timeline render from the asset cache, so
+      // without this the row says "assigned" while the tile still says
+      // "Unassigned" until a reload.
+      void mutateCache(matchAssetCacheKeys([assetId]));
     } finally {
       setSaving(false);
     }
@@ -85,14 +90,15 @@ export function AssetSignedInUserRow({
         contactId,
         assignAssetId: assetId,
       });
-      if (isActionPermissionError(result)) {
-        toast.error(t('assetBento.rmmUser.mapFailed', { defaultValue: 'Unable to save the mapping.' }));
+      if (isAssetActionError(result)) {
+        toast.error(assetActionErrorMessage(result));
         return;
       }
       setIsPickerOpen(false);
       setDismissed(true);
       onAssigned?.();
       void mutate();
+      void mutateCache(matchAssetCacheKeys([assetId]));
     } finally {
       setSaving(false);
     }

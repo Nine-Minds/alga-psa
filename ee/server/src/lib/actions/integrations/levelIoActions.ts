@@ -3,6 +3,7 @@
 import { randomBytes } from 'crypto';
 import type { Knex } from 'knex';
 import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
 import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -495,12 +496,6 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
       }
       patch.contact_assignment_mode = input.contactAssignmentMode;
     }
-    if (typeof input.billingProfileId !== 'undefined') {
-      patch.billing_profile_id = input.billingProfileId || null;
-    } else if (typeof input.clientId !== 'undefined') {
-      // FR-F1: a profile belongs to one client, so a client change clears it.
-      patch.billing_profile_id = null;
-    }
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
 
@@ -511,6 +506,15 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
       const existing = await trxDb.table('rmm_organization_mappings')
         .where({ mapping_id: input.mappingId })
         .first('client_id', 'integration_id', 'external_organization_id');
+
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: input.clientId,
+        billingProfileId: input.billingProfileId,
+      });
+      if (typeof billingProfileId !== 'undefined') patch.billing_profile_id = billingProfileId;
 
       await trxDb.table('rmm_organization_mappings')
         .where({ mapping_id: input.mappingId })

@@ -208,6 +208,8 @@ export interface CreateTicketFromAssetInput {
   client_id: string;
   /** FR-E8: the asset's assignee, or a shared workspace's single user. */
   contact_name_id?: string | null;
+  /** FR-F3: the profile resolved from the asset (or its location). */
+  billing_profile_id?: string | null;
 }
 
 export interface UpdateTicketInput {

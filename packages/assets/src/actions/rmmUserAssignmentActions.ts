@@ -12,6 +12,7 @@ import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
 
 /**
  * FR-D5 / FR-D6 on the asset surfaces. The core lives in
@@ -43,13 +44,22 @@ export const mapRmmUserToContact = withAuth(async (
     contactId: string | null;
     assignAssetId?: string | null;
   }
-): Promise<{ key: string; assignedAssetIds: string[] } | ActionPermissionError> => {
+): Promise<{ key: string; assignedAssetIds: string[] } | AssetActionError> => {
   if (!await hasPermission(user, 'asset', 'update')) {
     return permissionError('Permission denied: Cannot update assets', 'msp/assets:errors.permissions.updateAssets');
   }
 
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) =>
-    mapSignedInUserToContact(trx, tenant, { ...input, actorUserId: user.user_id })
-  );
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) =>
+      mapSignedInUserToContact(trx, tenant, { ...input, actorUserId: user.user_id })
+    );
+  } catch (error) {
+    // A rejected assignment (workspace member, contact of another client)
+    // rolls the mapping back too — the dialog has to say so instead of
+    // sitting open as if nothing happened.
+    const expected = assetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

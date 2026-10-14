@@ -116,9 +116,26 @@ export async function matchContactForRmmUser(
     if (mapped) return { contactId: mapped.contact_name_id, method: 'mapped' };
   }
 
+  /**
+   * Only the contacts one of the three rules below could match. Loading every
+   * contact of the client worked, but sync calls this once per device: a
+   * 400-person client meant 400 rows read per machine, per run.
+   *
+   * The predicate is deliberately a superset of the rules — ambiguity has to
+   * stay visible, so every row that could match comes back and the precedence
+   * and "more than one" decisions are still made here.
+   */
   const candidates = await table(conn, tenant, 'contacts')
     .where({ client_id: clientId })
     .whereNot({ contact_kind: 'shared_mailbox' })
+    .where((builder: Knex.QueryBuilder) => {
+      builder
+        .whereRaw("split_part(lower(btrim(coalesce(email, ''))), '@', 1) = ?", [normalized.username])
+        .orWhereRaw("lower(btrim(coalesce(full_name, ''))) = ?", [normalized.username]);
+      if (normalized.email) {
+        builder.orWhereRaw("lower(btrim(coalesce(email, ''))) = ?", [normalized.email]);
+      }
+    })
     .select<Array<{ contact_name_id: string; email: string | null; full_name: string | null }>>(
       'contact_name_id',
       'email',

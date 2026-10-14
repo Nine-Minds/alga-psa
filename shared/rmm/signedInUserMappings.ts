@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { setAssetAssignee, getOpenAssetAssignment } from '../models/assetAssignmentModel';
+import { setAssetAssignee, getOpenAssetAssignment, isAssetAssigneeError } from '../models/assetAssignmentModel';
 import {
   matchContactForRmmUser,
   normalizeRmmUsername,
@@ -244,12 +244,29 @@ export async function mapSignedInUserToContact(
 
   // In `auto` mode the rest of the organization follows; in `suggest` the
   // operator stays in control of each device.
-  const organizations = await table(trx, tenant, 'rmm_organization_mappings')
-    .where({ integration_id: args.integrationId, contact_assignment_mode: 'auto' })
-    .select<Array<{ external_organization_id: string; client_id: string | null }>>(
-      'external_organization_id',
-      'client_id'
-    );
+  //
+  // Only organizations mapped to the contact's own client follow along. An
+  // integration covering several clients will happily report the same
+  // `CORP\jdoe` on another client's device, and assigning our contact there is
+  // both wrong and fatal: the assignment helper rejects a contact from another
+  // client, and the throw rolled back this whole transaction — losing the
+  // explicit mapping and the assignment the operator actually clicked.
+  const contactClient = await table(trx, tenant, 'contacts')
+    .where({ contact_name_id: args.contactId })
+    .first<{ client_id: string | null }>('client_id');
+
+  const organizations = contactClient?.client_id
+    ? await table(trx, tenant, 'rmm_organization_mappings')
+        .where({
+          integration_id: args.integrationId,
+          contact_assignment_mode: 'auto',
+          client_id: contactClient.client_id,
+        })
+        .select<Array<{ external_organization_id: string; client_id: string | null }>>(
+          'external_organization_id',
+          'client_id'
+        )
+    : [];
 
   for (const organization of organizations) {
     if (!organization.client_id) continue;
@@ -272,11 +289,18 @@ export async function mapSignedInUserToContact(
       if (open && open.source !== 'rmm') continue;
       if (open && open.contact_name_id === args.contactId) continue;
 
-      await setAssetAssignee(trx, tenant, assetId, args.contactId, {
-        actorUserId: args.actorUserId ?? null,
-        source: 'rmm',
-        note: signedIn.get(assetId) ?? args.rawUser,
-      });
+      try {
+        await setAssetAssignee(trx, tenant, assetId, args.contactId, {
+          actorUserId: args.actorUserId ?? null,
+          source: 'rmm',
+          note: signedIn.get(assetId) ?? args.rawUser,
+        });
+      } catch (error) {
+        // One device the follow-along cannot take (a workspace member, say) is
+        // not a reason to lose the mapping and every other assignment.
+        if (isAssetAssigneeError(error)) continue;
+        throw error;
+      }
       assigned.push(assetId);
     }
   }

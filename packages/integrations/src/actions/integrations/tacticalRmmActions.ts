@@ -14,6 +14,7 @@ import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatu
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { countRmmOrganizationAssets, moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
 import {
   TACTICAL_WEBHOOK_HEADER_NAME,
   TACTICAL_API_KEY_SECRET,
@@ -706,14 +707,9 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
       }
       patch.contact_assignment_mode = input.contactAssignmentMode;
     }
-    if (typeof input.billingProfileId !== 'undefined') {
-      patch.billing_profile_id = input.billingProfileId || null;
+    if (!Object.keys(patch).length && typeof input.billingProfileId === 'undefined') {
+      return { success: true };
     }
-    // FR-F1: a profile belongs to one client, so a client change clears it.
-    if (typeof input.clientId !== 'undefined' && typeof input.billingProfileId === 'undefined') {
-      patch.billing_profile_id = null;
-    }
-    if (!Object.keys(patch).length) return { success: true };
 
     // FR-G4: a client change moves the organization's assets in the same
     // transaction as the mapping update, so the two can never disagree.
@@ -721,6 +717,15 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
       const existing = await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
         .where({ mapping_id: input.mappingId })
         .first(['client_id', 'integration_id', 'external_organization_id']);
+
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: input.clientId,
+        billingProfileId: input.billingProfileId,
+      });
+      if (typeof billingProfileId !== 'undefined') patch.billing_profile_id = billingProfileId;
 
       await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
         .where({ mapping_id: input.mappingId })

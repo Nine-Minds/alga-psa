@@ -88,6 +88,27 @@ describe('client-assets server action contract', () => {
     ).toHaveLength(2);
   });
 
+  it('T059: never ships the MSP-only cost, supplier or billing columns to the portal', () => {
+    // `select('assets.*')` put purchase_cost, purchase_cost_currency,
+    // vendor_id, order_number and billing_profile_id in every portal payload.
+    // Reads go through one allow-list now.
+    expect(source).toContain('const PORTAL_ASSET_COLUMNS = [');
+    expect(source).toContain('query.select(...PORTAL_ASSET_COLUMNS,');
+    expect(source).not.toContain("'assets.*'");
+    for (const column of [
+      'purchase_cost',
+      'purchase_cost_currency',
+      'vendor_id',
+      'vendor_name',
+      'order_number',
+      'billing_profile_id',
+      'manufacturer',
+      'model',
+    ]) {
+      expect(source).not.toContain(`assets.${column}`);
+    }
+  });
+
   it('sorts on qualified asset columns so the contacts join stays unambiguous', () => {
     // `contacts` has its own updated_at: an unqualified ORDER BY would be a
     // 42702 on the default sort.

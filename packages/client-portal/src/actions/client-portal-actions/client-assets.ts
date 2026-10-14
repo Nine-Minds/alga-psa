@@ -127,6 +127,31 @@ function scopedAssets(
 }
 
 /**
+ * What a client user may see of a device.
+ *
+ * An allow-list rather than `assets.*`: the MSP's commercial columns —
+ * purchase cost and currency, supplier, order number, billing profile — sit on
+ * the same row, and `select *` shipped every one of them to the browser. Add a
+ * column here only when the portal is meant to show it.
+ */
+const PORTAL_ASSET_COLUMNS = [
+  'assets.asset_id',
+  'assets.tenant',
+  'assets.client_id',
+  'assets.asset_type',
+  'assets.asset_tag',
+  'assets.serial_number',
+  'assets.name',
+  'assets.status',
+  'assets.location_id',
+  'assets.location',
+  'assets.purchase_date',
+  'assets.warranty_end_date',
+  'assets.created_at',
+  'assets.updated_at',
+] as const;
+
+/**
  * FR-C6: the portal names the person a device is assigned to, and `assets`
  * stores only the contact id — so every row read joins `contacts`. Counts never
  * need the join, which is why it lives here and not in `scopedAssets`.
@@ -143,7 +168,7 @@ function withAssigneeName(
     'assets.contact_name_id',
     { type: 'left' },
   );
-  return query.select('assets.*', 'contacts.full_name as contact_name');
+  return query.select(...PORTAL_ASSET_COLUMNS, 'contacts.full_name as contact_name');
 }
 
 /**

@@ -18,7 +18,29 @@ import type {
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
 import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
-import { resolveAssetBillingProfileId } from '../../models/assetBillingProfileModel';
+import {
+  assertBillingProfileForClient,
+  resolveAssetBillingProfileId,
+} from '../../models/assetBillingProfileModel';
+
+/**
+ * The profile when it belongs to this client and is active, otherwise null —
+ * an alert ticket falls back to the client default rather than failing or
+ * billing someone else's profile.
+ */
+async function profileForClient(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string,
+  billingProfileId: string | null
+): Promise<string | null> {
+  if (!billingProfileId) return null;
+  try {
+    return await assertBillingProfileForClient(trx, tenantId, clientId, billingProfileId);
+  } catch {
+    return null;
+  }
+}
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -81,8 +103,21 @@ export async function createTicketForAlert(
 
   // FR-F3: the RMM organization's profile wins, then the device's own, then
   // its location's default. Null leaves today's client-default behaviour.
-  const billingProfileId = params.mappingBillingProfileId
-    ?? (params.assetId ? await resolveAssetBillingProfileId(trx, tenantId, params.assetId) : null);
+  //
+  // Each candidate is checked against the client the ticket is raised for:
+  // the client comes from the device (FR-G5 lets a device be moved by hand and
+  // keeps it there), so a mapping still pointing at the previous client would
+  // otherwise bill the work to a profile that client no longer owns.
+  const billingProfileId =
+    (await profileForClient(trx, tenantId, params.clientId, params.mappingBillingProfileId ?? null)) ??
+    (params.assetId
+      ? await profileForClient(
+          trx,
+          tenantId,
+          params.clientId,
+          await resolveAssetBillingProfileId(trx, tenantId, params.assetId)
+        )
+      : null);
 
   const [ticket] = await db.table('tickets')
     .insert({
