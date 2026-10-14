@@ -12,7 +12,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
  * the delete guard and FK (#4), deactivation (#5), manual-use visibility (#6), the cascade and effective
  * board status check (#7), the permission boundary (#8) and custom fields / ITIL on generated tickets (#9).
  */
-const session = vi.hoisted(() => ({ user: null as any, deny: new Set<string>() }));
+const session = vi.hoisted(() => ({ user: null as any, deny: new Set<string>(), real: false }));
 let db: Knex;
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
@@ -27,7 +27,14 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
     ...actual,
     withAuth: (fn: any) => (...args: any[]) =>
       run(session.user.tenant, () => fn(session.user, { tenant: session.user.tenant }, ...args)),
-    hasPermission: async (_user: unknown, resource: string, action: string) => !session.deny.has(`${resource}:${action}`),
+    hasPermission: async (user: unknown, resource: string, action: string, ...rest: unknown[]) => {
+      if (session.real) {
+        // The real RBAC check, resolving the user's role rows from the database.
+        const rbac = await vi.importActual<typeof import('@alga-psa/auth/rbac')>('@alga-psa/auth/rbac');
+        return (rbac.hasPermission as any)(user, resource, action, ...rest);
+      }
+      return !session.deny.has(`${resource}:${action}`);
+    },
   };
 });
 
@@ -173,6 +180,7 @@ describe('recurring tickets on ticket templates (integration)', () => {
     f = await createFixture();
     session.user = { user_id: f.userId, tenant: f.tenant, user_type: 'internal' };
     session.deny.clear();
+    session.real = false;
   });
 
   describe('#1 / #11 migration B', () => {
@@ -242,6 +250,26 @@ describe('recurring tickets on ticket templates (integration)', () => {
       expect(tags.length).toBeGreaterThanOrEqual(2);
       const checklist = await scoped.table('ticket_checklist_items').where({ ticket_id: occurrence.ticket_id }).orderBy('order_number');
       expect(checklist.map((row: any) => [row.item_name, row.is_required])).toEqual([['Snapshot VM', true], ['Reboot', false]]);
+      // Activity rows. The legacy generator wrote CHECKLIST_TEMPLATE_APPLIED (via applyChecklistTemplateToTicket,
+      // details {template_name, items_added}) plus TICKET_CREATED. The template path keeps both and adds
+      // TICKET_CREATED_FROM_TEMPLATE; nothing the legacy ticket had is lost.
+      const legacyEventTypes = ['TICKET_CHECKLIST_TEMPLATE_APPLIED', 'TICKET_CREATED'];
+      const eventsOf = async (ticketId: string) =>
+        (await scoped.table('ticket_audit_logs').where({ ticket_id: ticketId }).select('event_type', 'details')).map((row: any) => ({
+          event_type: row.event_type as string,
+          details: typeof row.details === 'string' ? JSON.parse(row.details) : row.details,
+        }));
+      for (const definitionClientId of [first.definitionClientId, second.definitionClientId]) {
+        const [created] = await occurrenceOf(f, definitionClientId);
+        const events = await eventsOf(created.ticket_id);
+        const types = events.map((e) => e.event_type);
+        for (const legacyType of legacyEventTypes) expect(types, `${legacyType} for ${created.ticket_id}`).toContain(legacyType);
+        expect(types.filter((t) => t === 'TICKET_CHECKLIST_TEMPLATE_APPLIED')).toHaveLength(1);
+        expect(types).toContain('TICKET_CREATED_FROM_TEMPLATE');
+        expect(new Set(types)).toEqual(new Set([...legacyEventTypes, 'TICKET_CREATED_FROM_TEMPLATE']));
+        const applied = events.find((e) => e.event_type === 'TICKET_CHECKLIST_TEMPLATE_APPLIED')!;
+        expect(applied.details).toMatchObject({ template_name: 'Patch steps', items_added: 2 });
+      }
       // The legacy content columns stay (migration C is the next step).
       expect(defs[0].title_template).toBeTruthy();
     });
@@ -309,6 +337,23 @@ describe('recurring tickets on ticket templates (integration)', () => {
     const [occurrence] = await occurrenceOf(f, definitionClientId);
     const items = await scoped.table('ticket_checklist_items').where({ ticket_id: occurrence.ticket_id }).orderBy('order_number');
     expect(items.map((row: any) => row.item_name).sort()).toEqual(['Own item', 'Step 1']);
+    // One CHECKLIST_TEMPLATE_APPLIED for the checklist template, whether auto-apply or the owned items carried it.
+    const applied = await scoped.table('ticket_audit_logs').where({ ticket_id: occurrence.ticket_id, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' });
+    expect(applied).toHaveLength(1);
+  });
+
+  it('#3b owned items carrying a checklist template write the applied activity when no auto-apply rule exists', async () => {
+    const scoped = tenantDb(db, f.tenant);
+    const checklistId = uuidv4();
+    await scoped.table('checklist_templates').insert({ tenant: f.tenant, template_id: checklistId, name: 'Manual steps', is_active: true });
+    const templateId = await insertTemplate(f, {}, [{ item_name: 'A', checklist_template_id: checklistId }, { item_name: 'B', checklist_template_id: checklistId }, { item_name: 'Own' }]);
+    const { definitionClientId } = await insertDefinition(f, templateId);
+    await sweep(f, '2026-03-01T14:00:00Z');
+    const [occurrence] = await occurrenceOf(f, definitionClientId);
+    const applied = await scoped.table('ticket_audit_logs').where({ ticket_id: occurrence.ticket_id, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' });
+    expect(applied).toHaveLength(1);
+    const details = typeof applied[0].details === 'string' ? JSON.parse(applied[0].details) : applied[0].details;
+    expect(details).toMatchObject({ template_name: 'Manual steps', items_added: 2 });
   });
 
   describe('#4 / #5 / #6 template lifecycle', () => {
@@ -340,6 +385,10 @@ describe('recurring tickets on ticket templates (integration)', () => {
       expect(occurrence.status).toBe('created');
       const schedules: any = await templates.listSchedulesForTemplate(templateId);
       expect(schedules.length ?? schedules.schedules?.length).toBe(1);
+    expect(schedules[0].pins_status).toBe(false);
+    const { definitionId: pinned } = await insertDefinition(f, templateId, { statusId: f.statusId });
+    const after: any = await templates.listSchedulesForTemplate(templateId);
+    expect(after.filter((row: any) => row.pins_status).map((row: any) => row.definition_id)).toEqual([pinned]);
     });
 
     it('#6 manual-use visibility: scheduled-only templates stay in the admin list but not in the pickers', async () => {
@@ -430,6 +479,50 @@ describe('recurring tickets on ticket templates (integration)', () => {
       session.deny.clear();
       session.deny.add('ticket_template:read');
       expect(((await recurring.createRecurringTicketDefinition(input({ name: 'New' }) as any)) as any).permissionError).toBeTruthy();
+    });
+  });
+
+  describe('#8b permission boundary with real seeded role rows', () => {
+    async function userWithRole(roleName: string) {
+      const scoped = tenantDb(db, f.tenant);
+      const userId = await createUser(db, f.tenant);
+      const roleId = uuidv4();
+      await scoped.table('roles').insert({ tenant: f.tenant, role_id: roleId, role_name: roleName, msp: true, client: false });
+      await scoped.table('user_roles').insert({ tenant: f.tenant, role_id: roleId, user_id: userId });
+      return userId;
+    }
+
+    it('Dispatcher can edit schedules but not template content; Technician can only read', async () => {
+      // Real catalog reconciliation: roles named as in the product seeds receive their default grants.
+      // The catalog sync never creates roles, so seed the full default role set first.
+      for (const [name, msp] of [['Admin', true], ['Finance', true], ['Project Manager', true], ['Manager', true], ['Admin', false], ['Finance', false], ['User', false]] as const) {
+        await tenantDb(db, f.tenant).table('roles').insert({ tenant: f.tenant, role_id: uuidv4(), role_name: name, msp, client: !msp });
+      }
+      const dispatcherId = await userWithRole('Dispatcher');
+      const technicianId = await userWithRole('Technician');
+      const reconcile = require('../../../migrations/utils/permissions/reconcileTenants.cjs');
+      const summary = await reconcile.reconcileAllTenants(db, {
+        label: 'recurring-templates-test', tenantId: f.tenant, product: 'psa', onDrift: 'throw', logger: { log() {}, warn() {}, error() {} },
+      });
+      expect(summary.failed).toEqual([]);
+
+      const templateId = await insertTemplate(f, { name: 'Shared' });
+      const { definitionId } = await insertDefinition(f, templateId);
+      const input = (extra: Record<string, unknown> = {}) => ({
+        name: 'Edited', ticket_template_id: templateId, recurrence: monthlyOn1, start_date: '2026-01-01', ...extra,
+      });
+      session.real = true;
+
+      session.user = { user_id: dispatcherId, tenant: f.tenant, user_type: 'internal' };
+      expect(((await templates.updateTicketTemplate(templateId, { name: 'x', title: 'x' } as any)) as any).permissionError).toBeTruthy();
+      const updated: any = await recurring.updateRecurringTicketDefinition(definitionId, input() as any);
+      expect(updated.actionError ?? updated.permissionError).toBeUndefined();
+      const picker: any = await templates.listTicketTemplatesForCreate();
+      expect(Array.isArray(picker)).toBe(true);
+
+      session.user = { user_id: technicianId, tenant: f.tenant, user_type: 'internal' };
+      expect(((await recurring.updateRecurringTicketDefinition(definitionId, input({ name: 'Nope' }) as any)) as any).permissionError).toBeTruthy();
+      expect(((await templates.updateTicketTemplate(templateId, { name: 'x', title: 'x' } as any)) as any).permissionError).toBeTruthy();
     });
   });
 

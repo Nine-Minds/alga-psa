@@ -14,7 +14,7 @@ A recurring ticket definition stops carrying its own copy of the ticket fields a
 - One cascade: template -> definition overrides -> client overrides.
 - One `instantiateTicketTemplate` (built on `createTicketWithSideEffects`) used by the generator. `addTicket`'s
   from-template branch shares its helpers (`loadTemplateForInstantiation`, `templateTicketProvenance`,
-  `applyTemplateToCreatedTicket`). `createTicketWithSideEffects` itself is unchanged.
+  `applyCreatedFromTemplateEffects`). `createTicketWithSideEffects` is widened (see R9).
 
 ## 2. Decisions
 
@@ -32,8 +32,17 @@ A recurring ticket definition stops carrying its own copy of the ticket fields a
 - **R7** Description is written as `JSON.stringify(definition.description)`, as the legacy generator did.
 - **R8** Tokens `{{client}}`, `{{due_date}}`, `{{month}}`, `{{year}}`, `{{contact}}` (`lib/ticketTitleTokens.ts`). Missing
   context renders empty with whitespace collapsed. Quick Add re-renders only while the title is untouched.
-- **R9** `instantiateTicketTemplate` shape: resolve cascade -> check references on the effective values -> create ->
-  compose owned checklist items and the `CREATED_FROM_TEMPLATE` activity.
+- **R9** `instantiateTicketTemplate` shape: resolve cascade -> check references on the effective values -> create.
+  The create layer is widened rather than composed around: `createTicketWithSideEffects` takes optional
+  `checklistItems` (owned items with an optional `checklist_template_id`, applied with the replacement rule by
+  `insertChecklistItemsReplacingTemplates`, now in `shared/lib/ticketChecklists/insertItems.ts`) and `fromTemplate`
+  (writes `TICKET_CREATED_FROM_TEMPLATE`). `addTicket` cannot use that function wholesale, so it calls the same
+  exported `applyCreatedFromTemplateEffects`.
+- **R9a** Checklist activity. The legacy generator wrote a `TICKET_CHECKLIST_TEMPLATE_APPLIED` row via
+  `applyChecklistTemplateToTicket` (details `{template_name, items_added}`, entity `CHECKLIST_ITEM`). The new path
+  writes the same row, same shape, once per carried checklist template whose items were inserted, unless board
+  auto-apply already applied that template (it wrote its own row), so a ticket never gets two. Equivalence test #1
+  compares the event types per ticket against the legacy set; #3/#3b cover the no-doubling and no-auto-apply cases.
 - **R10** Generated tickets carry `created_from_template_id` and the `TICKET_CREATED_FROM_TEMPLATE` activity. Origin
   stays `recurring`; the ticket header shows both badges.
 - Status is validated against the **effective** board. A mismatch fails the occurrence with
