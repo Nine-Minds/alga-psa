@@ -368,7 +368,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [readAuthenticationExpired, setReadAuthenticationExpired] = useState(false);
   const [attributionAuthenticationExpired, setAttributionAuthenticationExpired] = useState(false);
   const [readRetry, setReadRetry] = useState(0);
-  const readAuthenticationExpiredRef = useRef(false);
+  const initialInvoiceReadRetryRef = useRef(0);
   const lastInvoiceReadIdRef = useRef<string | null>(null);
   // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
   // server returns the already-applied result instead of appending twice.
@@ -538,7 +538,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       if (invoiceIdToFetch) {
         if (lastInvoiceReadIdRef.current !== invoiceIdToFetch) {
           lastInvoiceReadIdRef.current = invoiceIdToFetch;
-          readAuthenticationExpiredRef.current = false;
+          initialInvoiceReadRetryRef.current = readRetry;
           setReadAuthenticationExpired(false);
           // Switch the editor identity immediately, before any asynchronous
           // fetch can finish. This prevents a late response from the previous
@@ -572,7 +572,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             isRemoved: false,
           })) : [{ ...baseDefaultItem, service_id: defaultManualServiceId, item_id: uuidv4(), invoice_id: invoiceIdToFetch }]);
         }
-        const recoveringReadFailure = readAuthenticationExpiredRef.current;
+        // Recovery requests check access, not the operator's draft. Keep this
+        // decision independent of which concurrent read succeeds or fails first.
+        const preserveDraft = readRetry !== initialInvoiceReadRetryRef.current;
         try {
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
@@ -580,7 +582,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
           if (!active) return;
           if (isAuthenticationFailure(fetchedItems)) {
-            readAuthenticationExpiredRef.current = true;
             setReadAuthenticationExpired(true);
             return;
           }
@@ -591,8 +592,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // A successful retry proves the read path is available again. Keep
           // the existing editor snapshot because the operator may have edited
           // rows while the session was unavailable.
-          if (recoveringReadFailure) {
-            readAuthenticationExpiredRef.current = false;
+          if (preserveDraft) {
             setReadAuthenticationExpired(false);
             return;
           }
@@ -657,7 +657,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         } catch (error) {
           if (!active) return;
           if (isAuthenticationFailure(error)) {
-            readAuthenticationExpiredRef.current = true;
             setReadAuthenticationExpired(true);
             return;
           }
@@ -670,6 +669,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
       } else {
         // Reset local state if invoice prop becomes null/undefined
+        lastInvoiceReadIdRef.current = null;
+        setReadAuthenticationExpired(false);
         setCurrentInvoiceData(undefined);
         // Ensure the default item gets a unique ID when resetting
         setItems([{
@@ -716,8 +717,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         ]);
         if (cancelled) return;
         if (isAuthenticationFailure(locationsResult) || isAuthenticationFailure(profilesResult)) {
-          readAuthenticationExpiredRef.current = true;
-          setReadAuthenticationExpired(true);
           setAttributionAuthenticationExpired(true);
           return;
         }
@@ -747,8 +746,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       } catch (error) {
         if (!cancelled) {
           if (isAuthenticationFailure(error)) {
-            readAuthenticationExpiredRef.current = true;
-            setReadAuthenticationExpired(true);
             setAttributionAuthenticationExpired(true);
           } else {
             setAttributionAuthenticationExpired(false);

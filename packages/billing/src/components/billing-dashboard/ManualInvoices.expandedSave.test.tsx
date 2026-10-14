@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -179,6 +179,68 @@ describe('expanded invoice adjustment global save', () => {
     expect(mocks.update).not.toHaveBeenCalled();
     expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
   });
+
+  it.each(['detail-first', 'attribution-first'] as const)(
+    'preserves collapsed additions, removals and save identity across repeated recovery (%s)',
+    async (completionOrder) => {
+      const expired = { success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' };
+      const existingCharge = {
+        item_id: 'recovery-remove', invoice_id: 'invoice-1', service_id: 'svc-1',
+        description: 'Remove during recovery', quantity: 1, unit_price: 2500,
+        total_price: 2500, net_amount: 2500, tax_amount: 0,
+        is_manual: true, is_discount: false, is_taxable: false,
+      };
+      const persistedItems = [...invoice.invoice_charges, existingCharge];
+      let resolveDetails!: (value: any) => void;
+      let resolveLocations!: (value: any) => void;
+      mocks.locations.mockResolvedValueOnce(expired)
+        .mockImplementationOnce(() => new Promise(resolve => { resolveLocations = resolve; }))
+        .mockResolvedValue([]);
+      mocks.lineItems.mockResolvedValueOnce(persistedItems)
+        .mockImplementationOnce(() => new Promise(resolve => { resolveDetails = resolve; }))
+        .mockResolvedValue(persistedItems);
+      mocks.update.mockResolvedValue(expired);
+      renderDraft({ ...invoice, invoice_charges: persistedItems });
+      expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+      await fillCharge('Collapsed attribution draft');
+      fireEvent.click(document.getElementById('collapse-line-item-button')!);
+      fireEvent.click(document.getElementById('item-recovery-remove')!);
+      fireEvent.click(document.getElementById('remove-line-item-button')!);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+      await waitFor(() => expect(mocks.locations).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(2));
+      if (completionOrder === 'attribution-first') {
+        await act(async () => { resolveLocations(expired); });
+        await act(async () => { resolveDetails(persistedItems); });
+      } else {
+        await act(async () => { resolveDetails(persistedItems); });
+        await act(async () => { resolveLocations(expired); });
+      }
+      expect(screen.getByText(/session expired while loading invoice details/i)).toBeTruthy();
+      expect(screen.getByText('Collapsed attribution draft')).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+      });
+      expect(mocks.lineItems).toHaveBeenCalledTimes(3);
+      expect(mocks.locations).toHaveBeenCalledTimes(3);
+      expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+      expect(screen.getByText('Collapsed attribution draft')).toBeTruthy();
+      expect(screen.queryByText('Remove during recovery')).toBeNull();
+      expect(mocks.update).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      expect(await screen.findByText(/Your session expired before this save completed/)).toBeTruthy();
+      expect(mocks.update.mock.calls[0][1].newItems).toEqual([
+        expect.objectContaining({ description: 'Collapsed attribution draft', quantity: 3, rate: 5000 }),
+      ]);
+      expect(mocks.update.mock.calls[0][1].removedItemIds).toEqual(['recovery-remove']);
+      fireEvent.click(screen.getByRole('button', { name: 'Retry save' }));
+      await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+      expect(mocks.update.mock.calls[1]).toEqual(mocks.update.mock.calls[0]);
+    },
+  );
 
   it('keeps attribution permission denial visible and separate from session recovery', async () => {
     mocks.locations.mockResolvedValueOnce({ permissionError: 'Permission denied: client read required' });
