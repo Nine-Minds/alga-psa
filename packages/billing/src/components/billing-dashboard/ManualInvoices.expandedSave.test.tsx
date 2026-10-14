@@ -88,6 +88,26 @@ describe('expanded invoice adjustment global save', () => {
     expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
   });
 
+  it('keeps edits visible and offers explicit reauthentication when a save expires', async () => {
+    const expired = Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' });
+    mocks.update.mockRejectedValue(expired);
+    renderDraft();
+    await fillCharge('Unsaved charge');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(await screen.findByText(/Your session expired before this save completed/)).toBeTruthy();
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Unsaved charge');
+    expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
+
+    const reauthenticate = screen.getByRole('link', { name: 'Reauthenticate' }) as HTMLAnchorElement;
+    expect(reauthenticate.href).toContain('/auth/signin?callbackUrl=');
+    expect(reauthenticate.target).toBe('_blank');
+    expect((screen.getByRole('button', { name: 'Save Changes' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+  });
+
   it('submits edits to an existing charge while its row remains expanded', async () => {
     const existingCharge = { item_id: 'manual-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Old charge', quantity: 1, unit_price: 2500, total_price: 2500, net_amount: 2500, tax_amount: 0, is_manual: true, is_discount: false, is_taxable: false };
     const draft = { ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] };

@@ -361,6 +361,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [authenticationExpired, setAuthenticationExpired] = useState(false);
   // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
   // server returns the already-applied result instead of appending twice.
   const pendingOperationIdRef = useRef<string>(uuidv4());
@@ -901,6 +902,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authenticationExpired) return;
     const itemsForSubmit = items.map((item, index) => {
       const draft = pendingLineItemDraftsRef.current.get(index);
       return draft ? mergeLineItemDraft(item, draft) : item;
@@ -1259,6 +1261,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     } catch (err: unknown) {
        if (IS_DEVELOPMENT) console.error('Error with invoice:', err);
+       if (err instanceof Error && (
+         err.name === 'AuthenticationError'
+         || err.message === 'User not authenticated'
+         || err.message === 'Authentication required'
+       )) {
+         setAuthenticationExpired(true);
+         setError(null);
+         return;
+       }
        const errorMode = currentInvoiceData ? 'update' : 'generate';
        let errorMessage = t(`manualInvoices.errors.${errorMode === 'update' ? 'updateFailed' : 'generateFailed'}`, {
          defaultValue: `Error ${errorMode === 'update' ? 'updating' : 'generating'} invoice`,
@@ -1499,7 +1510,26 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </div>
             )}
 
-            {error && (
+            {authenticationExpired && (
+              <Alert variant="destructive" className="mb-4" role="alert">
+                <AlertDescription>
+                  <p>{t('manualInvoices.errors.sessionExpired', {
+                    defaultValue: 'Your session expired before this save completed. Your edits remain in this editor and were not saved or replayed. Reauthenticate in a new tab, then copy or note your edits before reloading.',
+                  })}</p>
+                  <a
+                    id="manual-invoice-reauthenticate-link"
+                    className="mt-2 inline-block underline"
+                    href={`/auth/signin?callbackUrl=${encodeURIComponent(typeof window === 'undefined' ? '/msp/billing' : `${window.location.pathname}${window.location.search}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t('manualInvoices.actions.reauthenticate', { defaultValue: 'Reauthenticate' })}
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error && !authenticationExpired && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
@@ -1936,7 +1966,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <Button
                 id='save-changes-button'
                 type="submit"
-                disabled={isGenerating || (!currentInvoiceData && !selectedClient && !selectedSalesOrder)}
+                disabled={authenticationExpired || isGenerating || (!currentInvoiceData && !selectedClient && !selectedSalesOrder)}
                 className="px-4"
               >
                 {getButtonText()}
