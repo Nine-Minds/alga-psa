@@ -13,7 +13,7 @@ No delivered invoice, ledger row, or Xero batch was updated. `INV-000063` (`0df8
 - Server infrastructure true-up regressions: **3 passed** for preview/persisted increase parity, signed decrease credit, repeat reconciliation identity/amount, and retained manual-line totals.
 - Accounting export matrix: **2 passed** for Xero and Xero CSV. It enriches an old generic invoice description through the source ledger, checks the actual Xero adapter line and serialized `LineItems[].Description`, and preserves the settled net amount. Transport is mocked and does not prove provider acceptance.
 - Billing package typecheck and build: **passed**. Client portal typecheck: **passed**. Its `tsup` build has no configured entry files and exits `No input files`.
-- Server typecheck exhausted Node heap at both 4 GB and 8 GB without reporting type diagnostics. The isolated optimized server build was still running at handoff; its result is not claimed.
+- Server typecheck exhausted Node heap at both 4 GB and 8 GB without reporting type diagnostics. A fresh billing package typecheck after the final source edits passed. The isolated optimized server build remained at “Creating an optimized production build” after 10 minutes while its Next build process used about 21 GB RSS; it was stopped to avoid leaving work running. No server build result is claimed.
 - A focused DB suite attempt first hit its 20-second migration setup timeout; rerun with an isolated config completed the Xero and Xero CSV cases successfully. The config is temporary and is not part of the repair.
 
 ## Browser acceptance still required
