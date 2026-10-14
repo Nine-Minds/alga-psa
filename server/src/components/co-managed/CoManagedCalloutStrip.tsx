@@ -47,7 +47,7 @@ function writeDismissed(key: string, counts: Counts): void {
 
 /**
  * Dismissal is remembered per viewer and per count in browser storage, so a
- * dismissed segment returns when its count changes. Storage that is missing or
+ * dismissed segment stays hidden until its count rises above the dismissed value. Storage that is missing or
  * throws degrades to in-memory dismissal for the life of the page.
  */
 export function useCalloutDismissal(viewerId: string | null, scopeKey: string): [Dismissed, (counts: Counts) => void] {
@@ -68,18 +68,16 @@ export function useCalloutDismissal(viewerId: string | null, scopeKey: string): 
   return [value, dismiss];
 }
 
-/** A segment deep-links to Customer Tickets; on a client screen it opens the co-managed section instead. */
-function CalloutSegment({ id, href, onOpen, children }: { id: string; href: string; onOpen?: () => void; children: React.ReactNode }) {
-  return onOpen
-    ? <button id={id} type="button" className="underline-offset-2 hover:underline" onClick={onOpen}>{children}</button>
-    : <Link id={id} href={href} className="underline-offset-2 hover:underline">{children}</Link>;
+/** A segment deep-links to Customer Tickets filtered by its signal (and the client, on a client screen). */
+function CalloutSegment({ id, href, children }: { id: string; href: string; children: React.ReactNode }) {
+  return <Link id={id} href={href} className="underline-offset-2 hover:underline">{children}</Link>;
 }
 
-function CalloutBody({ counts, viewerId, scopeKey, clientId, onOpen }: { counts: Counts; viewerId: string | null; scopeKey: string; clientId?: string; onOpen?: () => void }) {
+function CalloutBody({ counts, viewerId, scopeKey, clientId }: { counts: Counts; viewerId: string | null; scopeKey: string; clientId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const [dismissed, dismiss] = useCalloutDismissal(viewerId, scopeKey);
-  const showEscalated = counts.escalatedUnassigned > 0 && dismissed.escalatedUnassigned !== counts.escalatedUnassigned;
-  const showAwaiting = counts.awaitingReply > 0 && dismissed.awaitingReply !== counts.awaitingReply;
+  const showEscalated = counts.escalatedUnassigned > 0 && counts.escalatedUnassigned > (dismissed.escalatedUnassigned ?? 0);
+  const showAwaiting = counts.awaitingReply > 0 && counts.awaitingReply > (dismissed.awaitingReply ?? 0);
   if (!showEscalated && !showAwaiting) return null;
 
   return (
@@ -95,7 +93,6 @@ function CalloutBody({ counts, viewerId, scopeKey, clientId, onOpen }: { counts:
           <CalloutSegment
             id={`co-managed-callout-escalated-${scopeKey}`}
             href={calloutHref('escalated_unassigned', clientId)}
-            onOpen={onOpen}
           >
             {t('coManaged.callout.escalatedUnassigned', { count: counts.escalatedUnassigned, defaultValue: '{{count}} escalated, unassigned' })}
           </CalloutSegment>
@@ -104,7 +101,6 @@ function CalloutBody({ counts, viewerId, scopeKey, clientId, onOpen }: { counts:
           <CalloutSegment
             id={`co-managed-callout-awaiting-${scopeKey}`}
             href={calloutHref('awaiting_reply', clientId)}
-            onOpen={onOpen}
           >
             {t('coManaged.callout.awaitingReply', { count: counts.awaitingReply, defaultValue: '{{count}} awaiting your reply' })}
           </CalloutSegment>
@@ -135,7 +131,7 @@ export function CoManagedCalloutStrip() {
 }
 
 /** Client Tickets tab mount: counts narrowed to one client. Silent on error, empty or zero. */
-function ClientCallout({ clientId, onOpen }: { clientId: string; onOpen?: () => void }) {
+function ClientCallout({ clientId }: { clientId: string }) {
   const { available, viewerId } = useCoManagedWorkSignals();
   const [counts, setCounts] = useState<Counts | null>(null);
   useEffect(() => {
@@ -147,9 +143,9 @@ function ClientCallout({ clientId, onOpen }: { clientId: string; onOpen?: () => 
     return () => { cancelled = true; };
   }, [available, clientId]);
   if (!available || !counts || counts.escalatedUnassigned + counts.awaitingReply <= 0) return null;
-  return <CalloutBody counts={counts} viewerId={viewerId} scopeKey={`client-${clientId}`} clientId={clientId} onOpen={onOpen} />;
+  return <CalloutBody counts={counts} viewerId={viewerId} scopeKey={`client-${clientId}`} clientId={clientId} />;
 }
 
-export function CoManagedClientCalloutStrip({ clientId, onOpen }: { clientId: string; onOpen?: () => void }) {
-  return <CoManagedFeatureBoundary><ClientCallout clientId={clientId} onOpen={onOpen} /></CoManagedFeatureBoundary>;
+export function CoManagedClientCalloutStrip({ clientId }: { clientId: string }) {
+  return <CoManagedFeatureBoundary><ClientCallout clientId={clientId} /></CoManagedFeatureBoundary>;
 }

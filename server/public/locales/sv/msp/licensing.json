@@ -601,6 +601,7 @@
         "ticket": "Ärende",
         "workspace": "Arbetsyta",
         "state": "Status",
+        "status": "Status",
         "priority": "Prioritet",
         "responsibility": "Ansvarig organisation",
         "updated": "Uppdaterad"

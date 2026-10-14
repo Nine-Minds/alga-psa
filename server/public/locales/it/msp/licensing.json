@@ -603,6 +603,7 @@
         "ticket": "Ticket",
         "workspace": "Spazio di lavoro",
         "state": "Stato",
+        "status": "Stato",
         "priority": "Priorità",
         "responsibility": "Organizzazione responsabile",
         "updated": "Aggiornamento"

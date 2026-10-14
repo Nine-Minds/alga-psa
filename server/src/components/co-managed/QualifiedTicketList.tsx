@@ -161,14 +161,17 @@ export default function QualifiedTicketList({
     return () => { generation.current += 1; };
   }, [request, refresh]);
 
-  const updatePresentation = useCallback((patch: Partial<TicketListPresentation>, options: { replaceHistory?: boolean } = {}) => {
+  const updatePresentation = useCallback((patch: Partial<TicketListPresentation>, options: { replaceHistory?: boolean; workspace?: TicketListWorkspace } = {}) => {
+    // A caller that changes the workspace in the same tick passes the new value:
+    // the `workspace` captured here is still the previous render's.
+    const nextWorkspace = options.workspace ?? workspace;
     setPresentation(current => {
       const next = { ...current, ...patch, page: patch.page ?? 1 };
       if (!embedded && options.replaceHistory !== false && typeof window !== 'undefined') {
         // Local filter changes replace the current history entry so refining a
         // view does not bury the previous page. Explicit view/workspace moves
         // are navigations handled by the scope bar.
-        window.history.replaceState(null, '', buildTicketListHref({ ...scope, workspace }, next, { includeClient: Boolean(next.clientId) }));
+        window.history.replaceState(null, '', buildTicketListHref({ ...scope, workspace: nextWorkspace }, next, { includeClient: Boolean(next.clientId) }));
       }
       return next;
     });
@@ -359,7 +362,7 @@ export default function QualifiedTicketList({
 
   const resetFilters = () => {
     setWorkspace('all');
-    updatePresentation({ searchQuery: '', state: 'open', signal: undefined, ...(fixedClientId ? {} : { clientId: undefined }), pageSize: presentation.pageSize });
+    updatePresentation({ searchQuery: '', state: 'open', signal: undefined, ...(fixedClientId ? {} : { clientId: undefined }), pageSize: presentation.pageSize }, { workspace: 'all' });
   };
 
   const selectView = (nextView: TicketQueueView) => {
@@ -456,7 +459,7 @@ export default function QualifiedTicketList({
               label={t('coManaged.queue.workspace', 'Workspace')}
               value={ticketListWorkspaceToken(workspace)}
               options={workspaceOptions}
-              onValueChange={token => { setWorkspace(token === 'all' ? 'all' : { tenant: token }); updatePresentation({}); }}
+              onValueChange={token => { const next: TicketListWorkspace = token === 'all' ? 'all' : { tenant: token }; setWorkspace(next); updatePresentation({}, { workspace: next }); }}
             />
           </div>
           {!fixedClientId && (

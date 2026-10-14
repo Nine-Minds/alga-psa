@@ -491,6 +491,42 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'customer', clientId: 'client-1' }));
   });
 
+  it('writes the newly selected workspace to the address bar, not the previous one', async () => {
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    const workspaceParam = () => new URLSearchParams(window.location.search).get('workspace');
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    openFilters();
+    const select = screen.getByLabelText('coManaged.queue.workspace');
+
+    fireEvent.change(select, { target: { value: 'alpha' } });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'alpha' }));
+    expect(workspaceParam()).toBe('alpha');
+
+    fireEvent.change(select, { target: { value: 'customer' } });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, workspaceTenant: 'customer' }));
+    expect(workspaceParam()).toBe('customer');
+
+    fireEvent.change(select, { target: { value: 'all' } });
+    await waitFor(() => expect(lastListRequest()).toEqual(DEFAULT_REQUEST));
+    expect(workspaceParam()).toBe('all');
+    // Every write replaced the entry; nothing was pushed.
+    expect(replaceState).toHaveBeenCalledTimes(3);
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it('writes workspace=all to the address bar when Reset runs from a tenant workspace', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    openFilters();
+    fireEvent.change(screen.getByLabelText('coManaged.queue.workspace'), { target: { value: 'customer' } });
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get('workspace')).toBe('customer'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'resetFilters' }));
+    await waitFor(() => expect(lastListRequest()).toEqual(DEFAULT_REQUEST));
+    expect(new URLSearchParams(window.location.search).get('workspace')).toBe('all');
+  });
+
   it('sends a callout signal with the request and clears it from the chip', async () => {
     mount({ initialPresentation: { signal: 'escalated_unassigned' } });
     await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });

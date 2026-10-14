@@ -605,6 +605,7 @@
         "ticket": "Zgłoszenie",
         "workspace": "Obszar roboczy",
         "state": "Status",
+        "status": "Status",
         "priority": "Priorytet",
         "responsibility": "Odpowiedzialna organizacja",
         "updated": "Aktualizacja"

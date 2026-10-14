@@ -125,6 +125,31 @@ describe('T023 — dismissal is per viewer and per count', () => {
     expect(await screen.findByTestId('co-managed-callout')).toBeInTheDocument();
   });
 
+  const dismissAt = async (counts: { escalatedUnassigned: number; awaitingReply: number }) => {
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: counts });
+    const first = mount();
+    await screen.findByTestId('co-managed-callout');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    first.unmount();
+  };
+
+  it('stays dismissed when the count falls below the dismissed value', async () => {
+    await dismissAt({ escalatedUnassigned: 2, awaitingReply: 2 });
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 1, awaitingReply: 1 } });
+    mount();
+    await waitFor(() => expect(mocks.signals).toHaveBeenCalledTimes(2));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+  });
+
+  it('returns when the count rises above the dismissed value', async () => {
+    await dismissAt({ escalatedUnassigned: 2, awaitingReply: 2 });
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 3, awaitingReply: 2 } });
+    mount();
+    expect(await screen.findByRole('link', { name: 'coManaged.callout.escalatedUnassigned:3' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /awaitingReply/ })).toBeNull();
+  });
+
   it('returns when a count changes, only for the segment that changed', async () => {
     const first = mount();
     await screen.findByTestId('co-managed-callout');
@@ -254,15 +279,20 @@ describe('T024 — menu badge', () => {
 });
 
 describe('T025 — client-scoped callout', () => {
-  it('asks for counts narrowed to the client and opens the co-managed section', async () => {
+  it('asks for counts narrowed to the client; each segment links to Customer Tickets filtered by signal and client', async () => {
     mocks.signals.mockImplementation(async (request: { clientId?: string }) =>
-      request?.clientId ? { assignedRelationshipCount: 1, signals: { escalatedUnassigned: 1, awaitingReply: 0 } } : READY);
-    const onOpen = vi.fn();
+      request?.clientId ? { assignedRelationshipCount: 1, signals: { escalatedUnassigned: 1, awaitingReply: 2 } } : READY);
     render(
-      <CoManagedWorkSignalsProvider viewerId="v"><CoManagedClientCalloutStrip clientId="client-1" onOpen={onOpen} /></CoManagedWorkSignalsProvider>,
+      <CoManagedWorkSignalsProvider viewerId="v"><CoManagedClientCalloutStrip clientId="client-1" /></CoManagedWorkSignalsProvider>,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'coManaged.callout.escalatedUnassigned:1' }));
-    expect(onOpen).toHaveBeenCalledOnce();
+    const escalated = await screen.findByRole('link', { name: 'coManaged.callout.escalatedUnassigned:1' });
+    const awaiting = screen.getByRole('link', { name: 'coManaged.callout.awaitingReply:2' });
+    for (const [link, signal] of [[escalated, 'escalated_unassigned'], [awaiting, 'awaiting_reply']] as const) {
+      const url = new URL(link.getAttribute('href') as string, 'http://localhost');
+      expect(url.pathname).toBe('/msp/tickets/customer');
+      expect(url.searchParams.get('signal')).toBe(signal);
+      expect(url.searchParams.get('clientId')).toBe('client-1');
+    }
     expect(mocks.signals).toHaveBeenCalledWith({ clientId: 'client-1' });
   });
 

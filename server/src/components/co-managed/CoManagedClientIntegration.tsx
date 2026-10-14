@@ -97,10 +97,9 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     summary: <CoManagedClientSummary view={view} clientId={clientId} idPrefix={idPrefix}
       selectedRelationshipId={selectedRelationshipId} onSelectRelationship={selectRelationship} onOpenTab={onOpenTab} />,
     // The Tickets tab keeps the native client list. A client-scoped callout
-    // above it points at the co-managed section, where this client's shared
-    // tickets are listed.
+    // above it links to Customer Tickets filtered by signal and this client.
     ...(view.relationships.length > 0 ? {
-      ticketsCallout: <CoManagedClientCalloutStrip clientId={clientId} onOpen={onOpenTab ? () => onOpenTab('co-managed') : undefined} />,
+      ticketsCallout: <CoManagedClientCalloutStrip clientId={clientId} />,
     } : {}),
     tab: {
       id: 'co-managed',

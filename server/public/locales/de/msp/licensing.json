@@ -601,6 +601,7 @@
         "ticket": "Ticket",
         "workspace": "Arbeitsbereich",
         "state": "Status",
+        "status": "Status",
         "priority": "Priorität",
         "responsibility": "Zuständige Organisation",
         "updated": "Aktualisiert"
