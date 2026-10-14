@@ -104,7 +104,8 @@
     },
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
-    "ticketsRecurring": "Wiederkehrende Tickets"
+    "ticketsRecurring": "Wiederkehrende Tickets",
+    "ticketsTemplates": "Ticket-Vorlagen"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

@@ -222,7 +222,9 @@
     "printOptions": "Print options",
     "duplicate": "Duplicate",
     "rowActions": "Actions",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "moreActions": "More actions",
+    "createTemplate": "Create template from ticket"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -849,7 +851,16 @@
     "duplicateChecklistHeading": "Checklist from #{{number}}",
     "duplicateChecklistRequired": "(required)",
     "duplicateCopyChecklist": "Copy checklist items (unchecked)",
-    "duplicateCustomFieldsNote": "Custom field values are copied from #{{number}}."
+    "duplicateCustomFieldsNote": "Custom field values are copied from #{{number}}.",
+    "templateLabel": "Template",
+    "templateNone": "None",
+    "templateLoadFailed": "The template could not be loaded. Please try again.",
+    "fromTemplatePill": "From template: {{name}}",
+    "templateChecklistHeading": "Checklist from template: {{name}}",
+    "templateCustomFieldsNote": "Custom field values are copied from the template.",
+    "templateReplaceTitle": "Replace your changes?",
+    "templateReplaceMessage": "Applying a template replaces the title, description and other fields you have entered.",
+    "templateReplaceConfirm": "Apply template"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1593,7 +1604,8 @@
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned.",
-    "duplicatedFrom": "Duplicated from #{{number}}"
+    "duplicatedFrom": "Duplicated from #{{number}}",
+    "fromTemplate": "From template: {{name}}"
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
@@ -1904,7 +1916,8 @@
       "noStatusChange": "Do not change status",
       "showAllActivity": "Show all activity",
       "collapseActivity": "Collapse older activity",
-      "replyingToComment": "Replying to {{name}}"
+      "replyingToComment": "Replying to {{name}}",
+      "createdFromTemplate": "{{actor}} created this ticket from template \"{{name}}\""
     }
   },
   "externalLinks": {
@@ -2311,5 +2324,85 @@
     "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
     "workDescription": "Work description",
     "whatAreYouWorkingOn": "What are you working on?"
+  },
+  "templates": {
+    "loading": "Loading…",
+    "list": {
+      "title": "Ticket templates",
+      "new": "New template",
+      "empty": "No ticket templates yet. Open a ticket and choose \"Create template from ticket\", or create one from scratch.",
+      "showInactive": "Show inactive",
+      "deleted": "Template deleted",
+      "deleteTitle": "Delete template",
+      "deleteMessage": "Delete \"{{name}}\"? Tickets already created from it are not changed.",
+      "columns": {
+        "name": "Name",
+        "title": "Ticket title",
+        "board": "Board",
+        "checklist": "Checklist items",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "edit": "Edit",
+      "newTicket": "New ticket from template",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "sections": {
+      "details": "Template",
+      "ticket": "Ticket",
+      "checklist": "Checklist",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "name": "Template name",
+      "notes": "Notes",
+      "notesHelp": "For your team only. Not copied to tickets.",
+      "title": "Ticket title",
+      "description": "Description",
+      "descriptionPlaceholder": "Description"
+    },
+    "checklist": {
+      "empty": "No checklist items.",
+      "itemName": "Checklist item",
+      "required": "Required",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove item",
+      "add": "Add item"
+    },
+    "customFields": {
+      "empty": "No custom field values.",
+      "name": "Field name",
+      "value": "Value",
+      "remove": "Remove field",
+      "add": "Add field"
+    },
+    "editor": {
+      "back": "Ticket templates",
+      "newTitle": "New ticket template",
+      "created": "Template created",
+      "saved": "Template saved",
+      "saving": "Saving…",
+      "save": "Save",
+      "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
+      "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
+      "viewOnly": "You can view this template but not change it.",
+      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:"
+    },
+    "errors": {
+      "notFound": "Ticket template not found",
+      "duplicateName": "A template named {{name}} already exists",
+      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "notAvailable": "Ticket templates are not available",
+      "subcategoryNeedsCategory": "A subcategory requires a category"
+    }
   }
 }

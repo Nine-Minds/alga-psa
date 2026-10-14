@@ -104,7 +104,8 @@
     },
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
-    "ticketsRecurring": "Terugkerende tickets"
+    "ticketsRecurring": "Terugkerende tickets",
+    "ticketsTemplates": "Ticketsjablonen"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

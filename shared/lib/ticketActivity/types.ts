@@ -52,6 +52,8 @@ export const TICKET_ACTIVITY_EVENT = {
   DUPLICATED_FROM: 'TICKET_DUPLICATED_FROM',
   /** Written on the source ticket when a duplicate of it is created. */
   DUPLICATED_TO: 'TICKET_DUPLICATED_TO',
+  /** Written on the new ticket created from a ticket template. */
+  CREATED_FROM_TEMPLATE: 'TICKET_CREATED_FROM_TEMPLATE',
 } as const;
 
 export type TicketActivityEvent =

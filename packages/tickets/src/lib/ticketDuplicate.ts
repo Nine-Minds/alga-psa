@@ -79,51 +79,52 @@ interface CopyChecklistParams {
   userId: string;
 }
 
+/** A checklist row to be written onto a new ticket, whatever its origin (source ticket or ticket template). */
+export interface ChecklistItemToInsert {
+  item_name: string;
+  description: string | null;
+  is_required: boolean;
+  assigned_to: string | null;
+  /** `ticket_checklist_items.source` ('manual' | 'template'). */
+  source: string;
+  /** Checklist template this item came from; drives the replacement rule below. */
+  template_id: string | null;
+}
+
+interface InsertChecklistParams {
+  targetTicketId: string;
+  items: readonly ChecklistItemToInsert[];
+  userId: string;
+}
+
 /**
- * Copies the source ticket's checklist onto the target, unchecked (D8).
+ * Appends `items` onto the target ticket, unchecked (Duplicate D8, Ticket template D4).
  *
  * `TicketModel.createTicket` has already auto-applied matching templates onto
- * the target inside the same transaction. For every template the source also
- * carries, the source's (possibly edited) items win: the target's freshly
- * applied rows for that template are deleted before the source items go in.
- * `template_id` is kept so the template's idempotency key still suppresses a
- * later re-apply. Templates that newly match and are not on the source stay as
- * auto-applied, and the source's items are ordered after them.
+ * the target inside the same transaction. For every checklist template the
+ * incoming items carry, those items win: the target's freshly applied rows for
+ * that template are deleted before the items go in. `template_id` is kept so the
+ * template's idempotency key still suppresses a later re-apply. Templates that
+ * newly match and are not carried stay as auto-applied, and the incoming items
+ * are ordered after them.
  *
- * Returns the number of items copied.
+ * Shared by Duplicate (items loaded from the source ticket) and
+ * create-from-ticket-template (items loaded from the template), so the rule is
+ * implemented once. Returns the number of items inserted.
  */
 // LEVERAGE: pattern tenant-scoped-table-helper — tenantScopedTable is redefined in nearly every tickets module; this site calls tenantDb(trx, tenant).table(...) directly instead of adding another copy
-export async function copyChecklistFromSource(
+export async function insertChecklistItemsReplacingTemplates(
   trx: Knex.Transaction,
   tenant: string,
-  { sourceTicketId, targetTicketId, userId }: CopyChecklistParams
+  { targetTicketId, items, userId }: InsertChecklistParams
 ): Promise<number> {
-  const db = tenantDb(trx, tenant);
-
-  const sourceItems = await db
-    .table('ticket_checklist_items')
-    .where({ ticket_id: sourceTicketId })
-    .orderBy('order_number', 'asc')
-    .orderBy('created_at', 'asc')
-    .select(
-      'item_name',
-      'description',
-      'is_required',
-      'assigned_to',
-      'order_number',
-      'source',
-      'template_id'
-    );
-  if (!sourceItems.length) {
+  if (!items.length) {
     return 0;
   }
+  const db = tenantDb(trx, tenant);
 
   const templateIds = Array.from(
-    new Set(
-      sourceItems
-        .map((item: { template_id: string | null }) => item.template_id)
-        .filter((id: string | null): id is string => Boolean(id))
-    )
+    new Set(items.map((item) => item.template_id).filter((id): id is string => Boolean(id)))
   );
   if (templateIds.length) {
     await db
@@ -141,34 +142,49 @@ export async function copyChecklistFromSource(
   const baseOrder = Number(maxOrder?.max ?? -1) + 1;
 
   await db.table('ticket_checklist_items').insert(
-    sourceItems.map(
-      (
-        item: {
-          item_name: string;
-          description: string | null;
-          is_required: boolean;
-          assigned_to: string | null;
-          source: string;
-          template_id: string | null;
-        },
-        index: number
-      ) => ({
-        tenant,
-        ticket_id: targetTicketId,
-        item_name: item.item_name,
-        description: item.description ?? null,
-        assigned_to: item.assigned_to ?? null,
-        is_required: item.is_required,
-        order_number: baseOrder + index,
-        source: item.source,
-        template_id: item.template_id ?? null,
-        completed: false,
-        completed_by: null,
-        completed_at: null,
-        created_by: userId,
-      })
-    )
+    items.map((item, index) => ({
+      tenant,
+      ticket_id: targetTicketId,
+      item_name: item.item_name,
+      description: item.description ?? null,
+      assigned_to: item.assigned_to ?? null,
+      is_required: item.is_required,
+      order_number: baseOrder + index,
+      source: item.source,
+      template_id: item.template_id ?? null,
+      completed: false,
+      completed_by: null,
+      completed_at: null,
+      created_by: userId,
+    }))
   );
 
-  return sourceItems.length;
+  return items.length;
+}
+
+/**
+ * Copies the source ticket's checklist onto the target, unchecked (D8): loads the
+ * source items and hands them to `insertChecklistItemsReplacingTemplates`.
+ *
+ * Returns the number of items copied.
+ */
+export async function copyChecklistFromSource(
+  trx: Knex.Transaction,
+  tenant: string,
+  { sourceTicketId, targetTicketId, userId }: CopyChecklistParams
+): Promise<number> {
+  const db = tenantDb(trx, tenant);
+
+  const sourceItems = await db
+    .table('ticket_checklist_items')
+    .where({ ticket_id: sourceTicketId })
+    .orderBy('order_number', 'asc')
+    .orderBy('created_at', 'asc')
+    .select('item_name', 'description', 'is_required', 'assigned_to', 'order_number', 'source', 'template_id');
+
+  return insertChecklistItemsReplacingTemplates(trx, tenant, {
+    targetTicketId,
+    userId,
+    items: sourceItems,
+  });
 }
