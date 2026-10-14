@@ -12,8 +12,9 @@ revision 8 → explicit save at revision 8. The reselection interaction now
 performs a successful save, asserts parent summary revision/total/charges
 refresh, deselects, reselects, and saves at the refreshed revision. A rendered
 preview callback test verifies the DraftsTab refresh callback runs after save.
-The initial-recovery and parent-callback tests each failed on pre-repair source
-`8e9e81571d` and pass on this candidate.
+The initial-recovery test failed on pre-repair source `8e9e81571d`; the
+parent-callback test failed on pre-repair source `0f56b6ac31`. Both pass on
+this candidate.
 
 Validation: focused editor/auth-recovery/concurrency/lifecycle suites passed
 (48 tests across four files); InvoicePreviewPanel suite passed (7 tests). Billing
