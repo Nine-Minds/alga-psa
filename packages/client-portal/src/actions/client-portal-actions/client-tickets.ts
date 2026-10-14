@@ -47,7 +47,11 @@ import {
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
-import { applyAssetVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import {
+  applyAssetVisibilityFilter,
+  extractActiveWatcherContactIds,
+  ticketMatchesVisibility,
+} from '@alga-psa/authorization/portal/visibility';
 import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
@@ -495,7 +499,25 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
       // Never fetch link data until the existing client/board/contact ticket scope succeeds.
       const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
-      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      /**
+       * FR-E7b: a shared-workspace colleague may read an open ticket about the
+       * hot desk, but it is not theirs to comment on or close — the write
+       * paths resolve the ticket without the workspace clause and would refuse
+       * them with "Ticket not found". The read says so up front.
+       */
+      const canInteract = ticket
+        ? ticketMatchesVisibility(
+            {
+              clientId: ticket.client_id,
+              boardId: ticket.board_id,
+              contactId: ticket.contact_name_id,
+              billingProfileId: ticket.billing_profile_id ?? null,
+              watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
+            },
+            visibility
+          )
+        : false;
+      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -590,6 +612,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     return {
       ...ticketWithoutCreatorType,
+      /** False for a ticket visible only through a shared workspace. */
+      can_interact: result.canInteract,
       ticket_origin: getTicketOrigin(result.ticket as any),
       entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
       updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,

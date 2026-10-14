@@ -316,7 +316,8 @@
     "errorWithMessage": "Errore: {{message}}",
     "billingProfileUpdated": "Profilo di fatturazione aggiornato",
     "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione",
-    "scheduleOpenFailed": "Impossibile aprire il pianificatore"
+    "scheduleOpenFailed": "Impossibile aprire il pianificatore",
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
   },
   "conversation": {
     "comments": "Commenti",

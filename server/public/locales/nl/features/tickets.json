@@ -316,7 +316,8 @@
     "errorWithMessage": "Fout: {{message}}",
     "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
     "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt",
-    "scheduleOpenFailed": "De planner kon niet worden geopend"
+    "scheduleOpenFailed": "De planner kon niet worden geopend",
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
   },
   "conversation": {
     "comments": "Reacties",

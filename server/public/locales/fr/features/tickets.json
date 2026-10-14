@@ -316,7 +316,8 @@
     "errorWithMessage": "Erreur : {{message}}",
     "billingProfileUpdated": "Profil de facturation mis à jour",
     "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation",
-    "scheduleOpenFailed": "Impossible d’ouvrir le planificateur"
+    "scheduleOpenFailed": "Impossible d’ouvrir le planificateur",
+    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose."
   },
   "conversation": {
     "comments": "Commentaires",
