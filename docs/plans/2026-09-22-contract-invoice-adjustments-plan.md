@@ -1,5 +1,34 @@
 # Contract invoice adjustments
 
+## Repair round 7: recovery adopts only a missing baseline (2026-10-14)
+
+Code candidate: `4c26c9ef43` (PR #3499). If the initial authoritative editor
+read fails authentication, the recovered snapshot now supplies the invoice
+metadata/revision baseline while pending expanded/collapsed rows, removals, and
+validation state remain local. If a successful read had already established a
+baseline, later recovery does not advance its revision, preserving stale-writer
+rejection. Regression coverage exercises initial auth rejection → read retry at
+revision 8 → explicit save at revision 8. The reselection test now performs a
+successful save, asserts parent summary revision/total/charges refresh,
+deselects, reselects, and saves at the refreshed revision. A rendered preview
+callback test verifies the DraftsTab refresh callback runs after adjustment
+save.
+
+Validation: focused editor/auth-recovery/concurrency/lifecycle suites passed
+(48 tests across four files); InvoicePreviewPanel callback suite passed (7
+tests). Both new regressions failed on pre-repair source `8e9e81571d` and pass
+on this candidate. Billing typecheck (8 GiB) and build passed; server typecheck
+(11 GiB) passed. The server production build previously failed with heap
+exhaustion at 8 GiB and was not retried: current capacity was 2.9 GiB free RAM,
+7.8 GiB free swap, and 6.2 GiB free disk (95% used). No app server was started.
+
+Runtime acceptance remains pending: the board-owned registered `dev-server`
+must be supervised-restarted to this candidate and its serving build stamp
+verified; last retained serving observation was historical `4571290674`. Open
+Review must reach the exact intended pane/session. Customer PDF/portal totals,
+runtime-auth diagnostics and lifecycle checks also remain outstanding.
+
+
 ## Repair round 6: coherent editor snapshots (2026-10-14)
 
 Candidate: `5c9c27c6d0` plus following documentation-only commits (PR #3499).
