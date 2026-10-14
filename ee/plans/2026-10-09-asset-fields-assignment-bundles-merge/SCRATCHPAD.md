@@ -47,7 +47,7 @@ Working memory for this plan. Short bullets; update earlier notes when a decisio
 
 - (2026-10-09, assignment-core) `setAssetAssignee` had to live in `shared/models/assetAssignmentModel.ts`, not `packages/assets/src/lib/assetAssignment.ts`: the shared RMM ingestion service needs it and `packages/assets` already depends on `@alga-psa/shared`, so the planned direction would close a dependency cycle. `packages/assets/src/lib/assetAssignment.ts` is a thin re-export, so every call site named in the PRD still resolves and there is still exactly one implementation.
 - (2026-10-09, assignment-core) NinjaOne's `updateExistingAsset` never wrote `client_id`, so F029 has nothing to convert on that side — only shared ingestion had a raw `contact_name_id: null` branch. T045 ("create writes no assignment row") holds because `createNewAsset` never set a contact.
-- (2026-10-09, assignment-core) `asset_history.changed_by` is NOT NULL, so a sessionless caller (RMM sync without an audit user) gets the assignment row and the column update but no history entry rather than failing the assignment.
+- (2026-10-09, assignment-core) `asset_history.changed_by` was NOT NULL, so a sessionless caller (RMM sync without an audit user) got the assignment row and the column update but no history entry. Superseded by review round 3: migration `20261009127000` makes the column nullable and every sessionless write (assignment and RMM organization move) records its history, naming the provider.
 - (2026-10-09, assignment-core) The in-memory knex harnesses in `packages/assets/src/actions/*.test.ts` gained `whereNull`/`whereNotNull`/`join` and an `asset_statuses` seed; the helper and FR-B3 validation both need them.
 
 - (2026-10-09, groups) The portal visibility helpers gained optional `sharedWorkspace` / `sharedWorkspaceTickets` column pairs instead of a new function: omitting them narrows, which is the rule the whole module is built on.
@@ -461,3 +461,62 @@ The FR-E7b contract test pinned `extractActiveWatcherContactIds(ticket.attribute
 while the action reads through its `ticketRow` alias; it matches either name
 now, so the contract is about where the watcher ids come from rather than what
 the local variable is called.
+
+## Round 5 — the gating suite (2026-10-14)
+
+### A committed test still described the old behaviour
+
+`shared/models/__tests__/assetAssignmentModel.test.ts` asserted that a
+sessionless RMM assignment writes *no* `asset_history` row — the rule review
+round 3 deliberately removed when it made `changed_by` nullable
+(`20261009127000`). `shared/**/*.test.ts` is inside the server suite's
+`SERVER_UNIT_INCLUDE`, so `cd server && npm run test:unit` — the command every
+commit in this plan runs, and the lane `unit-tests.yml` gates on — was red on
+HEAD. The test now asserts what ships: one `assignee_changed` row with
+`changed_by: null` carrying `source`, `provider` and the signed-in-user note.
+The stale implementation note above says so too.
+
+### Sessionless writes, consistently
+
+`moveRmmOrganizationAssets` still skipped both of its history rows when
+`actorUserId` was null, which was the same NOT NULL workaround one file over.
+A mapping move triggered without a session now records `updated` and
+`group_removed` with `changed_by: null`, with a test for it.
+
+### The group guards no longer swallow real failures
+
+Three lookups tolerated the group tables not existing yet with a bare `catch`,
+which inside a transaction also hides an abort. `isMissingAssetGroupTable`
+(the `42P01` shape, the convention `assetTypeRegistry` already uses) is the
+only error any of them absorbs; everything else is rethrown.
+
+### T147 is behaviour again
+
+The entry promises "returns history and 404 for another tenant's asset" and
+was satisfied by a grep for `export const GET`. The 404 path is exercised
+now: `server/src/test/unit/api/apiAssetAssignmentsController.test.ts` drives
+`ApiAssetController.listAssignments` with a stub service and asserts the
+history body for a visible asset and `404 NOT_FOUND` when the tenant-scoped
+`getById` finds nothing.
+
+### The merge billing choice met a real database
+
+The gap SCRATCHPAD admitted for T141-T143 is closed: `clientMerge.integration`
+gained TM021, which seeds an unprofiled ticket, project, asset and RMM
+organization mapping on the absorbed client and merges twice.
+`source_profile` stamps all four with the moved default and records
+`billing_strategy`; `target_default` leaves all four NULL so the attribution
+chain resolves them against the parent, and the rows still move. The preview's
+`billingChoice` counts are asserted against the same fixture.
+
+### Still outstanding, for the record
+
+- Group invariants, mapping moves and portal visibility are still covered by
+  in-memory-knex unit tests rather than `server/src/test/` integration files
+  (the migrations, procurement fields, statuses, assignments and now the merge
+  billing choice have those).
+- **Operator call-out, with FR-B6/FR-G5:** a Tactical **full** sync now
+  retires devices Tactical no longer lists (`retireVanishedTacticalAssets`) —
+  deletion detection Tactical never had. Incremental pages and an empty agent
+  list retire nothing, but the release note should name it alongside "RMM sync
+  no longer overwrites asset status" and "manual client changes persist".
