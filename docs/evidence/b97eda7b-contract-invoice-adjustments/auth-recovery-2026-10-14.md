@@ -1,6 +1,6 @@
 # Invoice editor authentication recovery
 
-Application revision: `8e3ef4fd9ab1aace63a5d523f2286edf47473848`, PR #3499.
+Initial save-recovery revision: `8e3ef4fd9ab1aace63a5d523f2286edf47473848`, PR #3499.
 
 The invoice editor handles an expired session without discarding pending rows.
 `updateInvoiceManualItems` returns a serializable `UNAUTHENTICATED` result when
@@ -182,7 +182,7 @@ Behavioral verification on the repair source:
 
 ## Required live handoff
 
-Repair candidate: `4dc4f344d90dadc8aeebbe9e62bfa2fef3310fd7` (`fix(billing): recover adjustment and attribution reads`). The supervised operator must roll that exact
+Repair candidate: `7bc86a28b4fe98c23f4728587002484171088a03` (`fix(billing): preserve invoice drafts across repeated read recovery`). The supervised operator must roll that exact
 candidate to canonical 23185 and verify the running build stamp before
 acceptance. Run independent 3185 and 23185 login, save, reload, and reselection
 checks; in each pane inspect same-origin `/api/auth/session`. Use an owned draft
@@ -256,7 +256,7 @@ and invoice-detail reads. The line-read recovery guard preserves unsaved rows
 while those requests settle; attribution state is reset by invoice identity so
 an earlier selection cannot leave an expiry warning or options behind.
 
-Latest focused verification on source candidate
+Prior focused verification on source candidate
 `4dc4f344d90dadc8aeebbe9e62bfa2fef3310fd7`:
 
 - 58 tests passed across the focused billing action, editor, capability,
@@ -267,5 +267,42 @@ Latest focused verification on source candidate
 - Billing typecheck passed with a 6 GiB Node heap and billing package build
   passed. The app server stayed untouched.
 
-This is the exact code candidate for the supervised 23185 rollout below; verify
-the running build stamp against this full SHA before acceptance.
+The takeover repair below supersedes this candidate for supervised rollout.
+
+
+## Takeover: repeated read recovery — 2026-10-14
+
+Code candidate: `7bc86a28b4fe98c23f4728587002484171088a03`.
+
+A repeated attribution failure could discard collapsed unsaved lines. When
+attribution failed before a slower detail request succeeded, that successful
+request cleared the shared recovery flag. The next retry then replaced the
+editor draft with persisted rows, also undoing pending removals.
+
+Draft preservation now depends on the retry attempt for the selected invoice,
+not an authentication flag. Detail and attribution reads manage their own
+expiry state. Every same-invoice recovery retry preserves draft rows; selecting
+a different invoice establishes a new initial read. Explicit save recovery
+continues to reuse the same operation ID and expected revision.
+
+The deferred-response regression failed on the inherited source in the
+attribution-first order. Both completion orders now pass, preserving collapsed
+additions and removals across two retries, issuing no financial mutation during
+read recovery, and submitting the same payload and operation identity after a
+subsequent save authentication failure.
+
+Validation on this code:
+
+- 60 focused billing tests passed across six files: action serialization,
+  manual-write guards, expanded/collapsed edits, capability, billing-profile
+  reads, and lifecycle restrictions.
+- Six preview tests passed under the server Vitest runner.
+- Billing typecheck passed with a 6 GiB heap; billing package build passed.
+- Changed-file ESLint exited 0 with warnings and no errors. No UI strings changed.
+
+No app server was started or restarted, no financial fixtures were modified,
+and no authentication policy changed. Full Next production build and live
+acceptance are not claimed. Workspace disk remained 93% used. Spontaneous
+session-loss cause, effective runtime cookie configuration, and the exact Open
+Review pane/session remain unresolved. Use the supervised procedure above with
+this code candidate before claiming production acceptance.
