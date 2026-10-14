@@ -2926,6 +2926,12 @@
         "label": "Abrechnungsprofil",
         "clientDefault": "Kundenstandard",
         "updateFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+      },
+      "errors": {
+        "invalidPeopleMode": "Das ist kein gültiger Personen-Modus.",
+        "billingProfileUnavailable": "Dieses Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+        "mappingNotFound": "Diese Zuordnung existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "forbidden": "Sie haben keine Berechtigung, dies zu ändern."
       }
     },
     "sso": {

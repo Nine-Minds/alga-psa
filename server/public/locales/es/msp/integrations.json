@@ -2926,6 +2926,12 @@
         "label": "Perfil de facturación",
         "clientDefault": "Predeterminado del cliente",
         "updateFailed": "No se pudo actualizar el perfil de facturación"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ese no es un modo de personas válido.",
+        "billingProfileUnavailable": "Ese perfil de facturación no está disponible para este cliente.",
+        "mappingNotFound": "Esa asignación ya no existe. Actualice la página e inténtelo de nuevo.",
+        "forbidden": "No tiene permiso para cambiar esto."
       }
     },
     "sso": {

@@ -471,6 +471,12 @@ export class AssetMigrationApplier implements EntityApplier {
 
     // FR-C3: an imported assignee is recorded with source `import` by
     // createAssetInTransaction, which routes it through setAssetAssignee.
+    //
+    // The contact is checked against the asset's client here rather than
+    // letting the helper throw: a source assignee who belongs to another
+    // client would otherwise fail the whole asset import. The device comes in
+    // unassigned, and the row says so.
+    const assigneeWarnings: string[] = [];
     let assigneeContactId: string | null = null;
     if (record.assignee_external_identifier) {
       assigneeContactId = await context.resolveReference(
@@ -478,33 +484,52 @@ export class AssetMigrationApplier implements EntityApplier {
         'contacts',
         record.assignee_external_identifier
       );
+
+      if (assigneeContactId) {
+        const contact = await tenantDb(trx, context.tenant).table('contacts')
+          .where({ contact_name_id: assigneeContactId, client_id: clientId })
+          .whereNot({ contact_kind: 'shared_mailbox' })
+          .first('contact_name_id');
+        if (!contact) {
+          assigneeWarnings.push(
+            `Assignee "${record.assignee_external_identifier}" is not a contact of this client; the asset was imported unassigned.`
+          );
+          assigneeContactId = null;
+        }
+      }
     }
+
+    const assetInput = {
+      asset_type: assetTypeSlug,
+      client_id: clientId,
+      asset_tag: record.serial_number ?? record.source_record_id,
+      name: record.name,
+      // FR-B2: keep the source lifecycle state when the tenant has a status
+      // with that slug or label; otherwise fall back to `active`.
+      status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
+      location_id: locationId,
+      contact_name_id: assigneeContactId,
+      serial_number: record.serial_number ?? undefined,
+      purchase_date: record.purchase_date ?? undefined,
+      // Manufacturer and model are first-class columns (FR-A4), not attributes.
+      manufacturer: record.manufacturer ?? null,
+      model: record.model ?? null,
+      attributes: customAttributes,
+    };
 
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
       context.actorUserId,
-      {
-        asset_type: assetTypeSlug,
-        client_id: clientId,
-        asset_tag: record.serial_number ?? record.source_record_id,
-        name: record.name,
-        // FR-B2: keep the source lifecycle state when the tenant has a status
-        // with that slug or label; otherwise fall back to `active`.
-        status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
-        location_id: locationId,
-        contact_name_id: assigneeContactId,
-        serial_number: record.serial_number ?? undefined,
-        purchase_date: record.purchase_date ?? undefined,
-        // Manufacturer and model are first-class columns (FR-A4), not attributes.
-        manufacturer: record.manufacturer ?? null,
-        model: record.model ?? null,
-        attributes: customAttributes,
-      },
+      assetInput,
       { requireCustomAttributes: false, assignmentSource: 'import' }
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: asset.asset_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: asset.asset_id,
+      ...(assigneeWarnings.length > 0 ? { warnings: assigneeWarnings } : {}),
+    };
   }
 }
 

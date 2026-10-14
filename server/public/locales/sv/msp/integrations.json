@@ -2949,6 +2949,12 @@
         "label": "Faktureringsprofil",
         "clientDefault": "Kundens standard",
         "updateFailed": "Kunde inte uppdatera faktureringsprofilen"
+      },
+      "errors": {
+        "invalidPeopleMode": "Det är inte ett giltigt personläge.",
+        "billingProfileUnavailable": "Den faktureringsprofilen är inte tillgänglig för den här kunden.",
+        "mappingNotFound": "Kopplingen finns inte längre. Uppdatera sidan och försök igen.",
+        "forbidden": "Du har inte behörighet att ändra detta."
       }
     },
     "sso": {

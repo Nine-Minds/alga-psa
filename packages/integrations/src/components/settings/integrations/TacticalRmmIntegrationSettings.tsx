@@ -1,5 +1,6 @@
 'use client';
 
+import { rmmMappingErrorMessage } from './rmmMappingErrors';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -319,7 +320,11 @@ export function TacticalRmmIntegrationSettings() {
       billingProfileId: patch.billingProfileId,
     });
     if (!res.success) {
-      const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      const message = rmmMappingErrorMessage(
+        t,
+        res.error,
+        t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }),
+      );
       setError(message);
       toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: message, variant: 'destructive' });
       return;

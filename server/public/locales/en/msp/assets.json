@@ -1771,7 +1771,8 @@
     "title": "Assets",
     "empty": "No assets assigned to this contact.",
     "sharedWorkspaces": "Shared workspaces",
-    "memberCount": "{{count}} assets"
+    "memberCount_one": "{{count}} asset",
+    "memberCount_other": "{{count}} assets"
   },
   "assetGroups": {
     "kinds": {

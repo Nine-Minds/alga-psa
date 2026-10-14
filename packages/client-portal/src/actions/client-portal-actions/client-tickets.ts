@@ -505,14 +505,15 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
        * paths resolve the ticket without the workspace clause and would refuse
        * them with "Ticket not found". The read says so up front.
        */
-      const canInteract = ticket
+      const ticketRow = ticket as unknown as Record<string, any> | undefined;
+      const canInteract = ticketRow
         ? ticketMatchesVisibility(
             {
-              clientId: ticket.client_id,
-              boardId: ticket.board_id,
-              contactId: ticket.contact_name_id,
-              billingProfileId: ticket.billing_profile_id ?? null,
-              watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
+              clientId: ticketRow.client_id,
+              boardId: ticketRow.board_id,
+              contactId: ticketRow.contact_name_id,
+              billingProfileId: ticketRow.billing_profile_id ?? null,
+              watcherContactIds: extractActiveWatcherContactIds(ticketRow.attributes),
             },
             visibility
           )

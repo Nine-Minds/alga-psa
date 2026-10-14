@@ -1,5 +1,6 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
@@ -135,7 +136,7 @@ export default function TaniumIntegrationSettings() {
         setSuccess(t('integrations.rmm.tanium.success.configurationSaved'));
         await refresh();
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.saveConfiguration'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.saveConfiguration')));
       }
     });
   };
@@ -148,7 +149,7 @@ export default function TaniumIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.tanium.success.connectionTestSucceeded'));
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.testConnectionFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.testConnectionFailed')));
       }
       await refresh();
     });
@@ -162,7 +163,7 @@ export default function TaniumIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.tanium.success.disconnected'));
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.disconnectFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.disconnectFailed')));
       }
       await refresh();
     });
@@ -182,7 +183,7 @@ export default function TaniumIntegrationSettings() {
           })
         );
       } else {
-        setError(result.error || t('integrations.rmm.tanium.errors.scopeDiscoveryFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.scopeDiscoveryFailed')));
       }
       await refresh();
     });
@@ -220,7 +221,7 @@ export default function TaniumIntegrationSettings() {
         defaultContactId: null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
         return;
       }
       await refresh();
@@ -234,7 +235,7 @@ export default function TaniumIntegrationSettings() {
         defaultContactId: contactId || null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
         return;
       }
       await refresh();
@@ -246,7 +247,7 @@ export default function TaniumIntegrationSettings() {
     void (async () => {
       const result = await updateTaniumOrganizationMapping({ mappingId, billingProfileId });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
         return;
       }
       await refresh();
@@ -257,7 +258,7 @@ export default function TaniumIntegrationSettings() {
     void (async () => {
       const result = await updateTaniumOrganizationMapping({ mappingId, contactAssignmentMode: mode });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.tanium.errors.updateMappingFailed')));
         return;
       }
       await refresh();

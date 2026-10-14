@@ -1771,7 +1771,10 @@
     "title": "Zasoby",
     "empty": "Do tego kontaktu nie przypisano żadnych zasobów.",
     "sharedWorkspaces": "Współdzielone stanowiska",
-    "memberCount": "{{count}} zasobów"
+    "memberCount_one": "{{count}} zasób",
+    "memberCount_few": "{{count}} zasoby",
+    "memberCount_many": "{{count}} zasobów",
+    "memberCount_other": "{{count}} zasobów"
   },
   "assetGroups": {
     "kinds": {

@@ -7,6 +7,7 @@
  * Devices can only be synced for organizations that have a company mapping.
  */
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
@@ -139,7 +140,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setSuccessMessage(t('integrations.rmm.ninjaone.success.mappingUpdated', { defaultValue: 'Mapping updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       }
     } catch (err) {
       console.error('NinjaOne organization mapping update failed:', err);
@@ -168,7 +169,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         setSuccessMessage(t('integrations.rmm.ninjaone.success.contactUpdated', { defaultValue: 'Default contact updated successfully' }));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateContact', { defaultValue: 'Failed to update default contact' })));
       }
     } catch (err) {
       console.error('NinjaOne default contact update failed:', err);
@@ -192,7 +193,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
             : m))
         );
       } else {
-        setError(result.error ?? t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' })));
       }
     } finally {
       setSavingMappingId(null);
@@ -214,7 +215,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
         )));
         onMappingChanged?.();
       } else {
-        setError(result.error ?? t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
       }
     } catch (err) {
       console.error('NinjaOne billing profile update failed:', err);
@@ -242,7 +243,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           )
         );
       } else {
-        setError(result.error ?? t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.ninjaone.errors.updateAutoSync', { defaultValue: 'Failed to update auto-sync setting' })));
       }
     } catch (err) {
       console.error('NinjaOne auto-sync update failed:', err);

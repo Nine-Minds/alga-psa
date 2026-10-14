@@ -2926,6 +2926,12 @@
         "label": "Factureringsprofiel",
         "clientDefault": "Standaard van de klant",
         "updateFailed": "Bijwerken van het factureringsprofiel is mislukt"
+      },
+      "errors": {
+        "invalidPeopleMode": "Dat is geen geldige personenmodus.",
+        "billingProfileUnavailable": "Dat facturatieprofiel is niet beschikbaar voor deze klant.",
+        "mappingNotFound": "Die koppeling bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+        "forbidden": "U hebt geen rechten om dit te wijzigen."
       }
     },
     "sso": {

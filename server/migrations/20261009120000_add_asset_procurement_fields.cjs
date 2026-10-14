@@ -72,6 +72,21 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   const hasManufacturer = await knex.schema.hasColumn('assets', 'manufacturer');
   if (!hasManufacturer) return;
+
+  // Put the two values `up` lifted out of `attributes` back where they were,
+  // or the rollback would quietly take an MSP's hardware identity with it.
+  // The columns the roll-forward introduced (vendor, cost, order number) have
+  // no earlier home and are dropped.
+  await knex.raw(`
+    UPDATE assets
+    SET attributes = COALESCE(attributes, '{}'::jsonb)
+      || CASE WHEN NULLIF(trim(COALESCE(manufacturer, '')), '') IS NULL
+              THEN '{}'::jsonb ELSE jsonb_build_object('manufacturer', manufacturer) END
+      || CASE WHEN NULLIF(trim(COALESCE(model, '')), '') IS NULL
+              THEN '{}'::jsonb ELSE jsonb_build_object('model', model) END
+    WHERE manufacturer IS NOT NULL OR model IS NOT NULL
+  `);
+
   await knex.raw('DROP INDEX IF EXISTS idx_assets_vendor');
   await knex.schema.alterTable('assets', (table) => {
     table.dropForeign(['tenant', 'vendor_id']);

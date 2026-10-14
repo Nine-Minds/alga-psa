@@ -74,18 +74,35 @@ exports.up = async function up(knex) {
 
     // Anything an MSP already typed into assets.status survives as a custom
     // status so no device loses its lifecycle state on this migration.
-    const existing = await knex('assets')
+    //
+    // Compared case- and whitespace-insensitively: a legacy " Active" would
+    // otherwise come through as a second, undeployable "Active" sitting
+    // alongside the builtin. Such rows are normalized onto the builtin slug
+    // instead, which is what they always meant.
+    const stored = await knex('assets')
       .where({ tenant })
       .whereNotNull('status')
       .whereNot('status', '')
-      .whereNotIn('status', BUILTIN_SLUGS)
       .distinct('status')
       .pluck('status');
 
-    if (existing.length === 0) continue;
+    const custom = [];
+    for (const value of stored) {
+      const normalized = String(value).trim().toLowerCase();
+      const builtin = BUILTIN_SLUGS.find((slug) => slug === normalized);
+      if (builtin) {
+        if (value !== builtin) {
+          await knex('assets').where({ tenant, status: value }).update({ status: builtin });
+        }
+        continue;
+      }
+      custom.push(value);
+    }
+
+    if (custom.length === 0) continue;
 
     await knex('asset_statuses')
-      .insert(existing.map((slug, index) => ({
+      .insert(custom.map((slug, index) => ({
         tenant,
         slug,
         // Best effort label from the slug: "in_repair" -> "In repair".

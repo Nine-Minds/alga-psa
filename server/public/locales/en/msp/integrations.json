@@ -2949,6 +2949,12 @@
         "label": "Billing profile",
         "clientDefault": "Client default",
         "updateFailed": "Failed to update the billing profile"
+      },
+      "errors": {
+        "invalidPeopleMode": "That is not a valid people mode.",
+        "billingProfileUnavailable": "That billing profile is not available for this client.",
+        "mappingNotFound": "That mapping no longer exists. Refresh and try again.",
+        "forbidden": "You do not have permission to change this."
       }
     },
     "sso": {

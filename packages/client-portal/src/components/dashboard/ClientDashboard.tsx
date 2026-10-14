@@ -8,12 +8,12 @@ import {
   getDashboardMetrics,
   getMyAppointmentRequests,
   getRecentActivity,
-  getClientAssets,
+  listClientAssets,
   type RecentActivity,
   type RecentActivityType,
   type DashboardMetrics,
 } from '@alga-psa/client-portal/actions';
-import type { Asset, ProductCode } from '@alga-psa/types';
+import type { Asset, AssetStatusKind, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
 import { PrepaidHoursCard } from './PrepaidHoursCard';
@@ -242,6 +242,14 @@ export function ClientDashboard({
   const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentSummary[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [devices, setDevices] = useState<Asset[]>([]);
+  const [deviceTotal, setDeviceTotal] = useState(0);
+  /**
+   * The registry kind and label for each status the client's devices are in.
+   * Without it the widget guessed the tone from the builtin slugs alone, so a
+   * tenant's own deployable status read amber here and green on the devices
+   * page.
+   */
+  const [deviceStatuses, setDeviceStatuses] = useState<Map<string, { label: string; kind: AssetStatusKind }>>(new Map());
   const [firstName, setFirstName] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -266,6 +274,8 @@ export function ClientDashboard({
         setUpcomingAppointments([]);
         setActivities(isReturnedActionError(activityData) ? [] : (activityData || []).filter((activity) => activity.type === 'ticket'));
         setDevices([]);
+        setDeviceTotal(0);
+        setDeviceStatuses(new Map());
         return;
       }
 
@@ -276,7 +286,7 @@ export function ClientDashboard({
           ? getMyAppointmentRequests({ status: 'approved' })
           : Promise.resolve({ success: true, data: [] }),
         getRecentActivity().catch(() => [] as RecentActivity[]),
-        getClientAssets().catch(() => [] as Asset[]),
+        listClientAssets({ limit: DASHBOARD_PREVIEW_DEVICES }).catch(() => null),
       ]);
       if (isReturnedActionError(metricsData)) {
         setErrorMessage(getErrorMessage(metricsData));
@@ -295,7 +305,17 @@ export function ClientDashboard({
       }
 
       setActivities(isReturnedActionError(activityData) ? [] : activityData || []);
-      setDevices(isReturnedActionError(devicesData) ? [] : devicesData || []);
+      if (!devicesData || isReturnedActionError(devicesData)) {
+        setDevices([]);
+        setDeviceTotal(0);
+        setDeviceStatuses(new Map());
+      } else {
+        setDevices(devicesData.assets ?? []);
+        setDeviceTotal(devicesData.total ?? 0);
+        setDeviceStatuses(new Map(
+          (devicesData.by_status ?? []).map((summary) => [summary.slug, { label: summary.label, kind: summary.kind }]),
+        ));
+      }
     } catch (err) {
       console.error('Error loading dashboard:', err);
       setErrorMessage(null);
@@ -691,8 +711,8 @@ export function ClientDashboard({
               </Link>
             </div>
             <div className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
-              {devices.length > 0
-                ? t('dashboard.devices.countLabel', { defaultValue: '{{count}} managed', count: devices.length })
+              {deviceTotal > 0
+                ? t('dashboard.devices.countLabel', { defaultValue: '{{count}} managed', count: deviceTotal })
                 : t('dashboard.devices.emptyShort', 'No devices yet')}
             </div>
           </CardHeader>
@@ -704,6 +724,7 @@ export function ClientDashboard({
             ) : (
               <ul className="space-y-2">
                 {devices.slice(0, DASHBOARD_PREVIEW_DEVICES).map((d) => {
+                  const statusRow = d.status ? deviceStatuses.get(d.status) : undefined;
                   const Icon = deviceIcon(d.asset_type);
                   return (
                     <li
@@ -726,8 +747,8 @@ export function ClientDashboard({
                           custom status contradicted its own details panel. It
                           reads the slug through the same helper as the device
                           list now. */}
-                      <Badge variant={portalAssetStatusVariant(d.status)}>
-                        {portalAssetStatusLabel(t, d.status)}
+                      <Badge variant={portalAssetStatusVariant(d.status, statusRow?.kind)}>
+                        {portalAssetStatusLabel(t, d.status, statusRow?.label)}
                       </Badge>
                     </li>
                   );

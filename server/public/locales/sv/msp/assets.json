@@ -1743,7 +1743,8 @@
     "title": "Tillgångar",
     "empty": "Inga tillgångar är tilldelade den här kontakten.",
     "sharedWorkspaces": "Delade arbetsplatser",
-    "memberCount": "{{count}} tillgångar"
+    "memberCount_one": "{{count}} tillgång",
+    "memberCount_other": "{{count}} tillgångar"
   },
   "assetGroups": {
     "kinds": {

@@ -1771,7 +1771,8 @@
     "title": "⟦Ȧşşḗŧş⟧",
     "empty": "⟦Ƞȯ ȧşşḗŧş ȧşşīɠƞḗḓ ŧȯ ŧħīş ƈȯƞŧȧƈŧ.⟧",
     "sharedWorkspaces": "⟦Şħȧřḗḓ ẇȯřķşƥȧƈḗş⟧",
-    "memberCount": "⟦{{count}} ȧşşḗŧş⟧"
+    "memberCount_one": "⟦{{count}} ȧşşḗŧ⟧",
+    "memberCount_other": "⟦{{count}} ȧşşḗŧş⟧"
   },
   "assetGroups": {
     "kinds": {

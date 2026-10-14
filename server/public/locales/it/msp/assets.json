@@ -1771,7 +1771,8 @@
     "title": "Asset",
     "empty": "Nessun asset assegnato a questo contatto.",
     "sharedWorkspaces": "Postazioni condivise",
-    "memberCount": "{{count}} asset"
+    "memberCount_one": "{{count}} asset",
+    "memberCount_other": "{{count}} asset"
   },
   "assetGroups": {
     "kinds": {

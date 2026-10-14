@@ -2926,6 +2926,12 @@
         "label": "Perfil de faturamento",
         "clientDefault": "Padrão do cliente",
         "updateFailed": "Falha ao atualizar o perfil de faturamento"
+      },
+      "errors": {
+        "invalidPeopleMode": "Esse não é um modo de pessoas válido.",
+        "billingProfileUnavailable": "Esse perfil de faturamento não está disponível para este cliente.",
+        "mappingNotFound": "Esse vínculo não existe mais. Atualize a página e tente novamente.",
+        "forbidden": "Você não tem permissão para alterar isso."
       }
     },
     "sso": {

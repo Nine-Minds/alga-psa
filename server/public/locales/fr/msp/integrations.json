@@ -2926,6 +2926,12 @@
         "label": "Profil de facturation",
         "clientDefault": "Valeur par défaut du client",
         "updateFailed": "Échec de la mise à jour du profil de facturation"
+      },
+      "errors": {
+        "invalidPeopleMode": "Ce mode de gestion des personnes n'est pas valide.",
+        "billingProfileUnavailable": "Ce profil de facturation n'est pas disponible pour ce client.",
+        "mappingNotFound": "Cette association n'existe plus. Actualisez la page et réessayez.",
+        "forbidden": "Vous n'avez pas l'autorisation de modifier cela."
       }
     },
     "sso": {

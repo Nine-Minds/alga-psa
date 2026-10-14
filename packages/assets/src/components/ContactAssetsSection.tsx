@@ -92,7 +92,11 @@ export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { con
                 <span className="flex-shrink-0 text-xs text-[rgb(var(--color-text-500))]">
                   {[
                     group.location_name,
-                    t('contactAssets.memberCount', { defaultValue: '{{count}} assets', count: group.member_count ?? 0 }),
+                    t('contactAssets.memberCount', {
+                      defaultValue_one: '{{count}} asset',
+                      defaultValue_other: '{{count}} assets',
+                      count: group.member_count ?? 0,
+                    }),
                   ].filter(Boolean).join(' · ')}
                 </span>
               </div>

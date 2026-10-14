@@ -1,5 +1,6 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
@@ -89,7 +90,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   const handleSync = () => {
     startTransition(async () => {
       const result = await syncHuntressOrganizationMappings();
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.sync', { defaultValue: 'Sync failed' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.sync', { defaultValue: 'Sync failed' })));
       await load();
       onMappingChanged?.();
     });
@@ -104,7 +105,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         client_id: clientId,
         default_contact_id: null,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       await load();
       onMappingChanged?.();
     });
@@ -115,7 +116,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       const result = await updateHuntressOrganizationMapping(mappingId, {
         default_contact_id: contactId || null,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateContact', { defaultValue: 'Failed to update default contact' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateContact', { defaultValue: 'Failed to update default contact' })));
       await load();
       onMappingChanged?.();
     });
@@ -127,7 +128,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         contact_assignment_mode: mode,
       });
       if (!result.success) {
-        setError(result.error ?? t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' })));
       }
       await load();
       onMappingChanged?.();
@@ -141,7 +142,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         billing_profile_id: billingProfileId,
       });
       if (!result.success) {
-        setError(result.error ?? t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
       }
       await load();
       onMappingChanged?.();
@@ -155,7 +156,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       const result = await updateHuntressOrganizationMapping(mappingId, {
         auto_create_tickets: enabled,
       });
-      if (!result.success) setError(result.error ?? t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      if (!result.success) setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.huntress.errors.updateMapping', { defaultValue: 'Failed to update mapping' })));
       await load();
       onMappingChanged?.();
     });

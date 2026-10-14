@@ -1,5 +1,6 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
 import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
@@ -157,7 +158,7 @@ export default function LevelIoIntegrationSettings() {
         setSuccess(t('integrations.rmm.levelio.success.configurationSaved', { defaultValue: 'Level configuration saved' }));
         await refresh(true);
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' })));
       }
     });
   };
@@ -170,7 +171,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.connectionTestSucceeded', { defaultValue: 'Connection to Level succeeded' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' })));
       }
       await refresh(true);
     });
@@ -184,7 +185,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.disconnected', { defaultValue: 'Level integration disconnected' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' })));
       }
       await refresh(true);
     });
@@ -262,7 +263,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -276,7 +277,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: contactId || null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -299,7 +300,7 @@ export default function LevelIoIntegrationSettings() {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({ mappingId, contactAssignmentMode: mode });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -311,7 +312,7 @@ export default function LevelIoIntegrationSettings() {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({ mappingId, billingProfileId });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
         return;
       }
       await refresh(true);

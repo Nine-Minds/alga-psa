@@ -1771,7 +1771,8 @@
     "title": "Ativos",
     "empty": "Nenhum ativo atribuído a este contato.",
     "sharedWorkspaces": "Espaços compartilhados",
-    "memberCount": "{{count}} ativos"
+    "memberCount_one": "{{count}} ativo",
+    "memberCount_other": "{{count}} ativos"
   },
   "assetGroups": {
     "kinds": {

@@ -1771,7 +1771,8 @@
     "title": "Assets",
     "empty": "Er zijn geen assets aan dit contact toegewezen.",
     "sharedWorkspaces": "Gedeelde werkplekken",
-    "memberCount": "{{count}} assets"
+    "memberCount_one": "{{count}} asset",
+    "memberCount_other": "{{count}} assets"
   },
   "assetGroups": {
     "kinds": {

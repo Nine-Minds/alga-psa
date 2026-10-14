@@ -1771,7 +1771,8 @@
     "title": "Assets",
     "empty": "Diesem Kontakt sind keine Assets zugewiesen.",
     "sharedWorkspaces": "Gemeinsame Arbeitsplätze",
-    "memberCount": "{{count}} Assets"
+    "memberCount_one": "{{count}} Asset",
+    "memberCount_other": "{{count}} Assets"
   },
   "assetGroups": {
     "kinds": {

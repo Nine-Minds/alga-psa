@@ -237,8 +237,13 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
     {
       title: t('clientTabs.assets.groups.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
-      render: (value: string) => (
-        <span className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]">{value}</span>
+      render: (value: string, row: AssetGroup) => (
+        <span
+          id={`client-asset-group-row-${row.group_id}`}
+          className="font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))]"
+        >
+          {value}
+        </span>
       )
     },
     {

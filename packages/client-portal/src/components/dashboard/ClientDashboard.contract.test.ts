@@ -64,8 +64,11 @@ describe('ClientDashboard quick-action distribution contract', () => {
     // "Active", so a device in a tenant status read "Aktiv" on the dashboard
     // and "In repair" in the device list.
     expect(source).toContain("import { portalAssetStatusLabel, portalAssetStatusVariant } from '../assets/portalAssetStatus';");
-    expect(source).toContain('portalAssetStatusLabel(t, d.status)');
-    expect(source).toContain('portalAssetStatusVariant(d.status)');
+    // With the registry row the summary carries, so a tenant's own deployable
+    // status reads green here and on the devices page.
+    expect(source).toContain('portalAssetStatusLabel(t, d.status, statusRow?.label)');
+    expect(source).toContain('portalAssetStatusVariant(d.status, statusRow?.kind)');
+    expect(source).toContain('listClientAssets({ limit: DASHBOARD_PREVIEW_DEVICES })');
     expect(source).not.toContain("d.status !== 'inactive'");
     expect(source).not.toContain('dashboard.devices.active');
     expect(source).not.toContain('dashboard.devices.inactive');

@@ -2926,6 +2926,12 @@
         "label": "Profil rozliczeniowy",
         "clientDefault": "Domyślny klienta",
         "updateFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
+      },
+      "errors": {
+        "invalidPeopleMode": "To nieprawidłowy tryb osób.",
+        "billingProfileUnavailable": "Ten profil rozliczeniowy nie jest dostępny dla tego klienta.",
+        "mappingNotFound": "To powiązanie już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+        "forbidden": "Nie masz uprawnień, aby to zmienić."
       }
     },
     "sso": {

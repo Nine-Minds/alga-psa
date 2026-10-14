@@ -1771,7 +1771,8 @@
     "title": "Actifs",
     "empty": "Aucun actif attribué à ce contact.",
     "sharedWorkspaces": "Espaces partagés",
-    "memberCount": "{{count}} actifs"
+    "memberCount_one": "{{count}} actif",
+    "memberCount_other": "{{count}} actifs"
   },
   "assetGroups": {
     "kinds": {
