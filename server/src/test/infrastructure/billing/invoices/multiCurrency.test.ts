@@ -254,7 +254,8 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contract_line_service_fixed_config').insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: 10000
+      base_rate: 10000,
+      base_rate_basis: 'share',
     });
     await tenantTable(context, 'contract_line_services').insert({
       tenant: context.tenantId,
@@ -484,7 +485,8 @@ describe('Multi-Currency Billing', () => {
     await tenantTable(context, 'contract_line_service_fixed_config').insert({
       config_id: legacyConfigId,
       tenant: context.tenantId,
-      base_rate: 5000
+      base_rate: 5000,
+      base_rate_basis: 'share',
     });
     await tenantTable(context, 'contract_line_services').insert({
       tenant: context.tenantId,

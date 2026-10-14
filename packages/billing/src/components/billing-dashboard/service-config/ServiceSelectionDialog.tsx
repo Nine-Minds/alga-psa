@@ -171,7 +171,8 @@ export function ServiceSelectionDialog({
                 base_rate: resolvedRate,
                 unit_of_measure: selectedService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
               }
-            : { base_rate: resolvedRate };
+            // A Fixed member's authoring default is the catalog price per unit.
+            : { base_rate: resolvedRate, base_rate_basis: 'per_unit' as const };
 
         return {
           service: selectedService,

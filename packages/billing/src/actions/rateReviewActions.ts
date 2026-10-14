@@ -448,7 +448,7 @@ export const resetContractLineRateToStandard = withAuth(
         // resetting the bundle rate must not reprice seats in place.
         await trx.raw(
           `UPDATE contract_line_service_fixed_config AS clsfc
-           SET base_rate = NULL, rate_provenance = 'inherited'
+           SET base_rate = NULL, base_rate_basis = NULL, rate_provenance = 'inherited'
            FROM contract_line_service_configuration AS clsc
            WHERE clsc.config_id = clsfc.config_id
              AND clsc.tenant = clsfc.tenant

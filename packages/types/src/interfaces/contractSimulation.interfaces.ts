@@ -58,6 +58,12 @@ export interface ScenarioFixedConfig {
    */
   base_rate: number | null;
   /**
+   * What `base_rate` means: 'per_unit' (× quantity) or 'share' (the member's
+   * slice of the line fee, as-is). Absent on a non-null rate reads as per_unit.
+   * Interpreted by `fixedMemberRate` in shared/billingClients.
+   */
+  base_rate_basis?: "per_unit" | "share" | null;
+  /**
    * 'unit' bills quantity × unit rate (zero bills zero) through the shared
    * fixed-charge path; absent/'bundle' keeps allocation semantics.
    */

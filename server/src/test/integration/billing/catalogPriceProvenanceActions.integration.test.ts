@@ -379,6 +379,7 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
       tenant: context.tenantId,
       config_id: configId,
       base_rate: 5000,
+      base_rate_basis: 'share',
       rate_provenance: 'unreviewed'
     });
 
@@ -394,7 +395,7 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     await expect(
       context.db('contract_line_service_fixed_config')
         .where({ tenant: context.tenantId, config_id: configId })
-        .update({ rate_provenance: 'custom', base_rate: null }),
+        .update({ rate_provenance: 'custom', base_rate: null, base_rate_basis: null }),
     ).rejects.toThrow(/check/i);
     await context.db.raw('ROLLBACK TO SAVEPOINT t14_member_custom_without_rate');
   });

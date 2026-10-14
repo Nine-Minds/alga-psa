@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveClonedRate,
+  memberContributionCents,
   resolveFixedLineRate,
   selectActivePricingSchedule,
   selectEffectiveServicePrice,
@@ -384,6 +385,60 @@ describe("resolveFixedLineRate (T15 equivalence matrix)", () => {
       provenance: "unreviewed",
       source: "line_override",
     });
+  });
+});
+
+describe("resolveFixedLineRate — base_rate_basis (card c150b8de)", () => {
+  const members = (basis: "per_unit" | "share", second: number) => [
+    service({ service_id: "svc-a", config_id: "cfg-a", configuration_quantity: 1, service_base_rate: 225, base_rate_provenance: "custom", base_rate_basis: basis }),
+    service({ service_id: "svc-b", config_id: "cfg-b", configuration_quantity: 3, service_base_rate: second, base_rate_provenance: "custom", base_rate_basis: basis }),
+  ];
+
+  it("inherited share members (225 q1, 675 q3) derive 900, not 2,250", () => {
+    const result = resolveFixedLineRate({ ...base, planServices: members("share", 675), catalogPrices: [] });
+    expect(result.line).toMatchObject({ rateCents: 900, source: "derived" });
+    expect(result.perService.get("cfg-b")).toMatchObject({ rateCents: 675, basis: "share", source: "service_override" });
+  });
+
+  it("inherited per-unit members (225 q1, 225 q3) derive 900", () => {
+    const result = resolveFixedLineRate({ ...base, planServices: members("per_unit", 225), catalogPrices: [] });
+    expect(result.line).toMatchObject({ rateCents: 900, source: "derived" });
+    expect(result.perService.get("cfg-b")).toMatchObject({ rateCents: 225, basis: "per_unit" });
+  });
+
+  it("a NULL basis on a stored rate reads as per_unit", () => {
+    const result = resolveFixedLineRate({
+      ...base,
+      planServices: [service({ service_base_rate: 225, base_rate_provenance: "custom", configuration_quantity: 3 })],
+      catalogPrices: [],
+    });
+    expect(result.line.rateCents).toBe(675);
+  });
+
+  it("reports basis for every member source; non-fixed-config sources are per_unit", () => {
+    const catalog = resolveFixedLineRate({ ...base, planServices: [service({})], catalogPrices: [price()] });
+    expect(catalog.perService.get("cfg-a")).toMatchObject({ source: "catalog", basis: "per_unit" });
+    const override = resolveFixedLineRate({
+      ...base,
+      planServices: [service({ configuration_custom_rate: 700 })],
+      catalogPrices: [],
+    });
+    expect(override.perService.get("cfg-a")).toMatchObject({ source: "config_override", basis: "per_unit" });
+    const seat = resolveFixedLineRate({
+      ...base,
+      planServices: [service({ service_base_rate: 500, base_rate_provenance: "custom", base_rate_basis: "share", pricing_basis: "unit" })],
+      catalogPrices: [],
+    });
+    expect(seat.perService.get("cfg-a")).toMatchObject({ source: "service_override", basis: "per_unit" });
+    const unrated = resolveFixedLineRate({ ...base, planServices: [service({})], catalogPrices: [] });
+    expect(unrated.perService.get("cfg-a")).toMatchObject({ source: null, basis: "per_unit" });
+  });
+
+  it("memberContributionCents applies the basis to the quantity", () => {
+    const row = service({ configuration_quantity: 3 });
+    expect(memberContributionCents({ rateCents: 225, basis: "per_unit" }, row)).toBe(675);
+    expect(memberContributionCents({ rateCents: 675, basis: "share" }, row)).toBe(675);
+    expect(memberContributionCents({ rateCents: null, basis: "share" }, row)).toBeNull();
   });
 });
 

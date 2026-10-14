@@ -401,6 +401,111 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
     }, HOOK_TIMEOUT);
   });
 
+  describe('inherited line: base_rate has one meaning per basis (c150b8de)', () => {
+    async function createWizardLine(currency: Currency, label: string, fee: number, quantities: [number, number]) {
+      setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+      const { fixture, clientId, cycleId } = await createBillableClient(`${label} Client`, currency);
+      const { serviceA, serviceB } = await createZeroPricedServices(fixture, label);
+      const created = unwrap(
+        await createClientContractFromWizard({
+          contract_name: label,
+          description: label,
+          client_id: clientId,
+          start_date: PREVIOUS_START,
+          end_date: null,
+          billing_frequency: 'monthly',
+          currency_code: currency,
+          enable_proration: false,
+          fixed_base_rate: fee,
+          fixed_services: [
+            { service_id: serviceA, quantity: quantities[0] },
+            { service_id: serviceB, quantity: quantities[1] },
+          ],
+          hourly_services: [],
+          usage_services: [],
+          po_required: false,
+        } as any),
+      );
+      return {
+        clientId,
+        cycleId,
+        serviceA,
+        serviceB,
+        contractId: created.contract_id as string,
+        contractLineId: created.contract_line_id as string,
+      };
+    }
+
+    it('symptom 1: an inherited per-unit 225x1 + 225x3 line bills 225/675, not 450/450', async () => {
+      const w = await createWizardLine('EUR', 'Inherited per-unit', 90000, [1, 3]);
+      // Re-state the line as inherited with a per-unit rate on each member.
+      await table('contract_lines')
+        .where({ contract_line_id: w.contractLineId })
+        .update({ custom_rate: null, rate_provenance: 'inherited' });
+      await db.raw(
+        `UPDATE contract_line_service_fixed_config f
+            SET base_rate = 22500, base_rate_basis = 'per_unit'
+           FROM contract_line_service_configuration c
+          WHERE c.config_id = f.config_id AND c.tenant = f.tenant
+            AND c.tenant = ? AND c.contract_line_id = ?`,
+        [tenantId, w.contractLineId],
+      );
+      await syncPeriods(w.contractLineId);
+
+      const { result, fixed } = await fixedChargesFor(w.clientId, w.cycleId);
+      expect(result.fixedLineBlockers).toBeUndefined();
+      expect(fixed.find((charge) => charge.serviceId === w.serviceA)?.total).toBe(22500);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
+      expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
+
+      const generated = unwrap(await generateInvoice(w.cycleId)) as any;
+      const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
+      expect(Number(persisted.subtotal)).toBe(90000);
+      expect(persisted.currency_code).toBe('EUR');
+      // Fixed lines consolidate into one invoice item; the per-service split lives in its details.
+      const details = await table('invoice_charge_details as d')
+        .join('invoice_charges as i', function () {
+          this.on('i.item_id', 'd.item_id').andOn('i.tenant', 'd.tenant');
+        })
+        .where('i.invoice_id', generated.invoice_id)
+        .join('invoice_charge_fixed_details as f', function () {
+          this.on('f.item_detail_id', 'd.item_detail_id').andOn('f.tenant', 'd.tenant');
+        })
+        .select('d.service_id', 'f.allocated_amount');
+      const byService = new Map(details.map((row: any) => [row.service_id, Number(row.allocated_amount)]));
+      expect(byService.get(w.serviceA)).toBe(22500);
+      expect(byService.get(w.serviceB)).toBe(67500);
+    }, HOOK_TIMEOUT);
+
+    it('symptom 2: a wizard line switched to inherited bills the line total, not shares x quantity', async () => {
+      const w = await createWizardLine('USD', 'Wizard then inherited', 90000, [1, 3]);
+      const { default: ContractLineFixedConfig } = await import('@alga-psa/billing/models/contractLineFixedConfig');
+      // The fixed-config editor clears the line rate; the members keep their shares.
+      await new ContractLineFixedConfig(db, tenantId).update(w.contractLineId, { base_rate: null });
+      const line = await table('contract_lines').where({ contract_line_id: w.contractLineId }).first();
+      expect(line.custom_rate).toBeNull();
+      expect(line.rate_provenance).toBe('inherited');
+      const members = await table('contract_line_service_configuration as c')
+        .join('contract_line_service_fixed_config as f', function () {
+          this.on('f.config_id', 'c.config_id').andOn('f.tenant', 'c.tenant');
+        })
+        .where('c.contract_line_id', w.contractLineId)
+        .select('f.base_rate', 'f.base_rate_basis');
+      expect(members.map((row: any) => row.base_rate_basis)).toEqual(['share', 'share']);
+      await syncPeriods(w.contractLineId);
+
+      const { fixed } = await fixedChargesFor(w.clientId, w.cycleId);
+      expect(sum(fixed.map((charge) => charge.total))).toBe(90000);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceA)?.total).toBe(22500);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
+      expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
+
+      const generated = unwrap(await generateInvoice(w.cycleId)) as any;
+      const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
+      expect(Number(persisted.subtotal)).toBe(90000);
+    }, HOOK_TIMEOUT);
+  });
+
   describe('Quick Add preset', () => {
     it('invoices the full fixed rate, allocated by quantity (no per-service shares are stored), matching estimated monthly', async () => {
       setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });

@@ -1285,6 +1285,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: configId,
         tenant: context.tenantId,
         base_rate: options.unitRateCents,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit'
       });
       return { serviceId, configId };
@@ -1328,7 +1329,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
     });
     it('mixed per-service pricing and catalog fallback match the invoice calculation', async () => {
       const setup = await setupSeatLine({year: 2023, month: 2, day: 1});
-      await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.standard.configId}).update({base_rate: null});
+      await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.standard.configId}).update({base_rate: null, base_rate_basis: null});
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.basic.configId}).update({pricing_basis: null});
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.server.configId}).update({pricing_basis: 'bundle'});
       await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: setup.contractLineId}).update({custom_rate: 90000});
@@ -1376,6 +1377,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           config_id: configId,
           tenant: context.tenantId,
           base_rate: 10000,
+          base_rate_basis: 'per_unit',
           pricing_basis: 'unit'
         });
       }
@@ -1691,6 +1693,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: configId,
         tenant: context.tenantId,
         base_rate: options.baseRate ?? 0,
+        base_rate_basis: 'share',
         pricing_basis: 'bundle',
       });
       return { serviceId, configId };
@@ -3433,6 +3436,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: seatConfigId,
         tenant: context.tenantId,
         base_rate: 10000,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit',
       });
       await assignContractLineToClient(context, seatLineId, {

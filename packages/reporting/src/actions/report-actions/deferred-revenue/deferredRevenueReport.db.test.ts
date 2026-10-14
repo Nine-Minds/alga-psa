@@ -167,6 +167,7 @@ async function seedFixtures(trx: Knex.Transaction): Promise<{
     config_id: fixedConfigMonthlyId,
     tenant: TENANT,
     base_rate: 100000,
+    base_rate_basis: 'share',
     created_at: now,
     updated_at: now,
   });

@@ -138,7 +138,7 @@ describe('Contract service catalog-rate prefill persistence', () => {
       1,
       resolved.rate as number,
       'Fixed',
-      { base_rate: resolved.rate as number }
+      { base_rate: resolved.rate as number, base_rate_basis: 'per_unit' }
     );
     expect(isActionError(configId)).toBe(false);
     expect(typeof configId).toBe('string');
@@ -159,6 +159,8 @@ describe('Contract service catalog-rate prefill persistence', () => {
       .first();
     expect(Number(fixedConfig.base_rate)).toBe(18000);
     expect(Number.isInteger(Number(fixedConfig.base_rate))).toBe(true);
+    // The authoring default is the catalog price per unit.
+    expect(fixedConfig.base_rate_basis).toBe('per_unit');
   });
 
   it('T009: rejects a cross-tenant service and writes no configuration row for the target line', async () => {
