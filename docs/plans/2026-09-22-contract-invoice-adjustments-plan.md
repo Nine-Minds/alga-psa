@@ -32,7 +32,7 @@ pending.
 
 ### Supervised live acceptance procedure
 
-Candidate: `a42d44e0de` (replace with the full pushed source commit SHA after publication). An operator must
+Candidate: `a42d44e0deb4bb79c04bf723ae33637ffee3078e`. An operator must
 roll this exact SHA to the supervised review service on canonical port 23185;
 verify its running build stamp equals the candidate before testing. Keep the app
 server stopped during implementation and do not patch or deploy around its

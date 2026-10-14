@@ -182,7 +182,7 @@ Behavioral verification on the repair source:
 
 ## Required live handoff
 
-Repair candidate: `a42d44e0de` (`fix(billing): serialize auth failures for invoice reads`). The supervised operator must roll that exact
+Repair candidate: `a42d44e0deb4bb79c04bf723ae33637ffee3078e` (`fix(billing): serialize auth failures for invoice reads`). The supervised operator must roll that exact
 candidate to canonical 23185 and verify the running build stamp before
 acceptance. Run independent 3185 and 23185 login, save, reload, and reselection
 checks; in each pane inspect same-origin `/api/auth/session`. Use an owned draft
@@ -223,7 +223,7 @@ detail profile reads and source-quote preview reads ignore late failures from a
 previous invoice selection. Read retry remains explicit and does not invoke an
 invoice mutation.
 
-Latest verification on source candidate `a42d44e0de`:
+Latest verification on source candidate `a42d44e0deb4bb79c04bf723ae33637ffee3078e`:
 
 - Billing action/editor/lifecycle and auth-boundary suites: 47 passed across
   six test files. Actual exported actions were invoked with `withAuth` rejecting
