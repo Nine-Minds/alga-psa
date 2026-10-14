@@ -131,6 +131,64 @@ intended app services. Use the canonical hostname for both ports.
 
 Live acceptance remains pending until these checks pass on the repaired head.
 
+## Mitigation round 5 — correlated safe diagnostics (2026-10-14)
+
+The mounted invoice read and edit repairs described above were re-audited on
+the current branch. Capability, client/service initialization, invoice details
+and line items, billing profile and location attribution, preview view model,
+PO summary, resolved template, annotations, and converted-quote reads all
+classify serialized authentication failures for explicit sign-in/retry. Their
+action boundaries preserve permission/lifecycle results, and read retries do
+not submit mutations. The retry-identity regression covers both read-completion
+orders, retains collapsed additions and pending removals over repeated retries,
+ignores the old invoice's late response after reselection, and preserves the
+explicit save operation ID. Existing post-commit refresh handling remains
+classified as saved.
+
+One diagnostics gap was corrected: JWT/Auth.js decoder exceptions had been
+logged as raw error objects. Decoder fallback now records only safe reason codes
+(`edge_session_decode_failed`, `full_session_decode_failed`) with the validated
+request/correlation ID supplied by the existing logger. Behavioral tests assert
+these reasons, durable revocation and lookup-unavailable reasons, and verify
+that cookie/error payload text is absent from captured logs. This describes
+observable rejection stages; it does not identify why the runtime session
+became empty.
+
+Fresh-source verification on this mitigation round:
+
+- `packages/auth`: `npx vitest run src/lib/getSession.test.ts
+  src/lib/session.test.ts` — 16 passed; auth typecheck and package build passed.
+- `packages/billing`: six focused editor/action/capability/attribution/
+  lifecycle files — 60 passed; billing typecheck and package build passed.
+- `server`: `InvoicePreviewPanel.test.tsx` — 6 passed.
+- `npm run test:i18n` — passed; 10 locales checked, no errors/warnings, all
+  50 localization tooling tests passed, and no newly unwired components.
+- Changed-file auth ESLint — 0 errors, 5 pre-existing warnings (`any` in test
+  fixtures and global `process` recognition in this file).
+- The full server typecheck and Next production build were not run. Host
+  inspection showed 7.7 GiB free disk and 3.2 GiB free swap; no isolated build
+  output was created. No app server was started or restarted.
+
+Runtime and launcher evidence remain incomplete. The retained capture shows an
+empty same-origin `/api/auth/session` after navigation while QA identity still
+rendered, two Open Review timeouts during the same interval (causality
+unproven), and a later direct 23185 browser pane serving build `4571290674`.
+The actual Open Review pane/session and launcher handoff were not captured, and
+no launcher source change was made. The next supervised run must record the
+effective origin, environment mode, configured cookie name/options and cookie
+presence (never its value), request/correlation ID, safe rejection reason, and
+the ordered login/save/reload/reselect/separate-review-login sequence. It must
+separately classify hub availability, pane routing/handoff, app readiness, and
+application authentication. Direct browser login is not launcher verification.
+
+The exact current candidate must be deployed and its build stamp verified by
+the supervised operator before live acceptance. Repeat controlled expiry and
+spontaneous navigation-loss checks on canonical 3185 and 23185, same-operation
+save/retry monetary parity, fresh PDF and portal true-up descriptions, and
+lifecycle/export protections. Preserve `INV-000063` and delivered `SMOKE457`
+fixtures. Until those checks pass, implementation verification is complete but
+runtime acceptance remains pending.
+
 ## Read-path recovery repair round — 2026-10-14
 
 The repair adds an auth-only recovery state to capability loading, invoice line

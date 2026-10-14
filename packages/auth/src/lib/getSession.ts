@@ -72,7 +72,7 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
       await logSessionRejection(`durable_session_${rejectionReason}`);
       return null;
     }
-  } catch (error) {
+  } catch {
     await logSessionRejection('durable_session_lookup_unavailable');
     logger.error('[auth] Session revocation check failed closed');
     return null;
@@ -91,12 +91,12 @@ async function decodeSession(): Promise<Session | null> {
     // Edge auth can legitimately return null (or fail) in dev / after hot reloads.
     // Fall back to the full Node.js helper which is more tolerant.
     return await fullAuth();
-  } catch (error) {
-    logger.error('Failed to retrieve auth session via edge auth helper; falling back to full auth', error);
+  } catch {
+    await logSessionRejection('edge_session_decode_failed');
     try {
       return await fullAuth();
-    } catch (fallbackError) {
-      logger.error('Failed to retrieve auth session via full auth helper', fallbackError);
+    } catch {
+      await logSessionRejection('full_session_decode_failed');
       return null;
     }
   }
@@ -133,19 +133,19 @@ async function decodeSessionWithFullAuthFirst(): Promise<Session | null> {
     if (process.env.NODE_ENV !== 'production') {
       try {
         return await edgeAuth();
-      } catch (edgeError) {
-        logger.error('Dev fallback: failed to retrieve auth session via edge auth helper', edgeError);
+      } catch {
+        await logSessionRejection('edge_session_decode_failed');
       }
     }
 
     return null;
-  } catch (error) {
-    logger.error('Failed to retrieve auth session with revocation check', error);
+  } catch {
+    await logSessionRejection('full_session_decode_failed');
     if (process.env.NODE_ENV !== 'production') {
       try {
         return await edgeAuth();
-      } catch (edgeError) {
-        logger.error('Dev fallback: failed to retrieve auth session via edge auth helper', edgeError);
+      } catch {
+        await logSessionRejection('edge_session_decode_failed');
       }
     }
     return null;

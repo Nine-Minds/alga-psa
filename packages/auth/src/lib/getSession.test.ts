@@ -8,8 +8,9 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
+const requestHeaders = vi.hoisted(() => ({ current: new Headers({ 'x-request-id': 'req-safe-1' }) }));
 vi.mock('next/headers', () => ({
-  headers: vi.fn(async () => new Headers({ 'x-request-id': 'req-safe-1' })),
+  headers: vi.fn(async () => requestHeaders.current),
 }));
 
 vi.mock('../nextauth/edge-auth', () => ({
@@ -31,6 +32,7 @@ import { getSession, getSessionWithRevocationCheck } from './getSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import logger from '@alga-psa/core/logger';
 
 const trackedSession = {
   user: {
@@ -49,6 +51,7 @@ beforeEach(() => {
   vi.mocked(fullAuth).mockReset();
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
   vi.mocked(UserSession.getRejectionReason).mockReset();
+  requestHeaders.current = new Headers({ 'x-request-id': 'req-safe-1' });
 });
 
 afterEach(() => {
@@ -81,6 +84,9 @@ describe('getSession', () => {
     vi.mocked(UserSession.getRejectionReason).mockResolvedValue('revoked');
 
     await expect(getSession()).resolves.toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'durable_session_revoked', requestId: 'req-safe-1',
+    });
   });
 
   it('rejects a session with no tracked session identifier without querying the database', async () => {
@@ -107,6 +113,32 @@ describe('getSession', () => {
     vi.mocked(UserSession.getRejectionReason).mockRejectedValue(new Error('connection refused'));
 
     await expect(getSession()).resolves.toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'durable_session_lookup_unavailable', requestId: 'req-safe-1',
+    });
+  });
+
+  it('logs decode failure with correlation and a reason code without logging the rejected payload', async () => {
+    requestHeaders.current = new Headers({
+      'x-correlation-id': 'corr-safe-2',
+      cookie: 'authjs.session-token=never-log-this-cookie',
+    });
+    vi.mocked(edgeAuth).mockRejectedValue(new Error('never-log-this-decode-payload'));
+    vi.mocked(fullAuth).mockRejectedValue(new Error('never-log-this-fallback-payload'));
+
+    await expect(getSession()).resolves.toBeNull();
+
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'edge_session_decode_failed', requestId: 'corr-safe-2',
+    });
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', {
+      reason: 'full_session_decode_failed', requestId: 'corr-safe-2',
+    });
+    const serializedLogs = JSON.stringify([
+      vi.mocked(logger.warn).mock.calls,
+      vi.mocked(logger.error).mock.calls,
+    ]);
+    expect(serializedLogs).not.toContain('never-log-this');
   });
 
   it('still enforces revocation on the full-auth fallback path', async () => {
