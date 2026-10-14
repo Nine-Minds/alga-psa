@@ -1,5 +1,59 @@
 # Contract invoice adjustments
 
+## Takeover: recover persisted rows with their revision (2026-10-14)
+
+This supersedes round 7's initial-recovery behavior. At `6dbae119c5`, recovery
+advanced the revision but kept manual rows from the old list projection. Save
+submits all existing manual rows, so it could overwrite another operator's
+amount or submit a row that had been deleted. Two rendered regressions reproduced
+this with expanded and collapsed additions before the fix (2 failed, 29 passed).
+
+Persisted rows now become editable only after `getInvoiceAdjustmentSnapshot`
+loads their revision and charges together. Until then, operators can prepare
+new lines while the existing authentication-recovery message remains visible.
+The first recovered snapshot appends current persisted rows after local drafts,
+preserving expanded indices, collapsed values, and operation identity. Later
+recovery keeps an established revision; a concurrent writer still causes a
+server conflict. Successful saves also establish the editing baseline.
+
+The reselection test saves, checks the parent summary, deselects, deliberately
+reselects stale list data, and saves at the current snapshot revision. The
+preview callback test covers the parent list refresh. No lifecycle or server
+optimistic-write checks were weakened.
+
+Runtime acceptance remains pending. During the authorized live step, deploy the
+candidate to the registered **review-app on 23185** and verify both its serving
+process/build stamp and the exact Open Review pane/session. The development
+service is **dev-server on 3185**; restarting it does not update production
+review. The last retained 457129 observation is historical. Repeat save,
+reselection, initial and established auth recovery, PDF/portal, lifecycle, and
+safe correlated runtime-auth checks on the deployed revision. The spontaneous
+session-loss cause remains unknown. Do not reset delivered fixtures or interpret
+old artifact evidence as proof for this candidate. No app server was started
+or restarted during this takeover.
+
+Validation: 75 tests passed across seven focused suites (31 editor, 7 preview,
+7 lifecycle, and 30 related line-item/total/auth-action/card tests). The final
+editor rerun includes stale-list reselection. Billing typecheck (8 GiB), server
+typecheck (11 GiB), billing tsup build, and `git diff --check` passed. Targeted
+ESLint returned 0 errors and 101 warnings. Commands, from `packages/billing`:
+
+```sh
+npx vitest run src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx tests/invoiceAdjustmentEditability.test.ts
+npx vitest run src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx src/components/billing-dashboard/manualInvoiceTotals.test.ts src/components/billing-dashboard/LineItem.test.tsx tests/invoiceModification.manualRecurringGuard.test.ts
+NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck
+npm run build
+```
+
+Server check, from `server`:
+`NODE_OPTIONS=--max-old-space-size=11264 npx tsc --noEmit`.
+
+Full production build was not retried: the previous 8 GiB attempt exhausted its heap, and the takeover
+host had only 5.9 GiB free disk (95% used), 6.5 GiB free RAM (10 GiB available),
+and 6 GiB free swap at the capacity check. This remains an outstanding build
+gate; the package build is not a substitute.
+
+
 ## Repair round 7: recovery adopts only a missing baseline (2026-10-14)
 
 Code candidate: `4c26c9ef43` (PR #3499). If the initial authoritative editor

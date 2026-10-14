@@ -305,53 +305,14 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
   // State specifically for the manual items being edited
-  const [items, setItems] = useState<EditableInvoiceItem[]>(() => {
-    const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
-    const normalizeHeaderAlias = (it: any) => ({
-      ...it,
-      is_bundle_header: it?.is_bundle_header ?? (it as any)[LEGACY_HEADER_KEY]
-    });
-    const initialManualItems = invoice?.invoice_charges?.filter(item => item.is_manual) || [];
-    const mappedItems = initialManualItems.map((item): EditableInvoiceItem => {
-      const i = normalizeHeaderAlias(item as any);
-      return ({
-        item_id: item.item_id,
-        invoice_id: item.invoice_id,
-        service_id: item.service_id || '',
-        quantity: item.quantity,
-        description: item.description,
-        rate: item.unit_price, // Use unit_price for editing rate
-        is_discount: !!item.is_discount,
-        discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
-        discount_percentage: item.discount_percentage,
-        applies_to_item_id: item.applies_to_item_id,
-        applies_to_service_id: item.applies_to_service_id,
-        client_contract_id: item.client_contract_id,
-        contract_name: item.contract_name,
-        is_bundle_header: (i as any).is_bundle_header,
-        parent_item_id: item.parent_item_id,
-        is_manual: true,
-        is_taxable: item.is_taxable, // Include is_taxable from the item
-        // Carried so the per-line tax treatment control can restore the chosen
-        // rate on reload; a non-taxable line keeps is_taxable=false and resolves
-        // to no rate regardless of its stored region.
-        tax_region: item.tax_region ?? undefined,
-        manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
-        location_id: item.location_id ?? null,
-        billing_profile_id: item.billing_profile_id ?? null,
-        is_manual_credit: item.is_manual_credit ?? false,
-        isExisting: true,
-        isRemoved: false,
-      });
-    });
-    // Ensure the default item gets a unique ID if added
-    return mappedItems.length > 0 ? mappedItems : [{
-      ...baseDefaultItem,
-      service_id: defaultManualServiceId,
-      item_id: uuidv4(), // Add ID here
-      invoice_id: invoice?.invoice_id || ''
-    }];
-  });
+  // Persisted rows become editable only after a coherent snapshot loads. A
+  // list projection may be stale and must never become a write payload.
+  const [items, setItems] = useState<EditableInvoiceItem[]>(() => [{
+    ...baseDefaultItem,
+    service_id: defaultManualServiceId,
+    item_id: uuidv4(),
+    invoice_id: invoice?.invoice_id || '',
+  }]);
   // Expanded LineItem editors keep working state locally. Capture their latest
   // values in a ref so Save can synchronously snapshot them without collapsing
   // the row or relying on a just-scheduled React state update.
@@ -548,33 +509,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // fetch can finish. This prevents a late response from the previous
           // selection from being displayed or submitted against the new one.
           setCurrentInvoiceData(invoice);
-          const initialManualItems = invoice?.invoice_charges?.filter((item) => item.is_manual) ?? [];
-          setItems(initialManualItems.length ? initialManualItems.map((item) => ({
-            item_id: item.item_id,
-            invoice_id: item.invoice_id,
-            service_id: item.service_id || '',
-            quantity: item.quantity,
-            description: item.description,
-            rate: item.unit_price,
-            is_discount: Boolean(item.is_discount),
-            discount_type: item.is_discount ? (item.discount_type || 'fixed') as DiscountType : undefined,
-            discount_percentage: item.discount_percentage,
-            applies_to_item_id: item.applies_to_item_id,
-            applies_to_service_id: item.applies_to_service_id,
-            client_contract_id: item.client_contract_id,
-            contract_name: item.contract_name,
-            is_bundle_header: (item as any).is_bundle_header,
-            parent_item_id: item.parent_item_id,
-            is_manual: true,
-            is_taxable: item.is_taxable,
-            tax_region: item.tax_region ?? undefined,
-            manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
-            location_id: item.location_id ?? null,
-            billing_profile_id: item.billing_profile_id ?? null,
-            is_manual_credit: item.is_manual_credit ?? false,
-            isExisting: true,
-            isRemoved: false,
-          })) : [{ ...baseDefaultItem, service_id: defaultManualServiceId, item_id: uuidv4(), invoice_id: invoiceIdToFetch }]);
+          pendingLineItemDraftsRef.current.clear();
+          setExpandedItems(new Set());
+          setItems([{ ...baseDefaultItem, service_id: defaultManualServiceId, item_id: uuidv4(), invoice_id: invoiceIdToFetch }]);
         }
         // Recovery requests check access, not the operator's draft. Keep this
         // decision independent of which concurrent read succeeds or fails first.
@@ -602,21 +539,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           }
           const fetchedInvoice = fetchedSnapshot as unknown as InvoiceViewModel;
           const fetchedItems = fetchedInvoice.invoice_charges ?? [];
-          // A successful retry proves the read path is available again. Keep
-          // the existing editor snapshot because the operator may have edited
-          // rows while the session was unavailable.
-          if (preserveDraft) {
-            // If the initial authoritative read expired, the list projection
-            // was never a valid revision baseline. Adopt snapshot metadata but
-            // retain the operator's in-memory rows. For an established editor
-            // baseline, preserve its revision so a concurrent writer still
-            // produces the server's stale-revision conflict.
-            if (!invoiceReadBaselineEstablishedRef.current) {
-              setCurrentInvoiceData((previous) => previous?.invoice_id === fetchedInvoice.invoice_id
-                ? { ...previous, ...fetchedInvoice, invoice_charges: fetchedItems }
-                : previous);
-              invoiceReadBaselineEstablishedRef.current = true;
-            }
+          // Once rows have been exposed for editing, their revision stays
+          // fixed across recovery so a concurrent writer still causes conflict.
+          if (preserveDraft && invoiceReadBaselineEstablishedRef.current) {
             setReadAuthenticationExpired(false);
             return;
           }
@@ -671,13 +596,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               isRemoved: false,
             };
           });
-          // Ensure the default item gets a unique ID if added after fetch
-          setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
-            ...baseDefaultItem,
-            service_id: defaultManualServiceId,
-            item_id: uuidv4(), // Add ID here
-            invoice_id: invoiceIdToFetch
-          }]);
+          if (preserveDraft) {
+            // Before the first snapshot only new local rows are editable.
+            // Append persisted rows so expanded draft indices and local row
+            // identities stay stable, including invalid and collapsed drafts.
+            setItems((pendingItems) => [...pendingItems, ...mappedManualItems]);
+          } else {
+            setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
+              ...baseDefaultItem,
+              service_id: defaultManualServiceId,
+              item_id: uuidv4(),
+              invoice_id: invoiceIdToFetch,
+            }]);
+          }
 
         } catch (error) {
           if (!active) return;
@@ -1323,6 +1254,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           : { ...currentInvoiceData, invoice_charges: refreshedItems };
 
         // Update the state with the refreshed data
+        invoiceReadBaselineEstablishedRef.current = true;
         setCurrentInvoiceData(updatedInvoiceData);
         console.log('[Submit] Updated currentInvoiceData state with refreshed items');
 

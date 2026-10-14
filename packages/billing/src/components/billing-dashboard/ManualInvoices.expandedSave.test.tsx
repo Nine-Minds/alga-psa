@@ -64,7 +64,7 @@ const fillCharge = async (description: string) => {
 };
 
 describe('expanded invoice adjustment global save', () => {
-  it('saves, deselects, reselects, and saves again with the refreshed parent summary revision', async () => {
+  it('refreshes the parent summary and saves again after reselecting stale list data', async () => {
     let persisted: any[] = [];
     let serverInvoice: any = { ...invoice };
     let parentSummary: any = { ...invoice };
@@ -96,7 +96,9 @@ describe('expanded invoice adjustment global save', () => {
     expect(parentSummary.invoice_charges).toHaveLength(2);
 
     first.unmount(); // deselect after the first successful save
-    const second = renderDraft(parentSummary, refreshParentSummary); // reselect refreshed summary
+    // A delayed list render must also be safe: the coherent read supersedes
+    // this stale projection even though the parent refresh already completed.
+    const second = renderDraft(invoice, refreshParentSummary);
     await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledTimes(2));
     await fillCharge('Second adjustment');
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -227,6 +229,61 @@ describe('expanded invoice adjustment global save', () => {
     expect(mocks.update.mock.calls[0][1].newItems).toEqual([
       expect.objectContaining({ description: 'Keep edit through initial read recovery' }),
     ]);
+  });
+
+  it.each(['expanded', 'collapsed'] as const)(
+    'loads current persisted rows alongside %s additions after initial read recovery',
+    async (draftState) => {
+      const oldCharge = {
+        item_id: 'existing-manual', invoice_id: 'invoice-1', service_id: 'svc-1',
+        description: 'Old saved description', quantity: 1, unit_price: 1000,
+        net_amount: 1000, total_price: 1000, tax_amount: 0,
+        is_manual: true, is_discount: false, is_taxable: false,
+      };
+      const deletedCharge = { ...oldCharge, item_id: 'deleted-manual', description: 'Deleted elsewhere' };
+      const currentCharge = { ...oldCharge, description: 'Changed by another operator', unit_price: 2500, net_amount: 2500, total_price: 2500 };
+      const recovered = { ...invoice, draft_adjustment_revision: 8, invoice_charges: [...invoice.invoice_charges, currentCharge] };
+      mocks.snapshot.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED' })
+        .mockResolvedValue(recovered);
+      mocks.update.mockResolvedValue({ ...recovered, draft_adjustment_revision: 9 });
+      renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, oldCharge, deletedCharge] });
+      expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+      expect(document.getElementById('item-existing-manual')).toBeNull();
+      expect(document.getElementById('item-deleted-manual')).toBeNull();
+      await fillCharge('Addition during recovery');
+      if (draftState === 'collapsed') fireEvent.click(document.getElementById('collapse-line-item-button')!);
+      fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+      await waitFor(() => expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull());
+      fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+      await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+      const [, changes, submission] = mocks.update.mock.calls[0];
+      expect(submission.expectedRevision).toBe(8);
+      expect(changes.updatedItems).toEqual([
+        expect.objectContaining({ item_id: oldCharge.item_id, description: currentCharge.description, rate: 2500 }),
+      ]);
+      expect(changes.newItems).toEqual([
+        expect.objectContaining({ description: 'Addition during recovery', quantity: 3, rate: 5000 }),
+      ]);
+      expect(changes.removedItemIds).toEqual([]);
+    },
+  );
+
+  it('retains an established revision when recovery observes a concurrent change', async () => {
+    mocks.snapshot.mockResolvedValueOnce(invoice).mockResolvedValue({ ...invoice, draft_adjustment_revision: 8 });
+    mocks.locations.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED' }).mockResolvedValue([]);
+    mocks.update.mockImplementation(async (_id, _changes, submission) => submission.expectedRevision === 7
+      ? { success: false, code: 'STALE_ADJUSTMENT_REVISION', message: 'Concurrent invoice change' }
+      : { ...invoice, draft_adjustment_revision: 9 });
+    renderDraft();
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    await fillCharge('Keep conflicting addition');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    expect(await screen.findByText('Concurrent invoice change')).toBeTruthy();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(mocks.update.mock.calls[0][2].expectedRevision).toBe(7);
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep conflicting addition');
   });
 
   it('keeps permission denial visible after an auth recovery read and preserves edits', async () => {
