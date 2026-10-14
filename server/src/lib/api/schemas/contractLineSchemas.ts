@@ -313,8 +313,9 @@ export const updatePlanServiceSchema = z.object({
   ]).and(
     // The partial branches above strip unknown keys and the hourly/usage/bucket
     // partials accept an empty object, so an invalid base_rate_basis would be
-    // silently dropped. Validate it explicitly whenever it is present.
-    z.object({ base_rate_basis: fixedBaseRateBasisSchema.optional() }).passthrough()
+    // silently dropped. Validate it explicitly whenever it is present (default
+    // strip: the right side contributes no keys other than base_rate_basis).
+    z.object({ base_rate_basis: fixedBaseRateBasisSchema.optional() })
   ).optional(),
   rate_tiers: z.array(createRateTierSchema).optional(),
   user_type_rates: z.array(createUserTypeRateSchema).optional()
