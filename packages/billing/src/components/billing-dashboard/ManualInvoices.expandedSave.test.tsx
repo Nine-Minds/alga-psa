@@ -3,7 +3,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async () => []) }));
+const mocks = vi.hoisted(() => ({ update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async (): Promise<any> => []) }));
 vi.mock('../../actions/invoiceExportWarnings', () => ({ getInvoiceAdjustmentExportWarnings: mocks.warnings }));
 vi.mock('@alga-psa/billing/actions/manualInvoiceActions', () => ({ generateManualInvoice: vi.fn(), getClientBillingEmailStatus: vi.fn(async () => ({ hasBillingEmail: true })) }));
 vi.mock('@alga-psa/billing/actions/salesOrderInvoicingActions', () => ({ generateInvoiceForSalesOrder: vi.fn() }));
@@ -126,8 +126,8 @@ describe('expanded invoice adjustment global save', () => {
   });
 
   it('keeps invoice drafts and performs only an explicit read retry after line loading expires', async () => {
-    const authError = Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' });
-    mocks.lineItems.mockRejectedValueOnce(authError).mockResolvedValueOnce(invoice.invoice_charges);
+    const authError = { success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' };
+    mocks.lineItems.mockResolvedValueOnce(authError).mockResolvedValueOnce(invoice.invoice_charges);
     renderDraft();
     expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
     await fillCharge('Keep this after read retry');
@@ -138,6 +138,20 @@ describe('expanded invoice adjustment global save', () => {
     expect(mocks.update).not.toHaveBeenCalled();
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep this after read retry');
     expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+  });
+
+  it('keeps permission denial visible after an auth recovery read and preserves edits', async () => {
+    mocks.lineItems
+      .mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' })
+      .mockResolvedValueOnce({ permissionError: 'Permission denied: billing read required' });
+    renderDraft();
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    await fillCharge('Keep edit after denied retry');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    expect(await screen.findByText('Permission denied: billing read required')).toBeTruthy();
+    expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep edit after denied retry');
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
   it('ignores a late detail response after selecting another invoice', async () => {

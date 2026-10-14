@@ -217,6 +217,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         if (isReturnedActionError(summary)) {
           throw new Error(getErrorMessage(summary));
         }
+        if (isAuthenticationFailure(templateId)) throw Object.assign(new Error('AuthenticationError'), { name: 'AuthenticationError' });
+        if (isReturnedActionError(templateId)) throw new Error(getErrorMessage(templateId));
         if (!viewModel) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
@@ -269,6 +271,15 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           return;
         }
 
+        if (isAuthenticationFailure(result)) {
+          setPreviewAuthenticationExpired(true);
+          return;
+        }
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
+
         if (result && !('permissionError' in result)) {
           setSourceQuote(result);
           return;
@@ -276,9 +287,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         setSourceQuote(null);
       } catch (sourceQuoteError) {
-        if (isAuthenticationFailure(sourceQuoteError)) setPreviewAuthenticationExpired(true);
-        else console.error(`Error fetching source quote for invoice ${invoiceId}`);
         if (isMounted) {
+          if (isAuthenticationFailure(sourceQuoteError)) setPreviewAuthenticationExpired(true);
+          else console.error(`Error fetching source quote for invoice ${invoiceId}`);
           setSourceQuote(null);
         }
       }
@@ -329,9 +340,16 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     let isMounted = true;
     getInvoiceAnnotations(invoiceId)
       .then((annotations) => {
-        if (isMounted) {
-          setInvoiceAnnotations(annotations);
+        if (!isMounted) return;
+        if (isAuthenticationFailure(annotations)) {
+          setPreviewAuthenticationExpired(true);
+          return;
         }
+        if (isReturnedActionError(annotations)) {
+          setError(getErrorMessage(annotations));
+          return;
+        }
+        setInvoiceAnnotations(annotations);
       })
       .catch((annotationError) => {
         if (isMounted) {
@@ -921,7 +939,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
 export default InvoicePreviewPanel;
 
-function isAuthenticationFailure(value: unknown): boolean {
+function isAuthenticationFailure(value: unknown): value is { success: false; code: 'UNAUTHENTICATED'; message?: string; error?: string; params?: Record<string, unknown> } | { name: 'AuthenticationError'; message?: string; code?: string } {
   if (!value || typeof value !== 'object') return false;
   const error = value as { name?: string; message?: string; code?: string };
   return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'

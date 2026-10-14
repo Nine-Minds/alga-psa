@@ -93,7 +93,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
           setAuthenticationExpired(true);
           return;
         }
-        setCapability(capabilityResult);
+        setCapability(capabilityResult as InvoiceAdjustmentCapability);
       } catch (error) {
         if (!cancelled) {
           if (isAuthenticationFailure(error)) setAuthenticationExpired(true);

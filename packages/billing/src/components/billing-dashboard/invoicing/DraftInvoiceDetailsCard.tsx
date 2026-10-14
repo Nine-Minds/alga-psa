@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
@@ -108,13 +108,27 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [profileAuthenticationExpired, setProfileAuthenticationExpired] = useState(false);
   const [profileRetry, setProfileRetry] = useState(0);
+  const profileRequestRef = useRef(0);
+  const profileInvoiceIdentityRef = useRef('');
+  profileInvoiceIdentityRef.current = `${invoice?.invoice_id ?? ''}:${invoice?.client_id ?? ''}`;
 
   const loadBillingProfiles = useCallback(async (clientId: string) => {
+    const requestId = ++profileRequestRef.current;
+    const invoiceIdentity = profileInvoiceIdentityRef.current;
+    const isCurrent = () => requestId === profileRequestRef.current
+      && invoiceIdentity === profileInvoiceIdentityRef.current;
     setProfileAuthenticationExpired(false);
     try {
-      return await getClientBillingProfilesForBilling(clientId);
+      const result = await getClientBillingProfilesForBilling(clientId);
+      if (!isCurrent()) return [];
+      if (isAuthenticationFailure(result)) {
+        setProfileAuthenticationExpired(true);
+        throw new Error('Authentication required');
+      }
+      if (isActionPermissionError(result)) throw new Error(getErrorMessage(result));
+      return result;
     } catch (error) {
-      if (isAuthenticationFailure(error)) setProfileAuthenticationExpired(true);
+      if (isCurrent() && isAuthenticationFailure(error)) setProfileAuthenticationExpired(true);
       throw error;
     }
   }, []);
@@ -395,7 +409,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
 
 export default DraftInvoiceDetailsCard;
 
-function isAuthenticationFailure(value: unknown): boolean {
+function isAuthenticationFailure(value: unknown): value is { success: false; code: 'UNAUTHENTICATED'; message?: string; error?: string; params?: Record<string, unknown> } | { name: 'AuthenticationError'; message?: string; code?: string } {
   if (!value || typeof value !== 'object') return false;
   const error = value as { name?: string; message?: string; code?: string };
   return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'

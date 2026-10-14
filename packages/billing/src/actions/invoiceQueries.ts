@@ -14,6 +14,7 @@ import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   permissionError,
@@ -846,7 +847,7 @@ export const getInvoiceForRendering = withAuth(async (
   }
 });
 
-export const getEnrichedInvoiceViewModel = withAuth(async (
+export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -898,15 +899,15 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
 
   await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel, invoiceId);
   return viewModel;
-});
+}));
 
-export const getResolvedInvoiceTemplateId = withAuth(async (
+export const getResolvedInvoiceTemplateId = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<string | null> => {
+): Promise<string | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return null;
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();
@@ -915,7 +916,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   // portal caller probe invoices outside their own client.
   const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
   if (denied) {
-    return null;
+    return denied;
   }
 
   const db = tenantDb(knex, tenant);
@@ -951,7 +952,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   const templates = await Invoice.getAllTemplates(knex, tenant);
   const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
   return defaultTemplate?.template_id ?? null;
-});
+}));
 
 export type InvoicePurchaseOrderSummary = {
   invoice_id: string;
@@ -962,7 +963,7 @@ export type InvoicePurchaseOrderSummary = {
   remaining_cents: number | null;
 };
 
-export const getInvoicePurchaseOrderSummary = withAuth(async (
+export const getInvoicePurchaseOrderSummary = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -1016,10 +1017,10 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
     consumed_cents: consumed,
     remaining_cents: remaining,
   };
-});
+}));
 
 // New function to get invoice items on demand
-export const getInvoiceLineItems = withAuth(async (
+export const getInvoiceLineItems = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -1042,4 +1043,4 @@ export const getInvoiceLineItems = withAuth(async (
     console.error('Error fetching invoice items:', error);
     throw new Error('Error fetching invoice items');
   }
-});
+}));

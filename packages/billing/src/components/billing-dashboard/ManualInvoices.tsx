@@ -531,7 +531,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   useEffect(() => {
     let active = true;
     const fetchItems = async () => {
-      const recoveringReadFailure = readAuthenticationExpiredRef.current;
       // Use the invoice prop ID for the initial fetch trigger
       const invoiceIdToFetch = invoice?.invoice_id;
       if (invoiceIdToFetch) {
@@ -571,6 +570,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             isRemoved: false,
           })) : [{ ...baseDefaultItem, service_id: defaultManualServiceId, item_id: uuidv4(), invoice_id: invoiceIdToFetch }]);
         }
+        const recoveringReadFailure = readAuthenticationExpiredRef.current;
         try {
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
@@ -582,16 +582,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             setReadAuthenticationExpired(true);
             return;
           }
+          if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
+            setError(getErrorMessage(fetchedItems));
+            return;
+          }
           // A successful retry proves the read path is available again. Keep
           // the existing editor snapshot because the operator may have edited
           // rows while the session was unavailable.
           if (recoveringReadFailure) {
             readAuthenticationExpiredRef.current = false;
             setReadAuthenticationExpired(false);
-            return;
-          }
-          if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
-            setError(getErrorMessage(fetchedItems));
             return;
           }
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
@@ -1246,6 +1246,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         const refreshedItems = authoritativeInvoice?.invoice_charges
           ?? await getInvoiceLineItems(currentInvoiceData.invoice_id);
         if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
+          setError(t('manualInvoices.errors.saveRefreshFailed', {
+            defaultValue: 'Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice.',
+          }));
+          return;
+        }
+        if (isAuthenticationFailure(refreshedItems)) {
           setError(t('manualInvoices.errors.saveRefreshFailed', {
             defaultValue: 'Your changes were saved, but the invoice page could not finish refreshing. Reload to view the saved invoice.',
           }));
@@ -2095,7 +2101,7 @@ const ManualInvoices: React.FC<ManualInvoicesProps> = (props) => {
 
 export default ManualInvoices;
 
-function isAuthenticationFailure(value: unknown): boolean {
+function isAuthenticationFailure(value: unknown): value is { success: false; code: 'UNAUTHENTICATED'; message?: string; error?: string; params?: Record<string, unknown> } | { name: 'AuthenticationError'; message?: string; code?: string } {
   if (!value || typeof value !== 'object') return false;
   const error = value as { name?: string; message?: string; code?: string };
   return error.name === 'AuthenticationError' || error.code === 'UNAUTHENTICATED'

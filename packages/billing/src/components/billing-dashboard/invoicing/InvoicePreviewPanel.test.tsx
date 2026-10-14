@@ -183,7 +183,7 @@ describe('InvoicePreviewPanel', () => {
   });
 
   it('offers sign-in and explicit preview retry after an authentication failure', async () => {
-    getEnrichedInvoiceViewModelMock.mockRejectedValueOnce(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    getEnrichedInvoiceViewModelMock.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' });
     render(<InvoicePreviewPanel invoiceId="inv-1" templates={defaultTemplates as any} selectedTemplateId={null} onTemplateChange={vi.fn()} isFinalized={false} />);
 
     expect(await screen.findByText(/Your session expired while loading this invoice/)).toBeTruthy();
@@ -192,6 +192,17 @@ describe('InvoicePreviewPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
     await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
     expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovers when the auxiliary source quote read returns an unauthenticated action result', async () => {
+    getQuoteByConvertedInvoiceIdMock.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' });
+    render(<InvoicePreviewPanel invoiceId="inv-1" templates={defaultTemplates as any} selectedTemplateId={null} onTemplateChange={vi.fn()} isFinalized={false} />);
+    expect(await screen.findByText(/Your session expired while loading this invoice/)).toBeTruthy();
+    getQuoteByConvertedInvoiceIdMock.mockResolvedValue(null);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(getQuoteByConvertedInvoiceIdMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('INV-1001::tpl-resolved')).toBeTruthy();
+    expect(screen.queryByText(/Your session expired while loading this invoice/)).toBeNull();
   });
 
   it('ignores an invoice preview response after the operator selects a different invoice', async () => {
@@ -205,5 +216,18 @@ describe('InvoicePreviewPanel', () => {
     resolvePrevious({ ...defaultViewModel, invoiceNumber: 'STALE-OLD' });
     expect(await screen.findByText('INV-1001::tpl-resolved')).toBeTruthy();
     expect(screen.queryByText('STALE-OLD::tpl-resolved')).toBeNull();
+  });
+
+  it('ignores a late source quote authentication failure after invoice reselection', async () => {
+    let rejectPrevious!: (error: unknown) => void;
+    getQuoteByConvertedInvoiceIdMock.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectPrevious = reject; }));
+    const props = { templates: defaultTemplates as any, selectedTemplateId: null, onTemplateChange: vi.fn(), isFinalized: false };
+    const view = render(<InvoicePreviewPanel {...props} invoiceId="inv-old" />);
+    await waitFor(() => expect(getQuoteByConvertedInvoiceIdMock).toHaveBeenCalledTimes(1));
+    view.rerender(<InvoicePreviewPanel {...props} invoiceId="inv-new" />);
+    await waitFor(() => expect(getQuoteByConvertedInvoiceIdMock).toHaveBeenCalledTimes(2));
+    rejectPrevious({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' });
+    await waitFor(() => expect(screen.getByText('INV-1001::tpl-resolved')).toBeTruthy());
+    expect(screen.queryByText(/session expired while loading this invoice/i)).toBeNull();
   });
 });

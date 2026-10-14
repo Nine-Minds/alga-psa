@@ -171,7 +171,7 @@ describe('draft invoice details — the profile it bills', () => {
   });
 
   it('offers sign-in and explicit retry when invoice profile details lose authentication', async () => {
-    mocks.loadProfiles.mockRejectedValueOnce(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    mocks.loadProfiles.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' });
     render(<DraftInvoiceDetailsCard invoice={invoice({ client_has_multiple_billing_profiles: true })} />);
 
     expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
@@ -180,5 +180,17 @@ describe('draft invoice details — the profile it bills', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
     await waitFor(() => expect(mocks.loadProfiles).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole('combobox')).toBeTruthy();
+  });
+
+  it('ignores a late authentication failure from the previous invoice selection', async () => {
+    let rejectFirst!: (error: unknown) => void;
+    mocks.loadProfiles.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectFirst = reject; }));
+    const { rerender } = render(<DraftInvoiceDetailsCard invoice={invoice({ client_has_multiple_billing_profiles: true })} />);
+    await waitFor(() => expect(mocks.loadProfiles).toHaveBeenCalledTimes(1));
+    rerender(<DraftInvoiceDetailsCard invoice={invoice({ invoice_id: 'invoice-2', client_id: 'client-2', client_has_multiple_billing_profiles: true })} />);
+    rejectFirst(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    await waitFor(() => expect(mocks.loadProfiles).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
   });
 });

@@ -47,6 +47,7 @@ import {
 } from '../services/prepaidReplenishmentSettlement';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { AuthenticationError, withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
@@ -845,7 +846,7 @@ async function recordAdjustmentSave(
  * Read-only capability probe for the draft adjustment editor. Returns the same
  * decision the writers enforce, without taking a row lock.
  */
-export const getInvoiceAdjustmentCapability = withAuth(async (
+export const getInvoiceAdjustmentCapability = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string,
@@ -857,7 +858,7 @@ export const getInvoiceAdjustmentCapability = withAuth(async (
   const { knex } = await createTenantKnex();
   const { capability } = await inspectInvoiceEditable(knex, tenant, invoiceId);
   return capability;
-});
+}));
 
 export const updateDraftInvoiceProperties = withAuth(async (
   user,

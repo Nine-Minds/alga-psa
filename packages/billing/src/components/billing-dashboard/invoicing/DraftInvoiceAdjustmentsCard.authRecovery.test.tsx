@@ -14,7 +14,7 @@ beforeEach(() => { vi.clearAllMocks(); mocks.clients.mockResolvedValue([]); mock
 const invoice: any = { invoice_id: 'inv-1', invoice_charges: [] };
 describe('draft adjustment capability auth recovery', () => {
   it('offers sign-in and explicit capability retry after auth failure', async () => {
-    mocks.capability.mockRejectedValueOnce(Object.assign(new Error('User not authenticated'), { name: 'AuthenticationError' }));
+    mocks.capability.mockResolvedValueOnce({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' });
     render(<DraftInvoiceAdjustmentsCard invoice={invoice} />);
     expect(await screen.findByText(/session expired while loading invoice adjustments/i)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('target')).toBe('_blank');
