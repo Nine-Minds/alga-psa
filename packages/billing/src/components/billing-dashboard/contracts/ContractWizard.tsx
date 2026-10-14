@@ -1336,6 +1336,11 @@ export function ContractWizard({
                   {
                     ...wizardData,
                     fixed_lines: meaningfulFixedLines(wizardData.fixed_lines),
+                    // Complete prepaid block lines only; incomplete drafts are not simulated (as on submit).
+                    prepaid_block_lines: (() => {
+                      const parsed = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+                      return "lines" in parsed ? parsed.lines : [];
+                    })(),
                   } as ContractDraftSimulationInput
                 }
               />

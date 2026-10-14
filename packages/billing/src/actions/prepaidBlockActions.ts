@@ -26,6 +26,7 @@ import {
   type PrepaidBlockConfigInput,
   type PrepaidBlockConfigWarning,
 } from '../services/prepaidBlockConfigService';
+import { supersedeScheduledExpiryForManualIssue } from '../services/prepaidBlockLifecycleService';
 
 /**
  * Prepaid Block contract-line actions (MSP-initiated).
@@ -402,8 +403,10 @@ export const issueNextPrepaidBlock = withAuth(async (
       const open = await db.table('contract_line_block_issuances')
         .where({ contract_line_id: contractLineId, status: 'scheduled' })
         .forUpdate()
-        .first('issuance_id');
-      if (open) {
+        .first('issuance_id', 'trigger_kind');
+      // A scheduled expiry issuance is a date obligation, not a follow-on: a manual block may replace it.
+      // (Renewal issuances are not created on this branch yet; if one appears it is still rejected here.)
+      if (open && open.trigger_kind !== 'expiry') {
         throw new Error('Cannot issue a block: a next block is already scheduled for this line');
       }
       const pending = await db.table('hour_blocks')
@@ -412,6 +415,11 @@ export const issueNextPrepaidBlock = withAuth(async (
       if (pending) {
         throw new Error('Cannot issue a block: a pending block is already awaiting invoice finalization');
       }
+
+      // Supersede first so the one-scheduled-per-line index is never violated by the insert below.
+      const replaced = open
+        ? await supersedeScheduledExpiryForManualIssue(trx, tenant, contractLineId)
+        : { superseded: false, sourceBlockId: null };
 
       const issuanceId = uuidv4();
       await db.table('contract_line_block_issuances').insert({
@@ -423,6 +431,8 @@ export const issueNextPrepaidBlock = withAuth(async (
         trigger_kind: 'manual',
         due_date: today,
         status: 'scheduled',
+        // Restore key: voiding this manual block puts the superseded expiry issuance back.
+        source_block_id: replaced.sourceBlockId,
       });
       return { issuanceId };
     });

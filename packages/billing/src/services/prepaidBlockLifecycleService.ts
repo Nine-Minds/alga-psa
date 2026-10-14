@@ -201,6 +201,25 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
   return 'scheduled';
 }
 
+/**
+ * Manual "Issue next block" over a scheduled expiry issuance: supersedes it (same reason as a usage
+ * follow-on) and returns its source block id, which the caller stores on the manual issuance so a
+ * void of the manual block can restore it. Returns `null` when there is no scheduled expiry issuance.
+ * Caller holds the config and issuance locks and must insert the manual issuance afterwards.
+ */
+export async function supersedeScheduledExpiryForManualIssue(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<{ superseded: boolean; sourceBlockId: string | null }> {
+  const expiry = await table(trx, tenant, 'contract_line_block_issuances')
+    .where({ contract_line_id: contractLineId, trigger_kind: 'expiry', status: 'scheduled' })
+    .first('source_block_id');
+  if (!expiry) return { superseded: false, sourceBlockId: null };
+  await supersedeExpiryIssuancesForLine(trx, tenant, contractLineId, { reason: EXPIRY_REPLACED_BY_USAGE_BLOCK_REASON });
+  return { superseded: true, sourceBlockId: expiry.source_block_id ?? null };
+}
+
 /** Undoes the supersession of a source block's expiry issuance by a usage-triggered follow-on. */
 async function restoreSourceBlockExpiryIssuance(
   trx: Knex.Transaction,
@@ -242,7 +261,8 @@ async function restoreSourceBlockExpiryIssuance(
  *    keeps the episode suppressed (captain decision 4, unconfirmed) via
  *    suppressPrepaidReplenishmentForVoidedInvoice / clearPrepaidReplenishmentForInvoice;
  *  - manual: cancelled. A manual issuance is an on-demand MSP action, not an
- *    obligation; the MSP can issue another from the line card.
+ *    obligation; the MSP can issue another from the line card. If it superseded a scheduled expiry
+ *    issuance (source_block_id set), that expiry issuance is restored like for an exhaustion follow-on.
  *
  * Caller holds the issuance/config locks.
  */
@@ -264,7 +284,9 @@ async function restoreIssuanceAfterBlockVoid(
     await table(trx, tenant, 'contract_line_block_issuances')
       .where({ issuance_id: issuanceId })
       .update({ ...cleared, status: 'cancelled', cancel_reason: reason });
-    if (issuance.trigger_kind === 'exhaustion' || issuance.trigger_kind === 'threshold') {
+    // A manual issuance carries source_block_id only when it superseded a scheduled expiry issuance
+    // (issueNextPrepaidBlock); voiding its block gives that expiry obligation back.
+    if (['exhaustion', 'threshold', 'manual'].includes(issuance.trigger_kind)) {
       await restoreSourceBlockExpiryIssuance(trx, tenant, issuance.contract_line_id, issuance.source_block_id);
     }
     return;

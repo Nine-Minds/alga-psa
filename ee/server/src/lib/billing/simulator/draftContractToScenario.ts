@@ -246,6 +246,47 @@ export async function draftContractToScenario(
     );
   }
 
+  // Prepaid Block lines: each is its own Hourly line carrying the block config, exactly the shape the
+  // saved-contract snapshot produces, so simulatePrepaidBlockTimeline prices the block issue.
+  const prepaidBlockLines = draft.prepaid_block_lines ?? [];
+  prepaidBlockLines.forEach((prepaidLine, lineIndex) => {
+    const services = prepaidLine.services
+      .filter((item) => item.service_id)
+      .map((item) =>
+        service(item.service_id, 1, item.hourly_rate ?? null, {
+          configuration_type: "Hourly",
+          hourly_rate: item.hourly_rate ?? null,
+          minimum_billable_time: draft.minimum_billable_time ?? 0,
+          round_up_to_nearest: draft.round_up_to_nearest ?? 0,
+          user_type_rates: [],
+        }),
+      );
+    if (services.length === 0) return;
+    const block = prepaidLine.block;
+    const expiryMonths = block.expiry_months ?? null;
+    lines.push({
+      ...line(
+        prepaidBlockLines.length === 1 ? "draft-prepaid" : `draft-prepaid-${lineIndex + 1}`,
+        prepaidLine.name?.trim() ||
+          (prepaidBlockLines.length === 1 ? "Prepaid block" : `Prepaid block ${lineIndex + 1}`),
+        "Hourly",
+        draft.hourly_billing_frequency || draft.billing_frequency,
+        services,
+      ),
+      prepaid_block: {
+        block_minutes: Number(block.block_minutes),
+        block_price: Math.round(Number(block.block_price)),
+        sold_as_service_id: block.sold_as_service_id ?? services[0].service_id,
+        expiry_months: expiryMonths,
+        trigger_on_exhaustion: Boolean(block.trigger_on_exhaustion),
+        trigger_threshold_percent: block.trigger_threshold_percent ?? null,
+        trigger_on_expiry: expiryMonths === null ? false : Boolean(block.trigger_on_expiry),
+        trigger_on_renewal: Boolean(block.trigger_on_renewal),
+        replenishment_tier: block.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+      },
+    });
+  });
+
   const schedule = await getClientBillingCycleAnchor(
     knex,
     tenant,
