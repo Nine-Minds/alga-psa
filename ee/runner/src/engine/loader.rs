@@ -546,14 +546,12 @@ pub async fn verify_archive_sha256(
     let mut fetch_url = url.clone();
     let mut using_presigned = false;
 
+    // STORAGE_S3_* is the documented runner config (shared with the server);
+    // S3_* / MINIO_* are kept for existing local setups.
     if let (Ok(base), Some(access), Some(secret)) = (
         std::env::var("BUNDLE_STORE_BASE"),
-        std::env::var("S3_ACCESS_KEY")
-            .ok()
-            .or_else(|| std::env::var("MINIO_ACCESS_KEY").ok()),
-        std::env::var("S3_SECRET_KEY")
-            .ok()
-            .or_else(|| std::env::var("MINIO_SECRET_KEY").ok()),
+        first_env(&["STORAGE_S3_ACCESS_KEY", "S3_ACCESS_KEY", "MINIO_ACCESS_KEY"]),
+        first_env(&["STORAGE_S3_SECRET_KEY", "S3_SECRET_KEY", "MINIO_SECRET_KEY"]),
     ) {
         tracing::info!(expected_hash=%expected_lower, "S3/MinIO credentials detected - attempting presigned URL generation");
         if let Ok(base_url) = Url::parse(&base) {
@@ -570,8 +568,8 @@ pub async fn verify_archive_sha256(
                     _ => String::new(),
                 };
                 if !endpoint.is_empty() {
-                    let region =
-                        std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+                    let region = first_env(&["STORAGE_S3_REGION", "S3_REGION"])
+                        .unwrap_or_else(|| "us-east-1".to_string());
                     let creds = AwsCredentials::new(
                         access.clone(),
                         secret.clone(),
@@ -854,6 +852,14 @@ fn presign_target_from_urls(base_url: &Url, bundle_url: &Url) -> Option<(String,
     }
 }
 
+/// First of `names` that is set to a non-blank value.
+fn first_env(names: &[&str]) -> Option<String> {
+    names
+        .iter()
+        .filter_map(|name| std::env::var(name).ok())
+        .find(|value| !value.trim().is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -953,5 +959,26 @@ mod tests {
         let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
         assert_eq!(bucket, "extensions");
         assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
+    }
+
+    #[test]
+    fn first_env_prefers_earlier_names_and_skips_blank_values() {
+        let (a, b, c) = (
+            "ALGA_TEST_FIRST_ENV_A",
+            "ALGA_TEST_FIRST_ENV_B",
+            "ALGA_TEST_FIRST_ENV_C",
+        );
+        std::env::remove_var(a);
+        std::env::set_var(b, "  ");
+        std::env::set_var(c, "from-c");
+        assert_eq!(first_env(&[a, b, c]).as_deref(), Some("from-c"));
+
+        std::env::set_var(a, "from-a");
+        assert_eq!(first_env(&[a, b, c]).as_deref(), Some("from-a"));
+
+        for name in [a, b, c] {
+            std::env::remove_var(name);
+        }
+        assert_eq!(first_env(&[a, b, c]), None);
     }
 }
