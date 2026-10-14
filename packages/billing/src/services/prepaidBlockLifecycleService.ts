@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
-import { computePrepaidBlockAnniversaryDate } from '../lib/prepaidBlockDates';
+import { computePrepaidBlockAnniversaryDate, toDateOnly } from '../lib/prepaidBlockDates';
 
 /**
  * Invoice-lifecycle helpers for Prepaid Block (contract-issued) hour blocks
@@ -152,16 +152,17 @@ export async function supersedeExpiryIssuancesForLine(
  * (an exhaustion/threshold/manual/renewal obligation) the new expiry issuance
  * is skipped rather than violating the index; returns what happened.
  *
- * TODO(captain-decision-2): do not schedule an expiry issuance past the
- * assignment's end_date (superseded when the assignment ends) once contract-end
- * forfeiture is confirmed.
+ * No expiry issuance is scheduled past the owning assignment's end_date (captain decision 2:
+ * the contract ends, its blocks are forfeited and nothing new is issued): returns
+ * `skipped_past_contract_end`. A due date equal to end_date is still allowed, matching the
+ * issuance sync's cancellation ("due_date > end_date").
  */
 export async function scheduleExpiryIssuanceForActivatedBlock(
   trx: Knex.Transaction,
   tenant: string,
   block: { block_id: string; client_id: string; contract_line_id: string; client_contract_id: string | null },
   invoiceDate: string | Date,
-): Promise<'scheduled' | 'not_configured' | 'already_scheduled' | 'skipped_open_issuance'> {
+): Promise<'scheduled' | 'not_configured' | 'already_scheduled' | 'skipped_open_issuance' | 'skipped_past_contract_end'> {
   const config = await table(trx, tenant, 'contract_line_prepaid_blocks')
     .where({ contract_line_id: block.contract_line_id })
     .forUpdate()
@@ -176,6 +177,13 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
   if (!config || !config.trigger_on_expiry || config.expiry_months == null || !block.client_contract_id) {
     return 'not_configured';
   }
+
+  const dueDate = computePrepaidBlockAnniversaryDate(invoiceDate, Number(config.expiry_months));
+  const assignment = await table(trx, tenant, 'client_contracts')
+    .where({ client_contract_id: block.client_contract_id })
+    .first('end_date');
+  const endDate = toDateOnly(assignment?.end_date);
+  if (endDate && dueDate > endDate) return 'skipped_past_contract_end';
 
   const existingForBlock = await table(trx, tenant, 'contract_line_block_issuances')
     .where({ contract_line_id: block.contract_line_id, trigger_kind: 'expiry', source_block_id: block.block_id, status: 'scheduled' })
@@ -194,7 +202,7 @@ export async function scheduleExpiryIssuanceForActivatedBlock(
     client_contract_id: block.client_contract_id,
     client_id: block.client_id,
     trigger_kind: 'expiry',
-    due_date: computePrepaidBlockAnniversaryDate(invoiceDate, Number(config.expiry_months)),
+    due_date: dueDate,
     status: 'scheduled',
     source_block_id: block.block_id,
   });

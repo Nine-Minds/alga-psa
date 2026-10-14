@@ -26,15 +26,15 @@ import { resolvePrepaidBlockBusinessDate, toDateOnly } from '../lib/prepaidBlock
  *    line.created_at in the tenant's effective time zone (resolvePrepaidBlockBusinessDate).
  *  - A scheduled `contract_start` issuance follows later edits to the start
  *    date / owning assignment.
- *  - Cancellation: scheduled issuances are cancelled (expiry ones superseded)
- *    when the config is removed, the line or its assignment is gone/inactive,
- *    or the assignment ends before the due date. (Line deletion also cascades
- *    through the issuance FK.)
- *
- * TODO(captain-decision-1): renewal contracts should issue a start block only
- * when trigger_on_renewal is on, and `renewal` issuances are scheduled from the
- * renewal cycle / renewal draft activation. Unconfirmed; deliberately not
- * implemented, so a renewal draft's block line gets a normal contract_start.
+ *  - Renewal contracts (see isRenewalContract): the line issues its first block
+ *    only when trigger_on_renewal is on, and then as a `renewal` issuance, never
+ *    `contract_start`. A line that inherited live blocks through re-ownership
+ *    (prepaidBlockRenewalService) already has a non-voided block, so the "never
+ *    issued" rule issues nothing for it.
+ *  - Cancellation: scheduled issuances of EVERY kind (expiry ones superseded, the
+ *    rest cancelled) are cancelled when the config is removed, the line or its
+ *    assignment is gone/inactive, or the assignment ends before the due date.
+ *    (Line deletion also cascades through the issuance FK.)
  */
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string) {
@@ -52,13 +52,30 @@ function isAddedAfterContract(lineCreatedAt: unknown, contractCreatedAt: unknown
   return line - contract > LINE_WITH_CONTRACT_TOLERANCE_MS;
 }
 
+/**
+ * A contract is a renewal contract when a source assignment links it as its renewal draft
+ * (`client_contracts.created_draft_contract_id`, written by createRenewalDraftForQueueItem in
+ * renewalsQueueActions.ts). That is the only link the renewals code keeps between the expiring
+ * term and its successor.
+ */
+export async function isRenewalContract(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  contractId: string,
+): Promise<boolean> {
+  const source = await table(trx, tenant, 'client_contracts')
+    .where({ created_draft_contract_id: contractId })
+    .first('client_contract_id');
+  return Boolean(source);
+}
+
 export type PrepaidBlockIssuanceSyncResult =
   | { action: 'none' }
   | { action: 'scheduled'; issuanceId: string; dueDate: string }
   | { action: 'rescheduled'; issuanceId: string; dueDate: string }
   | { action: 'cancelled'; count: number };
 
-async function cancelScheduledIssuances(
+export async function cancelScheduledIssuances(
   trx: Knex.Transaction,
   tenant: string,
   contractLineId: string,
@@ -90,7 +107,7 @@ export async function syncPrepaidBlockIssuancesForContractLine(
   const config = await table(trx, tenant, 'contract_line_prepaid_blocks')
     .where({ contract_line_id: contractLineId })
     .forUpdate()
-    .first('contract_line_id');
+    .first('contract_line_id', 'trigger_on_renewal');
 
   const db = tenantDb(trx, tenant);
   const lineQuery = db.table('contract_lines as cl');
@@ -133,6 +150,10 @@ export async function syncPrepaidBlockIssuancesForContractLine(
     .where({ contract_line_id: contractLineId, status: 'scheduled' })
     .first('issuance_id', 'trigger_kind', 'due_date', 'client_contract_id');
 
+  // A renewal contract's first block is a `renewal` issuance and only with trigger_on_renewal.
+  const renewalContract = await isRenewalContract(trx, tenant, line.contract_id);
+  const startKind = renewalContract ? 'renewal' : 'contract_start';
+
   const startDate = toDateOnly(assignment.start_date);
   // Only a line added to an already-running contract is due on the day it was added.
   // A line that came with the contract (created with it, within the tolerance, or before it)
@@ -141,9 +162,26 @@ export async function syncPrepaidBlockIssuancesForContractLine(
   const createdDate = addedToRunningContract ? await resolvePrepaidBlockBusinessDate(trx, tenant, line.created_at) : null;
   const firstDue = [startDate, createdDate].filter((d): d is string => !!d).sort().pop() ?? null;
 
+  // "Never issued a block": an invoiced issuance or any non-voided block for the line.
+  const neverIssued = async (): Promise<boolean> => {
+    const invoiced = await table(trx, tenant, 'contract_line_block_issuances')
+      .where({ contract_line_id: contractLineId, status: 'invoiced' })
+      .first('issuance_id');
+    if (invoiced) return false;
+    const hasBlock = await table(trx, tenant, 'hour_blocks')
+      .where({ contract_line_id: contractLineId })
+      .whereNot({ status: 'voided' })
+      .first('block_id');
+    return !hasBlock;
+  };
+
   if (scheduled) {
-    // Keep the not-yet-invoiced start obligation aligned with start-date edits.
-    if (scheduled.trigger_kind === 'contract_start' && firstDue && (endDate == null || firstDue <= endDate)
+    // Keep the not-yet-invoiced start obligation aligned with start-date edits. On a renewal
+    // contract the start obligation is a `renewal` issuance; a cycle-rollover renewal issuance
+    // only exists once the line has a block, so "line never issued" tells the two apart.
+    const isStartObligation = scheduled.trigger_kind === startKind
+      && (startKind === 'contract_start' || await neverIssued());
+    if (isStartObligation && firstDue && (endDate == null || firstDue <= endDate)
       && (toDateOnly(scheduled.due_date) !== firstDue || scheduled.client_contract_id !== assignment.client_contract_id)) {
       await table(trx, tenant, 'contract_line_block_issuances')
         .where({ issuance_id: scheduled.issuance_id })
@@ -162,16 +200,10 @@ export async function syncPrepaidBlockIssuancesForContractLine(
     return cancelled > 0 ? { action: 'cancelled', count: cancelled } : { action: 'none' };
   }
 
-  // "Never issued a block": an invoiced issuance or any non-voided block for the line.
-  const invoiced = await table(trx, tenant, 'contract_line_block_issuances')
-    .where({ contract_line_id: contractLineId, status: 'invoiced' })
-    .first('issuance_id');
-  if (invoiced) return cancelled > 0 ? { action: 'cancelled', count: cancelled } : { action: 'none' };
-  const hasBlock = await table(trx, tenant, 'hour_blocks')
-    .where({ contract_line_id: contractLineId })
-    .whereNot({ status: 'voided' })
-    .first('block_id');
-  if (hasBlock) return cancelled > 0 ? { action: 'cancelled', count: cancelled } : { action: 'none' };
+  if (renewalContract && !config.trigger_on_renewal) {
+    return cancelled > 0 ? { action: 'cancelled', count: cancelled } : { action: 'none' };
+  }
+  if (!(await neverIssued())) return cancelled > 0 ? { action: 'cancelled', count: cancelled } : { action: 'none' };
 
   const issuanceId = uuidv4();
   await table(trx, tenant, 'contract_line_block_issuances').insert({
@@ -180,7 +212,7 @@ export async function syncPrepaidBlockIssuancesForContractLine(
     contract_line_id: contractLineId,
     client_contract_id: assignment.client_contract_id,
     client_id: assignment.client_id,
-    trigger_kind: 'contract_start',
+    trigger_kind: startKind,
     due_date: firstDue,
     status: 'scheduled',
   });

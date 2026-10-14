@@ -208,11 +208,47 @@ A block's `currency_code` is the contract's `contracts.currency_code`, passed ex
    contract. A line matches when its covered-service sets are equal. The move is recorded with a
    `'reassignment'` audit row. This honours "renewal does not reset or extend blocks", and blocks
    never cross to unrelated contracts. If no matching line exists, the blocks follow rule 2.
-   **Confirm (a)+(b) and the re-ownership rule.**
+   **CONFIRMED by the captain: (a)+(b) and the re-ownership rule.** Implemented rules:
+   - **(a) Cycle rollover** (`processRenewalQueueHandler` -> `scheduleRenewalIssuancesForRolledCycle`
+     in `prepaidBlockRenewalService.ts`). A real rollover (previous `renewal_cycle_start` known, new
+     one later) of an assignment that continues (evergreen, or `end_date` after the new cycle
+     start) inserts one `renewal` issuance per block line with `trigger_on_renewal`, due on the new
+     `renewal_cycle_start`, under the line's config lock. One open issuance per line: if one is
+     already scheduled nothing is inserted and it is logged. Idempotent per (line, assignment,
+     cycle start) in any issuance status.
+   - **(b) Draft activation** (`completeRenewalQueueItemForActivation` ->
+     `reownBlocksForRenewalActivation`). Unexpired source blocks (active, or pending with an
+     unexpired date) move to the new contract's block line with an equal covered-service set:
+     `client_contract_id` / `contract_line_id` change, one `reassignment` audit row each; locks are
+     config rows, then blocks in `block_id` order, then `reconcileLineAllocations`. Unfinished draws by
+     the source line's uninvoiced entries are released by that re-draw (contract A's time never
+     draws a block now owned by contract B). A scheduled expiry issuance follows its block when the
+     new line has `trigger_on_expiry` and no open issuance, else it is superseded. Lines with no
+     match keep their blocks, which the contract-end pass forfeits.
+   - **No double start block.** A renewal contract (a contract some assignment links through
+     `client_contracts.created_draft_contract_id`) issues its first block only with
+     `trigger_on_renewal`, as a `renewal` issuance, never `contract_start`; a line that inherited
+     blocks issues none (the start-type issuance scheduled at activation is cancelled at
+     re-ownership).
+   - **No reset or extension.** `expiration_date` and `remaining_minutes` are never written by renewal.
 2. **Contract end without renewal.** Proposed: a contract block's remaining minutes are forfeited at
    the end of the assignment's `end_date`, with a `'contract_end_expiration'` audit row. No
    expiry-triggered block is issued past the end date. **Confirm** (brief item 6 asks for this
    confirmation).
+   **CONFIRMED by the captain.** Implemented rules:
+   - The nightly `expiredHourBlocksHandler` forfeits ACTIVE contract blocks (minutes left) whose
+     assignment `end_date` is past in the tenant business date or whose assignment is inactive
+     (`deriveClientContractStatus` = `expired`/`terminated`): status `expired`, remaining minutes kept
+     for display like `auto_expiration`, audit `contract_end_expiration`, the line's scheduled
+     issuances cancelled (expiry ones superseded), then the line is re-drawn. Time that drew the
+     block stays billed once.
+   - Not forfeited: blocks re-owned by a renewal, and blocks of an ended assignment whose renewal is
+     active but not yet completed.
+   - **Pending blocks at contract end** (draft invoice not finalized) are left alone: the customer may
+     still be invoiced for them. If the invoice is finalized after the end date the block activates and
+     the next pass forfeits it with a `contract_end_expiration` row.
+   - `scheduleExpiryIssuanceForActivatedBlock` returns `skipped_past_contract_end` when the expiry
+     due date is after the assignment `end_date`.
 3. **Expiry arithmetic** (D6): last usable day = invoice date + N months − 1 day; next block due on
    the anniversary. **Confirm.**
 4. **Voided follow-on.** The usage episode stays suppressed until the line gets a new block, which
