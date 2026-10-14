@@ -133,6 +133,10 @@ Live acceptance remains pending until these checks pass on the repaired head.
 
 ## Mitigation round 5 — correlated safe diagnostics (2026-10-14)
 
+Published candidate: `9614087b1a` (`fix(auth): correlate safe session decode diagnostics`).
+This commit adds the diagnostic hardening and current-source evidence below; it
+does not claim the earlier invoice recovery fixes were authored in this round.
+
 The mounted invoice read and edit repairs described above were re-audited on
 the current branch. Capability, client/service initialization, invoice details
 and line items, billing profile and location attribution, preview view model,

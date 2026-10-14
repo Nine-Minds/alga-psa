@@ -1,5 +1,24 @@
 # Contract invoice adjustments
 
+## Repair round 5: safe auth diagnostics and current candidate (2026-10-14)
+
+Current code candidate: `9614087b1a` (`fix(auth): correlate safe session decode diagnostics`).
+The invoice read-recovery and repeated-retry draft-preservation repairs were
+audited on this source and remain present. Decoder exceptions now log only
+reason codes with the existing validated request/correlation ID; behavioral
+tests prove cookie and exception payload text is not logged. Focused current
+source results and the supervised runtime/Open Review checklist are recorded in
+[`auth-recovery-2026-10-14.md`](../evidence/b97eda7b-contract-invoice-adjustments/auth-recovery-2026-10-14.md).
+
+Implementation verification is complete; runtime acceptance is pending. Do not
+start or restart an app server during this step. Before live checks, the
+supervised operator must deploy this exact SHA and verify its build stamp in the
+intended pane. The empty `/api/auth/session` after navigation remains unexplained.
+Two Open Review timeouts are documented but are not proven to share a cause with
+session loss. The actual Open Review pane/session and launcher-to-pane handoff
+remain unverified; the previously captured direct 23185 service served the old
+`4571290674` build.
+
 ## Repair round 4: read-path authentication recovery (2026-10-14)
 
 Capability, invoice-line, draft-detail billing-profile, and preview reads now
@@ -32,7 +51,7 @@ pending.
 
 ### Supervised live acceptance procedure
 
-Candidate: `449eaaee41b36655bd86872ca1e49c89482ccb8b`. An operator must
+Candidate: `9614087b1a` (supersedes the earlier code candidates below). An operator must
 roll this exact SHA to the supervised review service on canonical port 23185;
 verify its running build stamp equals the candidate before testing. Keep the app
 server stopped during implementation and do not patch or deploy around its
