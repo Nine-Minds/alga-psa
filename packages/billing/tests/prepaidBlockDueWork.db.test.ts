@@ -41,7 +41,7 @@ interface World {
   profileId: string;
 }
 
-async function setup(opts: { startDate?: string; lineCreatedAt?: string; cadenceOwner?: 'client' | 'contract'; withIssuance?: boolean } = {}): Promise<World> {
+async function setup(opts: { startDate?: string; lineCreatedAt?: string; contractCreatedAt?: string; cadenceOwner?: 'client' | 'contract'; withIssuance?: boolean } = {}): Promise<World> {
   const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 4 } });
   const tenant = uuidv4();
   const clientId = uuidv4();
@@ -61,7 +61,9 @@ async function setup(opts: { startDate?: string; lineCreatedAt?: string; cadence
     billing_method: 'hourly', default_rate: 11000, unit_of_measure: 'hour',
     category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
   });
-  await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'PBD Contract', currency_code: 'EUR', status: 'active' });
+  await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'PBD Contract', currency_code: 'EUR', status: 'active',
+    ...(opts.contractCreatedAt ? { created_at: opts.contractCreatedAt } : {}),
+  });
   await db('client_contracts').insert({
     tenant, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId,
     start_date: opts.startDate ?? '2026-03-01', is_active: true,
@@ -113,7 +115,7 @@ async function listRows(w: World, groupingMetadataByRecordId = new Map<string, a
 
 describe.runIf(enabled)('Prepaid Block issuance sync', () => {
   it('schedules contract_start at max(start date, line created date) and is idempotent', async () => {
-    const w = await setup({ startDate: '2026-03-01', lineCreatedAt: '2026-03-10T10:00:00Z' });
+    const w = await setup({ startDate: '2026-03-01', lineCreatedAt: '2026-03-10T10:00:00Z', contractCreatedAt: '2026-02-20T10:00:00Z' });
     try {
       const first = await sync(w);
       expect(first).toMatchObject({ action: 'scheduled', dueDate: '2026-03-10' });

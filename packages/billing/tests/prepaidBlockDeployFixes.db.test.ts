@@ -69,7 +69,7 @@ interface World {
   profileId: string;
 }
 
-async function setup(opts: { startDate?: string; lineCreatedAt?: string; tenantTimeZone?: string; withFixedLine?: boolean } = {}): Promise<World> {
+async function setup(opts: { startDate?: string; lineCreatedAt?: string; contractCreatedAt?: string; tenantTimeZone?: string; withFixedLine?: boolean } = {}): Promise<World> {
   const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 4 } });
   const tenant = uuidv4();
   const clientId = uuidv4();
@@ -93,7 +93,10 @@ async function setup(opts: { startDate?: string; lineCreatedAt?: string; tenantT
     category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
   });
   await db('tenant_settings').insert({ tenant, settings: opts.tenantTimeZone ? { timezone: opts.tenantTimeZone } : {} });
-  await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'PBD Contract', currency_code: 'EUR', status: 'active' });
+  await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'PBD Contract', currency_code: 'EUR', status: 'active',
+    // Default: the contract is created together with its line.
+    ...((opts.contractCreatedAt ?? opts.lineCreatedAt) ? { created_at: opts.contractCreatedAt ?? opts.lineCreatedAt } : {}),
+  });
   await db('client_contracts').insert({
     tenant, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId,
     start_date: opts.startDate ?? '2026-03-01', is_active: true,
@@ -278,7 +281,7 @@ describe.runIf(enabled)('Fix 2: one business date for first-due, listing readine
 
   it('a line added mid-contract is due on the date it was added, on the business-date basis', async () => {
     // Contract started 2026-09-01; line added 2026-10-14T02:30Z = 22:30 EDT on 10/13.
-    const w = await setup({ startDate: '2026-09-01', lineCreatedAt: '2026-10-14T02:30:00Z', tenantTimeZone: 'America/New_York' });
+    const w = await setup({ startDate: '2026-09-01', lineCreatedAt: '2026-10-14T02:30:00Z', contractCreatedAt: '2026-08-20T15:00:00Z', tenantTimeZone: 'America/New_York' });
     try {
       expect(await sync(w)).toMatchObject({ action: 'scheduled', dueDate: '2026-10-13' });
     } finally {
@@ -302,6 +305,56 @@ describe.runIf(enabled)('Fix 2: one business date for first-due, listing readine
     } finally {
       await teardown(w);
     }
+  });
+
+  describe('tenant timezone UNSET (UTC fallback), host TZ America/New_York', () => {
+    // 2026-10-14T00:30Z is 20:30 EDT on 10/13.
+    const EVENING = '2026-10-14T00:30:00Z';
+
+    it('(a) contract and line created at 20:30 EDT on the start date: due on the start date', async () => {
+      const w = await setup({ startDate: '2026-10-13', lineCreatedAt: EVENING, contractCreatedAt: '2026-10-14T00:29:00Z' });
+      try {
+        expect(await sync(w)).toMatchObject({ action: 'scheduled', dueDate: '2026-10-13' });
+        expect(dateOnly((await issuances(w))[0].due_date)).toBe('2026-10-13');
+      } finally {
+        await teardown(w);
+      }
+    });
+
+    it('(a2) a stored contract_start row shifted by UTC is re-synced to the start date', async () => {
+      const w = await setup({ startDate: '2026-10-13', lineCreatedAt: EVENING, contractCreatedAt: '2026-10-14T00:29:00Z' });
+      try {
+        await insertIssuance(w, 'contract_start', '2026-10-14');
+        expect(await sync(w)).toMatchObject({ action: 'rescheduled', dueDate: '2026-10-13' });
+        expect(dateOnly((await issuances(w))[0].due_date)).toBe('2026-10-13');
+      } finally {
+        await teardown(w);
+      }
+    });
+
+    it('(b) a line added days after the contract started: due on the business date it was added', async () => {
+      // Added 2026-10-12T14:00Z (10:00 EDT on 10/12), contract started 10/05.
+      const w = await setup({ startDate: '2026-10-05', lineCreatedAt: '2026-10-12T14:00:00Z', contractCreatedAt: '2026-10-01T12:00:00Z' });
+      try {
+        expect(await sync(w)).toMatchObject({ action: 'scheduled', dueDate: '2026-10-12' });
+      } finally {
+        await teardown(w);
+      }
+    });
+
+    it('(c) the server guard accepts generation of (a) on the start date', async () => {
+      const w = await setup({ startDate: '2026-10-13', lineCreatedAt: EVENING, contractCreatedAt: '2026-10-14T00:29:00Z' });
+      try {
+        await sync(w);
+        const issuanceId = (await issuances(w))[0].issuance_id;
+        const engine = BillingEngine.forTransaction(w.db as any, w.tenant) as any;
+        // Unset timezone resolves to UTC: at 20:30 EDT on 10/13 the business date is 10/14 (>= start date).
+        const charges = await withSystemTime(EVENING, () => engine.loadPrepaidBlockIssuanceCharges(w.clientId, GUARD_WINDOW, [issuanceId]));
+        expect(charges).toHaveLength(1);
+      } finally {
+        await teardown(w);
+      }
+    });
   });
 });
 
