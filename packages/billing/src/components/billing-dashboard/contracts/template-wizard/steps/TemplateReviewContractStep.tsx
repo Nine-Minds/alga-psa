@@ -7,7 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { useTemplateNeutralRate } from '../../templateNeutralRate';
+import { useTemplateMoney } from '../../useTemplateMoney';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -20,8 +20,7 @@ export function TemplateReviewContractStep({
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
 
-  // Templates are currency-neutral: rates render as a plain number (see useTemplateNeutralRate).
-  const formatNeutralRate = useTemplateNeutralRate();
+  const money = useTemplateMoney(data.currency_code);
 
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
@@ -71,9 +70,9 @@ export function TemplateReviewContractStep({
             });
       segments.push(
         t('templateReview.bucket.overage', {
-          amount: (overlay.overage_rate / 100).toFixed(2),
+          amount: money(overlay.overage_rate),
           unit: unitLabel,
-          defaultValue: 'Overage ${{amount}}/{{unit}}',
+          defaultValue: 'Overage {{amount}}/{{unit}}',
         })
       );
     }
@@ -110,7 +109,7 @@ export function TemplateReviewContractStep({
       <p className="text-sm text-[rgb(var(--color-text-500))]">
         {t('templateReview.description', {
           defaultValue:
-            "Confirm the template contents. Rates are determined by each service's pricing in the client's currency when a contract is created from this template.",
+            "Confirm the template contents. Rates are stored in the template's base currency. Other currencies use the template's price sets, or you enter the amounts when you create a contract.",
         })}
       </p>
 
@@ -135,6 +134,14 @@ export function TemplateReviewContractStep({
                 {t('templateReview.fields.billingFrequency', { defaultValue: 'Billing Frequency' })}
               </span>
               <span className="font-medium text-[rgb(var(--color-text-900))]">{formattedBillingFrequency}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[rgb(var(--color-text-500))]">
+                {t('templateReview.fields.baseCurrency', { defaultValue: 'Base Currency' })}
+              </span>
+              <span className="font-medium text-[rgb(var(--color-text-900))]">
+                {data.currency_code || t('templateReview.fallback.none', { defaultValue: '—' })}
+              </span>
             </div>
             <div>
               <span className="text-[rgb(var(--color-text-500))] block mb-1">
@@ -231,10 +238,7 @@ export function TemplateReviewContractStep({
                       <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                         {t('templateReview.fixed.unitRateLabel', { defaultValue: 'Unit rate:' })}{' '}
                         {service.unit_rate != null
-                          ? t('templateReview.fixed.unitRateNeutral', {
-                              rate: formatNeutralRate(service.unit_rate),
-                              defaultValue: "{{rate}} in the client's currency",
-                            })
+                          ? money(service.unit_rate)
                           : t('templateReview.fixed.unitRateFromCatalog', {
                               defaultValue: "Catalog price in the client's currency",
                             })}

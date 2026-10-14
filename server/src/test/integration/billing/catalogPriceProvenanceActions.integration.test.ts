@@ -132,7 +132,8 @@ describe('Catalog price provenance — clone, wizard, constraints and schedule o
     await context.db('contract_templates').insert({
       tenant: context.tenantId,
       template_id: templateId,
-      template_name: `Template ${templateId.slice(0, 6)}`
+      template_name: `Template ${templateId.slice(0, 6)}`,
+      currency_code: 'USD',
     });
     await context.db('contract_template_lines').insert({
       tenant: context.tenantId,

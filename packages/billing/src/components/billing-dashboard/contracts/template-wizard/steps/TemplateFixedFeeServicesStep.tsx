@@ -381,6 +381,7 @@ export function TemplateFixedFeeServicesStep({
 
                 <FixedServiceConfigPanel
                   idPrefix={`template-fixed-${index}-`}
+                  currencyCode={data.currency_code || undefined}
                   configuration={{ pricing_basis: service.pricing_basis ?? 'bundle', base_rate: service.unit_rate }}
                   quantity={service.quantity ?? 1}
                   planFixedConfig={{ enable_proration: data.enable_proration }}
@@ -393,7 +394,7 @@ export function TemplateFixedFeeServicesStep({
                   <p className="text-xs text-[rgb(var(--color-text-400))]" id={`template-fixed-unit-rate-help-${index}`}>
                     {t('templateFixed.help.unitRateOptional', {
                       defaultValue:
-                        "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a contract is created.",
+                        "Optional. The unit rate is in the template's base currency. Leave it empty to use this service's catalog price in that currency.",
                     })}
                   </p>
                 )}

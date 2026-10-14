@@ -691,6 +691,9 @@ describe('ContractWizard resume behavior', () => {
       getContractTemplateLinesForClientWizard,
     } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-template' });
+    const noAmount = { slot_key: 'k', template_amount: null, amount: null, catalog_amount: null, required: false };
+    const unpricedLineFields = { base_rate: noAmount, overtime_rate: noAmount, bucket_pools: [] };
+    const unpricedServiceFields = { rate: noAmount, overtime_rate: noAmount, bucket_overage_rate: noAmount };
     (getContractTemplateLinesForClientWizard as any).mockResolvedValue({
       template_id: 'template-1',
       contract_name: 'Template Contract',
@@ -698,8 +701,8 @@ describe('ContractWizard resume behavior', () => {
       billing_frequency: 'monthly',
       currency_code: 'EUR',
       lines: [
-        { template_line_id: 'tl-1', line_name: 'Fixed A', line_type: 'Fixed', billing_frequency: 'monthly', services: [{ service_id: 'svc-a' }] },
-        { template_line_id: 'tl-2', line_name: 'Hourly B', line_type: 'Hourly', billing_frequency: 'weekly', services: [{ service_id: 'svc-b' }] },
+        { template_line_id: 'tl-1', line_name: 'Fixed A', line_type: 'Fixed', billing_frequency: 'monthly', ...unpricedLineFields, services: [{ service_id: 'svc-a', ...unpricedServiceFields }] },
+        { template_line_id: 'tl-2', line_name: 'Hourly B', line_type: 'Hourly', billing_frequency: 'weekly', ...unpricedLineFields, services: [{ service_id: 'svc-b', ...unpricedServiceFields }] },
       ],
     });
 

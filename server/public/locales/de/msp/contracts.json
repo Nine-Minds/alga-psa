@@ -1259,9 +1259,7 @@
     },
     "loadingTemplate": "Vorlage wird geladen...",
     "servicesLabel": "Dienste",
-    "summary": {
-      "clientCurrency": "Währung des Kunden"
-    },
+    "summary": {},
     "templateBadge": "Vorlage",
     "templateNotFound": "Vertragsvorlage nicht gefunden",
     "templateSnapshotTitle": "Vorlagen-Snapshot",
@@ -1306,6 +1304,16 @@
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
       "title": "Vorlagensimulation"
+    },
+    "pricing": {
+      "title": "Preise nach Währung",
+      "addCurrency": "Währung hinzufügen",
+      "removeCurrency": "Entfernen",
+      "missing": "{{count}} Betrag/Beträge fehlen",
+      "baseCurrency": "(Basis)",
+      "changeBaseCurrency": "Basiswährung ändern",
+      "changeBaseConfirm": "Basiswährung auf {{currency}} ändern? Bestehende Beträge werden NICHT umgerechnet: Sie behalten ihren Zahlenwert und werden als {{currency}} gelesen.",
+      "noSlots": "Diese Vorlage enthält noch keine Beträge, die bepreist werden müssen."
     }
   },
   "quickStart": {
@@ -1493,6 +1501,9 @@
       "message": "Dadurch ändert sich der geschätzte monatliche wiederkehrende Wert des Vertrags von {{before}} auf {{after}}.",
       "confirm": "Bestätigen und fortfahren",
       "cancel": "Zurück"
+    },
+    "templatePicker": {
+      "needsRates": "Benötigt {{currency}}-Preise"
     }
   },
   "wizardBasics": {
@@ -1615,7 +1626,8 @@
       "preview": {
         "billingCadenceLabel": "Abrechnungsrhythmus:",
         "notSpecified": "Nicht angegeben",
-        "templateLabel": "Vorlage:"
+        "templateLabel": "Vorlage:",
+        "currencyLabel": "Basiswährung:"
       },
       "selectTemplateOptional": "Vorlage auswählen (optional)",
       "startFromTemplate": "Aus Vorlage starten"
@@ -1958,8 +1970,15 @@
     "unitRate": "Tarif pro Einheit",
     "serviceRate": "Service-Tarif",
     "noCurrencyPrice": "Kein Preis in {{currency}} für diesen Service. Geben Sie einen Tarif ein, sonst kann der Vertrag nicht erstellt werden.",
-    "templateRateNote": "Aus der Vorlage (der Betrag ist nicht mit einer Währung gekennzeichnet).",
-    "reviewTitle": "Aus der Vorlage erstellte Linien"
+    "reviewTitle": "Aus der Vorlage erstellte Linien",
+    "fallbackAlert": "Diese Vorlage hat keine Preise in {{currency}}. Ihre Struktur wird kopiert; geben Sie unten Beträge in {{currency}} ein. Vorlagenbeträge dienen nur als Referenz und werden nicht umgerechnet.",
+    "templateReference": "Vorlage: {{amount}} {{currency}}",
+    "catalogPrice": "Katalogpreis",
+    "fromTemplateCurrency": "Aus der Vorlage ({{currency}})",
+    "fromTemplatePriceSet": "Aus den {{currency}}-Preisen der Vorlage",
+    "noCurrencyAmount": "Kein Betrag in {{currency}}. Geben Sie einen ein, sonst kann der Vertrag nicht erstellt werden.",
+    "overtimeRate": "Überstundentarif",
+    "bucketOverageRate": "Überschreitungstarif"
   },
   "templateWizard": {
     "title": {
@@ -2003,8 +2022,10 @@
           "usage": "Nutzung"
         }
       },
-      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein."
-    }
+      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein.",
+      "currencyRequired": "Die Basiswährung ist erforderlich"
+    },
+    "currency": "Basiswährung *"
   },
   "templateBasics": {
     "heading": "Vorlagengrundlagen",
@@ -2022,7 +2043,8 @@
     "help": {
       "templateName": "Verwenden Sie einen aussagekräftigen Namen, damit Teams die richtige Vorlage schnell identifizieren können.",
       "internalNotes": "Diese Notizen bleiben bei der Vorlage, um Kontext bereitzustellen, wenn Teammitglieder sie verwenden.",
-      "billingFrequency": "Legt den Standardrhythmus fest, wenn die Vorlage angewendet wird. Er kann pro Kunde angepasst werden."
+      "billingFrequency": "Legt den Standardrhythmus fest, wenn die Vorlage angewendet wird. Er kann pro Kunde angepasst werden.",
+      "currency": "Die in diesem Assistenten eingegebenen Tarife gelten in dieser Währung. Preise für weitere Währungen können anschließend in der Vorlage ergänzt werden. Beträge werden nie umgerechnet."
     }
   },
   "templateFixed": {
@@ -2157,7 +2179,7 @@
   },
   "templateReview": {
     "heading": "Vorlage überprüfen",
-    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden durch die Preisgestaltung jedes Services in der Währung des Kunden festgelegt, wenn ein Vertrag aus dieser Vorlage erstellt wird.",
+    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden in der Basiswährung der Vorlage gespeichert. Andere Währungen verwenden die Preissätze der Vorlage, oder Sie geben die Beträge ein, wenn Sie einen Vertrag erstellen.",
     "sections": {
       "basics": "Vorlagengrundlagen",
       "fixedFeeServices": "Festgebühren-Services",
@@ -2168,7 +2190,8 @@
     "fields": {
       "templateName": "Vorlagenname",
       "billingFrequency": "Abrechnungsfrequenz",
-      "internalNotes": "Interne Notizen"
+      "internalNotes": "Interne Notizen",
+      "baseCurrency": "Basiswährung"
     },
     "fallback": {
       "none": "—",
@@ -2204,8 +2227,7 @@
       "serviceLabel": "Dienst:",
       "invoiceWindowLabel": "Rechnungsfenster:",
       "unitRateLabel": "Stückpreis:",
-      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
-      "unitRateNeutral": "{{rate}} in der Währung des Kunden"
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimale abrechenbare Zeit:",
@@ -2219,7 +2241,7 @@
       "hoursIncluded": "{{value}} Stunden enthalten",
       "unitsIncluded": "{{value}} {{unit}} enthalten",
       "unitsFallback": "Einheiten",
-      "overage": "Überschreitung ${{amount}}/{{unit}}",
+      "overage": "Überschreitung {{amount}}/{{unit}}",
       "hourSingular": "Stunde",
       "unitSingular": "Einheit",
       "rolloverEnabled": "Übertrag aktiviert",
@@ -2611,7 +2633,11 @@
       "recordInvalid": "Einer der ausgewählten Datensätze des Vertragsassistenten ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits.",
       "resumeUnsupportedShape": "Dieser Entwurf kann im Assistenten nicht fortgesetzt werden, ohne seine Preise zu ändern: {{lines}}",
-      "fixedLineNoService": "Die feste Position „{{lineName}}\" hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu."
+      "fixedLineNoService": "Die feste Position „{{lineName}}\" hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu.",
+      "templateAmountsMissing": "Der Vertrag kann nicht in {{currency}} erstellt werden. Für folgende Beträge gibt es keinen Wert in {{currency}}: {{amounts}}. Geben Sie für jeden einen Betrag ein oder ergänzen Sie {{currency}}-Preise in der Vorlage.",
+      "currencyPricingMissing": "Der Vertrag kann nicht in {{currency}} erstellt werden. Für folgende Services ist kein Preis in {{currency}} hinterlegt: {{services}}.",
+      "invalidTemplateCurrency": "„{{currency}}“ ist kein gültiger ISO-4217-Währungscode",
+      "templateCurrencyHasPriceSet": "Diese Vorlage hat bereits eine Preisliste in {{currency}}. Löschen Sie sie, bevor {{currency}} die Basiswährung wird."
     },
     "pricingSchedule": {
       "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",
@@ -2663,5 +2689,10 @@
   },
   "sellHourBlockNote": {
     "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, verwenden Sie „Block verkaufen“ unter „Stundenblöcke“ auf dem Tab „Abrechnungs-Dashboard“ des Kunden."
+  },
+  "review": {
+    "saveTemplateRates": "Diese {{currency}}-Preise in der Vorlage speichern",
+    "saveMissingTemplateRates": "Fehlende {{currency}}-Preise zur Vorlage hinzufügen",
+    "updateTemplateRates": "Die {{currency}}-Preise der Vorlage mit diesen Beträgen aktualisieren"
   }
 }

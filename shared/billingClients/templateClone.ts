@@ -1,7 +1,9 @@
 import type { Knex } from 'knex';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
+import { legacyCloneAmountReader, type ResolvedTemplateAmounts } from './templateAmounts';
 
 // LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone (drops hourly/usage rates and fixed config detail). The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
@@ -11,6 +13,13 @@ interface CloneTemplateOptions {
   templateContractId?: string | null;
   overrideRate?: number | null;
   effectiveDate?: string | null;
+  /**
+   * The template's amounts resolved for the TARGET contract's currency
+   * (`resolveTemplateAmountsForContract`). Every amount written by this clone
+   * comes from here; no template amount column is copied, so an amount can never
+   * cross currencies. Unset amounts stay unset (never rejected on this path).
+   */
+  amounts: ResolvedTemplateAmounts;
 }
 
 interface CloneTemplateResult {
@@ -29,7 +38,7 @@ export async function cloneTemplateContractLine(
   trx: Knex.Transaction,
   options: CloneTemplateOptions
 ): Promise<CloneTemplateResult> {
-  const { tenant, templateContractLineId, contractLineId, templateContractId = null, overrideRate = null } = options;
+  const { tenant, templateContractLineId, contractLineId, overrideRate = null, amounts } = options;
 
   if (!contractLineId) {
     throw new Error('contractLineId is required');
@@ -47,11 +56,17 @@ export async function cloneTemplateContractLine(
   // Full pool config round-trip: when the template carries template pool rows,
   // clone the WHOLE pool (scope incl. catch-all, membership, multipliers,
   // schedule, after-hours rule) and skip the legacy per-config bucket clone.
-  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, contractLineId);
-  await cloneServices(trx, tenant, templateContractLineId, contractLineId, hasTemplatePools);
+  const reader = legacyCloneAmountReader(amounts, templateContractLineId);
+  const hasTemplatePools = await cloneTemplateLinePools(
+    trx,
+    tenant,
+    templateContractLineId,
+    contractLineId,
+    reader.poolOverageRates()
+  );
+  await cloneServices(trx, tenant, templateContractLineId, contractLineId, hasTemplatePools, reader);
 
-  const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
-  const appliedCustomRate = overrideRate ?? templateCustomRate;
+  const appliedCustomRate = overrideRate ?? reader.lineRate();
 
   // A template rate is a clone-time snapshot source; a null one follows the
   // live catalog. Template edits stay provenance-only for live lines.
@@ -84,26 +99,74 @@ export async function cloneTemplateLinePools(
   trx: Knex | Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  contractLineId: string
+  contractLineId: string,
+  overageRateByTemplateBucketId?: Map<string, number | null>
 ): Promise<boolean> {
+  const { hasPools } = await cloneTemplateLinePoolsDetailed(
+    trx,
+    tenant,
+    templateContractLineId,
+    contractLineId,
+    overageRateByTemplateBucketId
+  );
+  return hasPools;
+}
+
+export interface ClonedTemplatePool {
+  template_bucket_id: string;
+  contract_bucket_id: string;
+  bucket_name: string | null;
+  /** The overage rate written to the contract pool (cents, 0 when unset). */
+  overage_rate: number;
+  /** True when a rate map was supplied and had no amount for this pool (stored as 0). */
+  overage_unset: boolean;
+}
+
+/**
+ * Pool clone that also reports what it wrote per pool.
+ *
+ * `overageRateByTemplateBucketId` (keyed by TEMPLATE pool id) is the currency-safe
+ * source of pool overage: a missing or null entry means "no amount in the
+ * contract currency", which is stored as 0 (the column is NOT NULL) and reported
+ * via `overage_unset`. When the map is NOT passed the template column is copied
+ * verbatim (legacy callers that have not resolved template amounts yet; they
+ * must pass the map built from `resolveTemplateAmounts` to stay currency-safe).
+ */
+export async function cloneTemplateLinePoolsDetailed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string,
+  overageRateByTemplateBucketId?: Map<string, number | null>
+): Promise<{ hasPools: boolean; pools: ClonedTemplatePool[] }> {
   const db = tenantDb(trx, tenant);
   const templatePools = await db.table('contract_template_line_buckets')
     .where('template_line_id', templateContractLineId)
     .select('*');
 
   if (!templatePools || templatePools.length === 0) {
-    return false;
+    return { hasPools: false, pools: [] };
   }
 
+  const cloned: ClonedTemplatePool[] = [];
   for (const pool of templatePools) {
     const newBucketId = uuidv4();
+    let overageRate: number;
+    let overageUnset = false;
+    if (overageRateByTemplateBucketId) {
+      const mapped = overageRateByTemplateBucketId.get(pool.bucket_id);
+      overageUnset = mapped === undefined || mapped === null;
+      overageRate = overageUnset ? 0 : Number(mapped);
+    } else {
+      overageRate = normalizeNumeric(pool.overage_rate) ?? 0;
+    }
     await db.table('contract_line_buckets').insert({
       tenant,
       bucket_id: newBucketId,
       contract_line_id: contractLineId,
       bucket_name: pool.bucket_name ?? null,
       total_minutes: pool.total_minutes,
-      overage_rate: normalizeNumeric(pool.overage_rate) ?? 0,
+      overage_rate: overageRate,
       allow_rollover: pool.allow_rollover,
       billing_period: pool.billing_period ?? 'monthly',
       after_hours_multiplier: pool.after_hours_multiplier ?? null,
@@ -111,6 +174,13 @@ export async function cloneTemplateLinePools(
       covers_all_services: pool.covers_all_services,
       created_at: trx.fn.now(),
       updated_at: trx.fn.now(),
+    });
+    cloned.push({
+      template_bucket_id: pool.bucket_id,
+      contract_bucket_id: newBucketId,
+      bucket_name: pool.bucket_name ?? null,
+      overage_rate: overageRate,
+      overage_unset: overageUnset,
     });
 
     const members = await db.table('contract_template_line_bucket_services')
@@ -130,10 +200,19 @@ export async function cloneTemplateLinePools(
     }
   }
 
-  return true;
+  return { hasPools: true, pools: cloned };
 }
 
-async function cloneServices(trx: Knex.Transaction, tenant: string, templateContractLineId: string, contractLineId: string, hasTemplatePools = false) {
+type AmountReader = ReturnType<typeof legacyCloneAmountReader>;
+
+async function cloneServices(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateContractLineId: string,
+  contractLineId: string,
+  hasTemplatePools: boolean,
+  reader: AmountReader
+) {
   type TemplateServiceRow = {
     service_id: string;
     quantity: number | null;
@@ -146,6 +225,9 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
     .select('service_id', 'quantity', 'custom_rate');
 
   for (const service of services) {
+    // The member rate is the resolved slot amount in the contract currency, never
+    // the template's custom_rate column.
+    const memberRate = reader.memberRate(service.service_id);
     // contract_line_services has no timestamp columns (see the other writers
     // in contractWizardActions/contractLinePresetActions).
     await db.table('contract_line_services')
@@ -154,15 +236,15 @@ async function cloneServices(trx: Knex.Transaction, tenant: string, templateCont
         contract_line_id: contractLineId,
         service_id: service.service_id,
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate)
+        custom_rate: memberRate
       })
       .onConflict(['tenant', 'contract_line_id', 'service_id'])
       .merge({
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate)
+        custom_rate: memberRate
       });
 
-    await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id, hasTemplatePools);
+    await cloneServiceConfiguration(trx, tenant, templateContractLineId, contractLineId, service.service_id, hasTemplatePools, reader);
   }
 }
 
@@ -179,9 +261,12 @@ async function cloneServiceConfiguration(
   templateContractLineId: string,
   contractLineId: string,
   serviceId: string,
-  hasTemplatePools: boolean
+  hasTemplatePools: boolean,
+  reader: AmountReader
 ) {
   const db = tenantDb(trx, tenant);
+  const memberRate = reader.memberRate(serviceId);
+  const memberOvertimeRate = reader.memberOvertimeRate(serviceId);
   const configurations = await db.table<TemplateServiceConfigurationRow>('contract_template_line_service_configuration')
     .where('template_line_id', templateContractLineId)
     .where('service_id', serviceId)
@@ -196,7 +281,7 @@ async function cloneServiceConfiguration(
       contract_line_id: contractLineId,
       service_id: serviceId,
       configuration_type: configuration.configuration_type,
-      custom_rate: normalizeNumeric(configuration.custom_rate),
+      custom_rate: memberRate,
       quantity: configuration.quantity,
       created_at: trx.fn.now(),
       updated_at: trx.fn.now()
@@ -206,19 +291,19 @@ async function cloneServiceConfiguration(
     // full by cloneTemplateLinePools — cloning the legacy per-config bucket
     // here would mint a duplicate pool.
     if (configuration.configuration_type === 'Bucket' && !hasTemplatePools) {
-      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
+      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId, reader.legacyBucketOverageRate(serviceId));
     }
 
     if (configuration.configuration_type === 'Hourly') {
-      await cloneHourlyConfig(trx, tenant, configuration.config_id, newConfigId, configuration);
+      await cloneHourlyConfig(trx, tenant, configuration.config_id, newConfigId, memberRate, memberOvertimeRate);
     }
 
     if (configuration.configuration_type === 'Usage') {
-      await cloneUsageConfig(trx, tenant, configuration.config_id, newConfigId, configuration);
+      await cloneUsageConfig(trx, tenant, configuration.config_id, newConfigId, memberRate);
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId, memberRate);
     }
   }
 }
@@ -236,7 +321,8 @@ async function cloneBucketConfig(
   sourceConfigId: string,
   targetConfigId: string,
   contractLineId: string,
-  serviceId: string
+  serviceId: string,
+  overageRate: number | null
 ) {
   const db = tenantDb(trx, tenant);
   const bucketConfig = await db.table<TemplateBucketConfigRow>('contract_template_line_service_bucket_config')
@@ -254,7 +340,7 @@ async function cloneBucketConfig(
     contract_line_id: contractLineId,
     bucket_name: null,
     total_minutes: bucketConfig.total_minutes,
-    overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
+    overage_rate: overageRate ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
     billing_period: bucketConfig.billing_period,
     after_hours_multiplier: null,
@@ -274,59 +360,76 @@ async function cloneBucketConfig(
   });
 }
 
-type TemplateHourlyConfigRow = {
-  billing_period: string;
-  hourly_rate: number | string | null;
-  user_type_rates?: any;
-};
-
+// LEVERAGE: friction template-clone-substrate — this hourly/usage config copy was written against
+// columns the live template tables do not have (billing_period, hourly_rate, unit_name, ...) and threw
+// on any hourly/usage template line. It now mirrors packages/billing/src/lib/billing/utils/templateClone.ts
+// (the same duplicate) so both legacy clones can be proven currency-safe; a single layer should own it.
 async function cloneHourlyConfig(
   trx: Knex.Transaction,
   tenant: string,
   sourceConfigId: string,
   targetConfigId: string,
-  configuration: TemplateServiceConfigurationRow
+  memberRate: number | null,
+  memberOvertimeRate: number | null
 ) {
   const db = tenantDb(trx, tenant);
-  const hourlyConfig = await db.table<TemplateHourlyConfigRow>('contract_template_line_service_hourly_config')
+  const hourlyConfig = await db.table('contract_template_line_service_hourly_config')
     .where('config_id', sourceConfigId)
-    .first('billing_period', 'hourly_rate', 'user_type_rates');
+    .first(
+      'minimum_billable_time',
+      'round_up_to_nearest',
+      'enable_overtime',
+      'overtime_threshold',
+      'enable_after_hours_rate',
+      'after_hours_multiplier'
+    );
 
-  if (!hourlyConfig) return;
+  const minimumBillableTime = hourlyConfig?.minimum_billable_time ?? 15;
+  const roundUpToNearest = hourlyConfig?.round_up_to_nearest ?? 15;
 
   await db.table('contract_line_service_hourly_config').insert({
     tenant,
     config_id: targetConfigId,
-    billing_period: hourlyConfig.billing_period,
-    hourly_rate: normalizeNumeric(hourlyConfig.hourly_rate) ?? normalizeNumeric(configuration.custom_rate) ?? 0,
-    user_type_rates: hourlyConfig.user_type_rates ?? null,
+    minimum_billable_time: minimumBillableTime,
+    round_up_to_nearest: roundUpToNearest,
+    enable_overtime: Boolean(hourlyConfig?.enable_overtime),
+    // The overtime RATE is an amount: only the resolved slot, never the template column.
+    overtime_rate: memberOvertimeRate,
+    overtime_threshold: hourlyConfig?.overtime_threshold ?? null,
+    enable_after_hours_rate: Boolean(hourlyConfig?.enable_after_hours_rate),
+    after_hours_multiplier: normalizeNumeric(hourlyConfig?.after_hours_multiplier),
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+
+  await db.table('contract_line_service_hourly_configs').insert({
+    tenant,
+    config_id: targetConfigId,
+    hourly_rate: memberRate ?? 0,
+    minimum_billable_time: minimumBillableTime,
+    round_up_to_nearest: roundUpToNearest,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
 }
 
-type TemplateUsageConfigRow = {
-  billing_period: string;
-  unit_name: string | null;
-  included_units: number | null;
-  overage_rate: number | string | null;
-};
-
-async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string, configuration: TemplateServiceConfigurationRow) {
+async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string, memberRate: number | null) {
   const db = tenantDb(trx, tenant);
-  const usageConfig = await db.table<TemplateUsageConfigRow>('contract_template_line_service_usage_config')
+  const usageConfig = await db.table('contract_template_line_service_usage_config')
     .where('config_id', sourceConfigId)
-    .first('billing_period', 'unit_name', 'included_units', 'overage_rate');
+    .first('unit_of_measure', 'unit_code', 'enable_tiered_pricing', 'minimum_usage');
 
-  if (!usageConfig) return;
-
+  const clonedUnit = withUnitCode({
+    unit_of_measure: usageConfig?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
+    unit_code: usageConfig?.unit_code ?? null,
+  });
   await db.table('contract_line_service_usage_config').insert({
     tenant,
     config_id: targetConfigId,
-    billing_period: usageConfig.billing_period,
-    unit_name: usageConfig.unit_name,
-    included_units: usageConfig.included_units,
-    overage_rate: normalizeNumeric(usageConfig.overage_rate) ?? normalizeNumeric(configuration.custom_rate) ?? 0,
+    ...clonedUnit,
+    enable_tiered_pricing: Boolean(usageConfig?.enable_tiered_pricing),
+    minimum_usage: usageConfig?.minimum_usage ?? 0,
+    base_rate: memberRate,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
@@ -352,7 +455,13 @@ export async function cloneTemplateServiceFixedConfig(
   trx: Knex | Knex.Transaction,
   tenant: string,
   sourceConfigId: string,
-  targetConfigId: string
+  targetConfigId: string,
+  /**
+   * The unit rate in the CONTRACT's currency (the resolved `member_rate` slot,
+   * null = follow the catalog). The template's own base_rate column is never
+   * copied: it is in the template's currency.
+   */
+  baseRate: number | null
 ): Promise<void> {
   const db = tenantDb(trx, tenant);
   const fixedConfig = await db.table<{ base_rate: number | string | null; pricing_basis: string | null }>(
@@ -363,7 +472,7 @@ export async function cloneTemplateServiceFixedConfig(
 
   if (!fixedConfig) return;
 
-  const templateBaseRate = normalizeNumeric(fixedConfig.base_rate);
+  const templateBaseRate = baseRate;
 
   await db.table('contract_line_service_fixed_config').insert({
     tenant,
@@ -374,28 +483,4 @@ export async function cloneTemplateServiceFixedConfig(
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });
-}
-
-async function resolveTemplateCustomRate(
-  trx: Knex.Transaction,
-  tenant: string,
-  templateContractId: string | null,
-  templateContractLineId: string
-): Promise<number | null> {
-  if (!templateContractId) {
-    return null;
-  }
-
-  type CustomRateRow = { custom_rate: number | string | null };
-
-  const templateLine = await tenantDb(trx, tenant).table<CustomRateRow>('contract_template_lines')
-    .where('template_id', templateContractId)
-    .where('template_line_id', templateContractLineId)
-    .first('custom_rate');
-
-  if (templateLine && templateLine.custom_rate != null) {
-    return normalizeNumeric(templateLine.custom_rate);
-  }
-
-  return null;
 }
