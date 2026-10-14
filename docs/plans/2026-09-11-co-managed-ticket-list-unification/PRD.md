@@ -6,6 +6,95 @@
 
 The historical checklist records 18/39 implemented features and 2/20 implemented tests. Reconcile all 21 unchecked features and tests T002–T019 through C1/C4; close missing behavior and attach current proof for behavior already implemented. Source-state recovery, qualified identity/export, uncertain handback recovery, error redaction and UI boundaries remain required.
 
+## Decision amendment — 2026-10-14
+
+**This amendment supersedes the original design wherever they conflict.** The baseline below is kept for its still-valid contracts: qualified identity, reader redaction, handback recovery, release boundary, failure states. Sections that this amendment replaces carry a pointer back here. Feature and test rows that the amendment changes are marked in `features.json` and `tests.json` (`amendment: "2026-10-14"`, with `supersededBy` where a row no longer applies).
+
+### Why the design changed
+
+Captain review of the running branch found that the native dashboard and the co-managed queues behaved differently in ways the scope bar made look accidental. "This MSP" kept the full dashboard (board strip, Filters popover, Bundled toggle, View, Share). Choosing "All workspaces" put native tickets into a reduced list with no bundles, no native filters and no View menu. Presenting the full native dashboard as one setting inside a co-managed switcher made the reduced list look like the same screen degraded.
+
+The reduced capability set is correct for shared tickets, for the reasons in the capability matrix and in "Bundles" below. Putting native tickets into that list, and framing the native dashboard as a sub-option of it, was the mistake.
+
+### Captain decisions
+
+| ID | Decision |
+| --- | --- |
+| D1 | **Shared work becomes a separate destination.** A new **Customer Tickets** page lists co-managed shared tickets. `/msp/tickets` (**All Tickets**) is the native dashboard only, with no Working/Oversight control and no workspace selector. |
+| D2 | **No merged list.** Native and shared tickets are never shown in one list. "Working queue / All workspaces" (native plus shared) and the "This MSP" workspace option are removed. Customer Tickets shows shared tickets only. |
+| D3 | **The native dashboard points to shared work when there is a reason to.** A callout strip on All Tickets and a count badge on the Customer Tickets menu entry appear only when shared tickets need MSP action, as defined under "Callouts". Being separate keeps each screen clear; the callouts keep shared work visible. |
+| D4 | **Co-managed entry points appear only when relevant.** Customer Tickets, the callouts and the other co-managed navigation are shown only when the tenant has co-managed work the user can act on, not merely because the release flag is on. |
+
+### Consequences adopted with these decisions
+
+These follow from D1–D4. They are recorded so the implementation round does not have to rediscover them. Each one can be revisited at review.
+
+| ID | Consequence |
+| --- | --- |
+| A1 | **Route.** Customer Tickets lives at `/msp/tickets/customer`, a static segment beside the existing `/msp/tickets/recurring`. It takes `queueView=working\|oversight`, `workspace=all\|<owner-tenant-id>`, `clientId` and the qualified presentation parameters from the original URL policy. `workspace=msp` is no longer valid. |
+| A2 | **Legacy URLs redirect.** `/msp/tickets?queueView=…` redirects to `/msp/tickets/customer` with the supported parameters. `workspace=msp`, or a missing `queueView`, lands on native `/msp/tickets` with no qualified parameters. `/msp/co-managed/tickets` stays a compatibility adapter that targets the new route. Co-managed work links (overview, escalation receipts, notifications) link to `/msp/tickets/customer` directly. |
+| A3 | **Reader.** The ticket queue reader stops adding the home tenant's native tickets to `view: 'working'` (the `projection(actor.tenant, …)` call in `packages/co-managed/src/ticketQueue.ts`). Working = shared tickets with MSP responsibility or an explicit MSP user/team assignment. Oversight = permitted customer-owned tickets. Rows, counts, workspace options and CSV come from that one relation. The task queue reader is not changed by this amendment (see Open questions). |
+| A4 | **Native dashboard restored.** All Tickets renders exactly as main does: no `scopeControls` slot content, no qualified branch in `server/src/app/msp/tickets/page.tsx`, and no co-managed state in the native URL, filters or saved View defaults. The only co-managed addition is the callout strip from D3, mounted inside the release boundary. |
+| A5 | **No create action on Customer Tickets.** Customer Tickets lists customer-owned tickets. A ticket the MSP creates is native and appears on All Tickets, so the page has no Add Ticket action. This removes the "created ticket is outside the current view" problem (F025/F026). |
+| A6 | **One toolbar vocabulary, not one extracted shell.** Customer Tickets has its own page heading and uses the same toolbar primitives as the native dashboard: a search field, a collapsible **Filters** control holding its supported filters, **View** (supported optional columns and density), and **Share** (full filtered CSV). This replaces F010's extraction of a shared frame from `TicketingDashboard`, which was blocked and only needed while both sources shared one page. Extract the toolbar pieces the dashboard owns into presentational components where both pages need them. Delete the parallel `TicketListShell` frame if it ends up with no caller. |
+| A7 | **Client screens follow the same split.** A client's Tickets tab always shows the native `MspClientTickets` list. Shared tickets for that client appear in the client's co-managed section using the shared-only qualified list body with the client fixed. A client-scoped callout strip on the Tickets tab links there when that client's shared tickets need MSP action. `CoManagedClientIntegration` no longer replaces the native client list with the qualified body. |
+| A8 | **Navigation regrouped.** Tickets → All Tickets, Customer Tickets, Recurring Tickets. Projects → All Projects, Shared Tasks (the existing `/msp/co-management/tasks`), Templates. The three top-level co-managed items become one **Co-managed IT** group: Overview (`/msp/co-managed`), Delegated administration, and (customer workspaces only) Co-managed access. |
+
+### Callouts
+
+The callout strip on All Tickets is one line between the board tabs and the list, for example: "2 customer tickets escalated to your team · 1 awaiting your reply → View". Each segment deep-links to Customer Tickets with a matching filter applied.
+
+Signals in this round:
+
+| Signal | Membership |
+| --- | --- |
+| Escalated, unassigned | Shared tickets the user can read with MSP responsibility and no MSP user or team assignment on the qualified MSP reference. |
+| Awaiting MSP reply | Shared tickets assigned to the user or one of the user's teams whose owner ticket has `response_state = 'awaiting_internal'`. |
+
+Rules:
+
+- **Counts come from the authorized reader.** A count discloses that tickets exist, so it uses the same authorized relation and field redaction as the list. A redacted responsibility, assignment or response-state field excludes the row from that signal; do not infer it in the browser. Each signal is a supported reader filter, so the deep link and the count match exactly.
+- **The native dashboard never waits on callouts.** The strip loads after the native list renders, inside the release boundary, and on any error or empty result renders nothing. It starts no native request and writes nothing to native URL or View state.
+- **Dismissal is per viewer and per count.** Dismissing hides the strip until a signal's count increases. Store the dismissed counts in browser storage, wrapped so the strip still works when storage is unavailable. It is a convenience, not durable state.
+- **Menu badge.** The Customer Tickets entry shows the sum of the two signals for the user, from the same reader call. No badge at zero.
+- **Out of scope for this round:** an SLA-at-risk signal. Shared SLA indicators are not yet in the qualified row. Add the signal when that projection exists, with the same authorization rule.
+
+### Visibility gating
+
+Show Customer Tickets, Shared Tasks, the callout strip and the menu badge only when all of these hold:
+
+1. The `release-v1-6-feature` presentation boundary has resolved to enabled.
+2. The tenant is a sponsoring PSA Pro tenant.
+3. The reader reports at least one active relationship on which the user has a staff assignment. Use the existing discovery in the queue reader; do not add a second directory query.
+
+This is presentation only. Every route and action keeps its own server-side authorization, and a user who opens `/msp/tickets/customer` directly without assignments gets the ordinary empty state, not an error.
+
+**Delegated administration (verified 2026-10-14).** In a PSA tenant, the sidebar shows this entry to every Pro user with the release flag (`server/src/components/layout/SidebarWithFeatureFlags.tsx`, the `/msp/co-management/administration` filter), and the menu item has no `requiredPermission`. That is not an authorization hole. `getCoManagedDelegatedAdministration` and the other actions in `server/src/lib/actions/coManagedDelegatedAdministrationActions.ts` admit only the signed-in technician's own staff assignments and current customer approvals (`listCoManagedDelegatedWorkspaces` in `packages/co-managed/src/delegatedAdministration.ts`). Users without approvals see an empty directory. Under D4, show the PSA entry only when that directory is non-empty, using the same action. The customer-workspace rule (`co_management:manage`) is unchanged.
+
+### Bundles
+
+Customer Tickets stays flat and has no Bundled toggle. A bundle is a master and children in one tenant on one board. Sharing is per ticket, so a customer bundle can be only partly visible to the MSP, and no authority path is defined for acting on a bundle child through its shared master. Native bundles are unaffected and remain available on All Tickets and inside each customer workspace. A read-only grouping of customer bundles, shown only when every member is visible to the user, is a possible later addition and is not part of this round.
+
+### Effect on the original checklists
+
+| Row | Effect |
+| --- | --- |
+| F002, F003, F013, F014, F017, F027, T002, T005, T008 (native half) | Reframed: the native dashboard is restored rather than switched. The requirement becomes "All Tickets matches main with no co-managed state". F003's native snapshot and source switching are no longer needed. |
+| F010, T005 | Superseded by A6 (F043). |
+| F011, F012 | Superseded: no coordinator mounts two sources on one route. Customer Tickets is its own page and handles its own release-boundary loading (F040). |
+| F025, F026, T011 | Superseded by A5. |
+| F033, F034, T016 | Changed by A7 (F047). |
+| F035 | Changed by A2 (F041). |
+| T003 | Changed: native tickets must be absent from working. |
+| T019 | Changed: the browser journey covers All Tickets with callouts, then Customer Tickets, not source switching. |
+
+All other rows keep their meaning and are applied to Customer Tickets instead of the shared page.
+
+### Open questions
+
+- **Task queues.** `/msp/co-management/tasks` also merges native and shared tasks in its working view. The same reasoning may apply. This amendment only moves it into the Projects menu and leaves its contents unchanged until the captain decides.
+- **SLA-at-risk callout.** Deferred until shared SLA indicators are projected (see Callouts).
+
 ## Original design baseline
 
 - Date: 2026-09-11
@@ -16,7 +105,7 @@ The historical checklist records 18/39 implemented features and 2/20 implemented
 
 Bring the qualified co-managed working and oversight queues into `/msp/tickets`. Keep the existing native ticket dashboard as the MSP-workspace experience, including its board navigation, filters, bundles, display defaults, selection and routed actions. Use the same list frame and table primitives for the qualified source, with controls that match that source's actual capabilities.
 
-The selected design has two visible views, **Working queue** and **Customer oversight**, with an independent workspace selector. **This MSP** is workspace narrowing within Working queue. It is not a third peer view.
+The selected design has two visible views, **Working queue** and **Customer oversight**, with an independent workspace selector. **This MSP** is workspace narrowing within Working queue. It is not a third peer view. *(Superseded 2026-10-14 by D1/D2: Customer Tickets is a separate page and This MSP is removed.)*
 
 This follows the [co-managed foundation](../2026-09-06-co-managed-it-plan.md) and [client integration](../2026-09-11-co-managed-client-integration/PRD.md). Those plans own sponsorship, sharing, licensing, canonical ticket actions and client relationship discovery. This plan owns their integration into the ticket-list application.
 
@@ -82,6 +171,9 @@ The design study under `/tmp/co-managed-unification/` is supplementary and tempo
 
 ### Views and membership
 
+> **Amended 2026-10-14:** the This MSP and native-plus-shared rows are removed (D1, D2, A3). See the decision amendment.
+
+
 | View/workspace | Membership | Source |
 | --- | --- | --- |
 | Working queue / This MSP | Native tickets in the home workspace under existing native filters. | Existing native controller and `fetchTicketsWithPagination`. |
@@ -94,6 +186,9 @@ Visibility alone does not place a ticket in Working queue or start an MSP SLA. P
 This MSP is absent from the oversight workspace choices. Changing to oversight from This MSP selects All workspaces explicitly. Customer-workspace selection can be retained between working and oversight when still valid. An explicit workspace ID that becomes unavailable must produce a scoped unavailable/empty result and a clear reset action; do not silently widen it to All workspaces.
 
 ### URL and initial-entry policy
+
+> **Amended 2026-10-14:** the qualified scope moves to `/msp/tickets/customer`; `workspace=msp` and native-to-qualified source switching are removed (A1, A2).
+
 
 Add a shared parser/serializer for a discriminated list scope. Proposed query names:
 
@@ -121,6 +216,9 @@ The native-entry default deliberately differs from the prototype's all-workspace
 ## UI integration
 
 ### Existing frame and component ownership
+
+> **Amended 2026-10-14:** superseded by A4 and A6. No coordinator mounts two sources on one route, and the scope bar is removed from the native dashboard.
+
 
 Keep the current heading/action row, toolbar treatment, product theme tokens, translations, automation IDs and table pagination vocabulary. Place the working/oversight control and workspace selector below the heading and above the native board strip or qualified toolbar. Remove the separate “Co-managed ticket queues” link once it has been replaced by this control.
 
@@ -204,6 +302,9 @@ Rows, search, sort, state, counts and full CSV continue to use one authorized SQ
 
 ### Creation and return navigation
 
+> **Amended 2026-10-14:** Customer Tickets has no create action (A5). The return-navigation requirement still applies, targeting `/msp/tickets/customer`.
+
+
 Use `buildCreateTicketHref`; preserve the existing lazy-loaded routed form and create shortcut. On qualified screens label the action **Add MSP ticket**. A customer workspace filter never changes ownership of new records. Only an authorized local client selection may prefill client fields.
 
 After creation, refresh the active list under its existing scope. If the new native ticket is outside the current customer-only/oversight view, provide a clear success link to the created native ticket rather than silently switching workspace or claiming it appears in the current list. Do not duplicate the creation form to obtain this behavior.
@@ -229,6 +330,9 @@ Use loading, empty, zero-results, unavailable, restricted-field and retry states
 Preserve the current behavior of invalidating qualified rows/counts after failed authorization-sensitive reads and exports. The existing export action throws without a reliable transport-versus-permission classification, and `coManagedTicketQueue.test.tsx` explicitly tests removal of stale contents after export authority is lost. Therefore this plan does **not** adopt the prototype's unconditional “failed export keeps rows” behavior. Retaining rows would require a separately supported, sanitized error distinction; it is not necessary for this integration.
 
 ## Client and legacy entry integration
+
+> **Amended 2026-10-14:** the native client ticket list is no longer replaced (A7), and legacy entries target `/msp/tickets/customer` (A2).
+
 
 - Use the refactored qualified list body in `CoManagedClientIntegration`'s existing `ticketsContent` slot. Pass fixed `clientId`, an instance-specific ID prefix and embedded presentation mode. Omit a second page heading and global client selector.
 - Match all authorized relationships for that local client. Do not choose a single relationship for list discovery or replace client scoping with workspace scoping.
@@ -274,7 +378,7 @@ Browser evidence must come from the running application after implementation, wi
 
 ## Risks and review points
 
-1. **Entry default:** this draft preserves current native bare-route/remembered-board behavior. Confirm before implementation if the intended product change also includes making all-workspaces Working queue the default; that changes SSR and preference migration scope.
+1. **Entry default** *(resolved 2026-10-14 by D1: native is the only content of `/msp/tickets`)*: this draft preserves current native bare-route/remembered-board behavior. Confirm before implementation if the intended product change also includes making all-workspaces Working queue the default; that changes SSR and preference migration scope.
 2. **False native compatibility:** a qualified record padded with native fields can reach local tag, board, avatar, export or mutation handlers. Type/source separation and negative-call tests are mandatory.
 3. **Saved-default leakage:** `captureTicketViewSettings` captures new filter keys unless excluded. Keep scope state outside native filters and add explicit exclusion/validation if a shared type is extended.
 4. **Transient scope narrowing:** hidden workspace choices or revoked access must not silently broaden results. Client option discovery is independent of current page and result count.

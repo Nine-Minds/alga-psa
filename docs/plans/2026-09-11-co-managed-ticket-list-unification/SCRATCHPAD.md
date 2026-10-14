@@ -4,6 +4,14 @@
 
 The [whole-card correction plan](../2026-09-20-co-managed-it-completion/PRD.md) governs readiness. Historical implementation/test flags below are preserved and now carry a separate pending candidate-acceptance status. No product tests were run in this documentation revision. Required open rows must be reconciled and verified; a finished assignment or older smoke does not close this plan. Follow C1–C8 and the final candidate verifier before requesting XO review eligibility. Existing live-provider exclusions remain explicit production prerequisites, with in-card simulator/signed-test-license journeys still required.
 
+## 2026-10-14 decision amendment
+
+- Captain review found the native dashboard and the co-managed queues on one route made the native view look like a setting of a reduced co-managed list. Decisions D1–D4 and consequences A1–A8 are in PRD.md. In short: separate Customer Tickets page at `/msp/tickets/customer`, no native+shared merged list, callouts on All Tickets, co-managed entries only when relevant.
+- Reader seam for A3: the native branch is the single `if (request.view === 'working') projection(actor.tenant, workspace.client_name);` call in `packages/co-managed/src/ticketQueue.ts`.
+- Callout data: `response_state` is `'awaiting_client' | 'awaiting_internal' | null` (`packages/types/src/interfaces/ticket.interfaces.ts`). It is not in the qualified row DTO yet, so it needs a redaction-aware projection like `has_msp_assignment`.
+- Delegated administration nav: shown to every PSA Pro user with the flag (`SidebarWithFeatureFlags.tsx`), but the actions only admit the user's own staff assignments and customer approvals, so it is a visibility issue, not an authorization hole.
+- Existing scope-bar pieces to remove or repurpose: `server/src/components/tickets/TicketListScopeBar.tsx`, the `scopeControls` slot and qualified branch in `server/src/app/msp/tickets/page.tsx`, `packages/tickets/src/components/TicketListShell.tsx`.
+
 ## Historical working notes
 
 ## Scope and decisions
