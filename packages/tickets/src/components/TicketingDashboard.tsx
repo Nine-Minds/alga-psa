@@ -8,6 +8,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
+import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -63,7 +64,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -495,6 +496,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // Gates the row menu's "Create template from ticket" item; the server action is authoritative.
+  const templatePermissions = useTicketTemplatePermissions();
 
   // The only way out of this route. Announcing the departure *before* the push
   // is the point: the container mirrors filter state into the URL, and a write
@@ -967,9 +971,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
 
-  // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
-
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
     const filterQuery = getCurrentFiltersQuery();
@@ -979,8 +980,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo(href);
   }, [getCurrentFiltersQuery, navigateAwayTo]);
 
-
-  // Handle saving time entries created from intervals
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
@@ -1652,6 +1651,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         duplicateFromTicketId: ticketId,
         isAlgaDeskMode: useAlgaDeskQuickAddForm,
       })),
+      // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
+      onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
+      canCreateTemplate: templatePermissions.create,
     });
 
     return [selectionColumn, ...baseColumns, actionsColumn];
@@ -1683,6 +1685,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     densityClasses.tagSize,
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
+    templatePermissions.create,
     t,
     locale,
     dateFormat,

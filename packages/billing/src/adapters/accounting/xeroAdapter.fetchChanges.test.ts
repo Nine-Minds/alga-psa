@@ -132,6 +132,64 @@ describe('XeroAdapter.fetchChanges', () => {
     expect(result.truncated).toBe(false);
   });
 
+  it('scales payments and credit allocations by their own currency (JPY has no fraction digits)', async () => {
+    xeroListChangedPayments.mockResolvedValueOnce({
+      records: [
+        {
+          PaymentID: 'pay-jpy',
+          Status: 'AUTHORISED',
+          Amount: 10000,
+          CurrencyCode: 'JPY',
+          Reference: 'JPY-1',
+          Invoice: { InvoiceID: 'inv-jpy' }
+        },
+        {
+          PaymentID: 'pay-usd',
+          Status: 'AUTHORISED',
+          Amount: 100,
+          CurrencyCode: 'USD',
+          Reference: 'USD-1',
+          Invoice: { InvoiceID: 'inv-usd' }
+        }
+      ],
+      hasMore: false
+    });
+    xeroListChangedCreditNotes.mockResolvedValueOnce({
+      records: [
+        {
+          CreditNoteID: 'cn-jpy',
+          Status: 'AUTHORISED',
+          CurrencyCode: 'JPY',
+          Total: 2500,
+          Allocations: [{ AllocationID: 'alloc-jpy', Amount: 2500, Invoice: { InvoiceID: 'inv-jpy' } }]
+        }
+      ],
+      hasMore: false
+    });
+
+    const adapter = await XeroAdapter.create();
+    const result = await adapter.fetchChanges('tenant-x', '2026-01-01T00:00:00Z', 'conn-1');
+
+    const jpyPayment = result.changes.find((c) => c.externalId === 'pay-jpy');
+    expect(jpyPayment?.normalized).toMatchObject({
+      currency: 'JPY',
+      totalCents: 10000,
+      allocations: [{ externalInvoiceId: 'inv-jpy', amountCents: 10000 }]
+    });
+
+    const usdPayment = result.changes.find((c) => c.externalId === 'pay-usd');
+    expect(usdPayment?.normalized).toMatchObject({
+      currency: 'USD',
+      totalCents: 10000,
+      allocations: [{ externalInvoiceId: 'inv-usd', amountCents: 10000 }]
+    });
+
+    const jpyAllocation = result.changes.find((c) => c.externalId === 'creditnote:cn-jpy:alloc:alloc-jpy');
+    expect((jpyAllocation?.normalized as any).allocations).toEqual([
+      { externalInvoiceId: 'inv-jpy', amountCents: 2500 }
+    ]);
+  });
+
   it('keeps two allocations to one invoice distinct when AllocationID is present', async () => {
     xeroListChangedCreditNotes.mockResolvedValueOnce({
       records: [

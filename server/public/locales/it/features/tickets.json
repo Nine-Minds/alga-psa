@@ -214,7 +214,10 @@
     "printOptions": "Opzioni di stampa",
     "duplicate": "Duplica",
     "rowActions": "Azioni",
-    "openMenu": "Apri menu"
+    "openMenu": "Apri menu",
+    "moreActions": "Altre azioni",
+    "createTemplate": "Crea modello dal ticket",
+    "createWorkflowFromTicket": "Crea workflow dal ticket"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -761,6 +764,8 @@
       "failure": "Impossibile aggiornare lo stato",
       "failedHeading": "Stato non aggiornato sui seguenti ticket:",
       "resolutionLabel": "Commento di risoluzione (facoltativo)",
+      "resolutionLabelRequired": "Commento di risoluzione",
+      "resolutionRequiredHint": "Questa bacheca richiede un commento di risoluzione prima di poter chiudere i ticket.",
       "resolutionPlaceholder": "Descrivi come sono stati risolti questi ticket",
       "resolutionHelper": "Viene salvato come risoluzione su ogni ticket selezionato e soddisfa le bacheche che ne richiedono una prima della chiusura."
     },
@@ -839,7 +844,16 @@
     "duplicateChecklistHeading": "Checklist di #{{number}}",
     "duplicateChecklistRequired": "(obbligatorio)",
     "duplicateCopyChecklist": "Copia gli elementi della checklist (non selezionati)",
-    "duplicateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati da #{{number}}."
+    "duplicateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati da #{{number}}.",
+    "templateLabel": "Modello",
+    "templateNone": "Nessuno",
+    "templateLoadFailed": "Impossibile caricare il modello. Riprova.",
+    "fromTemplatePill": "Da modello: {{name}}",
+    "templateChecklistHeading": "Checklist dal modello: {{name}}",
+    "templateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati dal modello.",
+    "templateReplaceTitle": "Sostituire le modifiche?",
+    "templateReplaceMessage": "Applicando un modello vengono sostituiti titolo, descrizione e gli altri campi inseriti.",
+    "templateReplaceConfirm": "Applica modello"
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -978,9 +992,6 @@
     "closeTicketNowTitle": "Chiudere il ticket adesso?",
     "closeTicketNowPrompt": "Questo commento è ora la risoluzione. Scegli uno stato di chiusura per chiudere il ticket oppure lascialo aperto.",
     "leaveTicketOpen": "Lascia aperto",
-    "timerActiveElsewhereTitle": "Timer attivo altrove",
-    "timerTakeoverMessage": "Il timer di questo ticket è attivo in un'altra finestra. Vuoi assumerne il controllo e sostituirlo qui?",
-    "replaceHere": "Sostituisci qui",
     "noActiveTimePeriodTitle": "Nessun periodo di tempo attivo",
     "noActiveTimePeriodMessage": "Nessun periodo di tempo attivo trovato. È necessario configurare i periodi di tempo nella dashboard di fatturazione prima di aggiungere inserimenti ore.",
     "goToTimePeriodsSetup": "Vai alla configurazione dei periodi di tempo",
@@ -996,15 +1007,7 @@
   },
   "properties": {
     "timeEntry": "Inserimento ore",
-    "ticketTimer": "Timer ticket - #{{ticketNumber}}",
-    "timerActiveElsewhere": "Timer attivo in un'altra finestra",
-    "start": "Avvia",
-    "pause": "Pausa",
-    "reset": "Reimposta",
-    "enterWorkDescription": "Inserisci la descrizione del lavoro",
-    "liveTimerDisabled": "Il timer live dei ticket è disattivato per questa bacheca.",
     "addTimeEntry": "Aggiungi inserimento ore",
-    "trackedIntervals": "Intervalli tracciati",
     "contactInfo": "Informazioni contatto",
     "noContactSelected": "Nessun contatto selezionato",
     "selectOrChangeContact": "Seleziona o cambia contatto",
@@ -1594,7 +1597,8 @@
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato.",
-    "duplicatedFrom": "Duplicato da #{{number}}"
+    "duplicatedFrom": "Duplicato da #{{number}}",
+    "fromTemplate": "Da modello: {{name}}"
   },
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {
@@ -1749,9 +1753,7 @@
       "viewAll": "Vedi tutto",
       "viewAllCount": "Vedi tutti {{count}}",
       "timeLogged": "Tempo registrato",
-      "workDescription": "Descrizione del lavoro",
       "addTimeEntry": "Aggiungi inserimento ore",
-      "trackedIntervals": "Intervalli registrati",
       "teamAndWatchers": "Team e osservatori",
       "addAgent": "Aggiungi un agente…",
       "timeline": "Cronologia",
@@ -1762,7 +1764,6 @@
       "opened": "Aperto",
       "viaSource": "tramite {{source}}",
       "noContactOnTicket": "Nessun contatto su questo ticket",
-      "whatAreYouWorkingOn": "A cosa stai lavorando?",
       "agentFallback": "Agente",
       "removeAgent": "Rimuovi {{name}}",
       "noAdditionalAgents": "Nessun agente aggiuntivo",
@@ -1789,8 +1790,6 @@
       "acrossEntries_one": "su {{count}} voce",
       "acrossEntries_other": "su {{count}} voci",
       "team": "Team",
-      "startTimer": "Avvia timer",
-      "timerLockedHint": "Un altro timer è già in esecuzione",
       "billable": "Fatturabile",
       "nothingBillable": "Ancora nulla di fatturabile",
       "editContact": "Modifica contatto",
@@ -1910,7 +1909,8 @@
       "noStatusChange": "Non modificare lo stato",
       "showAllActivity": "Mostra tutta l'attività",
       "collapseActivity": "Comprimi attività precedente",
-      "replyingToComment": "Rispondendo a {{name}}"
+      "replyingToComment": "Rispondendo a {{name}}",
+      "createdFromTemplate": "{{actor}} ha creato questo ticket dal modello \"{{name}}\""
     }
   },
   "notifications": {
@@ -2308,6 +2308,102 @@
       "monthlyOnDay": "{{every}}, {{day}}",
       "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
       "yearly": "Ogni anno il {{day}} {{month}}"
+    }
+  },
+  "stopwatch": {
+    "boardDisabled": "Il cronometro è disattivato per questa bacheca.",
+    "pausedElsewhereTicket": "In pausa su un altro ticket: {{label}}",
+    "runningElsewhereTicket": "In corso su un altro ticket: {{label}}",
+    "pausedElsewhereTask": "In pausa su un'altra attività: {{label}}",
+    "runningElsewhereTask": "In corso su un'altra attività: {{label}}",
+    "switch": "Passa qui",
+    "start": "Avvia cronometro",
+    "resume": "Riprendi cronometro",
+    "pause": "Metti in pausa il cronometro",
+    "stop": "Ferma e registra il tempo",
+    "discard": "Scarta cronometro",
+    "pausedHint": "In pausa. Riprendi per continuare a tracciare, oppure ferma per registrare il tempo.",
+    "workDescription": "Descrizione del lavoro",
+    "whatAreYouWorkingOn": "Su cosa stai lavorando?"
+  },
+  "templates": {
+    "loading": "Caricamento…",
+    "list": {
+      "title": "Modelli di ticket",
+      "new": "Nuovo modello",
+      "empty": "Nessun modello di ticket. Apri un ticket e scegli \"Crea modello dal ticket\", oppure creane uno da zero.",
+      "showInactive": "Mostra inattivi",
+      "deleted": "Modello eliminato",
+      "deleteTitle": "Elimina modello",
+      "deleteMessage": "Eliminare \"{{name}}\"? I ticket già creati da questo modello non vengono modificati.",
+      "columns": {
+        "name": "Nome",
+        "title": "Titolo del ticket",
+        "board": "Bacheca",
+        "checklist": "Voci della checklist",
+        "status": "Stato"
+      }
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "actions": {
+      "edit": "Modifica",
+      "newTicket": "Nuovo ticket da modello",
+      "activate": "Attiva",
+      "deactivate": "Disattiva",
+      "delete": "Elimina",
+      "cancel": "Annulla"
+    },
+    "sections": {
+      "details": "Modello",
+      "ticket": "Ticket",
+      "checklist": "Lista di controllo",
+      "customFields": "Campi personalizzati"
+    },
+    "fields": {
+      "name": "Nome del modello",
+      "notes": "Note",
+      "notesHelp": "Solo per il tuo team. Non vengono copiate nei ticket.",
+      "title": "Titolo del ticket",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "Descrizione"
+    },
+    "checklist": {
+      "empty": "Nessuna voce di checklist.",
+      "itemName": "Voce della checklist",
+      "required": "Obbligatorio",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "remove": "Rimuovi voce",
+      "add": "Aggiungi voce"
+    },
+    "customFields": {
+      "empty": "Nessun valore di campo personalizzato.",
+      "name": "Nome del campo",
+      "value": "Valore",
+      "remove": "Rimuovi campo",
+      "add": "Aggiungi campo"
+    },
+    "editor": {
+      "back": "Modelli di ticket",
+      "newTitle": "Nuovo modello di ticket",
+      "created": "Modello creato",
+      "saved": "Modello salvato",
+      "saving": "Salvataggio…",
+      "save": "Salva",
+      "fromTicket": "Precompilato dal ticket #{{number}}. Non viene salvato nulla finché non fai clic su Salva.",
+      "inlineImages": "La descrizione contiene immagini che appartengono al ticket di origine. Potrebbero non essere più visualizzate se quel ticket viene eliminato. Rimuovile o ricaricale se il modello deve sopravvivere al ticket.",
+      "viewOnly": "Puoi visualizzare questo modello ma non modificarlo.",
+      "referenceProblems": "Alcuni campi di questo modello puntano a elementi che non esistono più. Restano vuoti quando il modello viene usato. Correggili e salva:"
+    },
+    "errors": {
+      "notFound": "Modello di ticket non trovato",
+      "duplicateName": "Esiste già un modello chiamato {{name}}",
+      "invalidReferences": "Il modello fa riferimento a una bacheca, una categoria o una priorità non disponibile",
+      "notAvailable": "I modelli di ticket non sono disponibili",
+      "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria"
     }
   }
 }

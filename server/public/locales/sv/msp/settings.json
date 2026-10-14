@@ -423,7 +423,8 @@
       "placeholders": {
         "teamName": "Ange teamnamn",
         "selectTeamLead": "Välj en teamledare",
-        "selectUserToAdd": "Välj en användare att lägga till"
+        "selectUserToAdd": "Välj en användare att lägga till",
+        "noTeamLead": "Inte tilldelad"
       },
       "alert": {
         "unsavedChanges": "Du har osparade ändringar"
@@ -673,8 +674,8 @@
           "suppressAiHelp": "Endast för tillägget Enterprise AI Assistant. Om tillägget inte är tillgängligt öppnas ärenden igen som vanligt vid svar."
         },
         "liveTimer": {
-          "label": "Aktivera löpande timer för ärenden",
-          "help": "Visar den löpande timern och registrerade intervall för ärenden på tavlan. Manuell tidregistrering är fortsatt tillgänglig."
+          "label": "Visa stoppur på ärenden",
+          "help": "Visar stoppursknapparna på ärenden på tavlan. Stäng av för att dölja stoppuret här; manuell tidregistrering är fortsatt tillgänglig. Ett stoppur som redan går fortsätter att gå."
         },
         "clientPortalVisible": {
           "label": "Synlig i kundportalen",
@@ -851,7 +852,7 @@
           "statuses": "Prioriteter och statusar",
           "statusesHelp": "Standardprioritet och ärendestatusar för tavlan",
           "display": "Visning och beteende",
-          "displayHelp": "Löpande timer och taveltyp"
+          "displayHelp": "Stoppur och taveltyp"
         },
         "saveChanges": "Spara ändringar",
         "unsaved": "Osparat",
@@ -2057,7 +2058,7 @@
       "openMenu": "Öppna meny",
       "columns": {
         "startDate": "Startdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen",
         "actions": "Åtgärder"
       },
       "form": {
@@ -2069,7 +2070,8 @@
         "startDate": "Startdatum",
         "startDatePlaceholder": "Välj startdatum",
         "noEndDate": "Inget slutdatum",
-        "endDate": "Slutdatum",
+        "endDate": "Sista dagen i perioden",
+        "endDateHelp": "Perioden inkluderar denna dag.",
         "endDatePlaceholder": "Välj slutdatum",
         "deletePeriod": "Radera period",
         "confirmDeleteTitle": "Bekräfta radering",
@@ -2083,7 +2085,7 @@
         "noSettings": "Inga tidsperiodsinställningar är tillgängliga. Det går inte att skapa en ny tidsperiod.",
         "settingsRequired": "Det går inte att hantera tidsperioden utan inställningar.",
         "startDateRequired": "Startdatum måste anges.",
-        "startBeforeEnd": "Startdatum måste infalla före slutdatum.",
+        "startBeforeEnd": "Slutdatumet får inte vara före startdatumet.",
         "overlap": "Tidsperioden överlappar en befintlig period.",
         "overlapRetry": "Tidsperioden överlappar en befintlig period. Välj andra datum.",
         "create": "Det gick inte att skapa tidsperioden.",

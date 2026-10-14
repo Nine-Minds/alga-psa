@@ -57,7 +57,7 @@ const wizardData = (billingProfileId: string | null) => ({
   currency_code: 'USD',
   start_date: '2026-01-01',
   billing_profile_id: billingProfileId,
-  fixed_services: [],
+  fixed_lines: [],
   product_services: [],
   hourly_services: [],
   usage_services: [],

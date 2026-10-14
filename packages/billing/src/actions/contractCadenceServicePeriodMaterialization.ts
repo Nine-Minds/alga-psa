@@ -12,6 +12,7 @@ import {
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
+import { whereLiveRecurringContractLine } from '@shared/billingClients/liveClientCadenceRecurringLine';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
 import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
 import {
@@ -44,7 +45,6 @@ type RecurringServicePeriodDbRow = {
   period_key: string;
   revision: number | string;
   obligation_id: string;
-  obligation_type: string;
   charge_family: RecurringChargeFamily;
   cadence_owner: 'client' | 'contract';
   due_position: DuePosition;
@@ -169,7 +169,6 @@ function mapRecurringServicePeriodRow(row: RecurringServicePeriodDbRow): IRecurr
     sourceObligation: {
       tenant: row.tenant,
       obligationId: row.obligation_id,
-      obligationType: row.obligation_type as IRecurringServicePeriodRecord['sourceObligation']['obligationType'],
       chargeFamily: row.charge_family,
     },
     cadenceOwner: row.cadence_owner,
@@ -223,7 +222,6 @@ function serializeRecurringServicePeriodRecord(record: IRecurringServicePeriodRe
     period_key: record.periodKey,
     revision: record.revision,
     obligation_id: record.sourceObligation.obligationId,
-    obligation_type: record.sourceObligation.obligationType,
     charge_family: record.sourceObligation.chargeFamily,
     cadence_owner: record.cadenceOwner,
     due_position: record.duePosition,
@@ -262,7 +260,6 @@ async function loadExistingRecurringServicePeriodRecords(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .orderBy('service_period_start', 'asc')
@@ -274,7 +271,6 @@ async function loadExistingRecurringServicePeriodRecords(
       'period_key',
       'revision',
       'obligation_id',
-      'obligation_type',
       'charge_family',
       'cadence_owner',
       'due_position',
@@ -347,7 +343,6 @@ async function retireFutureContractCadenceRowsForLine(
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
-      obligation_type: 'contract_line',
       cadence_owner: 'contract',
     })
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
@@ -365,6 +360,7 @@ async function loadContractCadenceObligations(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
   query
     .where('cc.is_active', true)
     .where((builder) =>
@@ -546,7 +542,6 @@ async function syncContractCadenceObligation(
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
-      obligationType: 'contract_line' as const,
       chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
     },
     duePosition,
@@ -724,8 +719,8 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  whereLiveRecurringContractLine(query, { excludeSystemManagedDefault: true }, { cc: 'cc', ct: 'ct', cl: 'cl' });
   const rows = await query
-    .where('cl.is_active', true)
     .where('cl.cadence_owner', 'contract')
     .whereIn('cl.billing_timing', ['advance', 'arrears'])
     // Keep eligibility identical to CONTRACT_CADENCE_COVERAGE_AUDIT_SQL. An
@@ -735,11 +730,6 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
     // locked/edited/skipped periods.
     .whereRaw(
       "lower(cl.billing_frequency) in ('monthly', 'quarterly', 'semi-annually', 'semiannually', 'annually', 'annual')",
-    )
-    .where('cc.is_active', true)
-    .where('ct.is_active', true)
-    .where((builder) =>
-      builder.whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false),
     )
     .whereNotNull('cc.start_date')
     .andWhere('cc.start_date', '<=', asOfDate)

@@ -100,6 +100,8 @@ const clientBodySchema = z.object({
   billing_email: clientEmailField,
   account_manager_id: uuidSchema.optional(),
   is_inactive: z.boolean().optional().default(false),
+  // Relationship lifecycle; mirrors the clients.lifecycle_status CHECK constraint.
+  lifecycle_status: z.enum(['prospect', 'active', 'former']).optional(),
   // Calendar date the relationship began; null keeps the created_at fallback.
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
   tags: z.array(z.string()).optional()
@@ -174,6 +176,7 @@ export const clientResponseSchema = z.object({
   account_manager_id: uuidSchema.nullable(),
   account_manager_full_name: z.string().nullable().optional(),
   client_since: z.string().nullable().optional(),
+  lifecycle_status: z.enum(['prospect', 'active', 'former']).optional(),
   logoUrl: z.string().nullable().optional(),
   tenant: uuidSchema,
   tags: z.array(z.string()).optional()

@@ -7,7 +7,6 @@ describe('materialize contract cadence service periods', () => {
   it('T287: contract-cadence recurring lines materialize persisted future service periods with contract-owned invoice-window timing', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'contract-line-8',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 
@@ -23,7 +22,7 @@ describe('materialize contract cadence service periods', () => {
     });
 
     expect(advancePlan.scheduleKey).toBe(
-      'schedule:tenant-1:contract_line:contract-line-8:contract:advance',
+      'schedule:tenant-1:contract-line-8:contract:advance',
     );
     expect(advancePlan.coverage.meetsTargetHorizon).toBe(true);
     expect(advancePlan.records[0]).toMatchObject({
@@ -59,7 +58,7 @@ describe('materialize contract cadence service periods', () => {
     });
 
     expect(arrearsPlan.records[0]).toMatchObject({
-      scheduleKey: 'schedule:tenant-1:contract_line:contract-line-8:contract:arrears',
+      scheduleKey: 'schedule:tenant-1:contract-line-8:contract:arrears',
       servicePeriod: {
         start: '2026-01-08',
         end: '2026-02-08',
@@ -75,7 +74,6 @@ describe('materialize contract cadence service periods', () => {
   it('T288: coverageAnchorDate advances the rolling horizon without moving the catch-up start', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'contract-line-9',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 
@@ -103,7 +101,6 @@ describe('materialize contract cadence service periods', () => {
   it('T289: omitting coverageAnchorDate keeps asOf as the horizon anchor', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'contract-line-10',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 
@@ -125,7 +122,6 @@ describe('materialize contract cadence service periods', () => {
   it('T290: reports hitPeriodCap instead of silently truncating long catch-up runs', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'contract-line-11',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
 

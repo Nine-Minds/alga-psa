@@ -7,6 +7,7 @@ import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, CheckCircle2, RotateCcw } from 'lucide-react';
 import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { filterTasks } from '../lib/taskFilters';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
@@ -220,6 +221,7 @@ interface TaskListViewProps {
   teamAvatarUrls?: Record<string, string | null>;
   // Filter props
   selectedPriorityFilter?: string;
+  selectedTaskTypeFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
   selectedTeamFilter?: string[];
@@ -278,6 +280,7 @@ export default function TaskListView({
   teamNames = {},
   teamAvatarUrls = {},
   selectedPriorityFilter = 'all',
+  selectedTaskTypeFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
   selectedTeamFilter = [],
@@ -582,87 +585,28 @@ export default function TaskListView({
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedRef = useRef<number>(0);
 
-  // Filter tasks based on search, priority and tags
-  const filteredTasks = useMemo(() => {
-    let filtered = tasks;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchCaseSensitive ? searchQuery : searchQuery.toLowerCase();
-      filtered = filtered.filter(task => {
-        const taskName = searchCaseSensitive ? task.task_name : task.task_name.toLowerCase();
-        const descText = taskDescriptionTextMap.get(task.task_id) ?? '';
-        const taskDescription = searchCaseSensitive
-          ? descText
-          : descText.toLowerCase();
-
-        if (searchWholeWord) {
-          // Use word boundary regex for whole word matching
-          const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const wordRegex = new RegExp(`\\b${escapedQuery}\\b`, searchCaseSensitive ? '' : 'i');
-          return wordRegex.test(task.task_name) || wordRegex.test(descText);
-        } else {
-          return taskName.includes(query) || taskDescription.includes(query);
-        }
-      });
-    }
-
-    // Apply priority filter
-    if (selectedPriorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority_id === selectedPriorityFilter);
-    }
-
-    // Apply tag filter
-    if (selectedTaskTags.length > 0) {
-      filtered = filtered.filter(task => {
-        const tags = taskTags[task.task_id] || [];
-        const tagTexts = tags.map(tag => tag.tag_text);
-        return selectedTaskTags.some(selectedTag => tagTexts.includes(selectedTag));
-      });
-    }
-
-    // Apply agent / team filter
-    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
-      filtered = filtered.filter(task => {
-        // Check if task is unassigned (no primary assignee)
-        const isUnassigned = !task.assigned_to;
-
-        // If includeUnassignedAgents is selected and task is unassigned, include it
-        if (includeUnassignedAgents && isUnassigned) {
-          return true;
-        }
-
-        // If specific agents are selected, check if task matches
-        if (selectedAgentFilter.length > 0) {
-          // Check primary assignee
-          if (task.assigned_to && selectedAgentFilter.includes(task.assigned_to)) {
-            return true;
-          }
-
-          // Check additional agents from task resources (only if not filtering for primary only)
-          // Primary only filter is only applicable when exactly one agent is selected
-          if (!(primaryAgentOnly && selectedAgentFilter.length === 1)) {
-            const resources = taskResources[task.task_id] || [];
-            const hasMatchingAdditionalAgent = resources.some(
-              resource => resource.additional_user_id && selectedAgentFilter.includes(resource.additional_user_id)
-            );
-            if (hasMatchingAdditionalAgent) {
-              return true;
-            }
-          }
-        }
-
-        // If specific teams are selected, match by the task's assigned team
-        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
-          return true;
-        }
-
-        return false;
-      });
-    }
-
-    return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  // Filter tasks with the shared predicate, so this list, the board and every
+  // derived count agree on what a filter leaves visible.
+  const filteredTasks = useMemo(() => filterTasks(
+    tasks,
+    {
+      searchQuery,
+      searchWholeWord,
+      searchCaseSensitive,
+      priorityId: selectedPriorityFilter,
+      taskTypeKey: selectedTaskTypeFilter,
+      tags: selectedTaskTags,
+      agentIds: selectedAgentFilter,
+      teamIds: selectedTeamFilter,
+      includeUnassigned: includeUnassignedAgents,
+      primaryAgentOnly,
+    },
+    {
+      tags: taskTags,
+      resources: taskResources,
+      descriptionText: (task) => taskDescriptionTextMap.get(task.task_id) ?? '',
+    },
+  ), [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -738,6 +682,7 @@ export default function TaskListView({
   const hasActiveFilter = Boolean(
     searchQuery.trim() ||
     selectedPriorityFilter !== 'all' ||
+    selectedTaskTypeFilter !== 'all' ||
     selectedTaskTags.length > 0 ||
     selectedAgentFilter.length > 0 ||
     selectedTeamFilter.length > 0 ||

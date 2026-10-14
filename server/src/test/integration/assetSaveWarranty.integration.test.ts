@@ -20,6 +20,11 @@ const published = vi.hoisted(() => ({ calls: [] as unknown[] }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn(async (event: unknown) => { published.calls.push(event); }),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 

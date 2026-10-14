@@ -86,12 +86,6 @@ import {
   resolveContractCadenceAnchorDate,
   resolveContractCadenceInvoiceWindowForServicePeriod,
 } from "@alga-psa/shared/billingClients/contractCadenceServicePeriods";
-import {
-  buildPostDropRecurringObligationCandidates,
-  buildClientCadencePostDropObligationRef,
-  CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
-  POST_DROP_RECURRING_OBLIGATION_TYPES,
-} from "@alga-psa/shared/billingClients/postDropRecurringObligationIdentity";
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import {
@@ -139,6 +133,7 @@ import {
   toRecurringUnitRevisionCandidate,
 } from "@alga-psa/shared/billingClients/recurringUnitPricing";
 import { resolveMemberRate } from "@alga-psa/shared/billingClients/resolveFixedLineRate";
+import { whereLiveRecurringContractLine } from "@alga-psa/shared/billingClients/liveClientCadenceRecurringLine";
 import {
   buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
@@ -1381,7 +1376,6 @@ export class BillingEngine {
     const dueRows = await db
       .table("recurring_service_periods")
       .whereIn("obligation_id", eligibleLineIds)
-      .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereIn("lifecycle_state", [
         ...DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
       ])
@@ -1394,7 +1388,6 @@ export class BillingEngine {
       .select(
         "record_id",
         "obligation_id",
-        "obligation_type",
         "charge_family",
         "cadence_owner",
         "due_position",
@@ -1408,8 +1401,7 @@ export class BillingEngine {
       const existingMaterializedRow = await db
         .table("recurring_service_periods")
         .whereIn("obligation_id", eligibleLineIds)
-        .whereIn("obligation_type", [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereNotIn("lifecycle_state", ["archived", "superseded"])
+          .whereNotIn("lifecycle_state", ["archived", "superseded"])
         .first("record_id");
 
       return existingMaterializedRow ? {} : null;
@@ -1421,7 +1413,6 @@ export class BillingEngine {
         sourceObligation: {
           tenant: this.tenant!,
           obligationId: row.obligation_id,
-          obligationType: row.obligation_type,
           chargeFamily: row.charge_family,
         },
         cadenceOwner: row.cadence_owner,
@@ -2544,10 +2535,12 @@ export class BillingEngine {
       "cl.contract_line_id",
     );
 
+    // System-managed default contracts are not excluded: they carry ad-hoc time.
+    whereLiveRecurringContractLine(eligibleLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
+
     const rows = await eligibleLinesQuery
       .where({
         "cc.client_id": input.clientId,
-        "cc.is_active": true,
         "cls.service_id": input.serviceId,
       })
       .where("cc.start_date", "<=", input.workDate)
@@ -3257,10 +3250,14 @@ export class BillingEngine {
       "c.contract_id",
     );
 
+    // Same definition of a live line as the period materializer and the
+    // materialization guard (cc + contract + line all active). System-managed
+    // default contracts are not excluded: they carry ad-hoc time.
+    whereLiveRecurringContractLine(clientContractLinesQuery, { excludeSystemManagedDefault: false }, { cc: "cc", ct: "c", cl: "cl" });
+
     const clientContractLines = await clientContractLinesQuery
       .where({
         "cc.client_id": clientId,
-        "cc.is_active": true,
         "cc.tenant": this.tenant,
       })
       // [start, end) semantics: a contract starting exactly on period end is not active within the period.
@@ -3278,7 +3275,9 @@ export class BillingEngine {
         "cl.service_category",
         "cc.start_date",
         "cc.end_date",
-        "cc.is_active",
+        // The line's own flag (the scope guarantees the assignment is active
+        // too), so the `line.is_active` checks downstream test the line.
+        "cl.is_active",
         "cc.client_contract_id",
         "cc.template_contract_id",
         "c.contract_id",
@@ -4948,11 +4947,11 @@ export class BillingEngine {
     const cadenceOwner = isSystemManagedDefault
       ? "client"
       : resolveCadenceOwner(clientContractLine.cadence_owner);
-    const sourceObligation = buildClientCadencePostDropObligationRef({
-      contractLineId: clientContractLine.client_contract_line_id,
-      chargeFamily: "fixed",
-      tenant: this.tenant ?? undefined,
-    });
+    const sourceObligation = {
+      obligationId: clientContractLine.client_contract_line_id,
+      chargeFamily: "fixed" as const,
+      ...(this.tenant ? { tenant: this.tenant } : {}),
+    };
     const activityWindow = {
       start: clientContractLine.start_date
         ? toISODate(toPlainDate(clientContractLine.start_date))
@@ -7345,36 +7344,12 @@ export class BillingEngine {
     const servicePeriodEndExclusive = toISODate(
       toPlainDate(servicePeriodEnd).add({ days: 1 }),
     );
-    const obligationCandidates = buildPostDropRecurringObligationCandidates({
-      contractLineId: clientContractLineId,
-      chargeFamily: "fixed",
-    });
-
     const recurringLinkedCharge = await db
       .table("recurring_service_periods")
       .where("charge_family", "fixed")
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")
-      .where(function matchObligationCandidates() {
-        for (const [index, candidate] of obligationCandidates.entries()) {
-          if (index === 0) {
-            this.where(function matchCandidate() {
-              this.where("obligation_type", candidate.obligationType).andWhere(
-                "obligation_id",
-                candidate.obligationId,
-              );
-            });
-            continue;
-          }
-
-          this.orWhere(function matchCandidate() {
-            this.where("obligation_type", candidate.obligationType).andWhere(
-              "obligation_id",
-              candidate.obligationId,
-            );
-          });
-        }
-      })
+      .where("obligation_id", clientContractLineId)
       .where("service_period_start", servicePeriodStart)
       .where(function matchServicePeriodEnd() {
         this.where("service_period_end", servicePeriodEnd).orWhere(

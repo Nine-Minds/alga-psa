@@ -11,7 +11,7 @@ import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions/serviceActions'
+import { createServiceWithPricing, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '@alga-psa/billing/actions/serviceActions'
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
@@ -352,7 +352,9 @@ const submitData: CreateServiceInput = {
 
 console.log('[QuickAddService] Submitting service data:', submitData);
 console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
-const createdService = await createService(submitData);
+const pricesToSave = normalizedPrices.length > 0 ? normalizedPrices : prices;
+// One transaction: a failed price write cannot leave a service with no prices.
+const createdService = await createServiceWithPricing(submitData, pricesToSave);
 console.log('[QuickAddService] Service created successfully:', createdService);
 
 if (isActionPermissionError(createdService)) {
@@ -364,12 +366,6 @@ if (isActionMessageError(createdService)) {
   return;
 }
 
-// Set all prices for the service (multi-currency support)
-if (createdService?.service_id) {
-  const pricesToSave = normalizedPrices.length > 0 ? normalizedPrices : prices;
-  await setServicePrices(createdService.service_id, pricesToSave);
-  console.log(`[QuickAddService] Set ${pricesToSave.length} price(s) for service ${createdService.service_id}`);
-}
 
       onServiceAdded()
       // Close dialog - in controlled mode this is handled by parent via onServiceAdded callback

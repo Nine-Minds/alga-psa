@@ -7,7 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Clock, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Lightbulb, LayoutGrid, List } from 'lucide-react';
 import { TimeSheetDateNavigatorState } from './types';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 
@@ -24,8 +24,9 @@ interface TimeSheetHeaderProps {
     onReopenForEdits?: () => Promise<void>;
     onSubmit: () => Promise<void>;
     onBack: () => void;
-    showIntervals?: boolean;
-    onToggleIntervals?: () => void;
+    showSuggestions?: boolean;
+    onToggleSuggestions?: () => void;
+    suggestionCount?: number;
     dateNavigator?: TimeSheetDateNavigatorState | null;
     viewMode?: TimeSheetViewMode;
     onViewModeChange?: (mode: TimeSheetViewMode) => void;
@@ -42,8 +43,9 @@ export function TimeSheetHeader({
     onReopenForEdits,
     onSubmit,
     onBack,
-    showIntervals = false,
-    onToggleIntervals,
+    showSuggestions = false,
+    onToggleSuggestions,
+    suggestionCount = 0,
     dateNavigator,
     viewMode = 'grid',
     onViewModeChange
@@ -163,18 +165,21 @@ export function TimeSheetHeader({
                         <Badge variant={statusDisplay.variant} className="py-1">{statusDisplay.label}</Badge>
                     </span>
 
-                    {onToggleIntervals && (
+                    {onToggleSuggestions && (
                         <div className="flex items-center gap-2 whitespace-nowrap">
                             <Switch
-                                id="show-intervals-toggle"
-                                checked={showIntervals}
-                                onCheckedChange={onToggleIntervals}
-                                data-automation-id="show-intervals-toggle"
+                                id="show-suggestions-toggle"
+                                checked={showSuggestions}
+                                onCheckedChange={onToggleSuggestions}
+                                data-automation-id="show-suggestions-toggle"
                                 data-automation-type="switch"
                             />
-                            <Label htmlFor="show-intervals-toggle" className="flex items-center">
-                                <Clock className="h-4 w-4 mr-1" />
-                                {t('timeSheetHeader.labels.showIntervals', { defaultValue: 'Show intervals' })}
+                            <Label htmlFor="show-suggestions-toggle" className="flex items-center">
+                                <Lightbulb className="h-4 w-4 mr-1" />
+                                {t('timeSheetHeader.labels.showSuggestions', { defaultValue: 'Suggestions' })}
+                                {suggestionCount > 0 && (
+                                    <Badge variant="info" className="ml-2">{suggestionCount}</Badge>
+                                )}
                             </Label>
                         </div>
                     )}

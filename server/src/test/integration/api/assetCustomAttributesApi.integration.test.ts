@@ -5,7 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { AssetService } from '@/lib/api/services/AssetService';
 
-vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn().mockResolvedValue(undefined), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 let db: Knex;
 const tenantIds = new Set<string>();
 const table = (tenant: string, name: string) => tenantDb(db, tenant).table(name);

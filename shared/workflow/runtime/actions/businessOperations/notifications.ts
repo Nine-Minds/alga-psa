@@ -11,7 +11,7 @@ import {
   writeRunAudit,
   throwActionError
 } from './shared';
-import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '@alga-psa/event-schemas';
 import { workflowUserRecipientsSchema, resolveWorkflowUserRecipients } from './userRecipients';
 
 const UUID_ONLY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

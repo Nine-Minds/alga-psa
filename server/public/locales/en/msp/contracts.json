@@ -1426,6 +1426,7 @@
       "hourlyServices": "Hourly Services",
       "products": "Products",
       "reviewCreate": "Review & Create",
+      "templateLines": "Template Lines",
       "usageBasedServices": "Usage-Based Services"
     },
     "title": {
@@ -1464,7 +1465,8 @@
       "unsupportedRecurringAuthoringCombination": "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
       "recurringUnitRateRequired": "Enter a unit rate for each recurring service.",
       "recurringQuantityWholeNumber": "Recurring quantity must be a whole number.",
-      "fixedQuantityInvalid": "Quantity must be zero or greater."
+      "fixedQuantityInvalid": "Quantity must be zero or greater.",
+      "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing."
     },
     "nav": {
       "back": "Back",
@@ -1478,6 +1480,19 @@
     "simulation": {
       "description": "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
       "title": "Simulate before creating"
+    },
+    "fixedLines": {
+      "addLine": "Add fixed line",
+      "nameLabel": "Line name (optional)",
+      "namePlaceholder": "Fixed line {{number}}",
+      "removeLine": "Remove fixed line",
+      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft."
+    },
+    "recurringChange": {
+      "title": "Confirm recurring total change",
+      "message": "This changes the contract's estimated monthly recurring value from {{before}} to {{after}}.",
+      "confirm": "Confirm and continue",
+      "cancel": "Go back"
     }
   },
   "wizardBasics": {
@@ -1791,7 +1806,8 @@
       "fixedFeeServices": "Fixed Fee Services",
       "products": "Products",
       "hourlyServices": "Hourly Services",
-      "usageBasedServices": "Usage-Based Services"
+      "usageBasedServices": "Usage-Based Services",
+      "fixedFeeServicesNumbered": "Fixed Fee Services ({{number}})"
     },
     "fields": {
       "client": "Client",
@@ -1911,7 +1927,8 @@
     "total": {
       "title": "Estimated Monthly Total",
       "description": "Fixed charges only. Hourly and usage services bill separately based on actual usage.",
-      "perMonth": "per month"
+      "perMonth": "per month",
+      "savedDraftValue": "Saved draft value: {{amount}}"
     },
     "finalChecklist": {
       "title": "Before you finish:",
@@ -1920,6 +1937,29 @@
       "itemDates": "Verify the start and end dates",
       "itemEditLater": "Remember: you can edit the contract later if needed"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Template Lines",
+    "description": "Every line of the template is created on the contract with its own name, billing frequency, services and rates. Change anything below to override it for this contract only; untouched values are copied from the template. Rates are in {{currency}}.",
+    "loading": "Loading template lines...",
+    "noTemplate": "Select a template on the first step.",
+    "emptyTemplate": "This template has no lines, so there is nothing to create.",
+    "bucketPools_one": "{{count}} bucket pool copied from the template",
+    "bucketPools_other": "{{count}} bucket pools copied from the template",
+    "lineName": "Line name",
+    "billingFrequency": "Billing frequency",
+    "fixedBaseRate": "Fixed base rate",
+    "fixedBaseRateHint": "Template rate {{rate}}. Leave empty to keep it.",
+    "fixedBaseRateNone": "The template sets no line rate; services follow their catalog prices.",
+    "minimumBillableTime": "Minimum billable time (minutes)",
+    "roundUpToNearest": "Round up to nearest (minutes)",
+    "quantity": "Quantity",
+    "hourlyRate": "Hourly rate",
+    "unitRate": "Unit rate",
+    "serviceRate": "Service rate",
+    "noCurrencyPrice": "No {{currency}} price for this service. Enter a rate or the contract cannot be created.",
+    "templateRateNote": "From the template (amount is not currency-tagged).",
+    "reviewTitle": "Lines created from the template"
   },
   "templateWizard": {
     "title": {
@@ -2552,7 +2592,8 @@
       "conflict": "This contract change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the contract values is not allowed. Please review the form and try again.",
       "missingField": "Missing required contract field.",
-      "missingFieldNamed": "Missing required contract field: {{field}}."
+      "missingFieldNamed": "Missing required contract field: {{field}}.",
+      "deleteFailed": "Something went wrong deleting this contract. Quote reference {{ref}} when contacting support."
     },
     "wizard": {
       "permissions": {
@@ -2568,7 +2609,9 @@
       "missingClient": "Draft contract is missing client assignment",
       "invalidStartDate": "Draft contract has an invalid start date",
       "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
-      "duplicate": "A matching contract wizard record already exists."
+      "duplicate": "A matching contract wizard record already exists.",
+      "resumeUnsupportedShape": "This draft can't be resumed in the wizard without changing its pricing: {{lines}}",
+      "fixedLineNoService": "Fixed line \"{{lineName}}\" has a recurring amount but no service to bill it on. Add a service before finishing."
     },
     "pricingSchedule": {
       "endAfterEffective": "End date must be after effective date",

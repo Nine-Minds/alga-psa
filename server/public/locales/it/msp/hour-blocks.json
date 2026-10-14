@@ -154,5 +154,16 @@
       "missingField": "Manca un campo obbligatorio del blocco ore. Controllare il modulo e riprovare.",
       "referenceMissing": "Il cliente, il servizio o la fattura selezionata non esiste più. Aggiornare la pagina e riprovare."
     }
+  },
+  "coverage": {
+    "oneLine": "Il tempo su {{service}} viene fatturato tramite {{contract}} / {{line}} e non verrà scalato da questo blocco ore.",
+    "manyLines": "Il tempo su {{service}} assegnato a una linea contrattuale non verrà scalato da questo blocco ore.",
+    "linesLabel": "Linee contrattuali che coprono {{service}}:",
+    "unscopedIntro": "Questo blocco ore copre tutto il lavoro, ma il tempo su questi servizi viene fatturato tramite una linea contrattuale e non verrà scalato da esso:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — quando assegnato a una linea contrattuale",
+    "more": "e altri {{count}}",
+    "badge": "Sovrapposizione con contratto",
+    "viewContract": "Visualizza contratto"
   }
 }

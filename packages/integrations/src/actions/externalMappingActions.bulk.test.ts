@@ -25,7 +25,7 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...args: any[]) => any) => async (...args: any[]) => fn(...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../lib/qbo/qboClientService', () => ({
   getStoredQboCredentialsMap: mocks.getStoredQboCredentialsMap,
   QboClientService: { create: mocks.qboCreate },

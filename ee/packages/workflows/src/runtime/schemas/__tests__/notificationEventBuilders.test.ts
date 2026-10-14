@@ -4,7 +4,7 @@ import {
   notificationFailedEventPayloadSchema,
   notificationReadEventPayloadSchema,
   notificationSentEventPayloadSchema,
-} from '../communicationsEventSchemas';
+} from '@alga-psa/event-schemas';
 import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   buildNotificationDeliveredPayload,

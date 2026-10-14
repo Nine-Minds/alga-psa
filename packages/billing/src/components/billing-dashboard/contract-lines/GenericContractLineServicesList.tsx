@@ -348,7 +348,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       title: t('services.generic.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value, record) => {
-        const rate = value !== undefined ? value : record.default_rate;
+        // A row with no custom rate stores SQL NULL, not undefined, so the
+        // catalog fallback has to be nullish — otherwise Standard rows read N/A.
+        const rate = value ?? record.default_rate;
         const hasCustomRate = value !== undefined && value !== null;
         // The member-level rate_provenance governs the same way the line-level
         // one does: `inherited` follows the catalog, `custom`/`unreviewed` take
@@ -369,12 +371,12 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
           : isCustom
             ? t('services.generic.badges.custom', { defaultValue: 'Custom' })
             : t('services.generic.badges.standard', { defaultValue: 'Standard' });
-        // Display rate directly as decimal
+        // custom_rate and the default_rate fallback are both stored in minor units
         return (
           <span className="inline-flex items-center gap-2">
             <Badge variant={badgeVariant}>{badgeLabel}</Badge>
             {rate !== undefined && rate !== null
-              ? money(Math.round(Number(rate) * 100))
+              ? money(Math.round(Number(rate)))
               : t('common.notAvailable', { defaultValue: 'N/A' })}
           </span>
         );

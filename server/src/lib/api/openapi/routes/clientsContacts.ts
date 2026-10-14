@@ -1,3 +1,4 @@
+import { createContactSchema, updateContactSchema } from '../../schemas/contact';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   clientLocationResponseSchema,
@@ -42,7 +43,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       email: zOpenApi.string().optional(),
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']).optional(),
-      is_inactive: zOpenApi.enum(['true', 'false']).optional(),
+      is_inactive: zOpenApi.enum(['true', 'false']).optional().describe(
+        'Filters to inactive clients when true and active clients when false; omit to include all clients.',
+      ),
       is_tax_exempt: zOpenApi.enum(['true', 'false']).optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       region_code: zOpenApi.string().optional(),
@@ -87,6 +90,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       billing_email: zOpenApi.string().email().optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       is_inactive: zOpenApi.boolean().optional(),
+      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
@@ -144,23 +148,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ContactBody = registry.registerSchema(
-    'ContactBody',
-    zOpenApi.object({
-      full_name: zOpenApi.string().min(1).max(255),
-      client_id: zOpenApi.string().uuid().optional(),
-      phone_numbers: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      email: zOpenApi.string().email(),
-      primary_email_canonical_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type_id: zOpenApi.string().uuid().optional().nullable(),
-      additional_email_addresses: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      role: zOpenApi.string().optional(),
-      notes: zOpenApi.string().optional(),
-      is_inactive: zOpenApi.boolean().optional(),
-      tags: zOpenApi.array(zOpenApi.string()).optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const ContactBody = registry.registerSchema('ContactBody', createContactSchema);
+  const ContactUpdateBody = registry.registerSchema('ContactUpdateBody', updateContactSchema);
 
   const ContactSearchQuery = registry.registerSchema(
     'ContactSearchQuery',
@@ -951,7 +941,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     description: 'Inherited ApiBaseController update route for one contact_name_id.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ContactIdParam, body: { schema: ContactBody.partial() } },
+    request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
     responses: {
       200: { description: 'Contact updated.', schema: ContactEnvelope },
       400: { description: 'Invalid contact id or request payload.', schema: ApiError },

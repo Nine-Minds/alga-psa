@@ -1426,6 +1426,7 @@
       "hourlyServices": "Usługi godzinowe",
       "products": "Produkty",
       "reviewCreate": "Przejrzyj i utwórz",
+      "templateLines": "Pozycje szablonu",
       "usageBasedServices": "Usługi rozliczane według zużycia"
     },
     "title": {
@@ -1464,7 +1465,8 @@
       "unsupportedRecurringAuthoringCombination": "Nieobsługiwana kombinacja tworzenia cyklu dla usług {{lineType}}: rytm rocznicy umowy obsługuje obecnie częstotliwości rozliczeń {{supportedFrequencies}}. {{billingFrequency}} nie jest jeszcze obsługiwana. Użyj jednej z obsługiwanych częstotliwości lub fakturuj według harmonogramu rozliczeń klienta.",
       "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej.",
       "recurringQuantityWholeNumber": "Ilość cykliczna musi być liczbą całkowitą.",
-      "fixedQuantityInvalid": "Ilość musi wynosić zero lub więcej."
+      "fixedQuantityInvalid": "Ilość musi wynosić zero lub więcej.",
+      "fixedLineNoService": "Linia stała „{{lineName}}\" ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem."
     },
     "nav": {
       "back": "Wstecz",
@@ -1478,6 +1480,19 @@
     "simulation": {
       "description": "Przetestuj tę niezapisaną wersję roboczą z zakładaną aktywnością. Symulacja niczego nie zapisuje ani nie wystawia.",
       "title": "Symuluj przed utworzeniem"
+    },
+    "fixedLines": {
+      "addLine": "Dodaj linię stałą",
+      "nameLabel": "Nazwa linii (opcjonalnie)",
+      "namePlaceholder": "Linia stała {{number}}",
+      "removeLine": "Usuń linię stałą",
+      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą."
+    },
+    "recurringChange": {
+      "title": "Potwierdź zmianę sumy cyklicznej",
+      "message": "To zmienia szacowaną miesięczną wartość cykliczną umowy z {{before}} na {{after}}.",
+      "confirm": "Potwierdź i kontynuuj",
+      "cancel": "Wstecz"
     }
   },
   "wizardBasics": {
@@ -1795,7 +1810,8 @@
       "fixedFeeServices": "Usługi z opłatą stałą",
       "products": "Produkty",
       "hourlyServices": "Usługi godzinowe",
-      "usageBasedServices": "Usługi rozliczane według zużycia"
+      "usageBasedServices": "Usługi rozliczane według zużycia",
+      "fixedFeeServicesNumbered": "Usługi o stałej opłacie ({{number}})"
     },
     "fields": {
       "client": "Klient",
@@ -1915,7 +1931,8 @@
     "total": {
       "title": "Szacowana suma miesięczna",
       "description": "Tylko opłaty stałe. Usługi godzinowe i rozliczane według zużycia są rozliczane osobno na podstawie rzeczywistego użycia.",
-      "perMonth": "miesięcznie"
+      "perMonth": "miesięcznie",
+      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
     },
     "finalChecklist": {
       "title": "Zanim zakończysz:",
@@ -1924,6 +1941,31 @@
       "itemDates": "Zweryfikuj daty rozpoczęcia i zakończenia",
       "itemEditLater": "Pamiętaj: możesz edytować umowę później, jeśli będzie to potrzebne"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Pozycje szablonu",
+    "description": "Każda pozycja szablonu jest tworzona w umowie z własną nazwą, częstotliwością rozliczeń, usługami i stawkami. Zmień dowolną wartość poniżej, aby zastąpić ją tylko dla tej umowy; niezmienione wartości są kopiowane z szablonu. Stawki są podane w {{currency}}.",
+    "loading": "Ładowanie pozycji szablonu...",
+    "noTemplate": "Wybierz szablon w pierwszym kroku.",
+    "emptyTemplate": "Ten szablon nie zawiera pozycji, więc nie ma czego tworzyć.",
+    "bucketPools_one": "{{count}} pakiet godzin skopiowany z szablonu",
+    "bucketPools_few": "{{count}} pakiety godzin skopiowane z szablonu",
+    "bucketPools_many": "{{count}} pakietów godzin skopiowanych z szablonu",
+    "bucketPools_other": "{{count}} pakietu godzin skopiowanego z szablonu",
+    "lineName": "Nazwa pozycji",
+    "billingFrequency": "Częstotliwość rozliczeń",
+    "fixedBaseRate": "Stała stawka podstawowa",
+    "fixedBaseRateHint": "Stawka z szablonu {{rate}}. Pozostaw puste, aby ją zachować.",
+    "fixedBaseRateNone": "Szablon nie ustawia stawki pozycji; usługi stosują ceny z katalogu.",
+    "minimumBillableTime": "Minimalny czas podlegający rozliczeniu (minuty)",
+    "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
+    "quantity": "Ilość",
+    "hourlyRate": "Stawka godzinowa",
+    "unitRate": "Stawka jednostkowa",
+    "serviceRate": "Stawka usługi",
+    "noCurrencyPrice": "Brak ceny w {{currency}} dla tej usługi. Wprowadź stawkę, w przeciwnym razie nie można utworzyć umowy.",
+    "templateRateNote": "Z szablonu (kwota nie ma przypisanej waluty).",
+    "reviewTitle": "Pozycje utworzone na podstawie szablonu"
   },
   "templateWizard": {
     "title": {
@@ -2556,7 +2598,8 @@
       "conflict": "Ta zmiana umowy jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola umowy.",
-      "missingFieldNamed": "Brakuje wymaganego pola umowy: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola umowy: {{field}}.",
+      "deleteFailed": "Coś poszło nie tak podczas usuwania tej umowy. Podaj numer referencyjny {{ref}} podczas kontaktu z pomocą techniczną."
     },
     "wizard": {
       "permissions": {
@@ -2572,7 +2615,9 @@
       "missingClient": "W roboczej wersji umowy brakuje przypisania klienta",
       "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
       "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Pasujący rekord kreatora umowy już istnieje."
+      "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
+      "resumeUnsupportedShape": "Tej wersji roboczej nie można wznowić w kreatorze bez zmiany jej cen: {{lines}}",
+      "fixedLineNoService": "Linia stała „{{lineName}}\" ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem."
     },
     "pricingSchedule": {
       "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",

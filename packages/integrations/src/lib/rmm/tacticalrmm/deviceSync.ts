@@ -68,7 +68,7 @@ export async function publishRmmSyncEvent(args: {
   };
 
   try {
-    await publishEvent({ eventType: args.eventType, payload } as any);
+    await publishEvent({ eventType: args.eventType, payload });
   } catch {
     // Best-effort: never fail the sync on event-publish issues.
   }

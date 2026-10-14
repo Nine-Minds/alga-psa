@@ -9,6 +9,7 @@ import {
   isBootstrapJobCollision,
   nudgeChildKustomizations,
   recoverAppRelease,
+  recoverStalledReleases,
   setHelmReleasesSuspended,
   summarizeHelmRelease
 } from '../helm-release-recovery.mjs';
@@ -155,6 +156,47 @@ test('server /api/recover uses the shared recovery (reset + force + bootstrap Jo
   assert.match(recover, /recoverAppRelease\(/);
   assert.doesNotMatch(recover, /annotate helmrelease/);
   assert.match(server, /import \{[^}]*recoverAppRelease[^}]*\} from '\.\/helm-release-recovery\.mjs'/);
+});
+
+// Live appliance 2026-10-05: email-service, temporal-worker and workflow-worker
+// sat at UpgradeFailed ("exceeded maximum retries") for a day after their
+// Deployments missed the progress deadline on a slow box, though the pods were
+// healthy. Recovery must reset exactly those, without re-running alga-core.
+test('recoverStalledReleases resets only the hard-failed releases and leaves a healthy alga-core alone', async () => {
+  const hr = (ready, reason) => json({ metadata: { generation: 2 }, status: { observedGeneration: 2, conditions: [{ type: 'Ready', status: ready, reason, message: reason }] } });
+  const { calls, runKubectl } = stubKubectl([
+    ["get helmrelease 'alga-core'", hr('True', 'UpgradeSucceeded')],
+    ["get helmrelease 'pgbouncer'", hr('True', 'UpgradeSucceeded')],
+    ["get helmrelease 'temporal'", hr('True', 'UpgradeSucceeded')],
+    ["get helmrelease 'temporal-worker'", hr('False', 'UpgradeFailed')],
+    ["get helmrelease 'workflow-worker'", hr('False', 'UpgradeFailed')],
+    ["get helmrelease 'email-service'", hr('False', 'UpgradeFailed')]
+  ]);
+  const result = await recoverStalledReleases({ runKubectl, at: '2026-10-05T03:30:00.000Z' });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.recovered, ['temporal-worker', 'workflow-worker', 'email-service']);
+  const annotated = calls.filter((c) => /annotate helmrelease/.test(c)).map((c) => c.match(/annotate helmrelease '([^']+)'/)[1]);
+  assert.deepEqual(annotated, ['temporal-worker', 'workflow-worker', 'email-service']);
+  assert.ok(calls.filter((c) => /annotate helmrelease/.test(c)).every((c) => /resetAt=/.test(c) && /forceAt=/.test(c)));
+  assert.equal(calls.some((c) => /delete job/.test(c)), false);
+});
+
+test('recoverStalledReleases clears the bootstrap Job first when alga-core itself is stuck', async () => {
+  const { calls, runKubectl } = stubKubectl([
+    ["get helmrelease 'alga-core'", json({ status: { conditions: [{ type: 'Ready', status: 'False', reason: 'UpgradeFailed' }] } })],
+    ["get helmrelease", json({ status: { conditions: [{ type: 'Ready', status: 'True', reason: 'UpgradeSucceeded' }] } })],
+    ['get job', json({ status: { succeeded: 1 } })]
+  ]);
+  const result = await recoverStalledReleases({ runKubectl });
+  assert.deepEqual(result.recovered, ['alga-core']);
+  assert.ok(calls.findIndex((c) => /delete job/.test(c)) < calls.findIndex((c) => /annotate helmrelease 'alga-core'/.test(c)));
+});
+
+test('recoverStalledReleases is a no-op when nothing is stuck', async () => {
+  const { calls, runKubectl } = stubKubectl([["get helmrelease", json({ status: { conditions: [{ type: 'Ready', status: 'True', reason: 'UpgradeSucceeded' }] } })]]);
+  const result = await recoverStalledReleases({ runKubectl });
+  assert.deepEqual(result, { ok: true, at: result.at, recovered: [] });
+  assert.equal(calls.some((c) => /annotate/.test(c)), false);
 });
 
 test('nudgeChildKustomizations annotates every Kustomization owned by the top-level one', async () => {

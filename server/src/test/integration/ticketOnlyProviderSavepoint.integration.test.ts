@@ -20,7 +20,14 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   publishEvent: vi.fn(async (event: any) => {
     busEvents.push({ eventType: event.eventType, payload: event.payload });
   }),
-  publishWorkflowEvent: vi.fn(async () => {}),
+  // Builder-minted payloads (WorkflowEventPublisher / ticket model) arrive already complete.
+  publishBuiltWorkflowPayload: vi.fn(async (event: any) => {
+    busEvents.push({ eventType: event.eventType, payload: event.payload });
+  }),
+  publishWorkflowEvent: vi.fn(async (params: any) => {
+    const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+    busEvents.push({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, params.ctx) });
+  }),
 }));
 
 describe('ticket-only execution provider transaction handling (integration)', () => {

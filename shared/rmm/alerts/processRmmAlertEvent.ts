@@ -15,6 +15,7 @@ import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
@@ -372,9 +373,10 @@ async function processReset(
           const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
             const transitionBefore = await captureTicketTransitionSnapshot(trx, event.tenantId, existing.ticket_id);
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, ...ticketUpdateStamp(trx, null) });
+              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), ...ticketUpdateStamp(trx, null) });
             await publishTicketTransitionsAfterCommit(trx, {
               tenant: event.tenantId,
               before: transitionBefore,
@@ -479,7 +481,7 @@ async function publishSafely(
   result: RmmAlertProcessingResult,
   assetId?: string | null
 ): Promise<void> {
-  if (!ctx.deps?.publishWorkflowEvent) return;
+  if (!ctx.deps?.publishRmmAlertEvent) return;
   try {
     // Shape matches RmmAlertEventPayloadSchema: optional fields are omitted,
     // never null.
@@ -500,7 +502,7 @@ async function publishSafely(
     if (eventType === 'RMM_ALERT_TRIGGERED') payload.triggeredAt = event.occurredAt;
     if (eventType === 'RMM_ALERT_RESOLVED') payload.resolvedAt = event.occurredAt;
 
-    await ctx.deps.publishWorkflowEvent({ eventType, tenantId: event.tenantId, payload });
+    await ctx.deps.publishRmmAlertEvent({ eventType, tenantId: event.tenantId, payload });
   } catch (error) {
     ctx.deps?.logger?.warn?.(`[rmm-alerts] Failed to publish ${eventType}: ${String(error)}`);
   }

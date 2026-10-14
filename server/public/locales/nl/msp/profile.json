@@ -500,6 +500,8 @@
         "sending": "Verzenden…",
         "rotateSecret": "Geheim roteren",
         "rotating": "Roteren…",
+        "retryFailed": "Mislukte leveringen opnieuw proberen",
+        "retryingFailed": "Opnieuw proberen…",
         "back": "Terug naar webhooks"
       },
       "deliveries": {
@@ -541,6 +543,8 @@
         "stateChangeFailed": "Webhookstatus kon niet worden bijgewerkt.",
         "retryQueued": "Opnieuw proberen in wachtrij voor gebeurtenis {{eventId}}.",
         "retryFailed": "Kon levering niet opnieuw proberen.",
+        "retryFailedQueued": "{{queued}} leveringen in wachtrij om opnieuw te proberen, {{skipped}} overgeslagen.",
+        "retryFailedFailed": "Kon mislukte leveringen niet opnieuw proberen.",
         "invalidHeaderLine": "Ongeldige headerregel: \"{{line}}\"",
         "invalidRetryConfig": "De retry-configuratie moet een JSON-object zijn"
       },

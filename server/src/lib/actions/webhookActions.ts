@@ -18,29 +18,13 @@ import {
 import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/webhooks/processWebhookDeliveryJob';
 import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
-import { WebhookDeliveryQueue, type WebhookDeliveryPayload } from '@/lib/webhooks/WebhookDeliveryQueue';
+import {
+  SUPPORTED_WEBHOOK_EVENTS,
+  enqueueDeliveryRetry,
+  retryFailedDeliveriesForWebhook,
+} from '@/lib/webhooks/deliveryRetry';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
 import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
-
-const SUPPORTED_WEBHOOK_EVENTS = [
-  'ticket.created',
-  'ticket.updated',
-  'ticket.assigned',
-  'ticket.status_changed',
-  'ticket.closed',
-  'ticket.comment.added',
-  'project.created',
-  'project.updated',
-  'project.status_changed',
-  'project.assigned',
-  'project.closed',
-  'project.completed',
-  'project.task.created',
-  'project.task.updated',
-  'project.task.status_changed',
-  'project.task.assigned',
-  'project.task.completed',
-] as const;
 
 const webhookInputSchema = z.object({
   webhookId: z.string().uuid().optional(),
@@ -54,14 +38,6 @@ const webhookInputSchema = z.object({
   verifySsl: z.boolean().default(true),
   rateLimitPerMin: z.number().int().min(1).max(1000).default(100),
   isActive: z.boolean().default(true),
-});
-
-const deliveryEnvelopeSchema = z.object({
-  event_id: z.string().uuid(),
-  event_type: z.enum(SUPPORTED_WEBHOOK_EVENTS),
-  occurred_at: z.string().datetime(),
-  tenant_id: z.string().uuid(),
-  data: z.unknown(),
 });
 
 const DEFAULT_DELIVERY_PAGE_SIZE = 10;
@@ -512,29 +488,40 @@ export const retryWebhookDelivery = withAuth(async (
     return actionError('Test deliveries cannot be retried.', 'msp/profile:errors.webhooks.testNotRetryable');
   }
 
-  const parsedEnvelope = deliveryEnvelopeSchema.safeParse(delivery.requestBody);
-  if (!parsedEnvelope.success) {
+  const enqueued = await enqueueDeliveryRetry(delivery, user.tenant);
+  if (!enqueued.queued) {
     return actionError('This delivery cannot be retried because the stored payload is invalid.', 'msp/profile:errors.webhooks.payloadInvalid');
   }
-
-  const queue = WebhookDeliveryQueue.getInstance();
-  await queue.enqueue({
-    webhookId,
-    eventId: parsedEnvelope.data.event_id,
-    eventType: parsedEnvelope.data.event_type,
-    occurredAt: parsedEnvelope.data.occurred_at,
-    tenantId: user.tenant,
-    payload: parsedEnvelope.data.data as WebhookDeliveryPayload,
-    attempt: 1,
-    deliverAt: Date.now(),
-  });
 
   return {
     queued: true,
     webhookId,
     deliveryId,
-    eventId: parsedEnvelope.data.event_id,
+    eventId: enqueued.eventId,
   };
+});
+
+export const retryFailedWebhookDeliveries = withAuth(async (
+  user,
+  _ctx,
+  webhookId: string,
+): Promise<{
+  queued: number;
+  skipped: number;
+  totalCandidates: number;
+  truncated: boolean;
+} | WebhookActionError> => {
+  const permissionFailure = await getWebhookPermissionError(user, 'retry');
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
+  const webhook = await webhookModel.getById(webhookId, user.tenant);
+  if (!webhook) {
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
+  }
+
+  return retryFailedDeliveriesForWebhook(user.tenant, webhookId);
 });
 
 export const getWebhookSummary = withAuth(async (

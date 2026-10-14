@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
@@ -87,12 +87,12 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
+import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
-import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -107,7 +107,7 @@ import {
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
-import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
+import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
 import type { RecurringTicketSource } from '../../lib/recurring/types';
@@ -137,7 +137,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -254,6 +254,19 @@ interface TicketDetailsProps {
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
+     * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
+     * fills it from the `@alga-psa/workflows/ticket-actions` seam). When absent (CE) or in
+     * Alga Desk mode the More menu entry is not rendered.
+     */
+    renderCreateWorkflowFromTicket?: (args: {
+        ticketId: string;
+        ticketNumber: string;
+        title: string;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -262,11 +275,6 @@ interface TicketDetailsProps {
         client: IClient;
     }) => React.ReactNode;
 
-    /**
-     * Optional injected UI for interval management (e.g. @alga-psa/scheduling IntervalManagement).
-     * Shows auto-tracked time intervals below the ticket timer.
-     */
-    renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     /** AlgaDesk product mode: Duplicate opens the AlgaDesk create form variant. */
     isAlgaDeskMode?: boolean;
     hideSlaStatus?: boolean;
@@ -333,8 +341,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderCreateWorkflowFromTicket,
     renderClientDetails,
-    renderIntervalManagement,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
     hideBilling = false,
@@ -361,8 +369,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Tracks which mount fetches the server bootstrap already satisfied, so the
     // corresponding effects skip their FIRST run only (later dep-driven runs —
     // e.g. checklist on status change — still fetch).
+    const [canManageWorkflows, setCanManageWorkflows] = useState(
+        bootstrap?.canManageWorkflows ?? false,
+    );
+    const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -373,6 +385,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
     const router = useRouter();
+    // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
+    const templatePermissions = useTicketTemplatePermissions();
+    // Gates the header "Create workflow from ticket" item: EE slot present, workflow:manage, not Alga Desk.
+    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && canManageWorkflows && !isAlgaDeskMode;
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -388,6 +404,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+                setCanManageWorkflows(hasWorkflowManageAccess(perms));
             }
         });
         return () => {
@@ -1327,8 +1344,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
     const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
@@ -1455,9 +1470,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [ticket.ticket_id, ticket.ticket_number, isInDrawer, closeDrawer, onClose, router, searchParams, t]);
 
-    // Create a single instance of the service
-    const intervalService = useMemo(() => new IntervalTrackingService(), []);
-
     useEffect(() => {
         if (bootstrapSkips.current.teams) {
             bootstrapSkips.current.teams = false;
@@ -1507,25 +1519,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         loadTeam();
     }, [ticket.assigned_team_id, teams]);
-
-    // Timer logic
-    const tick = useCallback(() => {
-        setElapsedTime(prevTime => {
-            return prevTime + 1;
-        });
-    }, [isRunning]);
-
-    useEffect(() => {
-        let intervalId: NodeJS.Timeout | undefined;
-        if (isRunning) {
-            intervalId = setInterval(tick, 1000);
-        }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [isRunning, tick]);
 
     // Load ticketing display settings
     useEffect(() => {
@@ -1585,208 +1578,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         fetchTags();
     }, [ticket.ticket_id]);
-
-    // Add automatic interval tracking using the custom hook
-    // Unique holder ID per tab for lock ownership
-    const [holderId] = useState<string>(() => {
-        if (typeof window !== 'undefined') {
-            const existing = sessionStorage.getItem('tabHolderId');
-            if (existing) return existing;
-            const id = generateUUID();
-            sessionStorage.setItem('tabHolderId', id);
-            return id;
-        }
-        return Math.random().toString(36).slice(2);
-    });
-
-    const {
-        isTracking,
-        currentIntervalId,
-        isLockedByOther,
-        startTracking,
-        stopTracking,
-        refreshLockState,
-    } = useTicketTimeTracking(
-        initialTicket.ticket_id || '',
-        initialTicket.ticket_number || '',
-        initialTicket.title || '',
-        userId || '',
-        { autoStart: false, holderId }
-    );
-
-    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
-    const startTrackingRef = React.useRef(startTracking);
-    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
-
-    // Reflect tracking state into local stopwatch state
-    useEffect(() => {
-        console.log('[TicketDetails] isTracking changed ->', isTracking);
-        setIsRunning(!!isTracking);
-    }, [isTracking]);
-
-    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
-    const autoStartedRef = React.useRef(false);
-    useEffect(() => {
-        const auto = async () => {
-            if (autoStartedRef.current) return;
-            if (!initialTicket.ticket_id || !userId) return;
-            if (isTracking) return;
-            if (!isLiveTicketTimerEnabled) return;
-            console.log('[TicketDetails] auto-start attempt');
-            try {
-                const started = await startTrackingRef.current(false);
-                console.log('[TicketDetails] auto-start result ->', started);
-                if (started) {
-                    setElapsedTime(0);
-                    autoStartedRef.current = true;
-                }
-            } catch (e) {
-                // Ignore auto-start failures; time tracking is best-effort here.
-            }
-        };
-        auto();
-        // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, isTracking, isLiveTicketTimerEnabled]);
-
-    // New screens start from zero; no seeding from existing intervals
-
-    useEffect(() => {
-        const disableLiveTimerInView = async () => {
-            if (isLiveTicketTimerEnabled) {
-                return;
-            }
-
-            try {
-                await stopTracking();
-            } catch {
-                // Ignore stop errors while enforcing board policy.
-            }
-
-            setIsRunning(false);
-            setElapsedTime(0);
-        };
-
-        disableLiveTimerInView();
-    }, [isLiveTicketTimerEnabled, stopTracking]);
-
-    // Poll lock state periodically to update UI lock indicator
-    useEffect(() => {
-        let id: any;
-        const poll = async () => {
-            try { await refreshLockState(); } catch {}
-        };
-        id = setInterval(poll, 5000);
-        poll();
-        return () => clearInterval(id);
-    }, [refreshLockState]);
-    
-    // Function to close the current interval before navigation
-    // Enhanced function to close the interval - will find and close any open interval for this ticket
-    const closeCurrentInterval = useCallback(async () => {
-        try {
-            // If we have a currentIntervalId, use it
-            if (currentIntervalId) {
-                console.debug('Closing known interval before navigation:', currentIntervalId);
-                await intervalService.endInterval(currentIntervalId);
-                return;
-            }
-            
-            // If currentIntervalId is null, try to find any open interval for this ticket
-            console.debug('No currentIntervalId available, checking for open intervals');
-            if (userId && initialTicket.ticket_id) {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id, userId);
-                if (openInterval) {
-                    console.debug('Found open interval to close:', openInterval.id);
-                    await intervalService.endInterval(openInterval.id);
-                } else {
-                    console.debug('No open intervals found for this ticket');
-                }
-            }
-        } catch (error: any) {
-            console.error('Error closing interval:', error);
-        }
-    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
-    
-    // Fixed navigation function - wait for interval to close before navigating
-    const handleBackToTickets = useCallback(async () => {
-        try {
-            // Stop tracking and release lock before leaving
-            await stopTracking();
-            // Wait for the interval to close
-            await closeCurrentInterval();
-            
-            // Navigate after interval is closed
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        } catch (error) {
-            console.error('Error closing interval before navigation:', error);
-            // Navigate anyway to prevent user from being stuck
-            if (onClose) {
-                onClose();
-            } else {
-                // Use proper routing to tickets dashboard instead of router.back()
-                router.push('/msp/tickets');
-            }
-        }
-    }, [closeCurrentInterval, onClose, router, stopTracking]);
-
-    // Handle timer control actions with locking
-    const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
-
-    const doStart = useCallback(async (force = false) => {
-        if (!initialTicket.ticket_id || !userId) return;
-        try {
-            const started = await startTracking(force);
-            if (started) {
-                setElapsedTime(0);
-                setIsRunning(true);
-            } else if (!force) {
-                // Locked elsewhere
-                setIsReplaceDialogOpen(true);
-            }
-        } catch (e) {
-            console.error('Failed to start tracking:', e);
-        }
-    }, [initialTicket.ticket_id, userId, startTracking]);
-
-    const handleStartClick = useCallback(() => {
-        doStart(false);
-    }, [doStart]);
-
-    const handleConfirmReplace = useCallback(async () => {
-        setIsReplaceDialogOpen(false);
-        await doStart(true);
-    }, [doStart]);
-
-    const handlePauseClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-    }, [stopTracking]);
-
-    const handleStopClick = useCallback(async () => {
-        try {
-            await stopTracking();
-        } catch {}
-        setIsRunning(false);
-        setElapsedTime(0);
-    }, [stopTracking]);
-
-    // Ensure we stop tracking only when component unmounts (not on re-renders)
-    const stopTrackingRef = React.useRef(stopTracking);
-    useEffect(() => {
-        stopTrackingRef.current = stopTracking;
-    }, [stopTracking]);
-    useEffect(() => {
-        return () => {
-            stopTrackingRef.current?.().catch(() => {});
-        };
-    }, []);
 
     const handleClientClick = async () => {
         if (!client?.client_id) return;
@@ -2600,6 +2391,11 @@ const handleClose = () => {
         }
     };
 
+    // A stopwatch Stop saved its entry (the session is logged server-side): refresh the time list.
+    const handleStopwatchEntryLogged = useCallback(() => {
+        setTimeEntriesRefreshKey((value) => value + 1);
+    }, []);
+
     const handleAddTimeEntry = async () => {
         if (isLaunchingTimeEntryRef.current) {
             return;
@@ -2612,23 +2408,16 @@ const handleClose = () => {
                 return;
             }
 
-            const baseOnComplete = createTicketTimeEntryOnComplete({
-                stopTracking,
-                setElapsedTime,
-                setIsRunning,
-            });
             await launchTimeEntry({
                 openDrawer,
                 closeDrawer,
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime,
                     timeDescription,
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
                 onComplete: () => {
-                    baseOnComplete();
                     setTimeEntriesRefreshKey((value) => value + 1);
                 },
             });
@@ -2675,7 +2464,6 @@ const handleClose = () => {
                 context: buildTicketTimeEntryContext({
                     ticket,
                     clientName: client?.client_name ?? null,
-                    elapsedTime: 0,
                     timeDescription: '',
                     masterTicketNumber: bundle?.masterTicket?.ticket_number ?? null,
                 }),
@@ -3857,6 +3645,30 @@ const handleClose = () => {
                                         })}
                                     </Link>
                                 ) : null}
+                                {ticket.created_from_template_id && ticket.created_from_template_name ? (
+                                    templatePermissions.read ? (
+                                        <Link
+                                            id={`${id}-created-from-template-link`}
+                                            href={`/msp/tickets/templates/${ticket.created_from_template_id}`}
+                                            className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            id={`${id}-created-from-template`}
+                                            className="flex-shrink-0 text-xs text-gray-600 whitespace-nowrap"
+                                        >
+                                            {t('details.fromTemplate', {
+                                                defaultValue: 'From template: {{name}}',
+                                                name: ticket.created_from_template_name,
+                                            })}
+                                        </span>
+                                    )
+                                ) : null}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -3898,6 +3710,51 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
+                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                id={`${id}-more-actions-button`}
+                                                variant="outline"
+                                                size="sm"
+                                                aria-label={t('actions.moreActions', { defaultValue: 'More actions' })}
+                                            >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            {templatePermissions.create ? (
+                                                <DropdownMenuItem
+                                                    id={`${id}-create-template-menu-item`}
+                                                    onClick={() => router.push(
+                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                                                    )}
+                                                >
+                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                            {canCreateWorkflowFromTicket ? (
+                                                <DropdownMenuItem
+                                                    id="create-workflow-from-ticket-menu-item"
+                                                    onSelect={() => setCreateWorkflowOpen(true)}
+                                                >
+                                                    <Workflow className="mr-2 h-4 w-4" />
+                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : null}
+                                {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
+                                    ? renderCreateWorkflowFromTicket({
+                                        ticketId: ticket.ticket_id as string,
+                                        ticketNumber: ticket.ticket_number ?? '',
+                                        title: ticket.title,
+                                        open: createWorkflowOpen,
+                                        onOpenChange: setCreateWorkflowOpen,
+                                    })
+                                    : null}
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -4221,18 +4078,6 @@ const handleClose = () => {
                     </DialogContent>
                 </Dialog>
 
-                {/* Timer Replace Confirmation */}
-                <ConfirmationDialog
-                    id={`${id}-replace-timer-dialog`}
-                    isOpen={isReplaceDialogOpen}
-                    onClose={() => setIsReplaceDialogOpen(false)}
-                    onConfirm={handleConfirmReplace}
-                    title={t('info.timerActiveElsewhereTitle', 'Timer Active Elsewhere')}
-                    message={t('info.timerTakeoverMessage', "This ticket's timer is active in another window. Do you want to take over and replace it here?")}
-                    confirmLabel={t('info.replaceHere', 'Replace Here')}
-                    cancelLabel={t('actions.cancel', 'Cancel')}
-                />
-
                 <ConfirmationDialog
                     id={`${id}-bundle-add-child-multi-client-confirm`}
                     isOpen={isAddChildMultiClientConfirmOpen}
@@ -4434,14 +4279,9 @@ const handleClose = () => {
                     onExternalLinksChanged={setExternalLinks}
                     hideTimeEntry={hideTimeEntry}
                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
-                    elapsedTime={elapsedTime}
-                    isRunning={isRunning}
-                    isTimerLocked={isLockedByOther}
                     timeDescription={timeDescription}
                     onTimeDescriptionChange={setTimeDescription}
-                    onStart={handleStartClick}
-                    onPause={handlePauseClick}
-                    onStop={handleStopClick}
+                    onTimeEntryLogged={handleStopwatchEntryLogged}
                     onAddTimeEntry={handleAddTimeEntry}
                     isLaunchingTimeEntry={isLaunchingTimeEntry}
                     onScheduleWork={handleScheduleWork}
@@ -4452,7 +4292,6 @@ const handleClose = () => {
                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                     onEditTimeEntry={handleEditTimeEntry}
                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
-                    renderIntervalManagement={renderIntervalManagement}
                     additionalAgents={additionalAgents}
                     availableAgents={availableAgents}
                     onAddAgent={handleAddAgent}
@@ -4633,14 +4472,9 @@ const handleClose = () => {
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
                                 board={board}
-                                elapsedTime={elapsedTime}
-                                isRunning={isRunning}
                                 timeDescription={timeDescription}
-                                isTimerLocked={isLockedByOther}
-                                onStart={handleStartClick}
-                                onPause={handlePauseClick}
-                                onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
+                                onTimeEntryLogged={handleStopwatchEntryLogged}
                                 onAddTimeEntry={handleAddTimeEntry}
                                 isLaunchingTimeEntry={isLaunchingTimeEntry}
                                 onClientClick={handleClientClick}
@@ -4680,8 +4514,7 @@ const handleClose = () => {
                                 surveySummaryCard={surveySummaryCard}
                                     hideTimeEntry={hideTimeEntry}
                                     hideMaterials={hideMaterials}
-                                    renderIntervalManagement={renderIntervalManagement}
-                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
                                     isLiveTicketTimerEnabled={isLiveTicketTimerEnabled}
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}

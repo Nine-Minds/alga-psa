@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function normalizeTimestamp(value: Date | string | undefined): string | undefined {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
@@ -9,13 +11,13 @@ export function buildTagDefinitionCreatedPayload(params: {
   tagName: string;
   createdByUserId?: string;
   createdAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TAG_DEFINITION_CREATED'> {
+  return builtWorkflowPayload('TAG_DEFINITION_CREATED', {
     tagId: params.tagId,
     tagName: params.tagName,
     ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
     ...(params.createdAt ? { createdAt: normalizeTimestamp(params.createdAt) } : {}),
-  };
+  });
 }
 
 export function buildTagDefinitionUpdatedPayload(params: {
@@ -24,14 +26,14 @@ export function buildTagDefinitionUpdatedPayload(params: {
   newName?: string;
   updatedByUserId?: string;
   updatedAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TAG_DEFINITION_UPDATED'> {
+  return builtWorkflowPayload('TAG_DEFINITION_UPDATED', {
     tagId: params.tagId,
     ...(params.previousName ? { previousName: params.previousName } : {}),
     ...(params.newName ? { newName: params.newName } : {}),
     ...(params.updatedByUserId ? { updatedByUserId: params.updatedByUserId } : {}),
     ...(params.updatedAt ? { updatedAt: normalizeTimestamp(params.updatedAt) } : {}),
-  };
+  });
 }
 
 export function buildTagAppliedPayload(params: {
@@ -40,14 +42,14 @@ export function buildTagAppliedPayload(params: {
   entityId: string;
   appliedByUserId?: string;
   appliedAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TAG_APPLIED'> {
+  return builtWorkflowPayload('TAG_APPLIED', {
     tagId: params.tagId,
     entityType: params.entityType,
     entityId: params.entityId,
     ...(params.appliedByUserId ? { appliedByUserId: params.appliedByUserId } : {}),
     ...(params.appliedAt ? { appliedAt: normalizeTimestamp(params.appliedAt) } : {}),
-  };
+  });
 }
 
 export function buildTagRemovedPayload(params: {
@@ -56,13 +58,13 @@ export function buildTagRemovedPayload(params: {
   entityId: string;
   removedByUserId?: string;
   removedAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'TAG_REMOVED'> {
+  return builtWorkflowPayload('TAG_REMOVED', {
     tagId: params.tagId,
     entityType: params.entityType,
     entityId: params.entityId,
     ...(params.removedByUserId ? { removedByUserId: params.removedByUserId } : {}),
     ...(params.removedAt ? { removedAt: normalizeTimestamp(params.removedAt) } : {}),
-  };
+  });
 }
 

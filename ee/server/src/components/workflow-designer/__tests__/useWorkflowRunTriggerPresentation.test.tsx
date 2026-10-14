@@ -27,4 +27,11 @@ describe('run source vs workflow trigger', () => {
     expect(result.current({ type: 'event', eventName: 'TICKET_CREATED' })).toBe('Event: TICKET_CREATED');
     expect(result.current(null)).toBeNull();
   });
+
+  it('labels a status-age trigger with its own source and days, not "on the day"', () => {
+    const { result } = renderHook(() => useDescribeWorkflowTrigger());
+    expect(result.current({ type: 'date', source: 'ticket.status_age', offsetDays: 0, params: { statusName: 'Waiting', days: 7 } }))
+      .toBe('Ticket in status for N days, 7 days in the status');
+    expect(result.current({ type: 'date', source: 'unknown.source', offsetDays: 0 })).toBe('Date, on the day');
+  });
 });

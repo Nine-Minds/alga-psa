@@ -79,7 +79,7 @@ describe('TicketService.addComment threading contract', () => {
     expect(body).toContain('...notificationSuppression,');
     // Publication is persisted inside the comment transaction and dispatched
     // after commit, so the suppression flags ride the durable payload.
-    expect(body).toContain("await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);");
+    expect(body).toContain("await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);");
     expect(body).not.toContain("safePublishEvent('TICKET_COMMENT_ADDED'");
   });
 });

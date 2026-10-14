@@ -44,12 +44,23 @@ vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
   }),
 }));
 
-vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(async (event: { eventType: string; payload: Record<string, any> }, options?: { eventId?: string; force?: boolean }) => {
+// The outbox dispatcher revives stored payloads (real schema check) and replays them with
+// publishBuiltWorkflowPayload / publishNonCatalogEventByName; all of them land in `published`.
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => {
+  const record = async (event: { eventType: string; payload: Record<string, any> }, options?: { eventId?: string; force?: boolean }) => {
     published.push({ id: options?.eventId ?? uuidv4(), eventType: event.eventType, payload: event.payload, force: Boolean(options?.force) });
-  }),
-  publishWorkflowEvent: vi.fn(async () => undefined),
-}));
+  };
+  return {
+    reviveStoredWorkflowPayload: ((await importOriginal()) as any).reviveStoredWorkflowPayload,
+    publishEvent: vi.fn(record),
+    publishBuiltWorkflowPayload: vi.fn(record),
+    publishNonCatalogEventByName: vi.fn(record),
+    publishStoredWorkflowEvent: vi.fn(record),
+    publishWorkflowEvent: vi.fn(async () => undefined),
+    publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+    publishUnregisteredEventType: vi.fn(async () => undefined),
+  };
+});
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: vi.fn(async () => null),

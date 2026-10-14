@@ -1623,6 +1623,12 @@
     "threecxDialing": "Wählvorgang von Ihrer 3CX-Nebenstelle",
     "threecxFailed": "Die PBX konnte den Anruf nicht aufbauen"
   },
+  "unsavedChangesGuard": {
+    "title": "Nicht gespeicherte Änderungen verwerfen?",
+    "message": "Sie haben nicht gespeicherte Änderungen, die beim Schließen verloren gehen. Möchten Sie sie verwerfen?",
+    "discard": "Änderungen verwerfen",
+    "keepEditing": "Weiter bearbeiten"
+  },
   "editor": {
     "attachFiles": "Dateien anhängen",
     "uploadingFiles": "Dateien werden hochgeladen…",

@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { IInteraction, IScheduleEntry } from '@alga-psa/types';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
+import { buildInteractionLoggedPayload, buildScheduleEntryCreatedPayload } from '@alga-psa/workflow-streams';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import InteractionModel from '../models/interactions';
 
@@ -317,18 +317,10 @@ export async function createInteractionScheduleEntry({
     entry,
     publishScheduleEntryCreated: async () => {
       try {
-        await publishEvent({
-          eventType: 'SCHEDULE_ENTRY_CREATED',
-          payload: {
-            tenantId: tenant,
-            userId: assignedByUserId,
-            entryId: entry.entry_id,
-            changes: {
+        await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: assignedByUserId, entryId: entry.entry_id, changes: {
               after: entry,
               assignedUserIds,
-            },
-          },
-        });
+            } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: assignedByUserId } } });
       } catch (eventError) {
         console.error('[interactionCreateHelper] Failed to publish SCHEDULE_ENTRY_CREATED event:', eventError);
       }

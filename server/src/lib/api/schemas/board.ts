@@ -17,7 +17,7 @@ export const createBoardSchema = z.object({
   default_assigned_to: uuidSchema.nullable().optional(),
   display_itil_impact: z.boolean().optional(),
   display_itil_urgency: z.boolean().optional(),
-  enable_live_ticket_timer: z.boolean().optional(),
+  enable_live_ticket_timer: z.boolean().optional().describe('Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board\'s tickets; a stopwatch already running keeps running. Defaults to true.'),
   client_portal_visible: z.boolean().optional(),
 });
 
@@ -41,7 +41,7 @@ export const boardResponseSchema = z.object({
   inbound_reply_reopen_cutoff_hours: z.number().int().optional(),
   inbound_reply_reopen_status_id: uuidSchema.nullable().optional(),
   inbound_reply_ai_ack_suppression_enabled: z.boolean().optional(),
-  enable_live_ticket_timer: z.boolean().nullable(),
+  enable_live_ticket_timer: z.boolean().nullable().describe('Show the stopwatch on tickets in this board. When false, the stopwatch cannot be started on this board\'s tickets; a stopwatch already running keeps running. Defaults to true.'),
   client_portal_visible: z.boolean().nullable(),
   tenant: uuidSchema
 });

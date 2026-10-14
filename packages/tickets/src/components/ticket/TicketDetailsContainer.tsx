@@ -91,8 +91,8 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
+  renderCreateWorkflowFromTicket?: React.ComponentProps<typeof TicketDetails>['renderCreateWorkflowFromTicket'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
-  renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   isAlgaDeskMode?: boolean;
   hideSlaStatus?: boolean;
   hideBilling?: boolean;
@@ -122,8 +122,8 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderQuickInvoice,
+  renderCreateWorkflowFromTicket,
   renderClientDetails,
-  renderIntervalManagement,
   isAlgaDeskMode = false,
   hideSlaStatus = false,
   hideBilling = false,
@@ -358,8 +358,8 @@ export default function TicketDetailsContainer({
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderQuickInvoice={renderQuickInvoice}
+      renderCreateWorkflowFromTicket={renderCreateWorkflowFromTicket}
       renderClientDetails={renderClientDetails}
-      renderIntervalManagement={renderIntervalManagement}
       isAlgaDeskMode={isAlgaDeskMode}
       hideSlaStatus={hideSlaStatus}
       hideBilling={hideBilling}

@@ -104,7 +104,8 @@
     "emailLogs": "⟦Ḗḿȧīŀ Ŀȯɠş⟧",
     "extensions": "⟦Ḗẋŧḗƞşīȯƞş⟧",
     "ticketsAll": "⟦Ȧŀŀ Ŧīƈķḗŧş⟧",
-    "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧"
+    "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧",
+    "ticketsTemplates": "⟦Ŧīƈķḗŧ Ŧḗḿƥŀȧŧḗş⟧"
   },
   "marketing": {
     "dialogs": {
@@ -591,7 +592,20 @@
       "system": "⟦Şẏşŧḗḿ⟧",
       "selected": "⟦Şḗŀḗƈŧḗḓ⟧"
     },
-    "openUserMenu": "⟦Ȯƥḗƞ ŭşḗř ḿḗƞŭ⟧"
+    "openUserMenu": "⟦Ȯƥḗƞ ŭşḗř ḿḗƞŭ⟧",
+    "stopwatch": {
+      "untitled": "⟦Ŭƞŧīŧŀḗḓ⟧",
+      "ariaLabelPaused": "⟦Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ: {{label}} ȧŧ {{clock}}⟧",
+      "ariaLabelRunning": "⟦Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ: {{label}} ȧŧ {{clock}}⟧",
+      "paused": "⟦Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ⟧",
+      "running": "⟦Şŧȯƥẇȧŧƈħ řŭƞƞīƞɠ⟧",
+      "resume": "⟦Řḗşŭḿḗ⟧",
+      "pause": "⟦Ƥȧŭşḗ⟧",
+      "stop": "⟦Şŧȯƥ ȧƞḓ ŀȯɠ⟧",
+      "discard": "⟦Ḓīşƈȧřḓ⟧",
+      "pausedNoDrawer": "⟦Şŧȯƥẇȧŧƈħ ƥȧŭşḗḓ ȧŧ {{clock}}. Ȯƥḗƞ ŧħḗ ẇȯřķ īŧḗḿ ŧȯ ŀȯɠ ŧħḗ ŧīḿḗ.⟧",
+      "openTicket": "⟦Ȯƥḗƞ ŧīƈķḗŧ⟧"
+    }
   },
   "dialogs": {
     "aiInterrupt": {
