@@ -2726,14 +2726,15 @@
       "onExhaustion": "il blocco si esaurisce",
       "onThreshold": "{{percent}}% utilizzato",
       "onExpiry": "il blocco scade",
-      "onRenewal": "il contratto viene rinnovato (policy in attesa di conferma)",
+      "onRenewal": "il contratto viene rinnovato",
       "tierAutoIssue": "Finalizzato automaticamente",
       "tierDraft": "Bozza da rivedere"
     },
     "balance": {
       "label": "Saldo attivo",
       "value": "{{remaining}} di {{total}} rimanenti",
-      "none": "Nessun blocco attivo. Un blocco si attiva quando la sua fattura viene finalizzata."
+      "none": "Nessun blocco attivo. Un blocco si attiva quando la sua fattura viene finalizzata.",
+      "contractEnded": "Contratto terminato; le ore rimanenti sono state perse."
     },
     "pending": {
       "heading": "Blocco in sospeso in attesa della finalizzazione della fattura",
@@ -2776,7 +2777,7 @@
       "triggerExhaustion": "Il blocco si esaurisce",
       "triggerExpiry": "Il blocco scade",
       "triggerRenewal": "Il contratto viene rinnovato",
-      "triggerRenewalPending": "Salvato con la riga. Il modo in cui i rinnovi emettono blocchi è in attesa di conferma, quindi per ora non viene emesso nulla.",
+      "triggerRenewalHint": "Fattura un nuovo blocco a ogni rinnovo (anniversario di un contratto a tempo indeterminato o contratto di rinnovo attivato). I blocchi esistenti mantengono la propria scadenza.",
       "tier": "Fattura successiva",
       "tierDraft": "Crea una bozza da rivedere",
       "tierAutoIssue": "Finalizza e invia automaticamente",

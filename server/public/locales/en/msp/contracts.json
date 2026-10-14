@@ -2726,14 +2726,15 @@
       "onExhaustion": "The block runs out",
       "onThreshold": "{{percent}}% used",
       "onExpiry": "The block expires",
-      "onRenewal": "The contract renews (pending policy confirmation)",
+      "onRenewal": "The contract renews",
       "tierAutoIssue": "Finalized automatically",
       "tierDraft": "Draft for review"
     },
     "balance": {
       "label": "Active balance",
       "value": "{{remaining}} of {{total}} remaining",
-      "none": "No active block yet. A block activates when its invoice is finalized."
+      "none": "No active block yet. A block activates when its invoice is finalized.",
+      "contractEnded": "Contract ended; remaining hours were forfeited."
     },
     "pending": {
       "heading": "Pending block awaiting invoice finalization",
@@ -2776,7 +2777,7 @@
       "triggerExhaustion": "The block runs out",
       "triggerExpiry": "The block expires",
       "triggerRenewal": "The contract renews",
-      "triggerRenewalPending": "Saved with the line. How renewals issue blocks is pending policy confirmation, so this does not issue anything yet.",
+      "triggerRenewalHint": "Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.",
       "tier": "Follow-on invoice",
       "tierDraft": "Create a draft for review",
       "tierAutoIssue": "Finalize and send automatically",

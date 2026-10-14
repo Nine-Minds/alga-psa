@@ -240,7 +240,7 @@ describe.runIf(enabled)('Prepaid Block contract-end forfeiture', () => {
     expect(row.remaining_minutes).toBe(600);
   });
 
-  it('skips a renewing assignment whose renewal contract is already active (its blocks are about to be re-owned)', async () => {
+  it('skips a renewing assignment with a linked renewal contract, active or draft (its blocks keep running)', async () => {
     const w = await setup();
     const renewalContractId = uuidv4();
     await db('contracts').insert({ tenant, contract_id: renewalContractId, contract_name: 'Renewal', currency_code: 'EUR', status: 'active' });
@@ -251,10 +251,42 @@ describe.runIf(enabled)('Prepaid Block contract-end forfeiture', () => {
     await expiredHourBlocksHandler({ tenantId: tenant });
     expect((await blockRow(blockId)).status).toBe('active');
 
-    // Renewal contract not (yet) active: the block is forfeited as usual.
+    // A draft (not yet active) renewal contract changes nothing: renewing keeps the block.
     await db('contracts').where({ tenant, contract_id: renewalContractId }).update({ status: 'draft' });
     await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await blockRow(blockId)).status).toBe('active');
+  });
+
+  it('spares a renewing fixed-term assignment with no renewal draft: no audit row, minutes kept', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'renewing', created_draft_contract_id: null });
+    const blockId = await insertBlock(w, { remaining: 90 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    const row = await blockRow(blockId);
+    expect(row.status).toBe('active');
+    expect(row.remaining_minutes).toBe(90);
+    expect(await db('hour_block_audit').where({ tenant, block_id: blockId })).toHaveLength(0);
+  });
+
+  it('still forfeits an ended assignment that is not marked renewing (regression guard)', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'non_renewing', created_draft_contract_id: null });
+    const blockId = await insertBlock(w, { remaining: 90 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
     expect((await blockRow(blockId)).status).toBe('expired');
+    expect((await db('hour_block_audit').where({ tenant, block_id: blockId }).first()).type).toBe('contract_end_expiration');
+  });
+
+  it('forfeits a renewing assignment that was terminated (terminated takes precedence over renewing)', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'renewing', is_active: false });
+    const blockId = await insertBlock(w, { remaining: 90 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await blockRow(blockId)).status).toBe('expired');
+    expect((await db('hour_block_audit').where({ tenant, block_id: blockId }).first()).type).toBe('contract_end_expiration');
   });
 
   it('keeps time that drew a forfeited block billed exactly once (not re-drawn onto another block)', async () => {

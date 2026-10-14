@@ -2726,14 +2726,15 @@
       "onExhaustion": "el bloque se agota",
       "onThreshold": "{{percent}} % usado",
       "onExpiry": "el bloque vence",
-      "onRenewal": "el contrato se renueva (política pendiente de confirmación)",
+      "onRenewal": "el contrato se renueva",
       "tierAutoIssue": "Finalizado automáticamente",
       "tierDraft": "Borrador para revisión"
     },
     "balance": {
       "label": "Saldo activo",
       "value": "{{remaining}} de {{total}} restantes",
-      "none": "Aún no hay un bloque activo. Un bloque se activa cuando se finaliza su factura."
+      "none": "Aún no hay un bloque activo. Un bloque se activa cuando se finaliza su factura.",
+      "contractEnded": "Contrato finalizado; las horas restantes se han perdido."
     },
     "pending": {
       "heading": "Bloque pendiente a la espera de finalizar la factura",
@@ -2776,7 +2777,7 @@
       "triggerExhaustion": "El bloque se agota",
       "triggerExpiry": "El bloque vence",
       "triggerRenewal": "El contrato se renueva",
-      "triggerRenewalPending": "Se guarda con la línea. Cómo emiten bloques las renovaciones está pendiente de confirmar, por lo que aún no se emite nada.",
+      "triggerRenewalHint": "Factura un bloque nuevo en cada renovación (aniversario de un contrato indefinido o contrato de renovación activado). Los bloques existentes conservan su propia caducidad.",
       "tier": "Factura de seguimiento",
       "tierDraft": "Crear un borrador para revisión",
       "tierAutoIssue": "Finalizar y enviar automáticamente",

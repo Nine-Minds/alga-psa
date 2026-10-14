@@ -2726,14 +2726,15 @@
       "onExhaustion": "der Block aufgebraucht ist",
       "onThreshold": "{{percent}} % verbraucht",
       "onExpiry": "der Block verfällt",
-      "onRenewal": "der Vertrag verlängert wird (Richtlinie noch nicht bestätigt)",
+      "onRenewal": "der Vertrag wird verlängert",
       "tierAutoIssue": "Automatisch abgeschlossen",
       "tierDraft": "Entwurf zur Prüfung"
     },
     "balance": {
       "label": "Aktives Guthaben",
       "value": "{{remaining}} von {{total}} verbleibend",
-      "none": "Noch kein aktiver Block. Ein Block wird aktiv, sobald seine Rechnung abgeschlossen ist."
+      "none": "Noch kein aktiver Block. Ein Block wird aktiv, sobald seine Rechnung abgeschlossen ist.",
+      "contractEnded": "Vertrag beendet; verbleibende Stunden sind verfallen."
     },
     "pending": {
       "heading": "Ausstehender Block wartet auf Rechnungsabschluss",
@@ -2776,7 +2777,7 @@
       "triggerExhaustion": "Der Block aufgebraucht ist",
       "triggerExpiry": "Der Block verfällt",
       "triggerRenewal": "Der Vertrag verlängert wird",
-      "triggerRenewalPending": "Wird mit der Position gespeichert. Wie Verlängerungen Blöcke ausstellen, ist noch nicht bestätigt, daher wird derzeit nichts ausgestellt.",
+      "triggerRenewalHint": "Stellt bei jeder Verlängerung einen neuen Block in Rechnung (Jahrestag bei unbefristeten Verträgen oder aktivierter Verlängerungsvertrag). Bestehende Blöcke behalten ihr eigenes Ablaufdatum.",
       "tier": "Folgerechnung",
       "tierDraft": "Entwurf zur Prüfung erstellen",
       "tierAutoIssue": "Automatisch abschließen und senden",

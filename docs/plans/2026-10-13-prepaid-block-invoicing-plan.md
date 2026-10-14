@@ -662,6 +662,16 @@ replenishmentBucketUsageId?, notes })`.
   6. Time on an uncovered service bills through the contract's other lines.
 - Typecheck plus the existing billing, jobs and portal suites stay green.
 
+## Renewing assignments at term end (deploy-fix round)
+
+**Rule.** An assignment marked `renewing` (`client_contracts.status = 'renewing'`, set by Upcoming Renewals → "Mark renewing") keeps its blocks when its `end_date` passes. The contract-end pass in `findContractEndBlocks` skips it whether or not a renewal draft is linked, and the blocks then run to their own `expiration_date`. Non-renewing assignments (including `renewal_mode` none) are still forfeited with `contract_end_expiration`.
+
+**Precedence: terminated beats renewing.** The renewing flag only shields an assignment that simply ran past its end date (`deriveClientContractStatus` = `expired`). An assignment that is `terminated` (`is_active = false`, or the contract itself terminated) is forfeited even if marked renewing, because a terminated agreement is not going to renew.
+
+**Gap (pre-existing on main).** Renewal-draft carry-over (`reownBlocksForRenewalActivation`, via `createRenewalDraftForQueueItem` / `completeRenewalQueueItemForActivation`) has no UI entry point: nothing in the product creates or activates a renewal draft. Only the evergreen-anniversary renewal trigger is reachable today. Before this fix, "Mark renewing" on a fixed-term contract forfeited paid blocks at term end.
+
+**Open question for the captain.** Confirm "renewing = keep blocks", or wire a "Create renewal draft" row action in Upcoming Renewals so carry-over becomes reachable. Not built in this round.
+
 ## Out of scope (separate cards)
 
 - Blocking In Advance on Hourly and Usage lines (server, custom-line dialog, inline edit).

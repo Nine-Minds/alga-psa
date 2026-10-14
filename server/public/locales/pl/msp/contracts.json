@@ -2736,14 +2736,15 @@
       "onExhaustion": "blok zostanie wyczerpany",
       "onThreshold": "zużyto {{percent}}%",
       "onExpiry": "blok wygaśnie",
-      "onRenewal": "umowa zostanie odnowiona (polityka oczekuje na potwierdzenie)",
+      "onRenewal": "umowa jest odnawiana",
       "tierAutoIssue": "Finalizowane automatycznie",
       "tierDraft": "Wersja robocza do przeglądu"
     },
     "balance": {
       "label": "Aktywne saldo",
       "value": "pozostało {{remaining}} z {{total}}",
-      "none": "Brak aktywnego bloku. Blok aktywuje się po sfinalizowaniu jego faktury."
+      "none": "Brak aktywnego bloku. Blok aktywuje się po sfinalizowaniu jego faktury.",
+      "contractEnded": "Umowa zakończona; pozostałe godziny przepadły."
     },
     "pending": {
       "heading": "Oczekujący blok czeka na sfinalizowanie faktury",
@@ -2786,7 +2787,7 @@
       "triggerExhaustion": "Blok zostanie wyczerpany",
       "triggerExpiry": "Blok wygaśnie",
       "triggerRenewal": "Umowa zostanie odnowiona",
-      "triggerRenewalPending": "Zapisywane z pozycją. Sposób wystawiania bloków przy odnowieniach czeka na potwierdzenie polityki, więc na razie nic nie jest wystawiane.",
+      "triggerRenewalHint": "Wystawia fakturę na nowy blok przy każdym odnowieniu (rocznica umowy bezterminowej lub aktywowana umowa odnowienia). Istniejące bloki zachowują własną datę ważności.",
       "tier": "Faktura następna",
       "tierDraft": "Utwórz wersję roboczą do przeglądu",
       "tierAutoIssue": "Finalizuj i wyślij automatycznie",

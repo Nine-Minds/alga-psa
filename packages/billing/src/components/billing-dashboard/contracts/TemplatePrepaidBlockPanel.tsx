@@ -236,7 +236,7 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
                   </Badge>
                 )}
                 {config.trigger_on_expiry && <Badge variant="default-muted">{t('prepaidBlock.summary.onExpiry', { defaultValue: 'The block expires' })}</Badge>}
-                {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews (pending policy confirmation)' })}</Badge>}
+                {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews' })}</Badge>}
                 <Badge variant="outline">
                   {config.replenishment_tier === 'auto_issue'
                     ? t('prepaidBlock.summary.tierAutoIssue', { defaultValue: 'Finalized automatically' })

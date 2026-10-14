@@ -188,6 +188,12 @@ export type ContractLinePrepaidBlockSummary = {
   contract_line_id: string;
   /** Derived label kind: 'PrepaidBlock' for configured lines, else the stored type. */
   display_kind: string;
+  /**
+   * True when the line's contract has client assignments but none is currently live (same test
+   * issueNextPrepaidBlock applies: is_active and start/end date around today). The panel disables
+   * issuing and shows the "contract ended" state.
+   */
+  assignment_ended: boolean;
   config: IContractLinePrepaidBlock | null;
   /** contracts.currency_code of the line's contract (never defaulted). */
   currency_code: string | null;
@@ -320,8 +326,18 @@ export const getContractLinePrepaidBlockSummary = withAuth(async (
 
       const covered = await loadCoveredServicesWithHourlyRates(trx, tenant, contractLineId);
 
+      const assignments = await db.table('client_contracts')
+        .where({ contract_id: line.contract_id })
+        .select('is_active', 'start_date', 'end_date') as Array<Record<string, any>>;
+      const assignmentEnded = assignments.length > 0 && !assignments.some((a) => {
+        const start = dateOnly(a.start_date);
+        const end = dateOnly(a.end_date);
+        return a.is_active === true && (!start || start <= today) && (!end || end >= today);
+      });
+
       return {
         contract_line_id: contractLineId,
+        assignment_ended: assignmentEnded,
         display_kind: displayKinds.get(contractLineId) ?? line.contract_line_type,
         config: config ?? null,
         currency_code: contract?.currency_code ?? null,
