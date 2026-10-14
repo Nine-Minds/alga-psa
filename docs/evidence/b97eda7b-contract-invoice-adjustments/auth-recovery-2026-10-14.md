@@ -182,7 +182,7 @@ Behavioral verification on the repair source:
 
 ## Required live handoff
 
-Repair candidate: `a42d44e0deb4bb79c04bf723ae33637ffee3078e` (`fix(billing): serialize auth failures for invoice reads`). The supervised operator must roll that exact
+Repair candidate: `4dc4f344d90dadc8aeebbe9e62bfa2fef3310fd7` (`fix(billing): recover adjustment and attribution reads`). The supervised operator must roll that exact
 candidate to canonical 23185 and verify the running build stamp before
 acceptance. Run independent 3185 and 23185 login, save, reload, and reselection
 checks; in each pane inspect same-origin `/api/auth/session`. Use an owned draft
@@ -223,7 +223,7 @@ detail profile reads and source-quote preview reads ignore late failures from a
 previous invoice selection. Read retry remains explicit and does not invoke an
 invoice mutation.
 
-Latest verification on source candidate `a42d44e0deb4bb79c04bf723ae33637ffee3078e`:
+Verification for the prior read-path repair on source candidate `a42d44e0deb4bb79c04bf723ae33637ffee3078e`:
 
 - Billing action/editor/lifecycle and auth-boundary suites: 47 passed across
   six test files. Actual exported actions were invoked with `withAuth` rejecting
@@ -243,3 +243,29 @@ Latest verification on source candidate `a42d44e0deb4bb79c04bf723ae33637ffee3078
 Review first: verify the JSON-safe auth classification and that capability,
 detail, preview, and billing-profile read failures leave the selected invoice's
 expanded/collapsed draft intact. Then perform the supervised live handoff above.
+
+## Follow-up review correction — 2026-10-14
+
+The adjustment card now uses recoverable server-action wrappers for its client
+and service reads as well as its capability read. An auth failure from any one
+of the three produces the same explicit sign-in and retry UI; permission
+denials remain distinct. Draft attribution reads now use recoverable location
+loading and the existing recoverable billing-profile action. Their auth
+failures show the read recovery prompt, and **Retry loading** reruns attribution
+and invoice-detail reads. The line-read recovery guard preserves unsaved rows
+while those requests settle; attribution state is reset by invoice identity so
+an earlier selection cannot leave an expiry warning or options behind.
+
+Latest focused verification on source candidate
+`4dc4f344d90dadc8aeebbe9e62bfa2fef3310fd7`:
+
+- 58 tests passed across the focused billing action, editor, capability,
+  attribution recovery, and lifecycle suites. Coverage includes all three
+  initial reads returning serialized auth failure, independent client/service
+  expiry, explicit retry, permission-denial distinction, billing-profile and
+  location attribution expiry, preserved draft edits, and no invoice mutation.
+- Billing typecheck passed with a 6 GiB Node heap and billing package build
+  passed. The app server stayed untouched.
+
+This is the exact code candidate for the supervised 23185 rollout below; verify
+the running build stamp against this full SHA before acceptance.
