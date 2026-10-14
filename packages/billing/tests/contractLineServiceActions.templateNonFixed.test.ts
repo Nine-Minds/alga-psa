@@ -1,0 +1,204 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+type Row = Record<string, any>;
+
+const mocks = vi.hoisted(() => ({
+  tables: {} as Record<string, Row[]>,
+}));
+
+function makeBuilder(table: string) {
+  let filters: Row = {};
+  const rows = () => (mocks.tables[table] ??= []);
+  const matching = () => rows().filter((r) => Object.entries(filters).every(([k, v]) => r[k] === v));
+  const builder: any = {};
+  builder.where = (criteria: Row) => {
+    filters = { ...filters, ...criteria };
+    return builder;
+  };
+  builder.orderByRaw = () => builder;
+  builder.select = () => builder;
+  builder.first = async () => matching()[0];
+  builder.insert = async (row: Row) => {
+    rows().push({ ...row });
+  };
+  builder.update = async (patch: Row) => {
+    const hits = matching();
+    hits.forEach((r) => Object.assign(r, patch));
+    return hits.length;
+  };
+  return builder;
+}
+
+const trx: any = (table: string) => makeBuilder(table);
+trx.fn = { now: () => 'now' };
+trx.transaction = async (cb: (t: any) => unknown) => cb(trx);
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: trx }),
+  tenantDb: (connection: any) => ({ table: (table: string) => connection(table) }),
+  withTransaction: async (_db: unknown, cb: (t: any) => unknown) => cb(trx),
+}));
+vi.mock('@alga-psa/auth', () => ({
+  withAuth:
+    (fn: any) =>
+    (...args: unknown[]) =>
+      fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('../src/actions/contractLineServiceConfigurationActions', () => ({}));
+
+const TENANT = 'tenant-1';
+
+function seed(lineType: string, service: Row = {}) {
+  mocks.tables = {
+    contract_template_lines: [
+      { tenant: TENANT, template_line_id: 'tl-1', line_type: lineType, billing_frequency: 'monthly' },
+    ],
+    service_catalog: [
+      { tenant: TENANT, service_id: 'svc-1', service_name: 'Svc', is_active: true, item_kind: 'service', default_rate: 12500, ...service },
+    ],
+  };
+}
+
+const rowsOf = (table: string) => mocks.tables[table] ?? [];
+
+describe('template line service management for non-Fixed lines', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  it('adds a service to an Hourly template line with defaults', async () => {
+    seed('Hourly');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1');
+    expect(typeof configId).toBe('string');
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Hourly',
+      template_line_id: 'tl-1',
+      config_id: configId,
+    });
+    expect(rowsOf('contract_template_line_service_hourly_config')[0]).toMatchObject({
+      tenant: TENANT,
+      config_id: configId,
+      hourly_rate: 12500,
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+    });
+  });
+
+  it('adds a service to a Usage template line', async () => {
+    seed('Usage');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Usage', {
+      unit_of_measure: 'GB',
+    } as any);
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Usage',
+      quantity: null,
+    });
+    expect(rowsOf('contract_template_line_service_usage_config')[0]).toMatchObject({
+      config_id: configId,
+      unit_of_measure: 'GB',
+      enable_tiered_pricing: false,
+      base_rate: 12500,
+    });
+  });
+
+  it('adds a Bucket configuration to an Hourly template line with overage_rate defaulted', async () => {
+    seed('Hourly');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Bucket', {
+      total_minutes: 600,
+    } as any);
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Bucket',
+    });
+    expect(rowsOf('contract_template_line_service_bucket_config')[0]).toMatchObject({
+      config_id: configId,
+      total_minutes: 600,
+      overage_rate: 12500,
+      billing_period: 'monthly',
+    });
+  });
+
+  it('keeps Fixed template lines writing only base rows', async () => {
+    seed('Fixed');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    await addServiceToContractLine('tl-1', 'svc-1', 2);
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Fixed',
+      quantity: 2,
+    });
+    expect(rowsOf('contract_template_line_service_hourly_config')).toHaveLength(0);
+    expect(rowsOf('contract_template_line_service_usage_config')).toHaveLength(0);
+  });
+
+  it('rejects invalid config types, products and inactive services', async () => {
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    seed('Hourly');
+    const badType = await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Usage');
+    expect(badType).toMatchObject({ actionError: expect.stringContaining('Configuration type') });
+    seed('Usage', { item_kind: 'product' });
+    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
+      actionError: expect.stringContaining('Products can only be added'),
+    });
+    seed('Hourly', { is_active: false });
+    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
+      actionError: expect.stringContaining('inactive'),
+    });
+  });
+
+  it('updates a template Hourly service via updateContractLineService', async () => {
+    seed('Hourly');
+    const { addServiceToContractLine, updateContractLineService } = await import(
+      '../src/actions/contractLineServiceActions'
+    );
+    const configId = await addServiceToContractLine('tl-1', 'svc-1');
+    const result = await updateContractLineService('tl-1', 'svc-1', {
+      quantity: 3,
+      typeConfig: { hourly_rate: 20000, minimum_billable_time: 30 } as any,
+    });
+    expect(result).toBe(true);
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({ config_id: configId, quantity: 3 });
+    expect(rowsOf('contract_template_line_services')[0]).toMatchObject({ quantity: 3 });
+    expect(rowsOf('contract_template_line_service_hourly_config')[0]).toMatchObject({
+      hourly_rate: 20000,
+      minimum_billable_time: 30,
+      round_up_to_nearest: 15,
+    });
+  });
+
+  it('upserts template hourly/usage/bucket configuration through the configuration service', async () => {
+    seed('Hourly');
+    const { ContractLineServiceConfigurationService } = await import(
+      '../src/services/contractLineServiceConfigurationService'
+    );
+    const svc = new ContractLineServiceConfigurationService(trx, TENANT);
+    const configId = await svc.upsertPlanServiceHourlyConfiguration('tl-1', 'svc-1', { hourly_rate: 9000 });
+    await svc.upsertPlanServiceHourlyConfiguration('tl-1', 'svc-1', { hourly_rate: 9500 });
+    expect(rowsOf('contract_template_line_service_hourly_config')).toHaveLength(1);
+    expect(rowsOf('contract_template_line_service_hourly_config')[0]).toMatchObject({ config_id: configId, hourly_rate: 9500 });
+
+    const bucketId = await svc.upsertPlanServiceBucketConfiguration('tl-1', 'svc-1', {
+      total_minutes: 120,
+      overage_rate: 100,
+    });
+    // overlay attaches to the existing primary config and does not retype it
+    expect(bucketId).toBe(configId);
+    expect(rowsOf('contract_template_line_service_configuration')[0].configuration_type).toBe('Hourly');
+    expect(rowsOf('contract_template_line_service_bucket_config')[0]).toMatchObject({ total_minutes: 120 });
+
+    expect(await svc.getConfigurationForService('tl-1', 'svc-1')).toMatchObject({
+      config_id: configId,
+      contract_line_id: 'tl-1',
+    });
+
+    seed('Usage');
+    const usageId = await svc.upsertPlanServiceUsageConfiguration('tl-1', 'svc-1', { unit_rate: 400, unit_of_measure: 'GB' });
+    expect(rowsOf('contract_template_line_service_usage_config')[0]).toMatchObject({
+      config_id: usageId,
+      base_rate: 400,
+      unit_of_measure: 'GB',
+    });
+  });
+});
