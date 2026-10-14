@@ -100,3 +100,93 @@ to cookie isolation or claim it fixed based on controlled signout recovery.
 Record each result, exact candidate stamp, fixture IDs, and evidence paths in
 the card dossier. Whole-card readiness remains blocked until every gate above
 passes on the replacement production process.
+
+## Owner diagnosis from read-only inspection (2026-10-14)
+
+The application and board supervisor have separate owners. Keep supervisor and
+Open Review implementation in `Nine-Minds/alga-dev`, in the
+`ghostty-pane-ide` project. The invoice candidate remains
+`35f4d3bdf2f09b913acbd14b9048ec420d1621ed` on PR #3499.
+
+### Restart acknowledgment does not prove replacement
+
+At 07:23 UTC, `alga-dev workflow-list-services --live=true --health=true`
+reported `review-app` as live with `restartedAt=2026-10-14T06:55:27.438Z`
+and HTTP 200 on its `/api/health` probe. Read-only process inspection found
+PID `2758219`, started October 13 at 21:27:38, still listening on port 23185.
+Its cwd is the PR worktree's `server` directory. The active
+`server/.next-review/.alga-review-revision` still contains
+`4571290674fe78f75438e90ec10ae0afc4d6e85a+da39a3ee5e6b`. This rechecks the
+old listener/build observation; it does not establish which process the 06:55
+operation attempted to stop.
+
+In Alga Dev, `src/main/workflow/WorkflowCardServiceService.ts`,
+`restartService` catches and logs errors from `killAgentSession` or
+`killSession`, then continues to `spawnServiceProcess`. It stores
+`restartedAt` after `createSession` returns. That path does not await a
+successful production build or readiness before returning success. The
+registered readiness probe is only an HTTP `/api/health` check, so a response
+does not identify the serving PID or build. `src/shared/pty/PtySessionManager.ts`
+and `src/agent/pty-service.ts` document and implement a stop operation that
+waits for the detached service process group to stop; the gap is that the
+workflow restart caller treats a rejected stop as a warning and reports the
+later spawn/metadata result as a successful restart.
+
+Alga Dev owner change: make a restart fail and propagate the stop error if the
+old service cannot be confirmed stopped. Only report restart success after the
+replacement launch definition has completed its required build/start phase and
+readiness succeeds. Return or log enough process-generation evidence for the
+operator to correlate the registered service, listener PID, and build marker.
+Keep a plain health response separate from candidate identity.
+
+Verify the owner change with behavioral coverage for (1) stop failure causes
+restart failure and does not launch a replacement, (2) the old process group
+has exited before a replacement starts, (3) build/start failure propagates,
+(4) readiness failure is not reported as success, and (5) successful restart
+reports the replacement generation. Then, in the separately supervised live
+step, require the old PID to exit, the new listener PID to belong to the
+replacement process, the production build to complete, and the running
+`.next-review` marker to match the approved candidate. Check health and
+authenticated application navigation after those identity checks.
+
+### Open Review remote pane handoff
+
+The retained smoke files `open-review.json` and `open-review-retry.json` both
+contain `Browser pane not found:
+review-app-b97eda7b-0e3f-4b09-be80-6b57f934d8a5-ts_robert-X670E-Pro-RS`.
+They show the failure text, not which workspace or browser-host stage failed.
+The separate Alga Dev worktree
+`/home/robert/alga-dev-open-review/ghostty-pane-ide` is on
+`fix/open-review-remote-browser-handoff` at `69cb91d` (also its origin branch).
+It contains `df8e9c2`, which adds
+`src/main/workflow/review-pane-backend.ts` and makes `CardReviewService` wait
+for the remote browser backend to register after workspace creation; `69cb91d`
+also refreshes activity when it reuses a registered remote pane. The behavioral
+tests cover delayed registration, no registration, disappearing backends, and
+local pane wake. This source inspection does not prove that either repair is
+published to the running IDE or that the exact card pane now authenticates.
+
+Alga Dev owner acceptance: follow the board button through
+`CardReviewService.openCardReview` → `openReviewWorkspace` → the renderer's
+`useWorkflowOpenReviewHandler` → remote `RemoteBrowserPane` registration →
+`resolveReviewPaneBackend` → sign-in and `/api/auth/session` verification.
+Instrument the result with the requested pane ID, actual host, actual
+registered backend, app origin, and the session result from that same pane.
+If the pane is missing, ensure workspace materialization creates it on the
+app's execution host before sign-in. Do not substitute a new card browser or a
+direct login. Verify with a behavioral delayed-registration test and a live
+board-button run that confirms the exact pane remains authenticated after
+navigation and that the guide pane is usable.
+
+### Authentication investigation boundary
+
+Spontaneous session invalidation remains unexplained. Controlled signout and
+retry evidence proves recovery behavior, not the cause of a spontaneous loss.
+The supervised operator should capture effective origin, runtime mode,
+effective auth URL, cookie name and non-secret attributes, navigation timing,
+and correlated safe rejection reason codes independently on canonical ports
+3185 and 23185. Do not capture cookie values, tokens, credentials, or session
+payloads. Do not infer runtime configuration from source defaults.
+
+No service was started or restarted during this inspection. The dev-server on
+3185 and production review-app on 23185 remain separate registered processes.
