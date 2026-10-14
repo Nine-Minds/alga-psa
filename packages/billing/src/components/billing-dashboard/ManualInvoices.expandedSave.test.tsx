@@ -125,6 +125,46 @@ describe('expanded invoice adjustment global save', () => {
     expect(screen.queryByText(/Your session expired before this save completed/)).toBeNull();
   });
 
+  it('keeps collapsed pending values and removals through auth rejection and explicit retry', async () => {
+    const existingCharge = {
+      item_id: 'manual-to-remove', invoice_id: 'invoice-1', service_id: 'svc-1',
+      description: 'Existing manual row', quantity: 1, unit_price: 2500,
+      total_price: 2500, net_amount: 2500, tax_amount: 0,
+      is_manual: true, is_discount: false, is_taxable: false,
+    };
+    mocks.lineItems.mockResolvedValueOnce([existingCharge] as any);
+    mocks.update.mockResolvedValueOnce(JSON.parse(JSON.stringify({
+      success: false, code: 'UNAUTHENTICATED', params: {},
+      message: 'Authentication required', error: 'Authentication required',
+    }))).mockResolvedValueOnce({
+      ...invoice,
+      draft_adjustment_revision: 8,
+      invoice_charges: [...invoice.invoice_charges, existingCharge],
+    });
+    renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] });
+    await fillCharge('Collapsed pending row');
+    fireEvent.click(document.getElementById('collapse-line-item-button')!);
+
+    fireEvent.click(document.getElementById('item-manual-to-remove')!);
+    fireEvent.click(document.getElementById('remove-line-item-button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(await screen.findByText(/Your session expired before this save completed/)).toBeTruthy();
+    expect(screen.getByText('Collapsed pending row')).toBeTruthy();
+    expect(screen.queryByText('Existing manual row')).toBeNull();
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([
+      expect.objectContaining({ description: 'Collapsed pending row', quantity: 3, rate: 5000 }),
+    ]);
+    expect(mocks.update.mock.calls[0][1].removedItemIds).toEqual(['manual-to-remove']);
+
+    const operationId = mocks.update.mock.calls[0][2].operationId;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry save' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update.mock.calls[1][1]).toEqual(mocks.update.mock.calls[0][1]);
+    expect(mocks.update.mock.calls[1][1].removedItemIds).toEqual(['manual-to-remove']);
+    expect(mocks.update.mock.calls[1][2]).toEqual({ operationId, expectedRevision: 7 });
+  });
+
   it('reports a post-save callback failure as saved instead of an auth rejection', async () => {
     const onSaved = vi.fn(async () => { throw Object.assign(new Error('refresh failed'), { name: 'AuthenticationError' }); });
     mocks.update.mockResolvedValue({

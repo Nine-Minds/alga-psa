@@ -51,3 +51,75 @@ and stable ledger postings on repeat. Also complete discount removal,
 permission/lifecycle/export protection, portal and signed true-up output checks.
 Inspect the actual session in the exact Open Review pane; its reported account
 alone does not establish a valid browser session. Preserve delivered fixtures.
+
+## Draft Implementation verification — 2026-10-14
+
+Current source includes the missing-session guard from `8e3ef4fd9ab1` and its
+follow-up. In `updateInvoiceManualItems`, the authentication wrapper rejection
+is converted to JSON-safe `UNAUTHENTICATED`; if the wrapper authenticated but
+the next session lookup has no user ID, the action returns the same code before
+creating a database connection or querying an invoice. Invoice-update
+permission failure remains `PERMISSION_DENIED` and also exits before invoice
+queries. No auth policy or cookie behavior was changed.
+
+The editor keeps expanded and collapsed draft values and pending removals after
+an auth rejection. It displays the reauthentication prompt and only retries
+after the operator clicks **Retry save**. The retry reuses its operation ID and
+revision; no financial save is automatically replayed. The server action's
+confirmed invoice response marks persistence complete before client refresh or
+callback work, so a later refresh failure is reported as saved.
+
+Cookie tests confirm the intentional separation: development on port 3185 uses
+`authjs.session-token.3185`; production review on port 23185 uses
+`authjs.session-token`. Auth tests also cover durable session creation,
+revocation checks on every JWT callback, rolling expiry extension, expired
+session handling, and retaining the cookie while durable state is temporarily
+unavailable. A valid `UserSession` row is required for authority. Ordinary
+sign-in creates it; password-reset completion has no evidenced revocation call.
+These observations do not identify the reported session-loss cause.
+
+### Checks run on this source
+
+- Billing action, editor, and lifecycle guard tests: 30 passed across
+  `invoiceModification.manualRecurringGuard.test.ts`,
+  `ManualInvoices.expandedSave.test.tsx`, and
+  `invoiceAdjustmentEditability.test.ts`. This includes both unauthenticated
+  action paths, zero invoice queries/mutations on rejection, permission denial,
+  expanded and collapsed draft retention, removal retention, same-operation
+  explicit retry, committed-save refresh failure, and the paid, cancelled,
+  finalized, exporting, and exported lifecycle guards.
+- Auth cookie/session/revocation tests: 20 passed across three files.
+- Durable `UserSession` tests: 4 passed.
+- Billing package build and billing/auth TypeScript checks: passed.
+- Server TypeScript check: incomplete; `tsc` exhausted its default 4 GiB heap
+  and exited 134. No production build was attempted because swap was exhausted
+  and workspace disk usage was 93% during resource inspection.
+- No application server was started. No delivered invoice or retained smoke
+  fixture was changed.
+
+### Live smoke handoff
+
+Run this only during the authorized smoke phase, after its operator starts the
+intended app services. Use the canonical hostname for both ports.
+
+1. Sign in independently at `https://<canonical-host>:3185` and
+   `https://<canonical-host>:23185`. In each exact browser pane, inspect that
+   pane's `/api/auth/session` response and record its user ID. The two services
+   intentionally have separate sessions.
+2. On an owned draft, record the session response and invoice revision. Save an
+   adjustment, then inspect `/api/auth/session` after save, reload and
+   navigation. Repeat after an idle interval and at expiry. A displayed QA
+   identity without a user in the actual session response is not authenticated
+   evidence.
+3. With an owned draft and unsaved expanded and collapsed rows plus a pending
+   removal, expire the session. Confirm the editor asks for sign-in and keeps
+   the rows/removal. Sign in again in that same service, return to the draft,
+   and click **Retry save** once. Confirm the operation commits once and a
+   repeated request does not duplicate the adjustment or ledger delta.
+4. In the exact Open Review pane, inspect its actual `/api/auth/session` and
+   verify the reviewer identity. Do not use the launcher identity as a
+   substitute or restore the superseded QA-only account gate.
+5. Finish discount removal and paid/cancelled/finalized/exported protection
+   checks. Verify customer portal output and the signed contract-change true-up
+   description and half-open period. Do not reset or unlock `INV-000063` or the
+   retained `SMOKE457` fixtures.
