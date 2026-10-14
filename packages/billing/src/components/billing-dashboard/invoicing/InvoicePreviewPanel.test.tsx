@@ -33,6 +33,14 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('../../../actions/voidInvoiceActions', () => ({ voidInvoice: vi.fn() }));
+vi.mock('../../../actions/accountingSyncActions', () => ({
+  queueInvoiceSync: vi.fn(), runAccountingSyncNow: vi.fn(),
+  resolveAccountingDriftReExport: vi.fn(), resolveAccountingDriftAccept: vi.fn(),
+}));
+vi.mock('../../invoices/useInvoiceSyncStatuses', () => ({ useInvoiceSyncStatuses: () => ({ statuses: {}, hidden: true }) }));
+vi.mock('../../invoices/InvoiceSyncBadge', () => ({ InvoiceSyncBadge: () => null, qboInvoiceDeepLink: vi.fn(), xeroInvoiceDeepLink: vi.fn() }));
+
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getEnrichedInvoiceViewModel: (...args: unknown[]) => getEnrichedInvoiceViewModelMock(...args),
   getInvoicePurchaseOrderSummary: (...args: unknown[]) => getInvoicePurchaseOrderSummaryMock(...args),
@@ -67,6 +75,10 @@ vi.mock('../PaperInvoice', () => ({
 
 vi.mock('./DraftInvoiceDetailsCard', () => ({
   default: () => <div data-automation-id="draft-invoice-details-card-mock" />,
+}));
+
+vi.mock('./DraftInvoiceAdjustmentsCard', () => ({
+  default: (props: any) => <button onClick={() => props.onUpdated?.()}>Save draft adjustment</button>,
 }));
 
 vi.mock('./PurchaseOrderSummaryBanner', () => ({
@@ -192,6 +204,22 @@ describe('InvoicePreviewPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
     await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
     expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes the parent DraftsTab summary after an adjustment save', async () => {
+    const onDraftInvoiceUpdated = vi.fn(async () => {});
+    render(<InvoicePreviewPanel
+      invoiceId="inv-1"
+      templates={defaultTemplates as any}
+      selectedTemplateId={null}
+      onTemplateChange={vi.fn()}
+      onDraftInvoiceUpdated={onDraftInvoiceUpdated}
+      isFinalized={false}
+      draftInvoiceSummary={{ invoice_id: 'inv-1', status: 'draft', draft_adjustment_revision: 7 } as any}
+    />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Save draft adjustment' }));
+    await waitFor(() => expect(onDraftInvoiceUpdated).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getEnrichedInvoiceViewModelMock).toHaveBeenCalledTimes(2));
   });
 
   it('recovers when the auxiliary source quote read returns an unauthenticated action result', async () => {

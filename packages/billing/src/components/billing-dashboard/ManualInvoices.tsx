@@ -370,6 +370,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [readRetry, setReadRetry] = useState(0);
   const initialInvoiceReadRetryRef = useRef(0);
   const lastInvoiceReadIdRef = useRef<string | null>(null);
+  // A list row is a provisional baseline until the authoritative editor read
+  // succeeds. Once established, recovery reads must not rebase concurrent edits.
+  const invoiceReadBaselineEstablishedRef = useRef(false);
   // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
   // server returns the already-applied result instead of appending twice.
   const pendingOperationIdRef = useRef<string>(uuidv4());
@@ -538,6 +541,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       if (invoiceIdToFetch) {
         if (lastInvoiceReadIdRef.current !== invoiceIdToFetch) {
           lastInvoiceReadIdRef.current = invoiceIdToFetch;
+          invoiceReadBaselineEstablishedRef.current = false;
           initialInvoiceReadRetryRef.current = readRetry;
           setReadAuthenticationExpired(false);
           // Switch the editor identity immediately, before any asynchronous
@@ -596,15 +600,27 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             setError(t('manualInvoices.errors.loadItems', { defaultValue: 'Error loading invoice items' }));
             return;
           }
+          const fetchedInvoice = fetchedSnapshot as unknown as InvoiceViewModel;
+          const fetchedItems = fetchedInvoice.invoice_charges ?? [];
           // A successful retry proves the read path is available again. Keep
           // the existing editor snapshot because the operator may have edited
           // rows while the session was unavailable.
           if (preserveDraft) {
+            // If the initial authoritative read expired, the list projection
+            // was never a valid revision baseline. Adopt snapshot metadata but
+            // retain the operator's in-memory rows. For an established editor
+            // baseline, preserve its revision so a concurrent writer still
+            // produces the server's stale-revision conflict.
+            if (!invoiceReadBaselineEstablishedRef.current) {
+              setCurrentInvoiceData((previous) => previous?.invoice_id === fetchedInvoice.invoice_id
+                ? { ...previous, ...fetchedInvoice, invoice_charges: fetchedItems }
+                : previous);
+              invoiceReadBaselineEstablishedRef.current = true;
+            }
             setReadAuthenticationExpired(false);
             return;
           }
-          const fetchedInvoice = fetchedSnapshot as unknown as InvoiceViewModel;
-          const fetchedItems = fetchedInvoice.invoice_charges ?? [];
+          invoiceReadBaselineEstablishedRef.current = true;
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
           const normalizeHeaderAlias = (it: any) => ({
             ...it,

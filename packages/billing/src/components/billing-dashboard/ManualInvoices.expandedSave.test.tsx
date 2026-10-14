@@ -44,7 +44,7 @@ beforeEach(() => {
 
 const invoice: any = {
   invoice_id: 'invoice-1', client_id: 'client-1', invoice_number: 'INV-1', currencyCode: 'USD', is_manual: false,
-  draft_adjustment_revision: 7, total_amount: 390000,
+  draft_adjustment_revision: 7, subtotal: 390000, total_amount: 390000,
   invoice_charges: [{ item_id: 'generated-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Recurring', quantity: 1, unit_price: 390000, total_price: 390000, net_amount: 390000, tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false }],
 };
 const services: any[] = [{ service_id: 'svc-1', service_name: 'Support', item_kind: 'service', is_active: true, default_rate: 5000, prices: [{ currency_code: 'USD', rate: 5000 }] }];
@@ -64,34 +64,46 @@ const fillCharge = async (description: string) => {
 };
 
 describe('expanded invoice adjustment global save', () => {
-  it('uses the authoritative revision after deselecting and reselecting a stale list row', async () => {
+  it('saves, deselects, reselects, and saves again with the refreshed parent summary revision', async () => {
     let persisted: any[] = [];
-    mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => ({
-      ...invoice,
-      invoice_id: requestedInvoiceId ?? invoice.invoice_id,
-      draft_adjustment_revision: 8,
-      subtotal: 405000,
-      total_amount: 405000,
-      invoice_charges: [...invoice.invoice_charges, ...persisted],
-    }));
+    let serverInvoice: any = { ...invoice };
+    let parentSummary: any = { ...invoice };
+    mocks.snapshot.mockImplementation(async () => ({ ...serverInvoice, invoice_charges: [...serverInvoice.invoice_charges] }));
     mocks.update.mockImplementation(async (_id, changes, submission) => {
-      expect(submission.expectedRevision).toBe(8);
+      expect(submission.expectedRevision).toBe(serverInvoice.draft_adjustment_revision);
       persisted = [...persisted, ...changes.newItems.map((item: any) => ({
         ...item, item_id: `persisted-${persisted.length}`, is_manual: true,
         total_price: item.quantity * item.rate, net_amount: item.quantity * item.rate, tax_amount: 0,
       }))];
-      return { ...invoice, draft_adjustment_revision: 9, invoice_charges: [...invoice.invoice_charges, ...persisted] };
+      serverInvoice = {
+        ...serverInvoice,
+        draft_adjustment_revision: serverInvoice.draft_adjustment_revision + 1,
+        subtotal: serverInvoice.subtotal + 15000,
+        total_amount: serverInvoice.total_amount + 15000,
+        invoice_charges: [...invoice.invoice_charges, ...persisted],
+      };
+      return serverInvoice;
     });
 
-    const first = renderDraft({ ...invoice, draft_adjustment_revision: 7 });
-    await waitFor(() => expect(mocks.snapshot).toHaveBeenCalled());
-    first.unmount(); // deselect
-    renderDraft({ ...invoice, draft_adjustment_revision: 7 }); // reselect stale list record
-    await fillCharge('Second adjustment');
+    const refreshParentSummary = async () => { parentSummary = { ...serverInvoice }; };
+    const first = renderDraft(parentSummary, refreshParentSummary);
+    await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledTimes(1));
+    await fillCharge('First adjustment');
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
-    expect(mocks.update.mock.calls[0][2].expectedRevision).toBe(8);
-    expect(persisted).toHaveLength(1);
+    await waitFor(() => expect(parentSummary.draft_adjustment_revision).toBe(8));
+    expect(parentSummary.total_amount).toBe(405000);
+    expect(parentSummary.invoice_charges).toHaveLength(2);
+
+    first.unmount(); // deselect after the first successful save
+    const second = renderDraft(parentSummary, refreshParentSummary); // reselect refreshed summary
+    await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledTimes(2));
+    await fillCharge('Second adjustment');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update.mock.calls.map((call) => call[2].expectedRevision)).toEqual([7, 8]);
+    expect(persisted).toHaveLength(2);
+    second.unmount();
   });
 
   it('submits the latest expanded charge values directly through global Save Changes', async () => {
@@ -192,6 +204,29 @@ describe('expanded invoice adjustment global save', () => {
     expect(mocks.update).not.toHaveBeenCalled();
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep this after read retry');
     expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+  });
+
+  it('adopts the recovered revision when the initial snapshot auth read never established a baseline', async () => {
+    const authError = { success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required', error: 'Authentication required' };
+    mocks.snapshot
+      .mockResolvedValueOnce(authError)
+      .mockResolvedValueOnce({ ...invoice, draft_adjustment_revision: 8, subtotal: 405000, total_amount: 405000 });
+    mocks.update.mockResolvedValue({ ...invoice, draft_adjustment_revision: 9, total_amount: 420000, invoice_charges: invoice.invoice_charges });
+    renderDraft({ ...invoice, draft_adjustment_revision: 7 });
+    expect(await screen.findByText(/session expired while loading invoice details/i)).toBeTruthy();
+    await fillCharge('Keep edit through initial read recovery');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }));
+    await waitFor(() => expect(mocks.snapshot).toHaveBeenCalledTimes(2));
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep edit through initial read recovery');
+    expect(screen.queryByText(/session expired while loading invoice details/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][2].expectedRevision).toBe(8);
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([
+      expect.objectContaining({ description: 'Keep edit through initial read recovery' }),
+    ]);
   });
 
   it('keeps permission denial visible after an auth recovery read and preserves edits', async () => {
