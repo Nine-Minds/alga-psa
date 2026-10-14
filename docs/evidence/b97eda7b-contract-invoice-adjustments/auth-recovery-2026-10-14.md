@@ -102,24 +102,31 @@ These observations do not identify the reported session-loss cause.
 Run this only during the authorized smoke phase, after its operator starts the
 intended app services. Use the canonical hostname for both ports.
 
-1. Sign in independently at `https://<canonical-host>:3185` and
-   `https://<canonical-host>:23185`. In each exact browser pane, inspect that
-   pane's `/api/auth/session` response and record its user ID. The two services
-   intentionally have separate sessions.
+1. Sign in independently at
+   `http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:3185`
+   and
+   `http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185`.
+   Keep both origins on HTTP. In each exact browser pane, inspect that same
+   origin's `/api/auth/session` response and record its user ID. The two
+   services intentionally have separate sessions; do not inspect the other
+   port's session endpoint from that pane.
 2. On an owned draft, record the session response and invoice revision. Save an
-   adjustment, then inspect `/api/auth/session` after save, reload and
-   navigation. Repeat after an idle interval and at expiry. A displayed QA
+   adjustment, then inspect the same-origin `/api/auth/session` after save,
+   reload and navigation. Repeat after an idle interval and at expiry. A displayed QA
    identity without a user in the actual session response is not authenticated
    evidence.
 3. With an owned draft and unsaved expanded and collapsed rows plus a pending
    removal, expire the session. Confirm the editor asks for sign-in and keeps
-   the rows/removal. Sign in again in that same service, return to the draft,
-   and click **Retry save** once. Confirm the operation commits once and a
+   the rows/removal. Reauthenticate at that exact same HTTP origin, return to
+   the draft, and click **Retry save** once. Confirm the operation commits once and a
    repeated request does not duplicate the adjustment or ledger delta.
-4. In the exact Open Review pane, inspect its actual `/api/auth/session` and
-   verify the reviewer identity. Do not use the launcher identity as a
-   substitute or restore the superseded QA-only account gate.
+4. In the exact Open Review pane, inspect the actual `/api/auth/session` on
+   that pane's current HTTP origin and verify the reviewer identity. Do not use
+   the launcher identity as a substitute or restore the superseded QA-only
+   account gate.
 5. Finish discount removal and paid/cancelled/finalized/exported protection
    checks. Verify customer portal output and the signed contract-change true-up
    description and half-open period. Do not reset or unlock `INV-000063` or the
    retained `SMOKE457` fixtures.
+
+Live acceptance remains pending until these checks pass on the repaired head.
