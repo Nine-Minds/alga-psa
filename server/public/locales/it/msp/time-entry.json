@@ -458,7 +458,7 @@
     },
     "timePeriod": {
       "datesRequired": "Inserire date di inizio e di fine valide.",
-      "closed": "This time period is closed. Reopen it before making changes."
+      "closed": "Questo periodo di tempo è chiuso. Riaprilo prima di apportare modifiche."
     },
     "timePeriodSettings": {
       "invalidValue": "Uno dei valori dell’impostazione del periodo non è valido. Aggiornare la pagina e riprovare.",

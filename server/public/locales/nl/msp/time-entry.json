@@ -458,7 +458,7 @@
     },
     "timePeriod": {
       "datesRequired": "Voer geldige begin- en einddatums in.",
-      "closed": "This time period is closed. Reopen it before making changes."
+      "closed": "Deze tijdsperiode is gesloten. Heropen deze voordat u wijzigingen aanbrengt."
     },
     "timePeriodSettings": {
       "invalidValue": "Een van de waarden van de periode-instelling is ongeldig. Vernieuw de pagina en probeer het opnieuw.",

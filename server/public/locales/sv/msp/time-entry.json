@@ -458,7 +458,7 @@
     },
     "timePeriod": {
       "datesRequired": "Ange giltiga start- och slutdatum.",
-      "closed": "This time period is closed. Reopen it before making changes."
+      "closed": "Den här tidsperioden är stängd. Öppna den igen innan du gör ändringar."
     },
     "timePeriodSettings": {
       "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",
