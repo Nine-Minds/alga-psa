@@ -133,7 +133,7 @@ Live acceptance remains pending until these checks pass on the repaired head.
 
 ## Mitigation round 5 — correlated safe diagnostics (2026-10-14)
 
-Published candidate: `622bf81a76` (`fix(auth): attribute decoder rejection stages accurately`).
+Published candidate: `622bf81a760a271383c52a0194fb5708b41b5deb` (`fix(auth): attribute decoder rejection stages accurately`).
 This mitigation commit series adds the diagnostic hardening and current-source
 evidence below; it does not claim the earlier invoice recovery fixes were
 authored in this round. The follow-up also ensures a `null` edge result followed
@@ -187,8 +187,9 @@ the ordered login/save/reload/reselect/separate-review-login sequence. It must
 separately classify hub availability, pane routing/handoff, app readiness, and
 application authentication. Direct browser login is not launcher verification.
 
-The exact current candidate must be deployed and its build stamp verified by
-the supervised operator before live acceptance. Repeat controlled expiry and
+The exact current candidate, `622bf81a760a271383c52a0194fb5708b41b5deb`, must be
+deployed and its build stamp verified by the supervised operator before live
+acceptance. Repeat controlled expiry and
 spontaneous navigation-loss checks on canonical 3185 and 23185, same-operation
 save/retry monetary parity, fresh PDF and portal true-up descriptions, and
 lifecycle/export protections. Preserve `INV-000063` and delivered `SMOKE457`
@@ -244,11 +245,14 @@ Behavioral verification on the repair source:
   GiB. Server production build was not attempted; workspace disk usage was 93%.
   No application server was started.
 
-## Required live handoff
+## Historical live handoff — superseded candidate; checks remain applicable
 
-Repair candidate: `7bc86a28b4fe98c23f4728587002484171088a03` (`fix(billing): preserve invoice drafts across repeated read recovery`). The supervised operator must roll that exact
-candidate to canonical 23185 and verify the running build stamp before
-acceptance. Run independent 3185 and 23185 login, save, reload, and reselection
+This earlier handoff named `7bc86a28b4fe98c23f4728587002484171088a03`; that
+SHA is historical and must not be deployed for acceptance. The authoritative
+candidate is `622bf81a760a271383c52a0194fb5708b41b5deb`. The supervised operator
+must deploy that exact SHA to canonical 23185 and verify its running build stamp
+before acceptance. The remaining checks in this section are still required.
+Run independent 3185 and 23185 login, save, reload, and reselection
 checks; in each pane inspect same-origin `/api/auth/session`. Use an owned draft
 to exercise controlled expiry with expanded and collapsed edits, a pending
 addition and removal, then sign in and explicitly retry once. Verify operation
@@ -334,7 +338,7 @@ Prior focused verification on source candidate
 The takeover repair below supersedes this candidate for supervised rollout.
 
 
-## Takeover: repeated read recovery — 2026-10-14
+## Historical repair record: repeated read recovery — 2026-10-14
 
 Code candidate: `7bc86a28b4fe98c23f4728587002484171088a03`.
 
@@ -371,14 +375,15 @@ session-loss cause, effective runtime cookie configuration, and the exact Open
 Review pane/session remain unresolved. Use the supervised procedure above with
 this code candidate before claiming production acceptance.
 
-## Current checkout verification — 2026-10-14
+## Historical checkout verification — 2026-10-14
 
-The checkout was reverified at `449eaaee41b36655bd86872ca1e49c89482ccb8b`,
+At that earlier verification, the checkout was `449eaaee41b36655bd86872ca1e49c89482ccb8b`,
 matching `origin/feature/contract-invoices-automatic-adjustments-and-disc`.
 Commit `7bc86a28b4` is present and its repeated-recovery draft-preservation
-repair is unchanged. No implementation gap was demonstrated, so this round made
-no application-code changes. The plan's supervised candidate is updated to
-this exact checkout SHA.
+repair is unchanged. No implementation gap was demonstrated, so that round
+made no application-code changes. At that time, the plan's supervised
+candidate pointed to this checkout SHA; the authoritative current candidate
+is listed in Mitigation round 5 above.
 
 Commands run against this revision:
 

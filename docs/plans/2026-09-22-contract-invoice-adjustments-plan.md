@@ -2,7 +2,7 @@
 
 ## Repair round 5: safe auth diagnostics and current candidate (2026-10-14)
 
-Current code candidate: `622bf81a76` (`fix(auth): attribute decoder rejection stages accurately`).
+Current code candidate: `622bf81a760a271383c52a0194fb5708b41b5deb` (`fix(auth): attribute decoder rejection stages accurately`).
 The invoice read-recovery and repeated-retry draft-preservation repairs were
 audited on this source and remain present. Decoder exceptions now log only
 reason codes with the existing validated request/correlation ID; behavioral
@@ -49,13 +49,14 @@ build passed. The server production build was not attempted because workspace
 disk usage was 93% and the app server must remain stopped. Live smoke is still
 pending.
 
-### Supervised live acceptance procedure
+### Historical supervised live acceptance procedure — superseded by Repair round 5
 
-Candidate: `9614087b1a` (supersedes the earlier code candidates below). An operator must
-roll this exact SHA to the supervised review service on canonical port 23185;
-verify its running build stamp equals the candidate before testing. Keep the app
-server stopped during implementation and do not patch or deploy around its
-supervisor.
+This earlier procedure named candidate `9614087b1a`, which is superseded and
+must not be deployed for acceptance. Use the authoritative candidate in Repair
+round 5 above; its full SHA is `622bf81a760a271383c52a0194fb5708b41b5deb`.
+The checks below remain applicable after the supervised operator deploys that
+candidate and verifies its running build stamp. Keep the app server stopped
+during implementation and do not patch or deploy around its supervisor.
 
 1. Independently sign in on HTTP origins
    `http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:3185`
