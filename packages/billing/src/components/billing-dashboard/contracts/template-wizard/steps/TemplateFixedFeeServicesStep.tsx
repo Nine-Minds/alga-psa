@@ -337,6 +337,9 @@ export function TemplateFixedFeeServicesStep({
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
+                    // A fixed fee line can only bill a fixed-method service —
+                    // the rule Manage Services applies to its add list.
+                    billingMethods={['fixed']}
                     placeholder={t('templateFixed.placeholders.selectService', {
                       defaultValue: 'Select a service',
                     })}
