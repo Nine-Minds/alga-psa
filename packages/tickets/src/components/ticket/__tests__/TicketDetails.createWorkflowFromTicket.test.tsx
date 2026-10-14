@@ -9,6 +9,15 @@ import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 let lastTicketInfoProps: any = null;
 
+// The header shares one More menu with "Create template from ticket"; its gate is this hook.
+const { templatePermsRef } = vi.hoisted(() => ({
+  templatePermsRef: { current: { read: false, create: false, update: false, delete: false, loaded: true } },
+}));
+
+vi.mock('../../templates/useTicketTemplatePermissions', () => ({
+  useTicketTemplatePermissions: () => templatePermsRef.current,
+}));
+
 // Radix menus open on pointer events jsdom does not model; render the content inline so the
 // test exercises our wiring (gating + selection), not Radix.
 vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
@@ -302,6 +311,7 @@ describe('TicketDetails create workflow from ticket', () => {
   beforeEach(() => {
     lastTicketInfoProps = null;
     renderSlot.mockClear();
+    templatePermsRef.current = { read: false, create: false, update: false, delete: false, loaded: true };
   });
 
   it('hides the More menu without workflow manage rights', () => {
@@ -353,5 +363,19 @@ describe('TicketDetails create workflow from ticket', () => {
 
     fireEvent.click(document.getElementById('cwft-close')!);
     expect(screen.getByTestId('cwft-slot').getAttribute('data-open')).toBe('false');
+  });
+
+  it('shares one More menu with Create template from ticket', () => {
+    templatePermsRef.current = { read: true, create: true, update: true, delete: true, loaded: true };
+    render(
+      <TicketDetails
+        bootstrap={bootstrapWith(true) as any}
+        initialTicket={baseTicket as any}
+        renderCreateWorkflowFromTicket={renderSlot}
+      />
+    );
+    expect(document.querySelectorAll('[id$="-more-actions-button"]')).toHaveLength(1);
+    expect(document.querySelector('[id$="-create-template-menu-item"]')).not.toBeNull();
+    expect(document.getElementById('create-workflow-from-ticket-menu-item')).not.toBeNull();
   });
 });
