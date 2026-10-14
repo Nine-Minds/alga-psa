@@ -66,6 +66,7 @@ import {
   upsertBucketOverlayInTransaction
 } from './bucketOverlayActions';
 import { createBucketPoolInTransaction } from './bucketPoolActions';
+import { assertServiceMatchesConfigurationType } from '../lib/contractLineServiceConfigPolicy';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 import {
   contractWizardActionErrorFrom,
@@ -638,6 +639,9 @@ export const createContractTemplateFromWizard = withAuth(async (
             `Catalog item "${match.service_name}" must be a service to be added to fixed fee template lines.`
           );
         }
+        // Same billing-method rule the service-add path enforces, so a wizard
+        // save cannot seed a template line with a service it cannot bill.
+        assertServiceMatchesConfigurationType('Fixed', match);
       }
 
       for (const item of filteredProductServices) {
@@ -659,6 +663,7 @@ export const createContractTemplateFromWizard = withAuth(async (
             `Catalog item "${match.service_name}" must be a service to be added to hourly template lines.`
           );
         }
+        assertServiceMatchesConfigurationType('Hourly', match);
       }
 
       for (const item of filteredUsageServices) {
@@ -669,6 +674,7 @@ export const createContractTemplateFromWizard = withAuth(async (
             `Catalog item "${match.service_name}" must be a service to be added to usage template lines.`
           );
         }
+        assertServiceMatchesConfigurationType('Usage', match);
       }
     }
 

@@ -7,7 +7,7 @@ import { IService } from '@alga-psa/types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
-import { resolveContractLineServiceConfigurationType } from '../lib/contractLineServiceConfigPolicy';
+import { resolveContractLineServiceConfig } from '../lib/contractLineServiceConfigPolicy';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -75,6 +75,8 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
       error.message === 'Products can only be added to fixed-fee contract lines.' ||
       error.message === TEMPLATE_RATE_TIERS_UNSUPPORTED ||
       error.message.includes('cannot be attached to contract lines') ||
+      // Billing-method mismatch from the shared configuration policy.
+      error.message.includes('cannot be added to') ||
       error.message.includes('does not have') ||
       error.message.includes('requires an hourly rate') ||
       error.message.includes('must be a numeric value') ||
@@ -311,37 +313,28 @@ async function addServiceToTemplateLine(
     throw new Error('Products can only be added to fixed-fee contract lines.');
   }
 
-  const configurationType = resolveContractLineServiceConfigurationType(lineType, configType);
+  // Same policy resolver the live-line path uses: one place decides the
+  // configuration type, the billing-method match and the per-type defaults.
+  const { configurationType, typeConfig: policyTypeConfig } = resolveContractLineServiceConfig(
+    lineType,
+    configType,
+    service,
+    typeConfig,
+  );
 
-  let resolvedTypeConfig: Record<string, any> = { ...(typeConfig || {}) };
+  let resolvedTypeConfig: Record<string, any> = { ...policyTypeConfig };
   if (configurationType === 'Bucket') {
+    // Template buckets have no pool row to inherit the period from.
     resolvedTypeConfig = {
       ...resolvedTypeConfig,
-      overage_rate: resolvedTypeConfig.overage_rate ?? service.default_rate,
       billing_period: resolvedTypeConfig.billing_period ?? templateLine.billing_frequency ?? 'monthly',
-    };
-  } else if (configurationType === 'Hourly') {
-    const hourlyRateValue = resolvedTypeConfig.hourly_rate ?? service.default_rate;
-    if (hourlyRateValue === undefined || hourlyRateValue === null) {
-      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
-    }
-    const hourlyRate = Number(hourlyRateValue);
-    if (!Number.isFinite(hourlyRate)) {
-      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
-    }
-    resolvedTypeConfig = {
-      ...resolvedTypeConfig,
-      hourly_rate: hourlyRate,
-      minimum_billable_time:
-        Number(resolvedTypeConfig.minimum_billable_time) > 0 ? Number(resolvedTypeConfig.minimum_billable_time) : 15,
-      round_up_to_nearest:
-        Number(resolvedTypeConfig.round_up_to_nearest) > 0 ? Number(resolvedTypeConfig.round_up_to_nearest) : 15,
     };
   }
 
   const now = trx.fn.now();
-  // Usage lines are not quantity-based (mirrors the live-line path).
-  const resolvedQuantity: number | null = configurationType === 'Usage'
+  // Hourly and usage services bill on reported work, not a quantity: the
+  // template wizard stores no quantity for them, and neither does this path.
+  const resolvedQuantity: number | null = configurationType === 'Usage' || configurationType === 'Hourly'
     ? null
     : typeof quantity === 'number' && quantity > 0 ? quantity : 1;
   const resolvedRate =
@@ -471,42 +464,12 @@ async function addServiceToLiveContractLine(
     }
   }
 
-  const configurationType = resolveContractLineServiceConfigurationType(
+  const { configurationType, typeConfig: resolvedTypeConfig } = resolveContractLineServiceConfig(
     contractLine.contract_line_type,
     configType,
+    service,
+    typeConfig,
   );
-
-  let resolvedTypeConfig = typeConfig || {};
-  if (configurationType === 'Bucket') {
-    resolvedTypeConfig = {
-      ...resolvedTypeConfig,
-      overage_rate:
-        (resolvedTypeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate
-        ?? service.default_rate,
-    };
-  } else if (configurationType === 'Hourly') {
-    const providedHourly = resolvedTypeConfig as Partial<IContractLineServiceHourlyConfig>;
-    const hourlyRateValue = providedHourly.hourly_rate ?? service.default_rate;
-    if (hourlyRateValue === undefined || hourlyRateValue === null) {
-      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
-    }
-    const hourlyRate = Number(hourlyRateValue);
-    if (!Number.isFinite(hourlyRate)) {
-      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
-    }
-    resolvedTypeConfig = {
-      ...providedHourly,
-      hourly_rate: hourlyRate,
-      minimum_billable_time:
-        Number(providedHourly.minimum_billable_time) > 0
-          ? Number(providedHourly.minimum_billable_time)
-          : 15,
-      round_up_to_nearest:
-        Number(providedHourly.round_up_to_nearest) > 0
-          ? Number(providedHourly.round_up_to_nearest)
-          : 15,
-    };
-  }
 
   const existingMembership = await tenantScopedTable(trx, tenant, 'contract_line_services')
     .where({ contract_line_id: contractLineId, service_id: serviceId })

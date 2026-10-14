@@ -138,6 +138,72 @@ describe('template line service management for non-Fixed lines', () => {
     expect(rowsOf('contract_template_line_service_usage_config')).toHaveLength(0);
   });
 
+  it('stores no quantity on Hourly rows, matching the template wizard', async () => {
+    seed('Hourly');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    await addServiceToContractLine('tl-1', 'svc-1', 3);
+    expect(rowsOf('contract_template_line_services')[0]).toMatchObject({ quantity: null });
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({ quantity: null });
+  });
+
+  it('rejects a service whose billing method the line cannot bill', async () => {
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+
+    seed('Hourly', { billing_method: 'fixed', service_name: 'Managed Bundle' });
+    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
+      actionError: expect.stringContaining('cannot be added to an hourly contract line'),
+    });
+    expect(rowsOf('contract_template_line_service_configuration')).toHaveLength(0);
+
+    seed('Usage', { billing_method: 'fixed' });
+    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
+      actionError: expect.stringContaining('cannot be added to a usage-based contract line'),
+    });
+
+    seed('Fixed', { billing_method: 'hourly', service_name: 'Basic Support' });
+    expect(await addServiceToContractLine('tl-1', 'svc-1')).toMatchObject({
+      actionError: expect.stringContaining('cannot be added to a fixed fee contract line'),
+    });
+    expect(rowsOf('contract_template_line_services')).toHaveLength(0);
+  });
+
+  it('allows a product on a Fixed template line despite its usage billing method', async () => {
+    seed('Fixed', { billing_method: 'usage', item_kind: 'product', service_name: 'Laptop' });
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1', 2);
+    expect(typeof configId).toBe('string');
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      configuration_type: 'Fixed',
+      quantity: 2,
+    });
+  });
+
+  it('keeps the bucket overlay through Bucket -> Hourly and drops it on Fixed', async () => {
+    seed('Hourly');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Bucket', {
+      total_minutes: 600,
+    } as any);
+    expect(rowsOf('contract_template_line_service_bucket_config')).toHaveLength(1);
+
+    // Re-typing an overlaid service to Hourly keeps the prepaid pool terms.
+    await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Hourly');
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({
+      config_id: configId,
+      configuration_type: 'Hourly',
+    });
+    expect(rowsOf('contract_template_line_service_bucket_config')[0]).toMatchObject({ total_minutes: 600 });
+
+    // A Fixed configuration has no overlay to keep.
+    const { ContractLineServiceConfigurationService } = await import(
+      '../src/services/contractLineServiceConfigurationService'
+    );
+    const svc = new ContractLineServiceConfigurationService(trx, TENANT);
+    await svc.updateTemplateConfiguration(configId as string, { configuration_type: 'Fixed' } as any);
+    expect(rowsOf('contract_template_line_service_bucket_config')).toHaveLength(0);
+    expect(rowsOf('contract_template_line_service_hourly_config')).toHaveLength(0);
+  });
+
   it('rejects invalid config types, products and inactive services', async () => {
     const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
     seed('Hourly');
