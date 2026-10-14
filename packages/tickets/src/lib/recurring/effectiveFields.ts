@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Per-client overrides of a recurring-ticket definition (plan §4.2).
+ * Overrides of a recurring ticket's fields, at definition level and per client (plan §4.2). One schema serves both layers.
  *
  * Each group is either present (overridden) or absent (inherited from the definition). Groups keep
  * dependent fields consistent: a board override always carries its status (board and status are only
@@ -34,11 +34,19 @@ export const recurringTicketOverridesSchema = z
 
 export type RecurringTicketOverrides = z.infer<typeof recurringTicketOverridesSchema>;
 
-/** The template fields of a definition that a client can override. */
+/**
+ * The ticket fields a recurring ticket resolves, in cascade order (R1/R8):
+ *
+ *   ticket template (content)  ->  definition (dispatch: status, assignment)  ->  definition overrides  ->  client overrides
+ *
+ * The template supplies board, priority and category (all nullable there; a schedule needs a board and a
+ * priority, which the reference check enforces on the EFFECTIVE values). The definition supplies the
+ * dispatch fields. Every further layer is a {@link RecurringTicketOverrides} and replaces whole groups.
+ */
 export interface RecurringTemplateFields {
-  board_id: string;
+  board_id: string | null;
   status_id: string | null;
-  priority_id: string;
+  priority_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
   assigned_to: string | null;
@@ -46,13 +54,13 @@ export interface RecurringTemplateFields {
   additional_agent_ids: string[];
 }
 
-/** Definition defaults, then the client's overridden groups. Group fields are replaced as a unit. */
-export function resolveEffectiveFields(
-  defaults: RecurringTemplateFields,
+/** Applies one override layer: present groups replace their fields as a unit, absent groups inherit. */
+export function applyOverrides(
+  fields: RecurringTemplateFields,
   overrides: RecurringTicketOverrides
 ): RecurringTemplateFields {
   return {
-    ...defaults,
+    ...fields,
     ...(overrides.board ? { board_id: overrides.board.board_id, status_id: overrides.board.status_id } : {}),
     ...(overrides.priority ? { priority_id: overrides.priority.priority_id } : {}),
     ...(overrides.category
@@ -66,4 +74,12 @@ export function resolveEffectiveFields(
         }
       : {}),
   };
+}
+
+/** An n-level fold: `base`, then each override layer in order (later layers win). */
+export function resolveEffectiveFields(
+  base: RecurringTemplateFields,
+  ...layers: RecurringTicketOverrides[]
+): RecurringTemplateFields {
+  return layers.reduce(applyOverrides, base);
 }
