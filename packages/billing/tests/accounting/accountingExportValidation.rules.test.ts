@@ -99,6 +99,8 @@ function createFakeKnex(state: FakeState) {
     return builder;
   };
   knex.__updates = updates;
+  // These mapping fixtures have no contract-change settlement table.
+  knex.schema = { hasTable: vi.fn(async () => false) };
   return knex;
 }
 

@@ -50,6 +50,7 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
     const load = async () => {
       setIsLoading(true);
       setLoadError(null);
+      setCapability(null);
       try {
         const [clientsResult, servicesResult, capabilityResult] = await Promise.all([
           getAllClientsForBilling(),
@@ -70,9 +71,11 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
           ? (servicesResult as { services: IService[] }).services
           : [];
         setServices(loadedServices);
-        if (!isActionPermissionError(capabilityResult)) {
-          setCapability(capabilityResult);
+        if (isActionPermissionError(capabilityResult)) {
+          setLoadError(getErrorMessage(capabilityResult));
+          return;
         }
+        setCapability(capabilityResult);
       } catch (error) {
         if (!cancelled) {
           setLoadError(error instanceof Error ? error.message : 'Failed to load adjustment data.');

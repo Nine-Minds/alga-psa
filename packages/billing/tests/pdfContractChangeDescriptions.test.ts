@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
@@ -46,6 +46,10 @@ const templateAst = {
 } as TemplateAst;
 
 afterEach(() => vi.restoreAllMocks());
+beforeEach(() => {
+  // The server test lane resets mock implementations between parameterized cases.
+  vi.mocked(browserPoolService.releaseBrowser).mockResolvedValue(undefined);
+});
 
 describe('PDF service canonical true-up output', () => {
   it.each([1, -1])('enriches a stored generic description for direction %s without changing invoice data', async (direction) => {

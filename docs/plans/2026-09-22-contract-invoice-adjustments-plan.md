@@ -1,5 +1,24 @@
 # Contract invoice adjustments
 
+## Implement desk audit (2026-10-14)
+
+Baseline `48bf4fe5f1` already exposes the shared `ManualInvoices` editor through
+`InvoicePreviewPanel` and `DraftInvoiceAdjustmentsCard`. Manual writes reuse
+`invoiceModification`, generated charges remain protected, and generation calls
+the companion contract-change reconciler before the shared automatic discount
+and tax pipeline. No second adjustment implementation is needed.
+
+This pass fixes a concrete UI permission gap: a returned capability permission
+error must show its message and never mount the editor. Clear the preceding
+invoice's capability when selection changes. Behavioral component tests cover
+editable access, denied access, stale blocked state, and late responses.
+
+CI also exposed missing schema APIs in two existing database test doubles and
+an async browser-release mock lost between server-runner PDF cases. Repair the
+fixtures while retaining production schema checks and both signed PDF assertions.
+Validation and limitations are recorded in
+`docs/evidence/b97eda7b-contract-invoice-adjustments/implement-desk-2026-10-14.md`.
+
 ## Ledger and live verification repair (2026-09-27)
 
 Generation already posts invoice principal before finalization. Draft recalculation must reconcile the sum of completed invoice generation/adjustment postings with the new total using only a signed delta; payment and credit transactions are not part of that base. Repeated saves are no-ops in the ledger, and imported/unposted drafts remain unposted. Lock the invoice inside recalculation and serialize adjustment balance reads on the client. Behavioral verification includes posted USD/EUR drafts and concurrent recalculation. Live evidence for posted-invoice edits and independent template copies is in `docs/evidence/contract-invoice-adjustments-repair-2026-09-27/takeover/README.md`. Portal, export artifacts and combined-companion acceptance retain their documented integration limits.
