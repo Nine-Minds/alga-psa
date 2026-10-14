@@ -64,6 +64,9 @@ const item = (template_id: string, is_active: boolean) => ({
   board_name: 'Service',
   checklist_count: 3,
   is_active,
+  // The list item now carries R5 (offered for manual use) and the schedule count.
+  offer_for_manual_use: true,
+  schedule_count: 0,
 });
 
 const perms = (overrides: Partial<Record<'read' | 'create' | 'update' | 'delete', boolean>> = {}) => ({

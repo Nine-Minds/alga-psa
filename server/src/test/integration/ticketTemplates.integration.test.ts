@@ -680,6 +680,10 @@ describe('Ticket templates (integration)', () => {
     it('down drops the tables and column; up restores them and is idempotent', async () => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const migration = require('../../../migrations/20261013041821_create_ticket_templates.cjs');
+      // Recurring definitions reference ticket_templates (migration A, ON DELETE RESTRICT), so roll that link back first.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const linkMigration = require('../../../migrations/20261014100000_add_recurring_ticket_template_link.cjs');
+      await linkMigration.down(context.db);
       try {
         await migration.down(context.db);
         expect(await tableExists('ticket_templates')).toBe(false);
@@ -688,6 +692,7 @@ describe('Ticket templates (integration)', () => {
         await expect(migration.down(context.db)).resolves.not.toThrow();
       } finally {
         await migration.up(context.db);
+        await linkMigration.up(context.db);
       }
       expect(await tableExists('ticket_templates')).toBe(true);
       expect(await columnRows()).toHaveLength(1);
