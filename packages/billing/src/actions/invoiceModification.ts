@@ -1686,8 +1686,8 @@ const updateInvoiceManualItemsWithAuth = withAuth(async (
     const session = await getSession();
     if (!session?.user?.id) {
       return manualInvoiceUpdateFailure(
-        'PERMISSION_DENIED',
-        'Unauthorized: No authenticated user found',
+        'UNAUTHENTICATED',
+        'Authentication required',
         context,
       );
     }
