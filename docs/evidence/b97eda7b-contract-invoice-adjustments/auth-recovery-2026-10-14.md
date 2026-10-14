@@ -130,3 +130,78 @@ intended app services. Use the canonical hostname for both ports.
    retained `SMOKE457` fixtures.
 
 Live acceptance remains pending until these checks pass on the repaired head.
+
+## Read-path recovery repair round — 2026-10-14
+
+The repair adds an auth-only recovery state to capability loading, invoice line
+loading, draft detail billing-profile loading, and the preview's
+detail/summary/template reads. Each offers a new-tab
+sign-in link and an explicit retry. Permission errors remain permission errors;
+other returned action errors and ordinary request failures keep their existing
+error path. Preview data from the currently selected invoice stays visible if a
+same-invoice refresh fails. A new invoice selection clears the old preview and
+immediately switches the manual editor identity; stale async reads from the
+previous selection are ignored. On explicit line-read retry, expanded inputs
+remain mounted and the fetched response does not overwrite the current draft.
+Neither retry calls a financial mutation. Existing save retry still uses the
+same operation ID and expected revision, and committed-save refresh errors
+remain reported as committed.
+
+Auth diagnostics now record safe reason codes for absent cookie, present-cookie
+empty Auth.js session, missing identity claims, durable session missing,
+revoked session, missing user, identity mismatch, and unavailable durable
+lookup. Correlation uses only a validated `x-request-id` or
+`x-correlation-id`; cookie values, JWTs, complete session payloads, and raw
+lookup exceptions are not logged by these diagnostics. The Auth.js session
+endpoint cannot distinguish signature/decoding failure from expiration or a
+rejection that already returned an empty session, so a present-cookie empty
+response is explicitly reported as that combined observable condition. Source
+still expects the intentional port split: development 3185 uses
+`authjs.session-token.3185`; production review 23185 uses
+`__Secure-authjs.session-token`. The app server stayed stopped, so the effective
+runtime values and the spontaneous invalidation cause remain unknown.
+
+Behavioral verification on the repair source:
+
+- Billing ManualInvoices/editor, draft detail, capability, and action/lifecycle
+  suites: 40 passed. Includes
+  read failure/retry with a retained expanded draft and no mutation, late
+  response after reselection, same-operation save retry, pending removals,
+  committed-save refresh handling, export/lifecycle rejection, and mutation
+  transaction recalculation boundaries.
+- Preview component suite under the server Vitest runner: 4 passed, including
+  authentication recovery/retry and stale response rejection after reselection.
+- Auth session/revocation suites: 18 passed; durable UserSession model suite: 5
+  passed.
+- `npm run test:i18n`: passed, including pseudo-locale regeneration and locale
+  checks for de/es/fr/it/nl/pl/pt/sv.
+- Current billing, auth, and DB package builds passed. Billing typecheck passed
+  with an 8 GiB heap, auth typecheck with 3 GiB, and server typecheck with 11
+  GiB. Server production build was not attempted; workspace disk usage was 93%.
+  No application server was started.
+
+## Required live handoff
+
+Repair commit: `43ccf1aa584c9934ec7454d915372dbee0d47abb`. The supervised operator must roll that exact
+candidate to canonical 23185 and verify the running build stamp before
+acceptance. Run independent 3185 and 23185 login, save, reload, and reselection
+checks; in each pane inspect same-origin `/api/auth/session`. Use an owned draft
+to exercise controlled expiry with expanded and collapsed edits, a pending
+addition and removal, then sign in and explicitly retry once. Verify operation
+identity and no duplicate financial effect. Test failed read retry separately.
+
+Launch Open Review from the actual workflow card and capture the card, host,
+pane, origin, URL, and same-pane session response. The available handoff has a
+direct 23185 browser pane (`2d721fdf-a50a-468b-bf39-54a65dfa0bd5`) that loaded
+Billing, but it does not establish that this was the intended Open Review pane;
+two Open Review attempts timed out and the serving build was `4571290674`.
+Classify viewer/hub availability, remote-pane routing, application readiness,
+and application authentication separately. The Alga Dev owner must inspect the
+launcher/handoff code paths; do not attribute the timeout to invoice code.
+
+On the verified candidate, complete PDF, portal, signed true-up explanation,
+lifecycle, and accounting-export checks. Preserve `INV-000063` and delivered
+`SMOKE457` fixtures; use owned editable fixtures for mutation. If spontaneous
+session loss recurs, capture sanitized runtime cookie configuration, reason
+code, and request ID. Do not claim any live checks passed in this server-stopped
+implementation step.

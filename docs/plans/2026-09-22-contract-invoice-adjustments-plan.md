@@ -1,5 +1,73 @@
 # Contract invoice adjustments
 
+## Repair round 4: read-path authentication recovery (2026-10-14)
+
+Capability, invoice-line, draft-detail billing-profile, and preview reads now
+classify session rejection separately from permission errors and offer sign-in
+plus explicit retry. Preview
+failures keep the previous same-invoice snapshot; invoice-line retries keep the
+editor's current draft state. Invoice selection changes immediately establish
+the new identity, and late results from the prior selection are ignored. No
+financial write is triggered by either read retry. Existing explicit
+same-operation save retry behavior remains unchanged.
+
+Auth diagnostics in `packages/auth/src/lib/getSession.ts` record reason codes
+for an absent cookie, a present cookie that produces no session, incomplete
+identity claims, durable session rejection, or unavailable durable lookup.
+Logs carry `x-request-id` or `x-correlation-id` when present and do not emit
+cookie values or session payloads. Source-derived cookie expectations remain
+port-scoped development names (3185) and the secure production name (23185);
+runtime environment and rejection cause remain unresolved with the app server
+stopped.
+
+Behavioral verification on the repair source: capability and draft-detail auth
+recovery, permission separation, invoice-line read retry, same-operation save
+retry, invoice reselection/late response, preview auth recovery, and existing
+invoice editability/lifecycle guards. Localization and pseudo-locales were
+regenerated and validated. Billing typecheck/build (8 GiB heap), auth
+typecheck/build (3 GiB heap), server typecheck (11 GiB heap), and DB package
+build passed. The server production build was not attempted because workspace
+disk usage was 93% and the app server must remain stopped. Live smoke is still
+pending.
+
+### Supervised live acceptance procedure
+
+Candidate: `43ccf1aa584c9934ec7454d915372dbee0d47abb` (replace with the pushed repair commit). An operator must
+roll this exact SHA to the supervised review service on canonical port 23185;
+verify its running build stamp equals the candidate before testing. Keep the app
+server stopped during implementation and do not patch or deploy around its
+supervisor.
+
+1. Independently sign in on HTTP origins
+   `http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:3185`
+   and `http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185`.
+   In each exact browser pane, capture sanitized effective cookie name/options,
+   same-origin `/api/auth/session`, and request correlation ID. Verify session
+   after save, reload, and invoice reselection on both origins.
+2. On an owned editable invoice, create expanded and collapsed unsaved rows,
+   mark a row for removal, control session expiry, confirm every edit remains,
+   sign in independently at that same origin, then click explicit Retry save
+   once. Confirm the existing operation identity commits once and repeat is
+   idempotent. Exercise failed-read retry separately and verify it does not
+   mutate invoice rows.
+3. Launch Open Review from the card's actual launcher, record card ID, host,
+   pane ID, origin, URL, and the session response fetched in that same pane.
+   Treat viewer/hub reachability, remote-pane navigation, app readiness and app
+   authentication as separate results. Verify current build stamp in that
+   pane; neither direct login nor a launcher account label is sufficient.
+4. On the current candidate, verify PDF and portal totals, signed true-up
+   explanations and periods, lifecycle restrictions, and accounting export
+   locks. Preserve `INV-000063` and delivered `SMOKE457` fixtures; use owned
+   editable fixtures for all mutations. If spontaneous loss recurs, capture
+   sanitized runtime cookie configuration, reason code and request ID without
+   recording cookies or credentials.
+
+Open Review remains an Alga Dev owner handoff: retained evidence shows two
+timeouts and a direct session on 23185 serving `4571290674`, but does not
+identify the intended Open Review pane/session or distinguish hub, routing,
+readiness and application-auth failure. Do not attribute those timeouts to
+invoice code without new evidence.
+
 ## Implement desk audit (2026-10-14)
 
 Baseline `48bf4fe5f1` already exposes the shared `ManualInvoices` editor through
