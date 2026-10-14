@@ -87,7 +87,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy, MoreHorizontal, LayoutTemplate, Workflow } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { useTicketTemplatePermissions } from '../templates/useTicketTemplatePermissions';
 import { WorkItemType } from "@alga-psa/types";
@@ -137,7 +137,7 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -254,6 +254,19 @@ interface TicketDetailsProps {
     renderQuickInvoice?: (args: { ticket: ITicket }) => React.ReactNode;
 
     /**
+     * Optional injected UI for "Create workflow from ticket" (EE only; the composition layer
+     * fills it from the `@alga-psa/workflows/ticket-actions` seam). When absent (CE) or in
+     * Alga Desk mode the More menu entry is not rendered.
+     */
+    renderCreateWorkflowFromTicket?: (args: {
+        ticketId: string;
+        ticketNumber: string;
+        title: string;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+    }) => React.ReactNode;
+
+    /**
      * Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the client page.
      */
@@ -328,6 +341,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderQuickInvoice,
+    renderCreateWorkflowFromTicket,
     renderClientDetails,
     isAlgaDeskMode = false,
     hideSlaStatus = false,
@@ -355,8 +369,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Tracks which mount fetches the server bootstrap already satisfied, so the
     // corresponding effects skip their FIRST run only (later dep-driven runs —
     // e.g. checklist on status change — still fetch).
+    const [canManageWorkflows, setCanManageWorkflows] = useState(
+        bootstrap?.canManageWorkflows ?? false,
+    );
+    const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -369,6 +387,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const router = useRouter();
     // Gates the header "Create template from ticket" item and the template link; server actions are authoritative.
     const templatePermissions = useTicketTemplatePermissions();
+    // Gates the header "Create workflow from ticket" item: EE slot present, workflow:manage, not Alga Desk.
+    const canCreateWorkflowFromTicket = Boolean(renderCreateWorkflowFromTicket) && canManageWorkflows && !isAlgaDeskMode;
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -384,6 +404,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         void getCurrentUserPermissions().then((perms) => {
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
+                setCanManageWorkflows(hasWorkflowManageAccess(perms));
             }
         });
         return () => {
@@ -3689,7 +3710,7 @@ const handleClose = () => {
                                     <Copy className="h-4 w-4" />
                                     <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
                                 </Button>
-                                {templatePermissions.create ? (
+                                {templatePermissions.create || canCreateWorkflowFromTicket ? (
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
@@ -3702,18 +3723,38 @@ const handleClose = () => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                id={`${id}-create-template-menu-item`}
-                                                onClick={() => router.push(
-                                                    `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
-                                                )}
-                                            >
-                                                <LayoutTemplate className="h-4 w-4 mr-2" />
-                                                {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
-                                            </DropdownMenuItem>
+                                            {templatePermissions.create ? (
+                                                <DropdownMenuItem
+                                                    id={`${id}-create-template-menu-item`}
+                                                    onClick={() => router.push(
+                                                        `/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticket.ticket_id ?? "")}`
+                                                    )}
+                                                >
+                                                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                                                    {t('actions.createTemplate', { defaultValue: 'Create template from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
+                                            {canCreateWorkflowFromTicket ? (
+                                                <DropdownMenuItem
+                                                    id="create-workflow-from-ticket-menu-item"
+                                                    onSelect={() => setCreateWorkflowOpen(true)}
+                                                >
+                                                    <Workflow className="mr-2 h-4 w-4" />
+                                                    {t('actions.createWorkflowFromTicket', { defaultValue: 'Create workflow from ticket' })}
+                                                </DropdownMenuItem>
+                                            ) : null}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 ) : null}
+                                {renderCreateWorkflowFromTicket && canCreateWorkflowFromTicket
+                                    ? renderCreateWorkflowFromTicket({
+                                        ticketId: ticket.ticket_id as string,
+                                        ticketNumber: ticket.ticket_number ?? '',
+                                        title: ticket.title,
+                                        open: createWorkflowOpen,
+                                        onOpenChange: setCreateWorkflowOpen,
+                                    })
+                                    : null}
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"

@@ -216,7 +216,8 @@
     "rowActions": "Aktionen",
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
-    "createTemplate": "Vorlage aus Ticket erstellen"
+    "createTemplate": "Vorlage aus Ticket erstellen",
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",

@@ -248,7 +248,8 @@
     "rowActions": "Akcje",
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
-    "createTemplate": "Utwórz szablon ze zgłoszenia"
+    "createTemplate": "Utwórz szablon ze zgłoszenia",
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",

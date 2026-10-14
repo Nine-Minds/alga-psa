@@ -224,7 +224,8 @@
     "rowActions": "⟦Ȧƈŧīȯƞş⟧",
     "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧",
     "moreActions": "⟦Ḿȯřḗ ȧƈŧīȯƞş⟧",
-    "createTemplate": "⟦Ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ ƒřȯḿ ŧīƈķḗŧ⟧"
+    "createTemplate": "⟦Ƈřḗȧŧḗ ŧḗḿƥŀȧŧḗ ƒřȯḿ ŧīƈķḗŧ⟧",
+    "createWorkflowFromTicket": "⟦Ƈřḗȧŧḗ ẇȯřķƒŀȯẇ ƒřȯḿ ŧīƈķḗŧ⟧"
   },
   "messages": {
     "noTickets": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ⟧",

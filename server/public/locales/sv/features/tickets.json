@@ -224,7 +224,8 @@
     "rowActions": "Åtgärder",
     "openMenu": "Öppna meny",
     "moreActions": "Fler åtgärder",
-    "createTemplate": "Skapa mall från ärende"
+    "createTemplate": "Skapa mall från ärende",
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",

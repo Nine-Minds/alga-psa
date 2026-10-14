@@ -3164,5 +3164,29 @@
       "label": "Causation depth exceeded",
       "hint": "The chain of events caused by events exceeded the maximum depth; skipped to prevent runaway loops."
     }
+  },
+  "createFromTicket": {
+    "title": "Create workflow from ticket",
+    "description": "Creates a draft workflow whose first step creates a ticket like #{{number}}. Nothing is published.",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "submit": "Create draft & open designer",
+    "nameLabel": "Workflow name",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manual (run on demand)",
+    "ticketCreatedWarning": "This workflow creates a ticket, and a new ticket fires this trigger again. Add a condition before publishing to avoid a loop.",
+    "includeLegend": "Include from the ticket",
+    "propertiesAlways": "Title, description, client, contact, board, category and priority are always included.",
+    "includeAssignment": "Assignment",
+    "includeTags": "Tags",
+    "includeCustomFields": "Custom fields",
+    "includeChecklist": "Checklist",
+    "errors": {
+      "nameRequired": "Workflow name is required",
+      "generic": "Failed to create the workflow draft"
+    },
+    "includeCustomFieldsCount": "Custom fields ({{n}})",
+    "includeChecklistCount": "Checklist ({{total}} items: {{templates}} from templates / {{adHoc}} ad-hoc)",
+    "checklistTemplateNote": "Items from templates are re-applied from the current template, so edits made on this ticket are not carried over."
   }
 }

@@ -3286,5 +3286,29 @@
       "label": "Profondità di causalità superata",
       "hint": "La catena di eventi causati ha superato la profondità massima; saltato per evitare cicli incontrollati."
     }
+  },
+  "createFromTicket": {
+    "title": "Crea workflow dal ticket",
+    "description": "Crea un workflow in bozza il cui primo passaggio crea un ticket come #{{number}}. Non viene pubblicato nulla.",
+    "cancel": "Annulla",
+    "creating": "Creazione…",
+    "submit": "Crea bozza e apri il designer",
+    "nameLabel": "Nome del workflow",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manuale (esegui su richiesta)",
+    "ticketCreatedWarning": "Questo workflow crea un ticket e un nuovo ticket attiva di nuovo questo trigger. Aggiungi una condizione prima di pubblicare per evitare un ciclo.",
+    "includeLegend": "Includi dal ticket",
+    "propertiesAlways": "Titolo, descrizione, cliente, contatto, bacheca, categoria e priorità sono sempre inclusi.",
+    "includeAssignment": "Assegnazione",
+    "includeTags": "Tag",
+    "includeCustomFields": "Campi personalizzati",
+    "includeChecklist": "Lista di controllo",
+    "errors": {
+      "nameRequired": "Il nome del workflow è obbligatorio",
+      "generic": "Impossibile creare la bozza del workflow"
+    },
+    "includeCustomFieldsCount": "Campi personalizzati ({{n}})",
+    "includeChecklistCount": "Lista di controllo ({{total}} elementi: {{templates}} da modelli / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Gli elementi dei modelli vengono riapplicati dal modello attuale, quindi le modifiche fatte su questo ticket non vengono riportate."
   }
 }

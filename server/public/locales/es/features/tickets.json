@@ -216,7 +216,8 @@
     "rowActions": "Acciones",
     "openMenu": "Abrir menú",
     "moreActions": "Más acciones",
-    "createTemplate": "Crear plantilla desde el ticket"
+    "createTemplate": "Crear plantilla desde el ticket",
+    "createWorkflowFromTicket": "Crear flujo de trabajo desde el ticket"
   },
   "messages": {
     "noTickets": "No se encontraron tickets",

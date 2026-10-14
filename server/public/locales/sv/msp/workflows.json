@@ -3164,5 +3164,29 @@
       "label": "Orsakskedjans djup överskreds",
       "hint": "Kedjan av orsakade händelser överskred maxdjupet; hoppades över för att förhindra skenande loopar."
     }
+  },
+  "createFromTicket": {
+    "title": "Skapa arbetsflöde från ärende",
+    "description": "Skapar ett arbetsflödesutkast vars första steg skapar ett ärende som #{{number}}. Inget publiceras.",
+    "cancel": "Avbryt",
+    "creating": "Skapar…",
+    "submit": "Skapa utkast och öppna designern",
+    "nameLabel": "Arbetsflödesnamn",
+    "triggerLabel": "Utlösare",
+    "triggerManual": "Manuell (kör vid behov)",
+    "ticketCreatedWarning": "Det här arbetsflödet skapar ett ärende, och ett nytt ärende utlöser samma utlösare igen. Lägg till ett villkor före publicering för att undvika en loop.",
+    "includeLegend": "Ta med från ärendet",
+    "propertiesAlways": "Rubrik, beskrivning, kund, kontakt, tavla, kategori och prioritet tas alltid med.",
+    "includeAssignment": "Tilldelning",
+    "includeTags": "Taggar",
+    "includeCustomFields": "Anpassade fält",
+    "includeChecklist": "Checklista",
+    "errors": {
+      "nameRequired": "Arbetsflödesnamn krävs",
+      "generic": "Det gick inte att skapa arbetsflödesutkastet"
+    },
+    "includeCustomFieldsCount": "Anpassade fält ({{n}})",
+    "includeChecklistCount": "Checklista ({{total}} punkter: {{templates}} från mallar / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Punkter från mallar tillämpas på nytt från den aktuella mallen, så ändringar som gjorts på det här ärendet förs inte över."
   }
 }

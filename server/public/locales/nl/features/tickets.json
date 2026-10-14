@@ -216,7 +216,8 @@
     "rowActions": "Acties",
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
-    "createTemplate": "Sjabloon maken van ticket"
+    "createTemplate": "Sjabloon maken van ticket",
+    "createWorkflowFromTicket": "Workflow maken van ticket"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
