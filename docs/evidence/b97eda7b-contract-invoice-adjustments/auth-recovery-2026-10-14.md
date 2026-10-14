@@ -306,3 +306,41 @@ acceptance are not claimed. Workspace disk remained 93% used. Spontaneous
 session-loss cause, effective runtime cookie configuration, and the exact Open
 Review pane/session remain unresolved. Use the supervised procedure above with
 this code candidate before claiming production acceptance.
+
+## Current checkout verification — 2026-10-14
+
+The checkout was reverified at `449eaaee41b36655bd86872ca1e49c89482ccb8b`,
+matching `origin/feature/contract-invoices-automatic-adjustments-and-disc`.
+Commit `7bc86a28b4` is present and its repeated-recovery draft-preservation
+repair is unchanged. No implementation gap was demonstrated, so this round made
+no application-code changes. The plan's supervised candidate is updated to
+this exact checkout SHA.
+
+Commands run against this revision:
+
+- In `packages/billing`, `npx vitest run` for
+  `ManualInvoices.expandedSave.test.tsx`,
+  `DraftInvoiceAdjustmentsCard.authRecovery.test.tsx`, and
+  `DraftInvoiceDetailsCard.billingProfile.test.tsx`: exit 0, 38 tests passed.
+- In `server`, `npx vitest run
+  ../packages/billing/src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx`:
+  exit 0, 6 tests passed.
+- In `server`, `npx vitest run` for billing-profile auth serialization,
+  invoice editability, and manual recurring/lifecycle guards: exit 0, 22 tests
+  passed, including paid/cancelled/finalized/exporting/exported protections.
+- In `packages/auth`, focused `getSession`, durable revocation, session expiry,
+  and cookie tests: exit 0, 28 tests passed.
+- `npm run typecheck` in `packages/billing` and `packages/auth`: both exit 0.
+- `npm run build` in `packages/billing`: exit 0 (tsup package build).
+- Targeted billing ESLint: exit 0, 0 errors and 144 warnings.
+- Translation validation, translation audit, and untranslated UI scan: exit 0;
+  no new unwired components were found.
+
+The full server typecheck and Next production build were not run. The checkout
+filesystem is 93% used with 7.7 GiB available and swap is nearly exhausted;
+existing isolated build directories were left untouched. No app server was
+started. Runtime cookie settings on ports 3185 and 23185, spontaneous session
+loss cause, supervised deployment/build stamp, exact Open Review pane and
+session, and live invoice lifecycle/output acceptance remain unverified.
+Historical evidence reports the direct 23185 review service serving
+`4571290674`; that revision was not rechecked in this round.
