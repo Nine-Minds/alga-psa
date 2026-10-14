@@ -36,9 +36,7 @@ export function describeContractChange(
   currencyCode: unknown,
 ): string {
   const periodStart = dateOnly(source.adjustment_period_start);
-  const start = source.mid_period_effective_date == null
-    ? dateOnly(source.adjustment_period_start)
-    : dateOnly(source.mid_period_effective_date);
+  const start = dateOnly(source.mid_period_effective_date);
   const end = dateOnly(source.adjustment_period_end);
   const delta = canonicalNumber(source.quantity_delta);
   const rateCents = canonicalNumber(source.unit_rate_cents);

@@ -36,6 +36,12 @@ describe('automatic contract change customer description', () => {
     expect(describeContractChange('Cabling', row, 'AUD')).toBe('Mid-period quantity change: Cabling');
   });
 
+  it.each([undefined, null])('does not imply coverage when the effective date is %s', (effectiveDate) => {
+    expect(describeContractChange('Cabling', {
+      ...source, mid_period_effective_date: effectiveDate, quantity_delta: 1, amount_cents: 7355,
+    }, 'AUD')).toBe('Mid-period quantity change: Cabling');
+  });
+
   it('does not substitute a default for an unknown currency', () => {
     expect(describeContractChange('Cabling', {
       ...source, quantity_delta: 1, amount_cents: 7355,
