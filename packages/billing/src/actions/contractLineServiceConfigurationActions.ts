@@ -414,6 +414,9 @@ export const upsertPlanServiceConfiguration = withAuth(async (
 
     // LEVERAGE: pattern template-vs-live-branch — template usage config is a plain upsert (no tiers/measurement mode).
     if (await isTemplateLine(knex, tenant, payload.contractLineId)) {
+      if (payload.enable_tiered_pricing || (payload.tiers && payload.tiers.length > 0)) {
+        return actionError('Rate tiers are not supported on contract template lines; remove the tiers or configure them on a live contract line.');
+      }
       return service.upsertPlanServiceUsageConfiguration(payload.contractLineId, payload.serviceId, {
         unit_rate: payload.base_rate,
         unit_of_measure: payload.unit_of_measure,

@@ -61,6 +61,9 @@ function isReturnedActionError(value: unknown): value is ContractLineServiceActi
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
+const TEMPLATE_RATE_TIERS_UNSUPPORTED =
+  'Rate tiers are not supported on contract template lines; remove the tiers or configure them on a live contract line.';
+
 function contractLineServiceActionErrorFrom(error: unknown): ContractLineServiceActionError | null {
   if (error instanceof Error && error.message.startsWith('Permission denied:')) {
     return permissionError(error.message);
@@ -70,6 +73,7 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
     if (
       error.message === 'System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.' ||
       error.message === 'Products can only be added to fixed-fee contract lines.' ||
+      error.message === TEMPLATE_RATE_TIERS_UNSUPPORTED ||
       error.message.includes('cannot be attached to contract lines') ||
       error.message.includes('does not have') ||
       error.message.includes('requires an hourly rate') ||
@@ -285,10 +289,12 @@ async function addServiceToTemplateLine(
     IContractLineServiceUsageConfig |
     IContractLineServiceBucketConfig
   >,
-  // Template schema has no rate-tier table; tiers are accepted for signature parity with
-  // live lines but cannot be persisted on a template.
-  _rateTiers?: IContractLineServiceRateTier[],
+  // Template schema has no rate-tier table; non-empty tiers are rejected rather than dropped.
+  rateTiers?: IContractLineServiceRateTier[],
 ) {
+  if (rateTiers && rateTiers.length > 0) {
+    throw new Error(TEMPLATE_RATE_TIERS_UNSUPPORTED);
+  }
   const service = await tenantScopedTable(trx, tenant, 'service_catalog')
     .where({ service_id: serviceId })
     .first() as IService | undefined;
@@ -402,9 +408,10 @@ async function addServiceToTemplateLine(
     });
   }
 
+  const templateConfigService = new ContractLineServiceConfigurationService(trx, tenant);
+  await templateConfigService.clearStaleTemplateTypeRows(trx, configId, configurationType);
   if (configurationType !== 'Fixed') {
-    await new ContractLineServiceConfigurationService(trx, tenant)
-      .upsertTemplateTypeConfig(trx, configId, configurationType, resolvedTypeConfig);
+    await templateConfigService.upsertTemplateTypeConfig(trx, configId, configurationType, resolvedTypeConfig);
   }
 
   return configId;
@@ -745,6 +752,10 @@ export const updateContractLineService = withAuth(async (
     return withTransaction(db, async (trx: Knex.Transaction) => {
       // LEVERAGE: pattern template-vs-live-branch — template lines write to contract_template_* tables.
       if (await findTemplateLine(trx, tenant, contractLineId)) {
+        if (rateTiers && rateTiers.length > 0) {
+          // Returned (not thrown): this promise is returned un-awaited, so a throw would bypass the catch.
+          return actionError(TEMPLATE_RATE_TIERS_UNSUPPORTED);
+        }
         const templateService = new ContractLineServiceConfigurationService(trx, tenant);
         const templateConfig = await templateService.getConfigurationForService(contractLineId, serviceId);
         if (!templateConfig) {
@@ -757,7 +768,6 @@ export const updateContractLineService = withAuth(async (
         if (updates.customRate !== undefined) {
           templateBaseUpdates.custom_rate = updates.customRate as number; // null clears the override
         }
-        // Template schema has no rate-tier storage; rateTiers are ignored for template lines.
         await templateService.updateTemplateConfiguration(
           templateConfig.config_id,
           templateBaseUpdates,

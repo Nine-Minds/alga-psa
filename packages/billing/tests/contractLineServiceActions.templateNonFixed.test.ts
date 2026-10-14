@@ -26,6 +26,11 @@ function makeBuilder(table: string) {
     hits.forEach((r) => Object.assign(r, patch));
     return hits.length;
   };
+  builder.delete = async () => {
+    const hits = matching();
+    mocks.tables[table] = rows().filter((r) => !hits.includes(r));
+    return hits.length;
+  };
   return builder;
 }
 
@@ -200,5 +205,69 @@ describe('template line service management for non-Fixed lines', () => {
       base_rate: 400,
       unit_of_measure: 'GB',
     });
+  });
+
+  it('adds a Bucket-typed service to a Fixed template line', async () => {
+    seed('Fixed');
+    const { addServiceToContractLine } = await import('../src/actions/contractLineServiceActions');
+    const configId = await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Bucket', {
+      total_minutes: 300,
+    } as any);
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({ configuration_type: 'Bucket' });
+    expect(rowsOf('contract_template_line_service_bucket_config')[0]).toMatchObject({
+      config_id: configId,
+      total_minutes: 300,
+      overage_rate: 12500,
+    });
+  });
+
+  it('updates template Usage and Bucket services via updateContractLineService', async () => {
+    const { addServiceToContractLine, updateContractLineService } = await import(
+      '../src/actions/contractLineServiceActions'
+    );
+    seed('Usage');
+    await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Usage');
+    expect(
+      await updateContractLineService('tl-1', 'svc-1', { typeConfig: { unit_of_measure: 'GB', minimum_usage: 5 } as any }),
+    ).toBe(true);
+    expect(rowsOf('contract_template_line_service_usage_config')[0]).toMatchObject({ unit_of_measure: 'GB', minimum_usage: 5 });
+
+    seed('Fixed');
+    await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Bucket', { total_minutes: 60 } as any);
+    expect(
+      await updateContractLineService('tl-1', 'svc-1', { typeConfig: { total_minutes: 90, allow_rollover: true } as any }),
+    ).toBe(true);
+    expect(rowsOf('contract_template_line_service_bucket_config')[0]).toMatchObject({ total_minutes: 90, allow_rollover: true });
+  });
+
+  it('rejects rate tiers on template lines instead of dropping them', async () => {
+    seed('Usage');
+    const { addServiceToContractLine, updateContractLineService } = await import(
+      '../src/actions/contractLineServiceActions'
+    );
+    const tiers = [{ min_quantity: 1, rate: 5 }] as any;
+    expect(await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Usage', undefined, tiers)).toMatchObject({
+      actionError: expect.stringContaining('Rate tiers are not supported'),
+    });
+    expect(rowsOf('contract_template_line_service_configuration')).toHaveLength(0);
+    await addServiceToContractLine('tl-1', 'svc-1', undefined, undefined, 'Usage');
+    expect(await updateContractLineService('tl-1', 'svc-1', {}, tiers)).toMatchObject({
+      actionError: expect.stringContaining('Rate tiers are not supported'),
+    });
+  });
+
+  it('clears the stale type-specific row when a configuration changes type', async () => {
+    seed('Hourly');
+    const { ContractLineServiceConfigurationService } = await import(
+      '../src/services/contractLineServiceConfigurationService'
+    );
+    const svc = new ContractLineServiceConfigurationService(trx, TENANT);
+    const configId = await svc.upsertPlanServiceHourlyConfiguration('tl-1', 'svc-1', { hourly_rate: 100 });
+    await svc.upsertPlanServiceUsageConfiguration('tl-1', 'svc-1', { unit_rate: 50, unit_of_measure: 'GB' });
+    expect(rowsOf('contract_template_line_service_configuration')[0]).toMatchObject({ config_id: configId, configuration_type: 'Usage' });
+    expect(rowsOf('contract_template_line_service_hourly_config')).toHaveLength(0);
+    expect(rowsOf('contract_template_line_service_usage_config')).toHaveLength(1);
+    await svc.updateTemplateConfiguration(configId, { configuration_type: 'Fixed' } as any);
+    expect(rowsOf('contract_template_line_service_usage_config')).toHaveLength(0);
   });
 });

@@ -651,6 +651,28 @@ export class ContractLineServiceConfigurationService {
   }
 
   /**
+   * Deletes type-specific template rows that no longer apply once a configuration's type
+   * changes (e.g. Hourly -> Fixed), so stale rows cannot be picked up by readers.
+   * The bucket overlay is kept for Hourly/Usage/Bucket and dropped for Fixed.
+   */
+  async clearStaleTemplateTypeRows(
+    trx: Knex | Knex.Transaction,
+    configId: string,
+    configurationType: string,
+  ): Promise<void> {
+    await this.initKnex();
+    if (configurationType !== 'Hourly') {
+      await this.templateTable(trx, 'contract_template_line_service_hourly_config').where({ config_id: configId }).delete();
+    }
+    if (configurationType !== 'Usage') {
+      await this.templateTable(trx, 'contract_template_line_service_usage_config').where({ config_id: configId }).delete();
+    }
+    if (!['Hourly', 'Usage', 'Bucket'].includes(configurationType)) {
+      await this.templateTable(trx, 'contract_template_line_service_bucket_config').where({ config_id: configId }).delete();
+    }
+  }
+
+  /**
    * Template counterpart of updateConfiguration: updates the base template config row
    * (and the mirrored contract_template_line_services row) plus the type-specific row.
    */
@@ -667,6 +689,7 @@ export class ContractLineServiceConfigurationService {
       if (!base) {
         throw new Error(`Configuration with ID ${configId} not found.`);
       }
+      const previousType = base.configuration_type;
       const patch: Record<string, any> = {};
       if (baseUpdates?.quantity !== undefined) patch.quantity = baseUpdates.quantity;
       if (baseUpdates?.custom_rate !== undefined) patch.custom_rate = baseUpdates.custom_rate;
@@ -683,12 +706,11 @@ export class ContractLineServiceConfigurationService {
           .where({ template_line_id: base.template_line_id, service_id: base.service_id })
           .update(membershipPatch);
       }
-      await this.upsertTemplateTypeConfig(
-        trx,
-        configId,
-        patch.configuration_type ?? base.configuration_type,
-        typeConfig,
-      );
+      const effectiveType = patch.configuration_type ?? previousType;
+      if (effectiveType !== previousType) {
+        await this.clearStaleTemplateTypeRows(trx, configId, effectiveType);
+      }
+      await this.upsertTemplateTypeConfig(trx, configId, effectiveType, typeConfig);
     });
   }
 
@@ -708,7 +730,10 @@ export class ContractLineServiceConfigurationService {
       .first();
     if (existing) {
       const patch: Record<string, any> = {};
-      if (existing.configuration_type !== configurationType) patch.configuration_type = configurationType;
+      if (existing.configuration_type !== configurationType) {
+        patch.configuration_type = configurationType;
+        await this.clearStaleTemplateTypeRows(trx, existing.config_id, configurationType);
+      }
       if (customRate !== undefined) patch.custom_rate = customRate;
       if (Object.keys(patch).length > 0) {
         await this.templateTable(trx, 'contract_template_line_service_configuration')
