@@ -3,6 +3,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -1103,6 +1104,8 @@ export interface IContractLineOverview {
   contract_line_id: string;
   contract_line_name: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
+  display_kind?: string;
   billing_frequency: string;
   base_rate: number | null;  // For fixed lines - in cents
   display_order: number;
@@ -1483,6 +1486,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           })
         });
       }
+    }
+
+    // Derived label kind so the overview labels Prepaid Block lines correctly.
+    const overviewDisplayKinds = await (isTemplate ? resolveTemplateLineDisplayKinds : resolveContractLineDisplayKinds)(
+      knex,
+      tenant,
+      contractLines.map((line) => ({ contract_line_id: line.contract_line_id, contract_line_type: line.contract_line_type })),
+    );
+    for (const line of contractLines) {
+      line.display_kind = overviewDisplayKinds.get(line.contract_line_id) ?? line.contract_line_type;
     }
 
     // Calculate totals

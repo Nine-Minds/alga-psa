@@ -2853,14 +2853,15 @@
       "onExhaustion": "le bloc est épuisé",
       "onThreshold": "{{percent}} % utilisé",
       "onExpiry": "le bloc expire",
-      "onRenewal": "le contrat est renouvelé (politique en attente de confirmation)",
+      "onRenewal": "le contrat est renouvelé",
       "tierAutoIssue": "Finalisé automatiquement",
       "tierDraft": "Brouillon à vérifier"
     },
     "balance": {
       "label": "Solde actif",
       "value": "{{remaining}} sur {{total}} restantes",
-      "none": "Aucun bloc actif pour l'instant. Un bloc s'active lorsque sa facture est finalisée."
+      "none": "Aucun bloc actif pour l'instant. Un bloc s'active lorsque sa facture est finalisée.",
+      "contractEnded": "Contrat terminé ; les heures restantes ont été perdues."
     },
     "pending": {
       "heading": "Bloc en attente de finalisation de la facture",
@@ -2903,7 +2904,7 @@
       "triggerExhaustion": "Le bloc est épuisé",
       "triggerExpiry": "Le bloc expire",
       "triggerRenewal": "Le contrat est renouvelé",
-      "triggerRenewalPending": "Enregistré avec la ligne. La façon dont les renouvellements émettent des blocs est en attente de confirmation, donc rien n'est encore émis.",
+      "triggerRenewalHint": "Facture un nouveau bloc à chaque renouvellement (date anniversaire d'un contrat à durée indéterminée ou contrat de renouvellement activé). Les blocs existants conservent leur propre date d'expiration.",
       "tier": "Facture suivante",
       "tierDraft": "Créer un brouillon à vérifier",
       "tierAutoIssue": "Finaliser et envoyer automatiquement",

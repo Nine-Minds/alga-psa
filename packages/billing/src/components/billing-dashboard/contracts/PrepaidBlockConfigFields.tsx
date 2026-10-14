@@ -225,8 +225,8 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
               {t('prepaidBlock.fields.triggerRenewal', { defaultValue: 'The contract renews' })}
             </Label>
             <p className="text-xs text-muted-foreground">
-              {t('prepaidBlock.fields.triggerRenewalPending', {
-                defaultValue: 'Saved with the line. How renewals issue blocks is pending policy confirmation, so this does not issue anything yet.',
+              {t('prepaidBlock.fields.triggerRenewalHint', {
+                defaultValue: 'Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.',
               })}
             </p>
           </div>

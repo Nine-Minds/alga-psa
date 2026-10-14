@@ -2853,14 +2853,15 @@
       "onExhaustion": "blocket tar slut",
       "onThreshold": "{{percent}} % förbrukat",
       "onExpiry": "blocket förfaller",
-      "onRenewal": "avtalet förnyas (policy väntar på bekräftelse)",
+      "onRenewal": "avtalet förnyas",
       "tierAutoIssue": "Slutförs automatiskt",
       "tierDraft": "Utkast för granskning"
     },
     "balance": {
       "label": "Aktivt saldo",
       "value": "{{remaining}} av {{total}} återstår",
-      "none": "Inget aktivt block ännu. Ett block aktiveras när dess faktura slutförs."
+      "none": "Inget aktivt block ännu. Ett block aktiveras när dess faktura slutförs.",
+      "contractEnded": "Avtalet har avslutats; återstående timmar har förfallit."
     },
     "pending": {
       "heading": "Väntande block i väntan på att fakturan slutförs",
@@ -2903,7 +2904,7 @@
       "triggerExhaustion": "Blocket tar slut",
       "triggerExpiry": "Blocket förfaller",
       "triggerRenewal": "Avtalet förnyas",
-      "triggerRenewalPending": "Sparas med raden. Hur förnyelser utfärdar block väntar på policybekräftelse, så inget utfärdas ännu.",
+      "triggerRenewalHint": "Fakturerar ett nytt block vid varje förnyelse (årsdag för ett löpande avtal eller ett aktiverat förnyelseavtal). Befintliga block behåller sitt eget utgångsdatum.",
       "tier": "Uppföljningsfaktura",
       "tierDraft": "Skapa ett utkast för granskning",
       "tierAutoIssue": "Slutför och skicka automatiskt",

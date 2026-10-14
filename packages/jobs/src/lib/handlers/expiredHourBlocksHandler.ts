@@ -27,8 +27,10 @@ interface ContractEndBlock {
 /**
  * Active contract blocks (with minutes left) whose owning assignment ended without renewal:
  * end_date passed in the tenant business date, or the assignment is inactive
- * (deriveClientContractStatus 'expired' / 'terminated'). Ended assignments whose renewal contract
- * is already active but not yet completed are skipped: completion re-owns their blocks.
+ * (deriveClientContractStatus 'expired' / 'terminated'). Assignments marked `renewing`
+ * (cc.status, with or without a linked renewal draft) that merely expired are skipped: their blocks
+ * keep running to their own expiration_date. A terminated assignment is forfeited even if marked
+ * renewing (terminated takes precedence).
  */
 async function findContractEndBlocks(
   trx: Knex.Transaction,
@@ -40,7 +42,6 @@ async function findContractEndBlocks(
   const query = db.table('hour_blocks as hb');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.client_contract_id', 'hb.client_contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id', { type: 'left' });
-  db.tenantJoin(query, 'contracts as rc', 'rc.contract_id', 'cc.created_draft_contract_id', { type: 'left' });
   query
     .where('hb.status', 'active')
     .whereNotNull('hb.contract_line_id')
@@ -51,12 +52,11 @@ async function findContractEndBlocks(
   if (clientId) query.where('hb.client_id', clientId);
   const rows: Array<Record<string, any>> = await query.select(
     'hb.block_id', 'hb.contract_line_id', 'cc.client_contract_id', 'cc.is_active', 'cc.start_date', 'cc.end_date',
-    'cc.status as renewal_status', 'ct.status as contract_status', 'rc.status as renewal_contract_status',
+    'cc.status as renewal_status', 'ct.status as contract_status',
   );
 
   const result: ContractEndBlock[] = [];
   for (const row of rows) {
-    if (row.renewal_status === 'renewing' && row.renewal_contract_status === 'active') continue;
     const status = deriveClientContractStatus({
       isActive: row.is_active === true,
       startDate: toDateOnly(row.start_date),
@@ -65,6 +65,11 @@ async function findContractEndBlocks(
       now: businessDate,
     });
     if (status !== 'expired' && status !== 'terminated') continue;
+    // Precedence: terminated beats renewing. A renewal flag never shields an assignment that was
+    // terminated (is_active=false or the contract itself terminated); only an assignment that
+    // simply ran past its end_date ('expired') is spared when marked renewing. Blocks of a
+    // renewing assignment keep running to their own expiration_date.
+    if (status === 'expired' && row.renewal_status === 'renewing') continue;
     result.push({
       block_id: row.block_id,
       contract_line_id: row.contract_line_id,
@@ -89,8 +94,8 @@ async function findContractEndBlocks(
  * active) is expired the same way, with a `contract_end_expiration` audit row, and the line's
  * scheduled issuances are cancelled (expiry ones superseded). Not forfeited:
  *  - blocks a renewal re-owned (their client_contract_id is the new, live assignment), nor blocks
- *    of an ended assignment whose renewal contract is already active but not yet completed (the
- *    re-ownership happens at completion);
+ *    of an expired assignment marked `renewing` (they run to their own expiry; any draft carry-over
+ *    re-owns them at activation);
  *  - `pending` blocks (a draft invoice not yet finalized): the customer may still be invoiced for
  *    them, and voiding one would leave an invoice line with no block. They stay pending; if the
  *    invoice is finalized after the end date the block activates and the next pass forfeits it

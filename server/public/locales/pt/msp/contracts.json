@@ -2853,14 +2853,15 @@
       "onExhaustion": "o bloco se esgota",
       "onThreshold": "{{percent}}% utilizado",
       "onExpiry": "o bloco expira",
-      "onRenewal": "o contrato é renovado (política pendente de confirmação)",
+      "onRenewal": "o contrato é renovado",
       "tierAutoIssue": "Finalizado automaticamente",
       "tierDraft": "Rascunho para revisão"
     },
     "balance": {
       "label": "Saldo ativo",
       "value": "{{remaining}} de {{total}} restantes",
-      "none": "Ainda não há bloco ativo. Um bloco ativa-se quando a sua fatura é finalizada."
+      "none": "Ainda não há bloco ativo. Um bloco ativa-se quando a sua fatura é finalizada.",
+      "contractEnded": "Contrato terminado; as horas restantes foram perdidas."
     },
     "pending": {
       "heading": "Bloco pendente a aguardar a finalização da fatura",
@@ -2903,7 +2904,7 @@
       "triggerExhaustion": "O bloco se esgota",
       "triggerExpiry": "O bloco expira",
       "triggerRenewal": "O contrato é renovado",
-      "triggerRenewalPending": "Guardado com a linha. A forma como as renovações emitem blocos aguarda confirmação da política, pelo que ainda não é emitido nada.",
+      "triggerRenewalHint": "Fatura um novo bloco em cada renovação (aniversário de um contrato sem termo ou contrato de renovação ativado). Os blocos existentes mantêm a sua própria validade.",
       "tier": "Fatura seguinte",
       "tierDraft": "Criar um rascunho para revisão",
       "tierAutoIssue": "Finalizar e enviar automaticamente",

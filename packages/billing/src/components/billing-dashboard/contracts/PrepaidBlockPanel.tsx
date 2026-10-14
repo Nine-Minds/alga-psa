@@ -313,7 +313,7 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
                 </Badge>
               )}
               {config.trigger_on_expiry && <Badge variant="default-muted">{t('prepaidBlock.summary.onExpiry', { defaultValue: 'The block expires' })}</Badge>}
-              {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews (pending policy confirmation)' })}</Badge>}
+              {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews' })}</Badge>}
               <Badge variant="outline">
                 {config.replenishment_tier === 'auto_issue'
                   ? t('prepaidBlock.summary.tierAutoIssue', { defaultValue: 'Finalized automatically' })
@@ -345,7 +345,12 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
         >
           <div className="h-full bg-[rgb(var(--color-primary-500))]" style={{ width: `${usedPercent}%` }} />
         </div>
-        {balance.active_block_count === 0 && (
+        {balance.active_block_count === 0 && summary.assignment_ended && (
+          <p className="text-xs text-muted-foreground">
+            {t('prepaidBlock.balance.contractEnded', { defaultValue: 'Contract ended; remaining hours were forfeited.' })}
+          </p>
+        )}
+        {balance.active_block_count === 0 && !summary.assignment_ended && (
           <p className="text-xs text-muted-foreground">
             {t('prepaidBlock.balance.none', { defaultValue: 'No active block yet. A block activates when its invoice is finalized.' })}
           </p>
@@ -401,7 +406,7 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             type="button"
             variant="outline"
             size="sm"
-            disabled={busy || hasOpenFollowOn}
+            disabled={busy || hasOpenFollowOn || summary.assignment_ended}
             onClick={issueNext}
           >
             {t('prepaidBlock.actions.issueNext', { defaultValue: 'Issue next block' })}

@@ -2853,14 +2853,15 @@
       "onExhaustion": "het blok opgebruikt is",
       "onThreshold": "{{percent}}% gebruikt",
       "onExpiry": "het blok verloopt",
-      "onRenewal": "het contract wordt verlengd (beleid nog te bevestigen)",
+      "onRenewal": "het contract wordt verlengd",
       "tierAutoIssue": "Automatisch afgerond",
       "tierDraft": "Concept ter controle"
     },
     "balance": {
       "label": "Actief saldo",
       "value": "{{remaining}} van {{total}} resterend",
-      "none": "Nog geen actief blok. Een blok wordt actief zodra de factuur is afgerond."
+      "none": "Nog geen actief blok. Een blok wordt actief zodra de factuur is afgerond.",
+      "contractEnded": "Contract beëindigd; de resterende uren zijn vervallen."
     },
     "pending": {
       "heading": "Openstaand blok wacht op afronding van de factuur",
@@ -2903,7 +2904,7 @@
       "triggerExhaustion": "Het blok opgebruikt is",
       "triggerExpiry": "Het blok verloopt",
       "triggerRenewal": "Het contract wordt verlengd",
-      "triggerRenewalPending": "Wordt met de regel opgeslagen. Hoe verlengingen blokken uitgeven is nog niet bevestigd, dus er wordt nog niets uitgegeven.",
+      "triggerRenewalHint": "Factureert bij elke verlenging een nieuw blok (verjaardag van een doorlopend contract of geactiveerd verlengingscontract). Bestaande blokken behouden hun eigen vervaldatum.",
       "tier": "Vervolgfactuur",
       "tierDraft": "Een concept ter controle aanmaken",
       "tierAutoIssue": "Automatisch afronden en verzenden",
