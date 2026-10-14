@@ -1,31 +1,37 @@
 /**
- * Title tokens for recurring-ticket definitions.
+ * Title tokens for ticket templates (recurring schedules and Quick Add both render them).
  *
  *   {{client}}    the client's name
+ *   {{contact}}   the contact's name
  *   {{due_date}}  the due date in long form, in the tenant's default locale
  *   {{month}}     the due date's month name, in the tenant's default locale
  *   {{year}}      the due date's year
  *
- * Unknown tokens are rejected when a definition is saved (`findUnknownTitleTokens`) so a typo can
- * never reach a generated ticket title; `renderTitleTemplate` therefore throws on one as well.
+ * Unknown tokens are rejected when a template is saved (`findUnknownTitleTokens`) so a typo can never
+ * reach a ticket title; `renderTitleTemplate` therefore throws on one as well. A token whose context is
+ * missing (a manual ticket with no due date, no contact) renders as empty text and the surrounding
+ * whitespace is collapsed.
+ *
+ * Client-safe: no server imports. The Quick Add dialog uses it directly.
  */
 
-export const RECURRING_TITLE_TOKENS = ['client', 'due_date', 'month', 'year'] as const;
-export type RecurringTitleToken = (typeof RECURRING_TITLE_TOKENS)[number];
+export const TICKET_TITLE_TOKENS = ['client', 'contact', 'due_date', 'month', 'year'] as const;
+export type TicketTitleToken = (typeof TICKET_TITLE_TOKENS)[number];
 
 const TOKEN_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
 
-const KNOWN_TOKENS: ReadonlySet<string> = new Set(RECURRING_TITLE_TOKENS);
+const KNOWN_TOKENS: ReadonlySet<string> = new Set(TICKET_TITLE_TOKENS);
 
-export interface TitleTemplateContext {
-  clientName: string;
-  /** Due date, `YYYY-MM-DD`. */
-  dueDate: string;
+export interface TitleTokenContext {
+  clientName?: string | null;
+  contactName?: string | null;
+  /** Due date, `YYYY-MM-DD`. Absent for a ticket without one. */
+  dueDate?: string | null;
   /** BCP-47 locale for the date words; invalid or missing locales fall back to `en`. */
   locale?: string | null;
 }
 
-/** Tokens in `template` that are not one of {@link RECURRING_TITLE_TOKENS}, in first-seen order. */
+/** Tokens in `template` that are not one of {@link TICKET_TITLE_TOKENS}, in first-seen order. */
 export function findUnknownTitleTokens(template: string): string[] {
   const unknown: string[] = [];
   for (const match of template.matchAll(TOKEN_PATTERN)) {
@@ -33,6 +39,11 @@ export function findUnknownTitleTokens(template: string): string[] {
     if (!KNOWN_TOKENS.has(token) && !unknown.includes(token)) unknown.push(token);
   }
   return unknown;
+}
+
+/** Whether the template uses any token (known or not). */
+export function titleHasTokens(template: string): boolean {
+  return new RegExp(TOKEN_PATTERN.source).test(template);
 }
 
 function resolveLocale(locale: string | null | undefined): string {
@@ -51,23 +62,39 @@ function dueDateAsUtc(dueDate: string): Date {
   return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
 }
 
-export function renderTitleTemplate(template: string, context: TitleTemplateContext): string {
+export function renderTitleTemplate(template: string, context: TitleTokenContext): string {
   const unknown = findUnknownTitleTokens(template);
   if (unknown.length > 0) {
     throw new Error(`Unknown title token${unknown.length > 1 ? 's' : ''}: ${unknown.map((t) => `{{${t}}}`).join(', ')}`);
   }
 
   const locale = resolveLocale(context.locale);
-  const due = dueDateAsUtc(context.dueDate);
+  const due = context.dueDate ? dueDateAsUtc(context.dueDate) : null;
   const format = (options: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(due);
+    due ? new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(due) : '';
 
-  const values: Record<RecurringTitleToken, () => string> = {
-    client: () => context.clientName,
+  const values: Record<TicketTitleToken, () => string> = {
+    client: () => context.clientName ?? '',
+    contact: () => context.contactName ?? '',
     due_date: () => format({ dateStyle: 'long' }),
     month: () => format({ month: 'long' }),
     year: () => format({ year: 'numeric' }),
   };
 
-  return template.replace(TOKEN_PATTERN, (_whole, token: string) => values[token as RecurringTitleToken]());
+  let anyEmpty = false;
+  const rendered = template.replace(TOKEN_PATTERN, (_whole, token: string) => {
+    const value = values[token as TicketTitleToken]();
+    if (value === '') anyEmpty = true;
+    return value;
+  });
+  // Only a missing token triggers the collapse, so a title without gaps is byte-identical to its template.
+  return anyEmpty ? rendered.replace(/\s+/g, ' ').trim() : rendered;
+}
+
+/**
+ * Quick Add re-renders the title when client, contact or due date change, but only while the user has
+ * not edited it: the title is "untouched" when it still equals what was last rendered (or is empty).
+ */
+export function isRenderedTitleUntouched(currentTitle: string, lastRendered: string | null): boolean {
+  return currentTitle === '' || (lastRendered !== null && currentTitle === lastRendered);
 }

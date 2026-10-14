@@ -94,7 +94,8 @@ export interface ChecklistItemToInsert {
 interface InsertChecklistParams {
   targetTicketId: string;
   items: readonly ChecklistItemToInsert[];
-  userId: string;
+  /** Null when the system (the recurring generator) creates the ticket. */
+  userId: string | null;
 }
 
 /**
