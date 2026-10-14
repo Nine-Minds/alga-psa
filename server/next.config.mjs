@@ -1341,6 +1341,9 @@ const nextConfig = {
     'handlebars',
     'jsdom',
     'monaco-editor',
+    // The SDK generator transpiles with the compiler API at runtime; keep it
+    // on disk so `ts.sys` can still read the default lib .d.ts files.
+    'typescript',
     '@js-temporal/polyfill',
     'pdfkit',
     'sharp',

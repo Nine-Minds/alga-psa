@@ -110,7 +110,8 @@
     "coManagedAccess": "Co-managed access",
     "ticketsCustomer": "Customer Tickets",
     "projectsSharedTasks": "Shared Tasks",
-    "coManagedOverview": "Overview"
+    "coManagedOverview": "Overview",
+    "ticketsTemplates": "Ticket Templates"
   },
   "marketing": {
     "dialogs": {

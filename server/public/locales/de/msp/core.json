@@ -110,7 +110,8 @@
     "coManagedAccess": "Co-Managed-Zugriff",
     "ticketsCustomer": "Kundentickets",
     "projectsSharedTasks": "Gemeinsame Aufgaben",
-    "coManagedOverview": "Übersicht"
+    "coManagedOverview": "Übersicht",
+    "ticketsTemplates": "Ticket-Vorlagen"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

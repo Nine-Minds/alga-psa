@@ -269,6 +269,10 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
   'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
 
+  // Ticket templates. Both FK to tenants; items FK to templates (ON DELETE CASCADE),
+  // so items go first. Neither references tickets or clients.
+  'ticket_template_checklist_items', 'ticket_templates',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',

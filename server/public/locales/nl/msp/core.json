@@ -110,7 +110,8 @@
     "coManagedAccess": "Toegang voor gezamenlijk beheer",
     "ticketsCustomer": "Klanttickets",
     "projectsSharedTasks": "Gedeelde taken",
-    "coManagedOverview": "Overzicht"
+    "coManagedOverview": "Overzicht",
+    "ticketsTemplates": "Ticketsjablonen"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

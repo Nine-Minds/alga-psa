@@ -110,7 +110,8 @@
     "coManagedAccess": "Acceso cogestionado",
     "ticketsCustomer": "Tickets de clientes",
     "projectsSharedTasks": "Tareas compartidas",
-    "coManagedOverview": "Resumen"
+    "coManagedOverview": "Resumen",
+    "ticketsTemplates": "Plantillas de tickets"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

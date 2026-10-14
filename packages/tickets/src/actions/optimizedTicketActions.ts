@@ -472,6 +472,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         's.name as status_name',
         's.is_closed',
         'src.ticket_number as duplicated_from_ticket_number',
+        'tt.name as created_from_template_name',
         'cl.location_id as location_location_id',
         'cl.location_name',
         'cl.address_line1',
@@ -493,6 +494,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     tenantLeftJoin(trx, tenant, ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
     tenantLeftJoin(trx, tenant, ticketQuery, 'client_locations as cl', 't.location_id', 'cl.location_id');
     tenantLeftJoin(trx, tenant, ticketQuery, 'tickets as src', 't.duplicated_from_ticket_id', 'src.ticket_id');
+    tenantLeftJoin(trx, tenant, ticketQuery, 'ticket_templates as tt', 't.created_from_template_id', 'tt.template_id');
     const ticket = await ticketQuery
       .where({ 't.ticket_id': ticketId })
       .first();

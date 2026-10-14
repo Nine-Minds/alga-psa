@@ -30,8 +30,13 @@ export interface BoardStatusValue {
 }
 
 export function BoardStatusFields({
-  idPrefix, reference, disabled, value, onChange,
-}: GroupProps & { value: BoardStatusValue; onChange: (value: BoardStatusValue) => void }) {
+  idPrefix, reference, disabled, value, onChange, showStatus = true,
+}: GroupProps & {
+  value: BoardStatusValue;
+  onChange: (value: BoardStatusValue) => void;
+  /** False for ticket templates, which never carry a status (the board's default applies). */
+  showStatus?: boolean;
+}) {
   const { t } = useTranslation('features/tickets');
   const [filterState, setFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const { ensureBoard } = reference;
@@ -56,6 +61,7 @@ export function BoardStatusFields({
           placeholder={t('recurring.fields.boardPlaceholder', 'Select a board')}
         />
       </div>
+      {showStatus && (
       <div>
         <Label htmlFor={`${idPrefix}-status`}>{t('recurring.fields.status', 'Status')}</Label>
         <CustomSelect
@@ -69,6 +75,7 @@ export function BoardStatusFields({
           ]}
         />
       </div>
+      )}
     </div>
   );
 }

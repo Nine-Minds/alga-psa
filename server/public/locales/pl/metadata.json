@@ -285,6 +285,9 @@
       },
       "recurring": {
         "title": "Zgłoszenia cykliczne"
+      },
+      "templates": {
+        "title": "Szablony zgłoszeń"
       }
     },
     "workflowEditor": {

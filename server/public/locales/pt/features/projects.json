@@ -943,7 +943,7 @@
       "choose_status": "Escolha um status",
       "no_statuses_available": "Nenhum status disponível",
       "no_statuses_available_hint": "Crie status primeiro em Configurações → Projetos → Status.",
-      "task_status_library_title": "Biblioteca de status de tarefas do projeto",
+      "task_status_library_title": "Biblioteca de status de tarefas",
       "task_status_library_description": "Gerencie os status das tarefas do projeto da sua organização. Esses status podem ser usados ​​em todos os projetos.",
       "task_status_library_empty": "Nenhum status de tarefa do projeto encontrado",
       "task_status_library_empty_hint": "Crie seu primeiro status para começar",
@@ -983,12 +983,33 @@
       "last_closed_error": "Pelo menos um status deve permanecer marcado como fechado",
       "last_closed_delete_error": "Não é possível excluir o último status fechado deste tipo.",
       "addStatus": "Adicionar novo status",
-      "add_from_library": "Adicionar status"
+      "add_from_library": "Adicionar status",
+      "closed_badge": "(Fechado)",
+      "drag_to_reorder": "Arraste para reordenar",
+      "refresh_library": "Atualizar a biblioteca de status",
+      "all_library_statuses_used": "Todos os status da biblioteca já são uma coluna aqui. Use “Criar novo” para adicionar outro.",
+      "delete_no_move_target": "Não há outra coluna de status para onde mover estas tarefas. Adicione outra coluna primeiro.",
+      "delete_scope_help": "Isso remove a coluna apenas neste escopo. O status permanece na sua Biblioteca de status de tarefas.",
+      "fork_title": "Usar colunas de status personalizadas para esta fase?",
+      "fork_message": "Esta fase deixará de herdar as colunas padrão do projeto. As colunas de status que você adicionar depois aos padrões do projeto não aparecerão aqui até você voltar a fase.",
+      "fork_confirm": "Usar status personalizados",
+      "phase_uses_custom": "Esta fase tem as próprias colunas de status e já não herda os padrões do projeto.",
+      "pending_title": "Alterações não salvas nas colunas de status",
+      "pending_apply_hint": "Nada muda até você salvar.",
+      "pending_fork": "{{phase}} passará a ter colunas de status próprias.",
+      "pending_revert": "{{phase}} voltará às colunas padrão do projeto.",
+      "pending_order": "Nova ordem de colunas para {{scope}}.",
+      "pending_preview_hint": "As colunas padrão do projeto estão sendo exibidas como prévia. Salve para aplicar a troca e depois adicione ou remova colunas aqui.",
+      "rename_impact_title": "Onde esta renomeação se aplica",
+      "rename_impact_following": "Adota esta renomeação imediatamente: {{columns}} coluna(s) em {{projects}}.",
+      "rename_impact_keeping": "Mantém o nome «{{name}}»: {{columns}} coluna(s) em {{projects}}. Estas colunas não estão ligadas a este status da sua Biblioteca de status de tarefas, por isso esses projetos continuam a reportar o nome antigo até você renomear a coluna lá.",
+      "rename_impact_more": "e mais {{remaining}}",
+      "rename_impact_none": "Este status ainda não é usado como coluna em nenhum projeto."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gerenciar colunas de status",
+      "manage_title": "Colunas de status da tarefa",
       "manage_description": "Defina as colunas de status das tarefas neste modelo. Arraste para reordenar.",
       "template_defaults": "Padrões de modelo",
       "added": "Coluna de status adicionada",
@@ -1014,7 +1035,8 @@
       "replaced": "Coluna de status substituída",
       "replace_failed": "Falha ao substituir a coluna de status",
       "repair_status_columns": "Reparar colunas de status",
-      "unresolved_apply_guard": "As colunas de status precisam de reparo ({{count}})"
+      "unresolved_apply_guard": "As colunas de status precisam de reparo ({{count}})",
+      "pending_row_hint": "Preencha a coluna de status vazia antes de adicionar outra."
     },
     "list": {
       "title": "Modelos de projeto",
@@ -1463,18 +1485,6 @@
     "authorUnavailable": "Autor indisponível",
     "loadError": "Não foi possível carregar a conversa. Atualize para verificar seu acesso."
   },
-  "addStatusDialog": {
-    "phaseTitle": "Adicionar status de fase da biblioteca",
-    "projectTitle": "Adicionar status da biblioteca",
-    "selectLabel": "Selecione na biblioteca de status",
-    "placeholder": "Escolha um status",
-    "helpText": "Selecione um status da biblioteca de status do seu locatário para adicionar a este projeto.",
-    "noStatusesTitle": "Nenhum status disponível",
-    "noStatusesDescription": "Crie status primeiro em Configurações → Projetos → Status.",
-    "adding": "Adicionando...",
-    "addStatus": "Adicionar status",
-    "addFailed": "Falha ao adicionar status. Por favor, tente novamente."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Status da tarefa",
     "selectStatus": "Selecione o status"
@@ -1561,7 +1571,7 @@
     "statusColor": "Cor do status",
     "changeColor": "Mudar cor",
     "markClosed": "Marcar como status fechado",
-    "markClosedDescription": "Tarefas em status fechado são consideradas concluídas",
+    "markClosedDescription": "Tarefas com este status serão consideradas concluídas",
     "creating": "Criando...",
     "createButton": "Criar status",
     "nameRequired": "O nome do status é obrigatório",

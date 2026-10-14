@@ -5150,6 +5150,8 @@ components:
           enum:
             - "true"
             - "false"
+          description: Filters to inactive clients when true and active clients when
+            false; omit to include all clients.
         is_tax_exempt:
           type: string
           enum:
@@ -5257,6 +5259,12 @@ components:
           format: uuid
         is_inactive:
           type: boolean
+        lifecycle_status:
+          type: string
+          enum:
+            - prospect
+            - active
+            - former
         tags:
           type: array
           items:
@@ -6279,6 +6287,12 @@ components:
               type:
                 - string
                 - "null"
+            lifecycle_status:
+              type: string
+              enum:
+                - prospect
+                - active
+                - former
             logoUrl:
               type:
                 - string
@@ -6484,6 +6498,12 @@ components:
                 type:
                   - string
                   - "null"
+              lifecycle_status:
+                type: string
+                enum:
+                  - prospect
+                  - active
+                  - former
               logoUrl:
                 type:
                   - string
@@ -31595,7 +31615,11 @@ paths:
             enum:
               - "true"
               - "false"
+            description: Filters to inactive clients when true and active clients when
+              false; omit to include all clients.
           required: false
+          description: Filters to inactive clients when true and active clients when
+            false; omit to include all clients.
           name: is_inactive
           in: query
         - schema:
@@ -31894,6 +31918,12 @@ paths:
                   format: uuid
                 is_inactive:
                   type: boolean
+                lifecycle_status:
+                  type: string
+                  enum:
+                    - prospect
+                    - active
+                    - former
                 tags:
                   type: array
                   items:

@@ -8,7 +8,6 @@ const readWorkspaceFile = (relativePath: string) =>
 describe('supporting per-phase status system contracts', () => {
   const importSource = readWorkspaceFile('packages/projects/src/actions/phaseTaskImportActions.ts');
   const statusActionsSource = readWorkspaceFile('packages/projects/src/actions/projectTaskStatusActions.ts');
-  const editorSource = readWorkspaceFile('packages/projects/src/components/ProjectTaskStatusEditor.tsx');
   const selectorSource = readWorkspaceFile('packages/projects/src/components/ProjectTaskStatusSelector.tsx');
 
   it('T053: phase task import builds per-phase effective status lookups from phase-specific or default mappings', () => {
@@ -32,10 +31,10 @@ describe('supporting per-phase status system contracts', () => {
     expect(statusActionsSource).not.toContain("eventType: 'PROJECT_STATUSES_REORDERED'");
   });
 
-  it('T056/T065: project creation status editor and selector preserve phase-specific template selections', () => {
-    expect(editorSource).toContain('await reorderProjectStatuses(projectId, statusOrder, phaseId);');
-    expect(editorSource).toContain("t('settings.statuses.phase_task_statuses_label', 'Phase Task Statuses')");
-    expect(editorSource).toContain("t('settings.statuses.task_statuses_label', 'Task Statuses')");
+  it('T056/T065: project creation status selector preserves phase-specific template selections', () => {
+    // ProjectTaskStatusEditor.tsx was deleted in the status-columns rework: it
+    // was never imported anywhere, and the project/phase editor is now
+    // ProjectTaskStatusSettings over the shared StatusColumnsEditor.
     expect(selectorSource).toContain('selectedStatuses: Array<{ status_id: string; display_order: number; phase_id?: string }>;');
     expect(selectorSource).toContain('phaseId?: string | null;');
     expect(selectorSource).toContain(

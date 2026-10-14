@@ -10517,6 +10517,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "lifecycle_status": {
+                "type": "string",
+                "enum": [
+                  "prospect",
+                  "active",
+                  "former"
+                ]
+              },
               "logoUrl": {
                 "type": [
                   "string",
@@ -10745,6 +10753,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_inactive": {
           "type": "boolean"
+        },
+        "lifecycle_status": {
+          "type": "string",
+          "enum": [
+            "prospect",
+            "active",
+            "former"
+          ]
         },
         "tags": {
           "type": "array",
@@ -10983,6 +10999,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
               ]
             },
             "logoUrl": {
@@ -11292,6 +11316,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
+              ]
+            },
             "logoUrl": {
               "type": [
                 "string",
@@ -11475,6 +11507,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_inactive": {
           "type": "boolean"
+        },
+        "lifecycle_status": {
+          "type": "string",
+          "enum": [
+            "prospect",
+            "active",
+            "former"
+          ]
         },
         "tags": {
           "type": "array",
@@ -11713,6 +11753,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ]
+            },
+            "lifecycle_status": {
+              "type": "string",
+              "enum": [
+                "prospect",
+                "active",
+                "former"
               ]
             },
             "logoUrl": {

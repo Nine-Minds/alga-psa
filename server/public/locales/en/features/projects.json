@@ -943,7 +943,7 @@
       "choose_status": "Choose a status",
       "no_statuses_available": "No statuses available",
       "no_statuses_available_hint": "Create statuses in Settings → Projects → Statuses first.",
-      "task_status_library_title": "Project Task Status Library",
+      "task_status_library_title": "Task Status Library",
       "task_status_library_description": "Manage your organization's project task statuses. These statuses can be used across all projects.",
       "task_status_library_empty": "No project task statuses found",
       "task_status_library_empty_hint": "Create your first status to get started",
@@ -983,12 +983,33 @@
       "last_closed_error": "At least one status must remain marked as closed",
       "last_closed_delete_error": "Cannot delete the last closed status for this type.",
       "addStatus": "Add new status",
-      "add_from_library": "Add Status"
+      "add_from_library": "Add Status",
+      "closed_badge": "(Closed)",
+      "drag_to_reorder": "Drag to reorder",
+      "refresh_library": "Refresh status library",
+      "all_library_statuses_used": "Every library status is already a column here. Use Create New to add another one.",
+      "delete_no_move_target": "There is no other status column to move these tasks into. Add another column first.",
+      "delete_scope_help": "This removes the column from this scope only. The status stays in your Task Status Library.",
+      "fork_title": "Use custom status columns for this phase?",
+      "fork_message": "This phase will stop inheriting the project default columns. Status columns you add to Project Defaults later will not appear here until you switch the phase back.",
+      "fork_confirm": "Use custom statuses",
+      "phase_uses_custom": "This phase has its own status columns and no longer inherits project defaults.",
+      "pending_title": "Unsaved status column changes",
+      "pending_apply_hint": "Nothing changes until you save.",
+      "pending_fork": "{{phase}} will switch to its own status columns.",
+      "pending_revert": "{{phase}} will go back to the project default columns.",
+      "pending_order": "New column order for {{scope}}.",
+      "pending_preview_hint": "Showing the project default columns as a preview. Save to apply this switch, then add or remove columns here.",
+      "rename_impact_title": "Where this rename lands",
+      "rename_impact_following": "Follows this rename immediately: {{columns}} column(s) in {{projects}}.",
+      "rename_impact_keeping": "Keeps the name \"{{name}}\": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.",
+      "rename_impact_more": "and {{remaining}} more",
+      "rename_impact_none": "This status is not used as a column in any project yet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Manage Status Columns",
+      "manage_title": "Task Status Columns",
       "manage_description": "Define the status columns for tasks in this template. Drag to reorder.",
       "template_defaults": "Template Defaults",
       "added": "Status column added",
@@ -1014,7 +1035,8 @@
       "replaced": "Status column replaced",
       "replace_failed": "Failed to replace status column",
       "repair_status_columns": "Repair status columns",
-      "unresolved_apply_guard": "Status columns need repair ({{count}})"
+      "unresolved_apply_guard": "Status columns need repair ({{count}})",
+      "pending_row_hint": "Fill in the empty status column before adding another one."
     },
     "list": {
       "title": "Project Templates",
@@ -1463,18 +1485,6 @@
     "authorUnavailable": "Author unavailable",
     "loadError": "Unable to load this conversation. Refresh to check your current access."
   },
-  "addStatusDialog": {
-    "phaseTitle": "Add Phase Status from Library",
-    "projectTitle": "Add Status from Library",
-    "selectLabel": "Select from Status Library",
-    "placeholder": "Choose a status",
-    "helpText": "Select a status from your tenant's status library to add to this project.",
-    "noStatusesTitle": "No statuses available",
-    "noStatusesDescription": "Create statuses in Settings → Projects → Statuses first.",
-    "adding": "Adding...",
-    "addStatus": "Add Status",
-    "addFailed": "Failed to add status. Please try again."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Task status",
     "selectStatus": "Select status"
@@ -1561,7 +1571,7 @@
     "statusColor": "Status Color",
     "changeColor": "Change color",
     "markClosed": "Mark as closed status",
-    "markClosedDescription": "Tasks in closed statuses are considered complete",
+    "markClosedDescription": "Tasks with this status will be considered complete",
     "creating": "Creating...",
     "createButton": "Create Status",
     "nameRequired": "Status name is required",

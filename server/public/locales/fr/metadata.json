@@ -263,6 +263,9 @@
       },
       "recurring": {
         "title": "Tickets récurrents"
+      },
+      "templates": {
+        "title": "Modèles de tickets"
       }
     },
     "workflowEditor": {

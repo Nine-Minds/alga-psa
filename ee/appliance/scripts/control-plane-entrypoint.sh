@@ -50,4 +50,14 @@ fi
   fi
 ) >> /var/lib/alga-appliance/storage-reconcile.log 2>&1 &
 
+# Existing appliances only run `flux install` during setup, so a control-plane
+# update is how they receive the single-node Flux controller tuning (leader
+# election off, Recreate rollouts). Idempotent; a box without Flux yet (fresh,
+# pre-setup) reports the controllers as absent and changes nothing.
+(
+  sleep "${ALGA_APPLIANCE_FLUX_TUNING_DELAY_SECONDS:-15}"
+  node /opt/alga-appliance/host-service/flux-controller-tuning.mjs \
+    --kubeconfig "$KUBECONFIG_PATH" --attempts 5 --retry-delay-ms 60000
+) >> /var/lib/alga-appliance/flux-controller-tuning.log 2>&1 &
+
 exec node /opt/alga-appliance/host-service/server.mjs

@@ -110,7 +110,8 @@
     "coManagedAccess": "Dostęp do współzarządzania",
     "ticketsCustomer": "Zgłoszenia klientów",
     "projectsSharedTasks": "Wspólne zadania",
-    "coManagedOverview": "Przegląd"
+    "coManagedOverview": "Przegląd",
+    "ticketsTemplates": "Szablony zgłoszeń"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

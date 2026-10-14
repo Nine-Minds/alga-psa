@@ -110,7 +110,8 @@
     "coManagedAccess": "Samhanterad åtkomst",
     "ticketsCustomer": "Kundärenden",
     "projectsSharedTasks": "Delade uppgifter",
-    "coManagedOverview": "Översikt"
+    "coManagedOverview": "Översikt",
+    "ticketsTemplates": "Ärendemallar"
   },
   "marketing": {
     "dialogs": {

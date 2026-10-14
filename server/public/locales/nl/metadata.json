@@ -269,6 +269,9 @@
       },
       "recurring": {
         "title": "Terugkerende tickets"
+      },
+      "templates": {
+        "title": "Ticketsjablonen"
       }
     },
     "timeEntry": {

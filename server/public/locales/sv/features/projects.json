@@ -943,7 +943,7 @@
       "choose_status": "Välj en status",
       "no_statuses_available": "Inga statusar tillgängliga",
       "no_statuses_available_hint": "Skapa först statusar under Inställningar → Projekt → Statusar.",
-      "task_status_library_title": "Statusbibliotek för projektuppgifter",
+      "task_status_library_title": "Statusbibliotek för uppgifter",
       "task_status_library_description": "Hantera organisationens statusar för projektuppgifter. Statusarna kan användas i alla projekt.",
       "task_status_library_empty": "Inga statusar för projektuppgifter hittades",
       "task_status_library_empty_hint": "Skapa din första status för att komma igång",
@@ -983,12 +983,33 @@
       "last_closed_error": "Minst en status måste förbli markerad som stängd",
       "last_closed_delete_error": "Det går inte att radera den sista stängda statusen för den här typen.",
       "addStatus": "Lägg till ny status",
-      "add_from_library": "Lägg till status"
+      "add_from_library": "Lägg till status",
+      "closed_badge": "(Stängd)",
+      "drag_to_reorder": "Dra för att ändra ordning",
+      "refresh_library": "Uppdatera statusbiblioteket",
+      "all_library_statuses_used": "Varje status i biblioteket är redan en kolumn här. Använd ”Skapa ny” för att lägga till en till.",
+      "delete_no_move_target": "Det finns ingen annan statuskolumn att flytta dessa uppgifter till. Lägg till en kolumn först.",
+      "delete_scope_help": "Detta tar bort kolumnen endast i det här omfånget. Statusen finns kvar i statusbiblioteket för uppgifter.",
+      "fork_title": "Använda anpassade statuskolumner för den här fasen?",
+      "fork_message": "Den här fasen slutar då ärva projektets standardkolumner. Statuskolumner som du senare lägger till i projektets standardinställningar visas inte här förrän du ställer tillbaka fasen.",
+      "fork_confirm": "Använd anpassade statusar",
+      "phase_uses_custom": "Den här fasen har egna statuskolumner och ärver inte längre projektets standardinställningar.",
+      "pending_title": "Osparade ändringar av statuskolumner",
+      "pending_apply_hint": "Inget ändras förrän du sparar.",
+      "pending_fork": "{{phase}} får egna statuskolumner.",
+      "pending_revert": "{{phase}} återgår till projektets standardkolumner.",
+      "pending_order": "Ny kolumnordning för {{scope}}.",
+      "pending_preview_hint": "Projektets standardkolumner visas som förhandsvisning. Spara för att tillämpa bytet, sedan kan du lägga till eller ta bort kolumner här.",
+      "rename_impact_title": "Var namnbytet slår igenom",
+      "rename_impact_following": "Följer namnbytet direkt: {{columns}} kolumn(er) i {{projects}}.",
+      "rename_impact_keeping": "Behåller namnet ”{{name}}”: {{columns}} kolumn(er) i {{projects}}. Dessa kolumner är inte kopplade till den här statusen i statusbiblioteket för uppgifter, så de projekten rapporterar det gamla namnet till du byter namn på kolumnen där.",
+      "rename_impact_more": "och {{remaining}} till",
+      "rename_impact_none": "Den här statusen används inte som kolumn i något projekt ännu."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Hantera statuskolumner",
+      "manage_title": "Statuskolumner för uppgifter",
       "manage_description": "Definiera statuskolumnerna för uppgifter i den här mallen. Dra för att ändra ordningen.",
       "template_defaults": "Mallens standardinställningar",
       "added": "Statuskolumnen har lagts till",
@@ -1014,7 +1035,8 @@
       "replaced": "Statuskolumnen har ersatts",
       "replace_failed": "Det gick inte att ersätta statuskolumnen",
       "repair_status_columns": "Reparera statuskolumner",
-      "unresolved_apply_guard": "Statuskolumner behöver repareras ({{count}})"
+      "unresolved_apply_guard": "Statuskolumner behöver repareras ({{count}})",
+      "pending_row_hint": "Fyll i den tomma statuskolumnen innan du lägger till en till."
     },
     "list": {
       "title": "Projektmallar",
@@ -1463,18 +1485,6 @@
     "authorUnavailable": "Författaren är inte tillgänglig",
     "loadError": "Det gick inte att läsa in konversationen. Uppdatera för att kontrollera din aktuella åtkomst."
   },
-  "addStatusDialog": {
-    "phaseTitle": "Lägg till fasstatus från bibliotek",
-    "projectTitle": "Lägg till status från bibliotek",
-    "selectLabel": "Välj från statusbibliotek",
-    "placeholder": "Välj en status",
-    "helpText": "Välj en status från organisationens statusbibliotek att lägga till i projektet.",
-    "noStatusesTitle": "Inga statusar tillgängliga",
-    "noStatusesDescription": "Skapa först statusar under Inställningar → Projekt → Statusar.",
-    "adding": "Lägger till…",
-    "addStatus": "Lägg till status",
-    "addFailed": "Det gick inte att lägga till statusen. Försök igen."
-  },
   "taskStatusSelect": {
     "ariaLabel": "Uppgiftsstatus",
     "selectStatus": "Välj status"
@@ -1561,7 +1571,7 @@
     "statusColor": "Statusfärg",
     "changeColor": "Ändra färg",
     "markClosed": "Markera som stängd status",
-    "markClosedDescription": "Uppgifter med stängda statusar räknas som slutförda",
+    "markClosedDescription": "Uppgifter med den här statusen räknas som slutförda",
     "creating": "Skapar…",
     "createButton": "Skapa status",
     "nameRequired": "Statusnamn krävs",

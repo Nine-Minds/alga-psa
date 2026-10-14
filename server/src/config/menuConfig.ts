@@ -120,7 +120,8 @@ export const navigationSections: NavigationSection[] = [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
           // Presentation-gated in SidebarWithFeatureFlags (flag + sponsoring PSA Pro + an assigned relationship).
           { name: 'Customer Tickets', translationKey: 'nav.ticketsCustomer', icon: Handshake, href: '/msp/tickets/customer', badgeSource: 'co-managed-work' },
-          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' }
+          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
         ]
       },
       {
