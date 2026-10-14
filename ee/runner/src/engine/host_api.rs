@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 use tracing::{self};
 use url::{form_urlencoded, Url};
-use wasmtime::component::{Accessor, HasSelf, Linker};
+use wasmtime::component::{HasSelf, Linker};
 
 use component::alga::extension::types;
 use component::alga::extension::{
@@ -371,17 +371,17 @@ fn make_storage_entry(
     }
 }
 
-impl context::HostWithStore for HasSelf<HostState> {
-    fn get_context<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = ContextData> + Send {
-        let (ctx, providers) = accessor.with(|mut access| {
-            let state = access.get();
+impl context::Host for HostState {
+    async fn get_context(
+        &mut self,
+    ) -> ContextData {
+        let (ctx, providers) = {
+            let state = &*self;
             (
                 clone_context_for_host(state),
                 state.context.providers.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_CONTEXT_READ) {
@@ -408,23 +408,23 @@ impl context::HostWithStore for HasSelf<HostState> {
                 "context capability granted; returning context"
             );
             data
-        }
+        }.await
     }
 }
 
-impl secrets::HostWithStore for HasSelf<HostState> {
-    fn get<T>(
-        accessor: &Accessor<T, Self>,
+impl secrets::Host for HostState {
+    async fn get(
+        &mut self,
         key: String,
-    ) -> impl std::future::Future<Output = Result<String, SecretError>> + Send {
-        let (providers, material, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<String, SecretError> {
+        let (providers, material, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.secrets.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SECRETS_GET) {
@@ -453,20 +453,20 @@ impl secrets::HostWithStore for HasSelf<HostState> {
                 Some(value) => Ok(value.clone()),
                 None => Err(SecretError::Missing),
             }
-        }
+        }.await
     }
 
-    fn list_keys<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = Vec<String>> + Send {
-        let (providers, material, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    async fn list_keys(
+        &mut self,
+    ) -> Vec<String> {
+        let (providers, material, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.secrets.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SECRETS_GET) {
@@ -484,23 +484,23 @@ impl secrets::HostWithStore for HasSelf<HostState> {
                 "secrets capability list_keys"
             );
             keys
-        }
+        }.await
     }
 }
 
-impl http::HostWithStore for HasSelf<HostState> {
-    fn fetch<T>(
-        accessor: &Accessor<T, Self>,
+impl http::Host for HostState {
+    async fn fetch(
+        &mut self,
         request: HttpRequest,
-    ) -> impl std::future::Future<Output = Result<HttpResponse, HttpError>> + Send {
-        let (providers, config, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<HttpResponse, HttpError> {
+        let (providers, config, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.runtime.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_HTTP_FETCH) {
@@ -581,19 +581,19 @@ impl http::HostWithStore for HasSelf<HostState> {
                 headers,
                 body: Some(body_bytes.to_vec()),
             })
-        }
+        }.await
     }
 }
 
-impl logging::HostWithStore for HasSelf<HostState> {
-    fn log_info<T>(
-        accessor: &Accessor<T, Self>,
+impl logging::Host for HostState {
+    async fn log_info(
+        &mut self,
         message: String,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        let (providers, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> () {
+        let (providers, ctx) = {
+            let state = &*self;
             (state.context.providers.clone(), state.context.clone())
-        });
+        };
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
                 tracing::info!(
@@ -605,17 +605,17 @@ impl logging::HostWithStore for HasSelf<HostState> {
                 );
                 crate::engine::debug::emit_log(&ctx, tracing::Level::INFO, &message).await;
             }
-        }
+        }.await
     }
 
-    fn log_warn<T>(
-        accessor: &Accessor<T, Self>,
+    async fn log_warn(
+        &mut self,
         message: String,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        let (providers, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> () {
+        let (providers, ctx) = {
+            let state = &*self;
             (state.context.providers.clone(), state.context.clone())
-        });
+        };
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
                 tracing::warn!(
@@ -627,17 +627,17 @@ impl logging::HostWithStore for HasSelf<HostState> {
                 );
                 crate::engine::debug::emit_log(&ctx, tracing::Level::WARN, &message).await;
             }
-        }
+        }.await
     }
 
-    fn log_error<T>(
-        accessor: &Accessor<T, Self>,
+    async fn log_error(
+        &mut self,
         message: String,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        let (providers, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> () {
+        let (providers, ctx) = {
+            let state = &*self;
             (state.context.providers.clone(), state.context.clone())
-        });
+        };
         async move {
             if has_capability(&providers, CAP_LOG_EMIT) {
                 tracing::error!(
@@ -649,24 +649,24 @@ impl logging::HostWithStore for HasSelf<HostState> {
                 );
                 crate::engine::debug::emit_log(&ctx, tracing::Level::ERROR, &message).await;
             }
-        }
+        }.await
     }
 }
 
-impl storage::HostWithStore for HasSelf<HostState> {
-    fn get<T>(
-        accessor: &Accessor<T, Self>,
+impl storage::Host for HostState {
+    async fn get(
+        &mut self,
         namespace: String,
         key: String,
-    ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<StorageEntry, StorageError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
@@ -706,21 +706,21 @@ impl storage::HostWithStore for HasSelf<HostState> {
 
             let value = storage_request(&install_id, "get", payload).await?;
             parse_storage_entry(value, Some(namespace), Some(key))
-        }
+        }.await
     }
 
-    fn put<T>(
-        accessor: &Accessor<T, Self>,
+    async fn put(
+        &mut self,
         entry: StorageEntry,
-    ) -> impl std::future::Future<Output = Result<StorageEntry, StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<StorageEntry, StorageError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
@@ -779,22 +779,22 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 entry.value,
                 revision,
             ))
-        }
+        }.await
     }
 
-    fn delete<T>(
-        accessor: &Accessor<T, Self>,
+    async fn delete(
+        &mut self,
         namespace: String,
         key: String,
-    ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<(), StorageError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
@@ -837,22 +837,22 @@ impl storage::HostWithStore for HasSelf<HostState> {
                 Some(true) | None => Ok(()),
                 Some(false) => Err(StorageError::Conflict),
             }
-        }
+        }.await
     }
 
-    fn list_entries<T>(
-        accessor: &Accessor<T, Self>,
+    async fn list_entries(
+        &mut self,
         namespace: String,
         cursor: Option<String>,
-    ) -> impl std::future::Future<Output = Result<Vec<StorageEntry>, StorageError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<Vec<StorageEntry>, StorageError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_STORAGE_KV) {
@@ -918,24 +918,24 @@ impl storage::HostWithStore for HasSelf<HostState> {
             }
 
             Ok(entries)
-        }
+        }.await
     }
 }
 
-impl ui_proxy::HostWithStore for HasSelf<HostState> {
-    fn call_route<T>(
-        accessor: &Accessor<T, Self>,
+impl ui_proxy::Host for HostState {
+    async fn call_route(
+        &mut self,
         route: String,
         payload: Option<Vec<u8>>,
-    ) -> impl std::future::Future<Output = Result<Vec<u8>, ProxyError>> + Send {
-        let (providers, ctx, runtime) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<Vec<u8>, ProxyError> {
+        let (providers, ctx, runtime) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.clone(),
                 state.runtime.clone(),
             )
-        });
+        };
         async move {
             if !has_capability(&providers, CAP_UI_PROXY) {
                 tracing::error!(
@@ -1122,7 +1122,7 @@ impl ui_proxy::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(bytes.to_vec())
-        }
+        }.await
     }
 }
 
@@ -1813,18 +1813,18 @@ fn parse_services_list_result(value: &Value) -> Option<ServicesListResult> {
     })
 }
 
-impl scheduler::HostWithStore for HasSelf<HostState> {
-    fn list_schedules<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = Result<Vec<ScheduleInfo>, SchedulerError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+impl scheduler::Host for HostState {
+    async fn list_schedules(
+        &mut self,
+    ) -> Result<Vec<ScheduleInfo>, SchedulerError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -1876,22 +1876,22 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(schedules)
-        }
+        }.await
     }
 
-    fn get_schedule<T>(
-        accessor: &Accessor<T, Self>,
+    async fn get_schedule(
+        &mut self,
         schedule_id: String,
-    ) -> impl std::future::Future<Output = Result<Option<ScheduleInfo>, SchedulerError>> + Send
+    ) -> Result<Option<ScheduleInfo>, SchedulerError>
     {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -1937,21 +1937,21 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(schedule)
-        }
+        }.await
     }
 
-    fn create_schedule<T>(
-        accessor: &Accessor<T, Self>,
+    async fn create_schedule(
+        &mut self,
         input: CreateScheduleInput,
-    ) -> impl std::future::Future<Output = CreateScheduleResult> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> CreateScheduleResult {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -2072,22 +2072,22 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 error,
                 field_errors,
             }
-        }
+        }.await
     }
 
-    fn update_schedule<T>(
-        accessor: &Accessor<T, Self>,
+    async fn update_schedule(
+        &mut self,
         schedule_id: String,
         input: UpdateScheduleInput,
-    ) -> impl std::future::Future<Output = UpdateScheduleResult> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> UpdateScheduleResult {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -2207,21 +2207,21 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
                 error,
                 field_errors,
             }
-        }
+        }.await
     }
 
-    fn delete_schedule<T>(
-        accessor: &Accessor<T, Self>,
+    async fn delete_schedule(
+        &mut self,
         schedule_id: String,
-    ) -> impl std::future::Future<Output = DeleteScheduleResult> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> DeleteScheduleResult {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -2294,20 +2294,20 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
             );
 
             DeleteScheduleResult { success, error }
-        }
+        }.await
     }
 
-    fn get_endpoints<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = Result<Vec<EndpointInfo>, SchedulerError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    async fn get_endpoints(
+        &mut self,
+    ) -> Result<Vec<EndpointInfo>, SchedulerError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_SCHEDULER_MANAGE) {
@@ -2359,23 +2359,23 @@ impl scheduler::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(endpoints)
-        }
+        }.await
     }
 }
 
-impl invoicing::HostWithStore for HasSelf<HostState> {
-    fn create_manual_invoice<T>(
-        accessor: &Accessor<T, Self>,
+impl invoicing::Host for HostState {
+    async fn create_manual_invoice(
+        &mut self,
         input: CreateManualInvoiceInput,
-    ) -> impl std::future::Future<Output = CreateManualInvoiceResult> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> CreateManualInvoiceResult {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             let install_id = match require_invoicing_access(&providers, install_id) {
@@ -2493,23 +2493,23 @@ impl invoicing::HostWithStore for HasSelf<HostState> {
             );
 
             result
-        }
+        }.await
     }
 }
 
-impl clients::HostWithStore for HasSelf<HostState> {
-    fn list_clients<T>(
-        accessor: &Accessor<T, Self>,
+impl clients::Host for HostState {
+    async fn list_clients(
+        &mut self,
         input: ClientsListInput,
-    ) -> impl std::future::Future<Output = Result<ClientsListResult, ClientReadError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<ClientsListResult, ClientReadError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             let install_id = require_client_read_access(&providers, install_id)
@@ -2561,22 +2561,22 @@ impl clients::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(parsed)
-        }
+        }.await
     }
 
-    fn get_client<T>(
-        accessor: &Accessor<T, Self>,
+    async fn get_client(
+        &mut self,
         client_id: String,
-    ) -> impl std::future::Future<Output = Result<Option<ClientSummary>, ClientReadError>> + Send
+    ) -> Result<Option<ClientSummary>, ClientReadError>
     {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             let install_id = require_client_read_access(&providers, install_id)
@@ -2620,23 +2620,23 @@ impl clients::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(item)
-        }
+        }.await
     }
 }
 
-impl services::HostWithStore for HasSelf<HostState> {
-    fn list_services<T>(
-        accessor: &Accessor<T, Self>,
+impl services::Host for HostState {
+    async fn list_services(
+        &mut self,
         input: ServicesListInput,
-    ) -> impl std::future::Future<Output = Result<ServicesListResult, ServiceReadError>> + Send {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+    ) -> Result<ServicesListResult, ServiceReadError> {
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             let install_id = require_service_read_access(&providers, install_id)
@@ -2703,22 +2703,22 @@ impl services::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(parsed)
-        }
+        }.await
     }
 
-    fn get_service<T>(
-        accessor: &Accessor<T, Self>,
+    async fn get_service(
+        &mut self,
         service_id: String,
-    ) -> impl std::future::Future<Output = Result<Option<ServiceSummary>, ServiceReadError>> + Send
+    ) -> Result<Option<ServiceSummary>, ServiceReadError>
     {
-        let (providers, install_id, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+        let (providers, install_id, ctx) = {
+            let state = &*self;
             (
                 state.context.providers.clone(),
                 state.context.install_id.clone(),
                 state.context.clone(),
             )
-        });
+        };
 
         async move {
             let install_id = require_service_read_access(&providers, install_id)
@@ -2762,18 +2762,18 @@ impl services::HostWithStore for HasSelf<HostState> {
             );
 
             Ok(item)
-        }
+        }.await
     }
 }
 
-impl user::HostWithStore for HasSelf<HostState> {
-    fn get_user<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = Result<UserData, UserError>> + Send {
-        let (providers, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+impl user::Host for HostState {
+    async fn get_user(
+        &mut self,
+    ) -> Result<UserData, UserError> {
+        let (providers, ctx) = {
+            let state = &*self;
             (state.context.providers.clone(), state.context.clone())
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_USER_READ) {
@@ -2815,18 +2815,18 @@ impl user::HostWithStore for HasSelf<HostState> {
                     Err(UserError::NotAvailable)
                 }
             }
-        }
+        }.await
     }
 }
 
-impl user_v2::HostWithStore for HasSelf<HostState> {
-    fn get_user<T>(
-        accessor: &Accessor<T, Self>,
-    ) -> impl std::future::Future<Output = Result<UserDataV2, UserError>> + Send {
-        let (providers, ctx) = accessor.with(|mut access| {
-            let state = access.get();
+impl user_v2::Host for HostState {
+    async fn get_user(
+        &mut self,
+    ) -> Result<UserDataV2, UserError> {
+        let (providers, ctx) = {
+            let state = &*self;
             (state.context.providers.clone(), state.context.clone())
-        });
+        };
 
         async move {
             if !has_capability(&providers, CAP_USER_READ) {
@@ -2877,23 +2877,11 @@ impl user_v2::HostWithStore for HasSelf<HostState> {
                     Err(UserError::NotAvailable)
                 }
             }
-        }
+        }.await
     }
 }
 
 impl types::Host for HostState {}
-impl context::Host for HostState {}
-impl secrets::Host for HostState {}
-impl http::Host for HostState {}
-impl storage::Host for HostState {}
-impl logging::Host for HostState {}
-impl ui_proxy::Host for HostState {}
-impl user::Host for HostState {}
-impl user_v2::Host for HostState {}
-impl scheduler::Host for HostState {}
-impl invoicing::Host for HostState {}
-impl clients::Host for HostState {}
-impl services::Host for HostState {}
 
 #[cfg(test)]
 mod tests {
