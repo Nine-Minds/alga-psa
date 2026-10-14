@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
@@ -46,6 +46,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const openContactQuickView = useContactQuickViewDrawer();
   const openContactEdit = useContactEditDrawer();
 
@@ -102,6 +103,39 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     void openContactEdit(contact.contact_name_id, { onSaved: refreshContacts });
   };
 
+  // Notes written in the rich-text editor live in a document, not on the contact
+  // row, so the indexed search is what finds them here — the same query the main
+  // contacts list runs. Results are intersected with this client's contacts.
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (!query) {
+      setIndexedSearchContactIds(null);
+      return;
+    }
+
+    setIndexedSearchContactIds(null);
+    let isCancelled = false;
+    const timeout = setTimeout(() => {
+      searchContactListIds(query)
+        .then((contactIds) => {
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set(contactIds));
+          }
+        })
+        .catch((err) => {
+          console.error('Error searching client contacts:', err);
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set());
+          }
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [searchTerm]);
+
   // Client-side search: getContactsByClient returns the client's full contact
   // set, so filtering here scales to the realistic per-client contact count.
   const filteredContacts = useMemo(() => {
@@ -111,11 +145,12 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     // number on the contact rather than the default number's literal text.
     const searchDigits = phoneSearchDigits(needle);
     return contacts.filter((contact) =>
-      [contact.full_name, contact.email, contact.role]
+      [contact.full_name, contact.email, contact.role, contact.notes]
         .some((field) => field && field.toLowerCase().includes(needle))
       || (searchDigits !== null && contactMatchesPhoneDigits(contact, searchDigits))
+      || indexedSearchContactIds?.has(contact.contact_name_id) === true
     );
-  }, [contacts, searchTerm]);
+  }, [contacts, searchTerm, indexedSearchContactIds]);
 
   const columns: ColumnDefinition<IContact>[] = [
     {
