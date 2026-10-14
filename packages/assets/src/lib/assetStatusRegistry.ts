@@ -126,8 +126,18 @@ export async function createAssetStatusRow(
   if (!slug) return fail({ code: 'invalid_status', message: 'Label must contain at least one letter or digit' });
 
   const existing = await statusTable(conn, tenant).where({ slug }).first();
-  if (existing) {
+  if (existing?.is_active) {
     return fail({ code: 'duplicate_slug', message: `A status named "${label}" already exists`, slug });
+  }
+  if (existing) {
+    // The slug is taken by an archived row. Re-creating the status by name is
+    // exactly what "bring it back" looks like to an operator, and refusing it
+    // left an archived status with no way back at all.
+    const [restored] = await statusTable(conn, tenant)
+      .where({ status_id: existing.status_id })
+      .update({ label, kind: input.kind, is_active: true, updated_at: new Date().toISOString() })
+      .returning('*');
+    return ok(mapRow(restored));
   }
 
   const nextOrder = input.display_order ?? (await (async () => {
@@ -219,6 +229,21 @@ export async function archiveAssetStatusRow(
     .returning('*');
 
   return ok({ status: mapRow(row), in_use_count: 0 });
+}
+
+/** Puts an archived status back in circulation (FR-B4 is archive, not delete). */
+export async function restoreAssetStatusRow(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<AssetStatusRegistryResult<AssetStatus>> {
+  const [row] = await statusTable(conn, tenant)
+    .where({ status_id: statusId })
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .returning('*');
+
+  if (!row) return fail({ code: 'not_found', message: 'Status not found' });
+  return ok(mapRow(row));
 }
 
 export { BUILTIN_ASSET_STATUSES };

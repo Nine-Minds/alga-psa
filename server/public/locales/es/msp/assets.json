@@ -186,11 +186,6 @@
       "client": "Cliente: {{value}}",
       "agent": "Agente: {{value}}"
     },
-    "statuses": {
-      "active": "Activo",
-      "inactive": "Inactivo",
-      "maintenance": "Mantenimiento"
-    },
     "types": {
       "workstation": "Puesto de trabajo",
       "server": "Servidor",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "En espera de selección de activos",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Activo",
-      "inactive": "Inactivo",
-      "maintenance": "Mantenimiento"
     },
     "empty": {
       "selectAsset": "Seleccione un activo para ver los detalles",
@@ -1759,13 +1749,20 @@
       "archive": "Archivar",
       "moveUp": "Subir",
       "moveDown": "Bajar",
-      "openMenu": "Abrir menú"
+      "openMenu": "Abrir menú",
+      "restore": "Restaurar",
+      "archiveBlocked": "Archivar · {{count}} activo(s) todavía lo usan"
     },
     "confirmArchiveTitle": "¿Archivar este estado?",
-    "confirmArchiveMessage": "¿Archivar «{{label}}»? Se mantiene en los activos que ya lo usan, pero deja de ofrecerse.",
+    "confirmArchiveMessage": "¿Archivar «{{label}}»? Dejará de ofrecerse en los formularios de activos. Puede restaurarlo más tarde.",
     "errors": {
       "load": "No se pudieron cargar los estados de activos",
-      "inUse": "Todavía lo usan {{count}} activo(s). Muévalos primero a otro estado."
+      "inUse": "Todavía lo usan {{count}} activo(s). Muévalos primero a otro estado.",
+      "duplicate": "Ya existe un estado con ese nombre.",
+      "invalidKind": "Elija un ciclo de vida para este estado.",
+      "invalidLabel": "Introduzca un nombre con al menos una letra o un número.",
+      "notFound": "Ese estado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "save": "No se pudo guardar el estado."
     }
   },
   "contactAssets": {

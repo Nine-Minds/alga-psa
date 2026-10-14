@@ -186,11 +186,6 @@
       "client": "Cliente: {{value}}",
       "agent": "Agente: {{value}}"
     },
-    "statuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção"
-    },
     "types": {
       "workstation": "Estação de trabalho",
       "server": "Servidor",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "Aguardando seleção de ativos",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção"
     },
     "empty": {
       "selectAsset": "Selecione um ativo para ver detalhes",
@@ -1759,13 +1749,20 @@
       "archive": "Arquivar",
       "moveUp": "Mover para cima",
       "moveDown": "Mover para baixo",
-      "openMenu": "Abrir menu"
+      "openMenu": "Abrir menu",
+      "restore": "Restaurar",
+      "archiveBlocked": "Arquivar · {{count}} ativo(s) ainda o usam"
     },
     "confirmArchiveTitle": "Arquivar este status?",
-    "confirmArchiveMessage": "Arquivar \"{{label}}\"? Ele permanece nos ativos que já o usam, mas deixa de ser oferecido.",
+    "confirmArchiveMessage": "Arquivar \"{{label}}\"? Ele deixa de ser oferecido nos formulários de ativos. Você pode restaurá-lo depois.",
     "errors": {
       "load": "Não foi possível carregar os status de ativos",
-      "inUse": "Ainda usado por {{count}} ativo(s). Mova-os para outro status primeiro."
+      "inUse": "Ainda usado por {{count}} ativo(s). Mova-os para outro status primeiro.",
+      "duplicate": "Já existe um status com esse nome.",
+      "invalidKind": "Escolha um ciclo de vida para este status.",
+      "invalidLabel": "Informe um nome com pelo menos uma letra ou um dígito.",
+      "notFound": "Esse status não existe mais. Atualize a página e tente novamente.",
+      "save": "Não foi possível salvar o status."
     }
   },
   "contactAssets": {

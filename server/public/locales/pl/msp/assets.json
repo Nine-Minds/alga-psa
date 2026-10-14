@@ -186,11 +186,6 @@
       "client": "Klient: {{value}}",
       "agent": "Agent monitorujący: {{value}}"
     },
-    "statuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja"
-    },
     "types": {
       "workstation": "Stacja robocza",
       "server": "Serwer",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "Oczekiwanie na wybór zasobu",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Aktywny",
-      "inactive": "Nieaktywny",
-      "maintenance": "Konserwacja"
     },
     "empty": {
       "selectAsset": "Wybierz zasób, aby wyświetlić szczegóły",
@@ -1759,13 +1749,20 @@
       "archive": "Archiwizuj",
       "moveUp": "W górę",
       "moveDown": "W dół",
-      "openMenu": "Otwórz menu"
+      "openMenu": "Otwórz menu",
+      "restore": "Przywróć",
+      "archiveBlocked": "Archiwizuj · {{count}} zasób/zasoby nadal go używają"
     },
     "confirmArchiveTitle": "Zarchiwizować ten status?",
-    "confirmArchiveMessage": "Zarchiwizować „{{label}}”? Pozostanie na zasobach, które go już używają, ale nie będzie oferowany.",
+    "confirmArchiveMessage": "Zarchiwizować „{{label}}”? Nie będzie już oferowany w formularzach zasobów. Można go później przywrócić.",
     "errors": {
       "load": "Nie udało się wczytać statusów zasobów",
-      "inUse": "Nadal używany przez {{count}} zasób/zasoby. Najpierw przenieś je na inny status."
+      "inUse": "Nadal używany przez {{count}} zasób/zasoby. Najpierw przenieś je na inny status.",
+      "duplicate": "Status o tej nazwie już istnieje.",
+      "invalidKind": "Wybierz cykl życia dla tego statusu.",
+      "invalidLabel": "Wpisz nazwę zawierającą co najmniej jedną literę lub cyfrę.",
+      "notFound": "Ten status już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "save": "Nie udało się zapisać statusu."
     }
   },
   "contactAssets": {

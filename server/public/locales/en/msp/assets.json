@@ -186,11 +186,6 @@
       "client": "Client: {{value}}",
       "agent": "Agent: {{value}}"
     },
-    "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
-    },
     "types": {
       "workstation": "Workstation",
       "server": "Server",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "Awaiting asset selection",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
     },
     "empty": {
       "selectAsset": "Select an asset to view details",
@@ -1759,13 +1749,20 @@
       "archive": "Archive",
       "moveUp": "Move up",
       "moveDown": "Move down",
-      "openMenu": "Open menu"
+      "openMenu": "Open menu",
+      "restore": "Restore",
+      "archiveBlocked": "Archive · {{count}} asset(s) still on it"
     },
     "confirmArchiveTitle": "Archive this status?",
-    "confirmArchiveMessage": "Archive \"{{label}}\"? It stays on assets that already use it but stops being offered.",
+    "confirmArchiveMessage": "Archive \"{{label}}\"? It stops being offered on every asset form. You can restore it later.",
     "errors": {
       "load": "Unable to load asset statuses",
-      "inUse": "Still used by {{count}} asset(s). Move them to another status first."
+      "inUse": "Still used by {{count}} asset(s). Move them to another status first.",
+      "duplicate": "A status with that name already exists.",
+      "invalidKind": "Choose a lifecycle for this status.",
+      "invalidLabel": "Enter a name with at least one letter or digit.",
+      "notFound": "That status no longer exists. Refresh and try again.",
+      "save": "Unable to save the status."
     }
   },
   "contactAssets": {

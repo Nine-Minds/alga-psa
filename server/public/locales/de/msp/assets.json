@@ -186,11 +186,6 @@
       "client": "Kunde: {{value}}",
       "agent": "Agent: {{value}}"
     },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Wartung"
-    },
     "types": {
       "workstation": "Arbeitsplatz",
       "server": "Server",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "Warten auf Asset-Auswahl",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Wartung"
     },
     "empty": {
       "selectAsset": "Wählen Sie ein Asset aus, um Details anzuzeigen",
@@ -1759,13 +1749,20 @@
       "archive": "Archivieren",
       "moveUp": "Nach oben",
       "moveDown": "Nach unten",
-      "openMenu": "Menü öffnen"
+      "openMenu": "Menü öffnen",
+      "restore": "Wiederherstellen",
+      "archiveBlocked": "Archivieren · {{count}} Asset(s) nutzen ihn noch"
     },
     "confirmArchiveTitle": "Diesen Status archivieren?",
-    "confirmArchiveMessage": "„{{label}}“ archivieren? Er bleibt bei Assets, die ihn schon verwenden, wird aber nicht mehr angeboten.",
+    "confirmArchiveMessage": "„{{label}}“ archivieren? Er wird in keinem Asset-Formular mehr angeboten. Sie können ihn später wiederherstellen.",
     "errors": {
       "load": "Asset-Status konnten nicht geladen werden",
-      "inUse": "Wird noch von {{count}} Asset(s) verwendet. Verschieben Sie diese zuerst auf einen anderen Status."
+      "inUse": "Wird noch von {{count}} Asset(s) verwendet. Verschieben Sie diese zuerst auf einen anderen Status.",
+      "duplicate": "Ein Status mit diesem Namen existiert bereits.",
+      "invalidKind": "Wählen Sie einen Lebenszyklus für diesen Status.",
+      "invalidLabel": "Geben Sie einen Namen mit mindestens einem Buchstaben oder einer Ziffer ein.",
+      "notFound": "Dieser Status existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "save": "Der Status konnte nicht gespeichert werden."
     }
   },
   "contactAssets": {

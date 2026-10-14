@@ -49,6 +49,38 @@ describe('buildAssetStatusOptions', () => {
     const options = buildAssetStatusOptions([status({ slug: 'active' })], t, 'active');
     expect(options.map((option) => option.value)).toEqual(['active']);
   });
+
+  it('never offers an archived status', () => {
+    // The edit form listed "Loaner QA" after it was archived; picking it was
+    // then refused by the server with 'Status "Loaner QA" is archived'.
+    const options = buildAssetStatusOptions([
+      status({ slug: 'active' }),
+      status({ slug: 'loaner_qa', label: 'Loaner QA', kind: 'pending', is_builtin: false, is_active: false }),
+    ], t);
+    expect(options.map((option) => option.value)).toEqual(['active']);
+  });
+
+  it('still shows the archived status an asset already sits on, by its label', () => {
+    const options = buildAssetStatusOptions([
+      status({ slug: 'active' }),
+      status({ slug: 'loaner_qa', label: 'Loaner QA', kind: 'pending', is_builtin: false, is_active: false }),
+    ], t, 'loaner_qa');
+    expect(options.map((option) => option.value)).toEqual(['active', 'loaner_qa']);
+    expect(options[1].label).toBe('Loaner QA');
+  });
+});
+
+// A tenant that renames a builtin means it (FR-B4): translating the slug
+// regardless kept showing "Active" after the rename, in every locale.
+describe('renamed builtins', () => {
+  it('shows the tenant label instead of the shipped translation', () => {
+    const translate = (key: string, options?: Record<string, unknown>) =>
+      key === 'assetStatuses.active' ? 'Aktiv' : String(options?.defaultValue ?? key);
+    expect(resolveAssetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'In service' })]))
+      .toBe('In service');
+    expect(resolveAssetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'Active' })]))
+      .toBe('Aktiv');
+  });
 });
 
 // T030: every surface that prints a bare slug reads it through this resolver,

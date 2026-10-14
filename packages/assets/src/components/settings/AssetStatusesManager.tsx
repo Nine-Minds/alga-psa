@@ -17,9 +17,10 @@ import {
   archiveAssetStatus,
   createAssetStatus,
   listAssetStatuses,
+  restoreAssetStatus,
   updateAssetStatus,
 } from '../../actions/assetStatusActions';
-import { ASSET_STATUS_KINDS } from '../../lib/assetStatusSchema';
+import { ASSET_STATUS_KINDS, type AssetStatusRegistryError } from '../../lib/assetStatusSchema';
 
 /**
  * Settings → Assets → Statuses (FR-B4). Statuses are archived, never deleted,
@@ -35,6 +36,36 @@ export default function AssetStatusesManager() {
   const [kind, setKind] = useState<AssetStatusKind>('deployable');
   const [archiving, setArchiving] = useState<AssetStatus | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // The registry speaks in codes; the operator reads their own language. A
+  // raw server string ("2 asset(s) still use …") was reaching the toast.
+  const registryErrorMessage = useCallback((error: AssetStatusRegistryError): string => {
+    switch (error.code) {
+      case 'status_in_use':
+        return t('assetStatusSettings.errors.inUse', {
+          defaultValue: 'Still used by {{count}} asset(s). Move them to another status first.',
+          count: error.inUseCount ?? 0,
+        });
+      case 'duplicate_slug':
+        return t('assetStatusSettings.errors.duplicate', {
+          defaultValue: 'A status with that name already exists.',
+        });
+      case 'invalid_kind':
+        return t('assetStatusSettings.errors.invalidKind', {
+          defaultValue: 'Choose a lifecycle for this status.',
+        });
+      case 'invalid_status':
+        return t('assetStatusSettings.errors.invalidLabel', {
+          defaultValue: 'Enter a name with at least one letter or digit.',
+        });
+      case 'not_found':
+        return t('assetStatusSettings.errors.notFound', {
+          defaultValue: 'That status no longer exists. Refresh and try again.',
+        });
+      default:
+        return t('assetStatusSettings.errors.save', { defaultValue: 'Unable to save the status.' });
+    }
+  }, [t]);
 
   const kindOptions = useMemo(() => ASSET_STATUS_KINDS.map((value) => ({
     value,
@@ -75,7 +106,7 @@ export default function AssetStatusesManager() {
         return;
       }
       if (!result.success) {
-        toast.error(result.error.message);
+        toast.error(registryErrorMessage(result.error));
         return;
       }
       setIsEditorOpen(false);
@@ -101,7 +132,7 @@ export default function AssetStatusesManager() {
         return;
       }
       if (!result.success) {
-        toast.error(result.error.message);
+        toast.error(registryErrorMessage(result.error));
         return;
       }
     }
@@ -115,15 +146,15 @@ export default function AssetStatusesManager() {
       const result = await archiveAssetStatus(archiving.status_id);
       if (isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        setArchiving(null);
         return;
       }
       if (!result.success) {
-        toast.error(result.error.code === 'status_in_use'
-          ? t('assetStatusSettings.errors.inUse', {
-              defaultValue: 'Still used by {{count}} asset(s). Move them to another status first.',
-              count: result.error.inUseCount ?? 0,
-            })
-          : result.error.message);
+        // A refusal is final — leaving the dialog open invited the operator to
+        // press Archive again and watch it fail again.
+        toast.error(registryErrorMessage(result.error));
+        setArchiving(null);
+        await load();
         return;
       }
       setArchiving(null);
@@ -131,6 +162,19 @@ export default function AssetStatusesManager() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const restore = async (status: AssetStatus) => {
+    const result = await restoreAssetStatus(status.status_id);
+    if (isActionPermissionError(result)) {
+      toast.error(getErrorMessage(result));
+      return;
+    }
+    if (!result.success) {
+      toast.error(registryErrorMessage(result.error));
+      return;
+    }
+    await load();
   };
 
   const columns: ColumnDefinition<AssetStatus>[] = [
@@ -195,10 +239,29 @@ export default function AssetStatusesManager() {
                 {t('assetStatusSettings.actions.rename', { defaultValue: 'Rename' })}
               </DropdownMenuItem>
               {row.is_active ? (
-                <DropdownMenuItem id={`asset-status-archive-${row.status_id}`} onClick={() => setArchiving(row)}>
-                  {t('assetStatusSettings.actions.archive', { defaultValue: 'Archive' })}
+                // FR-B4: the server refuses to archive a status assets still
+                // carry, so the menu says so up front instead of offering an
+                // action that always fails.
+                <DropdownMenuItem
+                  id={`asset-status-archive-${row.status_id}`}
+                  disabled={(row.in_use_count ?? 0) > 0}
+                  onClick={() => setArchiving(row)}
+                >
+                  {(row.in_use_count ?? 0) > 0
+                    ? t('assetStatusSettings.actions.archiveBlocked', {
+                        defaultValue: 'Archive · {{count}} asset(s) still on it',
+                        count: row.in_use_count ?? 0,
+                      })
+                    : t('assetStatusSettings.actions.archive', { defaultValue: 'Archive' })}
                 </DropdownMenuItem>
-              ) : null}
+              ) : (
+                <DropdownMenuItem
+                  id={`asset-status-restore-${row.status_id}`}
+                  onClick={() => void restore(row)}
+                >
+                  {t('assetStatusSettings.actions.restore', { defaultValue: 'Restore' })}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -284,7 +347,7 @@ export default function AssetStatusesManager() {
         onConfirm={confirmArchive}
         title={t('assetStatusSettings.confirmArchiveTitle', { defaultValue: 'Archive this status?' })}
         message={t('assetStatusSettings.confirmArchiveMessage', {
-          defaultValue: 'Archive "{{label}}"? It stays on assets that already use it but stops being offered.',
+          defaultValue: 'Archive "{{label}}"? It stops being offered on every asset form. You can restore it later.',
           label: archiving?.label ?? '',
         })}
         confirmLabel={t('assetStatusSettings.actions.archive', { defaultValue: 'Archive' })}

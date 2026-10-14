@@ -12,6 +12,7 @@ import {
   archiveAssetStatusRow,
   createAssetStatusRow,
   listAssetStatusRows,
+  restoreAssetStatusRow,
   updateAssetStatusRow,
   type AssetStatusRegistryError,
   type AssetStatusRegistryResult,
@@ -105,5 +106,22 @@ export const archiveAssetStatus = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) =>
     toActionResult(await archiveAssetStatusRow(trx, tenant, statusId))
+  );
+});
+
+/** FR-B4: an archived status can come back; it was never deleted. */
+export const restoreAssetStatus = withAuth(async (
+  user,
+  { tenant },
+  statusId: string
+): Promise<AssetStatusActionResult<AssetStatus> | AssetStatusPermissionError> => {
+  const { knex } = await createTenantKnex();
+
+  if (!await canManageAssetStatuses(user)) {
+    return permissionError('Permission denied: Cannot manage asset statuses', 'msp/assets:errors.permissions.manageAssetStatuses');
+  }
+
+  return withTransaction(knex, async (trx: Knex.Transaction) =>
+    toActionResult(await restoreAssetStatusRow(trx, tenant, statusId))
   );
 });

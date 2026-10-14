@@ -44,8 +44,7 @@ import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
-import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
-import { assetStatusLabelForSlug } from '../lib/assetStatusSchema';
+import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -118,9 +117,7 @@ export function AssetDetailDrawerClient({
   // F021: a custom status reads as its registry label, not its slug.
   const { statuses: assetStatuses } = useAssetStatusRegistry();
   const translateStatus = useCallback(
-    (status: string) => t(`assetDetailDrawer.statuses.${status}`, {
-      defaultValue: assetStatusLabelForSlug(status, assetStatuses) || formatTitleCase(status),
-    }),
+    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses) || formatTitleCase(status),
     [assetStatuses, t]
   );
 

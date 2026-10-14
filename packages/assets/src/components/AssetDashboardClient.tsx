@@ -46,8 +46,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
-import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
-import { assetStatusLabelForSlug } from '../lib/assetStatusSchema';
+import { buildAssetStatusOptions, resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
@@ -940,11 +939,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   // F021: the filter list and the bulk dialog read the tenant's
   // asset_statuses registry instead of three hardcoded slugs.
-  const getAssetStatusLabel = useCallback((status: string) => {
-    return t(`assetDashboardClient.statuses.${status}`, {
-      defaultValue: assetStatusLabelForSlug(status, assetStatuses)
-    });
-  }, [assetStatuses, t]);
+  // One reading of a slug across every surface: the registry label wins and
+  // only an untouched builtin is translated, so a renamed status reads the
+  // same here, in the drawer and on the details page.
+  const getAssetStatusLabel = useCallback(
+    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses),
+    [assetStatuses, t]
+  );
 
   const statusFilterOptions = useMemo(
     () => buildAssetStatusOptions(assetStatuses, t),

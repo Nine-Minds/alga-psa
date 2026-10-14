@@ -186,11 +186,6 @@
       "client": "Client : {{value}}",
       "agent": "Agent : {{value}}"
     },
-    "statuses": {
-      "active": "Actif",
-      "inactive": "Inactif",
-      "maintenance": "Entretien"
-    },
     "types": {
       "workstation": "Poste de travail",
       "server": "Serveur",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "En attente de sélection des actifs",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Actif",
-      "inactive": "Inactif",
-      "maintenance": "Entretien"
     },
     "empty": {
       "selectAsset": "Sélectionnez un actif pour afficher les détails",
@@ -1759,13 +1749,20 @@
       "archive": "Archiver",
       "moveUp": "Monter",
       "moveDown": "Descendre",
-      "openMenu": "Ouvrir le menu"
+      "openMenu": "Ouvrir le menu",
+      "restore": "Restaurer",
+      "archiveBlocked": "Archiver · {{count}} actif(s) l'utilisent encore"
     },
     "confirmArchiveTitle": "Archiver ce statut ?",
-    "confirmArchiveMessage": "Archiver « {{label}} » ? Il reste sur les actifs qui l'utilisent déjà mais n'est plus proposé.",
+    "confirmArchiveMessage": "Archiver « {{label}} » ? Il ne sera plus proposé dans les formulaires d'actifs. Vous pourrez le restaurer plus tard.",
     "errors": {
       "load": "Impossible de charger les statuts des actifs",
-      "inUse": "Encore utilisé par {{count}} actif(s). Déplacez-les d'abord vers un autre statut."
+      "inUse": "Encore utilisé par {{count}} actif(s). Déplacez-les d'abord vers un autre statut.",
+      "duplicate": "Un statut portant ce nom existe déjà.",
+      "invalidKind": "Choisissez un cycle de vie pour ce statut.",
+      "invalidLabel": "Saisissez un nom comportant au moins une lettre ou un chiffre.",
+      "notFound": "Ce statut n'existe plus. Actualisez la page et réessayez.",
+      "save": "Impossible d'enregistrer le statut."
     }
   },
   "contactAssets": {

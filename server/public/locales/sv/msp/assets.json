@@ -184,11 +184,6 @@
       "client": "Kund: {{value}}",
       "agent": "Agent: {{value}}"
     },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
-    },
     "types": {
       "workstation": "Arbetsstation",
       "server": "Server",
@@ -306,11 +301,6 @@
     "helper": {
       "awaitingSelection": "Väntar på att en tillgång väljs",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
     },
     "empty": {
       "selectAsset": "Välj en tillgång för att visa detaljer",
@@ -1731,13 +1721,20 @@
       "archive": "Arkivera",
       "moveUp": "Flytta upp",
       "moveDown": "Flytta ned",
-      "openMenu": "Öppna meny"
+      "openMenu": "Öppna meny",
+      "restore": "Återställ",
+      "archiveBlocked": "Arkivera · {{count}} tillgång(ar) använder den fortfarande"
     },
     "confirmArchiveTitle": "Arkivera denna status?",
-    "confirmArchiveMessage": "Arkivera \"{{label}}\"? Den stannar på tillgångar som redan använder den men erbjuds inte längre.",
+    "confirmArchiveMessage": "Arkivera \"{{label}}\"? Den erbjuds inte längre i tillgångsformulären. Du kan återställa den senare.",
     "errors": {
       "load": "Kunde inte läsa in tillgångsstatusar",
-      "inUse": "Används fortfarande av {{count}} tillgång(ar). Flytta dem till en annan status först."
+      "inUse": "Används fortfarande av {{count}} tillgång(ar). Flytta dem till en annan status först.",
+      "duplicate": "En status med det namnet finns redan.",
+      "invalidKind": "Välj en livscykel för denna status.",
+      "invalidLabel": "Ange ett namn med minst en bokstav eller siffra.",
+      "notFound": "Statusen finns inte längre. Uppdatera sidan och försök igen.",
+      "save": "Det gick inte att spara statusen."
     }
   },
   "contactAssets": {

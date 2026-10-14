@@ -186,11 +186,6 @@
       "client": "Cliente: {{value}}",
       "agent": "Agente: {{value}}"
     },
-    "statuses": {
-      "active": "Attivo",
-      "inactive": "Inattivo",
-      "maintenance": "Manutenzione"
-    },
     "types": {
       "workstation": "Stazione di lavoro",
       "server": "Server",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "In attesa di selezione dell'asset",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Attivo",
-      "inactive": "Inattivo",
-      "maintenance": "Manutenzione"
     },
     "empty": {
       "selectAsset": "Seleziona un asset per visualizzare i dettagli",
@@ -1759,13 +1749,20 @@
       "archive": "Archivia",
       "moveUp": "Sposta su",
       "moveDown": "Sposta giù",
-      "openMenu": "Apri menu"
+      "openMenu": "Apri menu",
+      "restore": "Ripristina",
+      "archiveBlocked": "Archivia · {{count}} asset lo usano ancora"
     },
     "confirmArchiveTitle": "Archiviare questo stato?",
-    "confirmArchiveMessage": "Archiviare «{{label}}»? Rimane sugli asset che lo usano già ma non viene più proposto.",
+    "confirmArchiveMessage": "Archiviare «{{label}}»? Non verrà più proposto nei moduli degli asset. Potrai ripristinarlo in seguito.",
     "errors": {
       "load": "Impossibile caricare gli stati degli asset",
-      "inUse": "Ancora usato da {{count}} asset. Spostali prima su un altro stato."
+      "inUse": "Ancora usato da {{count}} asset. Spostali prima su un altro stato.",
+      "duplicate": "Esiste già uno stato con questo nome.",
+      "invalidKind": "Scegli un ciclo di vita per questo stato.",
+      "invalidLabel": "Inserisci un nome con almeno una lettera o una cifra.",
+      "notFound": "Questo stato non esiste più. Aggiorna la pagina e riprova.",
+      "save": "Impossibile salvare lo stato."
     }
   },
   "contactAssets": {

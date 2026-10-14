@@ -51,6 +51,7 @@ let listAssetStatuses: typeof import('@alga-psa/assets/actions/assetStatusAction
 let createAssetStatus: typeof import('@alga-psa/assets/actions/assetStatusActions').createAssetStatus;
 let archiveAssetStatus: typeof import('@alga-psa/assets/actions/assetStatusActions').archiveAssetStatus;
 let updateAssetStatus: typeof import('@alga-psa/assets/actions/assetStatusActions').updateAssetStatus;
+let restoreAssetStatus: typeof import('@alga-psa/assets/actions/assetStatusActions').restoreAssetStatus;
 
 const cleanupTenants = new Set<string>();
 
@@ -143,7 +144,7 @@ describe('asset statuses', () => {
     }
     ({ createAsset, updateAsset } = await import('@alga-psa/assets/actions/assetActions'));
     ({ assetActionErrorFrom } = await import('@alga-psa/assets/actions/assetActionErrors'));
-    ({ listAssetStatuses, createAssetStatus, archiveAssetStatus, updateAssetStatus } =
+    ({ listAssetStatuses, createAssetStatus, archiveAssetStatus, updateAssetStatus, restoreAssetStatus } =
       await import('@alga-psa/assets/actions/assetStatusActions'));
   }, HOOK_TIMEOUT);
 
@@ -239,6 +240,34 @@ describe('asset statuses', () => {
     expect(archived.success).toBe(true);
     const row = await table(tenantId, 'asset_statuses').where({ slug: 'in_stock' }).first();
     expect(row.is_active).toBe(false);
+  });
+
+  // FR-B4: archive is not delete, so an archived status has a way back. It
+  // had none: the list greyed it out with only Rename, and re-creating it by
+  // name came back as duplicate_slug.
+  it('restores an archived status, by action or by re-creating it', async () => {
+    const { tenantId } = await seedTenant();
+    const statuses = await listAssetStatuses() as any[];
+    const inStock = statuses.find((status) => status.slug === 'in_stock');
+
+    expect((await archiveAssetStatus(inStock.status_id) as any).success).toBe(true);
+    const restored: any = await restoreAssetStatus(inStock.status_id);
+    expect(restored.success).toBe(true);
+    expect(restored.data.is_active).toBe(true);
+    expect((await table(tenantId, 'asset_statuses').where({ slug: 'in_stock' }).first()).is_active).toBe(true);
+
+    // Re-creating by name brings the archived row back rather than failing.
+    const created: any = await createAssetStatus({ label: 'Loaner QA', kind: 'pending' });
+    expect(created.success).toBe(true);
+    expect((await archiveAssetStatus(created.data.status_id) as any).success).toBe(true);
+
+    const recreated: any = await createAssetStatus({ label: 'Loaner QA', kind: 'undeployable' });
+    expect(recreated.success).toBe(true);
+    expect(recreated.data.status_id).toBe(created.data.status_id);
+    expect(recreated.data.is_active).toBe(true);
+    expect(recreated.data.kind).toBe('undeployable');
+    expect(await table(tenantId, 'asset_statuses').where({ slug: 'loaner_qa' }).count('* as count').first())
+      .toMatchObject({ count: '1' });
   });
 
   // T027

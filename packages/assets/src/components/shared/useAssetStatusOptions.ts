@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AssetStatus } from '@alga-psa/types';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { listAssetStatuses } from '../../actions/assetStatusActions';
@@ -8,7 +8,12 @@ import {
   getErrorMessage,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { BUILTIN_ASSET_STATUSES, assetStatusLabelForSlug, groupAssetStatusesByKind } from '../../lib/assetStatusSchema';
+import {
+  BUILTIN_ASSET_STATUSES,
+  assetStatusLabelForSlug,
+  groupAssetStatusesByKind,
+  humanizeAssetStatusSlug,
+} from '../../lib/assetStatusSchema';
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -69,9 +74,15 @@ export function useAssetStatusRegistry(
 }
 
 export function assetStatusLabel(t: TranslateFn, status: { slug: string; label: string }): string {
-  // Builtin slugs keep their existing i18n labels so a translated UI stays
-  // translated; custom statuses show the label the MSP typed.
-  return t(`assetStatuses.${status.slug}`, { defaultValue: status.label });
+  const builtin = BUILTIN_ASSET_STATUSES.find((candidate) => candidate.slug === status.slug);
+  // The registry label is the source of truth. A builtin is translated only
+  // while it still carries its shipped label: renaming "Active" is allowed
+  // (FR-B4), and translating the slug regardless made the rename invisible
+  // everywhere it was read.
+  if (builtin && (!status.label || status.label === builtin.label)) {
+    return t(`assetStatuses.${status.slug}`, { defaultValue: builtin.label });
+  }
+  return status.label || humanizeAssetStatusSlug(status.slug);
 }
 
 /**
@@ -89,15 +100,20 @@ export function resolveAssetStatusLabel(
 }
 
 /**
- * Status-select options grouped by lifecycle kind, with the asset's current
- * status appended when it is archived (and therefore not in the active list).
+ * Status-select options grouped by lifecycle kind.
+ *
+ * Archived statuses are never offered — the server refuses them (FR-B3), so
+ * listing one only lets the operator pick a value that cannot be saved. The
+ * asset's current status is appended when it is not in the offered list, which
+ * is how a device already sitting on an archived status still reads correctly.
  */
 export function buildAssetStatusOptions(
   statuses: AssetStatus[] | null,
   t: TranslateFn,
   currentSlug?: string | null
 ): SelectOption[] {
-  const rows = statuses === null || statuses.length === 0 ? fallbackStatuses() : statuses;
+  const all = statuses === null || statuses.length === 0 ? fallbackStatuses() : statuses;
+  const rows = all.filter((status) => status.is_active);
   const options: SelectOption[] = [];
 
   for (const group of groupAssetStatusesByKind(rows)) {
@@ -113,16 +129,11 @@ export function buildAssetStatusOptions(
   }
 
   if (currentSlug && !options.some((option) => option.value === currentSlug)) {
-    options.push({ value: currentSlug, label: currentSlug });
+    options.push({
+      value: currentSlug,
+      label: assetStatusLabel(t, { slug: currentSlug, label: assetStatusLabelForSlug(currentSlug, all) }),
+    });
   }
 
   return options;
-}
-
-/** FR-B5: slugs whose kind is `deployable`, for "deployed" metrics. */
-export function useDeployableStatusSlugs(statuses: AssetStatus[] | null): Set<string> {
-  return useMemo(() => {
-    const rows = statuses === null || statuses.length === 0 ? fallbackStatuses() : statuses;
-    return new Set(rows.filter((status) => status.kind === 'deployable').map((status) => status.slug));
-  }, [statuses]);
 }

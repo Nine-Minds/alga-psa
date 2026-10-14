@@ -186,11 +186,6 @@
       "client": "Klant: {{value}}",
       "agent": "Medewerker: {{value}}"
     },
-    "statuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
-    },
     "types": {
       "workstation": "Werkstation",
       "server": "Server",
@@ -308,11 +303,6 @@
     "helper": {
       "awaitingSelection": "In afwachting van activaselectie",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
     },
     "empty": {
       "selectAsset": "Selecteer een item om details te bekijken",
@@ -1759,13 +1749,20 @@
       "archive": "Archiveren",
       "moveUp": "Omhoog",
       "moveDown": "Omlaag",
-      "openMenu": "Menu openen"
+      "openMenu": "Menu openen",
+      "restore": "Herstellen",
+      "archiveBlocked": "Archiveren · {{count}} asset(s) gebruiken hem nog"
     },
     "confirmArchiveTitle": "Deze status archiveren?",
-    "confirmArchiveMessage": "'{{label}}' archiveren? Hij blijft op assets die hem al gebruiken, maar wordt niet meer aangeboden.",
+    "confirmArchiveMessage": "'{{label}}' archiveren? Hij wordt niet meer aangeboden in assetformulieren. U kunt hem later herstellen.",
     "errors": {
       "load": "Assetstatussen konden niet worden geladen",
-      "inUse": "Nog gebruikt door {{count}} asset(s). Verplaats die eerst naar een andere status."
+      "inUse": "Nog gebruikt door {{count}} asset(s). Verplaats die eerst naar een andere status.",
+      "duplicate": "Er bestaat al een status met die naam.",
+      "invalidKind": "Kies een levenscyclus voor deze status.",
+      "invalidLabel": "Voer een naam in met minstens één letter of cijfer.",
+      "notFound": "Die status bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "save": "De status kon niet worden opgeslagen."
     }
   },
   "contactAssets": {
