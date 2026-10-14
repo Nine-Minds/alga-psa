@@ -113,11 +113,18 @@ export function describeAssetHistoryEntry(
     }
     const person = contactName ?? t('assetTimeline.events.aContact', { defaultValue: 'a contact' });
     if (source === 'rmm') {
+      const provider = typeof changes.provider === 'string' && changes.provider ? changes.provider : null;
       return {
-        title: t('assetTimeline.events.autoAssigned', {
-          defaultValue: 'Auto-assigned to {{contact}} from the signed-in user',
-          contact: person,
-        }),
+        title: provider
+          ? t('assetTimeline.events.autoAssignedFrom', {
+              defaultValue: 'Auto-assigned to {{contact}} from {{provider}}',
+              contact: person,
+              provider,
+            })
+          : t('assetTimeline.events.autoAssigned', {
+              defaultValue: 'Auto-assigned to {{contact}} from the signed-in user',
+              contact: person,
+            }),
         detail: note,
         icon: UserPlus,
         tone: 'info',
@@ -148,6 +155,26 @@ export function describeAssetHistoryEntry(
         defaultValue: 'Added to {{group}}',
         group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
       }),
+      icon: Boxes,
+      tone: 'info',
+    };
+  }
+
+  if (entry.change_type === 'group_location_changed') {
+    const locationName = typeof changes.location_name === 'string' && changes.location_name
+      ? changes.location_name
+      : null;
+    return {
+      title: locationName
+        ? t('assetTimeline.events.groupLocationMoved', {
+            defaultValue: 'Moved to {{location}} with {{group}}',
+            location: locationName,
+            group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+          })
+        : t('assetTimeline.events.groupLocationCleared', {
+            defaultValue: 'Location cleared with {{group}}',
+            group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+          }),
       icon: Boxes,
       tone: 'info',
     };

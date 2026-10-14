@@ -1599,7 +1599,10 @@
       "aContact": "un contact",
       "groupAdded": "Ajouté à {{group}}",
       "groupRemoved": "Retiré de {{group}}",
-      "aGroup": "un groupe"
+      "aGroup": "un groupe",
+      "autoAssignedFrom": "Attribué automatiquement à {{contact}} depuis {{provider}}",
+      "groupLocationMoved": "Déplacé vers {{location}} avec {{group}}",
+      "groupLocationCleared": "Emplacement effacé avec {{group}}"
     },
     "changeTypes": {
       "created": "Créé",
@@ -1696,7 +1699,6 @@
       "invalid_name": "Le nom du groupe est obligatoire.",
       "client_mismatch": "Cet actif ou ce contact appartient à un autre client.",
       "already_grouped": "Cet actif est déjà dans un autre groupe.",
-      "owner_exists": "Un lot ne peut avoir qu'un seul propriétaire.",
       "users_on_bundle": "Un lot a un propriétaire, pas une liste d'utilisateurs.",
       "owner_on_workspace": "Un espace partagé a des utilisateurs, pas de propriétaire.",
       "users_present": "Retirez les utilisateurs de l'espace avant d'en faire un lot.",

@@ -1599,7 +1599,10 @@
       "aContact": "kontaktu",
       "groupAdded": "Dodano do {{group}}",
       "groupRemoved": "Usunięto z {{group}}",
-      "aGroup": "grupy"
+      "aGroup": "grupy",
+      "autoAssignedFrom": "Automatycznie przypisano do {{contact}} z {{provider}}",
+      "groupLocationMoved": "Przeniesiono do {{location}} wraz z {{group}}",
+      "groupLocationCleared": "Lokalizacja wyczyszczona wraz z {{group}}"
     },
     "changeTypes": {
       "created": "Utworzono",
@@ -1696,7 +1699,6 @@
       "invalid_name": "Nazwa grupy jest wymagana.",
       "client_mismatch": "Ten zasób lub kontakt należy do innego klienta.",
       "already_grouped": "Ten zasób jest już w innej grupie.",
-      "owner_exists": "Zestaw może mieć tylko jednego właściciela.",
       "users_on_bundle": "Zestaw ma jednego właściciela, nie listę użytkowników.",
       "owner_on_workspace": "Współdzielone stanowisko ma użytkowników, nie właściciela.",
       "users_present": "Usuń użytkowników stanowiska, zanim zmienisz je w zestaw.",

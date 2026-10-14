@@ -1599,7 +1599,10 @@
       "aContact": "een contact",
       "groupAdded": "Toegevoegd aan {{group}}",
       "groupRemoved": "Verwijderd uit {{group}}",
-      "aGroup": "een groep"
+      "aGroup": "een groep",
+      "autoAssignedFrom": "Automatisch toegewezen aan {{contact}} via {{provider}}",
+      "groupLocationMoved": "Met {{group}} verplaatst naar {{location}}",
+      "groupLocationCleared": "Locatie gewist met {{group}}"
     },
     "changeTypes": {
       "created": "Aangemaakt",
@@ -1696,7 +1699,6 @@
       "invalid_name": "Een groepsnaam is verplicht.",
       "client_mismatch": "Dat asset of contact hoort bij een andere klant.",
       "already_grouped": "Dat asset zit al in een andere groep.",
-      "owner_exists": "Een bundel kan maar één eigenaar hebben.",
       "users_on_bundle": "Een bundel heeft één eigenaar, geen lijst met gebruikers.",
       "owner_on_workspace": "Een gedeelde werkplek heeft gebruikers, geen eigenaar.",
       "users_present": "Verwijder de gebruikers van de werkplek voordat u er een bundel van maakt.",

@@ -391,6 +391,16 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     ...vendors.map((vendor) => ({ value: vendor.vendor_id, label: vendor.vendor_name })),
   ]), [vendors, t]);
 
+  /**
+   * FR-F1: whether the stored billing profile is still a choice the client
+   * offers. The select only renders for a client with more than one active
+   * profile, so a profile deactivated later would otherwise be re-submitted
+   * from an invisible field and rejected on every save.
+   */
+  const billingProfileSelectable = billingProfiles.length > 1
+    && (!formData.billing_profile_id
+      || billingProfiles.some((profile) => profile.billing_profile_id === formData.billing_profile_id));
+
   useEffect(() => {
     let isMounted = true;
 
@@ -1125,7 +1135,10 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         manufacturer: formData.manufacturer?.trim() || null,
         model: formData.model?.trim() || null,
         vendor_id: formData.vendor_id || null,
-        billing_profile_id: formData.billing_profile_id || null,
+        // Only ever send a profile the client still offers. When a client is
+        // left with one active profile the select disappears, and sending the
+        // stored id anyway made the asset unsaveable for good.
+        billing_profile_id: billingProfileSelectable ? formData.billing_profile_id || null : null,
         purchase_cost: parseMoneyToMinorUnits(purchaseCostInput),
         order_number: formData.order_number?.trim() || null,
         // F309/F310: submit only schema-declared keys — the server merges into

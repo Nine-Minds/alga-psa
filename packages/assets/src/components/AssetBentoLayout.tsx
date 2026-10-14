@@ -164,7 +164,9 @@ export function AssetBentoLayout({
           id: 'group',
           label: t('assetGroups.drawerTitle', { defaultValue: 'Group' }),
           icon: Boxes,
-          content: <AssetGroupDrawer groupId={asset.group.group_id} />,
+          // Deleting the group takes this tab with it, so the focus view has
+          // to step back instead of sitting on a group that no longer exists.
+          content: <AssetGroupDrawer groupId={asset.group.group_id} onDeleted={() => onFocusChange(null)} />,
         }]
       : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
@@ -376,6 +378,7 @@ export function AssetBentoLayout({
                       <BentoRow key={member.asset_id} align="center" meta={member.asset_tag ?? undefined}>
                         <HardDrive className="h-3.5 w-3.5 flex-shrink-0 text-[rgb(var(--color-text-400))]" />
                         <Link
+                          id={`asset-bento-group-sibling-${member.asset_id}`}
                           href={`/msp/assets/${member.asset_id}`}
                           className="truncate text-sm text-[rgb(var(--color-text-700))] hover:underline min-w-0"
                         >

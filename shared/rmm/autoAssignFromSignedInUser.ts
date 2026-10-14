@@ -81,6 +81,7 @@ export async function applyRmmSignedInUserAssignment(
   await setAssetAssignee(trx, args.tenant, args.assetId, match.contactId, {
     actorUserId: args.actorUserId ?? null,
     source: 'rmm',
+    provider: args.provider,
     note: String(args.currentUser ?? '').trim() || null,
   });
 

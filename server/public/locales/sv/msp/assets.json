@@ -1571,7 +1571,10 @@
       "aContact": "en kontakt",
       "groupAdded": "Tillagd i {{group}}",
       "groupRemoved": "Borttagen från {{group}}",
-      "aGroup": "en grupp"
+      "aGroup": "en grupp",
+      "autoAssignedFrom": "Tilldelades automatiskt {{contact}} från {{provider}}",
+      "groupLocationMoved": "Flyttad till {{location}} med {{group}}",
+      "groupLocationCleared": "Plats rensad med {{group}}"
     },
     "changeTypes": {
       "created": "Skapad",
@@ -1668,7 +1671,6 @@
       "invalid_name": "Ett gruppnamn krävs.",
       "client_mismatch": "Den tillgången eller kontakten hör till en annan kund.",
       "already_grouped": "Den tillgången finns redan i en annan grupp.",
-      "owner_exists": "Ett paket kan bara ha en ägare.",
       "users_on_bundle": "Ett paket har en ägare, inte en lista med användare.",
       "owner_on_workspace": "En delad arbetsplats har användare, inte en ägare.",
       "users_present": "Ta bort arbetsplatsens användare innan du gör den till ett paket.",

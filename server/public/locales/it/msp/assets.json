@@ -1599,7 +1599,10 @@
       "aContact": "un contatto",
       "groupAdded": "Aggiunto a {{group}}",
       "groupRemoved": "Rimosso da {{group}}",
-      "aGroup": "un gruppo"
+      "aGroup": "un gruppo",
+      "autoAssignedFrom": "Assegnato automaticamente a {{contact}} da {{provider}}",
+      "groupLocationMoved": "Spostato in {{location}} con {{group}}",
+      "groupLocationCleared": "Posizione rimossa con {{group}}"
     },
     "changeTypes": {
       "created": "Creato",
@@ -1696,7 +1699,6 @@
       "invalid_name": "Il nome del gruppo è obbligatorio.",
       "client_mismatch": "Quell'asset o contatto appartiene a un altro cliente.",
       "already_grouped": "Quell'asset è già in un altro gruppo.",
-      "owner_exists": "Un bundle può avere un solo proprietario.",
       "users_on_bundle": "Un bundle ha un proprietario, non un elenco di utenti.",
       "owner_on_workspace": "Una postazione condivisa ha utenti, non un proprietario.",
       "users_present": "Rimuovi gli utenti della postazione prima di trasformarla in un bundle.",

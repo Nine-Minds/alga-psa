@@ -157,6 +157,10 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogContent: ({ children }: any) => <div>{children}</div>,
 }));
 
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, message }: any) => (isOpen ? <div>{message}</div> : null),
+}));
+
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ id, data = [], columns = [] }: any) => (
     <table id={id}>

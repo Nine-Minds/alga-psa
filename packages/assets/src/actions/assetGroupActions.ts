@@ -10,7 +10,6 @@ import {
   addGroupUser,
   createGroup,
   deleteGroupRow,
-  getAssetGroupRow,
   getGroupWithDetails,
   isAssetGroupError,
   listContactSharedWorkspaces,
@@ -86,20 +85,6 @@ export const getAssetGroup = withAuth(async (
   }
   const { knex } = await createTenantKnex();
   return withGroupErrors(() => getGroupWithDetails(knex, tenant, groupId));
-});
-
-export const getAssetGroupForAsset = withAuth(async (
-  user,
-  { tenant },
-  assetId: string
-): Promise<AssetGroup | null | AssetGroupActionError> => {
-  if (!await hasPermission(user, 'asset', 'read')) {
-    return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
-  }
-  const { knex } = await createTenantKnex();
-  const group = await getAssetGroupRow(knex, tenant, assetId);
-  if (!group) return null;
-  return getGroupWithDetails(knex, tenant, group.group_id);
 });
 
 export const getContactSharedWorkspaces = withAuth(async (

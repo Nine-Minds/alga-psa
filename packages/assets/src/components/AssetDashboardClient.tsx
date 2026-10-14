@@ -11,6 +11,7 @@ import { AssetAgentCell, AssetCoverageCell, AssetIdentityMeta, AssetPatchingCell
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   createPrintColumnsFromColumnDefinitions,
@@ -34,7 +35,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import type { Asset, AssetGroup, AssetGroupKind, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
-import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import { assetActionErrorMessage, isAssetActionError, unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { addAssetsToGroup, createAssetGroup, listAssetGroups } from '../actions/assetGroupActions';
@@ -232,6 +233,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupKind, setNewGroupKind] = useState<AssetGroupKind>('bundle');
   const [groupFilter, setGroupFilter] = useState<string>('');
+  const [confirmBulkWorkspace, setConfirmBulkWorkspace] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('active');
@@ -818,29 +820,45 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     };
   }, [singleClientSelectionId, clientFilters, isBulkGroupOpen]);
 
-  const handleBulkAddToGroup = useCallback(async () => {
+  // The group select only renders while a client is in scope. Without this a
+  // filter picked and then orphaned by clearing the selection kept filtering
+  // the list from a control nobody could see.
+  useEffect(() => {
+    if (groupFilter && !clientGroups.some((group) => group.group_id === groupFilter)) {
+      setGroupFilter('');
+    }
+  }, [clientGroups, groupFilter]);
+
+  /** The kind the bulk dialog would put the selection into. */
+  const bulkTargetKind: AssetGroupKind = bulkGroupId
+    ? clientGroups.find((group) => group.group_id === bulkGroupId)?.kind ?? 'bundle'
+    : newGroupKind;
+
+  const applyBulkAddToGroup = useCallback(async () => {
     if (!singleClientSelectionId) return;
     setBulkActionLoading(true);
     try {
-      let groupId = bulkGroupId;
-      if (!groupId) {
-        const created = await createAssetGroup({
-          clientId: singleClientSelectionId,
-          name: newGroupName,
-          kind: newGroupKind,
-        });
-        if (!created || !('group_id' in created)) {
-          toast.error(t('assetGroups.errors.createFailed', { defaultValue: 'Unable to create the group.' }));
-          return;
-        }
-        groupId = created.group_id;
+      // Creating the group and filling it is one call, so a failure to add
+      // the assets cannot leave an empty group behind.
+      const result = bulkGroupId
+        ? await addAssetsToGroup(bulkGroupId, selectedAssetIds)
+        : await createAssetGroup({
+            clientId: singleClientSelectionId,
+            name: newGroupName,
+            kind: newGroupKind,
+            assetIds: selectedAssetIds,
+          });
+
+      if (isAssetActionError(result)) {
+        toast.error(assetActionErrorMessage(result));
+        return;
       }
-      const result = await addAssetsToGroup(groupId, selectedAssetIds);
       if (!result || !('group_id' in result)) {
         toast.error(t('assetGroups.errors.addFailed', { defaultValue: 'Unable to add the selected assets.' }));
         return;
       }
       setIsBulkGroupOpen(false);
+      setConfirmBulkWorkspace(false);
       setBulkGroupId('');
       setNewGroupName('');
       setSelectedAssetIds([]);
@@ -849,6 +867,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       setBulkActionLoading(false);
     }
   }, [bulkGroupId, newGroupKind, newGroupName, refreshAssets, selectedAssetIds, singleClientSelectionId, t]);
+
+  const handleBulkAddToGroup = useCallback(async () => {
+    // FR-E4: a shared workspace clears the assignee of everything it takes
+    // in. The drawer asks first; doing it silently from the list did not.
+    const assignedCount = assets
+      .filter((asset) => selectedAssetIds.includes(asset.asset_id) && asset.contact_name_id)
+      .length;
+    if (bulkTargetKind === 'shared_workspace' && assignedCount > 0) {
+      setConfirmBulkWorkspace(true);
+      return;
+    }
+    await applyBulkAddToGroup();
+  }, [applyBulkAddToGroup, assets, bulkTargetKind, selectedAssetIds]);
 
   const handleBulkAssignContact = useCallback(async (contactId: string | null) => {
     setBulkActionLoading(true);
@@ -2107,6 +2138,20 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmationDialog
+        id="bulk-group-confirm-workspace-dialog"
+        isOpen={confirmBulkWorkspace}
+        onClose={() => setConfirmBulkWorkspace(false)}
+        onConfirm={() => { void applyBulkAddToGroup(); }}
+        title={t('assetGroups.confirmUnassignTitle', { defaultValue: 'Unassign these assets?' })}
+        message={t('assetGroups.confirmUnassignMessage', {
+          defaultValue: 'A shared workspace has users rather than one assignee, so {{count}} asset(s) will be unassigned.',
+          count: assets.filter((asset) => selectedAssetIds.includes(asset.asset_id) && asset.contact_name_id).length,
+        })}
+        confirmLabel={t('assetGroups.addAssets', { defaultValue: 'Add assets' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={bulkActionLoading}
+      />
       <BulkActionBar
         idPrefix="asset-bulk-action-bar"
         count={selectedAssetIds.length}

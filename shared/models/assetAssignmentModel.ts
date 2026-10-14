@@ -34,6 +34,8 @@ export interface SetAssetAssigneeOptions {
   actorUserId?: string | null;
   source: AssetAssignmentSource;
   note?: string | null;
+  /** The RMM provider behind a `rmm` assignment, so the timeline can name it. */
+  provider?: string | null;
   /**
    * Skip the shared-workspace guard. Only the group model itself passes this,
    * when it is the one doing the unassigning.
@@ -159,34 +161,34 @@ export async function setAssetAssignee(
     .where({ asset_id: assetId })
     .update({ contact_name_id: contactId, updated_at: now });
 
-  // asset_history.changed_by is NOT NULL; a sessionless caller (RMM sync with
-  // no audit user) has no actor, so the row is skipped rather than failing the
-  // assignment it is only describing.
-  if (options.actorUserId) {
-    // The names travel with the history entry so the timeline can render
-    // "Assigned to Jane Doe" without a second lookup per row — and still read
-    // correctly after the contact is renamed or deleted.
-    const [contactName, previousContactName] = await Promise.all([
-      contactId ? contactDisplayName(trx, tenant, contactId) : Promise.resolve(null),
-      previousContactId ? contactDisplayName(trx, tenant, previousContactId) : Promise.resolve(null),
-    ]);
+  // The names travel with the history entry so the timeline can render
+  // "Assigned to Jane Doe" without a second lookup per row — and still read
+  // correctly after the contact is renamed or deleted.
+  //
+  // `changed_by` is nullable since 20261009127000: RMM sync has no session,
+  // and skipping the row left every auto-assignment invisible on the timeline
+  // of the device it had just reassigned.
+  const [contactName, previousContactName] = await Promise.all([
+    contactId ? contactDisplayName(trx, tenant, contactId) : Promise.resolve(null),
+    previousContactId ? contactDisplayName(trx, tenant, previousContactId) : Promise.resolve(null),
+  ]);
 
-    await table(trx, tenant, 'asset_history').insert({
-      tenant,
-      asset_id: assetId,
-      changed_by: options.actorUserId,
-      change_type: 'assignee_changed',
-      changes: {
-        source: options.source,
-        previous_contact_name_id: previousContactId,
-        previous_contact_name: previousContactName,
-        contact_name_id: contactId,
-        contact_name: contactName,
-        ...(options.note ? { note: options.note } : {}),
-      },
-      changed_at: now,
-    });
-  }
+  await table(trx, tenant, 'asset_history').insert({
+    tenant,
+    asset_id: assetId,
+    changed_by: options.actorUserId ?? null,
+    change_type: 'assignee_changed',
+    changes: {
+      source: options.source,
+      previous_contact_name_id: previousContactId,
+      previous_contact_name: previousContactName,
+      contact_name_id: contactId,
+      contact_name: contactName,
+      ...(options.provider ? { provider: options.provider } : {}),
+      ...(options.note ? { note: options.note } : {}),
+    },
+    changed_at: now,
+  });
 
   return { changed: true, previousContactId, contactId };
 }

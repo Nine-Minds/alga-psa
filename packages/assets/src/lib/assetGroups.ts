@@ -35,7 +35,6 @@ export type AssetGroupErrorCode =
   | 'invalid_name'
   | 'client_mismatch'
   | 'already_grouped'
-  | 'owner_exists'
   | 'users_on_bundle'
   | 'owner_on_workspace'
   | 'users_present'
@@ -83,18 +82,17 @@ async function groupHistory(
   args: {
     assetId: string;
     actorUserId?: string | null;
-    changeType: 'group_added' | 'group_removed' | 'updated';
+    changeType: 'group_added' | 'group_removed' | 'group_location_changed';
     group: Pick<AssetGroup, 'group_id' | 'name' | 'kind'>;
     extra?: Record<string, unknown>;
   }
 ): Promise<void> {
-  // asset_history.changed_by is NOT NULL; a sessionless caller gets the
-  // membership change without the history row rather than a failed write.
-  if (!args.actorUserId) return;
+  // `changed_by` is nullable since 20261009127000, so a sessionless caller
+  // (sync, a job) still leaves the group change on the timeline.
   await table(trx, tenant, 'asset_history').insert({
     tenant,
     asset_id: args.assetId,
-    changed_by: args.actorUserId,
+    changed_by: args.actorUserId ?? null,
     change_type: args.changeType,
     changes: {
       group_id: args.group.group_id,
@@ -486,9 +484,9 @@ export async function updateGroupRow(
       await groupHistory(trx, tenant, {
         assetId,
         actorUserId: input.actorUserId,
-        changeType: 'updated',
+        changeType: 'group_location_changed',
         group: nextGroup,
-        extra: { location_id: input.locationId ?? null },
+        extra: { location_id: input.locationId ?? null, location_name: locationPatch.location ?? null },
       });
     }
   }
@@ -593,8 +591,14 @@ export async function getGroupWithDetails(
         .first<{ location_name?: string | null }>('location_name')
     : null;
 
+  // The drawer header names the client; without this it rendered blank.
+  const client = await table(trx, tenant, 'clients')
+    .where({ client_id: group.client_id })
+    .first<{ client_name?: string | null }>('client_name');
+
   return {
     ...group,
+    client_name: client?.client_name ?? null,
     location_name: location?.location_name ?? null,
     member_count: members.length,
     people_count: contacts.length,

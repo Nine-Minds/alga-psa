@@ -293,6 +293,7 @@ export async function mapSignedInUserToContact(
         await setAssetAssignee(trx, tenant, assetId, args.contactId, {
           actorUserId: args.actorUserId ?? null,
           source: 'rmm',
+          provider: args.provider,
           note: signedIn.get(assetId) ?? args.rawUser,
         });
       } catch (error) {

@@ -1599,7 +1599,10 @@
       "aContact": "einem Kontakt",
       "groupAdded": "Zu {{group}} hinzugefügt",
       "groupRemoved": "Aus {{group}} entfernt",
-      "aGroup": "einer Gruppe"
+      "aGroup": "einer Gruppe",
+      "autoAssignedFrom": "Automatisch {{contact}} zugewiesen über {{provider}}",
+      "groupLocationMoved": "Mit {{group}} nach {{location}} verschoben",
+      "groupLocationCleared": "Standort mit {{group}} entfernt"
     },
     "changeTypes": {
       "created": "Erstellt",
@@ -1696,7 +1699,6 @@
       "invalid_name": "Ein Gruppenname ist erforderlich.",
       "client_mismatch": "Dieses Asset oder dieser Kontakt gehört zu einem anderen Kunden.",
       "already_grouped": "Dieses Asset ist bereits in einer anderen Gruppe.",
-      "owner_exists": "Ein Bundle kann nur einen Eigentümer haben.",
       "users_on_bundle": "Ein Bundle hat einen Eigentümer, keine Benutzerliste.",
       "owner_on_workspace": "Ein gemeinsamer Arbeitsplatz hat Benutzer, keinen Eigentümer.",
       "users_present": "Entfernen Sie die Benutzer des Arbeitsplatzes, bevor Sie daraus ein Bundle machen.",

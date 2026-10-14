@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
@@ -133,11 +133,12 @@ export const getClientContactsForAssets = withAuth(async (
  * technician without inventory permissions can still pick a supplier.
  */
 export const getVendorOptionsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   currentVendorId?: string | null
 ): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await hasPermission(user, 'asset', 'read')) return [];
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -160,11 +161,12 @@ export const getVendorOptionsForAssets = withAuth(async (
  * single-profile client is never asked a question with one answer.
  */
 export const getClientBillingProfilesForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  if (!await hasPermission(user, 'asset', 'read')) return [];
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -1599,7 +1599,10 @@
       "aContact": "um contato",
       "groupAdded": "Adicionado a {{group}}",
       "groupRemoved": "Removido de {{group}}",
-      "aGroup": "um grupo"
+      "aGroup": "um grupo",
+      "autoAssignedFrom": "Atribuído automaticamente a {{contact}} a partir de {{provider}}",
+      "groupLocationMoved": "Movido para {{location}} com {{group}}",
+      "groupLocationCleared": "Localização removida com {{group}}"
     },
     "changeTypes": {
       "created": "Criado",
@@ -1696,7 +1699,6 @@
       "invalid_name": "O nome do grupo é obrigatório.",
       "client_mismatch": "Esse ativo ou contato pertence a outro cliente.",
       "already_grouped": "Esse ativo já está em outro grupo.",
-      "owner_exists": "Um pacote pode ter apenas um proprietário.",
       "users_on_bundle": "Um pacote tem um proprietário, não uma lista de usuários.",
       "owner_on_workspace": "Um espaço compartilhado tem usuários, não um proprietário.",
       "users_present": "Remova os usuários do espaço antes de transformá-lo em um pacote.",

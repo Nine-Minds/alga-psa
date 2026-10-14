@@ -300,7 +300,11 @@ describe('updateGroupRow', () => {
     expect(h.dbState.assets.slice(0, 2).map((row) => row.location_id)).toEqual(['loc-1', 'loc-1']);
     // Both columns move, so the read surfaces agree with the edit form.
     expect(h.dbState.assets.slice(0, 2).map((row) => row.location)).toEqual(['Lobby', 'Lobby']);
-    expect(h.dbState.asset_history.filter((row) => row.change_type === 'updated')).toHaveLength(2);
+    // A dedicated change type, so the timeline can say "Moved to Lobby with
+    // …" instead of "Updated — Group id, Group name".
+    const moved = h.dbState.asset_history.filter((row) => row.change_type === 'group_location_changed');
+    expect(moved).toHaveLength(2);
+    expect(moved[0].changes).toMatchObject({ location_id: 'loc-1', location_name: 'Lobby' });
   });
 
   it('clears the denormalized label when the group location is cleared', async () => {

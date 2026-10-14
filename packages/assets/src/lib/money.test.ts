@@ -26,6 +26,26 @@ describe('parseMoneyToMinorUnits', () => {
   it('strips a currency symbol a technician pasted in', () => {
     expect(parseMoneyToMinorUnits('$1,234.56')).toBe(123456);
   });
+
+  it('reads a European decimal comma', () => {
+    // Stripping commas turned this into 1.23 — a four-figure laptop saved as
+    // one twenty-three.
+    expect(parseMoneyToMinorUnits('1.234,56')).toBe(123456);
+    expect(parseMoneyToMinorUnits('1 234,56')).toBe(123456);
+    expect(parseMoneyToMinorUnits('€1.234,56')).toBe(123456);
+    expect(parseMoneyToMinorUnits('12,50')).toBe(1250);
+  });
+
+  it('keeps reading a lone dot as the decimal point and a lone comma group as thousands', () => {
+    expect(parseMoneyToMinorUnits('1.234')).toBe(123);
+    expect(parseMoneyToMinorUnits('1,234')).toBe(123400);
+    expect(parseMoneyToMinorUnits('1.234.567')).toBe(123456700);
+  });
+
+  it('clamps a negative amount to zero', () => {
+    expect(parseMoneyToMinorUnits('-400')).toBe(0);
+    expect(parseMoneyToMinorUnits('-1,234.56')).toBe(0);
+  });
 });
 
 describe('minorUnitsToInputValue', () => {

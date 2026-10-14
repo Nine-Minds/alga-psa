@@ -1906,7 +1906,21 @@ export const bulkUpdateAssets = withAuth(async (
     user,
     _ctx,
     assetIds: string[],
-    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id' | 'contact_name_id'>
+    // FR-A4: the procurement fields are bulk-editable too — a delivery of
+    // thirty identical laptops shares one supplier, model and order number.
+    data: Pick<
+        UpdateAssetRequest,
+        | 'status'
+        | 'location'
+        | 'location_id'
+        | 'contact_name_id'
+        | 'manufacturer'
+        | 'model'
+        | 'vendor_id'
+        | 'purchase_cost'
+        | 'purchase_cost_currency'
+        | 'order_number'
+    >
 ): Promise<BulkAssetActionResponse | AssetActionError> => {
     try {
     if (!await hasPermission(user, 'asset', 'update')) {

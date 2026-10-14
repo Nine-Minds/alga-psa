@@ -25,6 +25,7 @@ import {
   updateAssetGroup,
 } from '../../actions/assetGroupActions';
 import { isAssetActionError, assetActionErrorMessage } from '../../actions/assetActionErrors';
+import { getAsset } from '../../actions/assetActions';
 import { getClientContactsForAssets, getClientLocationsForAssets } from '../../actions/clientLookupActions';
 import { ClientAssetMultiSelect } from '../ClientAssetMultiSelect';
 import { formatClientLocation } from '../../lib/formatClientLocation';
@@ -53,7 +54,7 @@ export function AssetGroupDrawer({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [saving, setSaving] = useState(false);
-  const [confirmUnassign, setConfirmUnassign] = useState<string[] | null>(null);
+  const [confirmUnassign, setConfirmUnassign] = useState<{ incoming: string[]; assigned: number } | null>(null);
   const [confirmKindChange, setConfirmKindChange] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -130,6 +131,15 @@ export function AssetGroupDrawer({
     void mutate(matchAssetCacheKeys([...memberIds, ...after]));
   };
 
+  /** How many of these assets currently have an assignee a workspace would clear. */
+  const countAssignedAmong = async (assetIds: string[]): Promise<number> => {
+    const flags = await Promise.all(assetIds.map(async (assetId) => {
+      const asset = await getAsset(assetId);
+      return !isAssetActionError(asset) && Boolean(asset?.contact_name_id);
+    }));
+    return flags.filter(Boolean).length;
+  };
+
   const run = async (work: () => Promise<unknown>) => {
     setSaving(true);
     try {
@@ -145,10 +155,15 @@ export function AssetGroupDrawer({
   const addAssets = async (assetIds: string[]) => {
     const incoming = assetIds.filter((assetId) => !memberIds.includes(assetId));
     if (incoming.length === 0) return;
-    // FR-E4: a workspace unassigns what it takes in; say so before doing it.
+    // FR-E4: a workspace unassigns what it takes in; say so before doing it —
+    // but only when something would actually be unassigned, instead of
+    // warning about an assignee that is not there.
     if (!isBundle) {
-      setConfirmUnassign(incoming);
-      return;
+      const assigned = await countAssignedAmong(incoming);
+      if (assigned > 0) {
+        setConfirmUnassign({ incoming, assigned });
+        return;
+      }
     }
     await run(() => addAssetsToGroup(group.group_id, incoming));
   };
@@ -334,14 +349,14 @@ export function AssetGroupDrawer({
         isOpen={Boolean(confirmUnassign)}
         onClose={() => setConfirmUnassign(null)}
         onConfirm={async () => {
-          const pending = confirmUnassign ?? [];
+          const pending = confirmUnassign?.incoming ?? [];
           setConfirmUnassign(null);
           await run(() => addAssetsToGroup(group.group_id, pending));
         }}
         title={t('assetGroups.confirmUnassignTitle', { defaultValue: 'Unassign these assets?' })}
         message={t('assetGroups.confirmUnassignMessage', {
           defaultValue: 'A shared workspace has users rather than one assignee, so {{count}} asset(s) will be unassigned.',
-          count: confirmUnassign?.length ?? 0,
+          count: confirmUnassign?.assigned ?? 0,
         })}
         confirmLabel={t('assetGroups.addAssets', { defaultValue: 'Add assets' })}
         cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
