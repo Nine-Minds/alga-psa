@@ -13,6 +13,7 @@ import {
   normalizeResolvedContractCharge,
 } from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from "../prepaidBlockDates";
 import {
   IBillingPeriod,
   IBillingResult,
@@ -3445,6 +3446,7 @@ export class BillingEngine {
       await this.getClientDefaultBillingProfileId(clientId);
 
     const charges: IPrepaidBlockCharge[] = [];
+    const businessToday = await resolvePrepaidBlockBusinessDate(this.knex, tenant);
     for (const row of issuances) {
       if (row.status !== "scheduled") {
         throw new Error(
@@ -3454,10 +3456,10 @@ export class BillingEngine {
       // Server-side readiness guard (the Invoices screen shows such rows as early): a date-triggered
       // block (expiry, renewal) must not be issued before its due date, or the new block's expiry
       // clock would start while the old block still has hours.
-      const dueDate = row.due_date instanceof Date
-        ? row.due_date.toISOString().slice(0, 10)
-        : String(row.due_date).slice(0, 10);
-      if (dueDate > new Date().toISOString().slice(0, 10)) {
+      // Both sides on the tenant business date (the listing's readiness uses the same
+      // source), and the due date read TZ-independently from the date column.
+      const dueDate = toPrepaidBlockDateOnly(row.due_date) ?? String(row.due_date).slice(0, 10);
+      if (dueDate > businessToday) {
         throw new Error(
           `Prepaid block issuance ${row.issuance_id} is not due until ${dueDate}; it cannot be invoiced yet.`,
         );

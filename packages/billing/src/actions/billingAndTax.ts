@@ -25,11 +25,13 @@ import {
     IRecurringDueWorkMaterializationGap,
     IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
+    IRecurringScopedDuePeriodSelection,
     RecurringDueWorkChargeType,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
 import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
+import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import {
@@ -1235,8 +1237,7 @@ function buildRecurringDueWorkInvoiceCandidates(
         rows.map((row) => [row.executionIdentityKey, row] as const),
     );
 
-    const grouped = groupDueServicePeriodsForInvoiceCandidates(
-        rows.map((row) => ({
+    const toScopedSelection = (row: IRecurringDueWorkRow): IRecurringScopedDuePeriodSelection => ({
             clientId: row.clientId,
             ...(row.recordId ? metadataByRecordId.get(row.recordId) : undefined),
             servicePeriod: {
@@ -1279,8 +1280,26 @@ function buildRecurringDueWorkInvoiceCandidates(
                 (row.recordId ? metadataByRecordId.get(row.recordId)?.exportShapeKey : null)
                 ?? row.exportShapeKey
                 ?? null,
-        })),
-    );
+        });
+
+    // A not-yet-due Prepaid Block member must not hold back the ready members of
+    // its window (e.g. an in-advance Fixed fee): group it into its own candidate,
+    // which reads as "Not yet due" with the block's due date. Other ineligible
+    // members still block their group, unchanged.
+    const isEarlyPrepaidBlockRow = (row: IRecurringDueWorkRow) =>
+        row.chargeType === 'PrepaidBlock' && row.isEarly === true;
+    const withKeySuffix = (suffix: string) => (group: ReturnType<typeof groupDueServicePeriodsForInvoiceCandidates>[number]) => ({
+        ...group,
+        groupKey: `${group.groupKey}${suffix}`,
+    });
+    const grouped = [
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter((row) => !isEarlyPrepaidBlockRow(row)).map(toScopedSelection),
+        ).map(withKeySuffix('')),
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter(isEarlyPrepaidBlockRow).map(toScopedSelection),
+        ).map(withKeySuffix(':prepaid-block-not-yet-due')),
+    ];
 
     const candidates = grouped
         .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
@@ -1331,8 +1350,14 @@ function buildRecurringDueWorkInvoiceCandidates(
             const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
             const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
             const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            // A Prepaid Block opens on its issuance due date, which can fall well
+            // after its invoice window starts; other rows open with their window.
             const availableOnDate = notYetDue
-                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                ? (members
+                    .map((member) => (member.chargeType === 'PrepaidBlock'
+                        ? member.blockDueDate
+                        : undefined) ?? member.invoiceWindowStart)
+                    .sort()[0] ?? null)
                 : null;
             // Month-end early close: every member is a calendar-month arrears
             // period whose final calendar day is TODAY on the account's effective
@@ -1971,9 +1996,11 @@ export const getAvailableRecurringDueWork = withAuth(async (
         );
         // Scheduled Prepaid Block issuances: dated one-off in-advance rows that
         // share the contract's invoice window (and grouping scope) with its Fixed rows.
+        // Readiness uses the tenant business date (not the user's range end), the same
+        // source as the issuance due dates and the billing engine's not-due-until guard.
         const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
             tenant,
-            asOf,
+            asOf: await resolvePrepaidBlockBusinessDate(knex, tenant) as ISO8601String,
             clientTaxSourceById: new Map(
                 Array.from(clientMetadataById.entries()).map(([clientId, meta]) => [clientId, meta.taxSource] as const),
             ),

@@ -1,3 +1,4 @@
+import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractLinePrepaidBlock, PrepaidBlockReplenishmentTier } from '@alga-psa/types';
@@ -179,7 +180,7 @@ async function findOtherActiveLineWarnings(
   covered: CoveredService[],
 ): Promise<PrepaidBlockConfigWarning[]> {
   const db = tenantDb(trx, tenant);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await resolvePrepaidBlockBusinessDate(trx, tenant);
   const clientIds: string[] = await db.table('client_contracts')
     .where({ contract_id: contractId, is_active: true })
     .pluck('client_id');
