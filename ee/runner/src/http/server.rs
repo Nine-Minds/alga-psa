@@ -215,7 +215,7 @@ async fn execute(
         .strip_prefix("sha256:")
         .unwrap_or(&content_hash);
     tracing::info!(request_id=%req_id, tenant=%tenant, extension=%ext, content_hash=%hash, "Initializing Wasmtime ModuleLoader for extension execution");
-    let loader = match ModuleLoader::new() {
+    let loader = match ModuleLoader::shared() {
         Ok(l) => {
             tracing::info!(request_id=%req_id, "✓ ModuleLoader initialized successfully");
             l
