@@ -90,6 +90,8 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
+      // Client AR must stay a single-shard, co-located join on Citus.
+      'src/actions/billingProfileArActions.citus.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

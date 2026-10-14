@@ -631,16 +631,22 @@ async function fetchMoney(
   clientId: string,
   nowMs: number,
 ): Promise<{ money: ClientPulseMoney; flags: ClientAttentionFlag[] }> {
+  // The aggregate carries `tenant` so the join below can match on the
+  // distribution key: without it Citus cannot push the join down to a single
+  // shard and opens a connection to another node mid-transaction, which is how
+  // this query started failing in production once that node hit its ceiling.
   const completedPayments = trx('invoice_payments')
     .where({ tenant, status: COMPLETED_PAYMENT_STATUS })
-    .groupBy('invoice_id')
-    .select('invoice_id')
+    .groupBy('tenant', 'invoice_id')
+    .select('tenant', 'invoice_id')
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
   const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
     trx('invoices as i')
-      .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
+      .leftJoin(completedPayments, function joinCompletedPayments() {
+        this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
+      })
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
       .andWhere(function finalizedPredicate() {
         this.whereNotNull('i.finalized_at').orWhere('i.status', '!=', 'draft');
