@@ -56,7 +56,7 @@ interface InvoicePreviewPanelProps {
   onEmail?: () => Promise<void>;
   onEdit?: () => void;
   onUnfinalize?: () => Promise<void>;
-  onDraftInvoiceUpdated?: (updated: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
+  onDraftInvoiceUpdated?: (updated?: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
   isFinalized: boolean;
   /** Suppress mutation controls when embedded as cross-feature invoice detail. */
   readOnly?: boolean;
@@ -480,7 +480,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               // Refresh the DraftsTab list row as well as the detailed preview:
               // that row owns the summary passed back into the adjustment editor
               // after the operator deselects and reselects this invoice.
-              await onDraftInvoiceUpdated?.(draftInvoiceSummary as unknown as DraftInvoicePropertiesUpdateResult);
+              await onDraftInvoiceUpdated?.();
               setPreviewRefreshCounter((current) => current + 1);
             }}
           />
