@@ -2,7 +2,8 @@
 
 ## Repair round 6: coherent editor snapshots (2026-10-14)
 
-Candidate: `28ad9721a786ea7f8845bfd753fe7cab6af5c283` (PR #3499). The
+Candidate: `5c9c27c6d0` plus following documentation-only commits (PR #3499).
+The
 adjustment editor now reads invoice metadata and charges through
 `getInvoiceAdjustmentSnapshot` in a repeatable-read transaction, then uses the
 returned revision for optimistic writes. Authentication read recovery still
