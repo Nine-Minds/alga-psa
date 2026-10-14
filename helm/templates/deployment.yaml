@@ -670,6 +670,14 @@ spec:
           {{- $runnerBaseUrl := .baseUrl | default (printf "http://runner-exec.%s.svc.cluster.local" $.Release.Namespace) }}
           - name: RUNNER_BASE_URL
             value: "{{ $runnerBaseUrl }}"
+          {{- with .backend }}
+          - name: RUNNER_BACKEND
+            value: {{ . | quote }}
+          {{- end }}
+          {{- with .publicBase }}
+          - name: RUNNER_PUBLIC_BASE
+            value: {{ . | quote }}
+          {{- end }}
           {{- if and .serviceTokenSecret (hasKey .serviceTokenSecret "name") (hasKey .serviceTokenSecret "key") (.serviceTokenSecret.name) (.serviceTokenSecret.key) }}
           - name: RUNNER_SERVICE_TOKEN
             valueFrom:
