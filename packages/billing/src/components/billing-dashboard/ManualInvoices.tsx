@@ -12,7 +12,7 @@ import {
   updateInvoiceManualItems,
   type InvoiceManualItemsUpdateActionResult,
 } from '@alga-psa/billing/actions/invoiceModification';
-import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceAdjustmentSnapshot, getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import { getActiveClientLocationsForBillingRecoverable } from '@alga-psa/billing/actions/billingClientLocationActions';
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
@@ -579,14 +579,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
           setReadAuthenticationExpired(false);
-          const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          // Read the invoice header and its charges together. The list row can
+          // be stale after a prior save, so pairing its revision with a fresh
+          // line-only read can reject the next legitimate edit as stale.
+          const fetchedSnapshot = await getInvoiceAdjustmentSnapshot(invoiceIdToFetch);
           if (!active) return;
-          if (isAuthenticationFailure(fetchedItems)) {
+          if (isAuthenticationFailure(fetchedSnapshot)) {
             setReadAuthenticationExpired(true);
             return;
           }
-          if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
-            setError(getErrorMessage(fetchedItems));
+          if (isActionMessageError(fetchedSnapshot) || isActionPermissionError(fetchedSnapshot)) {
+            setError(getErrorMessage(fetchedSnapshot));
+            return;
+          }
+          if (!fetchedSnapshot) {
+            setError(t('manualInvoices.errors.loadItems', { defaultValue: 'Error loading invoice items' }));
             return;
           }
           // A successful retry proves the read path is available again. Keep
@@ -596,6 +603,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             setReadAuthenticationExpired(false);
             return;
           }
+          const fetchedInvoice = fetchedSnapshot as unknown as InvoiceViewModel;
+          const fetchedItems = fetchedInvoice.invoice_charges ?? [];
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
           const normalizeHeaderAlias = (it: any) => ({
             ...it,
@@ -606,7 +615,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Update local state with fetched items
           setCurrentInvoiceData(prevData => {
             const baseData = prevData || invoice;
-            return baseData ? { ...baseData, invoice_charges: fetchedItems } : undefined;
+            return baseData ? { ...baseData, ...fetchedInvoice, invoice_charges: fetchedItems } : undefined;
           });
           console.log('[Effect] Updated currentInvoiceData state with fetched items');
 

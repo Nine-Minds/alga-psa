@@ -477,6 +477,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 : null
             }
             onUpdated={async () => {
+              // Refresh the DraftsTab list row as well as the detailed preview:
+              // that row owns the summary passed back into the adjustment editor
+              // after the operator deselects and reselects this invoice.
+              await onDraftInvoiceUpdated?.(draftInvoiceSummary as unknown as DraftInvoicePropertiesUpdateResult);
               setPreviewRefreshCounter((current) => current + 1);
             }}
           />

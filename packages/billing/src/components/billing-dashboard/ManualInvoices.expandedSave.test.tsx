@@ -4,14 +4,14 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async (): Promise<any> => []),
-  locations: vi.fn(async (): Promise<any> => []), profiles: vi.fn(async (): Promise<any> => []),
+  update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async (_invoiceId?: string): Promise<any> => []),
+  snapshot: vi.fn(async (_invoiceId?: string): Promise<any> => null), locations: vi.fn(async (): Promise<any> => []), profiles: vi.fn(async (): Promise<any> => []),
 }));
 vi.mock('../../actions/invoiceExportWarnings', () => ({ getInvoiceAdjustmentExportWarnings: mocks.warnings }));
 vi.mock('@alga-psa/billing/actions/manualInvoiceActions', () => ({ generateManualInvoice: vi.fn(), getClientBillingEmailStatus: vi.fn(async () => ({ hasBillingEmail: true })) }));
 vi.mock('@alga-psa/billing/actions/salesOrderInvoicingActions', () => ({ generateInvoiceForSalesOrder: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ updateInvoiceManualItems: mocks.update }));
-vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({ getInvoiceLineItems: mocks.lineItems }));
+vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({ getInvoiceLineItems: mocks.lineItems, getInvoiceAdjustmentSnapshot: mocks.snapshot }));
 vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({ getActiveClientLocationsForBillingRecoverable: mocks.locations }));
 vi.mock('@alga-psa/billing/actions/taxRateActions', () => ({ getTaxRates: vi.fn(async () => []) }));
 vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({ getClientBillingProfilesForBilling: mocks.profiles }));
@@ -32,6 +32,12 @@ import ManualInvoices from './ManualInvoices';
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => {
+    const invoiceId = requestedInvoiceId ?? invoice.invoice_id;
+    const invoiceCharges = await mocks.lineItems(invoiceId);
+    if (!Array.isArray(invoiceCharges)) return invoiceCharges;
+    return { ...invoice, invoice_id: invoiceId, invoice_charges: invoiceCharges };
+  });
   mocks.locations.mockResolvedValue([]);
   mocks.profiles.mockResolvedValue([]);
 });
@@ -58,6 +64,36 @@ const fillCharge = async (description: string) => {
 };
 
 describe('expanded invoice adjustment global save', () => {
+  it('uses the authoritative revision after deselecting and reselecting a stale list row', async () => {
+    let persisted: any[] = [];
+    mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => ({
+      ...invoice,
+      invoice_id: requestedInvoiceId ?? invoice.invoice_id,
+      draft_adjustment_revision: 8,
+      subtotal: 405000,
+      total_amount: 405000,
+      invoice_charges: [...invoice.invoice_charges, ...persisted],
+    }));
+    mocks.update.mockImplementation(async (_id, changes, submission) => {
+      expect(submission.expectedRevision).toBe(8);
+      persisted = [...persisted, ...changes.newItems.map((item: any) => ({
+        ...item, item_id: `persisted-${persisted.length}`, is_manual: true,
+        total_price: item.quantity * item.rate, net_amount: item.quantity * item.rate, tax_amount: 0,
+      }))];
+      return { ...invoice, draft_adjustment_revision: 9, invoice_charges: [...invoice.invoice_charges, ...persisted] };
+    });
+
+    const first = renderDraft({ ...invoice, draft_adjustment_revision: 7 });
+    await waitFor(() => expect(mocks.snapshot).toHaveBeenCalled());
+    first.unmount(); // deselect
+    renderDraft({ ...invoice, draft_adjustment_revision: 7 }); // reselect stale list record
+    await fillCharge('Second adjustment');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][2].expectedRevision).toBe(8);
+    expect(persisted).toHaveLength(1);
+  });
+
   it('submits the latest expanded charge values directly through global Save Changes', async () => {
     let revision = 7;
     let persisted: any[] = [];
@@ -93,6 +129,17 @@ describe('expanded invoice adjustment global save', () => {
     await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep me');
     expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
+  });
+
+  it('keeps a draft and surfaces a genuine concurrent revision conflict without replay', async () => {
+    mocks.update.mockResolvedValue({ success: false, code: 'STALE_ADJUSTMENT_REVISION', params: {}, message: 'Invoice changed while you were editing' });
+    renderDraft();
+    await fillCharge('Keep after concurrent change');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    expect(await screen.findByText('Invoice changed while you were editing')).toBeTruthy();
+    expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep after concurrent change');
+    expect(mocks.update.mock.calls[0][2].expectedRevision).toBe(7);
   });
 
   it('preserves edits and the operation identity for an explicit retry after reauthentication', async () => {

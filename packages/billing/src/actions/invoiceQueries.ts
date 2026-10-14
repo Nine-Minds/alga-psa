@@ -901,6 +901,34 @@ export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
   return viewModel;
 }));
 
+/**
+ * Read the draft invoice header and its charges from one MVCC snapshot for the
+ * manual adjustment editor. A list projection plus getInvoiceLineItems can
+ * combine different invoice revisions after a save/reselection.
+ */
+export const getInvoiceAdjustmentSnapshot = withSerializableAuth(withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<InvoiceViewModel | null | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+
+  const { knex } = await createTenantKnex();
+  return knex.transaction(async (trx) => {
+    await trx.raw('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    const denied = await assertClientPortalInvoiceAccess(trx, tenant, user, invoiceId);
+    if (denied) return denied;
+    try {
+      return await Invoice.getFullInvoiceById(trx, tenant, invoiceId);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Invoice not found') return null;
+      throw error;
+    }
+  });
+}));
+
 export const getResolvedInvoiceTemplateId = withSerializableAuth(withAuth(async (
   user,
   { tenant },
