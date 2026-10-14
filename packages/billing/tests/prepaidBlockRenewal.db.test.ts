@@ -11,7 +11,11 @@ import {
   reownBlocksForRenewalActivation,
   scheduleRenewalIssuancesForRolledCycle,
 } from '../src/services/prepaidBlockRenewalService';
-import { scheduleExpiryIssuanceForActivatedBlock } from '../src/services/prepaidBlockLifecycleService';
+import {
+  EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON,
+  releaseAndVoidLinkedBlock,
+  scheduleExpiryIssuanceForActivatedBlock,
+} from '../src/services/prepaidBlockLifecycleService';
 import { fetchPrepaidBlockIssuanceDueWorkRows } from '../src/lib/prepaidBlockDueWork';
 
 // Guarded DB tests for the Prepaid Block renewal behaviour (alga-2026-0002695, captain decision 1):
@@ -106,7 +110,7 @@ async function setup(opts: {
   await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'Term A', currency_code: 'EUR', status: 'active', created_at: '2025-12-01T00:00:00Z' });
   {
     // created_draft_contract_id has an FK to contracts: create renewal contract B first, then link.
-    await db('contracts').insert({ tenant, contract_id: renewalContractId, contract_name: 'Term B', currency_code: 'EUR', status: 'active', created_at: '2025-12-01T00:00:00Z' });
+    await db('contracts').insert({ tenant, contract_id: renewalContractId, contract_name: 'Term B', currency_code: 'EUR', status: 'active', created_at: '2025-12-01T00:00:00Z', renewal_of_contract_id: contractId });
     await db('client_contracts').insert({
       tenant, client_contract_id: clientContractId, client_id: clientId, contract_id: contractId,
       start_date: '2026-01-01', end_date: endDate, is_active: true, status: 'renewing', created_draft_contract_id: renewalContractId,
@@ -229,6 +233,87 @@ describe.runIf(enabled)('Prepaid Block renewal cycle rollover', () => {
   });
 });
 
+describe.runIf(enabled)('Prepaid Block renewal supersedes the expiry issuance', () => {
+  it('rollover: an active block with a scheduled expiry issuance still gets the renewal issuance; the expiry one is superseded', async () => {
+    const w = await setup({ endDate: null });
+    const blockId = await insertBlock(w, w.lineId, w.clientContractId, { remaining: 90, expiration: '2027-06-30' });
+    const expiryId = uuidv4();
+    await db('contract_line_block_issuances').insert({
+      tenant, issuance_id: expiryId, contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+      client_id: w.clientId, trigger_kind: 'expiry', due_date: '2027-06-30', status: 'scheduled', source_block_id: blockId,
+    });
+    expect(await rollover(w)).toEqual([expect.objectContaining({ action: 'scheduled', dueDate: '2027-01-01' })]);
+    expect(await db('contract_line_block_issuances').where({ tenant, issuance_id: expiryId }).first())
+      .toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON });
+    const renewal = (await issuancesOf(w.lineId)).find((r) => r.trigger_kind === 'renewal')!;
+    expect(renewal).toMatchObject({ status: 'scheduled', source_block_id: blockId });
+    // Idempotent, and the block itself is untouched.
+    expect(await rollover(w)).toEqual([{ contractLineId: w.lineId, action: 'already_issued' }]);
+    expect(await db('hour_blocks').where({ tenant, block_id: blockId }).first()).toMatchObject({ remaining_minutes: 90, status: 'active' });
+  });
+
+  it('voiding the renewal block restores the superseded expiry issuance', async () => {
+    const w = await setup({ endDate: null });
+    const blockId = await insertBlock(w, w.lineId, w.clientContractId, { remaining: 90, expiration: '2027-06-30' });
+    const expiryId = uuidv4();
+    await db('contract_line_block_issuances').insert({
+      tenant, issuance_id: expiryId, contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+      client_id: w.clientId, trigger_kind: 'expiry', due_date: '2027-06-30', status: 'scheduled', source_block_id: blockId,
+    });
+    await rollover(w);
+    const renewal = (await issuancesOf(w.lineId)).find((r) => r.trigger_kind === 'renewal')!;
+    // The renewal block was invoiced as a pending draft block.
+    const renewalBlockId = await insertBlock(w, w.lineId, w.clientContractId, { remaining: 600, expiration: null, status: 'pending' });
+    await db('contract_line_block_issuances').where({ tenant, issuance_id: renewal.issuance_id })
+      .update({ status: 'invoiced', block_id: renewalBlockId });
+
+    await db.transaction((trx) => releaseAndVoidLinkedBlock(trx, tenant, {
+      blockId: renewalBlockId, status: 'pending', contractLineId: w.lineId, issuanceId: renewal.issuance_id,
+      invoiceId: uuidv4(), userId, now: new Date().toISOString(), reason: 'draft deleted',
+    }));
+    expect((await db('contract_line_block_issuances').where({ tenant, issuance_id: expiryId }).first()))
+      .toMatchObject({ status: 'scheduled', cancel_reason: null });
+    expect((await db('contract_line_block_issuances').where({ tenant, issuance_id: renewal.issuance_id }).first()).status).toBe('cancelled');
+    expect((await issuancesOf(w.lineId)).filter((r) => r.status === 'scheduled')).toHaveLength(1);
+  });
+
+  it('rollover still skips and reports an open exhaustion issuance, a pending block, and a line started after the cycle', async () => {
+    const w = await setup({ endDate: null });
+    await insertBlock(w, w.lineId, w.clientContractId, { remaining: 600, expiration: null, status: 'pending' });
+    expect(await rollover(w)).toEqual([{ contractLineId: w.lineId, action: 'skipped_pending_block' }]);
+    await db('hour_blocks').where({ tenant, contract_line_id: w.lineId }).update({ status: 'active' });
+
+    // Config created on the cycle start: never owed that renewal.
+    await db('contract_line_prepaid_blocks').where({ tenant, contract_line_id: w.lineId }).update({ created_at: '2027-01-01T08:00:00Z' });
+    expect(await rollover(w)).toEqual([{ contractLineId: w.lineId, action: 'skipped_line_started_after_cycle' }]);
+    expect(await issuancesOf(w.lineId)).toHaveLength(0);
+  });
+
+  it('renewal contract that inherited blocks and an expiry issuance: sync schedules one renewal, superseding the expiry', async () => {
+    const w = await setup({ renewalTriggerOnRenewal: true, renewalTriggerOnExpiry: true });
+    const live = await insertBlock(w, w.renewalLineId, w.renewalClientContractId, { remaining: 120, expiration: '2027-06-30' });
+    const expiryId = uuidv4();
+    await db('contract_line_block_issuances').insert({
+      tenant, issuance_id: expiryId, contract_line_id: w.renewalLineId, client_contract_id: w.renewalClientContractId,
+      client_id: w.clientId, trigger_kind: 'expiry', due_date: '2027-06-30', status: 'scheduled', source_block_id: live,
+    });
+    expect(await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId)))
+      .toMatchObject({ action: 'scheduled', dueDate: '2027-01-01' });
+    expect(await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId))).toEqual({ action: 'none' });
+    const rows = await issuancesOf(w.renewalLineId);
+    expect(rows.filter((r) => r.trigger_kind === 'renewal')).toHaveLength(1);
+    expect(rows.find((r) => r.issuance_id === expiryId)).toMatchObject({ status: 'superseded', cancel_reason: EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON });
+    expect(rows.some((r) => r.trigger_kind === 'contract_start')).toBe(false);
+  });
+
+  it('renewal contract that inherited blocks with trigger_on_renewal off issues nothing and lets the blocks run', async () => {
+    const w = await setup({ renewalTriggerOnRenewal: false });
+    await insertBlock(w, w.renewalLineId, w.renewalClientContractId, { remaining: 120, expiration: '2027-06-30' });
+    expect(await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId))).toEqual({ action: 'none' });
+    expect(await issuancesOf(w.renewalLineId)).toHaveLength(0);
+  });
+});
+
 describe.runIf(enabled)('Prepaid Block renewal issuance in due work', () => {
   it('lists the scheduled renewal issuance on its due date with the block price as a PrepaidBlock row', async () => {
     const w = await setup({ endDate: null });
@@ -247,7 +332,7 @@ describe.runIf(enabled)('Prepaid Block renewal issuance in due work', () => {
 });
 
 describe.runIf(enabled)('Prepaid Block renewal draft activation', () => {
-  it('re-owns unexpired blocks to the matching line with reassignment audit rows and no contract_start on the new line', async () => {
+  it('re-owns unexpired blocks to the matching line with reassignment audit rows, keeps the renewal start issuance and issues no contract_start', async () => {
     const w = await setup({ renewalTriggerOnRenewal: true });
     // Activation already scheduled the new line's start obligation.
     await db.transaction((trx) => syncPrepaidBlockIssuancesForContract(trx, tenant, w.renewalContractId));
@@ -294,15 +379,20 @@ describe.runIf(enabled)('Prepaid Block renewal draft activation', () => {
       from_client_contract_id: w.clientContractId, to_client_contract_id: w.renewalClientContractId,
     });
 
-    // The new line issues no first block (no contract_start, and the renewal start obligation is cancelled).
+    // Inherited blocks keep running AND the explicit renewal trigger still issues a new block on the
+    // renewal date: exactly one scheduled `renewal` issuance, never a contract_start.
     const newLine = await issuancesOf(w.renewalLineId);
     expect(newLine.some((r) => r.trigger_kind === 'contract_start')).toBe(false);
-    expect(newLine.filter((r) => r.status === 'scheduled')).toHaveLength(0);
     await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId));
-    expect((await issuancesOf(w.renewalLineId)).filter((r) => r.status === 'scheduled')).toHaveLength(0);
+    const afterSync = await issuancesOf(w.renewalLineId);
+    expect(afterSync.filter((r) => r.status === 'scheduled').map((r) => [r.trigger_kind, dateOnly(r.due_date)]))
+      .toEqual([['renewal', '2027-01-01']]);
+    expect(afterSync.filter((r) => r.trigger_kind === 'renewal')).toHaveLength(1);
 
-    // trigger_on_expiry is off on the new line: the moved block's expiry issuance is superseded, not orphaned.
-    expect((await db('contract_line_block_issuances').where({ tenant, issuance_id: expiryIssuance }).first()).status).toBe('superseded');
+    // The moved block's expiry issuance follows it to the new line, superseded by the renewal block.
+    expect(await db('contract_line_block_issuances').where({ tenant, issuance_id: expiryIssuance }).first())
+      .toMatchObject({ status: 'superseded', contract_line_id: w.renewalLineId, cancel_reason: EXPIRY_REPLACED_BY_RENEWAL_BLOCK_REASON });
+    expect(afterSync.find((r) => r.status === 'scheduled')!.source_block_id).toBe(live);
   });
 
   it('moves the expiry issuance with its block when the new line has trigger_on_expiry', async () => {
@@ -362,7 +452,7 @@ describe.runIf(enabled)('Prepaid Block renewal contract start block', () => {
     });
   });
 
-  it('with trigger_on_renewal and no inherited blocks issues a renewal issuance at the start date, never contract_start', async () => {
+  it('with trigger_on_renewal issues a renewal issuance at the start date, never contract_start', async () => {
     const w = await setup({ renewalTriggerOnRenewal: true });
     const first = await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId));
     expect(first).toMatchObject({ action: 'scheduled', dueDate: '2027-01-01' });
@@ -375,6 +465,20 @@ describe.runIf(enabled)('Prepaid Block renewal contract start block', () => {
     await db('client_contracts').where({ tenant, client_contract_id: w.renewalClientContractId }).update({ start_date: '2027-01-15' });
     expect(await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId)))
       .toMatchObject({ action: 'rescheduled', dueDate: '2027-01-15' });
+  });
+
+  it('stays a renewal contract after the source cycle rolled (created_draft_contract_id nulled): re-sync never issues contract_start', async () => {
+    const w = await setup({ renewalTriggerOnRenewal: false });
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ created_draft_contract_id: null });
+    await db.transaction(async (trx) => {
+      expect(await isRenewalContract(trx, tenant, w.renewalContractId)).toBe(true);
+    });
+    // Trigger off: nothing. Trigger on: a renewal, still never contract_start.
+    await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId));
+    expect(await issuancesOf(w.renewalLineId)).toHaveLength(0);
+    await db('contract_line_prepaid_blocks').where({ tenant, contract_line_id: w.renewalLineId }).update({ trigger_on_renewal: true });
+    await db.transaction((trx) => syncPrepaidBlockIssuancesForContractLine(trx, tenant, w.renewalLineId));
+    expect((await issuancesOf(w.renewalLineId)).map((r) => r.trigger_kind)).toEqual(['renewal']);
   });
 
   it('with trigger_on_renewal off issues no start issuance at all', async () => {
