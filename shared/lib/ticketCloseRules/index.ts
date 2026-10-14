@@ -15,7 +15,7 @@ import {
  * client portal) that audit-log their bypass instead of evaluating gates.
  */
 
-export type CloseRuleBypassSource = 'workflow' | 'import' | 'auto_close' | 'client_portal';
+export type CloseRuleBypassSource = 'workflow' | 'import' | 'auto_close' | 'client_portal' | 'api_import';
 
 export interface BoardCloseRulesRow {
   require_resolution_comment: boolean;
