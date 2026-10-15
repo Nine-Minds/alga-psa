@@ -9,6 +9,8 @@ import type {
   AccountingExportServicePeriodSource
 } from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+import { resolveMappingAdapterType } from '../adapters/accounting/mappingAdapterType';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 
 /** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
 export type AccountingExportAdapterLookup = {
@@ -66,6 +68,7 @@ type ServiceProjection = {
   tenant: string;
   service_id: string;
   service_name: string;
+  item_kind?: string | null;
 };
 
 function buildLineServicePeriodMetadata(
@@ -165,6 +168,9 @@ export class AccountingExportValidation {
 
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
+    // Desktop resolves through the QuickBooks CSV mappings, exactly as its adapter does.
+    const mappingAdapterType = resolveMappingAdapterType(adapterType);
+    const isQuickBooksDesktop = adapterType === 'quickbooks_desktop';
     const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
     // Company sync and mapping resolution stay period-agnostic. Export validation is the first
     // accounting seam that should care about recurring timing, and it must use canonical
@@ -245,7 +251,7 @@ export class AccountingExportValidation {
         : [];
     const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
-    if (isQuickBooks) {
+    if (isQuickBooks || isQuickBooksDesktop) {
       for (const invoice of invoices) {
         if (invoice.client_id) {
           clientIds.add(invoice.client_id);
@@ -333,6 +339,46 @@ export class AccountingExportValidation {
       }
     }
 
+    // QuickBooks Desktop creates any customer name it does not know when it
+    // imports an IIF file, so an unmapped client must be decided explicitly
+    // (link to an existing customer or create it) rather than guessed.
+    if (isQuickBooksDesktop) {
+      const flaggedClients = new Set<string>();
+      for (const invoice of invoices) {
+        if (!invoice.client_id || flaggedClients.has(invoice.client_id)) {
+          continue;
+        }
+        const mapping = await resolver.resolveClientMapping({
+          tenantId: tenant,
+          adapterType: mappingAdapterType,
+          clientId: invoice.client_id,
+          targetRealm: batch.target_realm
+        });
+        flaggedClients.add(invoice.client_id);
+        if (mapping) {
+          continue;
+        }
+        const lineId = firstLineByInvoice.get(invoice.invoice_id);
+        const line = lineId ? lineById.get(lineId) : null;
+        if (lineId) {
+          const clientName = clientsById.get(invoice.client_id)?.client_name ?? invoice.client_id;
+          await repo.addError({
+            batch_id: batchId,
+            line_id: lineId,
+            code: 'missing_client_mapping',
+            message: `No QuickBooks customer mapping for client "${clientName}"`,
+            metadata: mergeErrorMetadata(line, {
+              client_id: invoice.client_id,
+              client_name: clientName,
+              alga_entity_type: 'client',
+              alga_entity_id: invoice.client_id,
+              alga_name: clientName
+            })
+          });
+        }
+      }
+    }
+
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
     const invalidTaxRegions = new Set<string>();
@@ -364,11 +410,14 @@ export class AccountingExportValidation {
     const services =
       serviceIds.size > 0
         ? await db.table<ServiceProjection>('service_catalog')
-            .select('service_id', 'service_name')
+            .select('service_id', 'service_name', 'item_kind')
             .whereIn('service_id', Array.from(serviceIds))
         : [];
     const serviceNameById = new Map<string, string>(
       services.map((row) => [row.service_id, row.service_name])
+    );
+    const serviceKindById = new Map<string, string | null>(
+      services.map((row) => [row.service_id, row.item_kind ?? null])
     );
 
     for (const line of lines) {
@@ -486,7 +535,7 @@ export class AccountingExportValidation {
       if (isServicelessDiscount && !checkedServiceMappings.has(discountMappingKey)) {
         const mapping = await resolver.resolveDiscountMapping({
           tenantId: tenant,
-          adapterType,
+          adapterType: mappingAdapterType,
           targetRealm: batch.target_realm
         });
         if (!mapping) {
@@ -496,7 +545,12 @@ export class AccountingExportValidation {
             code: 'missing_discount_mapping',
             message:
               'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
-            metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+            metadata: mergeErrorMetadata(line, {
+              invoice_charge_id: line.document_line_id,
+              alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE,
+              alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
+              alga_name: 'Discount'
+            })
           });
         }
         checkedServiceMappings.add(discountMappingKey);
@@ -506,7 +560,7 @@ export class AccountingExportValidation {
       if (charge.service_id && !checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
           tenantId: tenant,
-          adapterType,
+          adapterType: mappingAdapterType,
           targetRealm: batch.target_realm,
           serviceId: charge.service_id
         });
@@ -522,7 +576,11 @@ export class AccountingExportValidation {
               : `No mapping for service ${charge.service_id}`,
             metadata: mergeErrorMetadata(line, {
               service_id: charge.service_id,
-              service_name: serviceName
+              service_name: serviceName,
+              alga_entity_type: 'service',
+              alga_entity_id: charge.service_id,
+              alga_name: serviceName,
+              item_kind: serviceKindById.get(charge.service_id) ?? null
             })
           });
           missingServiceMappings.add(serviceMappingKey);
@@ -539,7 +597,7 @@ export class AccountingExportValidation {
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
             tenantId: tenant,
-            adapterType,
+            adapterType: mappingAdapterType,
             taxRegionId: charge.tax_region,
             targetRealm: batch.target_realm
           });
@@ -626,7 +684,7 @@ export class AccountingExportValidation {
           if (!checkedPaymentTerms.has(paymentKey)) {
             const termMapping = await resolver.resolvePaymentTermMapping({
               tenantId: tenant,
-              adapterType,
+              adapterType: mappingAdapterType,
               paymentTermId: client.payment_terms,
               targetRealm: batch.target_realm
             });
