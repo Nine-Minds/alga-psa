@@ -10,7 +10,7 @@ const TENANT = process.env.SMOKE_TENANT!;
 const TICKET = process.env.SMOKE_TICKET!;
 
 const { readPortalTicketConversations } = await import(
-  '../../packages/tickets/src/lib/portalTicketConversations');
+  '../../shared/lib/tickets/portalTicketConversations');
 
 const all = await db('ticket_conversations').where({ tenant: TENANT, ticket_id: TICKET })
   .select('name', 'audience');

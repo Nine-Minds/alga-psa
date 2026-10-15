@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { conversationUuid, ensureDefaultTicketConversation, listStoredTicketConversations, readStoredTicketConversation, TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
+import { conversationUuid, ensureDefaultTicketConversation, listStoredTicketConversations, readStoredTicketConversation, TicketConversationError } from './namedConversations';
 
 /** Internal projection after the caller's current portal ticket admission.
  * Customer ownership is fixed by authentication; no home/private store selector

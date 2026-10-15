@@ -1,10 +1,8 @@
 import type { TicketConversationReference, NamedTicketConversation } from './namedConversations';
 
-export class ConversationAiError extends Error {
-  constructor(readonly code: 'AI_CONTEXT_TOO_LARGE' | 'AI_SOURCE_CHANGED' | 'AI_SOURCE_INVALID' | 'AI_UNAVAILABLE' | 'AI_CANCELLED') {
-    super(code); this.name = 'ConversationAiError';
-  }
-}
+// Keep one error identity across the CE/EE adapters without making CE stubs depend on shared services.
+export { ConversationAiError } from '@alga-psa/types';
+
 export type ConversationAiSourceRequest = { kind: 'synthesis'; source: TicketConversationReference }
   | { kind: 'conversation'; sources: TicketConversationReference[] };
 export interface ConversationAiMessage {

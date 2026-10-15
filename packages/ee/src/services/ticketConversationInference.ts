@@ -1,4 +1,5 @@
-import { ConversationAiError, type ConversationAiProvider } from '@alga-psa/shared/lib/tickets/conversationAi';
+import { ConversationAiError } from '@alga-psa/types';
 
-const unavailable = async (): Promise<never> => { throw new ConversationAiError('AI_UNAVAILABLE'); };
-export const ticketConversationAiProvider: ConversationAiProvider = { assertAvailable: unavailable, generate: unavailable };
+// CE always rejects, without loading shared services or enterprise implementation types.
+const unavailable = async (_request: unknown): Promise<never> => { throw new ConversationAiError('AI_UNAVAILABLE'); };
+export const ticketConversationAiProvider = { assertAvailable: unavailable, generate: unavailable };

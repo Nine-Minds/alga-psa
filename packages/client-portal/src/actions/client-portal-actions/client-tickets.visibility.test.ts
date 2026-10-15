@@ -18,7 +18,7 @@ const createTicketWithRetryMock = vi.fn();
 const getDefaultStatusIdMock = vi.fn();
 const publishEventMock = vi.fn();
 
-vi.mock('@alga-psa/tickets/lib/portalTicketConversations', () => ({
+vi.mock('@alga-psa/shared/lib/tickets/portalTicketConversations', () => ({
   readPortalTicketConversations: vi.fn().mockResolvedValue({ selectedConversationId: 'requester-conversation',
     requesterConversations: [{ conversationId: 'requester-conversation', name: 'Requester', isDefault: true, status: 'open' }] }),
 }));

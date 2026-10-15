@@ -1,6 +1,6 @@
 'use server'
 
-import { readPortalTicketConversations } from '@alga-psa/tickets/lib/portalTicketConversations';
+import { readPortalTicketConversations } from '@alga-psa/shared/lib/tickets/portalTicketConversations';
 import { TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';

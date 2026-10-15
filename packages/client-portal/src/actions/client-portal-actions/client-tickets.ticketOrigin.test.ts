@@ -17,7 +17,7 @@ vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: vi.fn().mockResolvedValue({ clientId: 'client-1', contactId: 'contact-1', effectiveTicketScope: 'client', visibleBoardIds: null }),
 }));
 
-vi.mock('@alga-psa/tickets/lib/portalTicketConversations', () => ({
+vi.mock('@alga-psa/shared/lib/tickets/portalTicketConversations', () => ({
   readPortalTicketConversations: vi.fn().mockResolvedValue({ selectedConversationId: 'requester-conversation',
     requesterConversations: [{ conversationId: 'requester-conversation', name: 'Requester', isDefault: true, status: 'open' }] }),
 }));

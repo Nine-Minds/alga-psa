@@ -3,7 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyTicketVisibilityFilter } from '@alga-psa/tickets/lib';
-import { readPortalTicketConversations } from '@alga-psa/tickets/lib/portalTicketConversations';
+import { readPortalTicketConversations } from '@alga-psa/shared/lib/tickets/portalTicketConversations';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
   listPublishedCoManagedAttachments, readPublishedCoManagedAttachment, type CoManagedSessionActor, type CoManagedAttachmentReadContext } from '@alga-psa/co-managed';
 
