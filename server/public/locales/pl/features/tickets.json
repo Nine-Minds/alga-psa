@@ -1948,6 +1948,7 @@
       "setClientToAddContact": "Najpierw wybierz klienta, aby dodać kontakt",
       "logInteraction": "Zarejestruj rozmowę lub e-mail",
       "changeClient": "Zmień klienta",
+      "changeLocation": "Zmień lokalizację",
       "teamFallback": "Zespół",
       "teamSectionLabel": "Przypisz zespół",
       "addAgentsOrTeam": "Dodaj agentów lub zespół…",

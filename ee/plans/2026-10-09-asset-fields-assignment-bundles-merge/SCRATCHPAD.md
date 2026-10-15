@@ -642,3 +642,56 @@ which fails without the fix.
 
 `features.json` (109) and `tests.json` (157) stay fully `implemented: true`;
 this round fixed presentation and an adjacent blocker, not plan scope.
+
+## Round 9 — location and billing profile on the grid layout (2026-10-15)
+
+Operator, on `#ticket-details-bento-contact-tile`: "location and billing
+profile are not visible on ticket (grid view)". Both were real, and both
+mattered to this card: FR-F3 stamps a ticket's billing profile from the asset
+it was raised against, and the grid layout — the default one — gave no way to
+see or change the result.
+
+- Location was a bare, unlabelled 12px line that only rendered when the ticket
+  carried an explicit `location_id`. The list layout has always shown a
+  labelled field that falls back to the client's default location marked
+  `(Default)`, then to "No location specified". The grid tile now reads the
+  same, with a pencil (`ticket-details-bento-location-edit`) opening a select
+  (`-location-select`) and Cancel/Save, wired to the `handleLocationChange`
+  TicketDetails already owned for the list layout.
+- Billing profile was absent from the grid layout entirely — the picker was
+  only mounted from `TicketProperties`. The tile now mounts the same
+  `BillingProfilePicker` with the same copy, so decision D6 still holds: a
+  client with one profile sees nothing at all, which is why the control cannot
+  simply be a static row.
+
+`TicketDetails` passes `onChangeLocation` / `onChangeBillingProfile` to the
+grid layout as it already did to the list one, so both layouts save through one
+pair of handlers and one toast.
+
+The one-line location formatter lived twice (`TicketProperties`,
+`QuickAddTicket`); rather than write a third copy for the tile it moved to
+`packages/tickets/src/lib/formatTicketLocation.ts`, which `TicketProperties`
+now imports. A drifting copy would have made the two ticket layouts disagree
+about the same ticket.
+
+Covered by `TicketBentoLayout.locationBilling.test.tsx` (eight cases: explicit
+location, default fallback with its suffix, no locations at all, save, clear,
+unchanged-is-a-no-op, and the picker's client/value wiring plus its absence
+without a handler). The sibling `addTimeEntry` test's
+`withDataAutomationId` mock gained `withUIReflectionId`, which `CustomSelect`
+pulls in. One headless load of the operator's ticket confirmed the tile now
+reads "Location — Main Office … (Default)" and "Billing profile — 234567".
+
+No plan scope moved: `features.json` (109) and `tests.json` (157) stay fully
+`implemented: true`, and all eleven standing feedback items were re-verified in
+place (portal `can_interact`, REST `asset:create`/`asset:delete` and
+`not_found → 404`, merge preview scoped by `client_id`, non-blocking
+`assigned_asset`, nullable `asset_history.changed_by`, Tactical's
+`applyRmmSignedInUserAssignment` on both sync paths, post-commit
+`ASSET_UPDATED`, and the three minor bundles).
+
+Observed and not fixed: pressing Escape while a ticket contact picker is open
+raises the unsaved-changes confirmation while leaving the picker open above it.
+Neither picker handles Escape, so the fix belongs to the shared
+`ContactPicker`/`ClientPicker` in `packages/ui` and would land on every surface
+in the product — out of this card's scope.

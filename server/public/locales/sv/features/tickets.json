@@ -1810,6 +1810,7 @@
       "setClientToAddContact": "Ange en kund först för att lägga till en kontakt",
       "logInteraction": "Registrera samtal eller e-post",
       "changeClient": "Ändra kund",
+      "changeLocation": "Ändra plats",
       "teamFallback": "Team",
       "teamSectionLabel": "Tilldela ett team",
       "addAgentsOrTeam": "Lägg till handläggare eller ett team…",

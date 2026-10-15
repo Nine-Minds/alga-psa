@@ -1802,6 +1802,7 @@
       "setClientToAddContact": "Stel eerst een klant in om een contact toe te voegen",
       "logInteraction": "Gesprek of e-mail vastleggen",
       "changeClient": "Klant wijzigen",
+      "changeLocation": "Locatie wijzigen",
       "teamFallback": "Team",
       "teamSectionLabel": "Team toewijzen",
       "addAgentsOrTeam": "Medewerkers of een team toevoegen…",

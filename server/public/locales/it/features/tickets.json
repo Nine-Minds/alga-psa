@@ -1802,6 +1802,7 @@
       "setClientToAddContact": "Imposta prima un cliente per aggiungere un contatto",
       "logInteraction": "Registra chiamata o email",
       "changeClient": "Cambia cliente",
+      "changeLocation": "Cambia sede",
       "teamFallback": "Team",
       "teamSectionLabel": "Assegna un team",
       "addAgentsOrTeam": "Aggiungi agenti o un team…",

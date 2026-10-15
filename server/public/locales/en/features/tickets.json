@@ -1810,6 +1810,7 @@
       "setClientToAddContact": "Set a client first to add a contact",
       "logInteraction": "Log call or email",
       "changeClient": "Change client",
+      "changeLocation": "Change location",
       "teamFallback": "Team",
       "teamSectionLabel": "Assign a team",
       "addAgentsOrTeam": "Add agents or a team…",

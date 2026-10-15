@@ -4273,6 +4273,8 @@ const handleClose = () => {
                     clients={clients}
                     onChangeContact={handleContactChange}
                     onChangeClient={handleClientChange}
+                    onChangeLocation={handleLocationChange}
+                    onChangeBillingProfile={handleBillingProfileChange}
                     checklistItems={checklistItems ?? []}
                     onChecklistItemsChanged={setChecklistItems}
                     externalLinks={externalLinks ?? undefined}
