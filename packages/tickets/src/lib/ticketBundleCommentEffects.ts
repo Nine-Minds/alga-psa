@@ -42,9 +42,12 @@ export async function applyTicketBundleCommentEffects(trx: Knex.Transaction, ten
     const now = new Date().toISOString();
     await store.table('comment_threads').insert({ tenant, thread_id: generated.thread_id, ticket_id: child.ticket_id,
       project_task_id: null, root_comment_id: generated.comment_id, is_internal: false, reply_count: 0,
-      last_activity_at: now, created_at: now, created_by: null });
+      last_activity_at: now, created_at: now, created_by: source.user_id ?? null });
+    // System-generated marks the copy as immutable; its author remains the
+    // source author, independently of the actor applying these bundle effects.
     await store.table('comments').insert({ tenant, comment_id: generated.comment_id, thread_id: generated.thread_id,
-      ticket_id: child.ticket_id, user_id: null, author_type: 'unknown', note: source.note, is_internal: false,
+      ticket_id: child.ticket_id, user_id: source.user_id ?? null, contact_id: source.contact_id ?? null,
+      author_type: source.author_type ?? 'unknown', note: source.note, is_internal: false,
       is_resolution: source.is_resolution, is_system_generated: true, markdown_content: source.markdown_content, created_at: now });
     const destination = await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: child.ticket_id }, storeTenant: tenant }, generated.thread_id);
     await store.table('ticket_conversations').where('conversation_id', destination.conversationId)
