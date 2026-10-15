@@ -215,11 +215,20 @@ Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accountin
      own.
    - **Sales tax liability account**: defaults to `Sales Tax Payable`.
    - **Default sales tax item**: needed only for invoices that carry tax.
+   - **New product item type**: the QuickBooks item type an export uses when it
+     creates a new item for an AlgaPSA product. The default is **Non-inventory
+     Part**: AlgaPSA stays the inventory system of record and QuickBooks only
+     records the sale. If you choose **Inventory Part**, also enter the
+     inventory asset and cost of goods sold accounts. AlgaPSA's stock receipts
+     are not exported, so QuickBooks on-hand quantities will go negative unless
+     you also enter stock there.
 2. **Mappings.** The Clients, Items / Services, Tax Codes, Payment Terms, and
    Discounts tabs are the same mappings QuickBooks CSV uses. Enter QuickBooks
    Desktop list names.
-   - Unmapped clients export under their AlgaPSA name, which must match the
-     QuickBooks customer.
+   - Every client, service, product and discount on an exported invoice needs
+     a mapping. You don't have to set them all up in advance: the export
+     prompts for anything missing (see
+     [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
    - Unmapped payment terms are left blank.
 3. **Per-item overrides.** Optional. In the mapping metadata editor, add:
    - `{"qbdIncomeAccount": "Account name"}` to an Items / Services or Discounts
@@ -241,6 +250,27 @@ For QuickBooks CSV and QuickBooks Desktop, running the batch downloads the file.
 AlgaPSA validates the batch first. A batch missing mappings
 moves to `needs_attention` and lists what to map; add the mappings and run it
 again.
+
+For QuickBooks CSV and QuickBooks Desktop, a batch that stops on unmapped
+clients, services, products or discounts opens a prompt instead. You can also
+reopen it with **Resolve unmapped items** in the batch details. For each entry,
+choose:
+
+- **Create new**: add it to QuickBooks under the name shown, which you can edit.
+  For QuickBooks Desktop, the IIF file defines the new customer (with its
+  billing address, phone and email) or item (type, description, income account
+  and price) before the invoices that use it. For QuickBooks CSV, QuickBooks
+  adds the new name when you import the file.
+- **Already in QuickBooks**: link to an existing QuickBooks entry with exactly
+  that name. Nothing is written to QuickBooks for it, so its existing details
+  are not overwritten.
+
+**Save mappings and export** saves your choices as QuickBooks mappings and
+runs the batch again, and later exports use those mappings without asking.
+**Go to QuickBooks mappings** opens the mapping tabs instead. Saving from the
+prompt requires the manage-mappings capability as well as export access.
+
+Serial numbers are not included in QuickBooks exports.
 
 Once an invoice exports successfully, AlgaPSA records an invoice mapping and
 excludes that invoice from later exports for the same integration. You cannot

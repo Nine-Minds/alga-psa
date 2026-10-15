@@ -109,12 +109,17 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
   - One `SPL` per charge: credits the line's income account with the mapped item (`INVITEM`), a negative quantity, a positive rate, and a `TAXABLE` flag. Quantity and rate come from the shared `reconcileExportLineQuantity`. Discounts post a positive amount with a negative rate.
   - When Alga computed tax, one sales-tax `SPL` (`EXTRA = AUTOSTAX`) posts the tax to the sales tax liability account.
   - Each transaction ends with `ENDTRNS`. The file uses CRLF line endings, and amounts are scaled by the invoice currency.
-- **Mappings.** Desktop reuses the QuickBooks CSV mappings (`integration_type = 'quickbooks_csv'`) for customers, items, tax codes, payment terms, and discounts, the same way `xero_csv` reuses `xero`. The values are QuickBooks list names.
+- **Mappings.** Desktop reuses the QuickBooks CSV mappings (`integration_type = 'quickbooks_csv'`) for customers, items, tax codes, payment terms, and discounts, the same way `xero_csv` reuses `xero`. The values are QuickBooks list names. `resolveMappingAdapterType` (`packages/billing/src/adapters/accounting/mappingAdapterType.ts`) maps `quickbooks_desktop` to `quickbooks_csv`, and both export validation and the adapter use it.
+- **Validation rules for Desktop batches:**
+  - Service, discount and client mappings are required. An unmapped client raises `missing_client_mapping`, because QuickBooks Desktop silently creates any customer name it doesn't recognise.
+  - Tax-code and payment-term mappings are optional; the default sales tax item and blank terms cover them.
 - **Desktop-only settings.** These live in `tenant_settings.settings.quickbooksDesktop` and are read by `getQuickBooksDesktopSettingsForTenant` in `@alga-psa/integrations/runtime`. They are edited on the **QuickBooks Desktop (IIF)** setup card:
   - `arAccount`: defaults to `Accounts Receivable`.
   - `defaultIncomeAccount`: required unless every mapping sets `qbdIncomeAccount`.
   - `salesTaxPayableAccount`: defaults to `Sales Tax Payable`.
   - `defaultSalesTaxItem`: required only for invoices that carry tax.
+  - `newProductItemType`: `NONINVENTORY` (default) or `INVENTORY`. This is the item type used when an export creates a new item for an Alga product.
+  - `inventoryAssetAccount` and `cogsAccount`: used only for new Inventory Part items. They default to `Inventory Asset` and `Cost of Goods Sold`.
 - **Mapping metadata overrides:**
   - `qbdIncomeAccount` on an Items / Services or Discounts mapping sets the income account per item.
   - `qbdSalesTaxItem` on a Tax Codes mapping sets the sales tax item or group per region. The tax-code mapping's own value is a QuickBooks tax *code*, not an item, so it is never used as the item.
@@ -125,6 +130,15 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
   
   Unmapped payment terms are left blank rather than exported as Alga term ids.
 - **External tax.** Invoices with `tax_source` `external` or `pending_external` export without a tax split, but their lines still carry `TAXABLE = Y`. IIF has no channel to return QuickBooks-calculated tax, so `supportsTaxDelegation` is `false`.
+- **Creating unmapped entities from an export.** This applies to QuickBooks Desktop and QuickBooks CSV batches.
+  - When a batch stops on `missing_client_mapping`, `missing_service_mapping` or `missing_discount_mapping`, **Billing → Accounting Exports** opens a prompt. The detail view's **Resolve unmapped items** button reopens it later.
+  - For each entity the user chooses **Create new** or **Already in QuickBooks**, and can edit the QuickBooks name. The proposed name has separators and colons removed and is cut to the QuickBooks limit.
+  - `saveQuickBooksExportMappings` (`packages/billing/src/actions/quickBooksExportMappingActions.ts`) saves each decision as a `quickbooks_csv` mapping through `SyncMappingLedger`. It needs both `exports_execute` and `mappings_manage`, and the rules are in `quickBooksExportMappingRules.ts`. The batch is then re-executed, and later exports find the mapping and never prompt again.
+  - **Create new** on a Desktop batch also sets `metadata.qbdCreateInBatch = <batch_id>` on the mapping. Only that batch's IIF file writes list records ahead of the transactions, so re-downloading it produces the same file:
+    - `!CUST`/`CUST` for customers: name, billing address from the billing (or default) client location, phone, email, and terms.
+    - `!INVITEM`/`INVITEM` for items: `SERV` for services, `PART` or `INVENTORY` for products according to `newProductItemType`, and `DISC` for the automatic discount. Each item gets a description, income account, price (the charge's rate) and taxable flag. `INVENTORY` items also get the asset and COGS accounts and the product's average cost.
+  - List records are included only for the invoices actually delivered. **Already in QuickBooks** never writes list records, so existing QuickBooks details aren't overwritten.
+  - QuickBooks CSV gets mappings only. QuickBooks Online's CSV import handles unknown names itself.
 - **Delivery.**
   - Each invoice is locked with `lockInvoiceForExternalSync` and recorded as an `iif:<invoice_number>` invoice mapping, which excludes it from later Desktop exports.
   - The file returned in `metadata.files` contains only the invoices that were delivered. **Billing → Accounting Exports** downloads it as soon as the batch executes.
@@ -133,6 +147,8 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
   - IIF imports cannot be undone. Test the first import on a backup of the company file.
   - QuickBooks Desktop multicurrency is not handled; amounts are written in the invoice currency.
   - Non-ASCII characters may not survive QuickBooks' ANSI import.
+  - Serial numbers are not exported. Stock units link to sales-order lines, not invoice charges, so an invoice line has no reliable serial to carry.
+  - Alga stock receipts and costs are not exported. Products created as Inventory Part will go negative in QuickBooks unless stock is also entered there.
 
 ### Xero Adapter Highlights (Phase 5)
 - Uses `XeroClientService` for OAuth token refresh and catalog access (`listAccounts`, `listItems`, `listTaxRates`, `listTrackingCategories`).
