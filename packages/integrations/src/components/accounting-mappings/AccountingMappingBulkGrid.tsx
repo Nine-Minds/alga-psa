@@ -19,6 +19,20 @@ import type {
   AccountingMappingModule
 } from './types';
 
+/**
+ * Preferred width and shrink floor per column. Preferred total 1224px, minimum total 824px.
+ * Status has no minWidth, so it stays fixed; Xero Target takes most of the shrink (and of the
+ * stretch at wide widths).
+ */
+export const BULK_GRID_COLUMN_SIZES = {
+  selected: { width: '72px', minWidth: '72px' },
+  name: { width: '220px', minWidth: '160px' },
+  kindId: { width: '200px', minWidth: '140px' },
+  externalId: { width: '520px', minWidth: '240px' },
+  ignored: { width: '72px', minWidth: '72px' },
+  id: { width: '140px' }
+} as const;
+
 type MappedRow = { externalName?: string; alga_entity_id: string };
 
 type RowEdit = {
@@ -237,10 +251,11 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.select', { defaultValue: 'Save' }),
         dataIndex: 'selected',
         sortable: false,
-        // px, not %: a % width is only a floor (>=160px) in DataTable. 96px is the
-        // narrowest a non-compact column can be; total widths are kept well under
-        // a 1920px viewport with the sidebar expanded so Status is never hidden.
-        width: '96px',
+        // Widths are px preferences (a % width is only a floor in DataTable). Columns with a
+        // minWidth are shrunk by the table, in proportion to their slack, before any column
+        // is hidden: preferred total 1224px, minimum total 824px, so every column stays
+        // visible down to an 824px container. See BULK_GRID_COLUMN_SIZES.
+        ...BULK_GRID_COLUMN_SIZES.selected,
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-select-${row.id}`}
@@ -258,7 +273,7 @@ export function AccountingMappingBulkGrid({
         title: module.labels.algaColumn,
         dataIndex: 'name',
         sortable: false,
-        width: '220px',
+        ...BULK_GRID_COLUMN_SIZES.name,
         render: (_value, row) => <span>{row.name}</span>
       }
     ];
@@ -268,7 +283,7 @@ export function AccountingMappingBulkGrid({
         title: targetConfig.label,
         dataIndex: 'kindId',
         sortable: false,
-        width: '160px',
+        ...BULK_GRID_COLUMN_SIZES.kindId,
         render: (_value, row) =>
           row.mappedTo !== null ? null : (
             <CustomSelect
@@ -292,7 +307,7 @@ export function AccountingMappingBulkGrid({
         title: module.labels.externalColumn,
         dataIndex: 'externalId',
         sortable: false,
-        width: '520px',
+        ...BULK_GRID_COLUMN_SIZES.externalId,
         render: (_value, row) => {
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
           const options = externalEntities
@@ -334,7 +349,7 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.ignore', { defaultValue: 'Ignore' }),
         dataIndex: 'ignored',
         sortable: false,
-        width: '96px',
+        ...BULK_GRID_COLUMN_SIZES.ignored,
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-ignore-${row.id}`}
@@ -352,7 +367,7 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.status', { defaultValue: 'Status' }),
         dataIndex: 'id',
         sortable: false,
-        width: '280px',
+        ...BULK_GRID_COLUMN_SIZES.id,
         render: (_value, row) => {
           const error = rowErrors[row.id];
           let content: React.ReactNode;
