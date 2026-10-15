@@ -121,7 +121,8 @@
     "saveAsDraft": "Opslaan als concept",
     "completing": "Voltooien...",
     "more": "Meer",
-    "closeDialog": "Dialoogvenster sluiten"
+    "closeDialog": "Dialoogvenster sluiten",
+    "clearSearch": "Zoekopdracht wissen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1344,6 +1345,19 @@
     "saving": "Opslaan..."
   },
   "enums": {
+    "locale": {
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "nl": "Nederlands",
+      "it": "Italiaans",
+      "pl": "Pools",
+      "pt": "Portugees (Brazilië)",
+      "sv": "Zweeds",
+      "xx": "Pseudotaal (xx)",
+      "yy": "Pseudotaal (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Ontgrendel AI-chat, documenthulp, zijbalk-assistentie en workflow-AI-tools voor uw team."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Fout bij het laden van de inhoud"
       }
     }
+  },
+  "reflection": {
+    "parentId": "ID van bovenliggende component: {{id}}",
+    "noParent": "Geen bovenliggende component"
   }
 }

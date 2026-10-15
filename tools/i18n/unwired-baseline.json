@@ -13,8 +13,6 @@
     "packages/ui-kit/src/components/Button.tsx",
     "packages/ui-kit/src/components/CustomSelect.tsx",
     "packages/ui-kit/src/components/Drawer.tsx",
-    "packages/ui-kit/src/components/SearchInput.tsx",
-    "packages/ui-kit/src/components/Spinner.tsx",
     "packages/ui-kit/src/components/Tabs.tsx",
     "packages/ui-kit/src/components/ViewSwitcher.tsx",
     "packages/ui/src/components/Alert.tsx",
@@ -38,10 +36,7 @@
     "packages/ui/src/components/tickets/PrioritySelect.tsx",
     "packages/ui/src/components/widgets/HighlightWidget.tsx",
     "packages/ui/src/editor/AiResponseBlock.tsx",
-    "packages/ui/src/editor/Mention.tsx",
     "packages/ui/src/editor/RichTextViewer.tsx",
-    "packages/ui/src/editor/TextEditor.tsx",
-    "packages/ui/src/lib/i18n/LanguageSwitcher.tsx",
-    "packages/ui/src/ui-reflection/ReflectionParentContext.tsx"
+    "packages/ui/src/editor/TextEditor.tsx"
   ]
 }

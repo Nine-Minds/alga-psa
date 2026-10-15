@@ -121,7 +121,8 @@
     "saveAsDraft": "Zapisz jako wersję roboczą",
     "completing": "Kończenie...",
     "more": "Więcej",
-    "closeDialog": "Zamknij okno dialogowe"
+    "closeDialog": "Zamknij okno dialogowe",
+    "clearSearch": "Wyczyść wyszukiwanie"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1344,6 +1345,19 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Odblokuj czat AI, pomoc w dokumentach, pomoc w pasku bocznym oraz narzędzia AI dla workflow Twojego zespołu."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Błąd ładowania treści"
       }
     }
+  },
+  "reflection": {
+    "parentId": "Identyfikator komponentu nadrzędnego: {{id}}",
+    "noParent": "Brak komponentu nadrzędnego"
   }
 }

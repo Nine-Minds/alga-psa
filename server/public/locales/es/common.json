@@ -121,7 +121,8 @@
     "saveAsDraft": "Guardar como borrador",
     "completing": "Finalizando...",
     "more": "Más",
-    "closeDialog": "Cerrar diálogo"
+    "closeDialog": "Cerrar diálogo",
+    "clearSearch": "Borrar búsqueda"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1344,6 +1345,19 @@
     "saving": "Guardando..."
   },
   "enums": {
+    "locale": {
+      "en": "Inglés",
+      "fr": "Francés",
+      "es": "Español",
+      "de": "Alemán",
+      "nl": "Neerlandés",
+      "it": "Italiano",
+      "pl": "Polaco",
+      "pt": "Portugués (Brasil)",
+      "sv": "Sueco",
+      "xx": "Pseudoidioma (xx)",
+      "yy": "Pseudoidioma (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Desbloquee el chat con IA, la asistencia de documentos, la ayuda en la barra lateral y las herramientas de IA de flujo de trabajo para su equipo."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Error al cargar el contenido"
       }
     }
+  },
+  "reflection": {
+    "parentId": "ID del componente padre: {{id}}",
+    "noParent": "Sin componente padre"
   }
 }

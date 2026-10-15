@@ -121,7 +121,8 @@
     "saveAsDraft": "Enregistrer comme brouillon",
     "completing": "Finalisation...",
     "more": "Plus",
-    "closeDialog": "Fermer la boîte de dialogue"
+    "closeDialog": "Fermer la boîte de dialogue",
+    "clearSearch": "Effacer la recherche"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1344,6 +1345,19 @@
     "saving": "Enregistrement..."
   },
   "enums": {
+    "locale": {
+      "en": "Anglais",
+      "fr": "Français",
+      "es": "Espagnol",
+      "de": "Allemand",
+      "nl": "Néerlandais",
+      "it": "Italien",
+      "pl": "Polonais",
+      "pt": "Portugais (Brésil)",
+      "sv": "Suédois",
+      "xx": "Pseudo-langue (xx)",
+      "yy": "Pseudo-langue (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Débloquez le chat IA, l'assistance documentaire, l'aide en barre latérale et les outils IA de workflow pour votre équipe."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Erreur lors du chargement du contenu"
       }
     }
+  },
+  "reflection": {
+    "parentId": "ID du composant parent : {{id}}",
+    "noParent": "Aucun composant parent"
   }
 }

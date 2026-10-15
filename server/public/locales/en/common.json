@@ -121,7 +121,8 @@
     "saveAsDraft": "Save as Draft",
     "completing": "Completing...",
     "more": "More",
-    "closeDialog": "Close Dialog"
+    "closeDialog": "Close Dialog",
+    "clearSearch": "Clear search"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1388,6 +1389,19 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish",
+      "de": "German",
+      "nl": "Dutch",
+      "it": "Italian",
+      "pl": "Polish",
+      "pt": "Portuguese (Brazil)",
+      "sv": "Swedish",
+      "xx": "Pseudo (xx)",
+      "yy": "Pseudo (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Error loading content"
       }
     }
+  },
+  "reflection": {
+    "parentId": "Parent ID: {{id}}",
+    "noParent": "No Parent"
   }
 }

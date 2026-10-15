@@ -121,7 +121,8 @@
     "saveAsDraft": "Spara som utkast",
     "completing": "Slutför…",
     "more": "Mer",
-    "closeDialog": "Stäng dialogruta"
+    "closeDialog": "Stäng dialogruta",
+    "clearSearch": "Rensa sökning"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1388,6 +1389,19 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "Engelska",
+      "fr": "Franska",
+      "es": "Spanska",
+      "de": "Tyska",
+      "nl": "Nederländska",
+      "it": "Italienska",
+      "pl": "Polska",
+      "pt": "Portugisiska (Brasilien)",
+      "sv": "Svenska",
+      "xx": "Pseudospråk (xx)",
+      "yy": "Pseudospråk (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Ge ditt team tillgång till AI-chatt, dokumentstöd, hjälp i sidopanelen och AI-verktyg för arbetsflöden."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Det gick inte att läsa in innehållet"
       }
     }
+  },
+  "reflection": {
+    "parentId": "Överordnad komponents ID: {{id}}",
+    "noParent": "Ingen överordnad komponent"
   }
 }

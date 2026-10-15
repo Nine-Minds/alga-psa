@@ -121,7 +121,8 @@
     "saveAsDraft": "Als Entwurf speichern",
     "completing": "Abschließen...",
     "more": "Mehr",
-    "closeDialog": "Dialog schließen"
+    "closeDialog": "Dialog schließen",
+    "clearSearch": "Suche löschen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1344,6 +1345,19 @@
     "saving": "Wird gespeichert..."
   },
   "enums": {
+    "locale": {
+      "en": "Englisch",
+      "fr": "Französisch",
+      "es": "Spanisch",
+      "de": "Deutsch",
+      "nl": "Niederländisch",
+      "it": "Italienisch",
+      "pl": "Polnisch",
+      "pt": "Portugiesisch (Brasilien)",
+      "sv": "Schwedisch",
+      "xx": "Pseudosprache (xx)",
+      "yy": "Pseudosprache (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Schalten Sie KI-Chat, Dokumentenhilfe, Seitenleisten-Assistenz und Workflow-KI-Tools für Ihr Team frei."
     },
@@ -2094,5 +2108,9 @@
         "loadFailed": "Fehler beim Laden des Inhalts"
       }
     }
+  },
+  "reflection": {
+    "parentId": "ID der übergeordneten Komponente: {{id}}",
+    "noParent": "Keine übergeordnete Komponente"
   }
 }
