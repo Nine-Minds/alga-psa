@@ -2722,6 +2722,10 @@
       "modeTitle": "Entra-Bereitstellungsmodus für das Kundenportal",
       "modeWorkflowManaged": "Workflow-gesteuert",
       "workflowManagedInfo": "Im Workflow-gesteuerten Modus werden nur Entra-Zugriffsereignisse veröffentlicht. Der ausgewählte Workflow ist für die Bereitstellung von Kundenportalbenutzern, Rollenzuweisungen, Einladungen und Lebenszyklusänderungen verantwortlich."
+    },
+    "proFeature": {
+      "title": "Sammelzuweisung für Single Sign-On",
+      "description": "Diese Funktion ist in Pro verfügbar. Führen Sie ein Upgrade durch, um SSO-Zuweisungen für Google Workspace und Microsoft 365 direkt auf der Seite mit den Sicherheitseinstellungen zu verwalten."
     }
   },
   "profile": {

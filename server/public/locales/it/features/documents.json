@@ -376,5 +376,8 @@
     "altVideoThumbnail": "Miniatura di {{name}}",
     "pageCount_one": "{{count}} pagina",
     "pageCount_other": "{{count}} pagine"
+  },
+  "skeleton": {
+    "cardLabel": "Scheda di caricamento del documento"
   }
 }

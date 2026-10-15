@@ -2722,6 +2722,10 @@
       "modeTitle": "Mode de provisionnement Entra du portail client",
       "modeWorkflowManaged": "Géré par workflow",
       "workflowManagedInfo": "Le mode géré par workflow publie uniquement les événements d'accès Entra. Le workflow sélectionné est responsable du provisionnement des utilisateurs du portail client, de l'affectation des rôles, des invitations et des changements de cycle de vie."
+    },
+    "proFeature": {
+      "title": "Affectation en masse de l’authentification unique",
+      "description": "Cette fonctionnalité est disponible dans Pro. Passez à Pro pour gérer les affectations SSO de Google Workspace et Microsoft 365 directement depuis la page des paramètres de sécurité."
     }
   },
   "profile": {

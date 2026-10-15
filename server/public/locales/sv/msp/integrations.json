@@ -1228,7 +1228,8 @@
         "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
       },
       "proFeature": {
-        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro."
+        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro.",
+        "notice": "Identitetsintegrationen med Microsoft Entra är en Pro-funktion."
       },
       "loading": "Läser in integrationen med Microsoft Entra…"
     },

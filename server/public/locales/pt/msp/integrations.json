@@ -1228,7 +1228,8 @@
         "unsavedNotice": "Estes filtros só terão efeito depois de serem salvos."
       },
       "proFeature": {
-        "description": "A integração com o Microsoft Entra está disponível no AlgaPSA Pro."
+        "description": "A integração com o Microsoft Entra está disponível no AlgaPSA Pro.",
+        "notice": "A integração de identidade do Microsoft Entra é um recurso do Pro."
       },
       "loading": "Carregando a integração com o Microsoft Entra…"
     },

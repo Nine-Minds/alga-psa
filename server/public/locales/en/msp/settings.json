@@ -2722,6 +2722,10 @@
       "modeTitle": "Client portal Entra provisioning mode",
       "modeWorkflowManaged": "Workflow-managed",
       "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+    },
+    "proFeature": {
+      "title": "Single Sign-On Bulk Assignment",
+      "description": "This feature is available in Pro. Upgrade to manage Google Workspace and Microsoft 365 SSO assignments directly from the Security settings page."
     }
   },
   "profile": {

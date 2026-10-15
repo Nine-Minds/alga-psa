@@ -2722,6 +2722,10 @@
       "modeTitle": "Läge för Entra-etablering i kundportalen",
       "modeWorkflowManaged": "Hanteras av arbetsflöde",
       "workflowManagedInfo": "Läget som hanteras av arbetsflöden publicerar endast Entra-åtkomsthändelser. Det valda arbetsflödet ansvarar för etablering av kundportalanvändare, rolltilldelning, inbjudningar och livscykeländringar."
+    },
+    "proFeature": {
+      "title": "Masstilldelning av enkel inloggning",
+      "description": "Den här funktionen är tillgänglig i Pro. Uppgradera för att hantera SSO-tilldelningar för Google Workspace och Microsoft 365 direkt från sidan med säkerhetsinställningar."
     }
   },
   "profile": {

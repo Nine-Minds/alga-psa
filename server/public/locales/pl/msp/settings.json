@@ -2722,6 +2722,10 @@
       "modeTitle": "Tryb inicjowania obsługi Entra dla portalu klienta",
       "modeWorkflowManaged": "Zarządzany przez workflow",
       "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
+    },
+    "proFeature": {
+      "title": "Zbiorcze przypisywanie pojedynczego logowania",
+      "description": "Ta funkcja jest dostępna w Pro. Przejdź na Pro, aby zarządzać przypisaniami SSO Google Workspace i Microsoft 365 bezpośrednio na stronie ustawień bezpieczeństwa."
     }
   },
   "profile": {

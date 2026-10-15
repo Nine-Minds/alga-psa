@@ -2722,6 +2722,10 @@
       "modeTitle": "Modo de aprovisionamiento de Entra para el portal del cliente",
       "modeWorkflowManaged": "Administrado por flujo de trabajo",
       "workflowManagedInfo": "El modo administrado por flujo de trabajo solo publica eventos de acceso de Entra. El flujo de trabajo seleccionado se encarga del aprovisionamiento de usuarios del portal del cliente, la asignación de roles, las invitaciones y los cambios del ciclo de vida."
+    },
+    "proFeature": {
+      "title": "Asignación masiva de inicio de sesión único",
+      "description": "Esta función está disponible en Pro. Actualice su plan para administrar las asignaciones de SSO de Google Workspace y Microsoft 365 directamente desde la página de configuración de Seguridad."
     }
   },
   "profile": {

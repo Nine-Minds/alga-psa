@@ -431,5 +431,8 @@
   "communityEdition": {
     "hostedDescription": "Las funciones de administración de cuentas y facturación están disponibles en Pro para implementaciones alojadas.",
     "selfHostedDescription": "La Community Edition autoalojada permite usuarios ilimitados sin restricciones de licencia ni facturación."
+  },
+  "page": {
+    "title": "Administración de la cuenta"
   }
 }

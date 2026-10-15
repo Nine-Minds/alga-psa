@@ -1228,7 +1228,8 @@
         "unsavedNotice": "These filter settings are not in effect until you save them."
       },
       "proFeature": {
-        "description": "Microsoft Entra integration is available in AlgaPSA Pro."
+        "description": "Microsoft Entra integration is available in AlgaPSA Pro.",
+        "notice": "Microsoft Entra Identity Integration is a Pro Feature."
       },
       "loading": "Loading Microsoft Entra integration…"
     },

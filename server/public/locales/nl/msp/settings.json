@@ -2722,6 +2722,10 @@
       "modeTitle": "Entra-inrichtingsmodus voor het klantenportaal",
       "modeWorkflowManaged": "Door workflow beheerd",
       "workflowManagedInfo": "De door workflow beheerde modus publiceert alleen Entra-toegangsgebeurtenissen. De geselecteerde workflow is verantwoordelijk voor de inrichting van gebruikers van het klantenportaal, roltoewijzing, uitnodigingen en levenscycluswijzigingen."
+    },
+    "proFeature": {
+      "title": "Bulktoewijzing voor single sign-on",
+      "description": "Deze functie is beschikbaar in Pro. Upgrade om SSO-toewijzingen voor Google Workspace en Microsoft 365 rechtstreeks vanaf de pagina met beveiligingsinstellingen te beheren."
     }
   },
   "profile": {

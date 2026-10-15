@@ -2722,6 +2722,10 @@
       "modeTitle": "Modalità di provisioning Entra del portale clienti",
       "modeWorkflowManaged": "Gestita da workflow",
       "workflowManagedInfo": "La modalità gestita da workflow pubblica solo gli eventi di accesso Entra. Il workflow selezionato gestisce il provisioning degli utenti del portale clienti, l'assegnazione dei ruoli, gli inviti e le modifiche del ciclo di vita."
+    },
+    "proFeature": {
+      "title": "Assegnazione in blocco del Single Sign-On",
+      "description": "Questa funzionalità è disponibile in Pro. Passa a Pro per gestire le assegnazioni SSO di Google Workspace e Microsoft 365 direttamente dalla pagina delle impostazioni di sicurezza."
     }
   },
   "profile": {

@@ -1228,7 +1228,8 @@
         "unsavedNotice": "Te filtry zaczną działać dopiero po zapisaniu."
       },
       "proFeature": {
-        "description": "Integracja z Microsoft Entra jest dostępna w AlgaPSA Pro."
+        "description": "Integracja z Microsoft Entra jest dostępna w AlgaPSA Pro.",
+        "notice": "Integracja tożsamości Microsoft Entra jest funkcją Pro."
       },
       "loading": "Ładowanie integracji z Microsoft Entra…"
     },

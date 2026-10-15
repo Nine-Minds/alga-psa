@@ -1228,7 +1228,8 @@
         "unsavedNotice": "Deze filters worden pas toegepast nadat u ze hebt opgeslagen."
       },
       "proFeature": {
-        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro."
+        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro.",
+        "notice": "De identiteitsintegratie met Microsoft Entra is een Pro-functie."
       },
       "loading": "Microsoft Entra-integratie laden…"
     },

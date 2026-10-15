@@ -2722,6 +2722,10 @@
       "modeTitle": "Modo de provisionamento do Entra para o portal do cliente",
       "modeWorkflowManaged": "Gerenciado por fluxo de trabalho",
       "workflowManagedInfo": "O modo gerenciado por fluxo de trabalho publica apenas eventos de acesso do Entra. O fluxo de trabalho selecionado é responsável pelo provisionamento de usuários no portal do cliente, pela atribuição de funções, pelos convites e pelas alterações no ciclo de vida."
+    },
+    "proFeature": {
+      "title": "Atribuição em massa de login único",
+      "description": "Este recurso está disponível no Pro. Faça upgrade para gerenciar atribuições de SSO do Google Workspace e Microsoft 365 diretamente na página de configurações de Segurança."
     }
   },
   "profile": {
