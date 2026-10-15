@@ -5,6 +5,7 @@ import type { CoManagedBulkHandbackRequest, CoManagedBulkHandbackResult, CoManag
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCoManagedWorkSignals } from './CoManagedWorkSignalsProvider';
 import { isQualifiedHandbackEligible } from '@alga-psa/tickets/lib';
 import { bulkHandBackCoManagedTicketsAction } from '@/lib/actions/coManagedTicketQueueActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
@@ -79,6 +80,7 @@ export default function CoManagedTicketHandbackComposer({
   idPrefix?: string;
 }) {
   const { t } = useTranslation('msp/licensing');
+  const { refresh: refreshWorkSignals } = useCoManagedWorkSignals();
   const eligible = useMemo(() => selectedItems.filter(isQualifiedHandbackEligible), [selectedItems]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -146,6 +148,8 @@ export default function CoManagedTicketHandbackComposer({
     setUncertain(false);
     try {
       const response = await bulkHandBackCoManagedTicketsAction(frozen.request);
+      // Hand back changes the callout and badge counts, even if this composer has since unmounted.
+      refreshWorkSignals();
       if (!mounted.current) return;
       setResults(response);
       setRestored(null);
@@ -157,7 +161,7 @@ export default function CoManagedTicketHandbackComposer({
       inFlight.current = false;
       if (mounted.current) setBusy(false);
     }
-  }, [actorScope, buildRequest, restored, results]);
+  }, [actorScope, buildRequest, restored, results, refreshWorkSignals]);
 
   // A restored intent is shown as unresolved and never submitted automatically.
   if (restored && !results) {

@@ -40,17 +40,26 @@ function readDismissed(key: string): Dismissed {
   }
 }
 
-function writeDismissed(key: string, counts: Counts): void {
+function writeDismissed(key: string, counts: Dismissed): void {
   memoryDismissals.set(key, counts);
   try { window.localStorage.setItem(key, JSON.stringify(counts)); } catch { /* in-memory only */ }
 }
 
+const SEGMENTS: Array<keyof Counts> = ['escalatedUnassigned', 'awaitingReply'];
+
 /**
  * Dismissal is remembered per viewer and per count in browser storage, so a
- * dismissed segment stays hidden until its count rises above the dismissed value. Storage that is missing or
- * throws degrades to in-memory dismissal for the life of the page.
+ * dismissed segment stays hidden until its count rises above the dismissed value.
+ * When a live count is later below the stored value the stored value is lowered
+ * (cleared at zero), so work that was handled and then recurs shows the strip again.
+ * `live` is null while the counts are unknown (gate closed, error): nothing is reset then.
+ * Storage that is missing or throws degrades to in-memory dismissal for the life of the page.
  */
-export function useCalloutDismissal(viewerId: string | null, scopeKey: string): [Dismissed, (counts: Counts) => void] {
+export function useCalloutDismissal(
+  viewerId: string | null,
+  scopeKey: string,
+  live: Counts | null = null,
+): [Dismissed, (counts: Counts) => void] {
   const key = `${DISMISS_PREFIX}${viewerId ?? 'anonymous'}:${scopeKey}`;
   // The state remembers which key it was read for. A different key is re-read
   // during render, so a dismissed strip never paints and one key's dismissal is
@@ -65,6 +74,26 @@ export function useCalloutDismissal(viewerId: string | null, scopeKey: string): 
     setState({ key, value: counts });
     writeDismissed(key, counts);
   }, [key]);
+
+  const liveEscalated = live?.escalatedUnassigned;
+  const liveAwaiting = live?.awaitingReply;
+  useEffect(() => {
+    if (liveEscalated === undefined || liveAwaiting === undefined) return;
+    const liveCounts: Counts = { escalatedUnassigned: liveEscalated, awaitingReply: liveAwaiting };
+    const stored = readDismissed(key);
+    const next: Dismissed = { ...stored };
+    let changed = false;
+    for (const segment of SEGMENTS) {
+      const was = stored[segment];
+      if (was !== undefined && liveCounts[segment] < was) {
+        changed = true;
+        if (liveCounts[segment] > 0) next[segment] = liveCounts[segment]; else delete next[segment];
+      }
+    }
+    if (!changed) return;
+    writeDismissed(key, next);
+    setState({ key, value: next });
+  }, [key, liveEscalated, liveAwaiting]);
   return [value, dismiss];
 }
 
@@ -73,9 +102,10 @@ function CalloutSegment({ id, href, children }: { id: string; href: string; chil
   return <Link id={id} href={href} className="underline-offset-2 hover:underline">{children}</Link>;
 }
 
-function CalloutBody({ counts, viewerId, scopeKey, clientId }: { counts: Counts; viewerId: string | null; scopeKey: string; clientId?: string }) {
+function CalloutBody({ counts, dismissed, dismiss, scopeKey, clientId }: {
+  counts: Counts; dismissed: Dismissed; dismiss: (counts: Counts) => void; scopeKey: string; clientId?: string;
+}) {
   const { t } = useTranslation('msp/licensing');
-  const [dismissed, dismiss] = useCalloutDismissal(viewerId, scopeKey);
   const showEscalated = counts.escalatedUnassigned > 0 && counts.escalatedUnassigned > (dismissed.escalatedUnassigned ?? 0);
   const showAwaiting = counts.awaitingReply > 0 && counts.awaitingReply > (dismissed.awaitingReply ?? 0);
   if (!showEscalated && !showAwaiting) return null;
@@ -122,8 +152,11 @@ function CalloutBody({ counts, viewerId, scopeKey, clientId }: { counts: Counts;
 /** All Tickets mount: reads the shared provider, so it adds no request of its own. */
 function WorkCallout() {
   const signals = useCoManagedWorkSignals();
-  if (!signals.available || signals.total <= 0) return null;
-  return <CalloutBody counts={signals} viewerId={signals.viewerId} scopeKey="all" />;
+  const counts = signals.available ? { escalatedUnassigned: signals.escalatedUnassigned, awaitingReply: signals.awaitingReply } : null;
+  // The hook lives here, not in the body, so a zero count (body unmounted) still resets the stored dismissal.
+  const [dismissed, dismiss] = useCalloutDismissal(signals.viewerId, 'all', counts);
+  if (!counts || signals.total <= 0) return null;
+  return <CalloutBody counts={counts} dismissed={dismissed} dismiss={dismiss} scopeKey="all" />;
 }
 
 export function CoManagedCalloutStrip() {
@@ -142,8 +175,10 @@ function ClientCallout({ clientId }: { clientId: string }) {
       .catch(() => { if (!cancelled) setCounts(null); });
     return () => { cancelled = true; };
   }, [available, clientId]);
+  const scopeKey = `client-${clientId}`;
+  const [dismissed, dismiss] = useCalloutDismissal(viewerId, scopeKey, available ? counts : null);
   if (!available || !counts || counts.escalatedUnassigned + counts.awaitingReply <= 0) return null;
-  return <CalloutBody counts={counts} viewerId={viewerId} scopeKey={`client-${clientId}`} clientId={clientId} />;
+  return <CalloutBody counts={counts} dismissed={dismissed} dismiss={dismiss} scopeKey={scopeKey} clientId={clientId} />;
 }
 
 export function CoManagedClientCalloutStrip({ clientId }: { clientId: string }) {

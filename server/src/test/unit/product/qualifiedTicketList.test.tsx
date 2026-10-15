@@ -66,12 +66,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useOptionalI18n: () => null,
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, label, value, disabled, options, onValueChange }: any) => (
-    <label>{label}
-      <select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
-        {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </label>
+  // Like the real control, a select with no visible label is named by its placeholder (the native toolbar has no labels).
+  default: ({ id, label, placeholder, value, disabled, options, onValueChange }: any) => (
+    <select id={id} aria-label={label ?? placeholder} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
+      {options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
   ),
 }));
 vi.mock('@alga-psa/ui/components/Checkbox', () => ({
@@ -176,11 +175,10 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
     mount();
     await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
 
-    // Typing alone must not query: the search is applied on submit.
+    // Search applies as you type, after a pause; there is no Search button.
+    expect(screen.queryByRole('button', { name: 'coManaged.queue.search' })).toBeNull();
     fireEvent.change(screen.getByLabelText('coManaged.queue.search'), { target: { value: 'literal 100%' } });
     expect(listRequests()).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.search' }));
     await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'literal 100%' }));
 
     openFilters();
@@ -238,7 +236,7 @@ describe('T007 — applied filters, sort and pagination reach the server', () =>
     expect(screen.getByRole('link', { name: 'T-1 · Beta ticket' }))
       .toHaveAttribute('href', '/msp/co-management/tickets/customer/relationship/same-id');
     // The counts come from the server response, not from the rows on screen.
-    expect(screen.getByText('coManaged.queue.counts:{"total":51,"open":50,"closed":1}')).toBeInTheDocument();
+    expect(screen.getByText('coManaged.queue.counts:{"count":51,"open":50,"closed":1}')).toBeInTheDocument();
   });
 });
 
@@ -466,6 +464,55 @@ describe('T022 — Customer Tickets owns its toolbar and carries no native chrom
     expect(screen.queryByLabelText('coManaged.queue.state')).toBeNull();
     expect(screen.queryByText(/addMspTicket|Add Ticket|bundle/i)).toBeNull();
     expect(screen.queryByText('coManaged.queue.thisMsp')).toBeNull();
+  });
+
+  it('puts Share in the page header beside the title, not in the toolbar; an embedded list keeps it in the toolbar', async () => {
+    const page = mount();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    const heading = screen.getByRole('heading', { level: 1, name: 'coManaged.customerTickets.title' });
+    const headerRow = heading.closest('div.justify-between') as HTMLElement;
+    expect(headerRow).toContainElement(document.getElementById('co-managed-ticket-list-share'));
+    expect(document.getElementById('co-managed-ticket-list-toolbar')).not.toContainElement(document.getElementById('co-managed-ticket-list-share'));
+    page.unmount();
+
+    mount({ embedded: true, idPrefix: 'embedded-list' });
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(document.getElementById('embedded-list-toolbar')).toContainElement(document.getElementById('embedded-list-share'));
+  });
+
+  it('search runs as you type: keystrokes within the pause make one request, Enter applies at once, and Reset clears the text', async () => {
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    const box = screen.getByLabelText('coManaged.queue.search') as HTMLInputElement;
+    fireEvent.change(box, { target: { value: 'a' } });
+    fireEvent.change(box, { target: { value: 'ab' } });
+    fireEvent.change(box, { target: { value: 'abc' } });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'abc' }));
+    // The intermediate values never reached the server.
+    expect(listRequests().filter(request => 'search' in request).map(request => request.search)).toEqual(['abc']);
+    // The text the field itself committed is not overwritten while the user keeps typing.
+    fireEvent.change(box, { target: { value: 'abcd' } });
+    expect(box.value).toBe('abcd');
+
+    fireEvent.change(box, { target: { value: 'quick' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    await waitFor(() => expect(lastListRequest()).toEqual({ ...DEFAULT_REQUEST, search: 'quick' }));
+
+    fireEvent.click(document.getElementById('co-managed-ticket-list-reset') as HTMLElement);
+    await waitFor(() => expect(box.value).toBe(''));
+    await waitFor(() => expect(lastListRequest()).toEqual(DEFAULT_REQUEST));
+  });
+
+  it('writes the typed search to the address bar with replaceState, never a history push', async () => {
+    const replace = vi.spyOn(window.history, 'replaceState');
+    mount();
+    await screen.findByRole('link', { name: 'T-1 · Alpha ticket' });
+    fireEvent.change(screen.getByLabelText('coManaged.queue.search'), { target: { value: 'door' } });
+    await waitFor(() => expect(window.location.search).toContain('door'));
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalled();
+    replace.mockRestore();
   });
 
   it('offers All workspaces plus the reader\'s own workspaces — never a "This MSP" option', async () => {

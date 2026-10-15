@@ -7,6 +7,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedTicketAssignmentAction, listSharedTicketAssigneesAction, assignSharedTicketAction } from '@/lib/actions/coManagedTicketAssignmentActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { useCoManagedWorkSignals } from './CoManagedWorkSignalsProvider';
 
 type Props = { resource: CoManagedSharedResource; onSaved: () => void; onUnavailable: () => void; onReload: () => void };
 type State = Awaited<ReturnType<typeof getSharedTicketAssignmentAction>>;
@@ -17,6 +18,7 @@ export default function CoManagedTicketAssignment(props: Props) {
 }
 function Assignment({ resource, onSaved, onUnavailable, onReload }: Props) {
   const { t } = useTranslation('msp/licensing');
+  const { refresh: refreshWorkSignals } = useCoManagedWorkSignals();
   const target = useRef({ ...resource }), callbacks = useRef({ onSaved, onUnavailable, onReload });
   callbacks.current = { onSaved, onUnavailable, onReload };
   const [state, setState] = useState<State | null>(null), [loadError, setLoadError] = useState(false);
@@ -64,6 +66,7 @@ function Assignment({ resource, onSaved, onUnavailable, onReload }: Props) {
     inFlight.current = true; setPending(request); setBusy(true); setError(null);
     try {
       const result = await assignSharedTicketAction(target.current, request);
+      if (result.ok) refreshWorkSignals();
       if (!mounted.current) return;
       if (result.ok) { setPending(null); callbacks.current.onSaved(); }
       else {

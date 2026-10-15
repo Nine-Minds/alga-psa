@@ -47,7 +47,7 @@ export default function CoManagedProjectTaskQueue() {
       <Button id="co-task-queue-search-submit" type="submit">{t('coManaged.queue.search')}</Button>
     </form>
     {error ? <p role="alert" className="text-destructive">{t('coManaged.projects.queue.loadError')}</p> : !result ? <p role="status">{t('coManaged.loading')}</p> : <>
-      <p role="status" className="text-sm text-muted-foreground">{t('coManaged.projects.queue.counts', { total: result.totalCount, open: result.openCount, closed: result.closedCount })}</p>
+      <p role="status" className="text-sm text-muted-foreground">{t('coManaged.projects.queue.counts', { count: result.totalCount, open: result.openCount, closed: result.closedCount })}</p>
       {!result.items.length ? <p>{t('coManaged.projects.queue.empty')}</p> : <div className="overflow-x-auto rounded-lg border border-[rgb(var(--color-border-200))]">
         <Table><TableHeader><TableRow>{['task', 'project', 'workspace', 'state', 'assignee', 'due'].map(field => <TableHead key={field}>{t(`coManaged.projects.queue.columns.${field}`)}</TableHead>)}</TableRow></TableHeader>
           <TableBody>{result.items.map((item, index) => {
