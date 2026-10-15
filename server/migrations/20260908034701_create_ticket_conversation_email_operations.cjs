@@ -1,6 +1,7 @@
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, supportsDistributedForeignKeyTarget } = require('./utils/citusDistribution.cjs');
 const OPERATIONS = 'ticket_conversation_email_operations', ROUTES = 'ticket_conversation_email_routes';
 exports.up = async function (knex) {
+  const providerFkSupported = await supportsDistributedForeignKeyTarget(knex, 'email_providers');
   if (!await knex.schema.hasColumn('ticket_conversation_editor_drafts', 'email_envelope')) await knex.schema.alterTable('ticket_conversation_editor_drafts', t => {
     t.jsonb('email_envelope').nullable();
     t.check("email_envelope IS NULL OR jsonb_typeof(email_envelope) = 'object'", [], 'ticket_editor_email_envelope_check');
@@ -36,10 +37,14 @@ exports.up = async function (knex) {
     t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     t.primary(['tenant', 'mailbox_id', 'token_hash'], { constraintName: 'ticket_conversation_email_routes_pkey' });
     t.unique(['tenant', 'mailbox_id', 'rfc_message_id'], { indexName: 'ticket_conversation_email_routes_message_key' });
-    t.foreign(['tenant', 'mailbox_id']).references(['tenant', 'id']).inTable('email_providers');
+    if (providerFkSupported) t.foreign(['tenant', 'mailbox_id']).references(['tenant', 'id']).inTable('email_providers');
     t.index(['tenant', 'ticket_tenant', 'ticket_id']);
     t.check("token_hash ~ '^[0-9a-f]{64}$'");
   });
+  // As with sender grants, local Citus providers are validated by mailbox
+  // admission in the app. Remove an incompatible FK left by a partial run.
+  if (!providerFkSupported) await knex.raw(`ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??`,
+    [ROUTES, 'ticket_conversation_email_routes_tenant_mailbox_id_foreign']);
   await ensureTenantDistribution(knex, OPERATIONS); await ensureTenantDistribution(knex, ROUTES);
 };
 exports.down = async function (knex) {

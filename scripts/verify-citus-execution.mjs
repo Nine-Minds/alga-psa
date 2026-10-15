@@ -13,6 +13,8 @@ const runtimeFiles = [
   'server/src/test/integration/invoiceTicketImmutable.integration.test.ts',
   'server/src/test/integration/remainingBucketUnits.integration.test.ts',
   'server/migrations/__tests__/unitOfMeasureBackfill.integration.test.ts',
+  'server/migrations/__tests__/ticketConversationMailboxMigrations.integration.test.ts',
+  'server/migrations/__tests__/coManagedTaskAttachmentParents.integration.test.ts',
   'server/migrations/__tests__/collapseRecurringServicePeriodObligationTypeMigration.integration.test.ts',
 ];
 const tenantFiles = [
