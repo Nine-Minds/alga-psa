@@ -592,3 +592,53 @@ kebab ids, pluralized workspace counts, drawer `onDeleted`, reversible
 `down()`, case-folded custom statuses, SQL-side contact candidates) are all
 present. `features.json` (109) and `tests.json` (157) stay fully
 `implemented: true`.
+
+## Round 8 — the focus drawer's footer (2026-10-15)
+
+### Two scrollbars and a Save button 700px below the fold
+
+Operator, on `/msp/assets/<id>`: "this drawer should have floating footer with
+save and cancel buttons, and double scroll is garbage". Measured headless with
+the edit view open, and both halves were real:
+
+- `Drawer` only makes its body (`p-6`) the scroll container when it is given a
+  `footer`; without one, `Dialog.Content` itself carries `overflow-y-auto`. The
+  focus drawer passed no footer, so the panel reported `scrollHeight` 1440 over
+  a 900px client box *and* the content pane inside it scrolled 1560 over 811 —
+  scroll the form to its end and the panel kept going into empty space.
+- `#form-actions` sat at the foot of a 1496px form: Save and Cancel were at
+  y≈1585 in a 900px viewport, reachable only by scrolling the whole edit form.
+
+`FocusView` grew a `footer`, every view supplies one (`asset-bento-focus-done`
+closes the read-only views), and the edit view's footer holds
+`asset-bento-focus-cancel` and `asset-bento-focus-save`. The save button is
+`type="submit" form="asset-edit-form"` — it submits the form from outside it,
+so `handleSubmit` and its validation are untouched. `AssetForm` takes
+`hideActions` (drop the duplicate row), `onSavingChange` (the footer disables
+Save and says "Saving...") and `onCancel` (in a drawer, `router.back()`
+navigated the page behind it away). Because the buttons left the form, a save
+error now scrolls itself into view.
+
+Giving the drawer a footer is also what removes the second scrollbar: the panel
+stops being a scroll container and the content pane is the only one left.
+
+Covered by `AssetForm.drawerActions.test.tsx` (four render cases) and
+`AssetBentoLayout.focusDrawer.contract.test.ts` (the footer wiring and the
+single scroll region).
+
+### The client picker that would not change clients
+
+The round-7 browser check could not verify the cross-client billing guard: in
+Quick Add Ticket opened from an asset, picking another client snapped straight
+back. `handleClientChange` returned early whenever `isPrefilledClient` — but
+nothing disables the picker, so the dialog silently ignored the choice and
+saved the ticket under the original client. A prefilled client is a default,
+not a lock: an explicit change now clears the flag (so the effect loads that
+client's contacts, which the prefilled branch skips) and clears the location,
+which belonged to the client before it. Pre-existing and not ours, but it sits
+directly on top of FR-F3's verification path. Test: "honours a client change
+when the dialog opened with one prefilled" in `ticket-inline-add-prefill`,
+which fails without the fix.
+
+`features.json` (109) and `tests.json` (157) stay fully `implemented: true`;
+this round fixed presentation and an adjacent blocker, not plan scope.
