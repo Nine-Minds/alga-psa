@@ -84,7 +84,8 @@
           "instant": "Instant",
           "live": "Live",
           "manual": "Manual",
-          "twoWay": "2-way"
+          "twoWay": "2-way",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Delivery",
@@ -104,6 +105,9 @@
           },
           "xeroCsv": {
             "description": "Export invoices and import Xero tax reports."
+          },
+          "qbd": {
+            "description": "Export invoices as an IIF file for import into QuickBooks Desktop."
           }
         },
         "selected": "{{title}} selected",
@@ -4056,6 +4060,47 @@
           "providers": "Teams Phone today; the same call core is what future providers plug into."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF) Integration",
+        "description": "Export invoices as an IIF file for File → Utilities → Import → IIF Files in QuickBooks Desktop.",
+        "loading": "Loading QuickBooks Desktop settings...",
+        "savedMessage": "Settings saved successfully",
+        "save": "Save settings",
+        "sharedMappingsNote": "Customer, item, tax code, payment term, and discount mappings are shared with the QuickBooks CSV integration.",
+        "metadataHelp": "Per-item overrides: add {\"qbdIncomeAccount\": \"Account name\"} to an Items / Services or Discounts mapping, or {\"qbdSalesTaxItem\": \"Item name\"} to a Tax Codes mapping, using the mapping metadata editor.",
+        "connectionsPermissionNotice": "You can view QuickBooks Desktop settings, but changing them requires the manage-connections capability. Ask an administrator to grant it.",
+        "errors": {
+          "load": "Failed to load QuickBooks Desktop settings",
+          "save": "Failed to save QuickBooks Desktop settings"
+        },
+        "warning": {
+          "title": "Back up your company file first",
+          "description": "QuickBooks Desktop adds any customer, item, account, or term name it does not recognise when importing an IIF file, and IIF imports cannot be undone. Make sure every name below and in the mappings matches your company file exactly, and try your first import on a backup copy."
+        },
+        "exportSettings": {
+          "title": "IIF Export Settings",
+          "description": "Enter the QuickBooks Desktop account and item names exactly as they appear in your Chart of Accounts and Item List."
+        },
+        "fields": {
+          "arAccount": "Accounts Receivable account",
+          "arAccountHelp": "The A/R account each invoice posts to.",
+          "defaultIncomeAccount": "Default income account",
+          "defaultIncomeAccountHelp": "Used for invoice lines whose mapping has no \"qbdIncomeAccount\" metadata. Required unless every mapping sets one.",
+          "salesTaxPayableAccount": "Sales tax liability account",
+          "salesTaxPayableAccountHelp": "The account the sales tax line posts to.",
+          "defaultSalesTaxItem": "Default sales tax item",
+          "defaultSalesTaxItemHelp": "Sales tax item or group for taxed invoices whose tax code mapping has no \"qbdSalesTaxItem\" metadata."
+        },
+        "mappings": {
+          "title": "QuickBooks Mappings",
+          "description": "Map Alga clients, services, tax codes, payment terms, and discounts to the names in your QuickBooks Desktop company file. Unmapped clients export under their Alga name; unmapped payment terms are left blank."
+        },
+        "exports": {
+          "description": "Create a QuickBooks Desktop export batch, execute it, and the IIF file downloads automatically."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
       "emailOnAnotherClient": "This email is already associated with another client",
       "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "User does not have permission to view integration settings",
+      "manageIntegrationsPermission": "User does not have permission to manage integration settings"
     }
   },
   "telephony": {

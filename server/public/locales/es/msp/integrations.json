@@ -82,7 +82,8 @@
           "instant": "Instantáneo",
           "live": "En vivo",
           "manual": "Manual",
-          "twoWay": "Bidireccional"
+          "twoWay": "Bidireccional",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Entrega",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Exporte facturas a CSV para importación manual en Xero e importe datos fiscales desde los informes de Xero."
+          },
+          "qbd": {
+            "description": "Exporta facturas como archivo IIF para importarlas en QuickBooks Desktop."
           }
         },
         "selected": "{{title}} seleccionado",
@@ -4056,6 +4060,47 @@
           "providers": "Hoy Teams Phone; el mismo núcleo de llamadas sostendrá a los futuros proveedores."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integración de QuickBooks Desktop (IIF)",
+        "description": "Exporta facturas como archivo IIF para Archivo → Utilidades → Importar → Archivos IIF en QuickBooks Desktop.",
+        "loading": "Cargando la configuración de QuickBooks Desktop...",
+        "savedMessage": "Configuración guardada correctamente",
+        "save": "Guardar configuración",
+        "sharedMappingsNote": "Las asignaciones de clientes, artículos, códigos de impuestos, condiciones de pago y descuentos se comparten con la integración QuickBooks CSV.",
+        "metadataHelp": "Anulaciones por artículo: añada {\"qbdIncomeAccount\": \"Nombre de cuenta\"} a una asignación de Artículos / Servicios o Descuentos, o {\"qbdSalesTaxItem\": \"Nombre de artículo\"} a una asignación de Códigos de impuestos, con el editor de metadatos de la asignación.",
+        "connectionsPermissionNotice": "Puede ver la configuración de QuickBooks Desktop, pero para cambiarla se requiere la capacidad de gestionar conexiones. Pida a un administrador que se la conceda.",
+        "errors": {
+          "load": "No se pudo cargar la configuración de QuickBooks Desktop",
+          "save": "No se pudo guardar la configuración de QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Primero haga una copia de seguridad del archivo de empresa",
+          "description": "QuickBooks Desktop crea cualquier nombre de cliente, artículo, cuenta o condición que no reconozca al importar un archivo IIF, y las importaciones IIF no se pueden deshacer. Asegúrese de que cada nombre aquí y en las asignaciones coincida exactamente con su archivo de empresa y pruebe la primera importación en una copia de seguridad."
+        },
+        "exportSettings": {
+          "title": "Configuración de exportación IIF",
+          "description": "Introduzca los nombres de cuentas y artículos de QuickBooks Desktop exactamente como aparecen en su plan de cuentas y lista de artículos."
+        },
+        "fields": {
+          "arAccount": "Cuenta de cuentas por cobrar",
+          "arAccountHelp": "La cuenta por cobrar en la que se registra cada factura.",
+          "defaultIncomeAccount": "Cuenta de ingresos predeterminada",
+          "defaultIncomeAccountHelp": "Se usa para las líneas de factura cuya asignación no tiene metadatos \"qbdIncomeAccount\". Obligatoria salvo que todas las asignaciones definan una.",
+          "salesTaxPayableAccount": "Cuenta de impuesto sobre ventas por pagar",
+          "salesTaxPayableAccountHelp": "La cuenta en la que se registra la línea de impuesto sobre ventas.",
+          "defaultSalesTaxItem": "Artículo de impuesto sobre ventas predeterminado",
+          "defaultSalesTaxItemHelp": "Artículo o grupo de impuesto sobre ventas para facturas con impuestos cuya asignación de código de impuesto no tiene metadatos \"qbdSalesTaxItem\"."
+        },
+        "mappings": {
+          "title": "Asignaciones de QuickBooks",
+          "description": "Asigne clientes, servicios, códigos de impuestos, condiciones de pago y descuentos de Alga a los nombres de su archivo de empresa de QuickBooks Desktop. Los clientes sin asignar se exportan con su nombre en Alga; las condiciones de pago sin asignar quedan en blanco."
+        },
+        "exports": {
+          "description": "Cree un lote de exportación de QuickBooks Desktop, ejecútelo y el archivo IIF se descargará automáticamente."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "Ya existe en el sistema un contacto con esta dirección de correo electrónico sin asignación de cliente",
       "emailOnAnotherClient": "Este correo electrónico ya está asociado a otro cliente",
       "emailOnAnotherClientNamed": "Este correo electrónico ya está asociado a {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "El usuario no tiene permiso para ver la configuración de integraciones",
+      "manageIntegrationsPermission": "El usuario no tiene permiso para gestionar la configuración de integraciones"
     }
   },
   "telephony": {

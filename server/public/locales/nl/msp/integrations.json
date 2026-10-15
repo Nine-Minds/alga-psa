@@ -82,7 +82,8 @@
           "instant": "Direct",
           "live": "Live",
           "manual": "Handmatig",
-          "twoWay": "Tweerichtings"
+          "twoWay": "Tweerichtings",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Levering",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten."
+          },
+          "qbd": {
+            "description": "Exporteer facturen als IIF-bestand om te importeren in QuickBooks Desktop."
           }
         },
         "selected": "{{title}} geselecteerd",
@@ -4056,6 +4060,47 @@
           "providers": "Vandaag Teams Phone; dezelfde gesprekskern draagt toekomstige aanbieders."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-integratie",
+        "description": "Exporteer facturen als IIF-bestand voor Bestand → Hulpprogramma's → Importeren → IIF-bestanden in QuickBooks Desktop.",
+        "loading": "QuickBooks Desktop-instellingen laden...",
+        "savedMessage": "Instellingen succesvol opgeslagen",
+        "save": "Instellingen opslaan",
+        "sharedMappingsNote": "Koppelingen voor klanten, artikelen, belastingcodes, betalingsvoorwaarden en kortingen worden gedeeld met de QuickBooks CSV-integratie.",
+        "metadataHelp": "Overschrijvingen per artikel: voeg {\"qbdIncomeAccount\": \"Rekeningnaam\"} toe aan een koppeling onder Artikelen / Diensten of Kortingen, of {\"qbdSalesTaxItem\": \"Artikelnaam\"} aan een belastingcodekoppeling, via de metadata-editor van de koppeling.",
+        "connectionsPermissionNotice": "U kunt de QuickBooks Desktop-instellingen bekijken, maar voor wijzigen is de bevoegdheid voor het beheren van verbindingen nodig. Vraag een beheerder om deze toe te kennen.",
+        "errors": {
+          "load": "QuickBooks Desktop-instellingen konden niet worden geladen",
+          "save": "QuickBooks Desktop-instellingen konden niet worden opgeslagen"
+        },
+        "warning": {
+          "title": "Maak eerst een back-up van uw bedrijfsbestand",
+          "description": "QuickBooks Desktop maakt elke klant-, artikel-, rekening- of voorwaardenaam aan die het niet herkent bij het importeren van een IIF-bestand, en IIF-imports kunnen niet ongedaan worden gemaakt. Zorg dat elke naam hieronder en in de koppelingen exact overeenkomt met uw bedrijfsbestand en test uw eerste import op een back-upkopie."
+        },
+        "exportSettings": {
+          "title": "IIF-exportinstellingen",
+          "description": "Voer de rekening- en artikelnamen van QuickBooks Desktop exact in zoals ze in uw rekeningschema en artikellijst staan."
+        },
+        "fields": {
+          "arAccount": "Debiteurenrekening",
+          "arAccountHelp": "De debiteurenrekening waarop elke factuur wordt geboekt.",
+          "defaultIncomeAccount": "Standaard opbrengstrekening",
+          "defaultIncomeAccountHelp": "Gebruikt voor factuurregels waarvan de koppeling geen \"qbdIncomeAccount\"-metadata heeft. Verplicht tenzij elke koppeling er een instelt.",
+          "salesTaxPayableAccount": "Rekening te betalen omzetbelasting",
+          "salesTaxPayableAccountHelp": "De rekening waarop de omzetbelastingregel wordt geboekt.",
+          "defaultSalesTaxItem": "Standaard omzetbelastingartikel",
+          "defaultSalesTaxItemHelp": "Omzetbelastingartikel of -groep voor belaste facturen waarvan de belastingcodekoppeling geen \"qbdSalesTaxItem\"-metadata heeft."
+        },
+        "mappings": {
+          "title": "QuickBooks-koppelingen",
+          "description": "Koppel Alga-klanten, diensten, belastingcodes, betalingsvoorwaarden en kortingen aan de namen in uw QuickBooks Desktop-bedrijfsbestand. Niet-gekoppelde klanten worden onder hun Alga-naam geëxporteerd; niet-gekoppelde betalingsvoorwaarden blijven leeg."
+        },
+        "exports": {
+          "description": "Maak een QuickBooks Desktop-exportbatch aan, voer deze uit en het IIF-bestand wordt automatisch gedownload."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
       "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
       "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te bekijken",
+      "manageIntegrationsPermission": "Gebruiker heeft geen toestemming om integratie-instellingen te beheren"
     }
   },
   "telephony": {

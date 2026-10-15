@@ -82,7 +82,8 @@
           "instant": "Natychmiastowy",
           "live": "Na żywo",
           "manual": "Ręczny",
-          "twoWay": "Dwukierunkowy"
+          "twoWay": "Dwukierunkowy",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Dostarczanie",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Eksportuj faktury do CSV w celu ręcznego importu do Xero i importuj dane podatkowe z raportów Xero."
+          },
+          "qbd": {
+            "description": "Eksportuj faktury jako plik IIF do importu w QuickBooks Desktop."
           }
         },
         "selected": "Wybrano {{title}}",
@@ -4056,6 +4060,47 @@
           "providers": "Dziś Teams Phone; ten sam rdzeń połączeń przyjmie kolejnych dostawców."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integracja QuickBooks Desktop (IIF)",
+        "description": "Eksportuj faktury jako plik IIF dla opcji Plik → Narzędzia → Importuj → Pliki IIF w QuickBooks Desktop.",
+        "loading": "Ładowanie ustawień QuickBooks Desktop...",
+        "savedMessage": "Ustawienia zostały zapisane",
+        "save": "Zapisz ustawienia",
+        "sharedMappingsNote": "Mapowania klientów, pozycji, kodów podatkowych, warunków płatności i rabatów są współdzielone z integracją QuickBooks CSV.",
+        "metadataHelp": "Nadpisania dla pozycji: dodaj {\"qbdIncomeAccount\": \"Nazwa konta\"} do mapowania Pozycje / Usługi lub Rabaty albo {\"qbdSalesTaxItem\": \"Nazwa pozycji\"} do mapowania kodów podatkowych w edytorze metadanych mapowania.",
+        "connectionsPermissionNotice": "Możesz przeglądać ustawienia QuickBooks Desktop, ale ich zmiana wymaga uprawnienia do zarządzania połączeniami. Poproś administratora o jego nadanie.",
+        "errors": {
+          "load": "Nie udało się wczytać ustawień QuickBooks Desktop",
+          "save": "Nie udało się zapisać ustawień QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Najpierw utwórz kopię zapasową pliku firmy",
+          "description": "Podczas importu pliku IIF QuickBooks Desktop tworzy każdą nierozpoznaną nazwę klienta, pozycji, konta lub warunku, a importów IIF nie można cofnąć. Upewnij się, że każda nazwa poniżej i w mapowaniach dokładnie odpowiada plikowi firmy, i wykonaj pierwszy import na kopii zapasowej."
+        },
+        "exportSettings": {
+          "title": "Ustawienia eksportu IIF",
+          "description": "Wprowadź nazwy kont i pozycji QuickBooks Desktop dokładnie tak, jak w planie kont i liście pozycji."
+        },
+        "fields": {
+          "arAccount": "Konto należności",
+          "arAccountHelp": "Konto należności, na które księgowana jest każda faktura.",
+          "defaultIncomeAccount": "Domyślne konto przychodów",
+          "defaultIncomeAccountHelp": "Używane dla pozycji faktury, których mapowanie nie ma metadanych \"qbdIncomeAccount\". Wymagane, chyba że każde mapowanie je określa.",
+          "salesTaxPayableAccount": "Konto zobowiązań z tytułu podatku od sprzedaży",
+          "salesTaxPayableAccountHelp": "Konto, na które księgowana jest linia podatku od sprzedaży.",
+          "defaultSalesTaxItem": "Domyślna pozycja podatku od sprzedaży",
+          "defaultSalesTaxItemHelp": "Pozycja lub grupa podatku od sprzedaży dla opodatkowanych faktur, których mapowanie kodu podatkowego nie ma metadanych \"qbdSalesTaxItem\"."
+        },
+        "mappings": {
+          "title": "Mapowania QuickBooks",
+          "description": "Przypisz klientów, usługi, kody podatkowe, warunki płatności i rabaty Alga do nazw w pliku firmy QuickBooks Desktop. Niezmapowani klienci są eksportowani pod nazwą z Alga; niezmapowane warunki płatności pozostają puste."
+        },
+        "exports": {
+          "description": "Utwórz partię eksportu QuickBooks Desktop, uruchom ją, a plik IIF pobierze się automatycznie."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
       "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
       "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Użytkownik nie ma uprawnień do wyświetlania ustawień integracji",
+      "manageIntegrationsPermission": "Użytkownik nie ma uprawnień do zarządzania ustawieniami integracji"
     }
   },
   "telephony": {

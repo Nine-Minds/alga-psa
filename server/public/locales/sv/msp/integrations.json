@@ -84,7 +84,8 @@
           "instant": "Omedelbar",
           "live": "I realtid",
           "manual": "Manuell",
-          "twoWay": "Dubbelriktad"
+          "twoWay": "Dubbelriktad",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Leverans",
@@ -104,6 +105,9 @@
           },
           "xeroCsv": {
             "description": "Exportera fakturor och importera skatterapporter från Xero."
+          },
+          "qbd": {
+            "description": "Exportera fakturor som IIF-fil för import i QuickBooks Desktop."
           }
         },
         "selected": "{{title}} har valts",
@@ -4056,6 +4060,47 @@
           "providers": "Teams Phone idag. Framtida leverantörer ansluts till samma samtalskärna."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-integration",
+        "description": "Exportera fakturor som IIF-fil för Arkiv → Verktyg → Importera → IIF-filer i QuickBooks Desktop.",
+        "loading": "Läser in QuickBooks Desktop-inställningar...",
+        "savedMessage": "Inställningarna har sparats",
+        "save": "Spara inställningar",
+        "sharedMappingsNote": "Mappningar för kunder, artiklar, skattekoder, betalningsvillkor och rabatter delas med QuickBooks CSV-integrationen.",
+        "metadataHelp": "Åsidosättningar per artikel: lägg till {\"qbdIncomeAccount\": \"Kontonamn\"} i en mappning under Artiklar / Tjänster eller Rabatter, eller {\"qbdSalesTaxItem\": \"Artikelnamn\"} i en skattekodsmappning, med mappningens metadataredigerare.",
+        "connectionsPermissionNotice": "Du kan visa QuickBooks Desktop-inställningarna, men för att ändra dem krävs behörigheten att hantera anslutningar. Be en administratör att bevilja den.",
+        "errors": {
+          "load": "Det gick inte att läsa in QuickBooks Desktop-inställningarna",
+          "save": "Det gick inte att spara QuickBooks Desktop-inställningarna"
+        },
+        "warning": {
+          "title": "Säkerhetskopiera företagsfilen först",
+          "description": "QuickBooks Desktop skapar alla kund-, artikel-, konto- eller villkorsnamn som det inte känner igen vid import av en IIF-fil, och IIF-importer kan inte ångras. Se till att varje namn nedan och i mappningarna exakt matchar din företagsfil och testa den första importen på en säkerhetskopia."
+        },
+        "exportSettings": {
+          "title": "IIF-exportinställningar",
+          "description": "Ange konto- och artikelnamnen i QuickBooks Desktop exakt som de visas i kontoplanen och artikellistan."
+        },
+        "fields": {
+          "arAccount": "Kundfordringskonto",
+          "arAccountHelp": "Kundfordringskontot som varje faktura bokförs på.",
+          "defaultIncomeAccount": "Standardintäktskonto",
+          "defaultIncomeAccountHelp": "Används för fakturarader vars mappning saknar \"qbdIncomeAccount\"-metadata. Obligatoriskt om inte varje mappning anger ett.",
+          "salesTaxPayableAccount": "Konto för utgående försäljningsskatt",
+          "salesTaxPayableAccountHelp": "Kontot som raden för försäljningsskatt bokförs på.",
+          "defaultSalesTaxItem": "Standardartikel för försäljningsskatt",
+          "defaultSalesTaxItemHelp": "Artikel eller grupp för försäljningsskatt för beskattade fakturor vars skattekodsmappning saknar \"qbdSalesTaxItem\"-metadata."
+        },
+        "mappings": {
+          "title": "QuickBooks-mappningar",
+          "description": "Mappa Alga-kunder, tjänster, skattekoder, betalningsvillkor och rabatter till namnen i din QuickBooks Desktop-företagsfil. Omappade kunder exporteras under sitt Alga-namn; omappade betalningsvillkor lämnas tomma."
+        },
+        "exports": {
+          "description": "Skapa en exportbatch för QuickBooks Desktop, kör den så laddas IIF-filen ned automatiskt."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "En kontakt med den här e-postadressen finns redan i systemet utan kundtilldelning",
       "emailOnAnotherClient": "Den här e-postadressen är redan kopplad till en annan kund",
       "emailOnAnotherClientNamed": "Den här e-postadressen är redan kopplad till {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Användaren har inte behörighet att visa integrationsinställningar",
+      "manageIntegrationsPermission": "Användaren har inte behörighet att hantera integrationsinställningar"
     }
   },
   "telephony": {

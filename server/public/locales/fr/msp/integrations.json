@@ -82,7 +82,8 @@
           "instant": "Instantané",
           "live": "En direct",
           "manual": "Manuel",
-          "twoWay": "Bidirectionnel"
+          "twoWay": "Bidirectionnel",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Livraison",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Exportez les factures au format CSV pour un import manuel dans Xero et importez les données fiscales depuis les rapports Xero."
+          },
+          "qbd": {
+            "description": "Exportez les factures dans un fichier IIF à importer dans QuickBooks Desktop."
           }
         },
         "selected": "{{title}} sélectionné",
@@ -4056,6 +4060,47 @@
           "providers": "Teams Phone aujourd'hui ; le même noyau d'appels accueillera les futurs fournisseurs."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Intégration QuickBooks Desktop (IIF)",
+        "description": "Exportez les factures dans un fichier IIF pour Fichier → Utilitaires → Importer → Fichiers IIF dans QuickBooks Desktop.",
+        "loading": "Chargement des paramètres QuickBooks Desktop...",
+        "savedMessage": "Paramètres enregistrés avec succès",
+        "save": "Enregistrer les paramètres",
+        "sharedMappingsNote": "Les correspondances de clients, articles, codes de taxe, conditions de paiement et remises sont partagées avec l'intégration QuickBooks CSV.",
+        "metadataHelp": "Remplacements par article : ajoutez {\"qbdIncomeAccount\": \"Nom du compte\"} à une correspondance Articles / Services ou Remises, ou {\"qbdSalesTaxItem\": \"Nom de l'article\"} à une correspondance de codes de taxe, via l'éditeur de métadonnées de la correspondance.",
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks Desktop, mais leur modification nécessite la capacité de gestion des connexions. Demandez à un administrateur de vous l'accorder.",
+        "errors": {
+          "load": "Impossible de charger les paramètres QuickBooks Desktop",
+          "save": "Impossible d'enregistrer les paramètres QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Sauvegardez d'abord votre fichier d'entreprise",
+          "description": "QuickBooks Desktop crée tout nom de client, d'article, de compte ou de condition qu'il ne reconnaît pas lors de l'import d'un fichier IIF, et les imports IIF ne peuvent pas être annulés. Vérifiez que chaque nom ci-dessous et dans les correspondances correspond exactement à votre fichier d'entreprise, et testez votre premier import sur une copie de sauvegarde."
+        },
+        "exportSettings": {
+          "title": "Paramètres d'export IIF",
+          "description": "Saisissez les noms de comptes et d'articles QuickBooks Desktop exactement tels qu'ils apparaissent dans votre plan comptable et votre liste d'articles."
+        },
+        "fields": {
+          "arAccount": "Compte clients",
+          "arAccountHelp": "Le compte clients sur lequel chaque facture est comptabilisée.",
+          "defaultIncomeAccount": "Compte de produits par défaut",
+          "defaultIncomeAccountHelp": "Utilisé pour les lignes de facture dont la correspondance n'a pas de métadonnée \"qbdIncomeAccount\". Obligatoire sauf si chaque correspondance en définit un.",
+          "salesTaxPayableAccount": "Compte de taxe de vente à payer",
+          "salesTaxPayableAccountHelp": "Le compte sur lequel la ligne de taxe de vente est comptabilisée.",
+          "defaultSalesTaxItem": "Article de taxe de vente par défaut",
+          "defaultSalesTaxItemHelp": "Article ou groupe de taxe de vente pour les factures taxées dont la correspondance de code de taxe n'a pas de métadonnée \"qbdSalesTaxItem\"."
+        },
+        "mappings": {
+          "title": "Correspondances QuickBooks",
+          "description": "Associez les clients, services, codes de taxe, conditions de paiement et remises d'Alga aux noms de votre fichier d'entreprise QuickBooks Desktop. Les clients non associés sont exportés sous leur nom Alga ; les conditions de paiement non associées restent vides."
+        },
+        "exports": {
+          "description": "Créez un lot d'export QuickBooks Desktop, exécutez-le et le fichier IIF se télécharge automatiquement."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "Un contact avec cette adresse e-mail existe déjà dans le système sans affectation à un client",
       "emailOnAnotherClient": "Cet e-mail est déjà associé à un autre client",
       "emailOnAnotherClientNamed": "Cet e-mail est déjà associé à {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "L'utilisateur n'a pas l'autorisation de consulter les paramètres d'intégration",
+      "manageIntegrationsPermission": "L'utilisateur n'a pas l'autorisation de gérer les paramètres d'intégration"
     }
   },
   "telephony": {

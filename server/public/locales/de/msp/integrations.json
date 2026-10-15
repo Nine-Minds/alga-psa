@@ -82,7 +82,8 @@
           "instant": "Sofort",
           "live": "Produktiv",
           "manual": "Manuell",
-          "twoWay": "Bidirektional"
+          "twoWay": "Bidirektional",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Übertragung",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in Xero und importieren Sie Steuerdaten aus Xero-Berichten."
+          },
+          "qbd": {
+            "description": "Rechnungen als IIF-Datei für den Import in QuickBooks Desktop exportieren."
           }
         },
         "selected": "{{title}} ausgewählt",
@@ -4056,6 +4060,47 @@
           "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-Integration",
+        "description": "Rechnungen als IIF-Datei für Datei → Dienstprogramme → Importieren → IIF-Dateien in QuickBooks Desktop exportieren.",
+        "loading": "QuickBooks Desktop-Einstellungen werden geladen...",
+        "savedMessage": "Einstellungen erfolgreich gespeichert",
+        "save": "Einstellungen speichern",
+        "sharedMappingsNote": "Zuordnungen für Kunden, Artikel, Steuercodes, Zahlungsbedingungen und Rabatte werden mit der QuickBooks CSV-Integration geteilt.",
+        "metadataHelp": "Überschreibungen pro Artikel: Fügen Sie {\"qbdIncomeAccount\": \"Kontoname\"} zu einer Zuordnung unter Artikel / Leistungen oder Rabatte bzw. {\"qbdSalesTaxItem\": \"Artikelname\"} zu einer Steuercode-Zuordnung über den Metadaten-Editor der Zuordnung hinzu.",
+        "connectionsPermissionNotice": "Sie können die QuickBooks Desktop-Einstellungen ansehen, zum Ändern ist jedoch die Berechtigung zum Verwalten von Verbindungen erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
+        "errors": {
+          "load": "QuickBooks Desktop-Einstellungen konnten nicht geladen werden",
+          "save": "QuickBooks Desktop-Einstellungen konnten nicht gespeichert werden"
+        },
+        "warning": {
+          "title": "Sichern Sie zuerst Ihre Firmendatei",
+          "description": "QuickBooks Desktop legt beim Import einer IIF-Datei jeden unbekannten Kunden-, Artikel-, Konto- oder Zahlungsbedingungsnamen neu an, und IIF-Importe können nicht rückgängig gemacht werden. Stellen Sie sicher, dass alle Namen hier und in den Zuordnungen exakt mit Ihrer Firmendatei übereinstimmen, und testen Sie den ersten Import mit einer Sicherungskopie."
+        },
+        "exportSettings": {
+          "title": "IIF-Exporteinstellungen",
+          "description": "Geben Sie die Konto- und Artikelnamen von QuickBooks Desktop genau so ein, wie sie in Ihrem Kontenplan und Ihrer Artikelliste erscheinen."
+        },
+        "fields": {
+          "arAccount": "Debitorenkonto",
+          "arAccountHelp": "Das Debitorenkonto, auf das jede Rechnung gebucht wird.",
+          "defaultIncomeAccount": "Standard-Erlöskonto",
+          "defaultIncomeAccountHelp": "Wird für Rechnungspositionen verwendet, deren Zuordnung keine \"qbdIncomeAccount\"-Metadaten enthält. Erforderlich, sofern nicht jede Zuordnung eines festlegt.",
+          "salesTaxPayableAccount": "Umsatzsteuer-Verbindlichkeitskonto",
+          "salesTaxPayableAccountHelp": "Das Konto, auf das die Umsatzsteuerzeile gebucht wird.",
+          "defaultSalesTaxItem": "Standard-Umsatzsteuerartikel",
+          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keine \"qbdSalesTaxItem\"-Metadaten enthält."
+        },
+        "mappings": {
+          "title": "QuickBooks-Zuordnungen",
+          "description": "Ordnen Sie Alga-Kunden, Leistungen, Steuercodes, Zahlungsbedingungen und Rabatte den Namen in Ihrer QuickBooks Desktop-Firmendatei zu. Nicht zugeordnete Kunden werden unter ihrem Alga-Namen exportiert; nicht zugeordnete Zahlungsbedingungen bleiben leer."
+        },
+        "exports": {
+          "description": "Erstellen Sie einen QuickBooks Desktop-Exportstapel und führen Sie ihn aus – die IIF-Datei wird automatisch heruntergeladen."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
       "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
       "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen anzuzeigen",
+      "manageIntegrationsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten"
     }
   },
   "telephony": {

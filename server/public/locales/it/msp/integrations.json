@@ -82,7 +82,8 @@
           "instant": "Istantaneo",
           "live": "In tempo reale",
           "manual": "Manuale",
-          "twoWay": "Bidirezionale"
+          "twoWay": "Bidirezionale",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Consegna",
@@ -102,6 +103,9 @@
           },
           "xeroCsv": {
             "description": "Esporta le fatture in CSV per l'importazione manuale in Xero e importa i dati fiscali dai report Xero."
+          },
+          "qbd": {
+            "description": "Esporta le fatture come file IIF da importare in QuickBooks Desktop."
           }
         },
         "selected": "{{title}} selezionato",
@@ -4056,6 +4060,47 @@
           "providers": "Oggi Teams Phone; lo stesso nucleo per le chiamate accoglierà i futuri fornitori."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integrazione QuickBooks Desktop (IIF)",
+        "description": "Esporta le fatture come file IIF per File → Utilità → Importa → File IIF in QuickBooks Desktop.",
+        "loading": "Caricamento delle impostazioni di QuickBooks Desktop...",
+        "savedMessage": "Impostazioni salvate correttamente",
+        "save": "Salva impostazioni",
+        "sharedMappingsNote": "Le mappature di clienti, articoli, codici fiscali, termini di pagamento e sconti sono condivise con l'integrazione QuickBooks CSV.",
+        "metadataHelp": "Sostituzioni per articolo: aggiungi {\"qbdIncomeAccount\": \"Nome conto\"} a una mappatura Articoli / Servizi o Sconti, oppure {\"qbdSalesTaxItem\": \"Nome articolo\"} a una mappatura dei codici fiscali, tramite l'editor dei metadati della mappatura.",
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks Desktop, ma per modificarle serve la capacità di gestione delle connessioni. Chiedi a un amministratore di concedertela.",
+        "errors": {
+          "load": "Impossibile caricare le impostazioni di QuickBooks Desktop",
+          "save": "Impossibile salvare le impostazioni di QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Esegui prima un backup del file aziendale",
+          "description": "Durante l'importazione di un file IIF, QuickBooks Desktop crea qualsiasi nome di cliente, articolo, conto o termine che non riconosce, e le importazioni IIF non possono essere annullate. Verifica che ogni nome qui e nelle mappature corrisponda esattamente al tuo file aziendale e prova la prima importazione su una copia di backup."
+        },
+        "exportSettings": {
+          "title": "Impostazioni di esportazione IIF",
+          "description": "Inserisci i nomi di conti e articoli di QuickBooks Desktop esattamente come compaiono nel piano dei conti e nell'elenco articoli."
+        },
+        "fields": {
+          "arAccount": "Conto crediti verso clienti",
+          "arAccountHelp": "Il conto crediti su cui viene registrata ogni fattura.",
+          "defaultIncomeAccount": "Conto ricavi predefinito",
+          "defaultIncomeAccountHelp": "Usato per le righe di fattura la cui mappatura non ha metadati \"qbdIncomeAccount\". Obbligatorio a meno che ogni mappatura ne imposti uno.",
+          "salesTaxPayableAccount": "Conto debiti per imposta sulle vendite",
+          "salesTaxPayableAccountHelp": "Il conto su cui viene registrata la riga dell'imposta sulle vendite.",
+          "defaultSalesTaxItem": "Articolo imposta sulle vendite predefinito",
+          "defaultSalesTaxItemHelp": "Articolo o gruppo di imposta sulle vendite per fatture tassate la cui mappatura del codice fiscale non ha metadati \"qbdSalesTaxItem\"."
+        },
+        "mappings": {
+          "title": "Mappature QuickBooks",
+          "description": "Associa clienti, servizi, codici fiscali, termini di pagamento e sconti di Alga ai nomi nel file aziendale di QuickBooks Desktop. I clienti non mappati vengono esportati con il nome Alga; i termini di pagamento non mappati restano vuoti."
+        },
+        "exports": {
+          "description": "Crea un batch di esportazione QuickBooks Desktop, eseguilo e il file IIF verrà scaricato automaticamente."
+        }
+      }
     }
   },
   "errors": {
@@ -4175,6 +4220,10 @@
       "contactWithoutClient": "Nel sistema esiste già un contatto con questo indirizzo email senza assegnazione a un cliente",
       "emailOnAnotherClient": "Questa email è già associata a un altro cliente",
       "emailOnAnotherClientNamed": "Questa email è già associata a {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "L'utente non ha l'autorizzazione per visualizzare le impostazioni di integrazione",
+      "manageIntegrationsPermission": "L'utente non ha l'autorizzazione per gestire le impostazioni di integrazione"
     }
   },
   "telephony": {
