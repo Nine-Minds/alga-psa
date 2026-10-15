@@ -85,7 +85,9 @@
     "noService": "⟦Ƞȯ şḗřṽīƈḗ⟧",
     "servicePlaceholder": "⟦Şḗŀḗƈŧ ḓḗƒȧŭŀŧ şḗřṽīƈḗ⟧",
     "serviceHelp": "⟦Ŭşḗḓ ƒȯř ŧīḿḗ ḗƞŧřīḗş ȯƞ ŧħīş ƥħȧşḗ'ş ŧȧşķş ẇħḗƞ ŧħḗ ŧȧşķ īŧşḗŀƒ şḗŧş ƞȯ şḗřṽīƈḗ.⟧",
-    "serviceDisplayLabel": "⟦Şḗřṽīƈḗ⟧"
+    "serviceDisplayLabel": "⟦Şḗřṽīƈḗ⟧",
+    "taskCount_few": "⟦{{count}} ŧȧşķş⟧",
+    "taskCount_many": "⟦{{count}} ŧȧşķş⟧"
   },
   "projectList": {
     "addProject": "⟦Ȧḓḓ Ƥřȯĵḗƈŧ⟧",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "⟦Ȧřḗ ẏȯŭ şŭřḗ ẏȯŭ ẇȧƞŧ ŧȯ ḿȯṽḗ {{count}} şḗŀḗƈŧḗḓ ŧȧşķş ŧȯ ƥħȧşḗ \"{{targetPhase}}\"?⟧",
     "taskTypeFallback": "⟦Ŧȧşķ⟧",
     "timeline": "⟦Ŧīḿḗŀīƞḗ⟧",
-    "loadingTimeline": "⟦Ŀȯȧḓīƞɠ ŧīḿḗŀīƞḗ...⟧"
+    "loadingTimeline": "⟦Ŀȯȧḓīƞɠ ŧīḿḗŀīƞḗ...⟧",
+    "bulkTagsSuccess_few": "⟦Ŧȧɠş ȧḓḓḗḓ ŧȯ {{count}} ŧȧşķş⟧",
+    "bulkTagsSuccess_many": "⟦Ŧȧɠş ȧḓḓḗḓ ŧȯ {{count}} ŧȧşķş⟧"
   },
   "taskForm": {
     "addTitle": "⟦Ȧḓḓ Ƞḗẇ Ŧȧşķ⟧",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "⟦Īƞħḗřīŧş {{service}} ƒřȯḿ ŧħḗ ƥřȯĵḗƈŧ.⟧",
     "startDateLabel": "⟦Şŧȧřŧ Ḓȧŧḗ⟧",
     "taskStartDateLabel": "⟦Ŧȧşķ Şŧȧřŧ Ḓȧŧḗ⟧",
-    "startDatePlaceholder": "⟦Şḗŀḗƈŧ şŧȧřŧ ḓȧŧḗ⟧"
+    "startDatePlaceholder": "⟦Şḗŀḗƈŧ şŧȧřŧ ḓȧŧḗ⟧",
+    "createdTicketsIntro_few": "⟦Ẏȯŭ ƈřḗȧŧḗḓ {{count}} ŧīƈķḗŧş ḓŭřīƞɠ ŧħīş şḗşşīȯƞ:⟧",
+    "createdTicketsIntro_many": "⟦Ẏȯŭ ƈřḗȧŧḗḓ {{count}} ŧīƈķḗŧş ḓŭřīƞɠ ŧħīş şḗşşīȯƞ:⟧",
+    "documentCleanupFailure_few": "⟦{{count}} ḓȯƈŭḿḗƞŧş ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ ȧƞḓ ẇīŀŀ řḗḿȧīƞ īƞ Ḓȯƈŭḿḗƞŧş⟧",
+    "documentCleanupFailure_many": "⟦{{count}} ḓȯƈŭḿḗƞŧş ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ ȧƞḓ ẇīŀŀ řḗḿȧīƞ īƞ Ḓȯƈŭḿḗƞŧş⟧",
+    "documentsCleanupIntro_few": "⟦Ẏȯŭ ħȧṽḗ {{count}} ḓȯƈŭḿḗƞŧş ŧħȧŧ ẇḗřḗ {{cleanupType}}:⟧",
+    "documentsCleanupIntro_many": "⟦Ẏȯŭ ħȧṽḗ {{count}} ḓȯƈŭḿḗƞŧş ŧħȧŧ ẇḗřḗ {{cleanupType}}:⟧",
+    "ticketCleanupFailure_few": "⟦{{count}} ŧīƈķḗŧş ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ⟧",
+    "ticketCleanupFailure_many": "⟦{{count}} ŧīƈķḗŧş ƈȯŭŀḓ ƞȯŧ ƀḗ ḓḗŀḗŧḗḓ⟧"
   },
   "taskDependencies": {
     "title": "⟦Ḓḗƥḗƞḓḗƞƈīḗş⟧",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "⟦Ḗẋƥȯřŧ {{count}} Şḗŀḗƈŧḗḓ⟧",
     "selectedTasksNotice_one": "⟦Ḗẋƥȯřŧīƞɠ {{count}} şḗŀḗƈŧḗḓ ŧȧşķ.⟧",
-    "selectedTasksNotice_other": "⟦Ḗẋƥȯřŧīƞɠ {{count}} şḗŀḗƈŧḗḓ ŧȧşķş.⟧"
+    "selectedTasksNotice_other": "⟦Ḗẋƥȯřŧīƞɠ {{count}} şḗŀḗƈŧḗḓ ŧȧşķş.⟧",
+    "phasesSelected_few": "⟦{{selected}} ȯƒ {{total}} ƥħȧşḗş şḗŀḗƈŧḗḓ⟧",
+    "phasesSelected_many": "⟦{{selected}} ȯƒ {{total}} ƥħȧşḗş şḗŀḗƈŧḗḓ⟧",
+    "selectedTasksNotice_few": "⟦Ḗẋƥȯřŧīƞɠ {{count}} şḗŀḗƈŧḗḓ ŧȧşķş.⟧",
+    "selectedTasksNotice_many": "⟦Ḗẋƥȯřŧīƞɠ {{count}} şḗŀḗƈŧḗḓ ŧȧşķş.⟧",
+    "success_few": "⟦Şŭƈƈḗşşƒŭŀŀẏ ḗẋƥȯřŧḗḓ {{count}} ŧȧşķş ŧȯ ƇŞṼ.⟧",
+    "success_many": "⟦Şŭƈƈḗşşƒŭŀŀẏ ḗẋƥȯřŧḗḓ {{count}} ŧȧşķş ŧȯ ƇŞṼ.⟧"
   },
   "import": {
     "title": "⟦Īḿƥȯřŧ Ƥħȧşḗş & Ŧȧşķş⟧",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "⟦Şŧȧŧŭş ḓȯḗş ƞȯŧ ḿȧŧƈħ ȧƞẏ ḗẋīşŧīƞɠ şŧȧŧŭş ƒȯř ŧħīş ƥħȧşḗ. Řḗşȯŀṽḗ īƞ ŧħḗ ḿȧƥƥīƞɠ şŧḗƥş ƀḗƒȯřḗ īḿƥȯřŧ.⟧",
     "statusFallbackSuffix": "⟦Ḓḗƒȧŭŀŧ⟧",
     "statusFallbackTooltip": "⟦Ŭşīƞɠ ŧħḗ ḓḗƒȧŭŀŧ ƒȧŀŀƀȧƈķ şŧȧŧŭş ƒȯř ŧħīş ƥħȧşḗ.⟧",
-    "inPhaseBadge": "⟦īƞ {{phase}}⟧"
+    "inPhaseBadge": "⟦īƞ {{phase}}⟧",
+    "taskCountLabel_few": "⟦({{count}} ŧȧşķş)⟧",
+    "taskCountLabel_many": "⟦({{count}} ŧȧşķş)⟧"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "restrictedTooltip": "⟦Ŀīḿīŧḗḓ ḓḗŧȧīŀş — ẏȯŭ ȧřḗ ƞȯŧ ȧşşīɠƞḗḓ ŧȯ ŧħīş ŧȧşķ⟧",
       "badgeCount_one": "⟦{{count}} Ŧȧşķ⟧",
       "billsToProject": "⟦Ŧīḿḗ ƀīŀŀş ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
-      "billsToClient": "⟦Ŧīḿḗ ƀīŀŀş ȧŧ ŧħḗ ƈŀīḗƞŧ ŀḗṽḗŀ⟧"
+      "billsToClient": "⟦Ŧīḿḗ ƀīŀŀş ȧŧ ŧħḗ ƈŀīḗƞŧ ŀḗṽḗŀ⟧",
+      "badgeCount_few": "⟦{{count}} Ŧȧşķş⟧",
+      "badgeCount_many": "⟦{{count}} Ŧȧşķş⟧"
     },
     "bulkMoveTask": {
       "title": "⟦Ḿȯṽḗ Ŧȧşķş⟧",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "⟦{{count}} ŧȧşķş⟧",
       "unknownUser": "⟦Ŭƞķƞȯẇƞ⟧",
       "unknownTask": "⟦Ŭƞķƞȯẇƞ ŧȧşķ⟧",
-      "checklistCountTitle": "⟦{{count}} ƈħḗƈķŀīşŧ īŧḗḿ⟧"
+      "checklistCountTitle": "⟦{{count}} ƈħḗƈķŀīşŧ īŧḗḿ⟧",
+      "taskCount_few": "⟦{{count}} ŧȧşķş⟧",
+      "taskCount_many": "⟦{{count}} ŧȧşķş⟧"
     },
     "taskForm": {
       "addTitle": "⟦Ȧḓḓ Ŧȧşķ⟧",
@@ -1625,7 +1649,9 @@
       "submitting": "⟦Ȧḓḓīƞɠ ŧȧɠş...⟧",
       "confirm_one": "⟦Ȧḓḓ Ŧȧɠş ŧȯ {{count}} Ŧȧşķ⟧",
       "confirm_other": "⟦Ȧḓḓ Ŧȧɠş ŧȯ {{count}} Ŧȧşķş⟧",
-      "failedHeading": "⟦Ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧḓḓḗḓ ŧȯ ŧħḗ ƒȯŀŀȯẇīƞɠ ŧȧşķş:⟧"
+      "failedHeading": "⟦Ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧḓḓḗḓ ŧȯ ŧħḗ ƒȯŀŀȯẇīƞɠ ŧȧşķş:⟧",
+      "confirm_few": "⟦Ȧḓḓ Ŧȧɠş ŧȯ {{count}} Ŧȧşķş⟧",
+      "confirm_many": "⟦Ȧḓḓ Ŧȧɠş ŧȯ {{count}} Ŧȧşķş⟧"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "⟦{{count}} ḗƞŧřīḗş ŧȯŧȧŀīƞɠ {{amount}} ȧřḗ ŀȯƈķḗḓ ȧƞḓ ẇīŀŀ ƞȯŧ ƈħȧƞɠḗ.⟧",
       "edit": "⟦Ḗḓīŧ ŧḗřḿş⟧",
       "saved": "⟦Ɓīŀŀīƞɠ ŧḗřḿş ŭƥḓȧŧḗḓ⟧",
-      "dialogTitle": "⟦Ḗḓīŧ ƀīŀŀīƞɠ ŧḗřḿş⟧"
+      "dialogTitle": "⟦Ḗḓīŧ ƀīŀŀīƞɠ ŧḗřḿş⟧",
+      "lockedSummary_few": "⟦{{count}} ḗƞŧřīḗş ŧȯŧȧŀīƞɠ {{amount}} ȧřḗ ŀȯƈķḗḓ ȧƞḓ ẇīŀŀ ƞȯŧ ƈħȧƞɠḗ.⟧",
+      "lockedSummary_many": "⟦{{count}} ḗƞŧřīḗş ŧȯŧȧŀīƞɠ {{amount}} ȧřḗ ŀȯƈķḗḓ ȧƞḓ ẇīŀŀ ƞȯŧ ƈħȧƞɠḗ.⟧"
     },
     "setup": {
       "title": "⟦Ɓīŀŀ ŧħīş ƥřȯĵḗƈŧ⟧",
@@ -2037,5 +2065,22 @@
     "question": "⟦Ḓḗƥḗƞḓḗƞƈīḗş ȧřḗ ƞȯŧ ḗƞƒȯřƈḗḓ, şȯ ẏȯŭ ƈȧƞ ƈȯƞŧīƞŭḗ. Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ?⟧",
     "proceed": "⟦Ƈȯƞŧīƞŭḗ ȧƞẏẇȧẏ⟧",
     "cancel": "⟦Ƈȧƞƈḗŀ⟧"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "⟦Ƈȯḿƥȧƈŧ⟧"
+    },
+    "spacious": {
+      "label": "⟦Şƥȧƈīȯŭş⟧"
+    },
+    "decrease": {
+      "title": "⟦Ḓḗƈřḗȧşḗ ƈȯŀŭḿƞ ẇīḓŧħ⟧"
+    },
+    "increase": {
+      "title": "⟦Īƞƈřḗȧşḗ ƈȯŀŭḿƞ ẇīḓŧħ⟧"
+    },
+    "reset": {
+      "title": "⟦Řḗşḗŧ ŧȯ ḓḗƒȧŭŀŧ⟧"
+    }
   }
 }

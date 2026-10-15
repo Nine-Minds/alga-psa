@@ -36,6 +36,20 @@
       "offline": "⟦Ȯƒƒŀīƞḗ⟧",
       "overdue": "⟦Ȯṽḗřḓŭḗ⟧",
       "unknown": "⟦Ŭƞķƞȯẇƞ⟧"
+    },
+    "rmaStatus": {
+      "open": "⟦Ȯƥḗƞ⟧",
+      "awaiting_return": "⟦Ȧẇȧīŧīƞɠ řḗŧŭřƞ⟧",
+      "returned": "⟦Řḗŧŭřƞḗḓ⟧",
+      "sent_to_vendor": "⟦Şḗƞŧ ŧȯ ṽḗƞḓȯř⟧",
+      "replacement_received": "⟦Řḗƥŀȧƈḗḿḗƞŧ řḗƈḗīṽḗḓ⟧",
+      "replacement_deployed": "⟦Řḗƥŀȧƈḗḿḗƞŧ ḓḗƥŀȯẏḗḓ⟧",
+      "dead_unit_owed": "⟦Ḓḗȧḓ ŭƞīŧ ȯẇḗḓ⟧",
+      "dead_unit_returned": "⟦Ḓḗȧḓ ŭƞīŧ řḗŧŭřƞḗḓ⟧",
+      "replaced": "⟦Řḗƥŀȧƈḗḓ⟧",
+      "credited": "⟦Ƈřḗḓīŧḗḓ⟧",
+      "charged": "⟦Ƈħȧřɠḗḓ⟧",
+      "closed": "⟦Ƈŀȯşḗḓ⟧"
     }
   },
   "assetAlertsSection": {
@@ -1631,5 +1645,35 @@
     "empty": "⟦Ƞȯ ḿȧŧƈħīƞɠ ȧşşḗŧş ƒȯř ŧħīş ƈŀīḗƞŧ⟧",
     "loading": "⟦Ŀȯȧḓīƞɠ...⟧",
     "remove": "⟦Řḗḿȯṽḗ ȧşşḗŧ⟧"
+  },
+  "inventoryProvenance": {
+    "title": "⟦Īƞṽḗƞŧȯřẏ ƥřȯṽḗƞȧƞƈḗ⟧",
+    "fields": {
+      "product": {
+        "label": "⟦Ƥřȯḓŭƈŧ⟧"
+      },
+      "serial": {
+        "label": "⟦Şḗřīȧŀ⟧"
+      },
+      "mac": {
+        "label": "⟦ḾȦƇ⟧"
+      },
+      "originSalesOrder": {
+        "label": "⟦Ȯřīɠīƞ şȧŀḗş ȯřḓḗř⟧"
+      },
+      "delivered": {
+        "label": "⟦Ḓḗŀīṽḗřḗḓ⟧"
+      }
+    },
+    "rmaHistory": {
+      "title": "⟦ŘḾȦ ħīşŧȯřẏ⟧"
+    },
+    "emptyValue": "⟦—⟧",
+    "rmaLabel": "⟦ŘḾȦ⟧"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "⟦Ŀȯȧḓīƞɠ ȧşşḗŧ ƒȯřḿ...⟧"
+    }
   }
 }
