@@ -520,3 +520,30 @@ chain resolves them against the parent, and the rows still move. The preview's
   deletion detection Tactical never had. Incremental pages and an empty agent
   list retire nothing, but the release note should name it alongside "RMM sync
   no longer overwrites asset status" and "manual client changes persist".
+
+## Round 6 — Settings → Integrations would not compile (2026-10-14)
+
+The browser check found `/msp/settings/integrations` answering HTTP 500 on
+navigation *and* on retry, with a runtime `ENOENT` for the route's
+`build-manifest.json`. That is what a route whose module graph fails to
+resolve looks like in dev, and the cause was ours, not the environment:
+`RmmUserContactMappingPanel` is a `'use client'` component and it
+*value*-imported `RMM_CONTACT_ASSIGNMENT_MODES` from
+`@alga-psa/shared/rmm/userMatching` — the module that needs `@alga-psa/db` to
+find a contact. One constant dragged knex → pg → `fs` into the browser graph
+and took every RMM, accounting and identity panel on the page down with it.
+
+The three mode names now live in `shared/rmm/contactAssignmentModes.ts`, a
+module with no imports at all; `userMatching` re-exports them so the five
+server actions that validate the mode are untouched, and the panel reads the
+pure module. `shared/tsup.config.ts` gained the entry, so the workflow worker
+and the dist consumers get it as its own chunk.
+
+`RmmUserContactMappingPanel.clientSafety.contract.test.ts` pins the rule that
+was easy to break by accident: the panel's only `@alga-psa/shared` value
+import is the modes module, that module imports nothing, and `userMatching`
+still re-exports the pair for its server callers.
+
+Verified headless at `http://localhost:3114/msp/settings/integrations`: HTTP
+200, "Integrations | AlgaPSA", the tab strip and the accounting cards render,
+and the console carries no module or page error.

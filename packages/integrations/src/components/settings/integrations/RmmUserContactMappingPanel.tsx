@@ -8,7 +8,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { RMM_CONTACT_ASSIGNMENT_MODES } from '@alga-psa/shared/rmm/userMatching';
+import { RMM_CONTACT_ASSIGNMENT_MODES } from '@alga-psa/shared/rmm/contactAssignmentModes';
 import {
   listRmmSignedInUsers,
   mapRmmSignedInUserToContact,

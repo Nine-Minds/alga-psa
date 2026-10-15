@@ -73,6 +73,7 @@ export default defineConfig({
     'workflow/workers/index': 'workflow/workers/index.ts',
     'workflow/services/index': 'workflow/services/index.ts',
     'extension-utils/index': 'extension-utils/index.ts',
+    'rmm/contactAssignmentModes': 'rmm/contactAssignmentModes.ts',
     'rmm/userMatching': 'rmm/userMatching.ts',
     'rmm/moveRmmOrganizationAssets': 'rmm/moveRmmOrganizationAssets.ts',
     'rmm/signedInUserMappings': 'rmm/signedInUserMappings.ts',

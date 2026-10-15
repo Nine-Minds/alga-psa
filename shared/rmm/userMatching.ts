@@ -168,11 +168,13 @@ export async function matchContactForRmmUser(
   return null;
 }
 
-/** FR-D3: what sync does with a matched signed-in user, per RMM organization. */
-export type RmmContactAssignmentMode = 'off' | 'suggest' | 'auto';
-
-export const RMM_CONTACT_ASSIGNMENT_MODES: readonly RmmContactAssignmentMode[] = ['off', 'suggest', 'auto'];
-
-export function isRmmContactAssignmentMode(value: unknown): value is RmmContactAssignmentMode {
-  return typeof value === 'string' && (RMM_CONTACT_ASSIGNMENT_MODES as readonly string[]).includes(value);
-}
+/**
+ * FR-D3: what sync does with a matched signed-in user, per RMM organization.
+ * Defined in the import-free sibling so client components can read it without
+ * pulling this module's `@alga-psa/db` graph; re-exported for server callers.
+ */
+export {
+  RMM_CONTACT_ASSIGNMENT_MODES,
+  isRmmContactAssignmentMode,
+  type RmmContactAssignmentMode,
+} from './contactAssignmentModes';
