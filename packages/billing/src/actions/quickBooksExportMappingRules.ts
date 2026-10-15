@@ -109,6 +109,7 @@ export function validateQuickBooksMappingDecisions(
   }
   const pendingByKey = new Map(pending.map((entity) => [`${entity.algaEntityType}:${entity.algaEntityId}`, entity]));
   const createdNames = new Set<string>();
+  const mappedNames = new Set<string>();
   const seen = new Set<string>();
 
   for (const decision of decisions) {
@@ -143,6 +144,48 @@ export function validateQuickBooksMappingDecisions(
         return `"${name}" is used for more than one new QuickBooks entry.`;
       }
       createdNames.add(nameKey);
+    }
+    // Mappings are one Alga entity per QuickBooks name within an entity type
+    // (idx_unique_external_mapping), whether the entry is new or existing.
+    const mappedKey = `${decision.algaEntityType}:${name}`;
+    if (mappedNames.has(mappedKey)) {
+      return `"${name}" is chosen for more than one ${decision.algaEntityType === 'client' ? 'client' : 'item'}. Each QuickBooks name can be mapped to only one.`;
+    }
+    mappedNames.add(mappedKey);
+  }
+  return null;
+}
+
+export interface ExistingQuickBooksMappingRow {
+  alga_entity_type: string;
+  alga_entity_id: string;
+  external_entity_id: string;
+}
+
+/**
+ * A decision whose QuickBooks name is already mapped to a different Alga
+ * entity of the same type would violate idx_unique_external_mapping. Returns a
+ * user-facing problem for the first such clash, or null.
+ */
+export function findQuickBooksNameConflict(
+  pending: UnmappedQuickBooksEntity[],
+  decisions: QuickBooksMappingDecision[],
+  existing: ExistingQuickBooksMappingRow[],
+  storedEntityType: (type: UnmappedEntityType) => string
+): string | null {
+  for (const decision of decisions) {
+    const name = decision.externalName.trim();
+    const owner = existing.find(
+      (row) =>
+        row.alga_entity_type === storedEntityType(decision.algaEntityType) &&
+        row.external_entity_id === name &&
+        row.alga_entity_id !== decision.algaEntityId
+    );
+    if (owner) {
+      const entity = pending.find(
+        (item) => item.algaEntityType === decision.algaEntityType && item.algaEntityId === decision.algaEntityId
+      );
+      return `"${name}" is already mapped to another ${decision.algaEntityType === 'client' ? 'client' : 'item'}, so it cannot also be used for "${entity?.algaName ?? decision.algaEntityId}". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.`;
     }
   }
   return null;

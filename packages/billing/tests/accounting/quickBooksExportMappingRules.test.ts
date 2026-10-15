@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   collectUnmappedQuickBooksEntities,
+  findQuickBooksNameConflict,
   proposeQuickBooksName,
   validateQuickBooksMappingDecisions
 } from '../../src/actions/quickBooksExportMappingRules';
@@ -104,6 +105,50 @@ describe('validateQuickBooksMappingDecisions', () => {
         { algaEntityType: 'client', algaEntityId: 'client-1', externalName: 'Acme', mode: 'create' },
         { algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Acme', mode: 'create' }
       ])
+    ).toBeNull();
+  });
+
+  it('rejects linking two entities to the same existing QuickBooks name (one entity per name)', () => {
+    const twoItems = collectUnmappedQuickBooksEntities('quickbooks_desktop', [
+      ...errors,
+      { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-2', alga_name: 'Dell 16 Laptop 2' } }
+    ]);
+    expect(
+      validateQuickBooksMappingDecisions('quickbooks_desktop', twoItems, [
+        { algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' },
+        { algaEntityType: 'service', algaEntityId: 'svc-2', externalName: 'Laptop', mode: 'existing' }
+      ])
+    ).toMatch(/more than one item/);
+  });
+});
+
+describe('findQuickBooksNameConflict', () => {
+  const pending = collectUnmappedQuickBooksEntities('quickbooks_desktop', errors);
+  const stored = (type: string) => (type === 'discount' ? 'discount' : type);
+
+  it('reports a name already mapped to a different entity of the same type', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' }],
+        [{ alga_entity_type: 'service', alga_entity_id: 'svc-other', external_entity_id: 'Laptop' }],
+        stored
+      )
+    ).toMatch(/already mapped to another item.*"Dell 16: Laptop"/);
+  });
+
+  it('ignores the same entity, other entity types, and other names', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' }],
+        [
+          { alga_entity_type: 'service', alga_entity_id: 'svc-1', external_entity_id: 'Laptop' },
+          { alga_entity_type: 'client', alga_entity_id: 'client-9', external_entity_id: 'Laptop' },
+          { alga_entity_type: 'service', alga_entity_id: 'svc-9', external_entity_id: 'Desktop' }
+        ],
+        stored
+      )
     ).toBeNull();
   });
 });
