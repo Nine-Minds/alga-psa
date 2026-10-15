@@ -74,6 +74,7 @@ vi.mock('@alga-psa/db', () => ({
 
 const {
   resolveAssetBillingProfileId,
+  resolveAssetBillingProfileIdForClient,
   assertBillingProfileForClient,
   ASSET_BILLING_PROFILE_UNAVAILABLE,
 } = await import('../assetBillingProfileModel');
@@ -124,6 +125,41 @@ describe('resolveAssetBillingProfileId (T127)', () => {
 
     await expect(resolveAssetBillingProfileId(h.knexMock as any, TENANT, ASSET)).resolves.toBeNull();
     await expect(resolveAssetBillingProfileId(h.knexMock as any, TENANT, 'missing')).resolves.toBeNull();
+  });
+});
+
+describe('resolveAssetBillingProfileIdForClient (T130)', () => {
+  it('inherits the asset profile when it belongs to the ticket’s client', async () => {
+    h.dbState.assets.push({ tenant: TENANT, asset_id: ASSET, billing_profile_id: PROFILE_ASSET, location_id: null });
+
+    await expect(resolveAssetBillingProfileIdForClient(h.knexMock as any, TENANT, ASSET, CLIENT))
+      .resolves.toBe(PROFILE_ASSET);
+  });
+
+  it('drops a profile the ticket’s client does not own instead of raising', async () => {
+    h.dbState.assets.push({
+      tenant: TENANT,
+      asset_id: ASSET,
+      billing_profile_id: PROFILE_OTHER_CLIENT,
+      location_id: null,
+    });
+
+    await expect(resolveAssetBillingProfileIdForClient(h.knexMock as any, TENANT, ASSET, CLIENT))
+      .resolves.toBeNull();
+  });
+
+  it('drops an archived profile instead of raising', async () => {
+    h.dbState.assets.push({ tenant: TENANT, asset_id: ASSET, billing_profile_id: PROFILE_ARCHIVED, location_id: null });
+
+    await expect(resolveAssetBillingProfileIdForClient(h.knexMock as any, TENANT, ASSET, CLIENT))
+      .resolves.toBeNull();
+  });
+
+  it('returns null when the asset resolves to nothing', async () => {
+    h.dbState.assets.push({ tenant: TENANT, asset_id: ASSET, billing_profile_id: null, location_id: null });
+
+    await expect(resolveAssetBillingProfileIdForClient(h.knexMock as any, TENANT, ASSET, CLIENT))
+      .resolves.toBeNull();
   });
 });
 

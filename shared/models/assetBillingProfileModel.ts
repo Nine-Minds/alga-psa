@@ -37,6 +37,29 @@ export async function resolveAssetBillingProfileId(
 }
 
 /**
+ * FR-F3 for the surfaces that create a ticket *with* an asset rather than
+ * *from* one (QuickAddTicket on the asset header, asset list, service history,
+ * maintenance): the same inheritance, but the ticket's client is picked by the
+ * user and may no longer be the asset's, so a profile that does not belong to
+ * it is dropped instead of raising. Ticket creation is never blocked by billing
+ * attribution.
+ */
+export async function resolveAssetBillingProfileIdForClient(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  assetId: string,
+  clientId: string
+): Promise<string | null> {
+  const candidate = await resolveAssetBillingProfileId(conn, tenant, assetId);
+  if (!candidate) return null;
+  try {
+    return await assertBillingProfileForClient(conn, tenant, clientId, candidate);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * FR-F1: the profile must belong to the row's client and be active. Returns
  * the id when valid, throws otherwise; `null` clears and is always allowed.
  */

@@ -547,3 +547,48 @@ still re-exports the pair for its server callers.
 Verified headless at `http://localhost:3114/msp/settings/integrations`: HTTP
 200, "Integrations | AlgaPSA", the tab strip and the accounting cards render,
 and the console carries no module or page error.
+
+## Round 7 — the second half of FR-F3 (2026-10-14)
+
+The browser check reproduced a real billing miss: merge `234567` into `12345`
+keeping the source profile, open the moved asset, raise a ticket — the asset
+kept `billing_profile_id`, the ticket came out `null`. Twice, on both "Create"
+and "Create + View Ticket".
+
+Those two button labels name the culprit. `CreateTicketFromAssetButton` (which
+*does* inherit, via `TicketModel.createTicketFromAsset`) is only mounted on the
+legacy `AssetDetails` view and the asset drawer. Every other asset surface —
+the Bento detail header, the asset list, the service-history tab, the
+maintenance command centre and `/msp/tickets/new?assetId=…` — renders
+`QuickAddTicket`, which submits `asset_id` to `addTicket`. `addTicket` created
+the `asset_associations` row and nothing else: it never looked at the asset's
+profile, so FR-F3 held on one MSP dialog out of six.
+
+`addTicket` now resolves the asset profile when the caller picked none, through
+a new `resolveAssetBillingProfileIdForClient` in
+`shared/models/assetBillingProfileModel.ts`. It is deliberately *not*
+`resolveAssetBillingProfileId` passed straight through: QuickAddTicket's client
+picker stays editable when the dialog is opened from an asset, so the ticket's
+client may no longer be the asset's. The new helper checks the candidate with
+`assertBillingProfileForClient` and returns `null` on a mismatch or an archived
+profile instead of raising — ticket creation is never blocked by billing
+attribution (the same shape as `profileForClient` in the alert-ticket creator).
+
+Covered by four cases in `shared/models/__tests__/assetBillingProfileModel.test.ts`
+and a wiring assertion in `assetBillingProfileTicketFlow.contract.test.ts`
+(T130, which already owned the "every MSP surface" claim).
+
+The eleven standing operator-feedback items were re-checked against the code
+rather than the ledger — group-filter reset (`AssetDashboardClient.tsx:827`),
+portal `can_interact`/`readOnly`, REST `asset:create`/`asset:delete` and
+`not_found → 404` plus `removeContact` honouring its contact id, merge preview
+scoped by `client_id` with the external-mapping union, non-blocking
+`assigned_asset` dependency, nullable `changed_by` with the provider in
+`changes`, Tactical's `applyRmmSignedInUserAssignment` on both sync paths,
+`ASSET_UPDATED` after group and assignment writes, and all three minor bundles
+(separator-aware `money.ts`, `client_name` on group details,
+`group_location_changed`, the removed dead code, localized status errors,
+kebab ids, pluralized workspace counts, drawer `onDeleted`, reversible
+`down()`, case-folded custom statuses, SQL-side contact candidates) are all
+present. `features.json` (109) and `tests.json` (157) stay fully
+`implemented: true`.

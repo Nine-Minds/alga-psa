@@ -10,7 +10,10 @@ import { describe, expect, it } from 'vitest';
  * Source-level because the call chain spans five packages and the behaviour is
  * "which module is wired to which", which is exactly what regressed: the
  * resolver existed but only the alert-ticket creator called it, so the column
- * influenced nothing on MSP, portal or mobile.
+ * influenced nothing on MSP, portal or mobile. The second miss was narrower —
+ * `createTicketFromAsset` inherited, but the asset detail header, asset list,
+ * service history and maintenance dialogs all create through `addTicket` with
+ * an `asset_id`, which did not.
  */
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
@@ -41,6 +44,20 @@ describe('asset billing profile reaches tickets from assets', () => {
     // The REST service must forward it rather than dropping it on the floor.
     expect(source('server/src/lib/api/services/TicketService.ts'))
       .toContain('billing_profile_id: data.billing_profile_id ?? null');
+  });
+
+  it('T130: addTicket inherits the asset profile for the QuickAddTicket surfaces', () => {
+    const text = source('packages/tickets/src/actions/ticketActions.ts');
+
+    // The asset header, asset list, service history and maintenance dialogs all
+    // create through addTicket with an asset_id — not createTicketFromAsset —
+    // so without this the retained profile reached no ticket at all.
+    expect(text).toContain(
+      "import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';"
+    );
+    expect(text).toMatch(
+      /if \(asset_id && createTicketInput\.client_id && !createTicketInput\.billing_profile_id\) \{\s*\n\s*createTicketInput\.billing_profile_id =\s*\n\s*\(await resolveAssetBillingProfileIdForClient\(/
+    );
   });
 
   it('T130: the portal prefers the asset profile over the contact heuristic', () => {
