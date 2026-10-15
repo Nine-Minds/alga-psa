@@ -67,6 +67,7 @@
     "sku": "SKU",
     "source": "Źródło",
     "subtotal": "Suma częściowa",
+    "subtotalBeforeDiscounts": "Suma częściowa przed rabatami",
     "tax": "Podatek",
     "termsAndConditions": "Warunki i postanowienia",
     "ticket": "Zgłoszenie",

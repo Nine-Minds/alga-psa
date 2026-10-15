@@ -67,6 +67,7 @@
     "sku": "SKU",
     "source": "Herkunft",
     "subtotal": "Zwischensumme",
+    "subtotalBeforeDiscounts": "Zwischensumme vor Rabatten",
     "tax": "Steuer",
     "termsAndConditions": "Allgemeine Geschäftsbedingungen",
     "ticket": "Ticket",
