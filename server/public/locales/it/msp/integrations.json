@@ -3454,6 +3454,11 @@
           "regenerate": "Rigenera pacchetto",
           "regenerating": "Rigenerazione..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Accesso a Teams non disponibile",
+        "tabTitle": "Scheda Teams non disponibile",
+        "description": "L’integrazione con Microsoft Teams è disponibile solo in Pro."
       }
     },
     "xero": {

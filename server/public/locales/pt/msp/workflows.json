@@ -3035,6 +3035,10 @@
         "selectBoard": "Selecione ou insira um quadro",
         "selectPriority": "Selecione ou insira uma prioridade"
       }
+    },
+    "proFeature": {
+      "title": "Recurso Pro",
+      "description": "O sistema de fluxos de trabalho está disponível apenas no Pro. Atualize sua instalação para acessar este recurso."
     }
   },
   "toggle": {

@@ -3157,6 +3157,10 @@
         "selectBoard": "Wybierz lub wprowadź tablicę",
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "System workflow jest dostępny tylko w Pro. Uaktualnij swoją instalację, aby uzyskać dostęp do tej funkcji."
     }
   },
   "toggle": {

@@ -3454,6 +3454,11 @@
           "regenerate": "Regenerar paquete",
           "regenerating": "Regenerando..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Inicio de sesión en Teams no disponible",
+        "tabTitle": "Pestaña de Teams no disponible",
+        "description": "La integración con Microsoft Teams solo está disponible en Pro."
       }
     },
     "xero": {

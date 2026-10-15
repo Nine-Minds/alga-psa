@@ -3157,6 +3157,10 @@
         "selectBoard": "Seleziona o inserisci una bacheca",
         "selectPriority": "Seleziona o inserisci una priorità"
       }
+    },
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "description": "Il sistema di workflow è disponibile solo in Pro. Esegui l’upgrade della tua installazione per accedere a questa funzionalità."
     }
   },
   "toggle": {

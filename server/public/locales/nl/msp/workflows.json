@@ -3157,6 +3157,10 @@
         "selectBoard": "Selecteer of voer een bord in",
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Het workflowsysteem is alleen beschikbaar in Pro. Upgrade uw installatie om toegang te krijgen tot deze functie."
     }
   },
   "toggle": {

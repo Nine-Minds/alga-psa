@@ -3454,6 +3454,11 @@
           "regenerate": "Wygeneruj pakiet ponownie",
           "regenerating": "Ponowne generowanie..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Logowanie do Teams jest niedostępne",
+        "tabTitle": "Karta Teams jest niedostępna",
+        "description": "Integracja z Microsoft Teams jest dostępna tylko w Pro."
       }
     },
     "xero": {

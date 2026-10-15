@@ -3454,6 +3454,11 @@
           "regenerate": "Gerar pacote novamente",
           "regenerating": "Gerando novamente..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Login no Teams indisponível",
+        "tabTitle": "Guia do Teams indisponível",
+        "description": "A integração com o Microsoft Teams está disponível apenas no Pro."
       }
     },
     "xero": {

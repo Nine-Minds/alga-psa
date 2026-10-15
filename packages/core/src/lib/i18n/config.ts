@@ -198,6 +198,8 @@ export const ROUTE_NAMESPACES = {
   // `portal` query param — so they preload both portals' auth copy.
   '/auth': ['common', 'msp/auth', 'client-portal'],
   '/auth/team': ['common', 'msp/auth', 'msp/onboarding'],
+  '/teams/auth/popup-complete': ['common', 'msp/integrations'],
+  '/teams/tab': ['common', 'msp/integrations'],
   '/client-portal': ['common', 'client-portal'],
   '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],

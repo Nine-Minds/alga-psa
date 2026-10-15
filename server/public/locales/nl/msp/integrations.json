@@ -3454,6 +3454,11 @@
           "regenerate": "Pakket opnieuw genereren",
           "regenerating": "Opnieuw genereren..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Aanmelden bij Teams niet beschikbaar",
+        "tabTitle": "Teams-tabblad niet beschikbaar",
+        "description": "De Microsoft Teams-integratie is alleen beschikbaar in Pro."
       }
     },
     "xero": {

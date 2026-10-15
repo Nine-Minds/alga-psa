@@ -3035,6 +3035,10 @@
         "selectBoard": "Välj eller ange en tavla",
         "selectPriority": "Välj eller ange en prioritet"
       }
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Arbetsflödessystemet är endast tillgängligt i Pro. Uppgradera din installation för att få tillgång till den här funktionen."
     }
   },
   "toggle": {

@@ -3035,6 +3035,10 @@
         "selectBoard": "Select or enter a board",
         "selectPriority": "Select or enter a priority"
       }
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "The workflow system is only available in Pro. Please upgrade your installation to access this feature."
     }
   },
   "toggle": {

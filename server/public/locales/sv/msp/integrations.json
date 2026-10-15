@@ -3477,6 +3477,11 @@
           "regenerate": "Generera paketet igen",
           "regenerating": "Genererar igen…"
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-inloggning är inte tillgänglig",
+        "tabTitle": "Teams-fliken är inte tillgänglig",
+        "description": "Integrationen med Microsoft Teams är endast tillgänglig i Pro."
       }
     },
     "xero": {

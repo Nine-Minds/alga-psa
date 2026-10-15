@@ -3,11 +3,6 @@
   "files": [
     "packages/documents/src/components/DocumentsPageSkeleton.tsx",
     "packages/ee/src/app/msp/account/page.tsx",
-    "packages/ee/src/app/teams/auth/popup-complete/page.tsx",
-    "packages/ee/src/app/teams/tab/page.tsx",
-    "packages/ee/src/components/flow/DnDFlow.tsx",
-    "packages/ee/src/components/settings/account/AccountManagement.tsx",
-    "packages/ee/src/components/settings/email/DnsRecordInstructions.tsx",
     "packages/ee/src/components/settings/email/ManagedDomainList.tsx",
     "packages/ee/src/components/settings/email/ManagedEmailSettings.tsx",
     "packages/ee/src/components/settings/extensions/ExtensionSettings.tsx",

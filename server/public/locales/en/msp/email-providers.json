@@ -930,6 +930,12 @@
       "copyHostAriaLabel": "Copy host",
       "copyFqdnAriaLabel": "Copy full name",
       "hostHint": "Tip: in your DNS provider, enter only the Host shown above. Most providers (Namecheap, GoDaddy, Cloudflare, and others) add “{{domain}}” automatically. If you paste the full name instead, the domain gets repeated (…{{domain}}.{{domain}}) and the record will never verify."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro Feature",
+        "description": "DNS record instructions require Pro."
+      }
     }
   },
   "inboundRules": {

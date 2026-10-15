@@ -3157,6 +3157,10 @@
         "selectBoard": "Sélectionnez ou saisissez un tableau",
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le système de workflows est uniquement disponible dans Pro. Veuillez mettre à niveau votre installation pour accéder à cette fonctionnalité."
     }
   },
   "toggle": {

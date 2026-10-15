@@ -3477,6 +3477,11 @@
           "regenerate": "Regenerate package",
           "regenerating": "Regenerating..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams sign-in unavailable",
+        "tabTitle": "Teams tab unavailable",
+        "description": "Microsoft Teams integration is only available in Pro."
       }
     },
     "xero": {

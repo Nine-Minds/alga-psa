@@ -3454,6 +3454,11 @@
           "regenerate": "Paket neu erstellen",
           "regenerating": "Wird neu erstellt..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-Anmeldung nicht verfügbar",
+        "tabTitle": "Teams-Registerkarte nicht verfügbar",
+        "description": "Die Microsoft Teams-Integration ist nur in Pro verfügbar."
       }
     },
     "xero": {

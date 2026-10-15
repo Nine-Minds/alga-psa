@@ -3454,6 +3454,11 @@
           "regenerate": "Régénérer le package",
           "regenerating": "Régénération..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Connexion à Teams indisponible",
+        "tabTitle": "Onglet Teams indisponible",
+        "description": "L’intégration Microsoft Teams est uniquement disponible dans Pro."
       }
     },
     "xero": {

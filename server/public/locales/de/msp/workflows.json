@@ -3157,6 +3157,10 @@
         "selectBoard": "Board auswählen oder eingeben",
         "selectPriority": "Priorität auswählen oder eingeben"
       }
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Das Workflow-System ist nur in Pro verfügbar. Führen Sie ein Upgrade Ihrer Installation durch, um auf diese Funktion zuzugreifen."
     }
   },
   "toggle": {

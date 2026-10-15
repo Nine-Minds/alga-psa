@@ -3157,6 +3157,10 @@
         "selectBoard": "Seleccione o introduzca un tablero",
         "selectPriority": "Seleccione o introduzca una prioridad"
       }
+    },
+    "proFeature": {
+      "title": "Función Pro",
+      "description": "El sistema de flujos de trabajo solo está disponible en Pro. Actualice su instalación para acceder a esta función."
     }
   },
   "toggle": {
