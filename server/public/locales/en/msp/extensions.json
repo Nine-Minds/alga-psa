@@ -125,7 +125,12 @@
       "description": "View extension details"
     },
     "title": "Extension Details",
-    "description": "Extension details are available in Pro."
+    "description": "Extension details are available in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extension Details (EE only)",
+      "title": "Extension Details Unavailable",
+      "description": "This page is available in Pro."
+    }
   },
   "settingsPage": {
     "metadata": {

@@ -125,7 +125,12 @@
       "description": "Visa information om tillägget"
     },
     "title": "Information om tillägget",
-    "description": "Information om tillägget är tillgänglig i Pro."
+    "description": "Information om tillägget är tillgänglig i Pro.",
+    "unavailable": {
+      "metadataTitle": "Information om tillägget (endast EE)",
+      "title": "Information om tillägget är inte tillgänglig",
+      "description": "Den här sidan är tillgänglig i Pro."
+    }
   },
   "settingsPage": {
     "metadata": {

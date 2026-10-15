@@ -1226,7 +1226,11 @@
         "recommendedUnsaved": "Empfohlen – nicht gespeichert",
         "unsavedChange": "Ungespeicherte Änderung",
         "unsavedNotice": "Diese Filtereinstellungen gelten erst, wenn Sie sie speichern."
-      }
+      },
+      "proFeature": {
+        "description": "Die Microsoft Entra-Integration ist in AlgaPSA Pro verfügbar."
+      },
+      "loading": "Microsoft Entra-Integration wird geladen…"
     },
     "google": {
       "settings": {

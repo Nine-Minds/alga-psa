@@ -2436,6 +2436,10 @@
       "title": "Bibliotheek met autorisatiebundels",
       "upgradeDescription": "Geavanceerd beheer van autorisatiebundels is beschikbaar in Pro. Upgrade om beperkende bundels voor rollen, teams, gebruikers en API-sleutels te configureren.",
       "protectionsDescription": "Ingebouwde autorisatiebeveiligingen blijven actief, ook wanneer configureerbare geavanceerde opties niet beschikbaar zijn in deze editie of dit abonnement."
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Beleidsbeheer vereist Pro. Upgrade om toegang te krijgen tot deze functie."
     }
   },
   "roleManagement": {

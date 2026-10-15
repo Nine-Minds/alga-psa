@@ -125,7 +125,12 @@
       "description": "Extensiedetails bekijken"
     },
     "title": "Extensiedetails",
-    "description": "Extensiedetails zijn beschikbaar in Pro."
+    "description": "Extensiedetails zijn beschikbaar in Pro.",
+    "unavailable": {
+      "metadataTitle": "Extensiedetails (alleen EE)",
+      "title": "Extensiedetails niet beschikbaar",
+      "description": "Deze pagina is beschikbaar in Pro."
+    }
   },
   "settingsPage": {
     "metadata": {

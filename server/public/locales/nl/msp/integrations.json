@@ -1226,7 +1226,11 @@
         "recommendedUnsaved": "Aanbevolen — niet opgeslagen",
         "unsavedChange": "Niet-opgeslagen wijziging",
         "unsavedNotice": "Deze filters worden pas toegepast nadat u ze hebt opgeslagen."
-      }
+      },
+      "proFeature": {
+        "description": "De Microsoft Entra-integratie is beschikbaar in AlgaPSA Pro."
+      },
+      "loading": "Microsoft Entra-integratie laden…"
     },
     "google": {
       "settings": {

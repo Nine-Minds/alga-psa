@@ -2436,6 +2436,10 @@
       "title": "Bibliothèque de paquets d’autorisation",
       "upgradeDescription": "La gestion avancée des paquets d’autorisation est disponible dans Pro. Passez à Pro pour configurer des paquets qui restreignent les autorisations des rôles, des équipes, des utilisateurs et des clés API.",
       "protectionsDescription": "Les protections d’autorisation intégrées restent actives même lorsque les contrôles avancés configurables ne sont pas disponibles dans cette édition ou cette offre."
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "La gestion des stratégies nécessite Pro. Passez à la version Pro pour accéder à cette fonctionnalité."
     }
   },
   "roleManagement": {

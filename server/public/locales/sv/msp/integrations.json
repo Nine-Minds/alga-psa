@@ -1226,7 +1226,11 @@
         "recommendedUnsaved": "Rekommenderat – inte sparat",
         "unsavedChange": "Osparad ändring",
         "unsavedNotice": "De här filterinställningarna gäller först när du har sparat dem."
-      }
+      },
+      "proFeature": {
+        "description": "Integrationen med Microsoft Entra är tillgänglig i AlgaPSA Pro."
+      },
+      "loading": "Läser in integrationen med Microsoft Entra…"
     },
     "google": {
       "settings": {

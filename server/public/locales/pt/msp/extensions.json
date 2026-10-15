@@ -125,7 +125,12 @@
       "description": "Ver detalhes da extensão"
     },
     "title": "Detalhes da extensão",
-    "description": "Os detalhes da extensão estão disponíveis no Pro."
+    "description": "Os detalhes da extensão estão disponíveis no Pro.",
+    "unavailable": {
+      "metadataTitle": "Detalhes da extensão (somente EE)",
+      "title": "Detalhes da extensão indisponíveis",
+      "description": "Esta página está disponível no Pro."
+    }
   },
   "settingsPage": {
     "metadata": {

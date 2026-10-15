@@ -2436,6 +2436,10 @@
       "title": "Authorization Bundle Library",
       "upgradeDescription": "Advanced authorization bundle management is available on Pro. Upgrade to configure narrowing bundles for roles, teams, users, and API keys.",
       "protectionsDescription": "Built-in authorization protections remain active even when configurable advanced controls are unavailable in this edition or tier."
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "Policy Management requires Pro. Please upgrade to access this feature."
     }
   },
   "roleManagement": {

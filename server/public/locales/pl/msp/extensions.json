@@ -125,7 +125,12 @@
       "description": "Wyświetl szczegóły rozszerzenia"
     },
     "title": "Szczegóły rozszerzenia",
-    "description": "Szczegóły rozszerzenia są dostępne w Pro."
+    "description": "Szczegóły rozszerzenia są dostępne w Pro.",
+    "unavailable": {
+      "metadataTitle": "Szczegóły rozszerzenia (tylko EE)",
+      "title": "Szczegóły rozszerzenia są niedostępne",
+      "description": "Ta strona jest dostępna w wersji Pro."
+    }
   },
   "settingsPage": {
     "metadata": {

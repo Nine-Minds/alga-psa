@@ -2436,6 +2436,10 @@
       "title": "Libreria dei pacchetti di autorizzazione",
       "upgradeDescription": "La gestione avanzata dei pacchetti di autorizzazione è disponibile in Pro. Passa a Pro per configurare pacchetti che limitano le autorizzazioni per ruoli, team, utenti e chiavi API.",
       "protectionsDescription": "Le protezioni di autorizzazione integrate rimangono attive anche quando i controlli avanzati configurabili non sono disponibili in questa edizione o piano."
+    },
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "description": "La gestione dei criteri richiede Pro. Passa a Pro per accedere a questa funzionalità."
     }
   },
   "roleManagement": {

@@ -2436,6 +2436,10 @@
       "title": "Biblioteca de pacotes de autorização",
       "upgradeDescription": "O gerenciamento avançado de pacotes de autorização está disponível no Pro. Faça o upgrade para configurar pacotes que restringem permissões para funções, equipes, usuários e chaves de API.",
       "protectionsDescription": "As proteções de autorização integradas permanecem ativas mesmo quando os controles avançados configuráveis não estão disponíveis nesta edição ou plano."
+    },
+    "proFeature": {
+      "title": "Recurso Pro",
+      "description": "O gerenciamento de políticas requer o Pro. Faça upgrade para acessar este recurso."
     }
   },
   "roleManagement": {

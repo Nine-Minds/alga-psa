@@ -2436,6 +2436,10 @@
       "title": "Bibliotek för behörighetspaket",
       "upgradeDescription": "Avancerad hantering av behörighetspaket är tillgänglig i Pro. Uppgradera för att konfigurera begränsande paket för roller, team, användare och API-nycklar.",
       "protectionsDescription": "Inbyggda behörighetsskydd förblir aktiva även när konfigurerbara avancerade kontroller inte är tillgängliga i den här utgåvan eller abonnemangsnivån."
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Policyhantering kräver Pro. Uppgradera för att få tillgång till den här funktionen."
     }
   },
   "roleManagement": {

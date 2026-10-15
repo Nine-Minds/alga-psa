@@ -2436,6 +2436,10 @@
       "title": "Biblioteca de paquetes de autorización",
       "upgradeDescription": "La administración avanzada de paquetes de autorización está disponible en Pro. Actualice su plan para configurar paquetes que restrinjan los permisos de roles, equipos, usuarios y claves de API.",
       "protectionsDescription": "Las protecciones de autorización integradas permanecen activas incluso cuando los controles avanzados configurables no están disponibles en esta edición o nivel."
+    },
+    "proFeature": {
+      "title": "Función Pro",
+      "description": "La administración de políticas requiere Pro. Actualice su plan para acceder a esta función."
     }
   },
   "roleManagement": {

@@ -2436,6 +2436,10 @@
       "title": "Bibliothek für Autorisierungspakete",
       "upgradeDescription": "Die erweiterte Verwaltung von Autorisierungspaketen ist in Pro verfügbar. Führen Sie ein Upgrade durch, um einschränkende Pakete für Rollen, Teams, Benutzer und API-Schlüssel zu konfigurieren.",
       "protectionsDescription": "Integrierte Autorisierungsschutzmaßnahmen bleiben auch dann aktiv, wenn konfigurierbare erweiterte Steuerelemente in dieser Edition oder Tarifstufe nicht verfügbar sind."
+    },
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "description": "Die Richtlinienverwaltung erfordert Pro. Führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
     }
   },
   "roleManagement": {
