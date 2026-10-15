@@ -678,7 +678,9 @@
           "statusPlaceholder": "Heropeningsstatus selecteren",
           "statusUseDefault": "Standaard open status van bord gebruiken",
           "suppressAiLabel": "Heropenen onderdrukken bij korte bevestigingsantwoorden (AI)",
-          "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal."
+          "suppressAiHelp": "Alleen Enterprise AI Assistant add-on. Als niet beschikbaar, heropenen antwoorden normaal.",
+          "sideConversationsLabel": "Dit beleid toepassen op e-mailantwoorden in nevengesprekken",
+          "sideConversationsHelp": "Antwoorden in leveranciersgesprekken en gedeelde IT-gesprekken gebruiken hetzelfde bovenstaande beleid voor tijdslimiet, status en onderdrukking. Standaard uitgeschakeld en alleen van kracht als het bovenstaande beleid ook is ingeschakeld."
         },
         "liveTimer": {
           "label": "Stopwatch tonen bij tickets",

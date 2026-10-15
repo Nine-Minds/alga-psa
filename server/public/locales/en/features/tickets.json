@@ -2607,6 +2607,11 @@
       "cancel": "Cancel generation",
       "generating": "Thinking…",
       "contextTooLarge": "The selected context exceeds the available AI capacity. Narrow the source list and try again. No question or reply was posted."
-    }
+    },
+    "recipients": "Recipients",
+    "recipientsPlaceholder": "name@example.com, name2@example.com",
+    "recipientsInvalid": "Enter at least one valid email address, separated by commas.",
+    "newCorrespondent": "New correspondent",
+    "removeRecipient": "Remove {{address}}"
   }
 }

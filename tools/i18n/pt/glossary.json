@@ -2396,7 +2396,8 @@
     {
       "term": "citação",
       "preferred": "cotação",
-      "reason": "Wrong register for a sales quote; citação means a textual citation or legal summons. Use cotação (native-reviewer confirmed)."
+      "reason": "Wrong register for a sales quote; citação means a textual citation or legal summons. Use cotação (native-reviewer confirmed). The conversation sharing control quotes message text, not a sales document.",
+      "keyUnless": "^features/tickets:namedConversations\\.share\\.quote$"
     },
     {
       "term": "citações",
