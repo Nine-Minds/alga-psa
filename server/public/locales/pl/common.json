@@ -113,7 +113,8 @@
     "printSelected": "Drukuj zaznaczone ({{count}})",
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
     "printSelected_many": "Drukuj zaznaczone ({{count}})",
-    "removeTag": "Usuń tag"
+    "removeTag": "Usuń tag",
+    "saveChanges": "Zapisz zmiany"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1578,7 +1579,26 @@
   },
   "notifications": {
     "needsAttention": "Wymaga uwagi ({{count}})",
-    "lowPriority": "Niski priorytet ({{count}})"
+    "lowPriority": "Niski priorytet ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Otwórz dokument",
+        "viewTicket": "Wyświetl zgłoszenie",
+        "viewTask": "Wyświetl zadanie",
+        "viewDetails": "Zobacz szczegóły"
+      },
+      "changes": "Zmiany:",
+      "status": "Status:",
+      "priority": "Priorytet:",
+      "assignedTo": "Przypisano do:",
+      "changedBy": "Zmienione przez:",
+      "assignedBy": "Przypisane przez:",
+      "unread": "Nieprzeczytane",
+      "internalComment": "Komentarz wewnętrzny",
+      "commentBy": "Komentarz użytkownika {{author}}:",
+      "readAt": "Przeczytano {{time}}"
+    }
   },
   "importConflicts": {
     "title": "Rozwiąż konflikty importu",
@@ -1788,5 +1808,56 @@
   "emailRecipients": {
     "remove": "Usuń {{email}}",
     "placeholder": "Wpisz adres i naciśnij Enter"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-mail",
+        "message-circle": "Komunikat",
+        "video": "Rozmowa wideo",
+        "send": "Wyślij",
+        "users": "Spotkanie",
+        "calendar": "Wizyta",
+        "presentation": "Prezentacja",
+        "coffee": "Nieformalne spotkanie",
+        "handshake": "Porozumienie",
+        "file-text": "Dokument",
+        "sticky-note": "Notatka",
+        "edit": "Edytuj",
+        "flag": "Dalsze działania",
+        "alarm-clock": "Przypomnienie",
+        "clock": "Rejestrowanie czasu",
+        "activity": "Ogólna aktywność",
+        "briefcase": "Zarządzanie kontem",
+        "search": "Badania",
+        "book-open": "Szkolenie",
+        "headphones": "Wsparcie",
+        "check-square": "Przegląd",
+        "clipboard": "Dokumentacja",
+        "users-2": "Konsultacja",
+        "target": "Planowanie",
+        "settings": "Konfiguracja",
+        "star": "Ważne",
+        "award": "Osiągnięcie",
+        "zap": "Szybka akcja",
+        "map-pin": "Lokalizacja",
+        "tag": "Etykieta",
+        "bell": "Powiadomienie",
+        "shield": "Bezpieczeństwo",
+        "key": "Dostęp",
+        "heart": "Ulubione"
+      },
+      "categories": {
+        "Communication": "Komunikacja",
+        "Meetings": "Spotkania",
+        "Documents": "Dokumenty",
+        "Tasks": "Zadania",
+        "Activities": "Aktywności",
+        "Business": "Biznes"
+      }
+    },
+    "selected": "Wybrano: {{label}}",
+    "help": "Wybierz ikonę reprezentującą ten typ interakcji. Ikona będzie wyświetlana na listach i w formularzach."
   }
 }

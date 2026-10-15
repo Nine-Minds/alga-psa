@@ -22,13 +22,19 @@
     "add": "Reagera",
     "ariaSummary_one": "{{emoji}} {{count}} reaktion",
     "ariaSummary_other": "{{emoji}} {{count}} reaktioner",
-    "ariaYouReacted": ", du reagerade"
+    "ariaYouReacted": ", du reagerade",
+    "ariaSummary_few": "{{emoji}} {{count}} reaktioner",
+    "ariaSummary_many": "{{emoji}} {{count}} reaktioner"
   },
   "credits": {
     "expiresInDaysOn_one": "Går ut om {{count}} dag, den {{date}}",
     "expiresInDaysOn_other": "Går ut om {{count}} dagar, den {{date}}",
     "expiringForClient_one": "{{count}} tillgodohavande för {{clientName}} går snart ut",
-    "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
+    "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut",
+    "expiresInDaysOn_few": "Går ut om {{count}} dagar, den {{date}}",
+    "expiresInDaysOn_many": "Går ut om {{count}} dagar, den {{date}}",
+    "expiringForClient_few": "{{count}} tillgodohavanden för {{clientName}} går snart ut",
+    "expiringForClient_many": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
   },
   "staleAction": {
     "message": "Sidan är inaktuell. Ladda om sidan för att återställa liveuppdateringar och åtgärder."
@@ -46,7 +52,13 @@
     "licenseWrongTenant": "Licensen utfärdades för en annan installation och är inte giltig här. Installationen använder Essentials-funktionerna.",
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
-    "dismiss": "Stäng"
+    "dismiss": "Stäng",
+    "licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "licenseExpiresIn_many": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "trialDaysRemaining_few": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
+    "trialDaysRemaining_many": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
+    "trialExpiresIn_few": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
+    "trialExpiresIn_many": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna."
   },
   "nav": {
     "dashboard": "Översikt",
@@ -99,7 +111,10 @@
     "done": "Klart",
     "continue": "Fortsätt",
     "printSelected": "Skriv ut markerade ({{count}})",
-    "removeTag": "Ta bort tagg"
+    "removeTag": "Ta bort tagg",
+    "saveChanges": "Spara ändringar",
+    "printSelected_few": "Skriv ut markerade ({{count}})",
+    "printSelected_many": "Skriv ut markerade ({{count}})"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -612,7 +627,11 @@
     "expand": "Fäll ut",
     "showInDrawer": "Visa i sidopanel",
     "showEarlierReplies_one": "Visa {{count}} tidigare svar",
-    "showEarlierReplies_other": "Visa {{count}} tidigare svar"
+    "showEarlierReplies_other": "Visa {{count}} tidigare svar",
+    "replies_few": "{{count}} svar",
+    "replies_many": "{{count}} svar",
+    "showEarlierReplies_few": "Visa {{count}} tidigare svar",
+    "showEarlierReplies_many": "Visa {{count}} tidigare svar"
   },
   "pagination": {
     "previous": "Föregående",
@@ -634,7 +653,9 @@
     "ariaLabel": "Sidnavigering",
     "totalItems": "Totalt {{count}} {{itemLabel}}",
     "totalRecordsInline": "(totalt {{count}} poster)",
-    "pageOf": "Sida {{current}} av {{total}}"
+    "pageOf": "Sida {{current}} av {{total}}",
+    "itemsLabel_few": "poster",
+    "itemsLabel_many": "poster"
   },
   "documents": {
     "title": "Dokument",
@@ -687,7 +708,11 @@
       "downloadFailed": "Det gick inte att ladda ner dokumentet",
       "bulkDeleteFailed": "Det gick inte att radera vissa dokument",
       "bulkDeleteSuccess_one": "{{count}} dokument har raderats",
-      "bulkDeleteSuccess_other": "{{count}} dokument har raderats"
+      "bulkDeleteSuccess_other": "{{count}} dokument har raderats",
+      "bulkDeleteSuccess_few": "{{count}} dokument har raderats",
+      "bulkDeleteSuccess_many": "{{count}} dokument har raderats",
+      "moveDocumentsSuccess_few": "{{count}} dokument har flyttats till {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} dokument har flyttats till {{destination}}"
     },
     "empty": {
       "default": "Inga dokument hittades",
@@ -701,11 +726,15 @@
       "selected_other": "{{count}} dokument markerade",
       "moveToFolder": "Flytta till mapp",
       "deleteSelected": "Radera markerade",
-      "clearSelection": "Avmarkera alla"
+      "clearSelection": "Avmarkera alla",
+      "selected_few": "{{count}} dokument markerade",
+      "selected_many": "{{count}} dokument markerade"
     },
     "prompts": {
       "confirmBulkDelete_one": "Vill du radera {{count}} dokument?",
-      "confirmBulkDelete_other": "Vill du radera {{count}} dokument?"
+      "confirmBulkDelete_other": "Vill du radera {{count}} dokument?",
+      "confirmBulkDelete_few": "Vill du radera {{count}} dokument?",
+      "confirmBulkDelete_many": "Vill du radera {{count}} dokument?"
     },
     "pagination": {
       "perPage": "{{count}} per sida"
@@ -738,7 +767,9 @@
       "rootOption": "Rot (ingen mapp)",
       "empty": "Inga mappar tillgängliga. Dokument sparas i roten.",
       "showAllFolders": "Visa alla mappar",
-      "showEntityFolders": "Visa entitetsmappar"
+      "showEntityFolders": "Visa entitetsmappar",
+      "bulkMoveDescription_few": "Välj målmapp för {{count}} dokument",
+      "bulkMoveDescription_many": "Välj målmapp för {{count}} dokument"
     },
     "filters": {
       "searchLabel": "Sök dokument",
@@ -1289,7 +1320,9 @@
       "revoking": "Återkallar…",
       "loggingOut": "Loggar ut…",
       "logoutFromOther_one": "Logga ut från {{count}} annan enhet",
-      "logoutFromOther_other": "Logga ut från {{count}} andra enheter"
+      "logoutFromOther_other": "Logga ut från {{count}} andra enheter",
+      "logoutFromOther_few": "Logga ut från {{count}} andra enheter",
+      "logoutFromOther_many": "Logga ut från {{count}} andra enheter"
     },
     "confirmations": {
       "logoutCurrent": "Du loggas ut från din aktuella session. Vill du fortsätta?",
@@ -1525,7 +1558,9 @@
     "showAll": "Visa alla",
     "showingAllColumns": "Alla kolumner visas. Rulla i sidled för att se dem.",
     "showLess": "Visa färre",
-    "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme."
+    "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme.",
+    "columnsHidden_few": "{{count}} kolumner är dolda.",
+    "columnsHidden_many": "{{count}} kolumner är dolda."
   },
   "richTextEditorSkeleton": {
     "loading": "Läser in redigeraren…"
@@ -1544,7 +1579,26 @@
   },
   "notifications": {
     "needsAttention": "Kräver åtgärd ({{count}})",
-    "lowPriority": "Låg prioritet ({{count}})"
+    "lowPriority": "Låg prioritet ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Öppna dokument",
+        "viewTicket": "Visa ärende",
+        "viewTask": "Visa uppgift",
+        "viewDetails": "Visa detaljer"
+      },
+      "changes": "Ändringar:",
+      "status": "Status:",
+      "priority": "Prioritet:",
+      "assignedTo": "Tilldelat till:",
+      "changedBy": "Ändrat av:",
+      "assignedBy": "Tilldelat av:",
+      "unread": "Oläst",
+      "internalComment": "Intern kommentar",
+      "commentBy": "Kommentar av {{author}}:",
+      "readAt": "Läst {{time}}"
+    }
   },
   "importConflicts": {
     "title": "Lös importkonflikter",
@@ -1754,5 +1808,56 @@
   "emailRecipients": {
     "remove": "Ta bort {{email}}",
     "placeholder": "Skriv en adress och tryck på Retur"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-post",
+        "message-circle": "Meddelande",
+        "video": "Videosamtal",
+        "send": "Skicka",
+        "users": "Möte",
+        "calendar": "Bokning",
+        "presentation": "Presentation",
+        "coffee": "Informellt möte",
+        "handshake": "Överenskommelse",
+        "file-text": "Dokument",
+        "sticky-note": "Anteckning",
+        "edit": "Redigera",
+        "flag": "Uppföljning",
+        "alarm-clock": "Påminnelse",
+        "clock": "Tidregistrering",
+        "activity": "Allmän aktivitet",
+        "briefcase": "Kontohantering",
+        "search": "Efterforskning",
+        "book-open": "Utbildning",
+        "headphones": "Support",
+        "check-square": "Granskning",
+        "clipboard": "Dokumentation",
+        "users-2": "Konsultation",
+        "target": "Planering",
+        "settings": "Konfiguration",
+        "star": "Viktigt",
+        "award": "Prestation",
+        "zap": "Snabbåtgärd",
+        "map-pin": "Plats",
+        "tag": "Etikett",
+        "bell": "Avisering",
+        "shield": "Säkerhet",
+        "key": "Åtkomst",
+        "heart": "Favorit"
+      },
+      "categories": {
+        "Communication": "Kommunikation",
+        "Meetings": "Möten",
+        "Documents": "Dokument",
+        "Tasks": "Uppgifter",
+        "Activities": "Aktiviteter",
+        "Business": "Affärsverksamhet"
+      }
+    },
+    "selected": "Valt: {{label}}",
+    "help": "Välj en ikon för den här interaktionstypen. Ikonen visas i listor och formulär."
   }
 }

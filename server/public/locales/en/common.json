@@ -22,13 +22,19 @@
     "add": "React",
     "ariaSummary_one": "{{emoji}} {{count}} reaction",
     "ariaSummary_other": "{{emoji}} {{count}} reactions",
-    "ariaYouReacted": ", you reacted"
+    "ariaYouReacted": ", you reacted",
+    "ariaSummary_few": "{{emoji}} {{count}} reactions",
+    "ariaSummary_many": "{{emoji}} {{count}} reactions"
   },
   "credits": {
     "expiresInDaysOn_one": "Expires in {{count}} day on {{date}}",
     "expiresInDaysOn_other": "Expires in {{count}} days on {{date}}",
     "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
-    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
+    "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon",
+    "expiresInDaysOn_few": "Expires in {{count}} days on {{date}}",
+    "expiresInDaysOn_many": "Expires in {{count}} days on {{date}}",
+    "expiringForClient_few": "{{count}} credits for {{clientName}} will expire soon",
+    "expiringForClient_many": "{{count}} credits for {{clientName}} will expire soon"
   },
   "staleAction": {
     "message": "This page is out of date. Refresh to restore live updates and actions."
@@ -46,7 +52,13 @@
     "licenseWrongTenant": "This license was issued for a different appliance and is not valid here. The install is running Essentials features.",
     "manageLicense": "Manage License",
     "ariaLabel": "License status",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "licenseExpiresIn_few": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "licenseExpiresIn_many": "License expires in {{count}} days. Renew to avoid service interruption.",
+    "trialDaysRemaining_few": "Pro trial active — {{count}} days remaining.",
+    "trialDaysRemaining_many": "Pro trial active — {{count}} days remaining.",
+    "trialExpiresIn_few": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
+    "trialExpiresIn_many": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -99,7 +111,10 @@
     "done": "Done",
     "continue": "Continue",
     "printSelected": "Print selected ({{count}})",
-    "removeTag": "Remove tag"
+    "removeTag": "Remove tag",
+    "saveChanges": "Save Changes",
+    "printSelected_few": "Print selected ({{count}})",
+    "printSelected_many": "Print selected ({{count}})"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -612,7 +627,11 @@
     "expand": "Expand",
     "showInDrawer": "Show in drawer",
     "showEarlierReplies_one": "Show {{count}} earlier reply",
-    "showEarlierReplies_other": "Show {{count}} earlier replies"
+    "showEarlierReplies_other": "Show {{count}} earlier replies",
+    "replies_few": "{{count}} replies",
+    "replies_many": "{{count}} replies",
+    "showEarlierReplies_few": "Show {{count}} earlier replies",
+    "showEarlierReplies_many": "Show {{count}} earlier replies"
   },
   "pagination": {
     "previous": "Previous",
@@ -634,7 +653,9 @@
     "ariaLabel": "Pagination",
     "totalItems": "{{count}} {{itemLabel}} total",
     "totalRecordsInline": "({{count}} total records)",
-    "pageOf": "Page {{current}} of {{total}}"
+    "pageOf": "Page {{current}} of {{total}}",
+    "itemsLabel_few": "items",
+    "itemsLabel_many": "items"
   },
   "documents": {
     "title": "Documents",
@@ -687,7 +708,11 @@
       "downloadFailed": "Failed to download document",
       "bulkDeleteFailed": "Failed to delete some documents",
       "bulkDeleteSuccess_one": "{{count}} document deleted successfully",
-      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully"
+      "bulkDeleteSuccess_other": "{{count}} documents deleted successfully",
+      "bulkDeleteSuccess_few": "{{count}} documents deleted successfully",
+      "bulkDeleteSuccess_many": "{{count}} documents deleted successfully",
+      "moveDocumentsSuccess_few": "{{count}} documents moved to {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} documents moved to {{destination}}"
     },
     "empty": {
       "default": "No documents found",
@@ -701,11 +726,15 @@
       "selected_other": "{{count}} documents selected",
       "moveToFolder": "Move to Folder",
       "deleteSelected": "Delete Selected",
-      "clearSelection": "Clear Selection"
+      "clearSelection": "Clear Selection",
+      "selected_few": "{{count}} documents selected",
+      "selected_many": "{{count}} documents selected"
     },
     "prompts": {
       "confirmBulkDelete_one": "Are you sure you want to delete {{count}} document?",
-      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?"
+      "confirmBulkDelete_other": "Are you sure you want to delete {{count}} documents?",
+      "confirmBulkDelete_few": "Are you sure you want to delete {{count}} documents?",
+      "confirmBulkDelete_many": "Are you sure you want to delete {{count}} documents?"
     },
     "pagination": {
       "perPage": "{{count}} per page"
@@ -738,7 +767,9 @@
       "rootOption": "Root (No folder)",
       "empty": "No folders available. Documents will be saved to root.",
       "showAllFolders": "Show all folders",
-      "showEntityFolders": "Show entity folders"
+      "showEntityFolders": "Show entity folders",
+      "bulkMoveDescription_few": "Select destination folder for {{count}} documents",
+      "bulkMoveDescription_many": "Select destination folder for {{count}} documents"
     },
     "filters": {
       "searchLabel": "Search Documents",
@@ -1289,7 +1320,9 @@
       "revoking": "Revoking...",
       "loggingOut": "Logging out...",
       "logoutFromOther_one": "Logout from {{count}} other device",
-      "logoutFromOther_other": "Logout from {{count}} other devices"
+      "logoutFromOther_other": "Logout from {{count}} other devices",
+      "logoutFromOther_few": "Logout from {{count}} other devices",
+      "logoutFromOther_many": "Logout from {{count}} other devices"
     },
     "confirmations": {
       "logoutCurrent": "This will log you out of your current session. Are you sure?",
@@ -1525,7 +1558,9 @@
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
-    "columnsHidden": "{{count}} columns hidden due to limited space."
+    "columnsHidden": "{{count}} columns hidden due to limited space.",
+    "columnsHidden_few": "{{count}} columns hidden.",
+    "columnsHidden_many": "{{count}} columns hidden."
   },
   "richTextEditorSkeleton": {
     "loading": "Loading editor…"
@@ -1544,7 +1579,26 @@
   },
   "notifications": {
     "needsAttention": "Needs attention ({{count}})",
-    "lowPriority": "Low priority ({{count}})"
+    "lowPriority": "Low priority ({{count}})",
+    "detail": {
+      "document": "Document",
+      "actions": {
+        "openDocument": "Open Document",
+        "viewTicket": "View Ticket",
+        "viewTask": "View Task",
+        "viewDetails": "View Details"
+      },
+      "changes": "Changes:",
+      "status": "Status:",
+      "priority": "Priority:",
+      "assignedTo": "Assigned to:",
+      "changedBy": "Changed by:",
+      "assignedBy": "Assigned by:",
+      "unread": "Unread",
+      "internalComment": "Internal Comment",
+      "commentBy": "Comment by {{author}}:",
+      "readAt": "Read {{time}}"
+    }
   },
   "importConflicts": {
     "title": "Resolve Import Conflicts",
@@ -1754,5 +1808,56 @@
   "emailRecipients": {
     "remove": "Remove {{email}}",
     "placeholder": "Type an address and press Enter"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Phone",
+        "mail": "Email",
+        "message-circle": "Message",
+        "video": "Video Call",
+        "send": "Send",
+        "users": "Meeting",
+        "calendar": "Appointment",
+        "presentation": "Presentation",
+        "coffee": "Informal Meeting",
+        "handshake": "Agreement",
+        "file-text": "Document",
+        "sticky-note": "Note",
+        "edit": "Edit",
+        "flag": "Follow-up",
+        "alarm-clock": "Reminder",
+        "clock": "Time Tracking",
+        "activity": "General Activity",
+        "briefcase": "Account Management",
+        "search": "Research",
+        "book-open": "Training",
+        "headphones": "Support",
+        "check-square": "Review",
+        "clipboard": "Documentation",
+        "users-2": "Consultation",
+        "target": "Planning",
+        "settings": "Configuration",
+        "star": "Important",
+        "award": "Achievement",
+        "zap": "Quick Action",
+        "map-pin": "Location",
+        "tag": "Label",
+        "bell": "Notification",
+        "shield": "Security",
+        "key": "Access",
+        "heart": "Favorite"
+      },
+      "categories": {
+        "Communication": "Communication",
+        "Meetings": "Meetings",
+        "Documents": "Documents",
+        "Tasks": "Tasks",
+        "Activities": "Activities",
+        "Business": "Business"
+      }
+    },
+    "selected": "Selected: {{label}}",
+    "help": "Select an icon to represent this interaction type. The icon will be displayed in lists and forms."
   }
 }

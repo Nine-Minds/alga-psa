@@ -22,13 +22,19 @@
     "add": "Reagieren",
     "ariaSummary_one": "{{emoji}} {{count}} Reaktion",
     "ariaSummary_other": "{{emoji}} {{count}} Reaktionen",
-    "ariaYouReacted": ", Sie haben reagiert"
+    "ariaYouReacted": ", Sie haben reagiert",
+    "ariaSummary_few": "{{emoji}} {{count}} Reaktionen",
+    "ariaSummary_many": "{{emoji}} {{count}} Reaktionen"
   },
   "credits": {
     "expiresInDaysOn_one": "Läuft in {{count}} Tag ab, am {{date}}",
     "expiresInDaysOn_other": "Läuft in {{count}} Tagen ab, am {{date}}",
     "expiringForClient_one": "{{count}} Guthaben für {{clientName}} läuft bald ab",
-    "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab"
+    "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab",
+    "expiresInDaysOn_few": "Läuft in {{count}} Tagen ab, am {{date}}",
+    "expiresInDaysOn_many": "Läuft in {{count}} Tagen ab, am {{date}}",
+    "expiringForClient_few": "{{count}} Guthaben für {{clientName}} laufen bald ab",
+    "expiringForClient_many": "{{count}} Guthaben für {{clientName}} laufen bald ab"
   },
   "staleAction": {
     "message": "Diese Seite ist nicht mehr aktuell. Aktualisieren Sie sie, um Live-Updates und Aktionen wiederherzustellen."
@@ -46,7 +52,13 @@
     "licenseWrongTenant": "Diese Lizenz wurde für eine andere Appliance ausgestellt und ist hier nicht gültig. Die Installation verwendet Essentials-Funktionen.",
     "manageLicense": "Lizenz verwalten",
     "ariaLabel": "Lizenzstatus",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "licenseExpiresIn_few": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "licenseExpiresIn_many": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
+    "trialDaysRemaining_few": "Pro-Testphase aktiv — noch {{count}} Tage.",
+    "trialDaysRemaining_many": "Pro-Testphase aktiv — noch {{count}} Tage.",
+    "trialExpiresIn_few": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
+    "trialExpiresIn_many": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -99,7 +111,10 @@
     "done": "Fertig",
     "continue": "Weiter",
     "printSelected": "Ausgewählte drucken ({{count}})",
-    "removeTag": "Tag entfernen"
+    "removeTag": "Tag entfernen",
+    "saveChanges": "Änderungen speichern",
+    "printSelected_few": "Auswahl drucken ({{count}})",
+    "printSelected_many": "Auswahl drucken ({{count}})"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -479,7 +494,11 @@
     "expand": "Ausklappen",
     "showInDrawer": "In Seitenleiste anzeigen",
     "showEarlierReplies_one": "{{count}} frühere Antwort anzeigen",
-    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen"
+    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen",
+    "replies_few": "{{count}} Antworten",
+    "replies_many": "{{count}} Antworten",
+    "showEarlierReplies_few": "{{count}} frühere Antworten anzeigen",
+    "showEarlierReplies_many": "{{count}} frühere Antworten anzeigen"
   },
   "pagination": {
     "previous": "Zurück",
@@ -501,7 +520,9 @@
     "totalRecordsInline": "({{count}} Gesamteinträge)",
     "pageOf": "Seite {{current}} von {{total}}",
     "itemsLabel_one": "Eintrag",
-    "itemsLabel_other": "Einträge"
+    "itemsLabel_other": "Einträge",
+    "itemsLabel_few": "Einträge",
+    "itemsLabel_many": "Einträge"
   },
   "documents": {
     "title": "Dokumente",
@@ -554,7 +575,11 @@
       "downloadFailed": "Dokument konnte nicht heruntergeladen werden",
       "bulkDeleteFailed": "Einige Dokumente konnten nicht gelöscht werden",
       "bulkDeleteSuccess_one": "{{count}} Dokument wurde erfolgreich gelöscht",
-      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht"
+      "bulkDeleteSuccess_other": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "bulkDeleteSuccess_few": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "bulkDeleteSuccess_many": "{{count}} Dokumente wurden erfolgreich gelöscht",
+      "moveDocumentsSuccess_few": "{{count}} Dokumente wurden nach {{destination}} verschoben",
+      "moveDocumentsSuccess_many": "{{count}} Dokumente wurden nach {{destination}} verschoben"
     },
     "empty": {
       "default": "Keine Dokumente gefunden",
@@ -568,11 +593,15 @@
       "selected_other": "{{count}} Dokumente ausgewählt",
       "moveToFolder": "In Ordner verschieben",
       "deleteSelected": "Ausgewählte löschen",
-      "clearSelection": "Auswahl aufheben"
+      "clearSelection": "Auswahl aufheben",
+      "selected_few": "{{count}} Dokumente ausgewählt",
+      "selected_many": "{{count}} Dokumente ausgewählt"
     },
     "prompts": {
       "confirmBulkDelete_one": "Möchten Sie wirklich {{count}} Dokument löschen?",
-      "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?"
+      "confirmBulkDelete_other": "Möchten Sie wirklich {{count}} Dokumente löschen?",
+      "confirmBulkDelete_few": "Möchten Sie wirklich {{count}} Dokumente löschen?",
+      "confirmBulkDelete_many": "Möchten Sie wirklich {{count}} Dokumente löschen?"
     },
     "pagination": {
       "perPage": "{{count}} pro Seite"
@@ -605,7 +634,9 @@
       "rootOption": "Stamm (kein Ordner)",
       "empty": "Keine Ordner vorhanden. Dokumente werden im Stammverzeichnis gespeichert.",
       "showAllFolders": "Alle Ordner anzeigen",
-      "showEntityFolders": "Zugehörige Ordner anzeigen"
+      "showEntityFolders": "Zugehörige Ordner anzeigen",
+      "bulkMoveDescription_few": "Zielordner für {{count}} Dokumente auswählen",
+      "bulkMoveDescription_many": "Zielordner für {{count}} Dokumente auswählen"
     },
     "filters": {
       "searchLabel": "Dokumente suchen",
@@ -1199,7 +1230,9 @@
       "revoking": "Wird widerrufen...",
       "loggingOut": "Wird abgemeldet...",
       "logoutFromOther_one": "Von {{count}} anderem Gerät abmelden",
-      "logoutFromOther_other": "Von {{count}} anderen Geräten abmelden"
+      "logoutFromOther_other": "Von {{count}} anderen Geräten abmelden",
+      "logoutFromOther_few": "Von {{count}} anderen Geräten abmelden",
+      "logoutFromOther_many": "Von {{count}} anderen Geräten abmelden"
     },
     "confirmations": {
       "logoutCurrent": "Dies meldet Sie von Ihrer aktuellen Sitzung ab. Sind Sie sicher?",
@@ -1525,7 +1558,9 @@
     "showAll": "Alle anzeigen",
     "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
     "showLess": "Weniger anzeigen",
-    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet."
+    "columnsHidden": "{{count}} Spalten aufgrund von begrenztem Platz ausgeblendet.",
+    "columnsHidden_few": "{{count}} Spalten aus Platzgründen ausgeblendet.",
+    "columnsHidden_many": "{{count}} Spalten aus Platzgründen ausgeblendet."
   },
   "richTextEditorSkeleton": {
     "loading": "Editor wird geladen…"
@@ -1544,7 +1579,26 @@
   },
   "notifications": {
     "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
-    "lowPriority": "Niedrige Priorität ({{count}})"
+    "lowPriority": "Niedrige Priorität ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Dokument öffnen",
+        "viewTicket": "Ticket anzeigen",
+        "viewTask": "Aufgabe anzeigen",
+        "viewDetails": "Details anzeigen"
+      },
+      "changes": "Änderungen:",
+      "status": "Status:",
+      "priority": "Priorität:",
+      "assignedTo": "Zugewiesen an:",
+      "changedBy": "Geändert von:",
+      "assignedBy": "Zugewiesen von:",
+      "unread": "Ungelesen",
+      "internalComment": "Interner Kommentar",
+      "commentBy": "Kommentar von {{author}}:",
+      "readAt": "Gelesen {{time}}"
+    }
   },
   "importConflicts": {
     "title": "Importkonflikte lösen",
@@ -1754,5 +1808,56 @@
   "emailRecipients": {
     "remove": "{{email}} entfernen",
     "placeholder": "Adresse eingeben und Eingabetaste drücken"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-Mail",
+        "message-circle": "Nachricht",
+        "video": "Videoanruf",
+        "send": "Senden",
+        "users": "Treffen",
+        "calendar": "Termin",
+        "presentation": "Präsentation",
+        "coffee": "Informelles Treffen",
+        "handshake": "Vereinbarung",
+        "file-text": "Dokument",
+        "sticky-note": "Notiz",
+        "edit": "Bearbeiten",
+        "flag": "Nachverfolgung",
+        "alarm-clock": "Erinnerung",
+        "clock": "Zeiterfassung",
+        "activity": "Allgemeine Aktivität",
+        "briefcase": "Kontoverwaltung",
+        "search": "Recherche",
+        "book-open": "Schulung",
+        "headphones": "Support",
+        "check-square": "Überprüfung",
+        "clipboard": "Dokumentation",
+        "users-2": "Beratung",
+        "target": "Planung",
+        "settings": "Konfiguration",
+        "star": "Wichtig",
+        "award": "Erfolg",
+        "zap": "Schnellaktion",
+        "map-pin": "Standort",
+        "tag": "Bezeichnung",
+        "bell": "Benachrichtigung",
+        "shield": "Sicherheit",
+        "key": "Zugriff",
+        "heart": "Favorit"
+      },
+      "categories": {
+        "Communication": "Kommunikation",
+        "Meetings": "Besprechungen",
+        "Documents": "Dokumente",
+        "Tasks": "Aufgaben",
+        "Activities": "Aktivitäten",
+        "Business": "Geschäftliches"
+      }
+    },
+    "selected": "Ausgewählt: {{label}}",
+    "help": "Wählen Sie ein Symbol für diesen Interaktionstyp. Das Symbol wird in Listen und Formularen angezeigt."
   }
 }
