@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Adicionar lançamento de horas"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visualizar",

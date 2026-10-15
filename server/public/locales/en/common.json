@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Breadcrumb"
+  },
   "phone": {
     "extension": "ext."
   },

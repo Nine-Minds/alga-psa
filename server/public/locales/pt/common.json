@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Caminho de navegação"
+  },
   "phone": {
     "extension": "ramal"
   },

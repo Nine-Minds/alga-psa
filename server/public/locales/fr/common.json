@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Fil d’Ariane"
+  },
   "phone": {
     "extension": "poste"
   },

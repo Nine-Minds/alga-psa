@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Percorso di navigazione"
+  },
   "phone": {
     "extension": "int."
   },

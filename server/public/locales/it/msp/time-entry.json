@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Aggiungi inserimento ore"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visualizza",

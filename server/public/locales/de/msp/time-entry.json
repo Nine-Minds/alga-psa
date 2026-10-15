@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Zeiteintrag hinzufügen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Anzeigen",

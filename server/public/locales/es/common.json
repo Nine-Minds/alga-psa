@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Ruta de navegación"
+  },
   "phone": {
     "extension": "extensión"
   },

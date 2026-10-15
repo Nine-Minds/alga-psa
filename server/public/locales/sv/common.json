@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Navigeringssökväg"
+  },
   "phone": {
     "extension": "ankn."
   },

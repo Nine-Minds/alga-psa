@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Add Entry"
+    }
+  },
   "common": {
     "actions": {
       "view": "View",

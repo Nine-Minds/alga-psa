@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Navigationspfad"
+  },
   "phone": {
     "extension": "Durchw."
   },

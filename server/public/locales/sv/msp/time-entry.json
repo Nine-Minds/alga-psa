@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Lägg till tidpost"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visa",

@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Ajouter une entrée de temps"
+    }
+  },
   "common": {
     "actions": {
       "view": "Voir",

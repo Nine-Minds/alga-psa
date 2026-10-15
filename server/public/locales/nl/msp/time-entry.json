@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Tijdsvermelding toevoegen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Bekijken",

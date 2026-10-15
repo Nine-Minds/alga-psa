@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Ścieżka nawigacji"
+  },
   "phone": {
     "extension": "wew."
   },
