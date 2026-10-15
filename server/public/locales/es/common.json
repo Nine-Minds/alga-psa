@@ -2115,5 +2115,24 @@
   "reflection": {
     "parentId": "ID del componente padre: {{id}}",
     "noParent": "Sin componente padre"
+  },
+  "contactAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar del contacto"
+  },
+  "entityAvatar": {
+    "alt": "Imagen de {{name}}",
+    "defaultAlt": "Imagen de la entidad"
+  },
+  "editableField": {
+    "notSet": "Sin establecer"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Haga clic para editar"
+    }
+  },
+  "label": {
+    "required": "Obligatorio"
   }
 }

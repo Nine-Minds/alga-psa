@@ -2115,5 +2115,24 @@
   "reflection": {
     "parentId": "Identyfikator komponentu nadrzędnego: {{id}}",
     "noParent": "Brak komponentu nadrzędnego"
+  },
+  "contactAvatar": {
+    "alt": "Awatar: {{name}}",
+    "defaultAlt": "Awatar kontaktu"
+  },
+  "entityAvatar": {
+    "alt": "Obraz: {{name}}",
+    "defaultAlt": "Obraz encji"
+  },
+  "editableField": {
+    "notSet": "Nie ustawiono"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Kliknij, aby edytować"
+    }
+  },
+  "label": {
+    "required": "Wymagane"
   }
 }

@@ -2115,5 +2115,24 @@
   "reflection": {
     "parentId": "Överordnad komponents ID: {{id}}",
     "noParent": "Ingen överordnad komponent"
+  },
+  "contactAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Kontaktens profilbild"
+  },
+  "entityAvatar": {
+    "alt": "Bild för {{name}}",
+    "defaultAlt": "Bild för entiteten"
+  },
+  "editableField": {
+    "notSet": "Inte angivet"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Klicka för att redigera"
+    }
+  },
+  "label": {
+    "required": "Obligatoriskt"
   }
 }

@@ -2115,5 +2115,24 @@
   "reflection": {
     "parentId": "ID van bovenliggende component: {{id}}",
     "noParent": "Geen bovenliggende component"
+  },
+  "contactAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Avatar van contact"
+  },
+  "entityAvatar": {
+    "alt": "Afbeelding van {{name}}",
+    "defaultAlt": "Afbeelding van entiteit"
+  },
+  "editableField": {
+    "notSet": "Niet ingesteld"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Klik om te bewerken"
+    }
+  },
+  "label": {
+    "required": "Verplicht"
   }
 }
