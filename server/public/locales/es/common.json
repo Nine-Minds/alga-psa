@@ -2024,5 +2024,22 @@
       "focus": "Enfoque este campo de entrada",
       "clear": "Borre el texto actual"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Haga clic en {{label}}",
+      "click": "Haga clic en este botón",
+      "focus": "Enfoque este botón"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Responder"
+    },
+    "fields": {
+      "internal": {
+        "label": "Marcar como interno"
+      }
+    }
   }
 }

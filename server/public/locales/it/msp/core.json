@@ -791,5 +791,17 @@
       "settingsSection": "Impostazioni: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Funzionalità Pro",
+      "description": "Le funzionalità di chat con IA richiedono Pro. Passa al piano superiore per accedere a questa funzionalità."
+    },
+    "messages": {
+      "proRequired": "Le funzionalità di messaggistica richiedono Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Le funzionalità di chat sono disponibili solo in Enterprise Edition"
+    }
   }
 }

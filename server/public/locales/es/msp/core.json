@@ -791,5 +791,17 @@
       "settingsSection": "Configuración: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Función Pro",
+      "description": "Las funciones de chat con IA requieren Pro. Actualice su plan para acceder a esta función."
+    },
+    "messages": {
+      "proRequired": "Las funciones de mensajes requieren Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Las funciones de chat solo están disponibles en Enterprise Edition"
+    }
   }
 }

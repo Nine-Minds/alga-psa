@@ -2024,5 +2024,22 @@
       "focus": "Fokussieren Sie dieses Eingabefeld",
       "clear": "Löschen Sie den aktuellen Text"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klicken Sie auf {{label}}",
+      "click": "Klicken Sie auf diese Schaltfläche",
+      "focus": "Fokussieren Sie diese Schaltfläche"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Antworten"
+    },
+    "fields": {
+      "internal": {
+        "label": "Als intern markieren"
+      }
+    }
   }
 }

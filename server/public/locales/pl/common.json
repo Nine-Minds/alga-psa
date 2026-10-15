@@ -2024,5 +2024,22 @@
       "focus": "Ustaw fokus na tym polu tekstowym",
       "clear": "Wyczyść bieżący tekst"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Kliknij {{label}}",
+      "click": "Kliknij ten przycisk",
+      "focus": "Ustaw fokus na tym przycisku"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Odpowiedz"
+    },
+    "fields": {
+      "internal": {
+        "label": "Oznacz jako wewnętrzne"
+      }
+    }
   }
 }

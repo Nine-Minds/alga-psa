@@ -791,5 +791,17 @@
       "settingsSection": "Configurações: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Recurso Pro",
+      "description": "Os recursos de bate-papo com IA exigem o Pro. Faça upgrade para acessar este recurso."
+    },
+    "messages": {
+      "proRequired": "Os recursos de mensagens exigem o Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
+    }
   }
 }

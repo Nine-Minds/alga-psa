@@ -2024,5 +2024,22 @@
       "focus": "Placer le curseur dans ce champ de saisie",
       "clear": "Effacer le texte actuel"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Cliquer sur {{label}}",
+      "click": "Cliquer sur ce bouton",
+      "focus": "Placer le focus sur ce bouton"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Répondre"
+    },
+    "fields": {
+      "internal": {
+        "label": "Marquer comme interne"
+      }
+    }
   }
 }

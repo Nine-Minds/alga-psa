@@ -2024,5 +2024,22 @@
       "focus": "Focus this input field",
       "clear": "Clear the current text"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Click {{label}}",
+      "click": "Click this button",
+      "focus": "Focus this button"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Reply"
+    },
+    "fields": {
+      "internal": {
+        "label": "Mark as Internal"
+      }
+    }
   }
 }

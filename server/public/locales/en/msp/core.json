@@ -791,5 +791,17 @@
       "settingsSection": "Settings: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro Feature",
+      "description": "AI Chat features require Pro. Please upgrade to access this feature."
+    },
+    "messages": {
+      "proRequired": "Message features require Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chat features are only available in Enterprise Edition"
+    }
   }
 }

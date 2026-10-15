@@ -2024,5 +2024,22 @@
       "focus": "Porta il focus su questo campo di input",
       "clear": "Cancella il testo attuale"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Fai clic su {{label}}",
+      "click": "Fai clic su questo pulsante",
+      "focus": "Porta il focus su questo pulsante"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Rispondi"
+    },
+    "fields": {
+      "internal": {
+        "label": "Segna come interno"
+      }
+    }
   }
 }

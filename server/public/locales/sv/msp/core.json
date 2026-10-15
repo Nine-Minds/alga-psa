@@ -791,5 +791,17 @@
       "settingsSection": "Inställningar: {{section}}",
       "chat": "Chatt"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-funktion",
+      "description": "AI-chattfunktionerna kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    },
+    "messages": {
+      "proRequired": "Meddelandefunktionerna kräver Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
+    }
   }
 }

@@ -2024,5 +2024,22 @@
       "focus": "Sätt fokus på det här inmatningsfältet",
       "clear": "Rensa den aktuella texten"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klicka på {{label}}",
+      "click": "Klicka på den här knappen",
+      "focus": "Sätt fokus på den här knappen"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Svara"
+    },
+    "fields": {
+      "internal": {
+        "label": "Markera som internt"
+      }
+    }
   }
 }

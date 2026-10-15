@@ -791,5 +791,17 @@
       "settingsSection": "Einstellungen: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-Funktion",
+      "description": "KI-Chatfunktionen erfordern Pro. Führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+    },
+    "messages": {
+      "proRequired": "Nachrichtenfunktionen erfordern Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chatfunktionen sind nur in der Enterprise Edition verfügbar"
+    }
   }
 }

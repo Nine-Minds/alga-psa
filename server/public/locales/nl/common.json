@@ -2024,5 +2024,22 @@
       "focus": "Geef dit invoerveld de focus",
       "clear": "Wis de huidige tekst"
     }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klik op {{label}}",
+      "click": "Klik op deze knop",
+      "focus": "Geef deze knop de focus"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Beantwoorden"
+    },
+    "fields": {
+      "internal": {
+        "label": "Markeren als intern"
+      }
+    }
   }
 }

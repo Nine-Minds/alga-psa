@@ -791,5 +791,17 @@
       "settingsSection": "Instellingen: {{section}}",
       "chat": "Chat"
     }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-functie",
+      "description": "AI-chatfuncties vereisen Pro. Upgrade om toegang te krijgen tot deze functie."
+    },
+    "messages": {
+      "proRequired": "Berichtfuncties vereisen Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chatfuncties zijn alleen beschikbaar in Enterprise Edition"
+    }
   }
 }
