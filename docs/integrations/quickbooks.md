@@ -1,15 +1,16 @@
 # QuickBooks Integration (Admin Guide)
 
-AlgaPSA reaches QuickBooks two ways. **QuickBooks Online** connects over OAuth:
+AlgaPSA reaches QuickBooks three ways. **QuickBooks Online** connects over OAuth:
 AlgaPSA sends invoices to your QuickBooks company through Intuit's API and reads
-back what QuickBooks records. **QuickBooks CSV** needs no connection at all — it
-produces files you import into QuickBooks yourself. QuickBooks Online is a
-**Pro** feature and the panel appears only in Pro; QuickBooks CSV is available in
-every edition. Each tenant connects its own QuickBooks company and keeps its own
+back what QuickBooks records. **QuickBooks CSV** and **QuickBooks Desktop
+(IIF)** need no connection at all — they produce files you import into
+QuickBooks yourself. QuickBooks Online is a **Pro** feature and the panel appears
+only in Pro; QuickBooks CSV and QuickBooks Desktop are available in every
+edition. Each tenant connects its own QuickBooks company and keeps its own
 mappings.
 
-Both paths are configured at **Settings → Integrations → Accounting**. Pick a
-card there to open its settings. Exports for either one run from **Billing →
+All three are configured at **Settings → Integrations → Accounting**. Pick a
+card there to open its settings. Exports for every one run from **Billing →
 Accounting Exports**.
 
 ## Choose a path
@@ -21,9 +22,14 @@ Accounting Exports**.
 - **QuickBooks CSV.** AlgaPSA writes a CSV compatible with QuickBooks' invoice
   import and you upload it. Nothing leaves AlgaPSA on its own, and you enter the
   QuickBooks-side identifier for each mapping by hand.
+- **QuickBooks Desktop (IIF).** AlgaPSA writes an IIF file for QuickBooks
+  Desktop's **File → Utilities → Import → IIF Files**. It shares the QuickBooks
+  CSV mappings and adds the account names an IIF invoice needs. See
+  [Configure QuickBooks Desktop (IIF)](#configure-quickbooks-desktop-iif).
 
 You can keep CSV configured while you use QuickBooks Online. They store their
-mappings separately and do not interfere.
+mappings separately and do not interfere. QuickBooks Desktop uses the same
+mappings as QuickBooks CSV.
 
 ## Which Intuit app you connect through
 
@@ -193,10 +199,46 @@ These mappings are stored in `tenant_external_entity_mappings` under
 mappings. The external side is typed in by hand, since there is no connection to
 read a catalog from.
 
+## Configure QuickBooks Desktop (IIF)
+
+Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accounting**.
+
+> **Back up your company file first.** When QuickBooks Desktop imports an IIF
+> file, it adds every customer, item, account, or term name it does not
+> recognise, and the import cannot be undone. Try your first import on a backup
+> copy.
+
+1. **IIF export settings.** Enter these names exactly as they appear in your
+   Chart of Accounts and Item List:
+   - **Accounts Receivable account**: defaults to `Accounts Receivable`.
+   - **Default income account**: required unless every item mapping sets its
+     own.
+   - **Sales tax liability account**: defaults to `Sales Tax Payable`.
+   - **Default sales tax item**: needed only for invoices that carry tax.
+2. **Mappings.** The Clients, Items / Services, Tax Codes, Payment Terms, and
+   Discounts tabs are the same mappings QuickBooks CSV uses. Enter QuickBooks
+   Desktop list names.
+   - Unmapped clients export under their AlgaPSA name, which must match the
+     QuickBooks customer.
+   - Unmapped payment terms are left blank.
+3. **Per-item overrides.** Optional. In the mapping metadata editor, add:
+   - `{"qbdIncomeAccount": "Account name"}` to an Items / Services or Discounts
+     mapping, to post that item to a different income account.
+   - `{"qbdSalesTaxItem": "Item name"}` to a Tax Codes mapping, to use a
+     region-specific sales tax item or group.
+
+Each invoice becomes one QuickBooks invoice. Its lines come from the mapped
+items, and it carries one sales tax line for the tax AlgaPSA calculated.
+QuickBooks Desktop allows one sales tax item per invoice. An invoice whose tax
+regions map to different sales tax items fails to export with an error instead.
+QuickBooks Desktop cannot return calculated tax to AlgaPSA. Invoices set to
+external tax export without a tax line and keep their taxable flags.
+
 ## Export invoices and import tax back
 
-Go to **Billing → Accounting Exports** to create an export batch, run it, and
-download the file. AlgaPSA validates the batch first. A batch missing mappings
+Go to **Billing → Accounting Exports** to create an export batch and run it.
+For QuickBooks CSV and QuickBooks Desktop, running the batch downloads the file.
+AlgaPSA validates the batch first. A batch missing mappings
 moves to `needs_attention` and lists what to map; add the mappings and run it
 again.
 
