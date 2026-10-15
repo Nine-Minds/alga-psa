@@ -206,6 +206,24 @@ describe('ClientDocumentsPage', () => {
     expect(downloadButtons.length).toBeGreaterThan(0);
   });
 
+  it('sizes the card grid by available width so names keep room beside the actions', async () => {
+    render(<ClientDocumentsPage />);
+
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+
+    // Fixed column counts squeezed cards to ~130px next to the folder sidebar on
+    // a 1024px screen, collapsing the name to nothing and pushing an action
+    // button past the card border.
+    const title = document.getElementById('client-docs-title-view-doc-1')!;
+    const grid = title.closest('[data-testid="card"]')!.parentElement!;
+    expect(grid.className).toContain('grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]');
+    expect(grid.className).not.toContain('grid-cols-3');
+
+    expect(title.className).toContain('truncate');
+    expect(title).toHaveAttribute('title', 'Service Agreement.pdf');
+    expect(title.closest('.min-w-0')?.nextElementSibling?.className).toContain('flex-shrink-0');
+  });
+
   it('routes uploaded document downloads through the checked portal file endpoint', async () => {
     const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
     render(<ClientDocumentsPage />);

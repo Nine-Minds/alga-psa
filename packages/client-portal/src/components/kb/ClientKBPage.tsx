@@ -142,7 +142,7 @@ function ArticleCard({ article, onClick }: ArticleCardProps) {
             <h4 className="text-sm font-medium line-clamp-2 break-words">
               {article.document_name || article.slug}
             </h4>
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
               <Badge variant="secondary" className="text-xs">
                 {formatArticleType(article.article_type)}
               </Badge>
@@ -395,7 +395,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 <p>{t('kb.noArticles', 'No articles found')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                 {articles.map((article) => (
                   <ArticleCard
                     key={article.article_id}

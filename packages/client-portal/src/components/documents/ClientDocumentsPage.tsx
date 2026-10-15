@@ -147,36 +147,38 @@ function DocumentCard({ document, onView, onDownload, isDownloading, labels }: D
           </div>
           <div className="flex-1 min-w-0">
             <button type="button" id={`client-docs-title-view-${document.document_id}`} className="block w-full text-sm font-medium truncate text-left" title={document.document_name} onClick={() => onView(document)}>{document.document_name}</button>
-            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
               <span>{formatFileSize(document.file_size)}</span>
               <span>·</span>
               <span>{formatDate(document.entered_at)}</span>
             </div>
           </div>
-          <Button
-            id={`client-docs-view-document-${document.document_id}`}
-            variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
-            className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
-          {document.file_id ? <Button
-            id={`client-docs-download-document-${document.document_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => onDownload(document)}
-            disabled={isDownloading}
-            className="flex-shrink-0"
-          >
-            <Download className="w-4 h-4" />
-          </Button> : <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download}>
-                <Download className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
-              <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>}
+          <div className="flex flex-shrink-0 items-center gap-1">
+            <Button
+              id={`client-docs-view-document-${document.document_id}`}
+              variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
+              className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
+            {document.file_id ? <Button
+              id={`client-docs-download-document-${document.document_id}`}
+              variant="ghost"
+              size="sm"
+              onClick={() => onDownload(document)}
+              disabled={isDownloading}
+              className="flex-shrink-0"
+            >
+              <Download className="w-4 h-4" />
+            </Button> : <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download} className="flex-shrink-0">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
+                <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -437,7 +439,9 @@ export default function ClientDocumentsPage() {
                 <p>{t('empty.default', 'No documents found')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              /* Columns follow the space left by the folder sidebar: a fixed 3-up grid
+                 squeezed cards to ~130px at 1024px, leaving no room for the name. */
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                 {documents.map((doc) => (
                   <DocumentCard
                     key={doc.document_id}
