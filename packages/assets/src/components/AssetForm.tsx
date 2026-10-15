@@ -59,6 +59,18 @@ interface AssetFormProps {
    * passes a handler so saving closes the drawer without leaving the page.
    */
   onSaved?: () => void;
+  /**
+   * Called instead of `router.back()` when Cancel is pressed. In a drawer,
+   * going back navigates away from the page behind it.
+   */
+  onCancel?: () => void;
+  /**
+   * The edit drawer pins Save and Cancel in its own footer, so the form drops
+   * its trailing action row and reports its saving state through
+   * `onSavingChange` instead.
+   */
+  hideActions?: boolean;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer'> & {
@@ -76,7 +88,7 @@ const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_poin
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
 
-export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
+export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onSavingChange }: AssetFormProps) {
   const { t } = useTranslation('msp/assets');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +125,17 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     label: t('assetForm.heading', { defaultValue: 'Edit Asset' }),
     disabled: saving
   });
+  // The drawer's pinned footer owns the Save button, so it has to know when
+  // the form is busy.
+  useEffect(() => {
+    onSavingChange?.(saving);
+  }, [saving, onSavingChange]);
+  // A save failure reports itself at the foot of the form; with the buttons
+  // lifted into the footer the user may be nowhere near it.
+  const saveErrorRef = React.useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (saveError) saveErrorRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [saveError]);
   const [formData, setFormData] = useState<AssetFormData>({
     asset_type: 'unknown',
     client_id: '',
@@ -1766,29 +1789,31 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </Card>
         )}
 
-        <div id="form-actions" className="flex justify-end gap-2">
-          <Button
-            id="cancel-button"
-            type="button"
-            variant="outline" 
-            onClick={() => router.back()}
-            disabled={saving}
-          >
-            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
-          </Button>
-          <Button
-            id="save-button"
-            type="submit"
-            disabled={saving}
-          >
-            {saving
-              ? t('common.actions.saving', { defaultValue: 'Saving...' })
-              : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
-          </Button>
-        </div>
+        {!hideActions && (
+          <div id="form-actions" className="flex justify-end gap-2">
+            <Button
+              id="cancel-button"
+              type="button"
+              variant="outline"
+              onClick={() => (onCancel ? onCancel() : router.back())}
+              disabled={saving}
+            >
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="save-button"
+              type="submit"
+              disabled={saving}
+            >
+              {saving
+                ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+            </Button>
+          </div>
+        )}
 
         {saveError && (
-          <div id="form-error" className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div ref={saveErrorRef} id="form-error" className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <div className="font-medium">{saveError}</div>
             {Object.keys(fieldErrors).length > 0 && (
               <ul id="form-field-errors" className="mt-1 list-disc pl-5">

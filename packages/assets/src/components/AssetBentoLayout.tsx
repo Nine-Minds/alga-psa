@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Activity,
@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
 import {
   BentoChip,
@@ -74,6 +75,12 @@ interface FocusView {
   label: string;
   icon: LucideIcon;
   content: React.ReactNode;
+  /**
+   * Rendered in the drawer's pinned footer. Every view supplies one: a footer
+   * is also what stops the panel itself from being a second scroll container
+   * on top of the content pane.
+   */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -140,11 +147,19 @@ export function AssetBentoLayout({
   const groupPeople = asset.group?.kind === 'bundle'
     ? (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'owner')
     : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
+  // Owned here because the drawer footer holds the edit form's Save button.
+  const [editSaving, setEditSaving] = useState(false);
   const softwareCount = Array.isArray(ext?.installed_software) ? ext.installed_software.length : null;
   const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
 
   const pendingPatches =
     (ext?.pending_os_patches ?? 0) + (ext?.pending_software_patches ?? 0) || ext?.pending_patches;
+
+  const closeFooter = (
+    <Button id="asset-bento-focus-done" variant="outline" onClick={() => onFocusChange(null)}>
+      {t('assetBento.close', { defaultValue: 'Close' })}
+    </Button>
+  );
 
   const views: FocusView[] = useMemo(() => [
     // Edit leads: it is the action people reach for most, and hosting it here
@@ -153,7 +168,35 @@ export function AssetBentoLayout({
       id: 'edit',
       label: t('assetBento.editAsset', { defaultValue: 'Edit asset' }),
       icon: Pencil,
-      content: <AssetFormClient assetId={asset.asset_id} onSaved={() => onFocusChange(null)} />,
+      // Save and Cancel live in the pinned footer below, so the form drops its
+      // own trailing row: at full length they sat ~700px below the fold.
+      content: (
+        <AssetFormClient
+          assetId={asset.asset_id}
+          onSaved={() => onFocusChange(null)}
+          onCancel={() => onFocusChange(null)}
+          hideActions
+          onSavingChange={setEditSaving}
+        />
+      ),
+      footer: (
+        <>
+          <Button
+            id="asset-bento-focus-cancel"
+            variant="outline"
+            disabled={editSaving}
+            onClick={() => onFocusChange(null)}
+          >
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          {/* Submits the form it names, from outside it. */}
+          <Button id="asset-bento-focus-save" type="submit" form="asset-edit-form" disabled={editSaving}>
+            {editSaving
+              ? t('common.actions.saving', { defaultValue: 'Saving...' })
+              : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+          </Button>
+        </>
+      ),
     },
     { id: 'service-history', label: t('assetDetailTabs.tabs.serviceHistory', { defaultValue: 'Service history' }), icon: Activity, content: <ServiceHistoryTab asset={asset} /> },
     { id: 'software', label: t('assetDetailTabs.tabs.software', { defaultValue: 'Software' }), icon: Boxes, content: <SoftwareInventoryTab asset={asset} /> },
@@ -170,7 +213,7 @@ export function AssetBentoLayout({
         }]
       : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
-  ], [asset, t, onFocusChange]);
+  ], [asset, t, onFocusChange, editSaving]);
 
   const activeView = focusView ? views.find((view) => view.id === focusView) ?? null : null;
 
@@ -604,7 +647,17 @@ export function AssetBentoLayout({
           <AssetInventoryProvenanceSection assetId={asset.asset_id} />
         </div>
 
-        <Drawer id="asset-bento-focus" isOpen={Boolean(activeView)} onClose={() => onFocusChange(null)} width="min(1200px, 88vw)" hideCloseButton>
+        {/* The footer is pinned outside the scrollable body, which is also what
+            keeps the panel from scrolling behind the content pane — two nested
+            scrollbars for one drawer. */}
+        <Drawer
+          id="asset-bento-focus"
+          isOpen={Boolean(activeView)}
+          onClose={() => onFocusChange(null)}
+          width="min(1200px, 88vw)"
+          hideCloseButton
+          footer={activeView?.footer ?? closeFooter}
+        >
           {activeView ? (
             <div className="flex flex-col h-full min-w-0">
               <div className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] pb-3">
