@@ -444,7 +444,9 @@
     "notSet": "Niet ingesteld",
     "set": "Reactiestatus instellen",
     "all": "Alle reactiestatussen",
-    "none": "Geen reactiestatus"
+    "none": "Geen reactiestatus",
+    "awaitingClientTooltip": "Wachten op een reactie van de klant",
+    "awaitingInternalTooltip": "De klant heeft gereageerd, wachten op interne actie"
   },
   "origin": {
     "internal": "Intern aangemaakt",

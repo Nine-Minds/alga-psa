@@ -1364,7 +1364,9 @@
     "notAssigned": "Nieprzypisane",
     "searchUsersOrTeams": "Szukaj użytkowników lub zespołów...",
     "unnamedUser": "Użytkownik bez nazwy",
-    "unnamedTeam": "Zespół bez nazwy"
+    "unnamedTeam": "Zespół bez nazwy",
+    "userPicker": "Wybór użytkownika",
+    "noUsersFound": "Nie znaleziono użytkowników"
   },
   "serviceTypeSelect": {
     "placeholder": "Wybierz rodzaj usługi...",
@@ -1666,6 +1668,23 @@
       "document": "dokumentów",
       "knowledge_base_article": "artykułów bazy wiedzy",
       "opportunity": "szans sprzedaży"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Tag „{{tag}}” już istnieje w tym elemencie",
+        "missingEntityId": "Nie można dodać tagu: brakuje identyfikatora encji"
+      },
+      "success": {
+        "added": "Tag „{{tag}}” został dodany"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Ostatnie użycie tagu",
+        "message": "To ostatnie użycie tagu „{{tag}}”. Usunąć definicję tagu czy zachować ją do wykorzystania w przyszłości?",
+        "confirm": "Odłącz i usuń definicję",
+        "keep": "Odłącz i zachowaj definicję"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Wybierz",
       "searchPlaceholder": "Szukaj według imienia i nazwiska, adresu e-mail lub telefonu..."
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Zwarty",
+      "title": "Przełącz na widok zwarty"
+    },
+    "spacious": {
+      "label": "Przestronny",
+      "title": "Przełącz na widok przestronny"
+    },
+    "decrease": {
+      "title": "Zmniejsz odstępy"
+    },
+    "reset": {
+      "title": "Przywróć ustawienia domyślne"
+    },
+    "increase": {
+      "title": "Zwiększ odstępy"
     }
   }
 }

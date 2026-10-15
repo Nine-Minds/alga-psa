@@ -503,7 +503,8 @@
     "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
     "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
     "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
-    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugestões",
@@ -528,7 +529,9 @@
       "checklistChanged": "checklist alterado",
       "linksChanged": "links alterados",
       "updated": "atualizado"
-    }
+    },
+    "activitySummary_few": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
+    "activitySummary_many": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado em {{count}} segmento (pausado {{paused}})",
@@ -547,6 +550,8 @@
       "confirm": "Continuar",
       "cancel": "Cancelar"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})",
+    "pausedNotice_many": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})"
   }
 }

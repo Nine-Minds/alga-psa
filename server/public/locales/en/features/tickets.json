@@ -452,7 +452,9 @@
     "notSet": "Not set",
     "set": "Set Response State",
     "all": "All Response States",
-    "none": "No Response State"
+    "none": "No Response State",
+    "awaitingClientTooltip": "Waiting for client to respond",
+    "awaitingInternalTooltip": "Client has responded, waiting for internal action"
   },
   "origin": {
     "internal": "Created Internally",

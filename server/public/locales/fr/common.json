@@ -1364,7 +1364,9 @@
     "notAssigned": "Non attribué",
     "searchUsersOrTeams": "Rechercher des utilisateurs ou des équipes...",
     "unnamedUser": "Utilisateur sans nom",
-    "unnamedTeam": "Équipe sans nom"
+    "unnamedTeam": "Équipe sans nom",
+    "userPicker": "Sélecteur d’utilisateurs",
+    "noUsersFound": "Aucun utilisateur trouvé"
   },
   "serviceTypeSelect": {
     "placeholder": "Sélectionner un type de service...",
@@ -1666,6 +1668,23 @@
       "document": "documents",
       "knowledge_base_article": "articles de la base de connaissances",
       "opportunity": "opportunités"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "L’étiquette « {{tag}} » existe déjà sur cet élément",
+        "missingEntityId": "Impossible d’ajouter l’étiquette : l’identifiant de l’entité est manquant"
+      },
+      "success": {
+        "added": "L’étiquette « {{tag}} » a été ajoutée avec succès"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Dernière utilisation de l’étiquette",
+        "message": "Il s’agit de la dernière utilisation de l’étiquette « {{tag}} ». Supprimer sa définition ou la conserver pour une utilisation ultérieure ?",
+        "confirm": "Retirer et supprimer la définition",
+        "keep": "Retirer et conserver la définition"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Sélectionner",
       "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone..."
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compacte",
+      "title": "Passer à la vue compacte"
+    },
+    "spacious": {
+      "label": "Aérée",
+      "title": "Passer à la vue aérée"
+    },
+    "decrease": {
+      "title": "Réduire l’espacement"
+    },
+    "reset": {
+      "title": "Rétablir les valeurs par défaut"
+    },
+    "increase": {
+      "title": "Augmenter l’espacement"
     }
   }
 }

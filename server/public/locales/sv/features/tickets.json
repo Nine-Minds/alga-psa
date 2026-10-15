@@ -452,7 +452,9 @@
     "notSet": "Inte angivet",
     "set": "Ange svarsstatus",
     "all": "Alla svarsstatusar",
-    "none": "Ingen svarsstatus"
+    "none": "Ingen svarsstatus",
+    "awaitingClientTooltip": "Väntar på att kunden ska svara",
+    "awaitingInternalTooltip": "Kunden har svarat, väntar på en intern åtgärd"
   },
   "origin": {
     "internal": "Skapat internt",

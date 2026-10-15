@@ -1364,7 +1364,9 @@
     "notAssigned": "Niet toegewezen",
     "searchUsersOrTeams": "Zoek gebruikers of teams...",
     "unnamedUser": "Naamloze gebruiker",
-    "unnamedTeam": "Naamloos team"
+    "unnamedTeam": "Naamloos team",
+    "userPicker": "Gebruikerskiezer",
+    "noUsersFound": "Geen gebruikers gevonden"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetype selecteren...",
@@ -1666,6 +1668,23 @@
       "document": "documenten",
       "knowledge_base_article": "kennisbankartikelen",
       "opportunity": "opportuniteiten"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Het label \"{{tag}}\" bestaat al op dit item",
+        "missingEntityId": "Kan label niet toevoegen: de entiteits-ID ontbreekt"
+      },
+      "success": {
+        "added": "Label \"{{tag}}\" is toegevoegd"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Laatste gebruik van label",
+        "message": "Dit is het laatste gebruik van het label \"{{tag}}\". Wilt u de labeldefinitie verwijderen of bewaren voor toekomstig gebruik?",
+        "confirm": "Loskoppelen en definitie verwijderen",
+        "keep": "Loskoppelen en definitie bewaren"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Selecteren",
       "searchPlaceholder": "Zoeken op naam, e-mail of telefoon..."
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compact",
+      "title": "Naar compacte weergave schakelen"
+    },
+    "spacious": {
+      "label": "Ruim",
+      "title": "Naar ruime weergave schakelen"
+    },
+    "decrease": {
+      "title": "Afstand verkleinen"
+    },
+    "reset": {
+      "title": "Standaardinstellingen herstellen"
+    },
+    "increase": {
+      "title": "Afstand vergroten"
     }
   }
 }

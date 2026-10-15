@@ -444,7 +444,9 @@
     "notSet": "Sin definir",
     "set": "Establecer estado de respuesta",
     "all": "Todos los estados de respuesta",
-    "none": "Sin estado de respuesta"
+    "none": "Sin estado de respuesta",
+    "awaitingClientTooltip": "Esperando la respuesta del cliente",
+    "awaitingInternalTooltip": "El cliente ha respondido, esperando una acción interna"
   },
   "origin": {
     "internal": "Creado internamente",

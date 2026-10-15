@@ -144,7 +144,9 @@
     "notAssigned": "Inte tilldelad",
     "searchUsersOrTeams": "Sök användare eller team…",
     "unnamedUser": "Användare utan namn",
-    "unnamedTeam": "Team utan namn"
+    "unnamedTeam": "Team utan namn",
+    "userPicker": "Användarväljare",
+    "noUsersFound": "Inga användare hittades"
   },
   "serviceTypeSelect": {
     "placeholder": "Välj tjänstetyp…",
@@ -1666,6 +1668,23 @@
       "document": "dokument",
       "knowledge_base_article": "kunskapsbasartiklar",
       "opportunity": "affärsmöjligheter"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Taggen ”{{tag}}” finns redan på det här objektet",
+        "missingEntityId": "Det gick inte att lägga till taggen: entitets-ID saknas"
+      },
+      "success": {
+        "added": "Taggen ”{{tag}}” har lagts till"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Sista användningen av taggen",
+        "message": "Det här är sista användningen av taggen ”{{tag}}”. Vill du ta bort taggdefinitionen eller behålla den för framtida bruk?",
+        "confirm": "Ta bort koppling och definition",
+        "keep": "Ta bort koppling och behåll definition"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Välj",
       "searchPlaceholder": "Sök efter namn, e-post eller telefon…"
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Kompakt",
+      "title": "Växla till kompakt vy"
+    },
+    "spacious": {
+      "label": "Rymlig",
+      "title": "Växla till rymlig vy"
+    },
+    "decrease": {
+      "title": "Minska avståndet"
+    },
+    "reset": {
+      "title": "Återställ till standard"
+    },
+    "increase": {
+      "title": "Öka avståndet"
     }
   }
 }

@@ -209,7 +209,7 @@ export const ROUTE_NAMESPACES = {
   '/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts'],
   '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
   '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
-  '/msp/schedule': ['common', 'msp/core', 'msp/schedule', 'features/tickets'],
+  '/msp/schedule': ['common', 'msp/core', 'msp/schedule', 'features/tickets', 'msp/time-entry'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
   '/msp/jobs': ['common', 'msp/core', 'msp/jobs'],
   // msp/time-entry loads on ticket and project surfaces because the shared
@@ -225,19 +225,19 @@ export const ROUTE_NAMESPACES = {
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   // These routes can open ticket details, including the shared SLA badge.
-  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets'],
+  '/msp/clients': ['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry'],
   // msp/dashboard carries the shared "Good morning" greeting used by the queue.
   '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities', 'msp/dashboard'],
-  '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets'],
-  '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations'],
-  '/msp/assets': ['common', 'msp/core', 'msp/assets', 'features/tickets'],
-  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets', 'features/tickets'],
+  '/msp/contacts': ['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry'],
+  '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry'],
+  '/msp/assets': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry'],
+  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
   '/msp/workflows': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
-  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities', 'msp/schedule', 'features/tickets'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities', 'msp/schedule', 'features/tickets', 'msp/time-entry'],
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry', 'features/tickets'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
@@ -252,7 +252,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
-  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities'],
+  '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities', 'msp/time-entry'],
   '/msp/credentials': ['common', 'msp/core', 'msp/credentials'],
 } as const;
 

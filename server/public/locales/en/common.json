@@ -144,7 +144,9 @@
     "notAssigned": "Not assigned",
     "searchUsersOrTeams": "Search users or teams...",
     "unnamedUser": "Unnamed User",
-    "unnamedTeam": "Unnamed Team"
+    "unnamedTeam": "Unnamed Team",
+    "userPicker": "User Picker",
+    "noUsersFound": "No users found"
   },
   "serviceTypeSelect": {
     "placeholder": "Select service type...",
@@ -1666,6 +1668,23 @@
       "document": "documents",
       "knowledge_base_article": "knowledge base articles",
       "opportunity": "opportunities"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Tag \"{{tag}}\" already exists on this item",
+        "missingEntityId": "Cannot add tag: entity ID is missing"
+      },
+      "success": {
+        "added": "Tag \"{{tag}}\" added successfully"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Last Tag Usage",
+        "message": "This is the last use of tag \"{{tag}}\". Delete the tag definition, or keep it for future use?",
+        "confirm": "Remove & Delete Definition",
+        "keep": "Remove & Keep Definition"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Select",
       "searchPlaceholder": "Search by name, email, or phone..."
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compact",
+      "title": "Snap to compact view"
+    },
+    "spacious": {
+      "label": "Spacious",
+      "title": "Snap to spacious view"
+    },
+    "decrease": {
+      "title": "Decrease spacing"
+    },
+    "reset": {
+      "title": "Reset to default"
+    },
+    "increase": {
+      "title": "Increase spacing"
     }
   }
 }

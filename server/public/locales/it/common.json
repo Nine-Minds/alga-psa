@@ -1364,7 +1364,9 @@
     "notAssigned": "Non assegnato",
     "searchUsersOrTeams": "Cerca utenti o team...",
     "unnamedUser": "Utente senza nome",
-    "unnamedTeam": "Team senza nome"
+    "unnamedTeam": "Team senza nome",
+    "userPicker": "Selettore utenti",
+    "noUsersFound": "Nessun utente trovato"
   },
   "serviceTypeSelect": {
     "placeholder": "Seleziona un tipo di servizio...",
@@ -1666,6 +1668,23 @@
       "document": "documenti",
       "knowledge_base_article": "articoli della base di conoscenza",
       "opportunity": "opportunità"
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Il tag \"{{tag}}\" esiste già su questo elemento",
+        "missingEntityId": "Impossibile aggiungere il tag: manca l’ID dell’entità"
+      },
+      "success": {
+        "added": "Tag \"{{tag}}\" aggiunto correttamente"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Ultimo utilizzo del tag",
+        "message": "Questo è l’ultimo utilizzo del tag \"{{tag}}\". Vuoi eliminare la definizione del tag o conservarla per un uso futuro?",
+        "confirm": "Rimuovi ed elimina la definizione",
+        "keep": "Rimuovi e conserva la definizione"
+      }
     }
   },
   "statusDialog": {
@@ -1895,6 +1914,25 @@
       },
       "select": "Seleziona",
       "searchPlaceholder": "Cerca per nome, email o telefono..."
+    }
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Compatta",
+      "title": "Passa alla vista compatta"
+    },
+    "spacious": {
+      "label": "Spaziosa",
+      "title": "Passa alla vista spaziosa"
+    },
+    "decrease": {
+      "title": "Riduci la spaziatura"
+    },
+    "reset": {
+      "title": "Ripristina i valori predefiniti"
+    },
+    "increase": {
+      "title": "Aumenta la spaziatura"
     }
   }
 }

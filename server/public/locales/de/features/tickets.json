@@ -444,7 +444,9 @@
     "notSet": "Nicht festgelegt",
     "set": "Antwortstatus festlegen",
     "all": "Alle Antwortstatus",
-    "none": "Kein Antwortstatus"
+    "none": "Kein Antwortstatus",
+    "awaitingClientTooltip": "Warten auf eine Antwort des Kunden",
+    "awaitingInternalTooltip": "Der Kunde hat geantwortet, eine interne Aktion steht aus"
   },
   "origin": {
     "internal": "Intern erstellt",
