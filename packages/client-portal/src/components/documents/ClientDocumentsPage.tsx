@@ -11,6 +11,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, getClientDocumentContent, ClientDocumentFilters } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { isInlineTextDocumentMimeType } from '@alga-psa/core';
 import { getErrorMessage, isActionMessageError, isActionPermissionError, UserFacingError, userFacingErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DocumentRequestError, fetchAndSaveFile } from '../../lib/fetchAndSaveFile';
@@ -139,13 +140,13 @@ interface DocumentCardProps {
 function DocumentCard({ document, onView, onDownload, isDownloading, labels }: DocumentCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
+      <CardContent className="p-4 !pt-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-muted rounded-lg">
             {getDocumentIcon(document.mime_type)}
           </div>
           <div className="flex-1 min-w-0">
-            <button type="button" id={`client-docs-title-view-${document.document_id}`} className="text-sm font-medium truncate text-left" onClick={() => onView(document)}>{document.document_name}</button>
+            <button type="button" id={`client-docs-title-view-${document.document_id}`} className="block w-full text-sm font-medium truncate text-left" title={document.document_name} onClick={() => onView(document)}>{document.document_name}</button>
             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
               <span>{formatFileSize(document.file_size)}</span>
               <span>·</span>
@@ -301,6 +302,15 @@ export default function ClientDocumentsPage() {
       if (requestId !== previewRequestId.current) return;
       if (isReturnedActionError(content)) throw new UserFacingError(getErrorMessage(content));
       if (!content || !('content' in content)) throw new Error('Document preview returned no content');
+      if (content.content.kind === 'file' && isInlineTextDocumentMimeType(doc.mime_type)) {
+        const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
+        if (requestId !== previewRequestId.current) return;
+        if (!response.ok) throw new UserFacingError(t('portal.previewError', 'Could not load this preview. Please try again.'));
+        const text = await response.text();
+        if (requestId !== previewRequestId.current) return;
+        setPreviewContent({ ...content, content: { kind: 'text', content: text } });
+        return;
+      }
       if (content.content.kind === 'file' && (doc.mime_type === 'application/pdf' || doc.mime_type?.startsWith('image/') && doc.mime_type !== 'image/svg+xml')) {
         const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
         if (requestId !== previewRequestId.current) return;
@@ -341,7 +351,7 @@ export default function ClientDocumentsPage() {
         {folders.length > 0 && (
           <div className={`flex-shrink-0 transition-all ${isFolderSidebarCollapsed ? 'w-10' : 'w-64'}`}>
             <Card className="h-full">
-              <CardContent className="p-2 h-full overflow-auto">
+              <CardContent className="p-2 !pt-2 h-full overflow-auto">
                 {isFolderSidebarCollapsed ? (
                   <CollapseToggleButton
                     id="client-docs-expand-sidebar"
@@ -477,7 +487,7 @@ export default function ClientDocumentsPage() {
       </div>
       <Dialog isOpen={!!preview} onClose={closePreview} title={preview?.document_name || t('portal.view', 'View document')} className="max-w-4xl" footer={preview && <div className="flex justify-end gap-2">{preview.file_id ? <Button id={`client-docs-preview-download-${preview.document_id}`} onClick={() => void handleDownload(preview)}>{t('portal.download', 'Download')}</Button> : <><Button id={`client-docs-preview-download-pdf-${preview.document_id}`} onClick={() => void handleDownload(preview, 'pdf')}>{t('portal.downloadPdf', 'Download PDF')}</Button><Button id={`client-docs-preview-markdown-${preview.document_id}`} variant="outline" onClick={() => void handleDownload(preview, 'md')}>{t('portal.downloadMarkdown', 'Download Markdown')}</Button></>}</div>}>
         <DialogContent>
-          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : isPreviewLoading || !previewContent ? <div role="status" aria-label={t('portal.loadingPreview', 'Loading preview')}><Spinner size="sm" /></div> : previewContent.content.kind === 'block' ? <DocumentRenderBoundary key={preview?.document_id} fallback={t('portal.previewError', 'Could not load this preview. Please try again.')}><DocumentViewerRenderer render={renderDocumentViewer} content={previewContent.content.blockData} /></DocumentRenderBoundary> : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
+          {previewError ? <p role="alert" className="text-destructive">{previewError}</p> : isPreviewLoading || !previewContent ? <div role="status" aria-label={t('portal.loadingPreview', 'Loading preview')}><Spinner size="sm" /></div> : previewContent.content.kind === 'block' ? <DocumentRenderBoundary key={preview?.document_id} fallback={t('portal.previewError', 'Could not load this preview. Please try again.')}><DocumentViewerRenderer render={renderDocumentViewer} content={previewContent.content.blockData} /></DocumentRenderBoundary> : previewContent.content.kind === 'text' ? <pre className="whitespace-pre-wrap break-words">{previewContent.content.content}</pre> : previewUrl && preview?.mime_type === 'application/pdf' ? <iframe title={preview.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="w-full h-[70vh]" /> : previewUrl ? <img alt={preview?.document_name} src={previewUrl} onError={() => setPreviewError(t('portal.previewError', 'Could not load this preview. Please try again.'))} className="max-w-full max-h-[70vh] mx-auto" /> : <p>{t('portal.previewUnavailable', 'Preview is not available for this file type.')}</p>}
         </DialogContent>
       </Dialog>
     </div>

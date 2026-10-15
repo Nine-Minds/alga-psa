@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { act, cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import ClientDocumentsPage from './ClientDocumentsPage';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 
@@ -12,7 +12,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-const { mockFolders, mockDocuments, mockRenderViewer } = vi.hoisted(() => {
+const { mockFolders, mockDocuments, mockTextDocument, mockRenderViewer } = vi.hoisted(() => {
   const mockFolders = [
     {
       name: 'Contracts',
@@ -70,7 +70,24 @@ const { mockFolders, mockDocuments, mockRenderViewer } = vi.hoisted(() => {
     },
   ] as IDocument[];
 
-  return { mockFolders, mockDocuments, mockRenderViewer: vi.fn(() => null) };
+  const mockTextDocument = {
+    tenant: 'tenant-1',
+    document_id: 'doc-3',
+    file_id: 'file-3',
+    document_name: 'Server Notes.txt',
+    type_id: null,
+    user_id: 'user-1',
+    order_number: 3,
+    created_by: 'user-1',
+    folder_path: '/Contracts',
+    mime_type: 'text/plain',
+    is_client_visible: true,
+    created_at: '2026-02-28T00:00:00Z',
+    updated_at: '2026-02-28T00:00:00Z',
+    file_size: 2048,
+  } as IDocument;
+
+  return { mockFolders, mockDocuments, mockTextDocument, mockRenderViewer: vi.fn(() => null) };
 });
 
 vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents', () => ({
@@ -266,11 +283,28 @@ describe('ClientDocumentsPage', () => {
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById(`client-docs-view-document-${documentId}`)!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/client-portal/documents/${documentId}/file?disposition=inline`, { credentials: 'include' }));
-    if (documentId === 'doc-1') await waitFor(() => expect(screen.getByTitle('Service Agreement.pdf')).toHaveAttribute('src', 'blob:doc-1'));
+    if (documentId === 'doc-1') await waitFor(() => expect(within(screen.getByRole('dialog')).getByTitle('Service Agreement.pdf')).toHaveAttribute('src', 'blob:doc-1'));
     else await waitFor(() => expect(screen.getByAltText('Network Diagram.png')).toHaveAttribute('src', 'blob:doc-2'));
     fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(revoke).toHaveBeenCalledWith(`blob:${documentId}`);
+  });
+
+  it('reads an uploaded text file inline instead of only offering a download', async () => {
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    vi.mocked(actions.getClientDocuments).mockResolvedValue({ documents: [mockTextDocument], total: 1, page: 1, pageSize: 20, totalPages: 1 } as any);
+    vi.mocked(actions.getClientDocumentContent).mockResolvedValue({ document: { document_id: 'doc-3' }, content: { kind: 'file' } } as any);
+    const fetchMock = vi.fn().mockResolvedValue(new Response('server rebooted at 02:00\nall clear'));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Server Notes.txt')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-3')!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/client-portal/documents/doc-3/file?disposition=inline', { credentials: 'include' }));
+    const body = await screen.findByText(/server rebooted at 02:00/);
+    expect(body.tagName).toBe('PRE');
+    expect(body).toHaveTextContent('all clear');
+    expect(screen.queryByText('Preview is not available for this file type.')).not.toBeInTheDocument();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   const deferred = <T,>() => {
@@ -326,7 +360,7 @@ describe('ClientDocumentsPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
     act(() => content.resolve({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData: [] } }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.queryByTitle('Service Agreement.pdf')).not.toBeInTheDocument();
+    expect(document.querySelector('iframe')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockRenderViewer).not.toHaveBeenCalled();
   });
