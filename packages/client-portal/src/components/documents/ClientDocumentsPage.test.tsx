@@ -216,7 +216,9 @@ describe('ClientDocumentsPage', () => {
     // button past the card border.
     const title = document.getElementById('client-docs-title-view-doc-1')!;
     const grid = title.closest('[data-testid="card"]')!.parentElement!;
-    expect(grid.className).toContain('grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]');
+    // `min(18rem,100%)` keeps the track from outgrowing a narrow column, which a
+    // bare 18rem minimum would overflow on a phone-width portal.
+    expect(grid.className).toContain('grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]');
     expect(grid.className).not.toContain('grid-cols-3');
 
     expect(title.className).toContain('truncate');

@@ -395,7 +395,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 <p>{t('kb.noArticles', 'No articles found')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))] gap-4">
                 {articles.map((article) => (
                   <ArticleCard
                     key={article.article_id}

@@ -441,7 +441,7 @@ export default function ClientDocumentsPage() {
             ) : (
               /* Columns follow the space left by the folder sidebar: a fixed 3-up grid
                  squeezed cards to ~130px at 1024px, leaving no room for the name. */
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))] gap-4">
                 {documents.map((doc) => (
                   <DocumentCard
                     key={doc.document_id}
