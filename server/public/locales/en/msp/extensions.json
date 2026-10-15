@@ -388,5 +388,11 @@
     "connecting": "Connecting to the runtime workspace…",
     "loadFailed": "We couldn’t load this extension.",
     "configurationHint": "Check the extension configuration and try again."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensions (EE only)",
+    "title": "Extension Not Available",
+    "description": "The extensions system is available in Pro and is not included in this Community Edition build.",
+    "requestedId": "Requested ID: {{id}}"
   }
 }

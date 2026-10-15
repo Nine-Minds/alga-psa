@@ -1694,6 +1694,15 @@
         "confirm": "Loskoppelen en definitie verwijderen",
         "keep": "Loskoppelen en definitie bewaren"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Labels",
+        "placeholder": "Label toevoegen..."
+      }
+    },
+    "actions": {
+      "removeTag": "Label {{tag}} verwijderen"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Thema wisselen",
     "selected": "Geselecteerd"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formulier",
+    "actions": {
+      "goBack": "Terug",
+      "goForward": "Vooruit",
+      "close": "Zijpaneel sluiten"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Land selecteren",
+    "searchPlaceholder": "Landen zoeken...",
+    "otherCountries": "Andere landen",
+    "empty": "Geen landen gevonden"
   }
 }

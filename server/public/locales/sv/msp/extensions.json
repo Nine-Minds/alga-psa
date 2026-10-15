@@ -388,5 +388,11 @@
     "connecting": "Ansluter till körmiljöns arbetsyta…",
     "loadFailed": "Det gick inte att läsa in det här tillägget.",
     "configurationHint": "Kontrollera tilläggets konfiguration och försök igen."
+  },
+  "unavailable": {
+    "metadataTitle": "Tillägg (endast EE)",
+    "title": "Tillägget är inte tillgängligt",
+    "description": "Tilläggssystemet finns i Pro och ingår inte i denna version av Community Edition.",
+    "requestedId": "Begärt ID: {{id}}"
   }
 }

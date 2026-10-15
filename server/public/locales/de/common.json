@@ -1694,6 +1694,15 @@
         "confirm": "Entfernen und Definition löschen",
         "keep": "Entfernen und Definition behalten"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Tag hinzufügen..."
+      }
+    },
+    "actions": {
+      "removeTag": "Tag {{tag}} entfernen"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Design wechseln",
     "selected": "Ausgewählt"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formular",
+    "actions": {
+      "goBack": "Zurück",
+      "goForward": "Vorwärts",
+      "close": "Seitenbereich schließen"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Land auswählen",
+    "searchPlaceholder": "Länder suchen...",
+    "otherCountries": "Andere Länder",
+    "empty": "Keine Länder gefunden"
   }
 }

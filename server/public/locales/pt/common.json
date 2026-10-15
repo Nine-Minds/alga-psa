@@ -1694,6 +1694,15 @@
         "confirm": "Remover e excluir definição",
         "keep": "Remover e manter definição"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Etiquetas",
+        "placeholder": "Adicionar tag..."
+      }
+    },
+    "actions": {
+      "removeTag": "Remover tag {{tag}}"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Alternar tema",
     "selected": "Selecionado"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formulário",
+    "actions": {
+      "goBack": "Voltar",
+      "goForward": "Avançar",
+      "close": "Fechar painel lateral"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Selecione o país",
+    "searchPlaceholder": "Procurar países...",
+    "otherCountries": "Outros países",
+    "empty": "Nenhum país encontrado"
   }
 }

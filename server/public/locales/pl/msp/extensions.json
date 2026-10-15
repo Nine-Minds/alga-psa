@@ -388,5 +388,11 @@
     "connecting": "Łączenie z obszarem roboczym środowiska wykonawczego…",
     "loadFailed": "Nie udało się załadować tego rozszerzenia.",
     "configurationHint": "Sprawdź konfigurację rozszerzenia i spróbuj ponownie."
+  },
+  "unavailable": {
+    "metadataTitle": "Rozszerzenia (tylko EE)",
+    "title": "Rozszerzenie niedostępne",
+    "description": "System rozszerzeń jest dostępny w Pro i nie jest zawarty w tej wersji Community Edition.",
+    "requestedId": "Żądany identyfikator: {{id}}"
   }
 }

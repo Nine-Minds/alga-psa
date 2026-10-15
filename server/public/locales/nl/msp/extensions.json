@@ -388,5 +388,11 @@
     "connecting": "Verbinding maken met de runtimewerkruimte…",
     "loadFailed": "Deze extensie kon niet worden geladen.",
     "configurationHint": "Controleer de configuratie van de extensie en probeer het opnieuw."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensies (alleen EE)",
+    "title": "Extensie niet beschikbaar",
+    "description": "Het extensiesysteem is beschikbaar in Pro en is niet inbegrepen in deze versie van Community Edition.",
+    "requestedId": "Aangevraagde ID: {{id}}"
   }
 }

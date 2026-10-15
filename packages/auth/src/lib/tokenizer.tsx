@@ -49,27 +49,34 @@ export async function getInfoFromToken(token: string): Promise<TokenResponse> {
             }
         };
     } catch (err) {
-        let errorType = '';
-        let messageKey = 'client-portal:auth.registration.errors.unknown';
+        // Pair stable identifiers with the keys translated by verifyRegisterUser.
+        let error = {
+            errorType: 'Unknown Error',
+            messageKey: 'client-portal:auth.registration.errors.unknown'
+        };
         if (err instanceof TokenExpiredError) {
             logger.error('Error decoding token: TokenExpiredError - JWT expired');
-            errorType = 'Token Expired Error';
-            messageKey = 'client-portal:auth.registration.errors.tokenExpired';
+            error = {
+                errorType: 'Token Expired Error',
+                messageKey: 'client-portal:auth.registration.errors.tokenExpired'
+            };
         } else if (err instanceof JsonWebTokenError) {
             logger.error('Error decoding token: JsonWebTokenError - Invalid JWT');
-            errorType = 'Json Web Token Error';
-            messageKey = 'client-portal:auth.registration.errors.invalidToken';
+            error = {
+                errorType: 'Json Web Token Error',
+                messageKey: 'client-portal:auth.registration.errors.invalidToken'
+            };
         } else if (err instanceof NotBeforeError) {
             logger.error('Error decoding token: NotBeforeError - JWT not active');
-            errorType = 'Not Before Error';
-            messageKey = 'client-portal:auth.registration.errors.tokenNotActive';
+            error = {
+                errorType: 'Not Before Error',
+                messageKey: 'client-portal:auth.registration.errors.tokenNotActive'
+            };
         } else {
             logger.error('Error decoding token:', err);
-            errorType = 'Unknown Error';
         }
         return {
-            errorType,
-            messageKey,
+            ...error,
             userInfo: null
         };
     }

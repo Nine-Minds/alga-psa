@@ -388,5 +388,11 @@
     "connecting": "Conectando al espacio de trabajo de ejecución…",
     "loadFailed": "No se pudo cargar esta extensión.",
     "configurationHint": "Revise la configuración de la extensión e inténtelo de nuevo."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensiones (solo EE)",
+    "title": "Extensión no disponible",
+    "description": "El sistema de extensiones está disponible en Pro y no se incluye en esta versión de Community Edition.",
+    "requestedId": "ID solicitado: {{id}}"
   }
 }

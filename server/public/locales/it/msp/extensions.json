@@ -388,5 +388,11 @@
     "connecting": "Connessione all’area di lavoro di esecuzione…",
     "loadFailed": "Impossibile caricare questa estensione.",
     "configurationHint": "Controlla la configurazione dell’estensione e riprova."
+  },
+  "unavailable": {
+    "metadataTitle": "Estensioni (solo EE)",
+    "title": "Estensione non disponibile",
+    "description": "Il sistema di estensioni è disponibile in Pro e non è incluso in questa versione Community Edition.",
+    "requestedId": "ID richiesto: {{id}}"
   }
 }

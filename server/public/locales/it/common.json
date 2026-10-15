@@ -1694,6 +1694,15 @@
         "confirm": "Rimuovi ed elimina la definizione",
         "keep": "Rimuovi e conserva la definizione"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tag",
+        "placeholder": "Aggiungi tag..."
+      }
+    },
+    "actions": {
+      "removeTag": "Rimuovi il tag {{tag}}"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Cambia tema",
     "selected": "Selezionato"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Modulo",
+    "actions": {
+      "goBack": "Indietro",
+      "goForward": "Avanti",
+      "close": "Chiudi il pannello laterale"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Seleziona un paese",
+    "searchPlaceholder": "Cerca paesi...",
+    "otherCountries": "Altri paesi",
+    "empty": "Nessun paese trovato"
   }
 }

@@ -388,5 +388,11 @@
     "connecting": "Verbindung zum Laufzeit-Arbeitsbereich wird hergestellt…",
     "loadFailed": "Diese Erweiterung konnte nicht geladen werden.",
     "configurationHint": "Überprüfen Sie die Konfiguration der Erweiterung und versuchen Sie es erneut."
+  },
+  "unavailable": {
+    "metadataTitle": "Erweiterungen (nur EE)",
+    "title": "Erweiterung nicht verfügbar",
+    "description": "Das Erweiterungssystem ist in Pro verfügbar und in dieser Community Edition nicht enthalten.",
+    "requestedId": "Angeforderte ID: {{id}}"
   }
 }

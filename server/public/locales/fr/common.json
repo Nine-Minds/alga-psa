@@ -1694,6 +1694,15 @@
         "confirm": "Retirer et supprimer la définition",
         "keep": "Retirer et conserver la définition"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Étiquettes",
+        "placeholder": "Ajouter une étiquette..."
+      }
+    },
+    "actions": {
+      "removeTag": "Retirer l’étiquette {{tag}}"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Changer de thème",
     "selected": "Sélectionné"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formulaire",
+    "actions": {
+      "goBack": "Revenir en arrière",
+      "goForward": "Avancer",
+      "close": "Fermer le panneau latéral"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Sélectionner un pays",
+    "searchPlaceholder": "Rechercher des pays...",
+    "otherCountries": "Autres pays",
+    "empty": "Aucun pays trouvé"
   }
 }

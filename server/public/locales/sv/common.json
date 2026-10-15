@@ -1694,6 +1694,15 @@
         "confirm": "Ta bort koppling och definition",
         "keep": "Ta bort koppling och behåll definition"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Taggar",
+        "placeholder": "Lägg till tagg…"
+      }
+    },
+    "actions": {
+      "removeTag": "Ta bort taggen {{tag}}"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Byt tema",
     "selected": "Valt"
+  },
+  "drawer": {
+    "formTitle": "{{title}} – Formulär",
+    "actions": {
+      "goBack": "Gå tillbaka",
+      "goForward": "Gå framåt",
+      "close": "Stäng sidopanelen"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Välj land",
+    "searchPlaceholder": "Sök länder…",
+    "otherCountries": "Andra länder",
+    "empty": "Inga länder hittades"
   }
 }

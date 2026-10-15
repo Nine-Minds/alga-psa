@@ -388,5 +388,11 @@
     "connecting": "Connexion à l’espace de travail d’exécution…",
     "loadFailed": "Impossible de charger cette extension.",
     "configurationHint": "Vérifiez la configuration de l’extension et réessayez."
+  },
+  "unavailable": {
+    "metadataTitle": "Extensions (EE uniquement)",
+    "title": "Extension indisponible",
+    "description": "Le système d’extensions est disponible dans Pro et n’est pas inclus dans cette version Community Edition.",
+    "requestedId": "Identifiant demandé : {{id}}"
   }
 }

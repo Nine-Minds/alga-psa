@@ -1694,6 +1694,15 @@
         "confirm": "Odłącz i usuń definicję",
         "keep": "Odłącz i zachowaj definicję"
       }
+    },
+    "fields": {
+      "tags": {
+        "label": "Tagi",
+        "placeholder": "Dodaj tag..."
+      }
+    },
+    "actions": {
+      "removeTag": "Usuń tag {{tag}}"
     }
   },
   "statusDialog": {
@@ -1964,5 +1973,19 @@
   "themeToggle": {
     "ariaLabel": "Zmień motyw",
     "selected": "Wybrany"
+  },
+  "drawer": {
+    "formTitle": "{{title}} - Formularz",
+    "actions": {
+      "goBack": "Wstecz",
+      "goForward": "Dalej",
+      "close": "Zamknij panel boczny"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Wybierz kraj",
+    "searchPlaceholder": "Szukaj krajów...",
+    "otherCountries": "Inne kraje",
+    "empty": "Nie znaleziono krajów"
   }
 }
