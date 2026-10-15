@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
@@ -7,7 +8,22 @@ import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { resolveTemplateAstI18n } from './i18nLabels';
 
-const { __transformAst: transformGroupedCatalogAst } = require('../../../../../server/migrations/20260923110000_add_quote_section_title_bindings_to_grouped_catalog.cjs');
+// Reaching into server/migrations from a package test uses the repo's runtime
+// dynamic-import pattern (see standardTemplateI18n.test.ts): a static require
+// is a project reference Nx resolves into a billing -> server cycle.
+const loadGroupedCatalogTransform = async (): Promise<(ast: unknown, direction: 'up' | 'down') => unknown> => {
+  const migration = await import(
+    /* @vite-ignore */ path.resolve(
+      __dirname,
+      '../../../../../server/migrations/20260923110000_add_quote_section_title_bindings_to_grouped_catalog.cjs'
+    )
+  );
+  const transform = (migration as any).__transformAst ?? (migration as any).default?.__transformAst;
+  if (typeof transform !== 'function') {
+    throw new Error('grouped catalog migration is missing its __transformAst export');
+  }
+  return transform;
+};
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -68,6 +84,7 @@ describe('renderEvaluatedTemplateAst', () => {
         { id: 'onetime-section-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.oneTimeItems', defaultValue: 'One-time Items' } },
       ] },
     };
+    const transformGroupedCatalogAst = await loadGroupedCatalogTransform();
     const migratedAst = transformGroupedCatalogAst(preMigrationCatalogAst, 'up') as TemplateAst;
     const localizedAst = resolveTemplateAstI18n(migratedAst, () => 'Localized Monthly');
     const evaluation = evaluateTemplateAst(localizedAst, {
