@@ -278,6 +278,12 @@ config:
 runner:
   # Internal URL for the Knative runner service (used for execute + debug stream)
   baseUrl: ""
+  # Execution backend: "knative" (server default when unset) or "docker" for a
+  # plain HTTP runner Service at baseUrl. Rendered as RUNNER_BACKEND.
+  backend: ""
+  # Path the app proxies extension UI assets through (e.g. "/runner").
+  # Rendered as RUNNER_PUBLIC_BASE.
+  publicBase: ""
   # Optional literal token for authenticating runner calls. Prefer using an existing
   # Kubernetes secret via serviceTokenSecret when running in production.
   serviceToken: ""

@@ -51,6 +51,8 @@ pub struct ModuleLoader {
     pub engine: Engine,
     http: Client,
     cache: Arc<RwLock<HashMap<String, Arc<Vec<u8>>>>>,
+    // Cranelift-compiling a JS component costs seconds of CPU; compile once per content hash.
+    compiled: std::sync::Mutex<HashMap<[u8; 32], Component>>,
     runtime_cfg: HostRuntimeConfig,
     bundle_store_base: Url,
     cache_root: PathBuf,
@@ -180,6 +182,7 @@ impl ModuleLoader {
             engine,
             http,
             cache: Arc::new(RwLock::new(HashMap::new())),
+            compiled: std::sync::Mutex::new(HashMap::new()),
             runtime_cfg,
             bundle_store_base,
             cache_root,
@@ -189,6 +192,34 @@ impl ModuleLoader {
         tracing::info!("  - HTTP transport ready for MinIO downloads");
         tracing::info!("  - Wasmtime engine ready for component instantiation");
         Ok(loader)
+    }
+
+    /// Process-wide loader. Building one per request also rebuilt the Engine and pooling
+    /// allocator, and compiled components are only valid for the Engine that made them.
+    pub fn shared() -> anyhow::Result<&'static ModuleLoader> {
+        static SHARED: once_cell::sync::OnceCell<ModuleLoader> = once_cell::sync::OnceCell::new();
+        SHARED.get_or_try_init(|| {
+            let loader = ModuleLoader::new()?;
+            // Deadlines are relative to the current epoch, so one ticker serves every store.
+            let engine = loader.engine.clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_millis(EPOCH_TICK_MS));
+                engine.increment_epoch();
+            });
+            Ok(loader)
+        })
+    }
+
+    fn compiled_component(&self, wasm: &[u8]) -> anyhow::Result<Component> {
+        use sha2::{Digest, Sha256};
+        let key: [u8; 32] = Sha256::digest(wasm).into();
+        if let Some(component) = self.compiled.lock().unwrap().get(&key) {
+            tracing::info!("Component served from compiled cache");
+            return Ok(component.clone());
+        }
+        let component = Component::from_binary(&self.engine, wasm)?;
+        self.compiled.lock().unwrap().insert(key, component.clone());
+        Ok(component)
     }
 
     fn instantiate(
@@ -202,7 +233,7 @@ impl ModuleLoader {
 
         // Parse WASM component
         tracing::info!("Parsing WebAssembly component binary...");
-        let component = Component::from_binary(&self.engine, wasm)?;
+        let component = self.compiled_component(wasm)?;
         tracing::info!("✓ Component binary parsed successfully");
 
         // Initialize resource table
@@ -270,6 +301,9 @@ impl ModuleLoader {
             tracing::info!(timeout_ms=%ms, "Configuring epoch-based timeout ({}ms)", ms);
             self.apply_timeout(&mut store, ms);
             tracing::info!("✓ Timeout configuration applied");
+        } else {
+            // The shared epoch ticker never stops, so an unset deadline would trap at once.
+            store.set_epoch_deadline(u64::MAX / 2);
         }
 
         // Build linker with all required imports
@@ -294,16 +328,6 @@ impl ModuleLoader {
         store.set_epoch_deadline(ticks);
         // For async configs, yield and update to continue if host wants to resume (not used yet)
         let _ = store.epoch_deadline_trap();
-
-        // Spawn a background task to bump the engine epoch periodically until the deadline is likely reached.
-        let engine = self.engine.clone();
-        std::thread::spawn(move || {
-            let steps = ticks + 2;
-            for _ in 0..steps {
-                std::thread::sleep(Duration::from_millis(EPOCH_TICK_MS));
-                engine.increment_epoch();
-            }
-        });
     }
 
     pub async fn load_wasm_module(
@@ -522,14 +546,12 @@ pub async fn verify_archive_sha256(
     let mut fetch_url = url.clone();
     let mut using_presigned = false;
 
+    // STORAGE_S3_* is the documented runner config (shared with the server);
+    // S3_* / MINIO_* are kept for existing local setups.
     if let (Ok(base), Some(access), Some(secret)) = (
         std::env::var("BUNDLE_STORE_BASE"),
-        std::env::var("S3_ACCESS_KEY")
-            .ok()
-            .or_else(|| std::env::var("MINIO_ACCESS_KEY").ok()),
-        std::env::var("S3_SECRET_KEY")
-            .ok()
-            .or_else(|| std::env::var("MINIO_SECRET_KEY").ok()),
+        first_env(&["STORAGE_S3_ACCESS_KEY", "S3_ACCESS_KEY", "MINIO_ACCESS_KEY"]),
+        first_env(&["STORAGE_S3_SECRET_KEY", "S3_SECRET_KEY", "MINIO_SECRET_KEY"]),
     ) {
         tracing::info!(expected_hash=%expected_lower, "S3/MinIO credentials detected - attempting presigned URL generation");
         if let Ok(base_url) = Url::parse(&base) {
@@ -546,8 +568,8 @@ pub async fn verify_archive_sha256(
                     _ => String::new(),
                 };
                 if !endpoint.is_empty() {
-                    let region =
-                        std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+                    let region = first_env(&["STORAGE_S3_REGION", "S3_REGION"])
+                        .unwrap_or_else(|| "us-east-1".to_string());
                     let creds = AwsCredentials::new(
                         access.clone(),
                         secret.clone(),
@@ -830,6 +852,14 @@ fn presign_target_from_urls(base_url: &Url, bundle_url: &Url) -> Option<(String,
     }
 }
 
+/// First of `names` that is set to a non-blank value.
+fn first_env(names: &[&str]) -> Option<String> {
+    names
+        .iter()
+        .filter_map(|name| std::env::var(name).ok())
+        .find(|value| !value.trim().is_empty())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -929,5 +959,26 @@ mod tests {
         let (bucket, key) = presign_target_from_urls(&base, &bundle).unwrap();
         assert_eq!(bucket, "extensions");
         assert_eq!(key, "tenants/t1/extensions/e1/sha256/h/bundle.tar.zst");
+    }
+
+    #[test]
+    fn first_env_prefers_earlier_names_and_skips_blank_values() {
+        let (a, b, c) = (
+            "ALGA_TEST_FIRST_ENV_A",
+            "ALGA_TEST_FIRST_ENV_B",
+            "ALGA_TEST_FIRST_ENV_C",
+        );
+        std::env::remove_var(a);
+        std::env::set_var(b, "  ");
+        std::env::set_var(c, "from-c");
+        assert_eq!(first_env(&[a, b, c]).as_deref(), Some("from-c"));
+
+        std::env::set_var(a, "from-a");
+        assert_eq!(first_env(&[a, b, c]).as_deref(), Some("from-a"));
+
+        for name in [a, b, c] {
+            std::env::remove_var(name);
+        }
+        assert_eq!(first_env(&[a, b, c]), None);
     }
 }
