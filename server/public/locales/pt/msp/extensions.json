@@ -7,6 +7,10 @@
     "description": "{{feature}} requer Pro. Atualize para acessar esse recurso."
   },
   "settings": {
+    "unavailable": {
+      "title": "Configurações de extensão indisponíveis",
+      "description": "O gerenciamento das configurações de extensão está disponível no AlgaPSA Pro."
+    },
     "title": "Gerenciamento de extensão",
     "description": "Instale, configure e gerencie extensões para estender a funcionalidade do AlgaPSA.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Cancelar"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensões indisponíveis",
+      "description": "O gerenciamento de extensões está disponível no AlgaPSA Pro."
+    },
     "label": "Gerenciamento de extensões",
     "heading": "Extensões",
     "loading": "Carregando extensões...",

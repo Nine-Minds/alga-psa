@@ -7,6 +7,10 @@
     "description": "Für {{feature}} ist Pro erforderlich. Bitte führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
   },
   "settings": {
+    "unavailable": {
+      "title": "Erweiterungseinstellungen nicht verfügbar",
+      "description": "Die Verwaltung von Erweiterungseinstellungen ist in AlgaPSA Pro verfügbar."
+    },
     "title": "Erweiterungsverwaltung",
     "description": "Installieren, konfigurieren und verwalten Sie Erweiterungen, um die Funktionalität von AlgaPSA zu erweitern.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Abbrechen"
   },
   "list": {
+    "unavailable": {
+      "title": "Erweiterungen nicht verfügbar",
+      "description": "Die Verwaltung von Erweiterungen ist in AlgaPSA Pro verfügbar."
+    },
     "label": "Erweiterungsverwaltung",
     "heading": "Erweiterungen",
     "loading": "Erweiterungen werden geladen...",

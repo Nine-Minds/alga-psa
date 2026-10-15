@@ -7,6 +7,10 @@
     "description": "{{feature}} richiede Pro. Effettua l'upgrade per accedere a questa funzionalità."
   },
   "settings": {
+    "unavailable": {
+      "title": "Impostazioni delle estensioni non disponibili",
+      "description": "La gestione delle impostazioni delle estensioni è disponibile in AlgaPSA Pro."
+    },
     "title": "Gestione estensioni",
     "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di AlgaPSA.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Annulla"
   },
   "list": {
+    "unavailable": {
+      "title": "Estensioni non disponibili",
+      "description": "La gestione delle estensioni è disponibile in AlgaPSA Pro."
+    },
     "label": "Gestione estensioni",
     "heading": "Estensioni",
     "loading": "Caricamento estensioni...",

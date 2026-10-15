@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-funktion",
+      "domainsDescription": "Hanterade domäner kräver Pro.",
+      "settingsDescription": "Inställningar för hanterad e-post kräver Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Det gick inte att läsa in hanterade domäner",
       "loadOutboundSettingsFailed": "Det gick inte att läsa in inställningarna för utgående e-post",

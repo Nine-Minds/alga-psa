@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-functie",
+      "domainsDescription": "Beheerde domeinen vereisen Pro.",
+      "settingsDescription": "Instellingen voor beheerde e-mail vereisen Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Kan beheerde domeinen niet laden",
       "loadOutboundSettingsFailed": "Kan instellingen voor uitgaande e-mail niet laden",

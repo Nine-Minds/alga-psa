@@ -7,6 +7,10 @@
     "description": "Pro est requis pour {{feature}}. Veuillez effectuer une mise à niveau pour accéder à cette fonctionnalité."
   },
   "settings": {
+    "unavailable": {
+      "title": "Paramètres des extensions indisponibles",
+      "description": "La gestion des paramètres des extensions est disponible dans AlgaPSA Pro."
+    },
     "title": "Gestion des extensions",
     "description": "Installez, configurez et gérez des extensions pour étendre les fonctionnalités d'AlgaPSA.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Annuler"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensions indisponibles",
+      "description": "La gestion des extensions est disponible dans AlgaPSA Pro."
+    },
     "label": "Gestion des extensions",
     "heading": "Extensions",
     "loading": "Chargement des extensions...",

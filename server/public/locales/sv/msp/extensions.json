@@ -7,6 +7,10 @@
     "description": "{{feature}} kräver Pro. Uppgradera för att få tillgång till den här funktionen."
   },
   "settings": {
+    "unavailable": {
+      "title": "Tilläggsinställningar är inte tillgängliga",
+      "description": "Hantering av tilläggsinställningar är tillgänglig i AlgaPSA Pro."
+    },
     "title": "Tilläggshantering",
     "description": "Installera, konfigurera och hantera tillägg för att utöka funktionaliteten i AlgaPSA.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Avbryt"
   },
   "list": {
+    "unavailable": {
+      "title": "Tillägg är inte tillgängliga",
+      "description": "Hantering av tillägg är tillgänglig i AlgaPSA Pro."
+    },
     "label": "Tilläggshantering",
     "heading": "Tillägg",
     "loading": "Läser in tillägg…",

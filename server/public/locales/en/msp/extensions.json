@@ -7,6 +7,10 @@
     "description": "{{feature}} require Pro. Please upgrade to access this feature."
   },
   "settings": {
+    "unavailable": {
+      "title": "Extension Settings Not Available",
+      "description": "Extension settings management is available in AlgaPSA Pro."
+    },
     "title": "Extension Management",
     "description": "Install, configure, and manage extensions to extend AlgaPSA functionality.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Cancel"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensions Not Available",
+      "description": "Extension management is available in AlgaPSA Pro."
+    },
     "label": "Extensions Management",
     "heading": "Extensions",
     "loading": "Loading extensions...",

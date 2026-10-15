@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "domainsDescription": "I domini gestiti richiedono Pro.",
+      "settingsDescription": "Le impostazioni delle email gestite richiedono Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Impossibile caricare i domini gestiti",
       "loadOutboundSettingsFailed": "Impossibile caricare le impostazioni di posta in uscita",

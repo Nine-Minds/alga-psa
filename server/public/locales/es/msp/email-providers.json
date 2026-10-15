@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Función Pro",
+      "domainsDescription": "Los dominios administrados requieren Pro.",
+      "settingsDescription": "La configuración de correo electrónico administrado requiere Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Error al cargar los dominios administrados",
       "loadOutboundSettingsFailed": "Error al cargar la configuración de correo saliente",

@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "domainsDescription": "Verwaltete Domains erfordern Pro.",
+      "settingsDescription": "Einstellungen für verwaltete E-Mails erfordern Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
       "loadOutboundSettingsFailed": "Einstellungen für ausgehende E-Mails konnten nicht geladen werden",

@@ -3,11 +3,6 @@
   "files": [
     "packages/documents/src/components/DocumentsPageSkeleton.tsx",
     "packages/ee/src/app/msp/account/page.tsx",
-    "packages/ee/src/components/settings/email/ManagedDomainList.tsx",
-    "packages/ee/src/components/settings/email/ManagedEmailSettings.tsx",
-    "packages/ee/src/components/settings/extensions/ExtensionSettings.tsx",
-    "packages/ee/src/components/settings/extensions/Extensions.tsx",
-    "packages/ee/src/components/settings/extensions/ExtensionsSimple.tsx",
     "packages/ee/src/components/settings/integrations/HuduIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/HuntressIntegrationSettings.tsx",
     "packages/ee/src/components/settings/integrations/LevelIoIntegrationSettings.tsx",

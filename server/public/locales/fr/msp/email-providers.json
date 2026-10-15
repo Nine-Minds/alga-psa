@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "domainsDescription": "Les domaines gérés nécessitent Pro.",
+      "settingsDescription": "Les paramètres des e-mails gérés nécessitent Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Échec du chargement des domaines gérés",
       "loadOutboundSettingsFailed": "Échec du chargement des paramètres d'envoi",

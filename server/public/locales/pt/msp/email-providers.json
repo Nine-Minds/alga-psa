@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Recurso Pro",
+      "domainsDescription": "Domínios gerenciados exigem o Pro.",
+      "settingsDescription": "As configurações de email gerenciado exigem o Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
       "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",

@@ -7,6 +7,10 @@
     "description": "Voor {{feature}} is Pro vereist. Upgrade om toegang te krijgen tot deze functie."
   },
   "settings": {
+    "unavailable": {
+      "title": "Extensie-instellingen niet beschikbaar",
+      "description": "Het beheer van extensie-instellingen is beschikbaar in AlgaPSA Pro."
+    },
     "title": "Extensiebeheer",
     "description": "Installeer, configureer en beheer extensies om de functionaliteit van AlgaPSA uit te breiden.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Annuleren"
   },
   "list": {
+    "unavailable": {
+      "title": "Extensies niet beschikbaar",
+      "description": "Het beheer van extensies is beschikbaar in AlgaPSA Pro."
+    },
     "label": "Extensiebeheer",
     "heading": "Extensies",
     "loading": "Extensies laden...",

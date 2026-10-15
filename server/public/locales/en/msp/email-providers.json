@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro Feature",
+      "domainsDescription": "Managed domains require Pro.",
+      "settingsDescription": "Managed email settings require Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Failed to load managed domains",
       "loadOutboundSettingsFailed": "Failed to load outbound email settings",

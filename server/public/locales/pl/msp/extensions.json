@@ -7,6 +7,10 @@
     "description": "Korzystanie z {{feature}} wymaga Pro. Wykonaj uaktualnienie, aby uzyskać dostęp do tej funkcji."
   },
   "settings": {
+    "unavailable": {
+      "title": "Ustawienia rozszerzeń są niedostępne",
+      "description": "Zarządzanie ustawieniami rozszerzeń jest dostępne w AlgaPSA Pro."
+    },
     "title": "Zarządzanie rozszerzeniami",
     "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności AlgaPSA.",
     "tabs": {
@@ -235,6 +239,10 @@
     "cancel": "Anuluj"
   },
   "list": {
+    "unavailable": {
+      "title": "Rozszerzenia są niedostępne",
+      "description": "Zarządzanie rozszerzeniami jest dostępne w AlgaPSA Pro."
+    },
     "label": "Zarządzanie rozszerzeniami",
     "heading": "Rozszerzenia",
     "loading": "Ładowanie rozszerzeń...",
