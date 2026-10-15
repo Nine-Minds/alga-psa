@@ -319,31 +319,29 @@ describe('Xero CSV adapter formats unit amounts with the document currency digit
   });
 });
 
-describe('QuickBooks Desktop IIF adapter scales the AMOUNT column by line currency', () => {
-  it('writes whole yen for JPY lines and dollars for USD lines', async () => {
+describe('QuickBooks Desktop IIF adapter scales amounts by the invoice currency', () => {
+  const amountsFor = async (currency: string, unitPrice: number, netAmount: number) => {
     const { QuickBooksDesktopAdapter } = await import('./quickBooksDesktopAdapter');
     const adapter = await QuickBooksDesktopAdapter.create();
-    harness.rows.invoices = [
-      { invoice_id: 'inv-jpy', invoice_number: 'INV-JPY', invoice_date: '2026-01-05', total_amount: 10000, client_id: CLIENT, currency_code: 'JPY' },
-      { invoice_id: 'inv-usd', invoice_number: 'INV-USD', invoice_date: '2026-01-05', total_amount: 1050, client_id: CLIENT, currency_code: 'USD' },
-    ];
-    harness.rows.invoice_charges = [
-      { item_id: 'c1', invoice_id: 'inv-jpy', service_id: 'svc-1', description: 'JPY charge', quantity: 1, net_amount: 10000, tax_amount: 0, is_discount: false },
-      { item_id: 'c2', invoice_id: 'inv-usd', service_id: 'svc-1', description: 'USD charge', quantity: 1, net_amount: 1050, tax_amount: 0, is_discount: false },
-    ];
-    harness.rows.clients = [{ client_id: CLIENT, client_name: 'Acme KK', billing_email: null, payment_terms: null }];
+    const lines = seedInvoice(currency, [{ quantity: 2, unitPrice, netAmount, taxAmount: 0 }]);
+    const result = await adapter.transform({
+      ...context('invoice', adapter.type, lines),
+      adapterSettings: { defaultIncomeAccount: 'Services Income' }
+    });
+    const rows = String(result.files?.[0]?.content ?? '').split('\r\n').map((row) => row.split('\t'));
+    const trnsHeader = rows.find((row) => row[0] === '!TRNS')!;
+    const splHeader = rows.find((row) => row[0] === '!SPL')!;
+    const trns = rows.find((row) => row[0] === 'TRNS')!;
+    const spl = rows.find((row) => row[0] === 'SPL')!;
+    return {
+      total: trns[trnsHeader.indexOf('AMOUNT')],
+      lineAmount: spl[splHeader.indexOf('AMOUNT')],
+      price: spl[splHeader.indexOf('PRICE')]
+    };
+  };
 
-    const result = await adapter.transform(
-      context('invoice', adapter.type, [
-        { document_id: 'inv-jpy', document_line_id: 'c1', client_id: CLIENT, amount_cents: 10000, currency_code: 'JPY' },
-        { document_id: 'inv-usd', document_line_id: 'c2', client_id: CLIENT, amount_cents: 1050, currency_code: 'USD' }
-      ])
-    );
-    const content = String(result.files?.[0]?.content ?? '');
-    const amounts = content
-      .split('\n')
-      .filter((row) => row.startsWith('TRNS\t'))
-      .map((row) => row.split('\t')[6]);
-    expect(amounts).toEqual(['10000', '10.50']);
+  it('writes whole yen for JPY and dollars for USD', async () => {
+    expect(await amountsFor('JPY', 5000, 10000)).toEqual({ total: '10000', lineAmount: '-10000', price: '5000' });
+    expect(await amountsFor('USD', 525, 1050)).toEqual({ total: '10.50', lineAmount: '-10.50', price: '5.25' });
   });
 });

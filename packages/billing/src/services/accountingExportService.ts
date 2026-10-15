@@ -28,7 +28,7 @@ import { AccountingExportValidation } from './accountingExportValidation';
 import { getExternalTaxImportService } from './externalTaxImportService';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { AppError, sanitizeProviderMessage } from '@alga-psa/core';
-import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
+import { getQuickBooksDesktopSettingsForTenant, getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 
@@ -393,6 +393,12 @@ export class AccountingExportService {
             error: (error as Error).message
           });
         }
+      } else if (normalizedBatch.adapter_type === 'quickbooks_desktop' && normalizedBatch.tenant) {
+        // No catch-and-default here: guessed account names would make QuickBooks
+        // Desktop create new accounts on import, so a load failure fails the batch.
+        adapterSettings = {
+          ...(await getQuickBooksDesktopSettingsForTenant(normalizedBatch.tenant))
+        };
       }
 
       context = {
