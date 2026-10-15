@@ -40,6 +40,9 @@ const harness = vi.hoisted(() => {
   };
   const knex: any = (expr: string) => builder(rows[tableName(expr)] ?? []);
   knex.table = knex;
+  // Charge expansion probes for the mid-period adjustments table before it
+  // projects contract-change descriptions; these fixtures carry none.
+  knex.schema = { hasTable: async () => false };
   const tenantDb = () => ({ table: (expr: string) => builder(rows[tableName(expr)] ?? []) });
   return { rows, knex, tenantDb };
 });
