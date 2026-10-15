@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
@@ -12,6 +12,7 @@ import { resolveMappingAdapterType } from '../adapters/accounting/mappingAdapter
 import {
   QUICKBOOKS_FILE_ADAPTERS,
   collectUnmappedQuickBooksEntities,
+  findQuickBooksNameConflict,
   validateQuickBooksMappingDecisions,
   type QuickBooksMappingDecision,
   type UnmappedQuickBooksEntity
@@ -87,26 +88,61 @@ export const saveQuickBooksExportMappings = withAuth(async (
   }
 
   const isDesktop = batch.adapter_type === 'quickbooks_desktop';
+  const integrationType = resolveMappingAdapterType(batch.adapter_type);
+  const storedEntityType = (type: QuickBooksMappingDecision['algaEntityType']) =>
+    type === 'discount' ? DISCOUNT_MAPPING_ENTITY_TYPE : type;
   const { knex } = await createTenantKnex();
-  await withTransaction(knex, async (trx) => {
-    const ledger = new SyncMappingLedger(trx, tenant, resolveMappingAdapterType(batch.adapter_type));
-    for (const decision of decisions) {
-      const isDiscount = decision.algaEntityType === 'discount';
-      await ledger.insert({
-        algaEntityType: isDiscount ? DISCOUNT_MAPPING_ENTITY_TYPE : decision.algaEntityType,
-        algaEntityId: isDiscount ? AUTOMATIC_DISCOUNT_MAPPING_ID : decision.algaEntityId,
-        externalEntityId: decision.externalName.trim(),
-        targetRealm: batch.target_realm ?? null,
-        syncStatus: 'manual_link',
-        metadata: {
-          linked_via: 'accounting_export',
-          export_batch_id: batchId,
-          ...(decision.mode === 'create' ? { createdByExport: true } : {}),
-          ...(decision.mode === 'create' && isDesktop ? { qbdCreateInBatch: batchId } : {})
-        }
-      });
+
+  // idx_unique_external_mapping allows one Alga entity per QuickBooks name and
+  // entity type, and covers unlinked rows too; check up front for a clear error.
+  const existing = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
+    .select('alga_entity_type', 'alga_entity_id', 'external_entity_id')
+    .where({ integration_type: integrationType })
+    .whereIn('alga_entity_type', Array.from(new Set(decisions.map((d) => storedEntityType(d.algaEntityType)))))
+    .whereIn('external_entity_id', Array.from(new Set(decisions.map((d) => d.externalName.trim()))))
+    .modify((query) => {
+      if (batch.target_realm) {
+        query.where('external_realm_id', batch.target_realm);
+      } else {
+        query.whereNull('external_realm_id');
+      }
+    });
+  const conflict = findQuickBooksNameConflict(pending, decisions, existing, storedEntityType);
+  if (conflict) {
+    return { success: false, code: 'QB_EXPORT_MAPPING_NAME_TAKEN', message: conflict };
+  }
+
+  try {
+    await withTransaction(knex, async (trx) => {
+      const ledger = new SyncMappingLedger(trx, tenant, integrationType);
+      for (const decision of decisions) {
+        const isDiscount = decision.algaEntityType === 'discount';
+        await ledger.insert({
+          algaEntityType: storedEntityType(decision.algaEntityType),
+          algaEntityId: isDiscount ? AUTOMATIC_DISCOUNT_MAPPING_ID : decision.algaEntityId,
+          externalEntityId: decision.externalName.trim(),
+          targetRealm: batch.target_realm ?? null,
+          syncStatus: 'manual_link',
+          metadata: {
+            linked_via: 'accounting_export',
+            export_batch_id: batchId,
+            ...(decision.mode === 'create' ? { createdByExport: true } : {}),
+            ...(decision.mode === 'create' && isDesktop ? { qbdCreateInBatch: batchId } : {})
+          }
+        });
+      }
+    });
+  } catch (error) {
+    // A concurrent mapping edit can still take a name between the check and the insert.
+    if ((error as { code?: string } | null)?.code === '23505') {
+      return {
+        success: false,
+        code: 'QB_EXPORT_MAPPING_NAME_TAKEN',
+        message: 'One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name.'
+      };
     }
-  });
+    throw error;
+  }
 
   logger.info('[quickBooksExportMappingActions] Saved mappings from export prompt', {
     tenant,
