@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Funzionalità Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mappatura in blocco",
@@ -1294,6 +1297,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "L’integrazione della documentazione IT di Hudu è disponibile in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Origine: Hudu",
         "openInHudu": "Apri in Hudu",
@@ -2314,6 +2320,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "L’integrazione RMM di NinjaOne è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento delle impostazioni di integrazione NinjaOne...",
         "card": {
           "title": "Integrazione NinjaOne RMM",
@@ -2591,6 +2600,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Tanium è disponibile in AlgaPSA Pro."
+        },
         "loading": "Caricamento impostazioni integrazione Tanium...",
         "actions": {
           "discoverScopes": "Scopri ambiti",
@@ -2661,6 +2673,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "L’integrazione RMM di Level.io è disponibile in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Recupera avvisi",
           "disconnect": "Disconnetti",
@@ -2743,6 +2758,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integrazione Huntress",
+          "description": "L’integrazione di sicurezza Huntress è una funzionalità Pro."
+        },
         "columns": {
           "organization": "Organizzazione Huntress",
           "client": "Cliente Alga",

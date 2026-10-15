@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-functie"
+    },
     "accounting": {
       "bulk": {
         "button": "Bulkkoppeling",
@@ -1294,6 +1297,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "De integratie met de IT-documentatie van Hudu is beschikbaar in AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Bron: Hudu",
         "openInHudu": "Openen in Hudu",
@@ -2314,6 +2320,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "De RMM-integratie met NinjaOne is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "NinjaOne-integratie-instellingen laden...",
         "card": {
           "title": "NinjaOne RMM-integratie",
@@ -2591,6 +2600,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "De RMM-integratie met Tanium is beschikbaar in AlgaPSA Pro."
+        },
         "loading": "Tanium-integratie-instellingen worden geladen...",
         "actions": {
           "discoverScopes": "Scopes ontdekken",
@@ -2661,6 +2673,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "De RMM-integratie met Level.io is beschikbaar in AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Waarschuwingen backfillen",
           "disconnect": "Verbinding verbreken",
@@ -2743,6 +2758,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integratie",
+          "description": "De beveiligingsintegratie met Huntress is een Pro-functie."
+        },
         "columns": {
           "organization": "Huntress-organisatie",
           "client": "Alga-klant",

@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Massmappning",
@@ -1294,6 +1297,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Integrationen med Hudu för IT-dokumentation är tillgänglig i AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Källa: Hudu",
         "openInHudu": "Öppna i Hudu",
@@ -2337,6 +2343,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "RMM-integrationen med NinjaOne är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för NinjaOne-integration…",
         "card": {
           "title": "RMM-integration för NinjaOne",
@@ -2614,6 +2623,9 @@
         }
       },
       "tanium": {
+        "proFeature": {
+          "description": "RMM-integrationen med Tanium är tillgänglig i AlgaPSA Pro."
+        },
         "loading": "Läser in inställningar för Tanium-integration…",
         "actions": {
           "discoverScopes": "Identifiera omfång",
@@ -2684,6 +2696,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "RMM-integrationen med Level.io är tillgänglig i AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Efterhämta larm",
           "disconnect": "Koppla från",
@@ -2766,6 +2781,10 @@
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-integration",
+          "description": "Säkerhetsintegrationen med Huntress är en Pro-funktion."
+        },
         "columns": {
           "organization": "Huntress-organisation",
           "client": "Alga-kund",
