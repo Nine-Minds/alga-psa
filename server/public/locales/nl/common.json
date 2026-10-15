@@ -1986,6 +1986,10 @@
     }
   },
   "dialogs": {
+    "success": {
+      "title": "Gelukt",
+      "confirm": "OK"
+    },
     "contactPicker": {
       "title": "Contact selecteren",
       "columns": {
@@ -2115,6 +2119,17 @@
   "reflection": {
     "parentId": "ID van bovenliggende component: {{id}}",
     "noParent": "Geen bovenliggende component"
+  },
+  "teamAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Teamavatar"
+  },
+  "userAvatar": {
+    "alt": "Avatar van {{name}}",
+    "defaultAlt": "Gebruikersavatar"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Deze pagina is in aanbouw. U bent op een deel van de site terechtgekomen dat nog niet helemaal klaar is. Alga legt achter de schermen de basis. Kom binnenkort terug!"
   },
   "contactAvatar": {
     "alt": "Avatar van {{name}}",

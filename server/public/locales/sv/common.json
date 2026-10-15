@@ -1986,6 +1986,10 @@
     }
   },
   "dialogs": {
+    "success": {
+      "title": "Lyckades",
+      "confirm": "OK"
+    },
     "contactPicker": {
       "title": "Välj kontakt",
       "columns": {
@@ -2115,6 +2119,17 @@
   "reflection": {
     "parentId": "Överordnad komponents ID: {{id}}",
     "noParent": "Ingen överordnad komponent"
+  },
+  "teamAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Teamets profilbild"
+  },
+  "userAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Användarens profilbild"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Den här sidan är under uppbyggnad. Du har kommit till en del av webbplatsen som inte är helt klar än. Alga lägger grunden bakom kulisserna. Kom tillbaka snart!"
   },
   "contactAvatar": {
     "alt": "Profilbild för {{name}}",

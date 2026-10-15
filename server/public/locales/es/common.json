@@ -1986,6 +1986,10 @@
     }
   },
   "dialogs": {
+    "success": {
+      "title": "Éxito",
+      "confirm": "Aceptar"
+    },
     "contactPicker": {
       "title": "Seleccionar contacto",
       "columns": {
@@ -2115,6 +2119,17 @@
   "reflection": {
     "parentId": "ID del componente padre: {{id}}",
     "noParent": "Sin componente padre"
+  },
+  "teamAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar del equipo"
+  },
+  "userAvatar": {
+    "alt": "Avatar de {{name}}",
+    "defaultAlt": "Avatar del usuario"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Esta página está en construcción. Ha llegado a una parte del sitio que aún no está lista. Alga está preparando todo entre bastidores. ¡Vuelva pronto!"
   },
   "contactAvatar": {
     "alt": "Avatar de {{name}}",
