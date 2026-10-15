@@ -4,15 +4,14 @@ import * as React from 'react';
 import { Filter, XCircle } from 'lucide-react';
 import { Button, type ButtonProps } from './Button';
 import { Input } from './Input';
-import { useTranslation } from '../lib/i18n/client';
 
 /**
  * Presentational pieces of the list-page toolbar shared by the native ticket
  * dashboard and the Customer Tickets list: page heading, the sticky toolbar
  * surface, search field, Filters toggle, Reset, active-filter chips and the
- * collapsible filter panel. They own no data or requests; labels, ids and
- * handlers come from the page, with a translated default for chip removal.
- * The class strings are the ones the native dashboard has always rendered.
+ * collapsible filter panel. They own no data, requests or translations; every
+ * label, id and handler comes from the page. The class strings are the ones the
+ * native dashboard has always rendered.
  */
 
 // These MUST be literal strings so Tailwind's scanner generates the arbitrary utilities; do not build
@@ -200,8 +199,8 @@ export interface ListFilterChip {
   onRemove: () => void;
   /** Automation id for the chip's remove button. */
   removeId?: string;
-  /** Accessible name for the remove button; defaults to a localized removal label. */
-  removeLabel?: string;
+  /** Translated accessible name for the remove button. The toolbar owns no strings. */
+  removeLabel: string;
 }
 
 export function ListFilterChips({ chips, clearLabel, onClear }: {
@@ -209,7 +208,6 @@ export function ListFilterChips({ chips, clearLabel, onClear }: {
   clearLabel?: React.ReactNode;
   onClear?: () => void;
 }) {
-  const { t } = useTranslation('common');
   if (chips.length === 0) return null;
   return (
     <div className="flex items-center flex-wrap gap-2">
@@ -223,7 +221,7 @@ export function ListFilterChips({ chips, clearLabel, onClear }: {
             type="button"
             id={chip.removeId}
             onClick={chip.onRemove}
-            aria-label={chip.removeLabel ?? t('listToolbar.removeFilter', { label: chip.label, defaultValue: 'Remove {{label}}' })}
+            aria-label={chip.removeLabel}
             className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
           >
             <XCircle className="h-3.5 w-3.5" />

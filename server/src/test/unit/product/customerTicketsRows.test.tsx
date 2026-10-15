@@ -175,8 +175,9 @@ describe('F032 — load failure and empty states', () => {
     mount();
     await screen.findByRole('link', { name: 'T-1 · Printer A' });
     mocks.load.mockResolvedValue(page([], { totalCount: 0, openCount: 0 }));
-    fireEvent.change(screen.getByLabelText('coManaged.queue.search'), { target: { value: 'zzz' } });
-    fireEvent.click(screen.getByRole('button', { name: 'coManaged.queue.search' }));
+    const box = screen.getByLabelText('coManaged.queue.search');
+    fireEvent.change(box, { target: { value: 'zzz' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
     expect(await screen.findByText('coManaged.queue.empty')).toBeTruthy();
   });
 });

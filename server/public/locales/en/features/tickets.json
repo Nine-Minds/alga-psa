@@ -61,6 +61,7 @@
     "unassigned": "Unassigned",
     "category": "Filter by category",
     "clearFilters": "Clear filters",
+    "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",

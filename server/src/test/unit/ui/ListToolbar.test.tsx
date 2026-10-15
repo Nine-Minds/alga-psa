@@ -3,49 +3,58 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createInstance } from 'i18next';
-import englishCommon from '../../../../public/locales/en/common.json';
-import germanCommon from '../../../../public/locales/de/common.json';
-import spanishCommon from '../../../../public/locales/es/common.json';
+import englishTickets from '../../../../public/locales/en/features/tickets.json';
+import germanTickets from '../../../../public/locales/de/features/tickets.json';
+import spanishTickets from '../../../../public/locales/es/features/tickets.json';
 import { ListFilterChips } from '@alga-psa/ui/components/ListToolbar';
 
 const i18n = createInstance();
-
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: (namespace: string) => ({ t: i18n.getFixedT(null, namespace) }),
-}));
 
 beforeEach(async () => {
   await i18n.init({
     lng: 'en',
     fallbackLng: false,
     interpolation: { escapeValue: false },
-    resources: { en: { common: englishCommon }, de: { common: germanCommon }, es: { common: spanishCommon } },
+    resources: {
+      en: { features: englishTickets },
+      de: { features: germanTickets },
+      es: { features: spanishTickets },
+    },
   });
 });
 
 afterEach(cleanup);
 
-it('translates the remove action when the locale changes and preserves the filter label and handler', async () => {
+it('renders the translated label the caller supplies and preserves the filter label, id and handler', async () => {
   const onRemove = vi.fn();
-  const chips = [{ key: 'client', label: 'R&D', removeId: 'remove-client-filter', onRemove }];
+  const chips = [{
+    key: 'client',
+    label: 'R&D',
+    removeId: 'remove-client-filter',
+    removeLabel: String(i18n.t('filters.removeFilterChip', { ns: 'features', label: 'R&D' })),
+    onRemove,
+  }];
   const { rerender } = render(<ListFilterChips chips={chips} />);
-  expect(screen.getByRole('button', { name: 'Remove R&D' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Remove filter: R&D' })).toBeTruthy();
 
   await i18n.changeLanguage('de');
-  rerender(<ListFilterChips chips={chips} />);
-  const remove = screen.getByRole('button', { name: 'R&D entfernen' });
+  rerender(<ListFilterChips chips={[{
+    ...chips[0],
+    removeLabel: String(i18n.t('filters.removeFilterChip', { ns: 'features', label: 'R&D' })),
+  }]} />);
+  const remove = screen.getByRole('button', { name: 'Filter entfernen: R&D' });
   expect(remove.id).toBe('remove-client-filter');
   expect(screen.getByText('R&D')).toBeTruthy();
   fireEvent.click(remove);
   expect(onRemove).toHaveBeenCalledOnce();
 });
 
-it('uses the Spanish default while honoring a caller-provided accessible label', async () => {
+it('honors a distinct caller-provided accessible name per chip', async () => {
   await i18n.changeLanguage('es');
   render(<ListFilterChips chips={[
-    { key: 'client', label: 'Acme', onRemove: vi.fn() },
+    { key: 'client', label: 'Acme', removeLabel: String(i18n.t('filters.removeFilterChip', { ns: 'features', label: 'Acme' })), onRemove: vi.fn() },
     { key: 'status', label: 'Abierto', removeLabel: 'Quitar filtro de estado', onRemove: vi.fn() },
   ]} />);
-  expect(screen.getByRole('button', { name: 'Eliminar Acme' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Quitar filtro: Acme' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Quitar filtro de estado' })).toBeTruthy();
 });
