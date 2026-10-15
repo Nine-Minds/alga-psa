@@ -3980,6 +3980,8 @@
       "managePermission": "Permission denied: You do not have permission to manage accounting mappings.",
       "loadFailed": "Unable to load mapping data. Please try again.",
       "duplicate": "A mapping already exists for this entity. Edit the existing mapping instead.",
+      "duplicateTarget": "This target is already mapped to another entity in this organisation. Choose a different target.",
+      "duplicateXeroItem": "This Xero item is already mapped to another service. An item can be mapped to only one service; to bill several services to the same code, map them to a revenue account instead.",
       "saveFailed": "Unable to save mapping. Please try again.",
       "idRequiredForUpdate": "Mapping ID is required for update.",
       "noUpdateData": "No update data provided.",

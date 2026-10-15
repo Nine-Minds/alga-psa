@@ -3980,6 +3980,8 @@
       "managePermission": "Odmowa uprawnień: brak uprawnień do zarządzania powiązaniami księgowymi.",
       "loadFailed": "Nie można wczytać danych powiązań. Spróbuj ponownie.",
       "duplicate": "Powiązanie dla tego obiektu już istnieje. Zamiast tego edytuj istniejące powiązanie.",
+      "duplicateTarget": "Ten cel jest już przypisany do innej jednostki w tej organizacji. Wybierz inny cel.",
+      "duplicateXeroItem": "Ta pozycja Xero jest już przypisana do innej usługi. Pozycję można przypisać tylko do jednej usługi; aby fakturować kilka usług pod tym samym kodem, przypisz je do konta przychodów.",
       "saveFailed": "Nie można zapisać powiązania. Spróbuj ponownie.",
       "idRequiredForUpdate": "Do aktualizacji wymagany jest identyfikator powiązania.",
       "noUpdateData": "Nie podano danych do aktualizacji.",
