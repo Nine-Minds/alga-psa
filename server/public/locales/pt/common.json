@@ -1723,10 +1723,14 @@
       "tags": {
         "label": "Etiquetas",
         "placeholder": "Adicionar tag..."
+      },
+      "newTag": {
+        "placeholder": "Nova tag"
       }
     },
     "actions": {
-      "removeTag": "Remover tag {{tag}}"
+      "removeTag": "Remover tag {{tag}}",
+      "saving": "..."
     },
     "errors": {
       "providerRequired": "useTags deve ser usado dentro de um TagProvider"
@@ -2067,6 +2071,27 @@
     "fields": {
       "internal": {
         "label": "Marcar como interno"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} requer {{tierLabel}}",
+    "description": "Faça upgrade para o plano {{tierLabel}} para desbloquear {{featureName}} e mais recursos avançados.",
+    "actions": {
+      "viewPlans": "Ver planos"
+    }
+  },
+  "widgets": {
+    "buttonLink": {
+      "unavailable": "Link indisponível",
+      "actions": {
+        "openLink": "Abrir link"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Carregando conteúdo...",
+      "errors": {
+        "loadFailed": "Erro ao carregar conteúdo"
       }
     }
   }

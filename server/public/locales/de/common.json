@@ -1723,10 +1723,14 @@
       "tags": {
         "label": "Tags",
         "placeholder": "Tag hinzufügen..."
+      },
+      "newTag": {
+        "placeholder": "Neues Tag"
       }
     },
     "actions": {
-      "removeTag": "Tag {{tag}} entfernen"
+      "removeTag": "Tag {{tag}} entfernen",
+      "saving": "..."
     },
     "errors": {
       "providerRequired": "useTags muss innerhalb eines TagProvider verwendet werden"
@@ -2067,6 +2071,27 @@
     "fields": {
       "internal": {
         "label": "Als intern markieren"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} erfordert {{tierLabel}}",
+    "description": "Wechseln Sie zum Tarif {{tierLabel}}, um {{featureName}} und weitere leistungsstarke Funktionen freizuschalten.",
+    "actions": {
+      "viewPlans": "Tarife anzeigen"
+    }
+  },
+  "widgets": {
+    "buttonLink": {
+      "unavailable": "Link nicht verfügbar",
+      "actions": {
+        "openLink": "Link öffnen"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Inhalt wird geladen...",
+      "errors": {
+        "loadFailed": "Fehler beim Laden des Inhalts"
       }
     }
   }

@@ -1723,10 +1723,14 @@
       "tags": {
         "label": "Labels",
         "placeholder": "Label toevoegen..."
+      },
+      "newTag": {
+        "placeholder": "Nieuw label"
       }
     },
     "actions": {
-      "removeTag": "Label {{tag}} verwijderen"
+      "removeTag": "Label {{tag}} verwijderen",
+      "saving": "..."
     },
     "errors": {
       "providerRequired": "useTags moet binnen een TagProvider worden gebruikt"
@@ -2067,6 +2071,27 @@
     "fields": {
       "internal": {
         "label": "Markeren als intern"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} vereist {{tierLabel}}",
+    "description": "Upgrade naar het abonnement {{tierLabel}} om {{featureName}} en meer krachtige functies te ontgrendelen.",
+    "actions": {
+      "viewPlans": "Abonnementen bekijken"
+    }
+  },
+  "widgets": {
+    "buttonLink": {
+      "unavailable": "Link niet beschikbaar",
+      "actions": {
+        "openLink": "Link openen"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Inhoud laden...",
+      "errors": {
+        "loadFailed": "Fout bij het laden van de inhoud"
       }
     }
   }

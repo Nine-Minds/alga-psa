@@ -1723,10 +1723,14 @@
       "tags": {
         "label": "Étiquettes",
         "placeholder": "Ajouter une étiquette..."
+      },
+      "newTag": {
+        "placeholder": "Nouvelle étiquette"
       }
     },
     "actions": {
-      "removeTag": "Retirer l’étiquette {{tag}}"
+      "removeTag": "Retirer l’étiquette {{tag}}",
+      "saving": "..."
     },
     "errors": {
       "providerRequired": "useTags doit être utilisé au sein d’un TagProvider"
@@ -2067,6 +2071,27 @@
     "fields": {
       "internal": {
         "label": "Marquer comme interne"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} nécessite {{tierLabel}}",
+    "description": "Passez à l’offre {{tierLabel}} pour débloquer {{featureName}} et d’autres fonctionnalités avancées.",
+    "actions": {
+      "viewPlans": "Voir les offres"
+    }
+  },
+  "widgets": {
+    "buttonLink": {
+      "unavailable": "Lien indisponible",
+      "actions": {
+        "openLink": "Ouvrir le lien"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Chargement du contenu...",
+      "errors": {
+        "loadFailed": "Erreur lors du chargement du contenu"
       }
     }
   }

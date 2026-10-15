@@ -1723,10 +1723,14 @@
       "tags": {
         "label": "Taggar",
         "placeholder": "Lägg till tagg…"
+      },
+      "newTag": {
+        "placeholder": "Ny tagg"
       }
     },
     "actions": {
-      "removeTag": "Ta bort taggen {{tag}}"
+      "removeTag": "Ta bort taggen {{tag}}",
+      "saving": "..."
     },
     "errors": {
       "providerRequired": "useTags måste användas inom en TagProvider"
@@ -2067,6 +2071,27 @@
     "fields": {
       "internal": {
         "label": "Markera som internt"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} kräver {{tierLabel}}",
+    "description": "Uppgradera till nivån {{tierLabel}} för att låsa upp {{featureName}} och fler kraftfulla funktioner.",
+    "actions": {
+      "viewPlans": "Visa planer"
+    }
+  },
+  "widgets": {
+    "buttonLink": {
+      "unavailable": "Länken är inte tillgänglig",
+      "actions": {
+        "openLink": "Öppna länk"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Läser in innehåll…",
+      "errors": {
+        "loadFailed": "Det gick inte att läsa in innehållet"
       }
     }
   }
