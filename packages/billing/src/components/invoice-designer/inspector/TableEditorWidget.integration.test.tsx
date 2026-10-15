@@ -267,7 +267,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
       { id: 'col-amount', header: 'Amount', key: 'item.total', type: 'currency', width: 140 },
     ] });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move col-quantity up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move Qty up' }));
 
     await waitFor(() => {
       const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
@@ -275,7 +275,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
       expect(columns.map((column: any) => column.id)).toEqual(['col-quantity', 'col-description', 'col-amount']);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move col-quantity down' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move Qty down' }));
 
     await waitFor(() => {
       const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
@@ -312,7 +312,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
       },
     ] });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move quantity up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move Qty up' }));
 
     await waitFor(() => {
       const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
@@ -375,6 +375,8 @@ describe('TableEditorWidget (schema widget integration)', () => {
     expect(screen.queryByRole('button', { name: 'Description' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Rate' })).toBeNull();
 
+    // Binding suggestions live in the column's expanded editor.
+    fireEvent.click(document.getElementById('designer-column-toggle-col-description')!);
     fireEvent.click(screen.getAllByRole('button', { name: 'item.aggregates.sumTotal' })[0]!);
 
     await waitFor(() => {
@@ -404,6 +406,8 @@ describe('TableEditorWidget (schema widget integration)', () => {
     expect(screen.queryByRole('button', { name: 'item.description' })).toBeNull();
 
     await selectCustomOption('designer-table-source-binding', 'items (Transforms source)');
+    // Binding suggestions live in the column's expanded editor.
+    fireEvent.click(document.getElementById('designer-column-toggle-col-description')!);
 
     await waitFor(() => {
       expect(screen.queryAllByText('item.aggregates.sumTotal')).toHaveLength(0);

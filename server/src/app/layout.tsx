@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./print.css";
-// Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
 // Granular action imports: the /actions barrel would pull every tenancy 'use server'
 // file into every route's server-reference manifest (dev OOM — see package-build-system.md).
@@ -29,6 +28,11 @@ import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfil
 import { resolveRequestHost, resolveRequestOrigin } from '@/lib/deployment/requestHost';
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
+// Vendor stylesheets are bundled from the installed packages rather than linked
+// from a CDN: a render-blocking third-party <link> in the root layout holds
+// first paint and the load event of every page hostage to that host.
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import '@radix-ui/themes/styles.css';
 // Loaded last so the Inter font-token overrides win over Mantine/Radix defaults.
 import './font-overrides.css';
 
@@ -189,8 +193,6 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
-        <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
         {/* Cascade order matters: the pair blocks in globals.css lose to the custom
             pair, which loses to the branding accents (they carry !important). */}
         {customThemeStyles && (

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "TM001",
+    "description": "Unit: a contact-scoped visibility context with no profile grants produces exactly today's own-tickets predicate.",
+    "implemented": true,
+    "featureIds": [
+      "M022",
+      "M023"
+    ]
+  },
+  {
+    "id": "TM002",
+    "description": "Unit: a contact-scoped context with grants matches own tickets, tickets on a granted profile, and NULL-profile tickets when the client default profile is granted — and nothing else.",
+    "implemented": true,
+    "featureIds": [
+      "M021",
+      "M022"
+    ]
+  },
+  {
+    "id": "TM003",
+    "description": "Unit: client scope and the client-admin override ignore profile grants entirely.",
+    "implemented": true,
+    "featureIds": [
+      "M023"
+    ]
+  },
+  {
+    "id": "TM004",
+    "description": "Unit: applyTicketVisibilityFilter without a billingProfileColumn is byte-identical to the pre-existing behaviour even when grants are present, so an un-migrated call site cannot widen visibility.",
+    "implemented": true,
+    "featureIds": [
+      "M022",
+      "M024"
+    ]
+  },
+  {
+    "id": "TM005",
+    "description": "Unit: getClientContactVisibilityContext loads only grants whose profile belongs to the contact's own client and only rows with can_view_profile_tickets.",
+    "implemented": true,
+    "featureIds": [
+      "M021"
+    ]
+  },
+  {
+    "id": "TM006",
+    "description": "Unit: the merge guard matrix rejects same-client merges, an already-merged source or target, a missing client, and a soft parent-link cycle.",
+    "implemented": true,
+    "featureIds": [
+      "M008"
+    ]
+  },
+  {
+    "id": "TM007",
+    "description": "Unit: the merge plan moves every source profile, renames the source default to the client name, clears is_default/is_system_managed_default, and keeps every billing_profile_id.",
+    "implemented": true,
+    "featureIds": [
+      "M009"
+    ]
+  },
+  {
+    "id": "TM008",
+    "description": "Unit: work items arriving with a NULL billing_profile_id are stamped with the source's moved default profile, and work items already carrying a profile are left alone.",
+    "implemented": true,
+    "featureIds": [
+      "M012"
+    ]
+  },
+  {
+    "id": "TM009",
+    "description": "Unit: contract cutover produces a terminated source contract plus a clone on the target starting at the cutover date; original-date moves leave the dates untouched.",
+    "implemented": true,
+    "featureIds": [
+      "M013"
+    ]
+  },
+  {
+    "id": "TM010",
+    "description": "Behaviour: a full merge round trip moves profiles, invoices, cycles, payment methods, tickets, contacts, visibility groups and inbound domains, writes an audit row, publishes CLIENT_MERGED and leaves the source archived with one fresh system-managed default profile.",
+    "implemented": true,
+    "featureIds": [
+      "M009",
+      "M010",
+      "M011",
+      "M014",
+      "M015",
+      "M016",
+      "M018"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts drives the merge through the server action against a real database (profiles, invoices, cycles, tickets, contacts, groups, inbound domains, audit row, CLIENT_MERGED, fresh default on the shell, re-merge refused), including invoices/transactions/credit_tracking rows that arrive with no billing profile. packages/clients/src/lib/clientMergeEngine.test.ts covers the same orchestration against an in-memory database."
+  },
+  {
+    "id": "TM011",
+    "description": "Integration: the parent's billing output is identical before and after a merge, and a moved billing cycle regenerates an identical invoice.",
+    "implemented": true,
+    "featureIds": [
+      "M011",
+      "M012",
+      "M013",
+      "M033"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts: the parent's finalized invoice projection (totals, per-line amounts, tax, credit) is byte-identical after a merge, and the absorbed client's moved February cycle regenerates the money projection its pre-merge January cycle produced, with every charge still attributed to the moved profile rather than the parent's default. This test is what surfaced M033: without re-pointing contracts.owner_client_id the regeneration fails outright with 'Recurring service periods were not materialized for this recurring execution window'."
+  },
+  {
+    "id": "TM012",
+    "description": "Integration: a granted profile manager sees the profile's tickets before and after the merge; an ungranted contact sees only their own.",
+    "implemented": true,
+    "featureIds": [
+      "M021",
+      "M022"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts asserts the pre/post-merge portal round trip against a real database through getClientContactVisibilityContext + applyTicketVisibilityFilter: the granted manager sees own + profile tickets and not the parent's, the ungranted colleague sees only their own. The predicate shapes are additionally unit-tested in packages/tickets/src/lib/clientPortalVisibility.test.ts."
+  },
+  {
+    "id": "TM013",
+    "description": "Behaviour: grant pinning writes explicit client_portal_user_billing_profiles rows for previously unrestricted source portal users and leaves already-restricted users alone.",
+    "implemented": true,
+    "featureIds": [
+      "M017"
+    ],
+    "note": "Behaviour: grant pinning writes rows for unrestricted portal users and writes none when switched off."
+  },
+  {
+    "id": "TM014",
+    "description": "Behaviour: re-merging an already merged source is refused.",
+    "implemented": true,
+    "featureIds": [
+      "M008",
+      "M018"
+    ],
+    "note": "Behaviour: a second merge of the same source raises ClientMergeBlockedError."
+  },
+  {
+    "id": "TM015",
+    "description": "Contract: the merge, preview and profile-contact endpoints are registered in OpenAPI with real metadata and surface in the generated MCP registry.",
+    "implemented": true,
+    "featureIds": [
+      "M030",
+      "M031"
+    ]
+  },
+  {
+    "id": "TM016",
+    "description": "Integration: merging two clients that each have a logo succeeds; the target keeps its own logo, the absorbed one arrives demoted to a plain document, and a variant the target does not use is inherited.",
+    "implemented": true,
+    "featureIds": [
+      "M034"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts seeds an is_entity_logo association on both clients against a real database. Without the fix it reproduces the operator's failure verbatim: duplicate key value violates unique constraint \"uq_document_associations_single_true_logo\". The three slot outcomes (taken, free, shared document) are unit-tested in packages/clients/src/lib/clientMergeEngine.test.ts."
+  },
+  {
+    "id": "TM017",
+    "description": "Unit: generateManualInvoice bills the profile the operator picked — invoice row and every line stamped with it, a per-line override left ahead of it, a foreign or archived profile refused, and an unpicked invoice attributed exactly as before.",
+    "implemented": true,
+    "featureIds": [
+      "M035"
+    ],
+    "note": "server/src/test/unit/billing/manualInvoiceActions.billingProfile.test.ts"
+  },
+  {
+    "id": "TM018",
+    "description": "Unit: createClientContractAssignment stores the chosen billing profile, refuses one belonging to another client, and writes NULL when none is chosen.",
+    "implemented": true,
+    "featureIds": [
+      "M036"
+    ],
+    "note": "shared/billingClients/__tests__/clientContracts.billingProfileAssignment.test.ts"
+  },
+  {
+    "id": "TM019",
+    "description": "Integration: every table in the schema with a uuid client_id is classified — moved, handled explicitly, or recorded as deliberately left behind — and every non-optional table the matrix names still exists.",
+    "implemented": true,
+    "featureIds": [
+      "M037"
+    ],
+    "note": "server/src/test/integration/clientMerge.integration.test.ts reads pg_catalog rather than a remembered list, so a new client-keyed table has to be classified before it passes. It caught client_plan_bundles on its first run (dropped by 20251008000003, recreated only by ensureClientPlanBundlesTable for legacy fixtures). The move and collision behaviour itself — sales orders, RMM mappings, the (tenant, client_id) key on client_billing_settings, an edition-optional table that is absent, and a payment customer left put on collision — is unit-tested in packages/clients/src/lib/clientMergeEngine.test.ts."
+  }
+]

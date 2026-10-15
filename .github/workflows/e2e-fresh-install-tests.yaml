@@ -776,25 +776,10 @@ jobs:
           mkdir -p logs
           node e2e-tests/harness/check-provider-topology.mjs > logs/provider-readiness-topology.json
 
-      - name: Trigger Login Page to Generate Credentials
-        id: login_trigger
-        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
-        run: |
-          echo "Attempting to trigger login page to generate credentials in server logs..."
-          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
-          LOGIN_PAGE_URL="http://localhost:${APP_PORT_VALUE}/auth/signin"
-          # Perform a curl request to the login page. We don't need the output, just the action of hitting the page.
-          # Allow failure as the page might not return 200 immediately or might redirect,
-          # but the act of requesting it should trigger the log.
-          curl -s -o /dev/null -w "%{http_code}" "${LOGIN_PAGE_URL}" || echo "Curl to login page finished (ignore exit code here)."
-          echo "Login page triggered. Waiting a few seconds for logs to propagate..."
-          sleep 3 # Wait for server to process the request and log credentials
-        shell: bash
-
-      - name: Capture Credentials from Server Logs
+      - name: Provision isolated browser fixture credential
         id: capture_creds
-        if: ${{ !cancelled() && steps.login_trigger.outcome == 'success' }}
-        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
+        if: ${{ !cancelled() && steps.server_ready.outcome == 'success' }}
+        run: node e2e-tests/harness/setup-browser-credential.mjs
 
       - name: Warm up authentication system
         if: ${{ !cancelled() && steps.capture_creds.outcome == 'success' }}
@@ -970,6 +955,21 @@ jobs:
             ${{ runner.temp }}/browser-artifact-manifest.json
           retention-days: 7
 
+      # A retry-only pass still fails the strict gate above, so this upload must
+      # survive the red job that publishes it. Reporting flakes is never itself a
+      # gate. The runner fills this directory only when something retried, so a
+      # run with no flake (or one that died before the runner wrote anything)
+      # publishes nothing and the weekly report spends no API budget on it; the
+      # always-written document rides along in the diagnostics artifact above.
+      - name: Upload browser flaky-test evidence
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-browser-${{ matrix.edition }}
+          path: e2e-tests/execution-evidence/flaky/
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Record browser journey readiness
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         continue-on-error: true
@@ -1044,7 +1044,7 @@ jobs:
           name: fresh-install-api-${{ matrix.edition }}
           path: test-results/api-e2e/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Prepare populated v1.5.0 upgrade
         id: upgrade_schema
@@ -1150,7 +1150,7 @@ jobs:
           name: supported-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload upgrade browser diagnostics
         if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1267,7 +1267,7 @@ jobs:
           name: supported-citus-upgrade-execution
           path: test-results/supported-upgrade/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Upload supported Citus upgrade diagnostics
         if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' && !env.ACT }}
@@ -1351,21 +1351,15 @@ jobs:
           printf '%s\n' "$status" > "$RUNNER_TEMP/teams-development-probe/last-status.txt"
           test "$ready" = true
 
-      - name: Capture recreated Teams server credentials
-        id: teams_creds
-        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
-        continue-on-error: true
-        run: docker-compose -p alga-e2e-test logs --no-color server | node e2e-tests/harness/capture-server-credentials.mjs
-
       - name: Check Teams source authentication configuration
         id: teams_auth_preflight
-        if: ${{ !cancelled() && steps.teams_creds.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.teams_development_server.outcome == 'success' }}
         continue-on-error: true
         timeout-minutes: 2
         env:
           E2E_DATABASE_ISOLATED: 'true'
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: |
           docker-compose -p alga-e2e-test exec -T \
             -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
@@ -1380,8 +1374,8 @@ jobs:
           E2E_TEAMS_DEVELOPMENT: 'true'
           E2E_DATABASE_ISOLATED: 'true'
           E2E_BASE_URL: http://localhost:3000
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: node e2e-tests/harness/warm-teams-dashboard.mjs
 
       - name: Run Teams development execution gate
@@ -1404,8 +1398,8 @@ jobs:
           E2E_DB_NAME: server
           E2E_DB_USER: postgres
           E2E_DB_PASSWORD: placeholder-password
-          E2E_USER_EMAIL: ${{ steps.teams_creds.outputs.e2e_user_email }}
-          E2E_USER_PASSWORD: ${{ steps.teams_creds.outputs.e2e_user_password }}
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         run: xvfb-run --auto-servernum node e2e-tests/run-teams-development.mjs
 
       - name: Upload Teams development execution
@@ -1415,7 +1409,7 @@ jobs:
           name: teams-development-execution
           path: test-results/teams-development/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect bounded Teams static chunk diagnostics
         if: ${{ always() && steps.teams_development_server.outcome == 'success' }}
@@ -1463,7 +1457,7 @@ jobs:
           name: microsoft-callback-execution
           path: test-results/microsoft-callback/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'
@@ -1577,3 +1571,4 @@ jobs:
           path: test-results/fresh-install-gate/
           if-no-files-found: error
           retention-days: 30
+          overwrite: true

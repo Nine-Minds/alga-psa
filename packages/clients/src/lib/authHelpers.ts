@@ -195,3 +195,13 @@ export async function getRolesAsync() {
   const module = await import('@alga-psa/auth/actions');
   return module.getRoles() as Promise<IRole[]>;
 }
+
+/**
+ * Dynamically imported for the same reason as the auth helpers above: a static
+ * import would close the clients → analytics → … → clients cycle. Same shape as
+ * `packages/billing/src/lib/authHelpers.ts`.
+ */
+export async function getAnalyticsAsync() {
+  const { analytics, AnalyticsEvents } = await import('@alga-psa/analytics');
+  return { analytics, AnalyticsEvents };
+}

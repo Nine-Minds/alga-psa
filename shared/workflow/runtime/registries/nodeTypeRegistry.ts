@@ -1,6 +1,7 @@
 import { ZodSchema } from 'zod';
 import type { Envelope } from '../types';
 import type { SecretResolver } from '../utils/mappingResolver';
+import { allowsRegistryReplacement } from './hotReload';
 
 export type NodeTypeUI = {
   label: string;
@@ -56,7 +57,7 @@ export class NodeTypeRegistry {
     if (!def.handler) {
       throw new Error(`NodeType ${def.id} must have handler`);
     }
-    if (this.nodes.has(def.id)) {
+    if (this.nodes.has(def.id) && !allowsRegistryReplacement()) {
       throw new Error(`NodeTypeRegistry already has ${def.id}`);
     }
     this.nodes.set(def.id, def);

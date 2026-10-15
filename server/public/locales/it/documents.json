@@ -5,6 +5,15 @@
     "authorizedBy": "Autorizzato da",
     "billTo": "Fatturare a",
     "billedTimeByTicket": "Tempo fatturato per ticket",
+    "cadence": {
+      "annually": "Annuale",
+      "monthly": "Mensile",
+      "oneTime": "Una tantum",
+      "other": "Altro",
+      "quarterly": "Trimestrale",
+      "semiAnnually": "Semestrale"
+    },
+    "cadenceTotal": "Totale {{cadence}}",
     "date": "Data",
     "description": "Descrizione",
     "discounts": "Sconti",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Voci una tantum",
     "oneTimeTotal": "Totale una tantum",
     "optional": "Opzionale",
+    "optionalIncluded": "Opzionale (incluso)",
+    "optionalSection": "Opzionale (se selezionato)",
+    "optionalSubtotal": "Subtotale opzionale",
+    "optionalTotal": "Opzionale se selezionato",
     "orderConfirmationTitle": "CONFERMA D'ORDINE",
     "orderDate": "Data ordine",
     "orderNumber": "Ordine n.",
@@ -77,7 +90,9 @@
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
       "thankYouForOrder": "Grazie per il vostro ordine."
-    }
+    },
+    "serialNumbers": "Numeri di serie",
+    "allocatedSerialsNote": "Numeri di serie assegnati; soggetti a modifica al momento dell’evasione."
   },
   "errors": {
     "permissions": {

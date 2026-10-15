@@ -470,8 +470,8 @@ async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   // The EE ai_schema migration declares vector-typed columns and no migration
-  // creates the extension; create it when the server ships pgvector (CI's
-  // ankane/pgvector does), otherwise let the migration fail with its own error.
+  // creates the extension; create it when the server ships pgvector (the
+  // pinned pgvector image does), otherwise let the migration fail with its own error.
   await connection.raw('CREATE EXTENSION IF NOT EXISTS "vector"').catch(() => undefined);
   // Stand-in Citus catalog so migration distribution probes succeed quietly
   // on plain Postgres (see test-utils/dbConfig.ts).

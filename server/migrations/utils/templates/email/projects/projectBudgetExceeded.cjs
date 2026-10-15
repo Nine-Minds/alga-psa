@@ -15,6 +15,7 @@ const COPY = {
   it: { subject: 'Budget del progetto superato: {{project.name}}', label: 'Budget del progetto superato', intro: 'Il nuovo lavoro fatturabile ha superato il limite rigido di budget del progetto. L’eccedenza è stata svalutata.', billed: 'Fatturato', cap: 'Limite di budget', writtenDown: 'Svalutato', button: 'Rivedi progetto', footer: 'Powered by AlgaPSA' },
   pl: { subject: 'Przekroczono budżet projektu: {{project.name}}', label: 'Przekroczono budżet projektu', intro: 'Nowa praca podlegająca rozliczeniu przekroczyła twardy limit budżetu projektu. Nadwyżka została odpisana.', billed: 'Zafakturowano', cap: 'Limit budżetu', writtenDown: 'Odpisano', button: 'Sprawdź projekt', footer: 'Powered by AlgaPSA' },
   pt: { subject: 'Orçamento do projeto excedido: {{project.name}}', label: 'Orçamento do projeto excedido', intro: 'Novo trabalho faturável excedeu o limite rígido de orçamento deste projeto. O excesso foi baixado.', billed: 'Faturado', cap: 'Limite do orçamento', writtenDown: 'Baixado', button: 'Revisar projeto', footer: 'Desenvolvido por AlgaPSA' },
+  sv: { subject: 'Projektbudgeten överskriden: {{project.name}}', label: 'Projektbudgeten överskriden', intro: 'Nytt debiterbart arbete överskred projektets fasta budgettak. Det överskjutande beloppet skrevs ned.', billed: 'Fakturerat', cap: 'Budgettak', writtenDown: 'Nedskrivet', button: 'Granska projekt', footer: 'Drivs av AlgaPSA' },
 };
 
 function body(c) {

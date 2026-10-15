@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import type {
   NormalizedRmmAlertEvent,
   RmmAlertProcessingContext,
@@ -15,6 +15,12 @@ import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '../../lib/tickets/ticketLifecycleEvents';
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -104,7 +110,7 @@ async function processTriggered(
   const context = await resolveAlertContext(knex, event);
   const dedupKey = computeDedupKey(event);
 
-  const result = await knex.transaction(async (trx): Promise<RmmAlertProcessingResult> => {
+  const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
     const existing = await db.table('rmm_alerts')
@@ -112,17 +118,21 @@ async function processTriggered(
         integration_id: event.integrationId,
         external_alert_id: event.externalAlertId,
       })
-      .first('alert_id', 'status', 'ticket_id');
+      .first('alert_id', 'status', 'ticket_id', 'device_name');
 
-    // Same external alert in a live state again = redelivery; nothing to do.
-    // Suppressed alerts fall through when reconciliation reprocesses them.
+    // Same external alert in a live state again = redelivery. Refresh only a
+    // previously missing name so re-polled enrichment reaches stored alerts;
+    // otherwise the duplicate is a no-op. Suppressed alerts fall through
+    // when reconciliation reprocesses them.
     const duplicateStatuses = options.reprocessSuppressed
       ? ['active', 'acknowledged']
       : ['active', 'acknowledged', 'suppressed'];
     if (existing && duplicateStatuses.includes(existing.status)) {
+      const refresh: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (existing.device_name == null && event.deviceName != null) refresh.device_name = event.deviceName;
       await db.table('rmm_alerts')
         .where({ alert_id: existing.alert_id })
-        .update({ updated_at: new Date().toISOString() });
+        .update(refresh);
       return {
         outcome: 'skipped',
         alertId: existing.alert_id,
@@ -304,7 +314,7 @@ async function processReset(
   let resolvedQuietly = false;
   let resolvedAssetId: string | null = null;
 
-  const result = await knex.transaction(async (trx): Promise<RmmAlertProcessingResult> => {
+  const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
     const existing = await db.table('rmm_alerts')
@@ -332,6 +342,21 @@ async function processReset(
       return { outcome: 'resolved', alertId: existing.alert_id, warnings };
     }
 
+    // rmm_alerts.ticket_id has no FK, so the linked ticket may have been
+    // deleted; detach it instead of noting against a missing ticket.
+    if (existing.ticket_id) {
+      const ticket = await db.table('tickets')
+        .where({ ticket_id: existing.ticket_id })
+        .first('ticket_id');
+      if (!ticket) {
+        await db.table('rmm_alerts')
+          .where({ alert_id: existing.alert_id })
+          .update({ ticket_id: null });
+        warnings.push(`Linked ticket ${existing.ticket_id} no longer exists; alert resolved without ticket update`);
+        existing.ticket_id = null;
+      }
+    }
+
     if (existing.ticket_id && existing.matched_rule_id) {
       const rule = (await db.table('rmm_alert_rules')
         .where({ rule_id: existing.matched_rule_id })
@@ -347,9 +372,16 @@ async function processReset(
         if (await isTicketUntouched(trx, event.tenantId, existing.ticket_id)) {
           const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
+            const transitionBefore = await captureTicketTransitionSnapshot(trx, event.tenantId, existing.ticket_id);
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, updated_at: new Date().toISOString() });
+              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), ...ticketUpdateStamp(trx, null) });
+            await publishTicketTransitionsAfterCommit(trx, {
+              tenant: event.tenantId,
+              before: transitionBefore,
+              correlationId: event.externalAlertId,
+            });
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });
@@ -449,7 +481,7 @@ async function publishSafely(
   result: RmmAlertProcessingResult,
   assetId?: string | null
 ): Promise<void> {
-  if (!ctx.deps?.publishWorkflowEvent) return;
+  if (!ctx.deps?.publishRmmAlertEvent) return;
   try {
     // Shape matches RmmAlertEventPayloadSchema: optional fields are omitted,
     // never null.
@@ -470,7 +502,7 @@ async function publishSafely(
     if (eventType === 'RMM_ALERT_TRIGGERED') payload.triggeredAt = event.occurredAt;
     if (eventType === 'RMM_ALERT_RESOLVED') payload.resolvedAt = event.occurredAt;
 
-    await ctx.deps.publishWorkflowEvent({ eventType, tenantId: event.tenantId, payload });
+    await ctx.deps.publishRmmAlertEvent({ eventType, tenantId: event.tenantId, payload });
   } catch (error) {
     ctx.deps?.logger?.warn?.(`[rmm-alerts] Failed to publish ${eventType}: ${String(error)}`);
   }

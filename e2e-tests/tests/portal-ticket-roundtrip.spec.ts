@@ -114,6 +114,10 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
         && Boolean(request.postData()?.includes(acknowledgment))),
       portalPage.getByRole('button', { name: 'Add Comment', exact: true }).click(),
     ]);
+    // The draft editor also renders the text while the action is in flight;
+    // only a settled action and a closed composer prove the comment was saved.
+    expect((await commentRequest.response())?.ok()).toBe(true);
+    await expect(portalPage.locator('[contenteditable="true"]:visible')).toHaveCount(0);
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
     await portalPage.reload();
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();

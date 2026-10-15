@@ -18,6 +18,12 @@ vi.mock('../../../lib/pushNotifications/expoPushService', () => ({
     body: params.body,
     data: { ticketId: params.ticketId },
   }),
+  buildTaskPushMessage: (params: { expoPushToken: string; title: string; body: string; taskId: string; tenant: string }) => ({
+    to: params.expoPushToken,
+    title: params.title,
+    body: params.body,
+    data: { taskId: params.taskId, url: `alga://project-task/${params.taskId}` },
+  }),
   sendPushNotifications: (...args: unknown[]) => mockSendPush(...args),
 }));
 
@@ -181,5 +187,96 @@ describe('pushNotificationDispatcher', () => {
       expect(mockGetActiveTokens).toHaveBeenCalled();
       expect(mockSendPush).toHaveBeenCalled();
     }
+  });
+
+  describe('project tasks and mentions', () => {
+    const taskId = '33333333-4444-4555-8666-777777777777';
+    const taskLink = `https://app.example.com/msp/projects/11111111-2222-4333-8444-555555555555?phaseId=x&taskId=${taskId}`;
+
+    beforeEach(() => {
+      mockGetActiveTokens.mockResolvedValue([
+        { expo_push_token: 'ExponentPushToken[t]', device_id: 'd', platform: 'ios' },
+      ]);
+      mockSendPush.mockResolvedValue(undefined);
+    });
+
+    it.each(['task-assigned', 'task-additional-agent-assigned', 'task-additional-agent-added', 'task-comment-added'])(
+      'pushes %s with the task id from metadata, not the link',
+      async (template) => {
+        await triggerPushForNotification({
+          ...baseNotification,
+          template_name: template,
+          link: taskLink,
+          metadata: { taskId, projectId: '11111111-2222-4333-8444-555555555555' },
+        });
+
+        expect(mockSendPush).toHaveBeenCalledWith(
+          [expect.objectContaining({ data: { taskId, url: `alga://project-task/${taskId}` } })],
+          baseNotification.tenant,
+        );
+      },
+    );
+
+    it('reads metadata that arrived as a JSON string', async () => {
+      await triggerPushForNotification({
+        ...baseNotification,
+        template_name: 'task-comment-added',
+        link: taskLink,
+        metadata: JSON.stringify({ taskId }) as unknown as Record<string, unknown>,
+      });
+      expect(mockSendPush).toHaveBeenCalledWith(
+        [expect.objectContaining({ data: expect.objectContaining({ taskId }) })],
+        baseNotification.tenant,
+      );
+    });
+
+    it('pushes a user-mentioned notification only when the mention is on a task', async () => {
+      await triggerPushForNotification({
+        ...baseNotification,
+        template_name: 'user-mentioned',
+        link: taskLink,
+        metadata: { taskId, entityType: 'task comment' },
+      });
+      expect(mockSendPush).toHaveBeenCalledWith(
+        [expect.objectContaining({ data: expect.objectContaining({ taskId }) })],
+        baseNotification.tenant,
+      );
+
+      mockSendPush.mockClear();
+      mockGetActiveTokens.mockClear();
+      await triggerPushForNotification({
+        ...baseNotification,
+        template_name: 'user-mentioned',
+        link: 'https://app.example.com/msp/documents/abc',
+        metadata: { documentId: 'abc' },
+      });
+      expect(mockGetActiveTokens).not.toHaveBeenCalled();
+      expect(mockSendPush).not.toHaveBeenCalled();
+    });
+
+    it('pushes a ticket comment @mention', async () => {
+      await triggerPushForNotification({
+        ...baseNotification,
+        template_name: 'user-mentioned-in-comment',
+        link: null,
+        metadata: { ticketId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', commentId: 'c1' },
+      });
+      expect(mockSendPush).toHaveBeenCalledWith(
+        [expect.objectContaining({ data: { ticketId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' } })],
+        baseNotification.tenant,
+      );
+    });
+
+    it('prefers the ticket id in metadata over the link and still pushes without a link', async () => {
+      await triggerPushForNotification({
+        ...baseNotification,
+        link: null,
+        metadata: { ticketId: '99999999-8888-4777-8666-555555555555' },
+      });
+      expect(mockSendPush).toHaveBeenCalledWith(
+        [expect.objectContaining({ data: { ticketId: '99999999-8888-4777-8666-555555555555' } })],
+        baseNotification.tenant,
+      );
+    });
   });
 });

@@ -276,7 +276,10 @@
       "heading": "Usługi z opłatą stałą",
       "itemLabel": "Pozycja {{index}}",
       "selectItemPlaceholder": "Wybierz element",
-      "servicesAndProducts": "Usługi i produkty"
+      "servicesAndProducts": "Usługi i produkty",
+      "recurringQuantity": "Ilość cykliczna",
+      "unitRateOptional": "Opcjonalnie. Pozostaw stawkę jednostkową pustą, aby przy tworzeniu linii z tego presetu użyć ceny katalogowej usługi w walucie klienta.",
+      "alertUnits": "Aby zamiast tego rozliczać usługę za stanowisko lub jednostkę, wybierz dla niej cennik według ilości cyklicznej: jest rozliczana jako ilość × stawka jednostkowa w każdym okresie i nie wchodzi w skład stawki bazowej."
     },
     "hourly": {
       "addHourlyService": "Dodaj usługę godzinową",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Usługa {{index}}: Proszę wybrać usługę",
       "unitOfMeasureRequired": "Usługa {{index}}: Wymagana jest jednostka miary",
       "unitRateRequired": "Usługa {{index}}: Wymagana jest stawka jednostkowa",
-      "usageServiceRequired": "Wymagana jest co najmniej jedna usługa oparta na użytkowaniu"
+      "usageServiceRequired": "Wymagana jest co najmniej jedna usługa oparta na użytkowaniu",
+      "recurringQuantityInvalid": "Usługa {{index}}: ilość cykliczna musi być liczbą całkowitą równą zero lub większą"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Stawka za jednostkę (stosowana, jeśli ceny warstwowe są wyłączone).",
         "minimumUsage": "Minimalna liczba jednostek podlegających rozliczeniu w okresie.",
         "unitOfMeasure": "np. GB, Użytkownik, Urządzenie."
-      }
+      },
+      "catalogUnitPrecedence": "Jednostka z katalogu ma pierwszeństwo przed jednostką z tej konfiguracji użycia."
     }
   },
   "list": {
@@ -727,7 +732,8 @@
         "enterRatePlaceholder": "Wprowadź stawkę",
         "metadata": "Typ usługi: {{type}} | Metoda: {{method}}",
         "noCurrencyPrice": "Brak ceny {{currency}}",
-        "rateDetail": "Stawka: {{symbol}}{{amount}}"
+        "rateDetail": "Stawka: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Domyślna stawka katalogowa: {{symbol}}{{amount}}"
       },
       "unknownService": "Nieznana usługa"
     },

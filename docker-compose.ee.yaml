@@ -211,6 +211,8 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_started
+      postgres-extension-update:
+        condition: service_completed_successfully
     entrypoint: ["/opt/setup/ee-entrypoint.sh"]
 
   workflow-worker:
@@ -422,16 +424,22 @@ services:
       DB_PORT: ${DB_PORT:-5432}
     secrets:
       - postgres_password
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_DB_PORT:-5432}:5432"
 
   redis:
     extends:
       file: docker-compose.base.yaml
       service: redis
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
 
   pgbouncer:
     extends:
       file: docker-compose.base.yaml
       service: pgbouncer
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
 
   temporal-dev:
     image: temporalio/auto-setup:1.24.2

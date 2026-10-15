@@ -148,3 +148,42 @@ describe('ClientPortalConfigEditor — project billing', () => {
     expect(screen.getByText(/Billing summary:/)).toBeInTheDocument();
   });
 });
+
+describe('ClientPortalConfigEditor — task start date field', () => {
+  afterEach(() => cleanup());
+
+  const withTasks = (fields: string[]) =>
+    buildConfig({ show_phases: true, show_tasks: true, visible_task_fields: fields });
+  const startDateCheckbox = () => document.getElementById('field-start_date') as HTMLInputElement | null;
+
+  it('offers Start Date as an optional task field, just before Due Date', () => {
+    render(<ClientPortalConfigEditor config={withTasks(['task_name', 'due_date', 'status'])} onChange={() => {}} />);
+    const start = startDateCheckbox();
+    expect(start).not.toBeNull();
+    expect(start!.disabled).toBe(false);
+    const ids = Array.from(document.querySelectorAll('[id^="field-"]')).map((el) => el.id);
+    expect(ids.indexOf('field-start_date')).toBe(ids.indexOf('field-due_date') - 1);
+  });
+
+  it('is off by default, so existing projects do not start exposing start dates', () => {
+    expect(DEFAULT_CLIENT_PORTAL_CONFIG.visible_task_fields).not.toContain('start_date');
+    render(<ClientPortalConfigEditor config={withTasks(DEFAULT_CLIENT_PORTAL_CONFIG.visible_task_fields ?? [])} onChange={() => {}} />);
+    expect(startDateCheckbox()!.checked).toBe(false);
+  });
+
+  it('adds and removes start_date from the visible fields without touching the others', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ClientPortalConfigEditor config={withTasks(['task_name', 'due_date'])} onChange={onChange} />
+    );
+    fireEvent.click(startDateCheckbox()!);
+    const enabled = onChange.mock.calls[0][0] as IClientPortalConfig;
+    expect([...(enabled.visible_task_fields ?? [])].sort()).toEqual(['due_date', 'start_date', 'task_name']);
+
+    rerender(<ClientPortalConfigEditor config={enabled} onChange={onChange} />);
+    expect(startDateCheckbox()!.checked).toBe(true);
+    fireEvent.click(startDateCheckbox()!);
+    const disabledAgain = onChange.mock.calls[1][0] as IClientPortalConfig;
+    expect([...(disabledAgain.visible_task_fields ?? [])].sort()).toEqual(['due_date', 'task_name']);
+  });
+});

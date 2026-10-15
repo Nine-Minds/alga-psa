@@ -5,6 +5,8 @@ import {
   correctEvidenceSchema,
   createOpportunitySchema,
   loseOpportunitySchema,
+  opportunityStageSchema,
+  opportunityStatusSchema,
   recordDeclaredEvidenceSchema,
   updateOpportunitySchema,
   winOpportunitySchema,
@@ -19,7 +21,24 @@ const positiveIntegerQuery = z.string()
   .refine((value) => value > 0, 'Must be a positive integer');
 
 export const createOpportunityApiSchema = createOpportunitySchema;
-export const updateOpportunityApiSchema = updateOpportunitySchema;
+
+// The package schema stays pure — stage/status/next-action belong to their
+// dedicated flows. The REST layer accepts them anyway so a full-body
+// read-modify-write PUT still round-trips, and so a caller that actually tries
+// to *change* one gets a 400 naming the canonical endpoint instead of a silent
+// field drop. OpportunityService.update enforces that distinction.
+export const updateOpportunityApiSchema = updateOpportunitySchema.extend({
+  stage: opportunityStageSchema.optional(),
+  status: opportunityStatusSchema.optional(),
+  // Nullable: a closed opportunity has no current step, so GET returns
+  // next_action/next_action_due as null and the echo has to validate.
+  next_action: z.string().trim().min(1).nullable().optional(),
+  next_action_due: z.string().datetime().nullable().optional(),
+});
+export const setOpportunityStageApiSchema = z.object({
+  stage: opportunityStageSchema,
+  detail: z.string().trim().optional().nullable(),
+});
 export const winOpportunityApiSchema = winOpportunitySchema;
 export const loseOpportunityApiSchema = loseOpportunitySchema;
 export const completeOpportunityActionApiSchema = completeNextActionSchema;
@@ -54,6 +73,7 @@ export const opportunityListQuerySchema = z.object({
 
 export type CreateOpportunityApi = z.infer<typeof createOpportunityApiSchema>;
 export type UpdateOpportunityApi = z.infer<typeof updateOpportunityApiSchema>;
+export type SetOpportunityStageApi = z.infer<typeof setOpportunityStageApiSchema>;
 export type WinOpportunityApi = z.infer<typeof winOpportunityApiSchema>;
 export type LoseOpportunityApi = z.infer<typeof loseOpportunityApiSchema>;
 export type CompleteOpportunityActionApi = z.infer<typeof completeOpportunityActionApiSchema>;

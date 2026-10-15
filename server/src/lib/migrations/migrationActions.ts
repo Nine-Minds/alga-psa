@@ -1,11 +1,13 @@
 'use server';
 
 import { createTenantKnex, tenantDb, type TenantDb } from '@alga-psa/db';
-import { JobService } from '@alga-psa/jobs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
+import { getJobRunner } from '@/lib/jobs/JobRunnerFactory';
+import { initializeJobRunner } from '@/lib/jobs/initializeJobRunner';
 import type { Knex } from 'knex';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
+import type { AssetTypeField } from '@alga-psa/types';
 import { MigrationPlanner, parseConfiguration } from './MigrationPlanner';
 import { MigrationReportService } from './MigrationReportService';
 import {
@@ -75,12 +77,13 @@ export interface MigrationConfigurationOptions {
   boards: Array<{ id: string; name: string }>;
   statuses: Array<{ id: string; name: string }>;
   priorities: Array<{ id: string; name: string }>;
-  assetTypes: Array<{ slug: string; name: string }>;
+  assetTypes: Array<{ slug: string; name: string; isBuiltin: boolean; fields: AssetTypeField[] }>;
   clients: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string }>;
   packageStatusNames: string[];
   packagePriorityNames: string[];
   packageAssetTypeNames: string[];
+  packageAssetCustomFields: Array<{ assetTypeName: string; fieldName: string; sampleValue: string | null; recordCount: number }>;
   stagedEntityTypes: AmpEntityType[];
 }
 
@@ -91,14 +94,15 @@ export async function getMigrationConfigurationOptions(
   const { knex } = await createTenantKnex(tenant);
   const db = tenantDb(knex, tenant);
 
-  return loadMigrationConfigurationOptions(db, knex, migrationJobId);
+  return loadMigrationConfigurationOptions(db, knex, migrationJobId, tenant);
 }
 
 /** Kept separate so the database-backed suite exercises this exact query. */
 export async function loadMigrationConfigurationOptions(
   db: TenantDb,
   knex: Knex,
-  migrationJobId: string
+  migrationJobId: string,
+  tenant: string
 ): Promise<MigrationConfigurationOptions> {
 
   const distinctPayloadValues = async (entityType: string, field: string): Promise<string[]> => {
@@ -119,7 +123,7 @@ export async function loadMigrationConfigurationOptions(
       .select('status_id', 'name')
       .orderBy('order_number'),
     db.table('priorities').select('priority_id', 'priority_name').orderBy('order_number'),
-    db.table('asset_type_registry').select('slug', 'name').orderBy('name'),
+    db.table('asset_type_registry').select('slug', 'name', 'is_builtin', 'fields_schema').orderBy('name'),
     db.table('clients').where({ is_inactive: false }).select('client_id', 'client_name').orderBy('client_name'),
     db
       .table('users')
@@ -137,12 +141,25 @@ export async function loadMigrationConfigurationOptions(
     distinctPayloadValues('tickets', 'priority_name'),
     distinctPayloadValues('assets', 'asset_type_name'),
   ]);
+  const customFieldQuery = await knex.raw(`
+    SELECT s.payload->>'asset_type_name' AS "assetTypeName", field.key AS "fieldName",
+           MIN(field.value #>> '{}') AS "sampleValue", COUNT(*)::int AS "recordCount"
+    FROM migration_staged_records s
+    CROSS JOIN LATERAL jsonb_each(s.custom_field_values) AS field(key, value)
+    WHERE s.tenant = ? AND s.migration_job_id = ? AND s.entity_type = 'assets'
+    GROUP BY s.payload->>'asset_type_name', field.key
+    ORDER BY 1, 2`, [tenant, migrationJobId]);
 
   return {
     boards: boards.map((row) => ({ id: row.board_id, name: row.board_name })),
     statuses: statuses.map((row) => ({ id: row.status_id, name: row.name })),
     priorities: priorities.map((row) => ({ id: row.priority_id, name: row.priority_name })),
-    assetTypes: assetTypes.map((row) => ({ slug: row.slug, name: row.name })),
+    assetTypes: assetTypes.map((row) => ({
+      slug: row.slug,
+      name: row.name,
+      isBuiltin: Boolean(row.is_builtin),
+      fields: (typeof row.fields_schema === 'string' ? JSON.parse(row.fields_schema) : row.fields_schema ?? []) as AssetTypeField[],
+    })),
     clients: clients.map((row) => ({ id: row.client_id, name: row.client_name })),
     users: users.map((row) => ({
       id: row.user_id,
@@ -151,6 +168,12 @@ export async function loadMigrationConfigurationOptions(
     packageStatusNames,
     packagePriorityNames,
     packageAssetTypeNames,
+    packageAssetCustomFields: (customFieldQuery.rows ?? customFieldQuery).map((row: any) => ({
+      assetTypeName: row.assetTypeName,
+      fieldName: row.fieldName,
+      sampleValue: row.sampleValue,
+      recordCount: Number(row.recordCount),
+    })),
     stagedEntityTypes: stagedTypes.map((row: { entity_type: AmpEntityType }) => row.entity_type),
   };
 }
@@ -215,25 +238,29 @@ export async function executeMigrationJob(migrationJobId: string): Promise<{ job
     throw new Error('Only a job with a clean preflight can run. Preflight it first.');
   }
 
-  const jobService = await JobService.create();
-  const { jobRecord } = await jobService.createAndScheduleJob('migration_apply', {
+  // AMP apply must use the same edition-aware runner that registers its worker
+  // handler. The legacy JobService always enqueues through pg-boss, which can
+  // be consumed by an unrelated CE worker in an enterprise deployment.
+  await initializeJobRunner();
+  const runner = await getJobRunner();
+  const { jobId } = await runner.scheduleJob('migration_apply', {
     tenantId: tenant,
     metadata: { user_id: userId, migrationJobId },
     migrationJobId,
     userId,
   });
-  if (!jobRecord.id) {
+  if (!jobId) {
     throw new Error('Migration job scheduling completed without returning a job id.');
   }
 
   await db.table('migration_jobs').where({ migration_job_id: migrationJobId }).update({
     state: 'queued',
-    job_id: jobRecord.id,
+    job_id: jobId,
     queued_at: knex.fn.now(),
     updated_at: knex.fn.now(),
   });
 
-  return { jobId: jobRecord.id };
+  return { jobId };
 }
 
 export async function cancelMigrationJob(migrationJobId: string): Promise<void> {

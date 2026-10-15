@@ -11,22 +11,32 @@ import type { IOpportunity, IOpportunityStep } from '@alga-psa/types';
 const dbMocks = vi.hoisted(() => {
   const afterCommitHooks: Array<() => void | Promise<void>> = [];
   const tableHandlers: Record<string, { first?: () => unknown; update?: (patch: unknown) => unknown }> = {};
+  const deletes: Array<{ table: string; criteria: unknown }> = [];
 
   function chain(name: string) {
     const q: any = {};
-    for (const method of ['where', 'whereIn', 'whereNull', 'whereNot', 'forUpdate', 'orderBy', 'select', 'limit']) {
+    let criteria: unknown;
+    for (const method of ['whereIn', 'whereNull', 'whereNot', 'forUpdate', 'orderBy', 'select', 'limit']) {
       q[method] = vi.fn(() => q);
     }
+    q.where = vi.fn((value: unknown) => {
+      criteria = value;
+      return q;
+    });
     q.first = vi.fn(async () => tableHandlers[name]?.first?.());
     q.update = vi.fn(async (patch: unknown) => tableHandlers[name]?.update?.(patch) ?? 1);
     q.insert = vi.fn(() => ({ returning: vi.fn(async () => [{}]) }));
-    q.delete = vi.fn(async () => 1);
+    q.delete = vi.fn(async () => {
+      deletes.push({ table: name, criteria });
+      return 1;
+    });
     return q;
   }
 
   return {
     afterCommitHooks,
     tableHandlers,
+    deletes,
     flush: async () => {
       for (const hook of afterCommitHooks.splice(0)) await hook();
     },
@@ -50,6 +60,11 @@ vi.mock('@alga-psa/db', () => ({
 const eventMocks = vi.hoisted(() => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => eventMocks);
@@ -139,6 +154,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   scheduleMocks.reset();
   dbMocks.afterCommitHooks.length = 0;
+  dbMocks.deletes.length = 0;
   for (const key of Object.keys(dbMocks.tableHandlers)) delete dbMocks.tableHandlers[key];
 });
 
@@ -151,14 +167,14 @@ describe('syncStepScheduleEntry event publication', () => {
     await syncStepScheduleEntry({} as never, 'tenant-1', step(), opportunity, 'user-1');
 
     // Inside the transaction nothing has been published yet.
-    expect(eventMocks.publishEvent).not.toHaveBeenCalled();
+    expect(eventMocks.publishWorkflowEvent).not.toHaveBeenCalled();
     await dbMocks.flush();
 
-    expect(eventMocks.publishEvent).toHaveBeenCalledTimes(1);
-    expect(eventMocks.publishEvent).toHaveBeenCalledWith({
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledTimes(1);
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledWith({
       eventType: 'SCHEDULE_ENTRY_CREATED',
+      ctx: { tenantId: 'tenant-1', actor: { actorType: 'USER', actorUserId: 'user-1' } },
       payload: {
-        tenantId: 'tenant-1',
         userId: 'user-1',
         entryId: 'entry-1',
         changes: {
@@ -191,8 +207,8 @@ describe('syncStepScheduleEntry event publication', () => {
     await syncStepScheduleEntry({} as never, 'tenant-1', step({ schedule_entry_id: 'entry-9' }), opportunity, 'user-1');
     await dbMocks.flush();
 
-    expect(eventMocks.publishEvent).toHaveBeenCalledTimes(1);
-    const { eventType, payload } = eventMocks.publishEvent.mock.calls[0][0] as any;
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledTimes(1);
+    const { eventType, payload } = eventMocks.publishWorkflowEvent.mock.calls[0][0] as any;
     expect(eventType).toBe('SCHEDULE_ENTRY_UPDATED');
     expect(payload.entryId).toBe('entry-9');
     expect(payload.changes.updateType).toBe('single');
@@ -220,8 +236,8 @@ describe('syncStepScheduleEntry event publication', () => {
 
     expect(scheduleMocks.entries.has('entry-9')).toBe(false);
     expect(updateSpy).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'step-1', { schedule_entry_id: null });
-    expect(eventMocks.publishEvent).toHaveBeenCalledTimes(1);
-    const { eventType, payload } = eventMocks.publishEvent.mock.calls[0][0] as any;
+    expect(eventMocks.publishWorkflowEvent).toHaveBeenCalledTimes(1);
+    const { eventType, payload } = eventMocks.publishWorkflowEvent.mock.calls[0][0] as any;
     expect(eventType).toBe('SCHEDULE_ENTRY_DELETED');
     expect(payload.changes.deleteType).toBe('single');
     expect(payload.changes.before.id).toBe('entry-9');
@@ -251,7 +267,7 @@ describe('removeOpportunityStepScheduleEntries', () => {
     expect(updateSpy).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'step-3', { schedule_entry_id: null });
     expect(updateSpy).not.toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'step-2', expect.anything());
 
-    const deletes = eventMocks.publishEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
+    const deletes = eventMocks.publishWorkflowEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
     expect(deletes.map(([event]: any[]) => event.payload.entryId).sort()).toEqual(['entry-a', 'entry-b']);
   });
 });
@@ -282,13 +298,10 @@ describe('closing and deleting a deal', () => {
     // The plan survives the close — only the calendar presence goes.
     expect(stepDeleteSpy).not.toHaveBeenCalled();
 
-    const deletes = eventMocks.publishEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
+    const deletes = eventMocks.publishWorkflowEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
     expect(deletes).toHaveLength(1);
-    expect(deletes[0][0].payload).toEqual(expect.objectContaining({
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-      entryId: 'entry-a',
-    }));
+    expect(deletes[0][0].ctx).toMatchObject({ tenantId: 'tenant-1', actor: { actorUserId: 'user-1' } });
+    expect(deletes[0][0].payload).toEqual(expect.objectContaining({ entryId: 'entry-a' }));
   });
 
   it('deleteOpportunity sweeps the entries before the steps cascade away', async () => {
@@ -308,8 +321,16 @@ describe('closing and deleting a deal', () => {
 
     expect(scheduleMocks.entries.size).toBe(0);
     expect(deleteSpy).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'opportunity-1');
-    const deletes = eventMocks.publishEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
+    const deletes = eventMocks.publishWorkflowEvent.mock.calls.filter(([event]: any[]) => event.eventType === 'SCHEDULE_ENTRY_DELETED');
     expect(deletes).toHaveLength(1);
     expect(deletes[0][0].payload.entryId).toBe('entry-a');
+
+    // The deal's attachments lose their link, but the documents themselves are
+    // library rows that may also be filed against the client or a quote.
+    expect(dbMocks.deletes).toContainEqual({
+      table: 'document_associations',
+      criteria: { entity_type: 'opportunity', entity_id: 'opportunity-1' },
+    });
+    expect(dbMocks.deletes.some((row) => row.table === 'documents')).toBe(false);
   });
 });

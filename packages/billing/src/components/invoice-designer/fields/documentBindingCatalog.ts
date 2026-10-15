@@ -1,5 +1,6 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Designer field picker builds its options with the shared expression-authoring path builder */
-import type { TemplateAst } from '@alga-psa/types';
+import type { TemplateAst, TemplateI18nRef } from '@alga-psa/types';
+import { getStandardDocumentLabel } from '../../../lib/invoice-template-ast/standardDocumentLabels';
 import type {
   ExpressionMode,
   SharedExpressionContextRoot,
@@ -9,8 +10,11 @@ import type {
 import { buildInvoiceExpressionPathOptions } from '@alga-psa/workflows/expression-authoring';
 
 import { buildInvoiceTemplateBindings } from '../../../lib/invoice-template-ast/standardTemplates';
-import { QUOTE_TEMPLATE_VALUE_BINDINGS } from '../../../lib/quote-template-ast/bindings';
-import { SALES_ORDER_TEMPLATE_VALUE_BINDINGS } from '../../../lib/sales-order-template-ast/bindings';
+import { QUOTE_TEMPLATE_VALUE_BINDINGS, buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
+import {
+  SALES_ORDER_TEMPLATE_VALUE_BINDINGS,
+  buildSalesOrderTemplateBindings,
+} from '../../../lib/sales-order-template-ast/bindings';
 import type { DesignerDocumentKind } from '../utils/documentKind';
 import {
   getTemplateFieldDefinition,
@@ -108,6 +112,8 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
     { name: 'service_sku', valueType: 'string', description: 'Product SKU.' },
     { name: 'quantity_ordered', valueType: 'number', description: 'Quantity ordered.' },
     { name: 'quantity_fulfilled', valueType: 'number', description: 'Quantity fulfilled so far.' },
+    { name: 'allocated_serials', valueType: 'string', description: 'Serial numbers currently allocated to this line.' },
+    { name: 'allocated_serials_display', valueType: 'string', description: 'Comma-separated serial numbers currently allocated to this line.' },
     { name: 'unit_price', valueType: 'number', description: 'Unit price.' },
     { name: 'amount', valueType: 'number', description: 'Line amount (qty × unit price).' },
   ],
@@ -266,6 +272,60 @@ export const getDocumentBindingFields = (documentKind: DesignerDocumentKind): Do
 
 export const getDocumentItemFields = (documentKind: DesignerDocumentKind): DocumentItemField[] =>
   ITEM_FIELDS[documentKind];
+
+/**
+ * The binding catalog each document type ships its standard templates with. Layouts
+ * authored in the designer register these same ids, so a designed layout reads like a
+ * shipped one and binding pickers can show the catalog's friendly names.
+ */
+export const resolveDocumentCanonicalBindings = (
+  documentKind: DesignerDocumentKind
+): NonNullable<TemplateAst['bindings']> => {
+  if (documentKind === 'quote') return buildQuoteTemplateBindings();
+  if (documentKind === 'sales-order') return buildSalesOrderTemplateBindings();
+  return buildInvoiceTemplateBindings();
+};
+
+const resolveDocumentValueBindings = (documentKind: DesignerDocumentKind): CatalogValueBindings =>
+  resolveDocumentCanonicalBindings(documentKind).values ?? {};
+
+/** Render-model path of the issuing company's logo, the source a Logo block binds to. */
+export const resolveDocumentLogoRenderPath = (documentKind: DesignerDocumentKind): string => {
+  const binding = Object.values(resolveDocumentValueBindings(documentKind)).find((candidate) =>
+    IMAGE_BINDING_ID.test(candidate.id)
+  );
+  if (!binding) {
+    throw new Error(`No logo binding is defined for ${documentKind} documents.`);
+  }
+  return binding.path;
+};
+
+/** Every document kind's logo path, for recognising a logo binding in imported layouts. */
+export const isDocumentLogoRenderPath = (path: string): boolean =>
+  (['invoice', 'quote', 'sales-order'] as const).some(
+    (documentKind) => resolveDocumentLogoRenderPath(documentKind) === path.trim()
+  );
+
+const DATE_PATH = /(date|period(start|end)|_at$|At$)/i;
+const QUANTITY_PATH = /(quantity|count|qty)/i;
+
+/** The display format a data field should start with when bound to `bindingKey`. */
+export const resolveDefaultFieldFormat = (bindingKey: string): 'text' | 'number' | 'currency' | 'date' => {
+  const leaf = bindingKey.trim().split('.').pop() ?? '';
+  if (DATE_PATH.test(leaf)) return 'date';
+  if (QUANTITY_PATH.test(leaf)) return 'number';
+  if (NUMERIC_RENDER_PATH.test(leaf) && !/number$/i.test(leaf)) return 'currency';
+  return 'text';
+};
+
+// Display-path leaves whose standard label key differs from the leaf name.
+const STANDARD_LABEL_KEY_BY_LEAF: Record<string, string> = { number: 'invoiceNumber' };
+
+/** The translated standard label for a bound field (e.g. invoice.issueDate -> "Issue Date"), if one exists. */
+export const resolveStandardFieldLabel = (bindingKey: string): TemplateI18nRef | undefined => {
+  const leaf = bindingKey.trim().split('.').pop() ?? '';
+  return getStandardDocumentLabel(`labels.${STANDARD_LABEL_KEY_BY_LEAF[leaf] ?? leaf}`);
+};
 
 /** Picker display path -> render-model path. */
 export const resolveDocumentRenderPath = (

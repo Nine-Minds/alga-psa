@@ -8,7 +8,7 @@
  * data-flow idioms, worked example, pitfalls) is authored here.
  */
 
-import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { listWorkflowExpressionFunctions } from '../expressionFunctions';
 import {
@@ -133,7 +133,11 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
         'Discover: GET /api/workflow/registry/authoring-guide (this document), GET /api/workflow/registry/events (trigger catalog), GET /api/workflow/registry/actions and /designer-catalog (action ids + input/output schemas), GET /api/workflow/registry/schemas/{schemaRef} (event payload schemas).',
         'Resolve tenant references (priority ids, user ids, activity groups, boards…) through the v1 REST endpoints before composing; never invent UUIDs.',
         'Compose the WorkflowDefinition JSON against definitionSchema and stepSchemas.',
-        'Verify: POST /api/workflow-definitions/validate until it returns no errors, then POST /api/workflow-definitions/simulate with a realistic payload and read the trace (action.call steps are stubbed and their evaluated inputs recorded).',
+        'Verify: POST /api/workflow-definitions/validate until it returns no errors, then POST /api/workflow-definitions/simulate and read the trace (action.call steps are stubbed and their evaluated inputs recorded). ' +
+          'For event-triggered workflows, simulate with useLatestEvent: true (or eventId for a specific stored event) so the stored event is replayed through the trigger; send an explicit payload only for non-event triggers, or when no event of that type has been stored (404 "No stored workflow runtime event found…"). ' +
+          'payloadSource: "replayed-event" with status completed means the trigger contract was checked against real data. ' +
+          '"Production would skip this event" means production would never launch this workflow for that event; fix it by adding trigger.payloadMapping, or by setting payloadSchemaRef to the event\'s source schema ref (a "failed workflow payload schema" replay failure means the same thing). ' +
+          'The warning "payload synthesized from schema…" means the trigger contract was NOT checked, so that simulate does not count as verification.',
         'Save: POST /api/workflow-definitions (create draft) or PUT /api/workflow-definitions/{workflowId}/{version} with expectedDraftVersion (replace draft). Reply with the editor link /msp/workflow-editor/{workflowId} — publishing is a human action.',
       ],
     },
@@ -171,7 +175,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
         'Expressions are JSONata programs written as { "$expr": "<source>" } objects.',
         '`==` is normalized to JSONata `=` for equality; use `!=`, `>`, `>=`, `<`, `<=` for comparisons and `and` / `or` for boolean logic. `$not(...)` is NOT allowlisted — negate with the conditional `expr ? false : true` (treats a missing value as false-y, like $not would), or compare explicitly (`vars.flag = false`); note comparisons against a missing field evaluate to false.',
         'String concatenation uses `&` (e.g. payload.name & "!"). String literals use double quotes inside the source.',
-        'Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append. They may be called with or without a $ prefix; any other function name fails validation.',
+        `Only these functions are allowed, exhaustively: ${listWorkflowExpressionFunctions().map((fn) => fn.name).join(', ')}. They may be called with or without a $ prefix; any other function name, JSONata built-ins such as $length or $split included, fails validation.`,
         'Results must be JSON-serializable and under 256KiB.',
       ],
       contexts: [
@@ -302,7 +306,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
       'In transform.assign, reference loop variables as vars.<itemVar> — bare locals only resolve in control-flow expressions.',
       'Do not invent tenant UUIDs (priorities, users, boards, groups) — resolve them via the v1 REST endpoints first.',
       'The workflow payloadSchemaRef must exist in the schema registry; when it differs from the trigger event schema a trigger.payloadMapping is required.',
-      'Validate, then simulate, before saving — the simulate trace shows each action\'s evaluated input without side effects.',
+      'Validate, then simulate with useLatestEvent: true for event triggers, before saving; a synthesized-payload warning means the trigger contract was not checked.',
       'JSONata filter results collapse when exactly one item matches. Wrong: `len(vars.found.comments[is_internal = false]) > 0` returns 0 for zero matches and also 0 for one matching object; only 2+ matches works. Correct: force an array with `len([vars.found.comments[is_internal = false]]) > 0`. This is data-dependent and breaks precisely in the common case of exactly one client reply.',
       'event.wait timeout throws `{ category: "TimeoutError" }`; it does not fall through and there is no resumed-vs-timed-out flag. Wrong: put the timeout path in the next step after event.wait. Correct: wrap the wait in control.tryCatch and treat catch[] as the timeout path, e.g. `{ "type": "control.tryCatch", "try": [{ "type": "event.wait", "config": { "timeoutMs": 86400000 } }], "catch": [{ "id": "handle-timeout", "type": "action.call", "config": { "...": "..." } }] }`.',
       'The function allowlist is exactly nowIso, coalesce, len, toString, append. Wrong: `$count`, `$filter`, `$map`, `$toMillis`, `$sum`, and `$substring` fail validation. Correct: use `len([...])` instead of `$count(...)`; compare full ISO-8601 UTC timestamps as strings instead of `$toMillis(...)`.',

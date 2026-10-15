@@ -63,6 +63,7 @@ export async function escalateTicket(
     const ticket = await scopedDb.table('tickets')
       .where({ ticket_id: ticketId })
       .select(
+        't.board_id',
         'ticket_id',
         'ticket_number',
         'title',
@@ -461,6 +462,8 @@ async function sendEscalationEmailNotification(
     };
 
     await emailService.sendNotification({
+      mailClass: 'ticket',
+      boardId: ticketDetails?.board_id,
       tenant,
       userId,
       subtypeId: subtype?.id || 1,

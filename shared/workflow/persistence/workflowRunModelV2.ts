@@ -10,7 +10,7 @@ export type WorkflowRunRecord = {
   tenant?: string | null;
   status: string;
   node_path?: string | null;
-  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   trigger_metadata_json?: Record<string, unknown> | null;
   trigger_fire_key?: string | null;
   event_type?: string | null;

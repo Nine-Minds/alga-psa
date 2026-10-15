@@ -21,6 +21,7 @@ import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '../lib/locale
 import { resolveEmailLocale } from '../emailLocaleResolver';
 import Handlebars from 'handlebars';
 import { applyFromNameOverride } from '../senderIdentity';
+import { TenantEmailService } from '../TenantEmailService';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -31,7 +32,8 @@ interface SystemProviderSnapshot {
 }
 
 // Extend BaseEmailParams for system-specific parameters
-export interface SystemEmailParams extends BaseEmailParams {
+export interface SystemEmailParams extends Omit<BaseEmailParams, 'mailClass'> {
+  to: BaseEmailParams['to'];
   subject?: string;
   html?: string;
   text?: string;
@@ -241,11 +243,21 @@ export class SystemEmailService extends BaseEmailService {
   }
 
   /**
-   * Replace template variables using Handlebars
+   * Replace template variables using Handlebars.
+   *
+   * Handlebars HTML-escapes `{{var}}` by default, which is correct for the
+   * HTML body only. Subject and plain-text parts are NOT HTML: render them with
+   * `noEscape: true` so values like URLs (`?requestId=<uuid>` -> `&#x3D;`) or
+   * names containing `"`/`&` render literally. Same rule as
+   * server/src/lib/notifications/sendEventEmail.ts.
    */
-  private replaceVariables(template: string, data: Record<string, any>): string {
+  private replaceVariables(
+    template: string,
+    data: Record<string, any>,
+    options: { noEscape?: boolean } = {}
+  ): string {
     try {
-      const compiledTemplate = Handlebars.compile(template);
+      const compiledTemplate = Handlebars.compile(template, { noEscape: options.noEscape === true });
       return compiledTemplate(data);
     } catch (error) {
       console.error('[SystemEmailService] Error compiling template with Handlebars:', error);
@@ -267,10 +279,24 @@ export class SystemEmailService extends BaseEmailService {
     const providerSnapshot = await this.refreshProviderState();
     return super.sendEmail({
       ...params,
+      to: params.to ?? '',
+      mailClass: 'general',
       resolvedSystemFromAddress: providerSnapshot.fromAddress,
       resolvedEmailProvider: providerSnapshot.emailProvider,
       resolvedProviderInitError: providerSnapshot.providerInitError,
     });
+  }
+
+  /** Send tenant-scoped appointment mail through tenant routing, then retain the established system fallback. */
+  public async sendTenantScopedEmail(params: SystemEmailParams, mailClass: import('@alga-psa/types').OutboundMailClass): Promise<EmailSendResult> {
+    if (!params.tenantId) return this.sendEmail(params);
+    const tenantService = TenantEmailService.getInstance(params.tenantId);
+    // The platform fallback is only for a tenant without a usable tenant
+    // provider. Once delivery is attempted, failures may be validation errors,
+    // provider rejections after acceptance, or rate limits; retrying those via
+    // another From/provider can violate routing or send duplicates.
+    if (!(await tenantService.isConfigured())) return this.sendEmail(params);
+    return tenantService.sendEmail({ ...params, to: params.to, mailClass });
   }
 
   public override async isConfigured(): Promise<boolean> {
@@ -341,10 +367,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to hardcoded template
@@ -379,10 +406,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to hardcoded template
@@ -431,10 +459,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -442,14 +471,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getAppointmentRequestReceivedFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -468,10 +497,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -486,7 +516,7 @@ export class SystemEmailService extends BaseEmailService {
       contentType: 'text/calendar; charset=utf-8; method=REQUEST'
     }] : undefined;
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
@@ -494,7 +524,7 @@ export class SystemEmailService extends BaseEmailService {
       locale,
       tenantId: options?.tenantId,
       attachments
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -514,10 +544,11 @@ export class SystemEmailService extends BaseEmailService {
       return { success: false, error: 'Template not found: appointment-assigned-technician' };
     }
 
+    // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
     const template: SystemEmailTemplate = {
-      subject: this.replaceVariables(dbTemplate.subject, data),
+      subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
       html: this.replaceVariables(dbTemplate.html, data),
-      text: this.replaceVariables(dbTemplate.text || '', data)
+      text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
     };
 
     const attachments = options?.icsAttachment ? [{
@@ -526,7 +557,7 @@ export class SystemEmailService extends BaseEmailService {
       contentType: 'text/calendar; charset=utf-8; method=REQUEST'
     }] : undefined;
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.technicianEmail,
       subject: template.subject,
       html: template.html,
@@ -534,7 +565,7 @@ export class SystemEmailService extends BaseEmailService {
       locale,
       tenantId: options?.tenantId,
       attachments
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -553,10 +584,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -564,14 +596,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getAppointmentRequestDeclinedFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to: data.requesterEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   /**
@@ -592,10 +624,11 @@ export class SystemEmailService extends BaseEmailService {
 
     if (dbTemplate) {
       // Use database template and replace variables
+      // LEVERAGE: pattern system-email-render-triple — subject/html/text render triple repeated in every DB-template sender; a missing renderDbTemplate() layer
       template = {
-        subject: this.replaceVariables(dbTemplate.subject, data),
+        subject: this.replaceVariables(dbTemplate.subject, data, { noEscape: true }),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text || '', data)
+        text: this.replaceVariables(dbTemplate.text || '', data, { noEscape: true })
       };
     } else {
       // Fall back to basic template
@@ -603,14 +636,14 @@ export class SystemEmailService extends BaseEmailService {
       template = this.getNewAppointmentRequestFallback(data);
     }
 
-    return this.sendEmail({
+    return this.sendTenantScopedEmail({
       to,
       subject: template.subject,
       html: template.html,
       text: template.text,
       locale,
       tenantId: options?.tenantId
-    });
+    }, 'scheduling');
   }
 
   // Template methods

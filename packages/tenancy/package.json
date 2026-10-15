@@ -34,6 +34,10 @@
     "./lib/tenantDefaultCountry": {
       "types": "./src/lib/tenantDefaultCountry.ts",
       "import": "./src/lib/tenantDefaultCountry.ts"
+    },
+    "./lib/tenantDefaultCompanyName": {
+      "types": "./src/lib/tenantDefaultCompanyName.ts",
+      "import": "./src/lib/tenantDefaultCompanyName.ts"
     }
   },
   "scripts": {

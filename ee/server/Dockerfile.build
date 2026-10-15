@@ -1,16 +1,18 @@
 # Start with a base image and install system dependencies.
-# Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
-# and broke bundled Vault provider initialization in the blue deployment.
-FROM node:26.1.0-alpine AS base
-RUN apk add --no-cache \
+# Keep the production-known-good Node version while using Debian/glibc in both
+# build and runtime stages. Node 26.2.0 broke bundled Vault provider initialization.
+FROM node:26.1.0-bookworm-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     bash \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
     curl \
-    nano
+    nano \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -90,22 +92,20 @@ WORKDIR /app
 RUN npm run build:ee
 
 # Final production image with minimal runtime artifacts
-FROM node:26.1.0-alpine
-RUN apk add --no-cache bash \
+FROM node:26.1.0-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
     curl \
     nano \
     chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
     ca-certificates \
-    ttf-freefont
+    fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -171,7 +171,7 @@ ENV NEXT_PUBLIC_EDITION=enterprise
 
 # Puppeteer chromium configuration
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Secret provider configuration
 # Default configuration for composite secret system

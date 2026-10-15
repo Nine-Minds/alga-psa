@@ -19,7 +19,7 @@ const LANGS = {
     subject: '{{platformName}} - Access Request',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -80,7 +80,7 @@ This is an automated message. Please do not reply to this email.`,
     subject: '{{platformName}} - Demande d\'acc\u00e8s',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -152,7 +152,7 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
     subject: '{{platformName}} - Solicitud de acceso',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -224,7 +224,7 @@ Este es un mensaje autom\u00e1tico. No responda a este correo electr\u00f3nico.`
     subject: '{{platformName}} - Zugriffsanfrage',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -296,7 +296,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
     subject: '{{platformName}} - Toegangsverzoek',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -368,7 +368,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
     subject: '{{platformName}} - Richiesta di accesso',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -440,7 +440,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
     subject: '{{platformName}} - Pro\u015bba o dost\u0119p',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background-color:#8A4DEA;background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -513,7 +513,7 @@ LANGS.pt = {
   subject: '{{platformName}} - Solicitação de acesso',
   html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+          <div style="background-color:#8A4DEA;background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
           </div>
           <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">
@@ -583,6 +583,82 @@ Observação de segurança: Se você não solicitou acesso, pode ignorar este em
 ---
 © {{currentYear}} {{platformName}}. Todos os direitos reservados.
 Esta é uma mensagem automática. Não responda a este email.`,
+};
+
+LANGS.sv = {
+  subject: '{{platformName}} – Begäran om åtkomst',
+  html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">
+            Begäran om åtkomst
+          </h2>
+          <div style="padding: 40px 30px;">
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Hej,</p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Vi har fått en begäran om åtkomst till kundportalen med den här e-postadressen.
+            </p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Om du har ett konto hos oss bör du få ett separat e-postmeddelande med dina inloggningslänkar.
+            </p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 15px;">
+              Om du inte har fått något e-postmeddelande med inloggningslänkar kan det bero på följande:
+            </p>
+            <ul style="color: #111827; font-size: 16px; margin-bottom: 25px;">
+              <li>Den här e-postadressen är inte kopplad till något konto i kundportalen</li>
+              <li>Ditt konto kan vara inaktivt</li>
+              <li>E-postmeddelandet kan ha hamnat i skräppostmappen</li>
+            </ul>
+
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                <strong>Behöver du hjälp?</strong>
+              </p>
+              <p style="color: #1e40af; font-size: 14px; margin: 5px 0 0 0;">
+                Kontakta din IT-leverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
+              </p>
+            </div>
+
+            <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
+              <p style="color: #4b5563; font-size: 14px; margin: 0;">
+                <strong>Säkerhetsinformation:</strong> Om du inte har begärt åtkomst kan du lugnt ignorera det här e-postmeddelandet.
+              </p>
+            </div>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+              © {{currentYear}} {{platformName}}. Alla rättigheter förbehållna.
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
+              Det här är ett automatiskt meddelande. Svara inte på det här e-postmeddelandet.
+            </p>
+          </div>
+        </div>
+      `,
+  text: `{{platformName}} – Begäran om åtkomst
+
+Hej,
+
+Vi har fått en begäran om åtkomst till kundportalen med den här e-postadressen.
+
+Om du har ett konto hos oss bör du få ett separat e-postmeddelande med dina inloggningslänkar.
+
+Om du inte har fått något e-postmeddelande med inloggningslänkar kan det bero på följande:
+- Den här e-postadressen är inte kopplad till något konto i kundportalen
+- Ditt konto kan vara inaktivt
+- E-postmeddelandet kan ha hamnat i skräppostmappen
+
+Behöver du hjälp?
+Kontakta din IT-leverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
+
+Säkerhetsinformation: Om du inte har begärt åtkomst kan du lugnt ignorera det här e-postmeddelandet.
+
+---
+© {{currentYear}} {{platformName}}. Alla rättigheter förbehållna.
+Det här är ett automatiskt meddelande. Svara inte på det här e-postmeddelandet.`,
 };
 
 /* eslint-enable max-len */

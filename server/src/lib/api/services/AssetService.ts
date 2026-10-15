@@ -23,8 +23,50 @@ import {
   MobileDeviceAssetData,
   PrinterAssetData
 } from '../schemas/asset';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
+import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
+import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+
+function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
+  return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
+}
+
+function mapInvalidAssetTypeError(error: unknown, slug: string): unknown {
+  if (isTypedAssetWriteError(error)) {
+    try {
+      const parsed = JSON.parse((error as Error).message);
+      if (parsed.kind === 'invalid_asset_type') {
+        const message = `Unknown asset_type '${slug}'`;
+        return new ValidationError(message, [{ path: ['asset_type'], code: 'invalid_asset_type', message }]);
+      }
+    } catch {
+      // Keep unrelated errors intact if their message is not typed JSON.
+    }
+  }
+  return error;
+}
+
+async function resolveRestAssetType(knex: Knex, tenant: string, slug: string) {
+  try {
+    return await resolveWritableAssetType(knex, tenant, slug);
+  } catch (error) {
+    throw mapInvalidAssetTypeError(error, slug);
+  }
+}
+
+async function resolveRestAttributeSchema(
+  knex: Knex,
+  tenant: string,
+  input: { nextAssetType?: string; storedAssetType?: string; attributesProvided: boolean }
+) {
+  try {
+    return await resolveAttributeSchemaForWrite(knex, tenant, input);
+  } catch (error) {
+    throw mapInvalidAssetTypeError(error, input.nextAssetType ?? input.storedAssetType ?? '');
+  }
+}
 
 function scopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
@@ -70,6 +112,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.location_id) {
         query.where(`${this.tableName}.location_id`, filters.location_id);
+      }
+      if (filters.contact_name_id) {
+        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -144,6 +189,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.location_id) {
         countQuery.where(`${this.tableName}.location_id`, filters.location_id);
+      }
+      if (filters.contact_name_id) {
+        countQuery.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -248,15 +296,24 @@ export class AssetService extends BaseService<any> {
   }
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
-    const { extension_data, ...assetData } = data;
+    // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
+    const { extension_data, attributes, ...assetData } = data;
     const knex = await this.getDbForContext(context);
+
+    const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
+    const issues = validateAttributesForWrite(typeEntry, attributes, 'create');
+    if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
 
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
     }
+    if (assetData.contact_name_id) {
+      await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
+    }
     
     const assetRecord = {
       ...assetData,
+      ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
       tenant: context.tenant,
       created_at: new Date(),
       updated_at: new Date()
@@ -272,35 +329,58 @@ export class AssetService extends BaseService<any> {
     }
 
     // Publish event
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'ASSET_CREATED',
-      payload: {
-        tenantId: context.tenant,
+      payload: buildAssetCreatedPayload({
         assetId: asset.asset_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
+        clientId: asset.client_id || undefined,
+        createdByUserId: context.userId,
+        createdAt: asset.created_at,
+        assetType: asset.asset_type,
+        serialNumber: asset.serial_number,
+      }),
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt: asset.created_at,
+        actor: { actorType: 'USER', actorUserId: context.userId },
+      },
     });
 
     return this.getWithDetails(asset.asset_id, context);
   }
 
   async update(id: string, data: UpdateAssetData, context: ServiceContext): Promise<any> {
+    // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
     const knex = await this.getDbForContext(context);
     const updateData: Record<string, unknown> = { ...data };
+    const attributes = data.attributes as Record<string, unknown> | undefined;
+    delete updateData.attributes;
 
     const needsCurrent =
       data.location_id !== undefined ||
+      data.contact_name_id !== undefined ||
       data.client_id !== undefined;
+    const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
-    const current = needsCurrent
+    const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
       : null;
 
-    if (needsCurrent && !current) {
+    if (needsAssetContext && !current) {
       throw new NotFoundError('Asset not found');
+    }
+
+    if (needsAssetContext) {
+      const entry = await resolveRestAttributeSchema(knex, context.tenant, {
+        nextAssetType: data.asset_type,
+        storedAssetType: current!.asset_type,
+        attributesProvided: attributes !== undefined,
+      });
+      const issues = attributes !== undefined ? validateAttributesForWrite(entry, attributes, 'merge') : [];
+      if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
+      if (attributes !== undefined) updateData.attributes = attributesMergeExpression(knex, attributes);
     }
 
     if (data.location_id) {
@@ -321,27 +401,59 @@ export class AssetService extends BaseService<any> {
       updateData.location_id = null;
     }
 
+    if (data.contact_name_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) {
+        throw new NotFoundError('Asset not found');
+      }
+      await this.assertContactBelongsToClient(knex, context.tenant, clientId, data.contact_name_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      current.contact_name_id &&
+      data.contact_name_id === undefined
+    ) {
+      // Client changed without an explicit new assignee — the old contact
+      // belongs to the previous client, so clear it.
+      updateData.contact_name_id = null;
+    }
+
     updateData.updated_at = new Date();
 
-    const updated = await scopedTable(knex, context.tenant, this.tableName)
+    const before = await scopedTable(knex, context.tenant, this.tableName)
       .where({ [this.primaryKey]: id })
-      .update(updateData);
+      .first();
 
-    if (!updated) {
+    const [after] = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
+      .update(updateData)
+      .returning('*');
+
+    if (!after) {
       throw new NotFoundError('Asset not found');
     }
 
     // Publish event
-    await publishEvent({
-      eventType: 'ASSET_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        assetId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
-      }
+    const updatePayload = buildAssetUpdatedPayload({
+      assetId: id,
+      before: (before ?? {}) as Record<string, unknown>,
+      after: after as Record<string, unknown>,
+      updatedPaths: Object.keys(updateData).filter((key) => key !== 'updated_at'),
+      updatedByUserId: context.userId,
+      updatedAt: updateData.updated_at as Date,
     });
+    if (updatePayload.updatedFields || updatePayload.changes) {
+      await publishWorkflowEvent({
+        eventType: 'ASSET_UPDATED',
+        payload: updatePayload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: updateData.updated_at as Date,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     const asset = await this.getById(id, context);
     if (!asset) {
@@ -367,6 +479,25 @@ export class AssetService extends BaseService<any> {
 
     if (!location) {
       throw new ValidationError('Selected location is not available for this client');
+    }
+  }
+
+  private async assertContactBelongsToClient(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    contactNameId: string
+  ): Promise<void> {
+    const contact = await scopedTable(knex, tenant, 'contacts')
+      .where({
+        client_id: clientId,
+        contact_name_id: contactNameId,
+      })
+      .whereNot({ contact_kind: 'shared_mailbox' })
+      .first('contact_name_id');
+
+    if (!contact) {
+      throw new ValidationError('Selected contact is not available for this client');
     }
   }
 

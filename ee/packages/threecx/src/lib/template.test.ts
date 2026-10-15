@@ -28,6 +28,20 @@ function scenarios(): any[] {
   return Array.isArray(list) ? list : [list];
 }
 
+function asList<T>(value: T | T[]): T[] {
+  return Array.isArray(value) ? value : [value];
+}
+
+function scenario(id: string): any {
+  return scenarios().find((s) => String(s['@_Id'] ?? '') === id);
+}
+
+/** PostValues rendered as { key: expression }. */
+function postValues(id: string): Record<string, string> {
+  const values = asList(scenario(id).Request.PostValues.Value);
+  return Object.fromEntries(values.map((v: any) => [v['@_Key'], String(v['#text'])]));
+}
+
 describe('renderThreecxTemplate', () => {
   it('T091: the XML parses with Name AlgaPSA, the given Version and Country, and one ApiKey password parameter', () => {
     expect(doc.Crm['@_Name']).toBe('AlgaPSA');
@@ -41,8 +55,29 @@ describe('renderThreecxTemplate', () => {
     expect(paramList[0]['@_Type']).toBe('Password');
   });
 
-  it('T092: the template sets number prefix handling to Plus', () => {
-    expect(doc.Crm.Number['@_Prefix']).toBe('Plus');
+  it('T092: numbers are sent with a 00 prefix and never truncated', () => {
+    // A leading + would decode to a space in the lookup query string, and
+    // MaxLength would strip the number below what the E.164 matcher needs.
+    expect(doc.Crm.Number['@_Prefix']).toBe('Zeros');
+    expect(doc.Crm.Number['@_MaxLength']).toBe('');
+  });
+
+  it('uses the enum spellings 3CX accepts, or the upload fails with "incorrect file format"', () => {
+    expect(doc.Crm.Connection['@_MaxConcurrentRequests']).toBeDefined();
+    for (const s of scenarios()) {
+      const request = s.Request;
+      const isPost = request.PostValues !== undefined;
+      expect(request['@_RequestType']).toBe(isPost ? 'Post' : 'Get');
+      expect(request['@_RequestEncoding']).toBe(isPost ? 'Json' : 'UrlEncoded');
+      expect(request['@_ResponseType']).toBe('Json');
+      expect(request['@_PostText']).toBeUndefined();
+    }
+    expect(xml).not.toMatch(/RequestType="(GET|POST)"/);
+  });
+
+  it('falls back to Global when the tenant has no country, since Country is mandatory', () => {
+    const blank = parser.parse(renderThreecxTemplate({ baseUrl: BASE, tenantSlug: SLUG, templateVersion: VERSION, country: '' }));
+    expect(blank.Crm['@_Country']).toBe('Global');
   });
 
   it('T093: scenarios carry the six reserved 3CX Ids in order', () => {
@@ -80,24 +115,33 @@ describe('renderThreecxTemplate', () => {
 
   it('T097: the lookup scenario maps the JSON fields to 3CX output types', () => {
     const lookup = scenarios().find((s) => String(s['@_Id'] ?? '') === '');
-    const outputs = lookup.Outputs.Output;
-    const outputList = Array.isArray(outputs) ? outputs : [outputs];
+    const outputList = asList(lookup.Outputs.Output);
     const types = outputList.map((o: any) => o['@_Type']);
     expect(types).toEqual(expect.arrayContaining(['ContactUrl', 'FirstName', 'LastName', 'CompanyName', 'Email', 'PhoneBusiness']));
 
-    const variables = lookup.Variables.Variable;
-    const varList = Array.isArray(variables) ? variables : [variables];
-    const contactUrlVar = varList.find((v: any) => v['@_Name'] === 'ContactUrl');
-    expect(contactUrlVar['@_Path']).toBe('contacts.0.contactUrl');
-    const phoneVar = varList.find((v: any) => v['@_Name'] === 'PhoneBusiness');
-    expect(phoneVar['@_Path']).toBe('contacts.0.phone');
+    // 3CX evaluates only bracketed output values; a bare name is a literal.
+    for (const output of outputList) {
+      expect(output['@_Value']).toMatch(/^\[[A-Za-z]+\]$/);
+    }
+
+    // Paths are absolute and unindexed; 3CX iterates the array itself.
+    const varList = asList(lookup.Variables.Variable);
+    expect(varList.find((v: any) => v['@_Name'] === 'ContactUrl')['@_Path']).toBe('contacts.contactUrl');
+    expect(varList.find((v: any) => v['@_Name'] === 'PhoneBusiness')['@_Path']).toBe('contacts.phone');
+    expect(xml).not.toMatch(/Path="[^"]*\.\d+\./);
+    expect(asList(lookup.Rules.Rule)[0]['#text']).toBe('contacts.contactUrl');
   });
 
   it('T098: the ReportCall scenario posts JSON whose keys match the report-call contract', () => {
-    const reportCall = scenarios().find((s) => String(s['@_Id'] ?? '') === 'ReportCall');
-    const postText = reportCall.Request['@_PostText'];
-    const body = JSON.parse(postText);
+    const body = postValues('ReportCall');
     expect(Object.keys(body).sort()).toEqual([...THREECX_REPORT_CALL_POST_KEYS].sort());
+    // [Duration] is hh:mm:ss and the UTC times are DateTime objects; the route
+    // needs seconds and ISO-8601.
+    expect(body.durationSeconds).toBe('[[[DurationTimespan].get_TotalSeconds()].ToString("F0")]');
+    expect(body.startTimeUtc).toBe('[[CallStartTimeUTC].ToString("yyyy-MM-ddTHH:mm:ssZ")]');
+    expect(body.endTimeUtc).toBe('[[CallEndTimeUTC].ToString("yyyy-MM-ddTHH:mm:ssZ")]');
+    expect(scenario('ReportCall').Rules).toBeUndefined();
+    expect(scenario('ReportCall').Outputs).toBeUndefined();
     expect(body.transcription).toBe('[Transcription]');
     expect(body.summary).toBe('[Summary]');
     expect(body.recordingUrl).toBe('[RecordingUrl]');
@@ -107,31 +151,27 @@ describe('renderThreecxTemplate', () => {
 
   it('T211: every lookup scenario outputs EntityId and EntityType from the response', () => {
     for (const id of ['', 'LookupByEmail', 'SearchContacts', 'CreateContactRecordFromClient']) {
-      const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === id);
-      const outputs = scenario.Outputs.Output;
-      const types = (Array.isArray(outputs) ? outputs : [outputs]).map((o: any) => o['@_Type']);
+      const found = scenario(id);
+      const types = asList(found.Outputs.Output).map((o: any) => o['@_Type']);
       expect(types).toEqual(expect.arrayContaining(['EntityId', 'EntityType']));
-      const variables = scenario.Variables.Variable;
-      const varList = Array.isArray(variables) ? variables : [variables];
-      expect(varList.find((v: any) => v['@_Name'] === 'EntityId')['@_Path']).toBe('contacts.0.entityId');
-      expect(varList.find((v: any) => v['@_Name'] === 'EntityType')['@_Path']).toBe('contacts.0.entityType');
+      const varList = asList(found.Variables.Variable);
+      expect(varList.find((v: any) => v['@_Name'] === 'EntityId')['@_Path']).toBe('contacts.entityId');
+      expect(varList.find((v: any) => v['@_Name'] === 'EntityType')['@_Path']).toBe('contacts.entityType');
     }
   });
 
   it('T215: CreateContactRecordFromClient posts the five client-entered variables to the contacts route', () => {
-    const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === 'CreateContactRecordFromClient');
-    const body = JSON.parse(scenario.Request['@_PostText']);
+    const body = postValues('CreateContactRecordFromClient');
     expect(Object.keys(body).sort()).toEqual([...THREECX_CREATE_CONTACT_POST_KEYS].sort());
     expect(body).toEqual({ firstName: '[FirstName]', lastName: '[LastName]', number: '[Number]', email: '[Email]', company: '[Company]' });
-    expect(scenario.Request['@_RequestType']).toBe('POST');
+    expect(scenario('CreateContactRecordFromClient').Request['@_RequestType']).toBe('Post');
   });
 
   it('T216: ReportChat posts the chat transcript and entity fields to the report-chat route', () => {
-    const scenario = scenarios().find((s) => String(s['@_Id'] ?? '') === 'ReportChat');
-    const body = JSON.parse(scenario.Request['@_PostText']);
+    const body = postValues('ReportChat');
     expect(Object.keys(body).sort()).toEqual([...THREECX_REPORT_CHAT_POST_KEYS].sort());
     expect(body.messages).toBe('[ChatMessages]');
-    expect(body.startTimeUtc).toBe('[ChatStartTimeUTC]');
+    expect(body.startTimeUtc).toBe('[[ChatStartTimeUTC].ToString("yyyy-MM-ddTHH:mm:ssZ")]');
     expect(body.entityId).toBe('[EntityId]');
   });
 

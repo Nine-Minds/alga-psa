@@ -15,6 +15,10 @@ import {
   clearTicketWebhookPayloadCache,
   type TicketWebhookSourceEvent,
 } from '../webhookTicketPayload';
+import {
+  buildTicketModelChanges,
+  buildTicketTeamAssignedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 
 const TENANT = '11111111-1111-1111-1111-111111111111';
 const TICKET_ID = 'ticket-1234';
@@ -117,6 +121,7 @@ describe('buildTicketWebhookPayload (T020)', () => {
       'category_id',
       'subcategory_id',
       'is_closed',
+      'response_state',
       'entered_at',
       'updated_at',
       'closed_at',
@@ -188,6 +193,50 @@ describe('buildTicketWebhookPayload (T020)', () => {
     });
   });
 
+  it('does not expose team-assignment changes on ticket.assigned (changes.assigned_team_id is now an object); team stays the top-level assigned_team_id', async () => {
+    tagMappingState.getByEntityMock.mockResolvedValue([]);
+    const { knex } = createFakeKnex(makeTicketRow());
+
+    const payload = await buildTicketWebhookPayload(
+      {
+        eventType: 'TICKET_ASSIGNED',
+        timestamp: '2026-05-06T12:00:00.000Z',
+        payload: {
+          tenantId: TENANT,
+          ...buildTicketTeamAssignedPayload({
+            ticketId: TICKET_ID,
+            assignedByUserId: 'user-1',
+            teamId: 'team-1',
+          }),
+        },
+      },
+      knex,
+    );
+
+    expect(payload.changes).toBeUndefined();
+    expect(payload.assigned_team_id).toBe('team-1');
+  });
+
+  it('normalizes TicketModel.updateTicket {old,new} changes to the documented {previous,new} webhook shape', async () => {
+    tagMappingState.getByEntityMock.mockResolvedValue([]);
+    const { knex } = createFakeKnex(makeTicketRow());
+
+    const payload = await buildTicketWebhookPayload(
+      {
+        eventType: 'TICKET_UPDATED',
+        timestamp: '2026-05-06T12:00:00.000Z',
+        payload: {
+          tenantId: TENANT,
+          ticketId: TICKET_ID,
+          changes: buildTicketModelChanges({ title: 'Old' }, { title: 'New' }),
+        },
+      },
+      knex,
+    );
+
+    expect(payload.changes).toEqual({ title: { previous: 'Old', new: 'New' } });
+  });
+
   it.each([
     ['TICKET_UPDATED', true, false],
     ['TICKET_CLOSED', true, true],
@@ -216,14 +265,15 @@ describe('buildTicketWebhookPayload (T020)', () => {
     }
   );
 
-  it('caches by (tenant, ticket_id) within 60s — second call hits neither the join nor the tag query', async () => {
+  it('caches by (tenant, ticket_id) within 60s — second call hits neither the snapshot join nor the tag query', async () => {
     tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'urgent' }]);
     const { knex, calls } = createFakeKnex(makeTicketRow());
 
     const first = await buildTicketWebhookPayload(ASSIGNED_EVENT, knex);
     const second = await buildTicketWebhookPayload(ASSIGNED_EVENT, knex);
 
-    expect(calls.ticketsCalls).toBe(1);
+    // One cached snapshot join + one fresh response_state read per build.
+    expect(calls.ticketsCalls).toBe(3);
     expect(tagMappingState.getByEntityMock).toHaveBeenCalledTimes(1);
 
     // Cache returns the same field values (tags array is cloned so callers can't mutate the cache).

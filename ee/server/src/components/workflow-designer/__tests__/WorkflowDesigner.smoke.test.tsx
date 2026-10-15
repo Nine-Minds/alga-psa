@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -16,7 +16,8 @@ const {
   getWorkflowStepQuotaSummaryActionMock,
   listEventCatalogOptionsV2ActionMock,
   getEventCatalogEntryByEventTypeMock,
-  routerReplaceMock
+  routerReplaceMock,
+  searchParamsState
 } = vi.hoisted(() => ({
   getCurrentUserMock: vi.fn(),
   getCurrentUserPermissionsMock: vi.fn(),
@@ -29,7 +30,8 @@ const {
   getWorkflowStepQuotaSummaryActionMock: vi.fn(),
   listEventCatalogOptionsV2ActionMock: vi.fn(),
   getEventCatalogEntryByEventTypeMock: vi.fn(),
-  routerReplaceMock: vi.fn()
+  routerReplaceMock: vi.fn(),
+  searchParamsState: { value: '' }
 }));
 
 vi.mock('next/navigation', () => ({
@@ -37,10 +39,7 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
     replace: (...args: unknown[]) => routerReplaceMock(...args),
   }),
-  useSearchParams: () => ({
-    get: () => null,
-    toString: () => ''
-  })
+  useSearchParams: () => new URLSearchParams(searchParamsState.value)
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -92,7 +91,16 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
-  default: ({ children }: any) => <div>{children}</div>
+  default: ({ children, tabs, onTabChange }: any) => (
+    <div>
+      {(tabs ?? []).map((tab: any) => (
+        <button key={tab.id} data-testid={`mock-tab-${tab.id}`} onClick={() => onTabChange?.(tab.id)}>
+          {tab.id}
+        </button>
+      ))}
+      {children}
+    </div>
+  )
 }));
 
 vi.mock('@alga-psa/ui/components/Switch', () => ({
@@ -193,7 +201,8 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   validateExpressionSource: vi.fn(() => []),
 }));
 
-vi.mock('@alga-psa/workflows/authoring', () => ({
+vi.mock('@alga-psa/workflows/authoring', async (importOriginal) => ({
+  ...((await importOriginal()) as typeof import('@alga-psa/workflows/authoring')),
   buildWorkflowDesignerActionCatalog: vi.fn(() => []),
   WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF: 'payload.WorkflowClock.v1',
   isWorkflowAiInferAction: vi.fn(() => false),
@@ -299,6 +308,7 @@ describe('WorkflowDesigner smoke', () => {
     listEventCatalogOptionsV2ActionMock.mockReset();
     getEventCatalogEntryByEventTypeMock.mockReset();
     routerReplaceMock.mockReset();
+    searchParamsState.value = '';
 
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', roles: [] });
     getCurrentUserPermissionsMock.mockResolvedValue(['workflow:read']);
@@ -344,5 +354,23 @@ describe('WorkflowDesigner smoke', () => {
 
     expect(screen.getByText('708 remaining')).toBeInTheDocument();
     expect(getWorkflowStepQuotaSummaryActionMock).toHaveBeenCalled();
+  });
+
+  it('drops eventId from the URL when leaving the events section', async () => {
+    searchParamsState.value = 'section=events&eventId=evt-1';
+    render(<WorkflowDesigner mode="control-panel" />);
+
+    fireEvent.click(await screen.findByTestId('mock-tab-event-catalog'));
+
+    expect(routerReplaceMock).toHaveBeenCalledWith('/msp/workflow-control?section=event-catalog');
+  });
+
+  it('keeps eventId when switching to the events section', async () => {
+    searchParamsState.value = 'section=events&eventId=evt-1';
+    render(<WorkflowDesigner mode="control-panel" />);
+
+    fireEvent.click(await screen.findByTestId('mock-tab-events'));
+
+    expect(routerReplaceMock).not.toHaveBeenCalled();
   });
 });

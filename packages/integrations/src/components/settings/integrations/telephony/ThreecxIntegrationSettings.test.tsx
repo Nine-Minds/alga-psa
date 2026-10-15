@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ThreecxCardState } from '../../../../actions/integrations/telephonyActions';
 
 const mocks = vi.hoisted(() => ({
@@ -122,10 +122,22 @@ describe('ThreecxIntegrationSettings', () => {
     expect(await screen.findByText('3CX')).toBeTruthy();
   });
 
-  it('T104/T069: when the server reports the provider unavailable (tier below Pro) the panel is hidden', async () => {
-    mocks.getCardState.mockResolvedValue(cardState({ available: false, reason: 'tier_required' }));
+  it('T104/T069: while availability loads and when the tier is below Pro, the panel is hidden', async () => {
+    let resolveCardState!: (state: ThreecxCardState) => void;
+    mocks.getCardState.mockReturnValue(new Promise((resolve) => {
+      resolveCardState = resolve;
+    }));
+
     const { container } = render(<ThreecxIntegrationSettings />);
+
+    expect(container.querySelector('#threecx-integration-settings')).toBeNull();
     await waitFor(() => expect(mocks.getCardState).toHaveBeenCalled());
+
+    await act(async () => {
+      resolveCardState(cardState({ available: false, reason: 'tier_required' }));
+      await Promise.resolve();
+    });
+
     expect(container.querySelector('#threecx-integration-settings')).toBeNull();
   });
 

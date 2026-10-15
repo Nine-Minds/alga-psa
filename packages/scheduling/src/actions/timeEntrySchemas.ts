@@ -8,7 +8,10 @@ export const fetchTimeEntriesParamsSchema = z.object({
 
 export type FetchTimeEntriesParams = z.infer<typeof fetchTimeEntriesParamsSchema>;
 
-export const saveTimeEntryParamsSchema = timeEntrySchema.superRefine((data, ctx) => {
+export const saveTimeEntryParamsSchema = timeEntrySchema.extend({
+  // When present, the save also logs this stopwatch session in the same transaction (plan D4/D6).
+  stopwatch_session_id: z.string().uuid().nullable().optional(),
+}).superRefine((data, ctx) => {
   if (!data.service_id?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

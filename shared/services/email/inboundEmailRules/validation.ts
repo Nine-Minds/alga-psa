@@ -71,6 +71,11 @@ export const inboundEmailExtractionSchema = z.discriminatedUnion('type', [
 export const extractAssignClientConfigSchema = z.object({
   source: z.enum(['subject', 'body_text']),
   extraction: inboundEmailExtractionSchema,
+  match_by: z.array(z.enum(['client_name', 'asset_name', 'contact_email'])).min(1).max(3).optional(),
+}).superRefine((config, ctx) => {
+  if (config.match_by && new Set(config.match_by).size !== config.match_by.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['match_by'], message: 'Match targets must be unique' });
+  }
 });
 
 export const setDestinationConfigSchema = z.object({

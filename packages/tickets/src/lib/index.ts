@@ -17,6 +17,13 @@ export {
 } from './ticketColumnCatalog';
 export type { TicketColumnSpec, TicketColumnKind, TicketListColumnKey } from './ticketColumnCatalog';
 export {
+  TICKET_LIST_SORT_KEYS,
+  DEFAULT_TICKET_LIST_SORT_KEY,
+  isTicketListSortKey,
+  normalizeTicketListSortKey,
+} from './ticketListSort';
+export type { TicketListSortKey } from './ticketListSort';
+export {
   CAPTURE_EXCLUDED_FILTER_KEYS,
   TICKET_VIEW_DENSITY_DEFAULT,
   TICKET_VIEW_DENSITY_STEP,
@@ -54,6 +61,7 @@ export {
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
 export {
   applyTicketVisibilityFilter,
+  ticketMatchesVisibility,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
 } from './clientPortalVisibility';

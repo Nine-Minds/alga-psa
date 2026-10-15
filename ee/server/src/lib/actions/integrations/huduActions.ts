@@ -128,20 +128,6 @@ function toIso(value: Date | string | null | undefined): string | null {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 
-/**
- * Converge the daily auto-sync schedule to the tenant's current desired state
- * (settings.autoSync + is_active). Best-effort: a scheduling blip must never
- * fail the connect/disconnect flow. Mirrors the RMM connect→reconcile call.
- */
-async function convergeHuduAutoSyncSchedule(tenant: string): Promise<void> {
-  try {
-    const { scheduleHuduAutoSyncJob } = await import('server/src/lib/jobs/handlers/huduAutoSyncHandler');
-    await scheduleHuduAutoSyncJob(tenant);
-  } catch (error) {
-    logger.warn('[HuduActions] auto-sync schedule converge skipped', { tenant, error: toErrorMessage(error) });
-  }
-}
-
 function sameHuduBaseUrl(left: string, right: string): boolean {
   return buildHuduApiBaseUrl(left) === buildHuduApiBaseUrl(right);
 }
@@ -222,10 +208,6 @@ export const connectHudu = withHuduSettingsAccess(
         connected_at: new Date().toISOString(),
         settings: { password_access: validation.passwordAccess },
       });
-
-      // Connecting doesn't enable auto-sync (opt-in), but converge so a
-      // previously-enabled toggle is honored on reconnect.
-      await convergeHuduAutoSyncSchedule(tenant);
 
       logger.info('[HuduActions] Hudu connected', { tenant });
 
@@ -366,9 +348,6 @@ export const disconnectHudu = withHuduSettingsAccess(
       // T111: drop this tenant's cached Hudu lists so a reconnect with a new
       // key can never be served data fetched under the old credentials.
       clearHuduReferenceCacheForTenant(tenant);
-
-      // Inactive connection ⇒ cancel any recurring auto-sync schedule.
-      await convergeHuduAutoSyncSchedule(tenant);
 
       logger.info('[HuduActions] Hudu disconnected', { tenant });
 

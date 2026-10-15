@@ -293,6 +293,7 @@ export interface ServiceSummary {
   serviceTypeName?: string | null;
   defaultRate: number;
   unitOfMeasure: string;
+  unitCode?: string | null;
   isActive: boolean;
   sku?: string | null;
 }

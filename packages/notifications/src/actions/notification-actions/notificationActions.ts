@@ -480,6 +480,7 @@ export const sendTestEmailAction = withAuth(async (
     // 6. Send the test email
     const service = TenantEmailSvc.getInstance(tenant);
     const result = await service.sendEmail({
+      mailClass: 'general',
       to: userRecord.email,
       templateProcessor,
       tenantId: tenant,

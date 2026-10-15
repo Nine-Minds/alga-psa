@@ -10,6 +10,7 @@ vi.mock('@alga-psa/auth', () => ({
     action(currentUser, { tenant: currentUser.tenant }, ...args),
   withOptionalAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({

@@ -211,7 +211,17 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
           continue;
         }
 
+        // An edit made in this provider's calendar already holds the new version there.
+        if (userIsAssigned && provider.id === changes?.sourceCalendarProviderId) {
+          continue;
+        }
+
         try {
+          if (changes?.calendarArchived === true) {
+            await syncService.removeProviderCopy(entryId, provider.id);
+            continue;
+          }
+
           // If user was assigned but no longer is, delete from their calendar
           if (userWasAssigned && !userIsAssigned && provider.user_id) {
             const result = await syncService.deleteScheduleEntry(entryId, provider.id, 'all');
@@ -503,7 +513,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
 /**
  * Register calendar sync subscriber
  */
-export async function registerCalendarSyncSubscriber(): Promise<void> {
+export async function registerCalendarSyncSubscriber(channel?: string): Promise<void> {
   try {
     logger.info('[CalendarSyncSubscriber] Starting registration');
 
@@ -511,13 +521,13 @@ export async function registerCalendarSyncSubscriber(): Promise<void> {
 
     // Stable IDs preserve per-subscriber deduplication across minified bundles.
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_CREATED', handleScheduleEntryCreated, { subscriberId: 'calendar-sync:created' });
+    await eventBus.subscribe('SCHEDULE_ENTRY_CREATED', handleScheduleEntryCreated, { subscriberId: 'calendar-sync:created', ...(channel ? { channel } : {}) });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_UPDATED', handleScheduleEntryUpdated, { subscriberId: 'calendar-sync:updated' });
+    await eventBus.subscribe('SCHEDULE_ENTRY_UPDATED', handleScheduleEntryUpdated, { subscriberId: 'calendar-sync:updated', ...(channel ? { channel } : {}) });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('SCHEDULE_ENTRY_DELETED', handleScheduleEntryDeleted, { subscriberId: 'calendar-sync:deleted' });
+    await eventBus.subscribe('SCHEDULE_ENTRY_DELETED', handleScheduleEntryDeleted, { subscriberId: 'calendar-sync:deleted', ...(channel ? { channel } : {}) });
     // @ts-ignore - Calendar events are extensions to the core EventType
-    await eventBus.subscribe('CALENDAR_CONFLICT_DETECTED', handleCalendarConflictDetected, { subscriberId: 'calendar-sync:conflict' });
+    await eventBus.subscribe('CALENDAR_CONFLICT_DETECTED', handleCalendarConflictDetected, { subscriberId: 'calendar-sync:conflict', ...(channel ? { channel } : {}) });
 
     logger.info('[CalendarSyncSubscriber] Successfully registered all calendar sync event handlers');
   } catch (error: any) {

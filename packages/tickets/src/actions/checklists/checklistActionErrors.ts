@@ -7,6 +7,18 @@ import {
 
 export type ChecklistActionError = ActionMessageError | ActionPermissionError;
 
+export const APPLY_RULE_CATEGORY_BOARD_MISMATCH = 'The selected category belongs to a different board than the rule.';
+export const APPLY_RULE_CATEGORY_INVALID = 'The selected category is not a top-level category.';
+export const APPLY_RULE_SUBCATEGORY_INVALID = 'The selected subcategory does not belong to the selected category.';
+export const APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY = 'Select a category before choosing a subcategory.';
+
+const APPLY_RULE_SCOPE_ERROR_KEYS: Record<string, string> = {
+  [APPLY_RULE_CATEGORY_BOARD_MISMATCH]: 'features/tickets:errors.checklist.ruleCategoryBoardMismatch',
+  [APPLY_RULE_CATEGORY_INVALID]: 'features/tickets:errors.checklist.ruleCategoryInvalid',
+  [APPLY_RULE_SUBCATEGORY_INVALID]: 'features/tickets:errors.checklist.ruleSubcategoryInvalid',
+  [APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY]: 'features/tickets:errors.checklist.ruleSubcategoryRequiresCategory',
+};
+
 const EXPECTED_CHECKLIST_MESSAGES = new Set([
   'Ticket not found',
   'Checklist item name is required',
@@ -22,6 +34,10 @@ export function checklistActionErrorFrom(error: unknown): ChecklistActionError |
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
+    }
+    const scopeErrorKey = APPLY_RULE_SCOPE_ERROR_KEYS[error.message];
+    if (scopeErrorKey) {
+      return actionError(error.message, scopeErrorKey);
     }
     if (EXPECTED_CHECKLIST_MESSAGES.has(error.message)) {
       return actionError(error.message);

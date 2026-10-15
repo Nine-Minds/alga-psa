@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
 
 export const ticketFormSchema = z.object({
   title: z.string(),
@@ -68,6 +69,10 @@ export const ticketSchema = z.object({
   itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
   // Response state tracking
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
+  // Provenance for a ticket created via "Duplicate". Create-only; no FK.
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  // Provenance for a ticket created from a ticket template. Create-only; no FK.
+  created_from_template_id: z.string().uuid().nullable().optional(),
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -76,6 +81,11 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   ticket_number: true,
   entered_by: true,
   entered_at: true,
+  duplicated_from_ticket_id: true,
+  created_from_template_id: true,
+  // Server-owned audit columns, stamped by ticketUpdateStamp.
+  updated_at: true,
+  updated_by: true,
 });
 
 export const ticketAttributesQuerySchema = z.object({
@@ -130,6 +140,14 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   bundle_open_child_count: z.number().int().nonnegative().optional(),
   bundle_master_ticket_number: z.string().nullable().optional(),
   bundle_distinct_client_count: z.number().int().nonnegative().optional(),
+  latest_activity_at: z.string().nullable().optional(),
+  latest_activity_actor: z
+    .object({
+      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      name: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   // ITIL-specific fields for list items (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
@@ -163,20 +181,7 @@ export const ticketListFiltersSchema = z.object({
   dueDateTo: z.string().datetime().optional(),
   responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
   slaStatusFilter: z.enum(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']).optional(),
-  sortBy: z
-    .enum([
-      'ticket_number',
-      'title',
-      'status_name',
-      'priority_name',
-      'board_name',
-      'category_name',
-      'client_name',
-      'entered_at',
-      'entered_by_name',
-      'due_date',
-    ])
-    .optional(),
+  sortBy: z.enum(TICKET_LIST_SORT_KEYS).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   bundleView: z.enum(['bundled', 'individual']).optional(),
 });

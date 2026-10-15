@@ -715,11 +715,24 @@ describe('client pulse infrastructure', () => {
     });
   });
 
-  it('T005: previews the first non-empty note blocks and treats blank docs as no notes', async () => {
-    // No notes document at all.
+  it('T005: previews document notes first and falls back to meaningful legacy notes', async () => {
+    // Empty stores stay empty.
     const withoutDoc = await getClientPulse(context.clientId);
     expect(withoutDoc.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
 
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ notes: '  REST-only note\nSecond legacy line\nThird legacy line  ' });
+    const legacyOnly = await getClientPulse(context.clientId);
+    expect(legacyOnly.notes).toEqual({
+      hasNotes: true,
+      previewLines: ['REST-only note', 'Second legacy line'],
+      lastEditedAt: null,
+    });
+
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ notes: null });
     // Real BlockNote content: empty paragraph skipped, heading text flattened,
     // preview capped at two lines even though three blocks carry text.
     await seedClientNote(context, [
@@ -737,15 +750,44 @@ describe('client pulse infrastructure', () => {
     ]);
     expect(withNotes.notes.lastEditedAt).toBe(isoOffset(-6));
 
+    // Document text wins when both stores contain content.
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ notes: 'Legacy text must not replace the document preview.' });
+    const bothStores = await getClientPulse(context.clientId);
+    expect(bothStores.notes.previewLines).toEqual([
+      'Renewal call July 15',
+      'Dorothy wants the Q3 refresh scoped first.',
+    ]);
+    expect(bothStores.notes.lastEditedAt).toBe(isoOffset(-6));
+
     // A saved-but-blank doc must read as "no notes" (D6) — not an empty
-    // preview with a timestamp implying content.
+    // preview with a timestamp implying content; meaningful legacy text is
+    // used when the document itself has no meaningful content.
     await seedClientNote(context, [
       { type: 'paragraph', content: [] },
       { type: 'paragraph', content: [{ type: 'text', text: '   ' }] },
     ], -1);
 
+    const blankDocWithLegacy = await getClientPulse(context.clientId);
+    expect(blankDocWithLegacy.notes).toEqual({
+      hasNotes: true,
+      previewLines: ['Legacy text must not replace the document preview.'],
+      lastEditedAt: null,
+    });
+
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ notes: null });
     const blankDoc = await getClientPulse(context.clientId);
     expect(blankDoc.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
+
+    // Whitespace-only content in both stores remains the empty state.
+    await context.db('clients')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ notes: ' \n  \t ' });
+    const whitespaceOnly = await getClientPulse(context.clientId);
+    expect(whitespaceOnly.notes).toEqual({ hasNotes: false, previewLines: [], lastEditedAt: null });
   });
 
   it('T006: reports SLA posture and ticket ownership facts', async () => {

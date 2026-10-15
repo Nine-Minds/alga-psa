@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function toIsoString(value: string | Date | undefined): string | undefined {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
@@ -20,7 +22,7 @@ export function buildTicketTimeEntryAddedWorkflowEvent(params: {
         minutes: number;
         billable: boolean;
         createdAt?: string;
-      };
+      } & BuiltWorkflowPayload<'TICKET_TIME_ENTRY_ADDED'>;
     }
   | null {
   if (params.workItemType !== 'ticket') return null;
@@ -31,12 +33,12 @@ export function buildTicketTimeEntryAddedWorkflowEvent(params: {
 
   return {
     eventType: 'TICKET_TIME_ENTRY_ADDED',
-    payload: {
+    payload: builtWorkflowPayload('TICKET_TIME_ENTRY_ADDED', {
       ticketId: params.workItemId,
       timeEntryId: params.timeEntryId,
       minutes: params.minutes,
       billable: params.billable,
       ...(createdAt ? { createdAt } : {}),
-    },
+    }),
   };
 }

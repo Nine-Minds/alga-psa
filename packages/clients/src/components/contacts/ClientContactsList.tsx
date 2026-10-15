@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { IContact } from '@alga-psa/types';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import type { IContact, IClientWithLocation } from '@alga-psa/types';
+import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
+import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
@@ -12,20 +14,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { useDrawer } from "@alga-psa/ui";
-import ContactQuickView from './bento/ContactQuickView';
-import ContactDetailsEdit from './ContactDetailsEdit';
-import type { IClient } from '@alga-psa/types';
-import { IDocument } from '@alga-psa/types';
-import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getCurrentUserAsync } from '../../lib/usersHelpers';
+import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
+import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
   clientId: string;
-  clients: IClient[]; // Pass clients down for ContactDetailsView
+  client: IClientWithLocation; // The client being viewed (QuickAddContact scope and phone default country)
 }
 
 // Extended contact type with id for stable DataTable keys
@@ -41,20 +37,18 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   }));
 };
 
-const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
+// LEVERAGE: friction client-picker-option-threading — ClientPicker's options are threaded from every caller (about 51 files call getAllClients). A caller that passes a list scoped to its page quietly shrinks the picker, as alga0002338 showed. A ClientPicker that loads its own tenant list would remove this class of bug.
+const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
-  const { getDocumentsByEntity } = useDocumentsCrossFeature();
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
-  const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
-  const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
-  const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
   const [searchTerm, setSearchTerm] = useState('');
-  const { openDrawer, closeDrawer } = useDrawer();
+  const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
+  const openContactQuickView = useContactQuickViewDrawer();
+  const openContactEdit = useContactEditDrawer();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,134 +77,80 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       }
     };
 
-    const fetchUser = async () => {
-      try {
-        const user = await getCurrentUserAsync();
-        if (user?.user_id) {
-          setCurrentUser(user.user_id);
-        }
-      } catch (error) {
-        console.error('Error fetching current user:', error);
-      }
-    };
-
     fetchContacts();
-    fetchUser();
   }, [clientId, statusFilter, t]);
+
+  // Re-run the list query so a contact moved to another client drops out of
+  // this list as soon as the drawer saves.
+  const refreshContacts = () => {
+    getContactsByClient(clientId, statusFilter)
+      .then(data => setContacts(addIdToContacts(data)))
+      .catch(err => console.error('Error refreshing contacts after drawer save:', err));
+  };
+
+  const handleQuickView = (contact: IContact) => {
+    void openContactQuickView(contact.contact_name_id, { onChangesSaved: refreshContacts });
+  };
 
   const handleContactClick = (contact: IContact) => {
     // Open quick view drawer (same behavior as dropdown quick view)
     handleQuickView(contact);
   };
 
-  const handleQuickView = async (contact: IContact) => {
-    if (!currentUser) return;
-
-    const handleChangesSaved = () => {
-      setChangesSavedInDrawer(true);
-    };
-
-    const handleDrawerClose = () => {
-      if (changesSavedInDrawer) {
-        // Refresh contacts list
-        getContactsByClient(clientId, statusFilter)
-          .then(data => setContacts(addIdToContacts(data)))
-          .catch(err => console.error('Error refreshing contacts after drawer close:', err));
-        setChangesSavedInDrawer(false);
-      }
-    };
-
-    try {
-      setDocumentLoading(prev => ({
-        ...prev,
-        [contact.contact_name_id]: true
-      }));
-
-      const existingDocuments = documents[contact.contact_name_id];
-      
-      if (!existingDocuments || existingDocuments.length === 0) {
-        const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-
-        if (!isActionPermissionError(response)) {
-          setDocuments(prev => {
-            const newDocuments = { ...prev };
-            newDocuments[contact.contact_name_id] = Array.isArray(response)
-              ? response
-              : response.documents || [];
-            return newDocuments;
-          });
-        }
-      }
-
-      openDrawer(
-        <ContactQuickView
-          contact={contact}
-          clients={clients}
-          documents={documents[contact.contact_name_id] || []}
-          userId={currentUser}
-          onDocumentCreated={async () => {
-            try {
-              const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-
-              if (!isActionPermissionError(updatedResponse)) {
-                setDocuments(prev => {
-                  const newDocuments = { ...prev };
-                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                    ? updatedResponse
-                    : updatedResponse.documents || [];
-                  return newDocuments;
-                });
-              }
-            } catch (err) {
-              console.error('Error refreshing documents:', err);
-            }
-          }}
-          onChangesSaved={handleChangesSaved}
-        />,
-        undefined, // onMount
-        handleDrawerClose // onClose
-      );
-    } catch (error) {
-      console.error('Error fetching contact documents:', error);
-    } finally {
-      setDocumentLoading(prev => ({
-        ...prev,
-        [contact.contact_name_id]: false
-      }));
-    }
-  };
-
   const handleEditContact = (contact: IContact) => {
     // Edit in a drawer so the client context survives (the full contact page
     // is still reachable from Quick View's "Go to contact").
-    openDrawer(
-      <ContactDetailsEdit
-        id="client-contact-edit"
-        initialContact={contact}
-        clients={clients}
-        isInDrawer={true}
-        onSave={(updatedContact) => {
-          setContacts(prev => addIdToContacts(
-            prev.map(existing => existing.contact_name_id === updatedContact.contact_name_id ? updatedContact : existing)
-          ));
-          closeDrawer();
-        }}
-        onCancel={() => closeDrawer()}
-      />
-    );
+    void openContactEdit(contact.contact_name_id, { onSaved: refreshContacts });
   };
 
+  // Notes written in the rich-text editor live in a document, not on the contact
+  // row, so the indexed search is what finds them here — the same query the main
+  // contacts list runs. Results are intersected with this client's contacts.
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (!query) {
+      setIndexedSearchContactIds(null);
+      return;
+    }
+
+    setIndexedSearchContactIds(null);
+    let isCancelled = false;
+    const timeout = setTimeout(() => {
+      searchContactListIds(query)
+        .then((contactIds) => {
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set(contactIds));
+          }
+        })
+        .catch((err) => {
+          console.error('Error searching client contacts:', err);
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set());
+          }
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [searchTerm]);
 
   // Client-side search: getContactsByClient returns the client's full contact
   // set, so filtering here scales to the realistic per-client contact count.
   const filteredContacts = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
     if (!needle) return contacts;
+    // Phones are formatted for display, so match them digits-only across every
+    // number on the contact rather than the default number's literal text.
+    const searchDigits = phoneSearchDigits(needle);
     return contacts.filter((contact) =>
-      [contact.full_name, contact.email, contact.role, contact.default_phone_number]
+      [contact.full_name, contact.email, contact.role, contact.notes]
         .some((field) => field && field.toLowerCase().includes(needle))
+      || (searchDigits !== null && contactMatchesPhoneDigits(contact, searchDigits))
+      || indexedSearchContactIds?.has(contact.contact_name_id) === true
     );
-  }, [contacts, searchTerm]);
+  }, [contacts, searchTerm, indexedSearchContactIds]);
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -240,6 +180,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           >
             {record.full_name}
           </div>
+          {record.contact_kind === 'shared_mailbox' && <span className="ml-2 rounded-full border px-2 py-0.5 text-xs">{t('contactsPage.sharedMailbox', { defaultValue: 'Shared mailbox' })}</span>}
         </div>
       ),
     },
@@ -266,9 +207,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       dataIndex: 'default_phone_number',
       width: '18%',
       render: (value, record): React.ReactNode =>
-        record.default_phone_number
-        || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
-        || t('common.states.na', { defaultValue: 'N/A' }),
+        <PhoneText value={record.default_phone_number || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number} extension={record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.extension} defaultCountry={client.location_country_code} fallback={t('common.states.na', { defaultValue: 'N/A' })} />,
     },
     {
       title: '',
@@ -432,7 +371,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             .then(data => setContacts(addIdToContacts(data)))
             .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
-        clients={clients}
+        clients={[client]}
         selectedClientId={clientId}
       />
     </div>

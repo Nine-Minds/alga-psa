@@ -276,6 +276,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
           SCIM_MANAGED_INACTIVE: 'profile.messages.error.scimManagedInactive',
+          INVALID_TIMEZONE: 'profile.messages.error.invalidTimezone',
           PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
           USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };

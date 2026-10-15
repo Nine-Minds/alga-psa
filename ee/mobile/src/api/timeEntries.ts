@@ -125,6 +125,8 @@ export type ListTimeEntriesParams = {
   user_id?: string;
   date_from?: string;
   date_to?: string;
+  work_item_id?: string;
+  work_item_type?: WorkItemType;
   sort?: string;
   order?: "asc" | "desc";
   signal?: AbortSignal;
@@ -146,6 +148,8 @@ export function listTimeEntries(
       user_id: params.user_id,
       date_from: params.date_from,
       date_to: params.date_to,
+      work_item_id: params.work_item_id,
+      work_item_type: params.work_item_type,
     },
     headers: {
       "x-api-key": params.apiKey,

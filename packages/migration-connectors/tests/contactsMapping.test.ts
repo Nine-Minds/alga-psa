@@ -144,7 +144,11 @@ describe('contacts header mapping', () => {
     const unmapped = result.diagnostics.find((diagnostic) => diagnostic.code === 'CSV_UNMAPPED_COLUMN');
     expect(unmapped).toBeDefined();
     expect(unmapped?.message).toContain('Favorite Color');
-    expect(unmapped?.message).toContain('extension_json');
+    expect(unmapped?.message).toContain('custom field value');
+    const reader = new AmpSqliteReader(result.outputPath);
+    try {
+      expect(reader.allRows('custom_field_values')).toContainEqual(expect.objectContaining({ field_name: 'Favorite Color', value_json: '"Blue"' }));
+    } finally { reader.close(); }
   });
 
   it('rejects a contacts mapping that targets another entity sentinel', async () => {

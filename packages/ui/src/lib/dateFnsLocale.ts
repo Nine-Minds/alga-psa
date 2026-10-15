@@ -7,6 +7,7 @@ import { nl } from 'date-fns/locale/nl';
 import { it } from 'date-fns/locale/it';
 import { pl } from 'date-fns/locale/pl';
 import { pt } from 'date-fns/locale/pt';
+import { sv } from 'date-fns/locale/sv';
 import type { SupportedLocale } from './i18n/config';
 
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
@@ -18,6 +19,7 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   it,
   pl,
   pt,
+  sv,
   xx: enUS,
   yy: enUS,
 };

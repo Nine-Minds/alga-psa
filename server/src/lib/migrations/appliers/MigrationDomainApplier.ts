@@ -130,7 +130,10 @@ export class MigrationDomainApplier {
           }
 
           try {
-            const applied = await applier.apply(trx, context, payload);
+            const customFieldValues = typeof staged.custom_field_values === 'string'
+              ? JSON.parse(staged.custom_field_values)
+              : staged.custom_field_values ?? {};
+            const applied = await applier.apply(trx, context, payload, { customFieldValues });
             await context.ledger.recordCreation(trx, identityKey, {
               migrationJobId,
               migrationStagedRecordId: staged.migration_staged_record_id,

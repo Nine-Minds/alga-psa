@@ -25,6 +25,7 @@ type UserModelState = {
     client_id: string;
     portal_visibility_group_id: string | null;
     is_client_admin: boolean;
+    contact_kind?: 'person' | 'shared_mailbox';
   }>;
   roles: Array<{
     role_id: string;
@@ -81,6 +82,8 @@ function createUserModelTrx(state: UserModelState) {
           const matches = state.contacts.filter((row) => matchesFilters(row, filters));
           return {
             first: async (...columns: string[]) => pickFields(matches[0], columns),
+            // Hierarchy edges: onboarding never sets a manager.
+            whereNotNull: () => ({ select: async () => [] }),
           };
         },
       };
@@ -144,6 +147,14 @@ function createUserModelTrx(state: UserModelState) {
       return {
         select: async () =>
           state.boards.map((board) => ({ board_id: board.board_id, client_portal_visible: true })),
+      };
+    }
+
+    // Onboarding creates no billing-profile ticket grants, so a freshly
+    // provisioned contact-scoped user still sees only their own tickets.
+    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+      return {
+        where: () => ({ select: async () => [] }),
       };
     }
 
@@ -262,6 +273,17 @@ describe('portal user creation preserves client portal visibility assignments', 
       clientId: 'client-a',
       visibilityGroupId: 'group-1',
       visibleBoardIds: ['board-1'],
+      // A brand-new portal user holds no billing-profile ticket grants.
+      grantedTicketProfileIds: [],
+      defaultBillingProfileId: null,
+      // The fixture group predates asset/project scope: the column default applies.
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
+      // Contact scope adds the (empty) hierarchy and the watcher grant; admins
+      // and client-scoped users get neither.
+      ...(effectiveTicketScope === 'contact' ? { visibleContactIds: ['contact-1'], watchGrant: true } : {}),
     });
   });
 
@@ -290,5 +312,27 @@ describe('portal user creation preserves client portal visibility assignments', 
     expect(visibility.visibleBoardIds).toBeNull();
     expect(visibility.ticketScope).toBe('client');
     expect(visibility.effectiveTicketScope).toBe('client');
+  });
+
+  it('rejects client portal user creation for shared mailbox contacts', async () => {
+    state.contacts.push({
+      tenant: 'tenant-1',
+      contact_name_id: 'contact-shared',
+      client_id: 'client-a',
+      portal_visibility_group_id: null,
+      is_client_admin: false,
+      contact_kind: 'shared_mailbox',
+    });
+
+    const result = await createPortalUserInDBWithTrx(trx, {
+      email: 'shared@example.com', password: 'Password123!', contactId: 'contact-shared',
+      clientId: 'client-a', tenantId: 'tenant-1', roleId: 'role-user',
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Shared mailbox contacts cannot have a client portal user.',
+    });
+    expect(state.users).toHaveLength(0);
   });
 });

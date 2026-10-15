@@ -127,6 +127,12 @@ export function EmojiSuggestionPopup({ editor, suggestionState }: EmojiSuggestio
     const COLS = 10;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl/Alt+Arrow is caret movement (line/word/document start and end), not popup navigation.
+      const hasModifier = e.metaKey || e.ctrlKey || e.altKey;
+      if (hasModifier && e.key.startsWith('Arrow')) {
+        return;
+      }
+
       if (e.key === 'Escape') {
         // Move cursor past the colon to dismiss
         editor.commands.focus();
@@ -195,6 +201,7 @@ export function EmojiSuggestionPopup({ editor, suggestionState }: EmojiSuggestio
   return createPortal(
     <div
       ref={popupRef}
+      data-editor-popup="true"
       style={{
         position: 'fixed',
         zIndex: 9999,

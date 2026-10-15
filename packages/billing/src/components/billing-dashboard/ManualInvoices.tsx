@@ -24,7 +24,10 @@ import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
@@ -65,6 +68,8 @@ const isLegacyManualItemsUpdateError = (
 ): result is Exclude<InvoiceManualItemsUpdateActionResult, InvoiceViewModel | ManualInvoiceFailure> => (
   isActionMessageError(result) || isActionPermissionError(result)
 );
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isManualInvoiceFailure = (result: unknown): result is ManualInvoiceFailure => (
   Boolean(result) &&
@@ -248,6 +253,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [hasSelectedClientBillingEmail, setHasSelectedClientBillingEmail] = useState<boolean | null>(null);
+  // Which of the client's billing profiles this invoice bills. A client with a
+  // single profile never sees the control (D6) and stays NULL — the write path
+  // already resolves an unattributed invoice to the client default, so the
+  // unsegmented path is byte-identical to before rather than newly stamped.
+  const [selectedBillingProfileId, setSelectedBillingProfileId] = useState<string | null>(null);
+  const {
+    profiles: billingProfiles,
+    isSegmented: isBillingProfileSegmented,
+    defaultProfile: defaultBillingProfile,
+  } = useClientBillingProfiles(
+    currentInvoiceData || invoice ? null : selectedClient,
+    loadBillingProfiles,
+  );
   const translateManualInvoiceError = (result: ManualInvoiceFailure): string => (
     translateManualInvoiceFailure(t, result)
   );
@@ -296,6 +314,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   useEffect(() => {
     setClientOptions(clients);
   }, [clients]);
+
+  // Pre-select the client's default profile — the operator picks another only
+  // when this invoice belongs to a different segment. Only a segmented client
+  // gets a pick at all: with one profile there is nothing to choose and
+  // stamping it would change what an ordinary client's invoice records.
+  useEffect(() => {
+    setSelectedBillingProfileId((current) => {
+      if (!isBillingProfileSegmented) return null;
+      return current && billingProfiles.some((profile) => profile.billing_profile_id === current)
+        ? current
+        : defaultBillingProfile?.billing_profile_id ?? null;
+    });
+  }, [billingProfiles, defaultBillingProfile, isBillingProfileSegmented]);
 
   useEffect(() => {
     if (sourceSalesOrderId && invoiceableSalesOrders.some((so) => so.so_id === sourceSalesOrderId)) {
@@ -725,6 +756,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         const result = await generateManualInvoice({
           clientId: selectedClient || '',
+          billingProfileId: selectedBillingProfileId,
           invoiceNumber: newInvoiceNumber,
           isPrepayment,
           expirationDate: isPrepayment && expirationDate ? expirationDate : undefined,
@@ -1037,6 +1069,44 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       })}
                     </>
                   )}
+                </div>
+              )}
+
+              {/* Only a client with more than one billing profile is asked which
+                  one to bill; everyone else bills their default (D6). */}
+              {!invoice && !currentInvoiceData && !hasSalesOrderSource && isBillingProfileSegmented && (
+                <div>
+                  <CustomSelect
+                    id="manual-invoice-billing-profile"
+                    label={t('manualInvoices.fields.billingProfile', { defaultValue: 'Billing Profile' })}
+                    options={billingProfiles.map((profile) => ({
+                      value: profile.billing_profile_id,
+                      label: profile.is_default
+                        ? t('manualInvoices.labels.defaultBillingProfile', {
+                          defaultValue: '{{name}} (default)',
+                          name: profile.name,
+                        })
+                        : profile.name,
+                    }))}
+                    value={selectedBillingProfileId}
+                    onValueChange={(next) => {
+                      // Radix echoes an empty value from its hidden native select
+                      // whenever the controlled value changes; only a real pick
+                      // (never blank — the placeholder entry is non-selectable)
+                      // should move the selection.
+                      if (next) {
+                        setSelectedBillingProfileId(next);
+                      }
+                    }}
+                    placeholder={t('manualInvoices.placeholders.selectBillingProfile', {
+                      defaultValue: 'Select a billing profile',
+                    })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('manualInvoices.hints.billingProfile', {
+                      defaultValue: 'The invoice and its lines are billed to this profile.',
+                    })}
+                  </p>
                 </div>
               )}
 

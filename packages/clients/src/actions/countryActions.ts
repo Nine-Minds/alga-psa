@@ -7,13 +7,23 @@ import {
   SYSTEM_DATE_FORMAT,
   type CountryDateFormat,
 } from '@alga-psa/core/i18n/countryDateFormat';
-import { resolveDateFormatCountry, resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import {
+  resolveClientCountry,
+  resolveDateFormatCountry,
+  resolveTenantDefaultCountry,
+} from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 
 export interface ICountry {
   code: string;
   name: string;
   phone_code?: string;
   flag_emoji?: string;
+}
+
+/** Everything a client's country decides, for the Settings → General preview. */
+export interface IClientCountryDefaultsPreview {
+  country: ICountry | null;
+  dateFormat: CountryDateFormat;
 }
 
 export const getAllCountries = withAuth(async (
@@ -52,6 +62,48 @@ export const getTenantDefaultCountry = withAuth(async (
     return await resolveTenantDefaultCountry(knex, tenant);
   } catch (error) {
     console.error('Error resolving tenant default country:', error);
+    throw error;
+  }
+});
+
+/**
+ * What picking a given client as "your company" would settle: the country new
+ * client, contact and location forms preselect, the dial code that comes with
+ * it, and the date shape every MSP surface then renders.
+ *
+ * Settings → General asks this for the current default and for the one being
+ * considered, so an admin can see the change before confirming it — the date
+ * format has no setting of its own, it follows this country.
+ */
+export const getClientCountryDefaultsPreview = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClientCountryDefaultsPreview> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    const resolved = await resolveClientCountry(knex, tenant, clientId);
+    if (!resolved) {
+      return { country: null, dateFormat: countryDateFormat(null) };
+    }
+
+    // resolveClientCountry answers code and name; the dial code lives on the
+    // same reference row.
+    const reference = await tenantDb(knex, tenant).table<ICountry>('countries')
+      .where({ code: resolved.code })
+      .first('code', 'name', 'phone_code');
+
+    return {
+      country: {
+        code: resolved.code,
+        name: resolved.name,
+        phone_code: reference?.phone_code ?? undefined,
+      },
+      dateFormat: countryDateFormat(resolved.code),
+    };
+  } catch (error) {
+    console.error('Error resolving client country defaults preview:', error);
     throw error;
   }
 });

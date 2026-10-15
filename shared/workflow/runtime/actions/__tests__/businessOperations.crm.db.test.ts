@@ -41,6 +41,12 @@ const publishWorkflowEventMock = vi.hoisted(() =>
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (event: PublishedWorkflowEvent) => publishWorkflowEventMock(event),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 function verifyTestDatabase(dbName: string): void {
@@ -547,6 +553,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
           sendEmail: async () => ({ success: true, messageId: 'msg-test-1' }),
         }),
         getTenantEmailSettings: async () => ({ providerConfigs: [] }),
+        resolveOutboundSenderForTenant: async (_request: { tenantId: string; mailClass: string; senderId?: string }, _settings: unknown, _knex: unknown) => ({ from: { email: 'support@example.test' } }),
       },
       StaticTemplateProcessor: class {
         subject: string;

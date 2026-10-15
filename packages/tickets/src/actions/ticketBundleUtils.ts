@@ -3,6 +3,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -16,6 +17,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   BundlePropagationConfirmationRequiredError,
@@ -33,8 +35,18 @@ import {
   TicketCloseValidationError,
 } from '../lib/validateTicketClosure';
 import type { CloseRuleFailure } from '../lib/closeRuleConstants';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import {
+  buildTicketStatusChangedPayload,
+  buildTicketTransitionEvents,
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import {
+  buildTicketClosedPayload,
+  buildTicketMergedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,
@@ -208,10 +220,12 @@ export async function reopenBundleMasterOnly(
   // Keep the denormalized `is_closed` column on tickets in sync with the
   // open status we're moving to — mirrors how updateTicketWithCache flips
   // is_closed when the status transitions across the closed boundary.
+  // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
   await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: masterTicketId })
     .update({
       status_id: openStatusId,
+      ...ticketStatusClockPatch(trx, openStatusId),
       is_closed: false,
       closed_at: null,
       closed_by: null,
@@ -282,6 +296,8 @@ export async function maybeReopenBundleMasterFromChildReply(
     return { reopened: false, masterTicketId };
   }
 
+  const masterBefore = await captureTicketTransitionSnapshot(trx, tenant, masterTicketId);
+
   const result = await reopenBundleMasterOnly(trx, tenant, masterTicketId, {
     actor: {
       actorType: TICKET_ACTIVITY_ACTOR.SYSTEM,
@@ -292,6 +308,14 @@ export async function maybeReopenBundleMasterFromChildReply(
     eventType: TICKET_ACTIVITY_EVENT.BUNDLE_REOPENED,
     details: { child_ticket_id: childTicketId },
   });
+
+  if (result.reopened && masterBefore) {
+    await publishTicketTransitionsAfterCommit(trx, {
+      tenant,
+      before: masterBefore,
+      actorUserId: updatedByUserId ?? undefined,
+    });
+  }
 
   return { reopened: result.reopened, masterTicketId };
 }
@@ -311,6 +335,10 @@ export type MirrorCommentSource = {
  * ticket_bundle_mirrors. Idempotent on (source_comment_id, child_ticket_id):
  * returns null when a mirror already exists. Shared with addTicketComment's
  * sync_updates loop so the mirrored shape is defined once.
+ *
+ * `MirrorCommentSource` deliberately omits `metadata`: a one-off Cc/Bcc belongs
+ * to the ticket it was added to, so the mirrored child copy never inherits
+ * `metadata.email_recipients` and never mails those addresses again.
  */
 export async function mirrorCommentToChild(
   trx: Knex.Transaction,
@@ -386,14 +414,27 @@ export async function mirrorCommentToChild(
   return childGenerated.comment_id;
 }
 
+type BundlePublicationEventType =
+  | 'TICKET_MERGED'
+  | 'TICKET_CLOSED'
+  | 'TICKET_STATUS_CHANGED'
+  | 'TICKET_UPDATED'
+  | 'TICKET_REOPENED'
+  | 'TICKET_SLA_STAGE_ENTERED'
+  | 'TICKET_SLA_STAGE_MET'
+  | 'TICKET_SLA_STAGE_BREACHED';
+
+/** Discriminated by `eventType` so each payload keeps its `BuiltWorkflowPayload<T>` brand. */
 export type BundleAfterCommitPublication = {
-  eventType: string;
-  payload: Record<string, unknown>;
-  eventName?: string;
-  fromState?: string;
-  toState?: string;
-  idempotencyKey?: string;
-};
+  [T in BundlePublicationEventType]: {
+    eventType: T;
+    payload: BuiltWorkflowPayload<T>;
+    eventName?: string;
+    fromState?: string;
+    toState?: string;
+    idempotencyKey?: string;
+  };
+}[BundlePublicationEventType];
 
 /**
  * The child-row fields the apply_resolution consequence needs to mirror the
@@ -443,8 +484,10 @@ export async function applyClosedMasterChoice(
 
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: childTicketId })
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: master.statusId,
+          ...ticketStatusClockPatch(trx, master.statusId),
           is_closed: true,
           closed_at: occurredAt,
           closed_by: actor.userId ?? null,
@@ -489,7 +532,7 @@ export async function applyClosedMasterChoice(
 
       publications.push({
         eventType: 'TICKET_CLOSED',
-        payload: {
+        payload: buildTicketClosedPayload({
           ticketId: childTicketId,
           ...(actor.userId ? { userId: actor.userId, closedByUserId: actor.userId } : {}),
           closedAt: occurredAt,
@@ -498,11 +541,26 @@ export async function applyClosedMasterChoice(
             closed_at: { old: null, new: occurredAt },
             closed_by: { old: null, new: actor.userId ?? null },
           },
-        },
+        }),
         eventName: 'Ticket Closed',
         fromState: previousStatusId ?? undefined,
         toState: master.statusId ?? undefined,
       });
+
+      if (previousStatusId && master.statusId && previousStatusId !== master.statusId) {
+        publications.push({
+          eventType: 'TICKET_STATUS_CHANGED',
+          payload: buildTicketStatusChangedPayload({
+            ticketId: childTicketId,
+            previousStatusId,
+            newStatusId: master.statusId,
+            changedAt: occurredAt,
+          }),
+          eventName: 'Ticket Status Changed',
+          fromState: previousStatusId,
+          toState: master.statusId,
+        });
+      }
 
       // The canonical close path also records the resolution SLA stage
       // outcome; child closes must do the same so the child's own SLA clock is
@@ -514,7 +572,13 @@ export async function applyClosedMasterChoice(
         enteredAt: snapshot?.entered_at ?? null,
         closedAt: occurredAt,
       });
-      if (slaCompletionEvent) {
+      if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_MET') {
+        publications.push({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      } else if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_BREACHED') {
         publications.push({
           eventType: slaCompletionEvent.eventType,
           payload: slaCompletionEvent.payload,
@@ -537,17 +601,17 @@ export async function applyClosedMasterChoice(
   if (reopenResult.reopened && reopenResult.previousStatusId && reopenResult.newStatusId) {
     publications.push({
       eventType: 'TICKET_UPDATED',
-      payload: {
+      payload: buildTicketUpdatedPayload({
         ticketId: master.masterTicketId,
         ...(actor.userId ? { userId: actor.userId, updatedByUserId: actor.userId } : {}),
         changes: {
           status_id: { old: reopenResult.previousStatusId, new: reopenResult.newStatusId },
         },
-      },
+      }),
       eventName: 'Ticket Updated',
     });
 
-    const transition = buildTicketTransitionWorkflowEvents({
+    const transition = buildTicketTransitionEvents({
       before: {
         ticketId: master.masterTicketId,
         statusId: reopenResult.previousStatusId,
@@ -568,16 +632,20 @@ export async function applyClosedMasterChoice(
         previousStatusIsClosed: true,
         newStatusIsClosed: false,
       },
-    }).find((event) => event.eventType === 'TICKET_REOPENED');
+    }).filter((event) => event.eventType === 'TICKET_REOPENED' || event.eventType === 'TICKET_STATUS_CHANGED');
 
-    if (transition) {
-      publications.push({
-        eventType: transition.eventType,
-        payload: transition.payload,
-        eventName: transition.workflow?.eventName,
-        fromState: transition.workflow?.fromState,
-        toState: transition.workflow?.toState,
-      });
+    for (const transitionEvent of transition) {
+      const meta = {
+        eventName: transitionEvent.workflow?.eventName,
+        fromState: transitionEvent.workflow?.fromState,
+        toState: transitionEvent.workflow?.toState,
+      };
+      // Narrow per event so each payload keeps its own brand.
+      if (transitionEvent.eventType === 'TICKET_REOPENED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      } else if (transitionEvent.eventType === 'TICKET_STATUS_CHANGED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      }
     }
   }
 
@@ -848,12 +916,12 @@ export async function attachChildrenToBundle(
 
   const publications: BundleAfterCommitPublication[] = childIds.map((childId) => ({
     eventType: 'TICKET_MERGED',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: childId,
       targetTicketId: params.masterTicketId,
       mergedAt: occurredAt,
       reason: params.mergedReason ?? 'bundle:added_children',
-    },
+    }),
     eventName: 'Ticket Merged',
   }));
 
@@ -1181,15 +1249,37 @@ export async function propagateBundleMasterStatus(
       .filter((child: Record<string, unknown>) => Boolean(child.is_closed))
       .map((child: Record<string, unknown>) => child.ticket_id as string);
 
+    const childSnapshots = new Map<string, Awaited<ReturnType<typeof captureTicketTransitionSnapshot>>>();
+    for (const child of childRows as Array<Record<string, unknown>>) {
+      childSnapshots.set(
+        child.ticket_id as string,
+        await captureTicketTransitionSnapshot(trx, ctx.tenant, child.ticket_id as string)
+      );
+    }
+
     if (openChildIds.length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', openChildIds)
-        .update({ ...propagateFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+        .update({
+          ...propagateFields,
+          ...ticketStatusClockPatch(trx, propagateFields.status_id as string | null | undefined),
+          updated_by: ctx.user.user_id,
+          updated_at: updatedAt,
+        });
     }
     if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', closedChildIds)
         .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+    }
+
+    for (const before of childSnapshots.values()) {
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: ctx.tenant,
+        before,
+        actorUserId: ctx.user.user_id,
+      });
     }
 
     for (const publish of childPublishes) {
@@ -1260,9 +1350,23 @@ export async function propagateBundleMasterStatus(
     }))
     .filter((publish) => publish.updatedFields.length > 0);
 
+  const propagateSnapshots = new Map<string, Awaited<ReturnType<typeof captureTicketTransitionSnapshot>>>();
+  for (const childId of affectedChildIds) {
+    propagateSnapshots.set(childId, await captureTicketTransitionSnapshot(trx, ctx.tenant, childId));
+  }
+
   await tenantScopedTable(trx, 'tickets', ctx.tenant)
     .whereIn('ticket_id', affectedChildIds)
-    .update(propagate);
+    // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+    .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
+
+  for (const before of propagateSnapshots.values()) {
+    await publishTicketTransitionsAfterCommit(trx, {
+      tenant: ctx.tenant,
+      before,
+      actorUserId: ctx.user.user_id,
+    });
+  }
 
   const occurredAt = nowIso();
   if (crossesBoundary === 'close') {

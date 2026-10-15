@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function requireNonEmpty(value: string, field: string): string {
   if (!value) throw new Error(`${field} is required`);
   return value;
@@ -27,13 +29,13 @@ export function buildSurveySentPayload(params: {
   sentAt?: string;
   channel: NotificationChannel;
   templateId?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SURVEY_SENT'> {
   requireNonEmpty(params.surveyId, 'surveyId');
   requireNonEmpty(params.surveyType, 'surveyType');
   requireNonEmpty(params.recipientId, 'recipientId');
   requireNonEmpty(params.channel, 'channel');
 
-  return {
+  return builtWorkflowPayload('SURVEY_SENT', {
     surveyId: params.surveyId,
     surveyType: params.surveyType,
     recipientId: params.recipientId,
@@ -41,7 +43,7 @@ export function buildSurveySentPayload(params: {
     ...withOptionalTimestamp('sentAt', params.sentAt),
     channel: params.channel,
     ...(params.templateId ? { templateId: params.templateId } : {}),
-  };
+  });
 }
 
 export function buildSurveyResponseReceivedPayload(params: {
@@ -53,13 +55,13 @@ export function buildSurveyResponseReceivedPayload(params: {
   respondedAt?: string;
   score: number;
   comment?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SURVEY_RESPONSE_RECEIVED'> {
   requireNonEmpty(params.surveyId, 'surveyId');
   requireNonEmpty(params.responseId, 'responseId');
   requireNonEmpty(params.recipientId, 'recipientId');
   if (typeof params.score !== 'number' || Number.isNaN(params.score)) throw new Error('score is required');
 
-  return {
+  return builtWorkflowPayload('SURVEY_RESPONSE_RECEIVED', {
     surveyId: params.surveyId,
     responseId: params.responseId,
     recipientId: params.recipientId,
@@ -67,7 +69,7 @@ export function buildSurveyResponseReceivedPayload(params: {
     ...withOptionalTimestamp('respondedAt', params.respondedAt),
     score: params.score,
     ...(params.comment ? { comment: params.comment } : {}),
-  };
+  });
 }
 
 export function buildSurveyReminderSentPayload(params: {
@@ -78,7 +80,7 @@ export function buildSurveyReminderSentPayload(params: {
   sentAt?: string;
   channel: NotificationChannel;
   reminderNumber: number;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SURVEY_REMINDER_SENT'> {
   requireNonEmpty(params.surveyId, 'surveyId');
   requireNonEmpty(params.recipientId, 'recipientId');
   requireNonEmpty(params.channel, 'channel');
@@ -86,14 +88,14 @@ export function buildSurveyReminderSentPayload(params: {
     throw new Error('reminderNumber must be a positive integer');
   }
 
-  return {
+  return builtWorkflowPayload('SURVEY_REMINDER_SENT', {
     surveyId: params.surveyId,
     recipientId: params.recipientId,
     ...surveySubject(params),
     ...withOptionalTimestamp('sentAt', params.sentAt),
     channel: params.channel,
     reminderNumber: params.reminderNumber,
-  };
+  });
 }
 
 export function buildSurveyExpiredPayload(params: {
@@ -102,16 +104,16 @@ export function buildSurveyExpiredPayload(params: {
   ticketId?: string;
   projectId?: string;
   expiredAt?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'SURVEY_EXPIRED'> {
   requireNonEmpty(params.surveyId, 'surveyId');
   requireNonEmpty(params.recipientId, 'recipientId');
 
-  return {
+  return builtWorkflowPayload('SURVEY_EXPIRED', {
     surveyId: params.surveyId,
     recipientId: params.recipientId,
     ...surveySubject(params),
     ...withOptionalTimestamp('expiredAt', params.expiredAt),
-  };
+  });
 }
 
 export type CsatWindow = 'daily' | 'weekly' | 'monthly';
@@ -126,13 +128,13 @@ export function buildCsatAlertTriggeredPayload(params: {
   scopeId?: string;
   baseline?: number;
   delta?: number;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CSAT_ALERT_TRIGGERED'> {
   requireNonEmpty(params.window, 'window');
   if (typeof params.score !== 'number' || Number.isNaN(params.score)) throw new Error('score is required');
   if (typeof params.threshold !== 'number' || Number.isNaN(params.threshold)) throw new Error('threshold is required');
   requireNonEmpty(params.scopeType, 'scopeType');
 
-  return {
+  return builtWorkflowPayload('CSAT_ALERT_TRIGGERED', {
     window: params.window,
     score: params.score,
     ...(typeof params.baseline === 'number' ? { baseline: params.baseline } : {}),
@@ -141,6 +143,6 @@ export function buildCsatAlertTriggeredPayload(params: {
     ...withOptionalTimestamp('triggeredAt', params.triggeredAt),
     scopeType: params.scopeType,
     ...(params.scopeId ? { scopeId: params.scopeId } : {}),
-  };
+  });
 }
 

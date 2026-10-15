@@ -34,6 +34,8 @@ export interface TicketMigrationConfiguration {
 export interface AssetMigrationConfiguration {
   /** Source asset_type_name → tenant asset type slug. Every staged name must map. */
   assetTypeMapping: Record<string, string>;
+  /** Target custom asset-type slug → source custom field name → target field key. */
+  customFieldMapping?: Record<string, Record<string, string>>;
 }
 
 export interface MigrationJobConfiguration {

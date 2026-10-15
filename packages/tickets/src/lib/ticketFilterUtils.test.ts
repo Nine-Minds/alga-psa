@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  normalizeAssignedToIdList,
   normalizeAssignedToIds,
   parseReturnFilters,
   UNASSIGNED_FILTER_SENTINEL,
@@ -55,6 +56,29 @@ describe('normalizeAssignedToIds', () => {
 
   it('returns no assignedToIds key when every token is junk', () => {
     expect(normalizeAssignedToIds('foo,bar')).toEqual({});
+  });
+});
+
+describe('normalizeAssignedToIdList', () => {
+  it('keeps valid UUIDs and drops legacy non-UUID tokens', () => {
+    // A stored board/tenant view can retain arbitrary strings from an older or
+    // hand-written document. Those must never reach the UUID-only list schema.
+    expect(normalizeAssignedToIdList(['legacy-token', USER_A, '12345', null as unknown as string]))
+      .toEqual([USER_A]);
+  });
+
+  it('deduplicates valid UUIDs', () => {
+    expect(normalizeAssignedToIdList([USER_A, USER_A, USER_B])).toEqual([USER_A, USER_B]);
+  });
+
+  it('drops the unassigned sentinel rather than forwarding it as an id', () => {
+    expect(normalizeAssignedToIdList([UNASSIGNED_FILTER_SENTINEL, USER_A])).toEqual([USER_A]);
+  });
+
+  it('returns undefined when nothing survives, so the key is omitted', () => {
+    expect(normalizeAssignedToIdList(['legacy-token'])).toBeUndefined();
+    expect(normalizeAssignedToIdList([])).toBeUndefined();
+    expect(normalizeAssignedToIdList(undefined)).toBeUndefined();
   });
 });
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { compileExpression } from '../expressionEngine';
-import { withWorkflowJsonSchemaMetadata } from '../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import {
   COMPOSE_TEXT_ACTION_ID,
   COMPOSE_TEXT_VERSION,

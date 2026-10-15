@@ -121,11 +121,10 @@ describe('Contract-cadence service-period replenishment', () => {
     await context.db('recurring_service_periods').insert({
       record_id: recordId,
       tenant,
-      schedule_key: `schedule:${tenant}:contract_line:${input.obligationId}:contract:${duePosition}`,
+      schedule_key: `schedule:${tenant}:${input.obligationId}:contract:${duePosition}`,
       period_key: `period:${dateOnly(input.serviceStart)}:${dateOnly(input.serviceEnd)}`,
       revision: input.revision ?? 1,
       obligation_id: input.obligationId,
-      obligation_type: 'contract_line',
       charge_family: 'fixed',
       cadence_owner: 'contract',
       due_position: duePosition,
@@ -200,11 +199,10 @@ describe('Contract-cadence service-period replenishment', () => {
     await context.db('recurring_service_periods').insert({
       record_id: uuidv4(),
       tenant: context.tenantId,
-      schedule_key: `schedule:${context.tenantId}:client_contract_line:${obligationId}:client:arrears`,
+      schedule_key: `schedule:${context.tenantId}:${obligationId}:client:arrears`,
       period_key: 'period:2026-08-01:2026-09-01',
       revision: 1,
       obligation_id: obligationId,
-      obligation_type: 'client_contract_line',
       charge_family: 'fixed',
       cadence_owner: 'client',
       due_position: 'arrears',
@@ -235,7 +233,6 @@ describe('Contract-cadence service-period replenishment', () => {
       .where({
         tenant: context.tenantId,
         obligation_id: obligationId,
-        obligation_type: 'contract_line',
         cadence_owner: 'contract',
       })
       .orderBy('service_period_start', 'asc')

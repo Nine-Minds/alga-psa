@@ -27,6 +27,9 @@ function createMockQuery(
       filters = { ...filters, ...nextFilters };
       return this;
     },
+    forUpdate() {
+      return this;
+    },
     async first() {
       if (table === 'default_billing_settings') {
         return state.existingSettings;

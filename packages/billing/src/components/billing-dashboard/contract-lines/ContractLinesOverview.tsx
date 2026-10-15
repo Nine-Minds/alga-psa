@@ -297,7 +297,7 @@ const ContractLinesOverview: React.FC = () => {
             text={t('overview.loading', { defaultValue: 'Loading contract line presets' })}
           />
         ) : (
-          <DataTable
+          <DataTable id="contract-lines-overview-table"
             data={filteredContractLines.filter(preset => preset.preset_id !== undefined)}
             columns={contractLineColumns}
             pagination={true}

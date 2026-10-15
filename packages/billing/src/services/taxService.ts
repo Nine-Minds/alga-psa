@@ -10,9 +10,8 @@ import type {
   ISO8601String,
 } from '@alga-psa/types';
 import ClientTaxSettings from '../models/clientTaxSettings';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { v4 as uuid4 } from 'uuid';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 
 import { divideRational, multiplyRational, normalizeTaxCapAmount, rationalInteger, regionalTaxAmount, toRational } from '../lib/billing/taxCapMath';
@@ -774,11 +773,10 @@ export class TaxService {
    * Provision the default tax settings row for a client's billing profile
    * (F132).
    *
-   * `client_tax_settings` is keyed per profile since S7, so provisioning for
-   * the client alone would leave the resolved profile without a row and the
-   * next read would provision it again. When no profile is given, the client's
-   * default profile is used — which is exactly the pre-S7 behaviour for a
-   * single-profile client.
+   * Delegates to the shared, transactional initializer. `client_tax_settings`
+   * is keyed per profile since S7; when no profile is given the client's
+   * default profile is used. The client-wide default rate association is
+   * shared and provisioning a second profile must not create a second default.
    */
   async createDefaultTaxSettings(
     clientId: string,
@@ -788,79 +786,9 @@ export class TaxService {
     if (!tenant) {
       throw new Error('Tenant context is required for creating default tax settings');
     }
-    const resolvedProfileId = billingProfileId
-      ?? await ensureClientDefaultBillingProfile(knex, tenant, clientId);
-    const trx = await knex.transaction();
-
-    try {
-      const db = tenantDb(trx, tenant);
-
-      // Get the first active tax rate to use as the default
-      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('is_active', true)
-        .orderBy('created_at', 'asc')
-        .first(); // Use first() instead of limit(1) which returns array
-
-      if (!defaultTaxRate) {
-        throw new Error('No active tax rates found in the system to assign as default.');
-      }
-
-      // Create default client tax settings (without tax_rate_id)
-      const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
-        .insert({
-          client_id: clientId,
-          billing_profile_id: resolvedProfileId,
-          // tax_rate_id: defaultTaxRate.tax_rate_id, // Removed
-          is_reverse_charge_applicable: false,
-          tenant
-        })
-        .onConflict(['tenant', 'client_id', 'billing_profile_id'])
-        .merge({ is_reverse_charge_applicable: false })
-        .returning('*');
-
-      // The default tax-rate association and its component are per *client*,
-      // not per profile — the region chain is unchanged by billing profiles
-      // (F089). Provisioning for a second profile must not create a second
-      // default rate for the same client.
-      const existingDefaultRate = await db.table('client_tax_rates')
-        .where({ client_id: clientId, is_default: true })
-        .first();
-
-      if (!existingDefaultRate) {
-        await db.table('client_tax_rates')
-          .insert({
-            // client_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
-            client_id: clientId,
-            tax_rate_id: defaultTaxRate.tax_rate_id,
-            is_default: true,
-            location_id: null,
-            tenant
-          });
-
-        // Create a default tax component (linked to the tax_rate, not settings)
-        // This part remains largely the same, assuming components are tied to rates
-        const tax_component_id = uuid4();
-        await db.table<ITaxComponent>('tax_components')
-          .insert({
-            tax_component_id,
-            tax_rate_id: defaultTaxRate.tax_rate_id, // Link component to the chosen default rate
-            name: 'Default Tax',
-            rate: Math.ceil(defaultTaxRate.tax_percentage),
-            sequence: 1,
-            is_compound: false,
-            tenant
-          });
-      }
-        // Removed .returning('*') as it wasn't used
-
-      await trx.commit();
-
-      return taxSettings;
-    } catch (error) {
-      await trx.rollback();
-      console.error('Error creating default tax settings:', error);
-      throw new Error('Failed to create default tax settings');
-    }
+    return withTransaction(knex, async (trx) =>
+      initializeClientDefaultTax(trx, tenant, clientId, { billingProfileId }),
+    );
   }
 
   async ensureDefaultTaxSettings(clientId: string): Promise<void> {
@@ -869,64 +797,8 @@ export class TaxService {
       throw new Error('Tenant context is required for ensuring default tax settings');
     }
 
-    const resolvedProfileId = await ensureClientDefaultBillingProfile(knex, tenant, clientId);
-
-    await knex.transaction(async (trx) => {
-      const db = tenantDb(trx, tenant);
-      const existingDefault = await db.table('client_tax_rates')
-        .where({ client_id: clientId, is_default: true })
-        .whereNull('location_id')
-        .first();
-
-      if (existingDefault) {
-        return;
-      }
-
-      const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
-        .where('is_active', true)
-        .whereNotNull('region_code')
-        .orderBy('created_at', 'asc')
-        .first();
-
-      if (!defaultTaxRate) {
-        throw new Error('No active tax rates found in the system to assign as default.');
-      }
-
-      const existingSettings = await db.table<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId, billing_profile_id: resolvedProfileId })
-        .first();
-
-      if (!existingSettings) {
-        await db.table<IClientTaxSettings>('client_tax_settings').insert({
-          client_id: clientId,
-          billing_profile_id: resolvedProfileId,
-          is_reverse_charge_applicable: false,
-          tenant
-        });
-      }
-
-      const association = await db.table('client_tax_rates')
-        .where({ client_id: clientId })
-        .whereNull('location_id')
-        .first();
-
-      if (association) {
-        await db.table('client_tax_rates')
-          .where({ client_id: clientId })
-          .whereNull('location_id')
-          .update({
-            tax_rate_id: defaultTaxRate.tax_rate_id,
-            is_default: true
-          });
-      } else {
-        await db.table('client_tax_rates').insert({
-          client_id: clientId,
-          tax_rate_id: defaultTaxRate.tax_rate_id,
-          is_default: true,
-          location_id: null,
-          tenant
-        });
-      }
+    await withTransaction(knex, async (trx) => {
+      await initializeClientDefaultTax(trx, tenant, clientId);
     });
   }
 

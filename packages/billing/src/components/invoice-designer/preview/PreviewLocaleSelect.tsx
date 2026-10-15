@@ -37,6 +37,7 @@ export function PreviewLocaleSelect({
 
   return (
     <CustomSelect
+      showPlaceholderInDropdown={false}
       id={id}
       options={options}
       value={value}

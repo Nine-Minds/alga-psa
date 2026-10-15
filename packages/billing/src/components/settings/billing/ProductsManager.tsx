@@ -148,6 +148,7 @@ const ProductsManager: React.FC = () => {
     return `${symbol}${((cents ?? 0) / 100).toFixed(2)} (${currencyCode})`;
   };
 
+  // LEVERAGE: pattern catalog-list-query — product catalog filters use the same server-paginated list shape.
   const fetchProducts = async () => {
     setIsLoading(true);
     try {

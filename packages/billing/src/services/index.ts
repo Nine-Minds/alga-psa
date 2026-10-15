@@ -137,3 +137,4 @@ export {
   type AccountingSyncCycleStats,
   type AccountingSyncOperation
 } from './accountingSync/accountingSync.types';
+export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';

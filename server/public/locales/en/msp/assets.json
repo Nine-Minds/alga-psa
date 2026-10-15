@@ -103,6 +103,8 @@
       "selectAsset": "Select asset {{name}}",
       "selectedAssets_one": "{{count}} asset selected",
       "selectedAssets_other": "{{count}} assets selected",
+      "selectedAssets_few": "{{count}} assets selected",
+      "selectedAssets_many": "{{count}} assets selected",
       "clearSelection": "Clear selection",
       "bulkActionsComingSoon": "Bulk actions coming soon"
     },
@@ -124,7 +126,8 @@
       "location": "Location",
       "actions": "Actions",
       "patching": "Patching",
-      "coverage": "Coverage"
+      "coverage": "Coverage",
+      "assignedTo": "Assigned to"
     },
     "metrics": {
       "totalAssets": {
@@ -389,10 +392,16 @@
       "momentsAgo": "moments ago",
       "minutesAgo_one": "{{count}} minute ago",
       "minutesAgo_other": "{{count}} minutes ago",
+      "minutesAgo_few": "{{count}} minutes ago",
+      "minutesAgo_many": "{{count}} minutes ago",
       "hoursAgo_one": "{{count}} hour ago",
       "hoursAgo_other": "{{count}} hours ago",
+      "hoursAgo_few": "{{count}} hours ago",
+      "hoursAgo_many": "{{count}} hours ago",
       "daysAgo_one": "{{count}} day ago",
-      "daysAgo_other": "{{count}} days ago"
+      "daysAgo_other": "{{count}} days ago",
+      "daysAgo_few": "{{count}} days ago",
+      "daysAgo_many": "{{count}} days ago"
     }
   },
   "assetDetailHeader": {
@@ -446,6 +455,12 @@
       "client": "Client",
       "status": "Status",
       "location": "Location"
+    }
+  },
+  "documentsTab": {
+    "errors": {
+      "title": "Documents unavailable",
+      "loadFailed": "Linked documents could not be loaded. Reload the page or try again later."
     }
   },
   "assetDetails": {
@@ -557,7 +572,8 @@
       "clientsLoadFailed": "Unable to load clients",
       "locationsLoadFailed": "Unable to load locations for this client",
       "updateFailed": "Failed to update asset",
-      "validation": "Please fix the highlighted fields before saving."
+      "validation": "Please fix the highlighted fields before saving.",
+      "contactsLoadFailed": "Unable to load contacts for this client"
     },
     "actions": {
       "viewClient": "View client",
@@ -610,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Purchase Date",
       "warrantyEndDate": "Warranty End Date",
-      "assetType": "Type"
+      "assetType": "Type",
+      "assignedTo": "Assigned to"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -620,7 +637,9 @@
       "selectClientFirst": "Select a client first",
       "customLocation": "Enter a custom location or area",
       "selectPurchaseDate": "Select purchase date",
-      "selectWarrantyEndDate": "Select warranty end date"
+      "selectWarrantyEndDate": "Select warranty end date",
+      "loadingContacts": "Loading contacts…",
+      "selectContact": "Select a contact"
     },
     "statusOptions": {
       "active": "Active",
@@ -655,6 +674,10 @@
       "mobileDevice": "Mobile Device Details",
       "printer": "Printer Details",
       "custom": "{{typeName}} Details"
+    },
+    "additionalFields": "Additional fields",
+    "help": {
+      "assignedTo": "In the client portal, people with limited visibility see this device only if it is assigned to them or to someone who reports to them."
     }
   },
   "assetFormClient": {
@@ -733,6 +756,11 @@
     "more": "+{{count}} more"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Remote Desktop",
     "remoteShell": "Remote Shell",
     "remoteAccess": "Remote Access",
@@ -740,13 +768,52 @@
     "deviceOffline": "Device is offline",
     "errors": {
       "urlFetchFailed": "Failed to get remote access URL",
-      "initiateFailed": "Failed to initiate remote access"
+      "initiateFailed": "Failed to initiate remote access",
+      "managePermission": "Permission denied: Cannot manage asset settings.",
+      "readPermission": "Permission denied: Cannot read assets."
     },
     "indicator": {
       "online": "Online",
       "offline": "Offline",
       "available": "Remote access available",
       "deviceOffline": "Device offline"
+    },
+    "links": {
+      "title": "Remote access links",
+      "description": "Configure URL templates for ScreenConnect and other remote tools.",
+      "add": "Add link",
+      "empty": "No remote access links are configured.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addTitle": "Add remote access link",
+      "editTitle": "Edit remote access link",
+      "cancel": "Cancel",
+      "save": "Save",
+      "label": "Button label",
+      "template": "URL template",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.",
+      "errors": {
+        "load": "Failed to load remote access links.",
+        "save": "Failed to save the remote access link.",
+        "delete": "Failed to delete the remote access link.",
+        "templateHttp": "Template must begin with http:// or https:// and a literal host.",
+        "templatePlaceholder": "Template contains an unsupported placeholder.",
+        "templateUrl": "Template must produce a valid http or https URL.",
+        "required": "A label and URL template are required.",
+        "partialDelete": "Could not delete {{count}} selected link(s)."
+      },
+      "loading": "Loading remote access options…",
+      "noneAvailable": "No remote access options are available.",
+      "unavailable": "Unavailable for this asset",
+      "confirmDeleteTitle": "Delete remote access link?",
+      "confirmDeleteMessage": "Are you sure you want to delete “{{label}}”? This action cannot be undone.",
+      "actions": "Actions",
+      "openMenu": "Open menu",
+      "selectLabel": "Select {{label}}",
+      "selectAll": "Select all links",
+      "confirmBulkDeleteTitle": "Delete selected links?",
+      "confirmBulkDeleteMessage": "Delete {{count}} selected remote access link(s)?",
+      "selectedCount": "{{count}} selected"
     }
   },
   "assetListErrors": {
@@ -766,7 +833,9 @@
       "addAsset": "Add Asset",
       "showLess": "Show less",
       "moreAssets_one": "{{count}} more asset",
-      "moreAssets_other": "{{count}} more assets"
+      "moreAssets_other": "{{count}} more assets",
+      "moreAssets_few": "{{count}} more assets",
+      "moreAssets_many": "{{count}} more assets"
     },
     "errors": {
       "loadAvailableAssets": "Failed to load available assets",
@@ -780,8 +849,12 @@
     "success": {
       "associated_one": "{{count}} asset associated successfully",
       "associated_other": "{{count}} assets associated successfully",
+      "associated_few": "{{count}} assets associated successfully",
+      "associated_many": "{{count}} assets associated successfully",
       "associatedPartial_one": "{{count}} asset associated successfully, {{failed}} failed (may already be associated)",
       "associatedPartial_other": "{{count}} assets associated successfully, {{failed}} failed (may already be associated)",
+      "associatedPartial_few": "{{count}} assets associated successfully, {{failed}} failed (may already be associated)",
+      "associatedPartial_many": "{{count}} assets associated successfully, {{failed}} failed (may already be associated)",
       "removed": "Asset association removed"
     },
     "empty": {
@@ -805,7 +878,9 @@
       },
       "actions": {
         "addAssets_one": "Add Asset",
-        "addAssets_other": "Add Assets"
+        "addAssets_other": "Add Assets",
+        "addAssets_few": "Add Assets",
+        "addAssets_many": "Add Assets"
       }
     },
     "table": {
@@ -917,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Serial Number",
       "customLocationOption": "Custom location",
-      "location": "Location"
+      "location": "Location",
+      "assignedTo": "Assigned to"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -937,7 +1013,9 @@
       "customLocation": "Enter a custom location or area",
       "loadingLocations": "Loading locations...",
       "selectClientFirst": "Select a client first",
-      "selectLocation": "Select location"
+      "selectLocation": "Select location",
+      "loadingContacts": "Loading contacts...",
+      "selectContact": "Select contact"
     },
     "sections": {
       "typeSpecificDetails": "Type-specific Details"
@@ -999,7 +1077,8 @@
       "model": "Model",
       "serialNumber": "Serial Number",
       "purchaseDate": "Purchase Date",
-      "warrantyEnd": "Warranty End"
+      "warrantyEnd": "Warranty End",
+      "assignedTo": "Assigned to"
     },
     "values": {
       "unknownClient": "Unknown Client",
@@ -1194,17 +1273,29 @@
     "frequency": {
       "every_one": "Every {{frequency}}",
       "every_other": "Every {{count}} {{frequency}}",
+      "every_few": "Every {{count}} {{frequency}}",
+      "every_many": "Every {{count}} {{frequency}}",
       "units": {
         "daily_one": "day",
         "daily_other": "days",
+        "daily_few": "days",
+        "daily_many": "days",
         "weekly_one": "week",
         "weekly_other": "weeks",
+        "weekly_few": "weeks",
+        "weekly_many": "weeks",
         "monthly_one": "month",
         "monthly_other": "months",
+        "monthly_few": "months",
+        "monthly_many": "months",
         "quarterly_one": "quarter",
         "quarterly_other": "quarters",
+        "quarterly_few": "quarters",
+        "quarterly_many": "quarters",
         "yearly_one": "year",
-        "yearly_other": "years"
+        "yearly_other": "years",
+        "yearly_few": "years",
+        "yearly_many": "years"
       }
     },
     "status": {
@@ -1508,8 +1599,7 @@
       "manageAssetTypes": "Permission denied: Cannot manage asset types",
       "readDocuments": "Permission denied: Cannot read asset documents",
       "associateDocuments": "Permission denied: Cannot associate documents with assets",
-      "removeDocuments": "Permission denied: Cannot remove documents from assets",
-      "updateDocumentNotes": "Permission denied: Cannot update asset document notes"
+      "removeDocuments": "Permission denied: Cannot remove documents from assets"
     },
     "asset": {
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
@@ -1528,7 +1618,18 @@
       "conflict": "This asset change conflicts with an existing record. Please refresh and try again.",
       "notAllowed": "One of the asset values is not allowed. Please review the form and try again.",
       "missingField": "Missing required asset field.",
-      "missingFieldNamed": "Missing required asset field: {{field}}."
+      "missingFieldNamed": "Missing required asset field: {{field}}.",
+      "contactUnavailable": "Selected contact is not available for this client."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Failed to load assets"
+    },
+    "placeholder": "Add an asset...",
+    "searchPlaceholder": "Search assets",
+    "empty": "No matching assets for this client",
+    "loading": "Loading...",
+    "remove": "Remove asset"
   }
 }

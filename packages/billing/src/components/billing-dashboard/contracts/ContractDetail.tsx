@@ -51,6 +51,9 @@ import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQuerie
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -64,6 +67,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -100,6 +104,8 @@ const ContractSimulator = dynamic(
     ssr: false,
   }
 );
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -168,6 +174,77 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
   );
 };
 
+interface AssignmentBillingProfileFieldProps {
+  clientContractId: string;
+  clientId: string;
+  billingProfileId: string | null;
+  billingProfileName: string | null;
+  isEditing: boolean;
+  onChange: (billingProfileId: string | null) => void;
+}
+
+/**
+ * The billing profile a client assignment bills, on the contract itself.
+ *
+ * A contract raised against a merged-in client bills that client's profile, and
+ * this is the screen where an operator comes back to check or change it. The
+ * hook lives in its own component because the assignments are rendered in a
+ * map — and it keeps the D6 invisibility rule: a single-profile client sees
+ * nothing here at all.
+ */
+const AssignmentBillingProfileField: React.FC<AssignmentBillingProfileFieldProps> = ({
+  clientContractId,
+  clientId,
+  billingProfileId,
+  billingProfileName,
+  isEditing,
+  onChange,
+}) => {
+  const { t } = useTranslation('msp/contracts');
+  const { profiles, isSegmented } = useClientBillingProfiles(clientId || null, loadBillingProfiles);
+
+  if (!isSegmented) {
+    return null;
+  }
+
+  const selectedName = billingProfileId
+    ? profiles.find((profile) => profile.billing_profile_id === billingProfileId)?.name
+      ?? billingProfileName
+    : null;
+
+  return (
+    <div>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        {t('contractDetail.clientAssignment.billingProfile', { defaultValue: 'Billing Profile' })}
+      </Label>
+      {isEditing ? (
+        <div className="mt-1 w-full md:w-72">
+          <BillingProfilePicker
+            id={`assignment-billing-profile-${clientContractId}`}
+            clientId={clientId || null}
+            loadProfiles={loadBillingProfiles}
+            value={billingProfileId}
+            onChange={onChange}
+            label={t('contractDetail.clientAssignment.billingProfileLabel', {
+              defaultValue: 'Assignment billing profile',
+            })}
+            unassignedLabel={t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+          />
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+          {selectedName
+            ?? t('contractDetail.clientAssignment.billingProfileNone', {
+              defaultValue: "Use the client's default profile",
+            })}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const ContractDetail: React.FC<ContractDetailProps> = ({
   resolvedContractId,
   resolvedClientContractId,
@@ -222,9 +299,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Edit tab state
   const [editContractName, setEditContractName] = useState('');
@@ -540,44 +615,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     }
   }, [contractId, clientContractId]);
 
-  // Warn before leaving page with unsaved changes (browser navigation)
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Intercept internal navigation (clicking links)
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        // Only intercept if navigating to a different page
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   // Initialize edit form when contract loads
   useEffect(() => {
@@ -842,20 +885,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setShowCancelConfirm(false);
   };
 
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      // Allow navigation
-      window.location.href = pendingNavigation;
-    }
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
-
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -970,6 +999,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         if (editedAssignment.credit_drawdown_opt_out !== originalAssignment.credit_drawdown_opt_out) {
           updatePayload.credit_drawdown_opt_out = editedAssignment.credit_drawdown_opt_out ?? false;
         }
+        if ((editedAssignment.billing_profile_id ?? null) !== (originalAssignment.billing_profile_id ?? null)) {
+          updatePayload.billing_profile_id = editedAssignment.billing_profile_id ?? null;
+        }
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
@@ -1079,7 +1111,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
   };
-
 
   const handleAssignmentFieldChange = (
     assignmentId: string,
@@ -2120,6 +2151,22 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 </p>
                               )}
                             </div>
+                            <AssignmentBillingProfileField
+                              clientContractId={assignment.client_contract_id}
+                              clientId={assignment.client_id}
+                              billingProfileId={editData.billing_profile_id ?? null}
+                              billingProfileName={assignment.billing_profile_name ?? null}
+                              isEditing={isEditing}
+                              onChange={(billingProfileId) =>
+                                setEditAssignments((prev) => ({
+                                  ...prev,
+                                  [assignment.client_contract_id]: {
+                                    ...(prev[assignment.client_contract_id] || assignment),
+                                    billing_profile_id: billingProfileId,
+                                  },
+                                }))
+                              }
+                            />
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">

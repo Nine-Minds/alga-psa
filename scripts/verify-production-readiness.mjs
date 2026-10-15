@@ -14,7 +14,7 @@ let result;
 try {
   const source = testRevision(root);
   if (source.dirty || source.revision !== process.env.GITHUB_SHA) throw new Error('Readiness checkout is dirty or differs from candidate');
-  const artifacts = {}, unreadable = [];
+  const artifacts = {}, unreadable = {};
   const changed = readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA, head: source.revision });
   const jobs = JSON.parse(process.env.READINESS_JOBS || '{}');
   const selection = selectIntegration(changed);
@@ -42,7 +42,7 @@ try {
           delete verified.counts;
         }
         artifacts[artifact] = verified;
-      } catch { unreadable.push(`${artifact}: missing or unreadable callback inputs`); }
+      } catch { unreadable[artifact] = ['missing or unreadable callback inputs']; }
       continue;
     }
     if (artifact === 'teams-development-execution') {
@@ -64,7 +64,7 @@ try {
           verified.status = 'failed';
         }
         artifacts[artifact] = verified;
-      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      } catch (error) { unreadable[artifact] = [error.message]; }
       continue;
     }
     if (['supported-upgrade-execution', 'supported-citus-upgrade-execution'].includes(artifact)) {
@@ -88,17 +88,16 @@ try {
           verified.status = 'failed';
         }
         artifacts[artifact] = verified;
-      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      } catch (error) { unreadable[artifact] = [error.message]; }
       continue;
     }
     const name = artifact + (revisionSuffix ? `-${source.revision}` : '');
     try { artifacts[artifact] = JSON.parse(readFileSync(path.join(root, 'test-results/readiness-input', name, 'aggregate.json'), 'utf8')); }
-    catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+    catch (error) { unreadable[artifact] = [error.message]; }
   }
   const quarantine = JSON.parse(readFileSync(path.join(root, 'scripts/lib/quarantine.json'), 'utf8'));
   result = evaluateProductionReadiness({ revision: source.revision,
-    changed, jobs, artifacts, quarantine });
-  result.failures.push(...unreadable);
+    changed, jobs, artifacts, inputErrors: unreadable, quarantine });
   if (result.failures.length) result.status = 'failed';
 } catch (error) { result = { schemaVersion: 1, scope: 'production-regression-readiness', status: 'failed', failures: [error.message] }; }
 const directory = path.join(root, 'test-results/production-readiness');

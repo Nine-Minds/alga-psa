@@ -18,6 +18,7 @@ function buildSelectBuilder(rows: Array<Record<string, any>>) {
   const passthrough = () => builder;
   builder.join = vi.fn(passthrough);
   builder.leftJoin = vi.fn(passthrough);
+  builder.joinRaw = vi.fn(passthrough);
   builder.where = vi.fn((condition: any) => {
     if (typeof condition === 'function') {
       condition.call(builder, builder);

@@ -4,7 +4,7 @@ import { NavigationContainer, useNavigationContainerRef } from "@react-navigatio
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
-import { linking } from "../navigation/linking";
+import { hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
 import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
@@ -61,6 +61,7 @@ export function AppRoot() {
   const setSession = useCallback(
     (next: MobileSession | null) => {
       sessionRef.current = next;
+      setDeepLinkSignedIn(next !== null);
       setSessionState(next);
       if (!next) setIsBiometricLocked(false);
       void (next ? storeSession(next) : clearStoredSession());
@@ -86,6 +87,7 @@ export function AppRoot() {
       if (stored) {
         if (isSessionUsable(stored)) {
           sessionRef.current = stored;
+          setDeepLinkSignedIn(true);
           if (!canceled) setSessionState(stored);
         } else {
           await clearStoredSession();
@@ -130,6 +132,14 @@ export function AppRoot() {
       }
 
       setNavStateLoaded(false);
+      // A pending deep link (e.g. a ticket link tapped in an email) must win over
+      // the restored screen; React Navigation ignores links when initialState is set.
+      if (await hasPendingDeepLink()) {
+        if (canceled) return;
+        setNavInitialState(undefined);
+        setNavStateLoaded(true);
+        return;
+      }
       const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
       if (canceled) return;
       setNavInitialState(stripTransientRouteParams(stored ?? undefined));

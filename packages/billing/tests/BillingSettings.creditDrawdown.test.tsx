@@ -50,6 +50,10 @@ vi.mock("@alga-psa/ui/components/CustomTabs", () => ({
   TabContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// Keep sibling settings isolated, including QuoteSettings on the PR merge target.
+vi.mock("../src/components/settings/billing/QuoteSettings", () => ({
+  default: () => null,
+}));
 vi.mock("../src/components/settings/billing/DefaultCurrencySettings", () => ({
   default: () => null,
 }));

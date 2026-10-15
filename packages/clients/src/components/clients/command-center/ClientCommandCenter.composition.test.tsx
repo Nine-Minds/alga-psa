@@ -70,7 +70,7 @@ const fullPulse: ClientPulse = {
   documents: { totalCount: 0, recent: [] },
   notes: { hasNotes: false, previewLines: [], lastEditedAt: null },
   record: {
-    url: null, accountManagerName: null, defaultContactName: null,
+    url: null, accountManagerName: null, defaultContactName: null, defaultContactId: null,
     inboundDomains: [], taxRegion: null, clientSince: null, isInactive: false,
   },
 };

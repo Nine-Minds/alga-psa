@@ -322,7 +322,7 @@ const UploadPackageDialog = ({ isOpen, onClose, onUploaded }: UploadPackageDialo
               <CustomSelect id="amp-spreadsheet-entity" value={entityType} onValueChange={(value) => setEntityType(value as AmpEntityType)} disabled={isUploading} options={[
                 { value: 'assets', label: 'Assets (legacy asset import)' }, { value: 'organizations', label: 'Organizations' }, { value: 'locations', label: 'Locations' }, { value: 'contacts', label: 'Contacts' }, { value: 'tickets', label: 'Tickets' }, { value: 'ticket_comments', label: 'Ticket comments' },
               ]} />
-              <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow.</p>
+              <p className="text-xs text-muted-foreground">Canonical headers are recognized automatically. Other columns can be mapped to custom asset-type fields during Configure. Contacts accept common spellings such as Name, First Name, Last Name, Email, Phone, Title, and Client; legacy asset names such as Asset Name, Asset Type, and Serial Number are preserved through the AMP flow.</p>
             </div>
           )}
 

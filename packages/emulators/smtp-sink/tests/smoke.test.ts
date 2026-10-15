@@ -1,11 +1,11 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import smtpSink from '../src/index';
 
 let host: EmulatorHost;
 let control: string;
-let transporter: nodemailer.Transporter;
+let transporter: Transporter;
 
 beforeAll(async () => {
   host = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });

@@ -15,6 +15,8 @@ import {
   WorkflowDefinitionVersionModelV2,
 } from '@alga-psa/workflows/persistence';
 import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from './workflow-runtime-v2-actions';
+import { getDateTriggerSourceByCatalogEvent } from '@alga-psa/event-schemas';
+import { buildDateTriggerForSource } from '../../../../../shared/workflow/runtime/dateTriggerBuilder';
 import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
 
 type PermissionLevel = 'read' | 'manage' | 'publish' | 'admin';
@@ -525,6 +527,54 @@ export const simulateWorkflowEventAction = withAuth(async (user, { tenant }, inp
   return result;
 });
 
+/**
+ * Trigger construction shared by "attach event to a new workflow" and "create workflow from ticket".
+ * A catalog row that documents a date source is not a real event: attach a date trigger for that
+ * source (publish rejects an event trigger naming it), pinned to the source's own payload schema.
+ * Not exported: this file is 'use server', so every export is a client-callable action.
+ */
+const constructCatalogEventTrigger = (params: {
+  eventName: string;
+  payloadSchemaRef?: string | null;
+  sourcePayloadSchemaRef?: string | null;
+}) => {
+  const dateSource = getDateTriggerSourceByCatalogEvent(params.eventName);
+  const payloadSchemaRef = dateSource ? dateSource.payloadSchemaRef : (params.payloadSchemaRef ?? '');
+  const trigger: Record<string, unknown> = dateSource
+    ? buildDateTriggerForSource(dateSource)
+    : {
+        type: 'event',
+        eventName: params.eventName,
+        ...(params.sourcePayloadSchemaRef ? { sourcePayloadSchemaRef: params.sourcePayloadSchemaRef } : {})
+      };
+  return { payloadSchemaRef, trigger, dateSource };
+};
+
+/**
+ * Resolves the trigger (and the workflow's payloadSchemaRef) for a catalog event, reading the
+ * payload schema from the catalog instead of trusting the caller. Throws for an event that is not
+ * in the catalog or has no payload schema, rather than falling back to an empty schema ref.
+ */
+export const buildTriggerForCatalogEvent = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = z.object({ eventName: z.string().trim().min(1) }).parse(input);
+
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const entry = await EventCatalogModel.getByEventType(knex, parsed.eventName, tenant);
+  if (!entry) {
+    throw new Error(`Unknown workflow event: ${parsed.eventName}`);
+  }
+  const { payloadSchemaRef, trigger, dateSource } = constructCatalogEventTrigger({
+    eventName: parsed.eventName,
+    payloadSchemaRef: typeof entry.payload_schema_ref === 'string' ? entry.payload_schema_ref : null
+  });
+  if (!payloadSchemaRef) {
+    throw new Error(`Workflow event ${parsed.eventName} has no payload schema`);
+  }
+  return { payloadSchemaRef, trigger, dateSourceId: dateSource?.id ?? null };
+});
+
 export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({
     eventType: z.string().min(1),
@@ -537,17 +587,18 @@ export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, i
   await requireWorkflowPermission(user, 'manage', knex);
 
   const workflowName = parsed.name ?? `New workflow for ${parsed.eventType}`;
+  const { payloadSchemaRef, trigger, dateSource } = constructCatalogEventTrigger({
+    eventName: parsed.eventType,
+    payloadSchemaRef: parsed.payloadSchemaRef,
+    sourcePayloadSchemaRef: parsed.sourcePayloadSchemaRef
+  });
   const definition = {
     id: uuidv4(),
     version: 1,
     name: workflowName,
     description: '',
-    payloadSchemaRef: parsed.payloadSchemaRef ?? '',
-    trigger: {
-      type: 'event',
-      eventName: parsed.eventType,
-      ...(parsed.sourcePayloadSchemaRef ? { sourcePayloadSchemaRef: parsed.sourcePayloadSchemaRef } : {})
-    },
+    payloadSchemaRef,
+    trigger,
     steps: []
   };
 
@@ -557,8 +608,10 @@ export const createWorkflowFromEventAction = withAuth(async (user, { tenant }, i
     operation: 'workflow_event_attach_new_workflow',
     tableName: 'workflow_definitions',
     recordId: created.workflowId,
-    changedData: { triggerEventName: parsed.eventType },
-    details: { payloadSchemaRef: parsed.payloadSchemaRef ?? null },
+    changedData: dateSource
+      ? { triggerDateSource: dateSource.id, catalogEventType: parsed.eventType }
+      : { triggerEventName: parsed.eventType },
+    details: { payloadSchemaRef: payloadSchemaRef || null },
     source: 'ui'
   });
 

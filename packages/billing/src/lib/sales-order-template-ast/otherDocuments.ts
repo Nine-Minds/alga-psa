@@ -107,6 +107,7 @@ const buildStandardPickListAst = (): TemplateAst => ({
         ],
       },
       { id: 'divider', type: 'divider', style: { inline: { margin: '0 0 16px 0' } } },
+      { id: 'allocated-serials-note', type: 'text', content: { type: 'i18n', i18nKey: 'labels.allocatedSerialsNote', defaultValue: 'Allocated serial numbers; subject to change at fulfillment.' }, style: { inline: { color: '#4b5563', fontSize: '11px', margin: '0 0 8px 0' } } },
       {
         id: 'line-items',
         type: 'dynamic-table',
@@ -115,9 +116,10 @@ const buildStandardPickListAst = (): TemplateAst => ({
         emptyStateText: { i18nKey: 'labels.emptyState.noItemsToPick', defaultValue: 'No items to pick' },
         columns: [
           { id: 'check', header: { i18nKey: 'labels.picked', defaultValue: 'Picked' }, value: { type: 'literal', value: '☐' }, style: { inline: { width: '8%', textAlign: 'center' } } },
-          { id: 'qty', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity_ordered' }, format: 'number', style: { inline: { width: '10%', textAlign: 'right' } } },
-          { id: 'product', header: { i18nKey: 'labels.product', defaultValue: 'Product' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '52%' } } },
-          { id: 'sku', header: { i18nKey: 'labels.sku', defaultValue: 'SKU' }, value: { type: 'path', path: 'service_sku' }, style: { inline: { width: '20%' } } },
+          { id: 'qty', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity_ordered' }, format: 'number', style: { inline: { width: '7%', textAlign: 'right' } } },
+          { id: 'product', header: { i18nKey: 'labels.product', defaultValue: 'Product' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '27%' } } },
+          { id: 'sku', header: { i18nKey: 'labels.sku', defaultValue: 'SKU' }, value: { type: 'path', path: 'service_sku' }, style: { inline: { width: '15%' } } },
+          { id: 'serials', header: { i18nKey: 'labels.serialNumbers', defaultValue: 'Serial numbers' }, value: { type: 'path', path: 'allocated_serials_display' }, style: { inline: { width: '43%' } } },
         ],
       },
       { id: 'picker', type: 'text', content: { type: 'i18n', i18nKey: 'labels.note.pickedBy', defaultValue: 'Picked by: ____________________     Date: ____________' }, style: { inline: { color: '#374151', margin: '24px 0 0 0' } } },

@@ -13,6 +13,7 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -1345,7 +1346,7 @@ export async function convertQuoteToDraftContract(
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
       round_up_to_nearest: contractLineType === 'Hourly' ? 15 : null,
-      is_active: false,
+      is_active: true,
       location_id: item.location_id ?? null,
       created_at: nowIso,
       updated_at: nowIso,
@@ -1443,7 +1444,10 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || 'unit',
+        ...withUnitCode({
+          unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+          unit_code: item.unit_code ?? null,
+        }),
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,
@@ -1461,7 +1465,9 @@ export async function convertQuoteToDraftContract(
     contract_id: contract.contract_id,
     start_date: quote.accepted_at || quote.quote_date || nowIso,
     end_date: null,
-    is_active: true,
+    // Draft contracts keep an inactive assignment until Set to Active; lines are always enabled.
+    // LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice
+    is_active: false,
     created_at: nowIso,
     updated_at: nowIso,
   });

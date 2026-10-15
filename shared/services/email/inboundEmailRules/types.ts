@@ -27,6 +27,7 @@ export type InboundEmailRuleActionType =
 export type InboundEmailRuleOnNoMatch = 'proceed' | 'fallback_destination' | 'skip';
 
 export type InboundEmailExtractionSource = 'subject' | 'body_text';
+export type InboundEmailClientMatchTarget = 'client_name' | 'asset_name' | 'contact_email';
 
 export type InboundEmailExtraction =
   | { type: 'between'; start: string; end: string; occurrence?: 'first' | 'last' }
@@ -37,6 +38,7 @@ export type InboundEmailExtraction =
 export interface ExtractAssignClientActionConfig {
   source: InboundEmailExtractionSource;
   extraction: InboundEmailExtraction;
+  match_by?: InboundEmailClientMatchTarget[];
 }
 
 export interface SetDestinationActionConfig {
@@ -78,11 +80,13 @@ export interface InboundEmailRuleConditionResult {
   passed: boolean;
 }
 
-export type InboundEmailClientMatchSource = 'client_name' | 'alias';
+export type InboundEmailClientMatchSource = 'client_name' | 'alias' | 'asset_name' | 'contact_email';
 
 export interface InboundEmailClientMatch {
   clientId: string;
   matchedBy: InboundEmailClientMatchSource;
+  contactId?: string;
+  assetId?: string;
 }
 
 /**
@@ -100,6 +104,9 @@ export type InboundEmailRuleOutcome =
       clientId: string;
       extractedValue: string;
       matchSource: 'rule_extraction' | 'rule_ai';
+      matchedBy: InboundEmailClientMatchSource;
+      contactId?: string;
+      assetId?: string;
     }
   | {
       kind: 'set_destination';
@@ -122,6 +129,7 @@ export interface InboundEmailRuleTraceEntry {
   conditionResults: InboundEmailRuleConditionResult[];
   extractedValue?: string | null;
   clientMatch?: InboundEmailClientMatch | null;
+  clientMatchAmbiguity?: Array<{ target: InboundEmailClientMatchTarget; clientCount: number }>;
   aiDecision?: string | null;
   resolution:
     | 'conditions_not_matched'

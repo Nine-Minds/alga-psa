@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerContactActions } from '../businessOperations/contacts';
 
@@ -118,5 +118,15 @@ describe('contact workflow action registration metadata', () => {
     expect(contactShape.phone).toBeTruthy();
     expect(contactShape.client_id).toBeTruthy();
     expect(contactShape.is_inactive).toBeTruthy();
+  });
+
+  it('declares that Find Contact needs a contact id, email or phone', () => {
+    const action = getActionRegistryV2().get('contacts.find', 1)!;
+    const schema = zodToWorkflowJsonSchema(action.inputSchema) as Record<string, unknown>;
+
+    expect(schema['x-workflow-require-one-of']).toEqual(['contact_id', 'email', 'phone']);
+    // The runtime rule it mirrors still holds.
+    expect(action.inputSchema.safeParse({ client_id: '11111111-1111-4111-8111-111111111111' }).success).toBe(false);
+    expect(action.inputSchema.safeParse({ email: 'jane@example.test' }).success).toBe(true);
   });
 });

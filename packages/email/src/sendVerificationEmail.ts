@@ -54,6 +54,7 @@ export async function sendVerificationEmail({
 
       // Use TenantEmailService to send the email
       const result = await TenantEmailService.sendEmail({
+        mailClass: 'account',
         tenantId: tenant,
         to: email,
         templateProcessor,

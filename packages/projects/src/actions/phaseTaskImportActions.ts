@@ -6,17 +6,13 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
-import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
-import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { IProjectPhase } from '@alga-psa/types';
-import { IPriority } from '@alga-psa/types';
-import { IService } from '@alga-psa/types';
-import { IUser } from '@shared/interfaces/user.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
@@ -108,6 +104,17 @@ async function resolveProjectStatusInfo(
  * Parse a date string to Date object
  * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
  */
+/**
+ * Task dates as they will be stored. A start date after the due date cannot
+ * be drawn or scheduled, so it is dropped rather than failing the row.
+ */
+function resolveImportTaskDates(row: ITaskImportRow): { start_date: Date | null; due_date: Date | null } {
+  const due_date = parseImportDate(row.due_date);
+  const parsedStart = parseImportDate(row.start_date);
+  const start_date = parsedStart && due_date && parsedStart > due_date ? null : parsedStart;
+  return { start_date, due_date };
+}
+
 function parseImportDate(dateStr: string | undefined): Date | null {
   if (!dateStr?.trim()) return null;
 
@@ -312,7 +319,7 @@ export async function groupRowsIntoPhases(
       additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
-      due_date: parseImportDate(row.due_date),
+      ...resolveImportTaskDates(row),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
       task_type_key: row.task_type?.trim() || 'task',
@@ -345,6 +352,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
+      start_date: '2024-02-12',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -412,6 +420,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
+    'start_date',
     'due_date',
     'priority',
     'service',
@@ -443,6 +452,12 @@ export const getImportReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    // The phases and statuses below belong to one project, so the caller has to
+    // be allowed to read that project and not merely projects in general.
+    if (projectId && tenant) {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    }
+
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
@@ -617,11 +632,17 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -658,193 +679,6 @@ export async function validatePhaseTaskImportDataWithReferenceData(
 }
 
 /**
- * Validate phase/task import data and build lookup maps
- * @deprecated Use getImportReferenceData + validatePhaseTaskImportDataWithReferenceData for better performance
- */
-export const validatePhaseTaskImportData = withAuth(async (
-  _user,
-  { tenant },
-  rows: ITaskImportRow[],
-  projectId?: string
-): Promise<IPhaseTaskValidationResponse> => {
-  const { knex: db } = await createTenantKnex();
-
-  // Fetch lookup data
-  const [users, priorities, servicesResponse] = await Promise.all([
-    getAllUsersBasic(true, 'internal'), // Only fetch active internal/MSP agents
-    getAllPriorities('project_task'),
-    getServices(1, 999),
-  ]);
-
-  const services = servicesResponse.services.filter((service) => {
-    const isActive = (service as any).is_active;
-    return isActive === undefined ? true : Boolean(isActive);
-  });
-
-  // Build lookup maps (case-insensitive)
-  const userLookup: Record<string, string> = {};
-  users.forEach((user: IUser) => {
-    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase().trim();
-    userLookup[fullName] = user.user_id;
-  });
-
-  const priorityLookup: Record<string, string> = {};
-  priorities.forEach((priority: IPriority) => {
-    priorityLookup[priority.priority_name.toLowerCase().trim()] = priority.priority_id;
-  });
-
-  const serviceLookup: Record<string, string> = {};
-  services.forEach((service: IService) => {
-    serviceLookup[service.service_name.toLowerCase().trim()] = service.service_id;
-  });
-
-  const statusLookup: Record<string, string> = {};
-  let statusLookupByPhase: Record<string, Record<string, string>> = {};
-  const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
-
-  if (projectId && tenant) {
-    const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
-    Object.assign(statusLookup, statusReferenceData.statusLookup);
-    statusLookupByPhase = statusReferenceData.statusLookupByPhase;
-  }
-
-  // Collect unique (phase, status) pairs from CSV. We preserve original casing for display.
-  const csvStatusPairs = new Map<string, { phaseName: string; statusName: string }>();
-  rows.forEach(row => {
-    const statusName = row.status?.trim();
-    if (statusName) {
-      const phaseName = row.phase_name?.trim() || DEFAULT_PHASE_NAME;
-      const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
-      if (!csvStatusPairs.has(key)) {
-        csvStatusPairs.set(key, { phaseName, statusName });
-      }
-    }
-  });
-
-  csvStatusPairs.forEach(({ phaseName, statusName }) => {
-    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
-    if (!lookup[statusName.toLowerCase()]) {
-      unmatchedStatuses.push({ phaseName, statusName });
-    }
-  });
-
-  // Collect unique agent names from CSV that don't match existing users
-  const unmatchedAgents: string[] = [];
-  const csvAgentNames = new Set<string>();
-  rows.forEach(row => {
-    if (row.assigned_to?.trim()) {
-      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
-      agentNames.forEach(agentName => {
-        csvAgentNames.add(agentName);
-      });
-    }
-  });
-
-  csvAgentNames.forEach(agentName => {
-    const normalizedName = agentName.toLowerCase();
-    if (!userLookup[normalizedName]) {
-      unmatchedAgents.push(agentName);
-    }
-  });
-
-  // Validate each row
-  const validationResults: ITaskImportValidationResult[] = rows.map((row, index) => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const rowNumber = index + 2; // +2 for 1-based indexing and header row
-
-    // Required field validation
-    if (!row.task_name?.trim()) {
-      errors.push('Task name is required');
-    }
-
-    // Name matching validation - supports comma-separated agents (first = primary, rest = additional)
-    if (row.assigned_to?.trim()) {
-      const agentNames = row.assigned_to.split(',').map(name => name.trim()).filter(name => name);
-      const notFoundAgents: string[] = [];
-
-      agentNames.forEach(agentName => {
-        const normalizedName = agentName.toLowerCase();
-        if (!userLookup[normalizedName]) {
-          notFoundAgents.push(agentName);
-        }
-      });
-
-      if (notFoundAgents.length > 0) {
-        if (notFoundAgents.length === agentNames.length) {
-          // All agents not found
-          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - task will be unassigned`);
-        } else {
-          // Some agents not found
-          warnings.push(`User(s) "${notFoundAgents.join(', ')}" not found - will be skipped`);
-        }
-      }
-    }
-
-    if (row.priority?.trim()) {
-      const normalizedPriority = row.priority.toLowerCase().trim();
-      if (!priorityLookup[normalizedPriority]) {
-        warnings.push(`Priority "${row.priority}" not found - will be skipped`);
-      }
-    }
-
-    if (row.service?.trim()) {
-      const normalizedService = row.service.toLowerCase().trim();
-      if (!serviceLookup[normalizedService]) {
-        warnings.push(`Service "${row.service}" not found - will be skipped`);
-      }
-    }
-
-    // Status validation - only warn, actual resolution happens in wizard step
-    if (row.status?.trim() && projectId) {
-      const normalizedStatus = row.status.toLowerCase().trim();
-      if (!statusLookup[normalizedStatus]) {
-        // Don't warn here - the status resolution step will handle this
-      }
-    }
-
-    // Date validation
-    if (row.due_date?.trim()) {
-      const parsedDate = parseImportDate(row.due_date);
-      if (!parsedDate) {
-        warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
-      }
-    }
-
-    // Number validation
-    if (row.estimated_hours?.trim()) {
-      const parsed = parseImportNumber(row.estimated_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid estimated_hours: "${row.estimated_hours}" - will be skipped`);
-      }
-    }
-
-    if (row.actual_hours?.trim()) {
-      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      rowNumber,
-      data: row,
-    };
-  });
-
-  return {
-    validationResults,
-    userLookup,
-    priorityLookup,
-    serviceLookup,
-    statusLookup,
-    statusLookupByPhase,
-    unmatchedStatuses,
-    unmatchedAgents,
-  };
-});
-
-/**
  * Default status column name for tasks without a matching status
  */
 const DEFAULT_UNSPECIFIED_STATUS_NAME = 'No Status Specified';
@@ -869,11 +703,9 @@ export const importPhasesAndTasks = withAuth(async (
         throw new Error('Permission denied: Cannot update projects');
       }
 
-    // Verify project exists
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
+    // Verify the project exists and this caller may reach that specific project —
+    // project:update alone does not grant access to every project in the tenant.
+    const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get existing status mappings
     let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
@@ -1145,6 +977,7 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
+              start_date: taskData.start_date,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,

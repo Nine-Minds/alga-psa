@@ -13,6 +13,7 @@ export interface ServiceSummary {
   serviceTypeName?: string | null
   defaultRate: number
   unitOfMeasure: string
+  unitCode: string | null
   isActive: boolean
   sku?: string | null
 }
@@ -69,6 +70,7 @@ function mapServiceSummary(row: any): ServiceSummary {
     serviceTypeName: row.service_type_name ?? null,
     defaultRate: Number(row.default_rate ?? 0),
     unitOfMeasure: String(row.unit_of_measure ?? ''),
+    unitCode: row.unit_code ?? null,
     isActive: Boolean(row.is_active),
     sku: row.sku ?? null,
   }
@@ -107,6 +109,7 @@ export async function listServiceSummaries(tenantId: string, input: ServicesList
       'sc.custom_service_type_id',
       'sc.default_rate',
       'sc.unit_of_measure',
+      'sc.unit_code',
       'sc.is_active',
       'sc.sku',
       'st.name as service_type_name',
@@ -139,6 +142,7 @@ export async function getServiceSummaryById(tenantId: string, serviceId: string)
       'sc.custom_service_type_id',
       'sc.default_rate',
       'sc.unit_of_measure',
+      'sc.unit_code',
       'sc.is_active',
       'sc.sku',
       'st.name as service_type_name',

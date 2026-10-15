@@ -1,8 +1,6 @@
 import logger from '@alga-psa/core/logger';
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { isEnterprise } from '@alga-psa/core';
-import { getJobScheduler } from '../jobSchedulerAccessor';
 
 const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
 const WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE = 10_000;
@@ -67,50 +65,5 @@ export async function cleanupWebhookDeliveriesJob(): Promise<{
       success: false,
       deletedCount: 0,
     };
-  }
-}
-
-export async function scheduleCleanupWebhookDeliveriesJob(
-  cronExpression: string = '*/15 * * * *',
-): Promise<string | null> {
-  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
-  if (isEnterprise) {
-    return null;
-  }
-  try {
-    // The CE server registers its initializeScheduler via registerJobSchedulerAccessor
-    // so this package never imports server/src (which would drag the full server handler
-    // registry into the Temporal worker build).
-    const scheduler = await getJobScheduler();
-
-    if (!scheduler) {
-      logger.error('[WebhookCleanupJob] Scheduler unavailable, skipping webhook delivery cleanup scheduling');
-      return null;
-    }
-
-    const jobId = await scheduler.scheduleRecurringJob(
-      'cleanup-webhook-deliveries',
-      cronExpression,
-      { tenantId: 'system' },
-    );
-
-    if (jobId) {
-      logger.info('[WebhookCleanupJob] Scheduled webhook delivery cleanup job', {
-        jobId,
-        cronExpression,
-      });
-      return jobId;
-    }
-
-    logger.info('[WebhookCleanupJob] Cleanup job already scheduled (singleton active)', {
-      cronExpression,
-      returnedJobId: jobId,
-    });
-    return null;
-  } catch (error) {
-    logger.error('[WebhookCleanupJob] Error scheduling webhook delivery cleanup job', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-    return null;
   }
 }

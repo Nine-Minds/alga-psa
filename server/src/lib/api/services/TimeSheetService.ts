@@ -22,14 +22,69 @@ import {
   ReverseApprovalData,
   TimeSheetSearchData,
   TimeSheetExportQuery,
-  GenerateTimePeriodsData,
   CreateScheduleEntryData,
   UpdateScheduleEntryData
 } from '../schemas/timeSheet';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
+import { ensureTimePeriodCoversDate } from '@alga-psa/scheduling/lib/timePeriodMaterialization';
+import { Temporal } from '@js-temporal/polyfill';
 import { hasPermission } from '../../auth/rbac';
+import {
+  buildVisibilityFilter,
+  evaluateEntryAccess,
+  resolveCalendarAccess,
+  type CalendarAccess,
+} from '@alga-psa/scheduling/lib/calendarAccess';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
+
+/**
+ * Normalize a DATE column value to YYYY-MM-DD.
+ * pg has no DATE (1082) parser, so the driver builds a Date at *server-local* midnight; local getters reverse that.
+ * If a 1082 parser returning strings is ever added, the string branch handles it.
+ */
+// LEVERAGE: friction pg-date-parsing — DATE columns arrive as local-midnight Dates, so every reader re-derives the
+// calendar date by hand. A global 1082 type parser would remove this (and the same bug in the TimePeriod model).
+export function formatDbDate(value: string | Date): string {
+  if (value instanceof Date) {
+    const y = String(value.getFullYear()).padStart(4, '0');
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+/** Shape a time_periods row for the API: YYYY-MM-DD dates, derived is_current and computed fields. */
+export function toApiTimePeriod(row: any, today: string): any {
+  const start = formatDbDate(row.start_date);
+  const end = formatDbDate(row.end_date);
+  const startDate = Temporal.PlainDate.from(start);
+  const endDate = Temporal.PlainDate.from(end);
+  const pastDaysOfYear = startDate.dayOfYear - 1;
+  const firstDayOfWeek = startDate.with({ month: 1, day: 1 }).dayOfWeek % 7; // 0 = Sunday
+  return {
+    ...row,
+    start_date: start,
+    end_date: end,
+    is_current: start <= today && today < end,
+    is_closed: !!row.is_closed,
+    duration_days: startDate.until(endDate, { largestUnit: 'days' }).days,
+    week_number: Math.ceil((pastDaysOfYear + firstDayOfWeek + 1) / 7),
+    month_name: new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(
+      new Date(Date.UTC(startDate.year, startDate.month - 1, startDate.day))
+    ),
+    year: startDate.year,
+  };
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const CLOSED_TIME_PERIOD_MESSAGE = 'Time period is closed; reopen it first';
 
 function throwTimePeriodSettingsApiError(error: unknown): never {
   const dbError = error as { code?: string; column?: string };
@@ -258,7 +313,8 @@ export class TimeSheetService extends BaseService<any> {
         return timeSheet;
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CREATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -305,7 +361,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_UPDATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_UPDATED',
         payload: {
           tenantId: context.tenant,
@@ -346,7 +403,8 @@ export class TimeSheetService extends BaseService<any> {
           .del();
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_DELETED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_DELETED',
         payload: {
           tenantId: context.tenant,
@@ -395,7 +453,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_SUBMITTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_SUBMITTED',
         payload: {
           tenantId: context.tenant,
@@ -452,7 +511,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVED',
         payload: {
           tenantId: context.tenant,
@@ -503,7 +563,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CHANGES_REQUESTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_CHANGES_REQUESTED',
         payload: {
           tenantId: context.tenant,
@@ -591,7 +652,8 @@ export class TimeSheetService extends BaseService<any> {
   
       });
 
-      await publishEvent({
+      // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVAL_REVERSED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
+      await publishUnregisteredEventType({
         eventType: 'TIME_SHEET_APPROVAL_REVERSED',
         payload: {
           tenantId: context.tenant,
@@ -664,137 +726,106 @@ export class TimeSheetService extends BaseService<any> {
   // Time periods management
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
-      
-      return tenantDb(knex, context.tenant).table('time_periods')
+      const today = todayUtc();
+
+      const rows = await tenantDb(knex, context.tenant).table('time_periods')
         .orderBy('start_date', 'desc');
+      return rows.map((row: any) => toApiTimePeriod(row, today));
     }
 
 
   async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
       const { knex } = await this.getKnex();
 
-      const targetDate = date ?? new Date().toISOString().slice(0, 10);
-      const period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+      const today = todayUtc();
+      const targetDate = date ?? today;
+      let period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+
+      // Materialize the current period from the tenant's settings, but never for other dates.
+      if (!period && targetDate === today) {
+        await ensureTimePeriodCoversDate(knex, context.tenant, Temporal.PlainDate.from(today));
+        period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
+      }
 
       return period ? this.getTimePeriod(period.period_id, context) : null;
     }
 
 
-  async getTimePeriod(id: string, context: ServiceContext): Promise<any | null> {
-      const { knex } = await this.getKnex();
-      
-      const period = await tenantDb(knex, context.tenant).table('time_periods')
+  async getTimePeriod(id: string, context: ServiceContext, db?: Knex | Knex.Transaction): Promise<any | null> {
+      const conn = db ?? (await this.getKnex()).knex;
+
+      const period = await tenantDb(conn, context.tenant).table('time_periods')
         .where({ period_id: id })
         .first();
-  
-      if (period && period.start_date && period.end_date) {
-        const startDate = new Date(period.start_date);
-        const endDate = new Date(period.end_date);
-        const durationMs = endDate.getTime() - startDate.getTime();
-        const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
-  
-        return {
-          ...period,
-          duration_days: durationDays,
-          week_number: this.getWeekNumber(startDate),
-          month_name: startDate.toLocaleString('default', { month: 'long' }),
-          year: startDate.getFullYear()
-        };
-      }
-  
-      return period || null;
+
+      return period ? toApiTimePeriod(period, todayUtc()) : null;
     }
 
 
   async createTimePeriod(data: CreateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
-      return withTransaction(knex, async (trx) => {
-        const startDate = data.start_date ? new Date(data.start_date) : null;
-        const endDate = data.end_date ? new Date(data.end_date) : null;
 
-        if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          throw new BadRequestError('Start date and end date must be valid dates');
-        }
+      return withTransaction(knex, async (trx) => {
+        // Dates are already normalized to YYYY-MM-DD by the schema; is_current is ignored (derived on read).
+        const { start_date: startDate, end_date: endDate } = data;
 
         if (startDate >= endDate) {
           throw new BadRequestError('Start date must be before end date');
         }
 
-        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .whereRaw('start_date < ?', [data.end_date])
-          .whereRaw('end_date > ?', [data.start_date])
-          .first();
-
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, context.tenant, startDate, endDate);
         if (overlappingPeriod) {
           throw new ConflictError('Cannot create time period: overlaps with existing period');
         }
 
-        const periodData = {
-          ...data,
-          tenant: context.tenant,
-          created_at: new Date(),
-          updated_at: new Date()
-        };
-  
-        const [period] = await tenantDb(trx, context.tenant).table('time_periods')
-          .insert(periodData)
-          .returning('*');
-  
-        return this.getTimePeriod(period.period_id, context);
+        const period = await TimePeriod.create(trx, context.tenant, { start_date: startDate, end_date: endDate });
+
+        return this.getTimePeriod(period.period_id, context, trx);
       });
     }
 
 
   async updateTimePeriod(id: string, data: UpdateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
-        const existingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .first();
+        const existingPeriod = await TimePeriod.findById(trx, context.tenant, id);
 
         if (!existingPeriod) {
           throw new NotFoundError('Time period not found');
         }
 
-        const nextStartDate = data.start_date ?? existingPeriod.start_date;
-        const nextEndDate = data.end_date ?? existingPeriod.end_date;
-        const startDate = new Date(nextStartDate);
-        const endDate = new Date(nextEndDate);
-
-        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-          throw new BadRequestError('Start date and end date must be valid dates');
+        if (existingPeriod.is_closed) {
+          throw new ConflictError(CLOSED_TIME_PERIOD_MESSAGE);
         }
 
-        if (startDate >= endDate) {
+        // is_current is ignored; only the dates are editable.
+        if (data.start_date === undefined && data.end_date === undefined) {
+          return this.getTimePeriod(id, context, trx);
+        }
+
+        const nextStartDate = data.start_date ?? formatDbDate(existingPeriod.start_date as string | Date);
+        const nextEndDate = data.end_date ?? formatDbDate(existingPeriod.end_date as string | Date);
+
+        if (nextStartDate >= nextEndDate) {
           throw new BadRequestError('Start date must be before end date');
         }
 
-        const overlappingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
-          .whereNot('period_id', id)
-          .where('start_date', '<', nextEndDate)
-          .where('end_date', '>', nextStartDate)
-          .first();
+        if (!(await TimePeriod.isEditable(trx, context.tenant, id))) {
+          throw new ConflictError('Cannot change the dates of a time period that has associated time sheets');
+        }
 
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, context.tenant, nextStartDate, nextEndDate, id);
         if (overlappingPeriod) {
           throw new ConflictError('Cannot update time period: overlaps with existing period');
         }
 
-        const updateData = {
-          ...data,
-          updated_at: new Date()
-        };
-  
-        const updatedCount = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .update(updateData);
+        await TimePeriod.update(trx, context.tenant, id, {
+          ...(data.start_date !== undefined ? { start_date: data.start_date } : {}),
+          ...(data.end_date !== undefined ? { end_date: data.end_date } : {}),
+        });
 
-        if (updatedCount === 0) {
-          throw new NotFoundError('Time period not found');
-        }
-  
-        return this.getTimePeriod(id, context);
+        return this.getTimePeriod(id, context, trx);
       });
     }
 
@@ -803,12 +834,14 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const period = await tenantDb(trx, context.tenant).table('time_periods')
-          .where({ period_id: id })
-          .first();
+        const period = await TimePeriod.findById(trx, context.tenant, id);
 
         if (!period) {
           throw new NotFoundError('Time period not found');
+        }
+
+        if (period.is_closed) {
+          throw new ConflictError(CLOSED_TIME_PERIOD_MESSAGE);
         }
 
         // Check if period has time sheets
@@ -831,33 +864,25 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  async generateTimePeriods(data: GenerateTimePeriodsData, context: ServiceContext): Promise<any[]> {
+  async closeTimePeriod(id: string, context: ServiceContext): Promise<any> {
+      return this.setTimePeriodClosed(id, true, context);
+    }
+
+
+  async reopenTimePeriod(id: string, context: ServiceContext): Promise<any> {
+      return this.setTimePeriodClosed(id, false, context);
+    }
+
+
+  private async setTimePeriodClosed(id: string, closed: boolean, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
-      
+
       return withTransaction(knex, async (trx) => {
-        const periods: any[] = [];
-        const startDate = new Date(data.start_date!);
-        const endDate = new Date(data.end_date!);
-        let currentDate = new Date(startDate);
-  
-        while (currentDate <= endDate) {
-          const periodEnd = this.calculatePeriodEnd(currentDate, data.frequency, data.frequency_unit);
-          
-          if (periodEnd <= endDate) {
-            const period = await this.createTimePeriod({
-              start_date: currentDate.toISOString().split('T')[0],
-              end_date: periodEnd.toISOString().split('T')[0],
-              is_current: false
-            }, context);
-            
-            periods.push(period);
-          }
-  
-          currentDate = new Date(periodEnd);
-          currentDate.setDate(currentDate.getDate() + 1);
+        const period = await TimePeriod.setClosed(trx, context.tenant, id, closed);
+        if (!period) {
+          throw new NotFoundError('Time period not found');
         }
-  
-        return periods;
+        return this.getTimePeriod(id, context, trx);
       });
     }
 
@@ -972,18 +997,36 @@ export class TimeSheetService extends BaseService<any> {
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
-      // Check permissions for private entries
-      if (!await this.canViewAllSchedules(context)) {
-        const userId = context.userId;
-        const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
-          .select('sea.user_id')
-          .whereRaw('sea.entry_id = schedule_entries.entry_id')
-          .where('sea.user_id', userId);
+      // Visibility comes from the shared-calendar resolver: own entries,
+      // shared personal calendars, group calendars, or everything for
+      // user_schedule:update holders. Filtered in SQL, then masked per entry.
+      const access = await resolveCalendarAccess(
+        knex,
+        context.tenant,
+        { user_id: context.userId },
+        await this.canViewAllSchedules(context)
+      );
+      const visibility = buildVisibilityFilter(access);
+      if (visibility) {
+        const visibleUserIds = visibility.userIds;
+        const visibleCalendarIds = visibility.calendarIds;
+        const assigneeVisibilityQuery = db.subquery('schedule_entry_assignees as sea')
+          .select(knex.raw('1'))
+          .whereRaw('?? = ??', ['sea.entry_id', 'schedule_entries.entry_id'])
+          .whereIn('sea.user_id', visibleUserIds);
+        db.tenantWhereColumn(assigneeVisibilityQuery, 'sea.tenant', 'schedule_entries.tenant');
 
         query = query.where(function() {
-          this.where('is_private', false)
-            .orWhere('created_by', userId)
-            .orWhereExists(assigneeVisibilityQuery);
+          this.whereExists(assigneeVisibilityQuery);
+          if (visibleCalendarIds.length > 0) {
+            this.orWhereIn('schedule_entries.calendar_id', visibleCalendarIds);
+          }
+        });
+      }
+      if (access.hiddenCalendarIds.length > 0) {
+        query = query.where(function() {
+          this.whereNull('schedule_entries.calendar_id')
+            .orWhereNotIn('schedule_entries.calendar_id', access.hiddenCalendarIds);
         });
       }
 
@@ -993,38 +1036,41 @@ export class TimeSheetService extends BaseService<any> {
         .orderBy('scheduled_start');
 
       // Get assigned users for each entry
-      return Promise.all(entries.map(async entry => {
+      const results = await Promise.all(entries.map(async entry => {
         const assignedUsers = await this.getScheduleAssignees(entry.entry_id, context);
-        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') {
+          return null;
+        }
 
         const startTime = entry.scheduled_start ? new Date(entry.scheduled_start) : new Date();
         const endTime = entry.scheduled_end ? new Date(entry.scheduled_end) : new Date();
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationHours = durationMs / (1000 * 60 * 60);
-
-        const result = {
-          ...entry,
-          assigned_users: assignedUsers,
-          work_item: workItem,
+        const timing = {
           duration_hours: Math.round(durationHours * 100) / 100,
-          is_current: startTime <= new Date() && endTime >= new Date()
+          is_current: startTime <= new Date() && endTime >= new Date(),
         };
 
-        // Private entries are masked for anyone who is not the creator or an assignee
-        const isOwnEntry = entry.created_by === context.userId ||
-          assignedUsers.some((u: any) => u.user_id === context.userId);
-        if (entry.is_private && !isOwnEntry) {
-          return {
-            ...result,
-            title: 'Busy',
-            notes: '',
-            work_item_id: null,
-            work_item: null
-          };
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry({ ...entry, ...timing }, assignedUsers, access);
         }
 
-        return result;
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          ...timing,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
       }));
+
+      return results.filter((entry) => entry !== null);
     }
 
 
@@ -1063,18 +1109,10 @@ export class TimeSheetService extends BaseService<any> {
         return entry;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: entry.entry_id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: context.userId, entryId: entry.entry_id, changes: {
             after: entry,
             assignedUserIds: data.assigned_user_ids || [],
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1158,19 +1196,11 @@ export class TimeSheetService extends BaseService<any> {
         };
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_UPDATED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: context.userId, entryId: id, changes: {
             before: result.existing,
             after: result.updated,
             assignedUserIds: data.assigned_user_ids,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
 
       // Re-fetch after commit: getScheduleEntry runs on a pooled
       // (non-transaction) connection and must read the row post-commit.
@@ -1212,17 +1242,9 @@ export class TimeSheetService extends BaseService<any> {
         return existing;
       });
 
-      await publishEvent({
-        eventType: 'SCHEDULE_ENTRY_DELETED',
-        payload: {
-          tenantId: context.tenant,
-          userId: context.userId,
-          entryId: id,
-          changes: {
+      await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: buildScheduleEntryDeletedPayload({ userId: context.userId, entryId: id, changes: {
             before: existing,
-          },
-        },
-      });
+          } }), ctx: { tenantId: context.tenant, actor: { actorType: 'USER', actorUserId: context.userId } } });
     }
 
 
@@ -1410,6 +1432,34 @@ export class TimeSheetService extends BaseService<any> {
       if (!entry) return null;
   
       const assignedUsers = await this.getScheduleAssignees(id, context);
+
+      // Internal callers (e.g. update/delete permission lookups) pass no user;
+      // REST reads always carry one and go through the shared-calendar resolver.
+      if (context.user) {
+        const access = await resolveCalendarAccess(
+          knex,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') return null;
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry(entry, assignedUsers, access);
+        }
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
+      }
+
       const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
   
       return {
@@ -1437,37 +1487,25 @@ export class TimeSheetService extends BaseService<any> {
     // Similar to TimeEntryService implementation
     return { id: workItemId, title: 'Unknown Work Item', type: workItemType };
   }
+}
 
-  private getWeekNumber(date: Date): number {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-  }
-
-  private calculatePeriodEnd(startDate: Date, frequency: string, interval: number = 1): Date {
-    const endDate = new Date(startDate);
-    
-    switch (frequency) {
-      case 'daily':
-        endDate.setDate(endDate.getDate() + interval - 1);
-        break;
-      case 'weekly':
-        endDate.setDate(endDate.getDate() + (interval * 7) - 1);
-        break;
-      case 'monthly':
-        endDate.setMonth(endDate.getMonth() + interval);
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-      case 'quarterly':
-        endDate.setMonth(endDate.getMonth() + (interval * 3));
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-      case 'yearly':
-        endDate.setFullYear(endDate.getFullYear() + interval);
-        endDate.setDate(endDate.getDate() - 1);
-        break;
-    }
-    
-    return endDate;
-  }
+/**
+ * Busy view of a schedule entry for REST responses: timing only, with
+ * assignees narrowed to calendars the viewer can see.
+ */
+function maskApiScheduleEntry(entry: any, assignedUsers: any[], access: CalendarAccess): any {
+  return {
+    ...entry,
+    title: 'Busy',
+    notes: '',
+    work_item_id: null,
+    work_item_type: 'ad_hoc',
+    work_item: null,
+    recurrence_pattern: null,
+    assigned_users: assignedUsers.filter(
+      (u: any) => u.user_id === access.viewerUserId || access.canViewAll || access.userLevels.has(u.user_id)
+    ),
+    access: 'busy',
+    can_edit: false,
+  };
 }

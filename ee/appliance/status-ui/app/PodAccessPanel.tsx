@@ -153,6 +153,7 @@ function responseError(data: unknown, fallback: string) {
   return fallback;
 }
 
+// LEVERAGE: pattern clipboard-copy-fallback — NOT extracting here: status-ui builds standalone (control-plane Dockerfile copies only this app), so it can't import @alga-psa/ui/lib/clipboard; keep in step with that helper (2026-09)
 async function copyText(value: string) {
   if (navigator.clipboard?.writeText) {
     try {
@@ -164,12 +165,16 @@ async function copyText(value: string) {
   }
   const input = document.createElement("textarea");
   input.value = value;
+  input.setAttribute("readonly", "");
   input.style.position = "fixed";
   input.style.opacity = "0";
   document.body.appendChild(input);
-  input.select();
-  document.execCommand("copy");
-  input.remove();
+  try {
+    input.select();
+    document.execCommand("copy");
+  } finally {
+    input.remove();
+  }
 }
 
 export function PodAccessPanel({

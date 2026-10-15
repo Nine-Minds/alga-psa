@@ -151,7 +151,8 @@
     "tryAgain": "Opnieuw proberen",
     "backToBilling": "Terug naar facturering",
     "retryFailed": "We konden de betaling nog steeds niet starten. Probeer het over een moment opnieuw.",
-    "loading": "Laden..."
+    "loading": "Laden...",
+    "offlinePaymentMethod": "Deze factuur wordt betaald per cheque of bankoverschrijving, dus online betalen is niet mogelijk. Volg de betalingsinstructies op de factuur."
   },
   "quotes": {
     "pendingQuotes": "Openstaande offertes",

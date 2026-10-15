@@ -17,6 +17,8 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { Knex } from 'knex';
 import { getHuduIntegration, setHuduSyncRunState } from './huduIntegrationRepository';
+
+export { listHuduAutoSyncTenants } from './huduIntegrationRepository';
 import { getHuduCompanyMappingRows } from './companyMapping';
 import { importUnmatchedHuduAssetsCore } from './assetImportCore';
 import type { HuduAssetBulkImportSummary } from './assetImportCore';

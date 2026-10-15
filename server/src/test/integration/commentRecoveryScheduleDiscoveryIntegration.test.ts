@@ -53,7 +53,7 @@ describe('comment recovery schedule discovery (PostgreSQL)', () => {
       const factory = await import('@/lib/jobs/JobRunnerFactory');
       vi.spyOn(factory, 'getJobRunner').mockResolvedValue(runner);
       const publishers = await import('@alga-psa/event-bus/publishers');
-      const publish = vi.spyOn(publishers, 'publishEvent').mockResolvedValue(undefined);
+      const publish = vi.spyOn(publishers, 'publishStoredWorkflowEvent').mockResolvedValue(undefined);
       await reconcileScheduledCommentPublications(false, job.tenantId);
       expect((await fixture.table('comments').where({ comment_id: fixture.comment }).first()).scheduled_publish_dispatched_at).toBeTruthy();
       expect((await fixture.table('ticket_comment_attachments').where({ attachment_id: fixture.attachment }).first()).cleanup_completed_at).toBeTruthy();
@@ -83,7 +83,7 @@ describe('comment recovery schedule discovery (PostgreSQL)', () => {
       expect(schedule.mock.calls.filter(call => call[1].tenantId === fixture.tenant)).toHaveLength(2);
       expect([...schedules.values()].filter(tenant => tenant === fixture.tenant)).toHaveLength(1);
       const publishers = await import('@alga-psa/event-bus/publishers');
-      vi.spyOn(publishers, 'publishEvent').mockResolvedValue(undefined);
+      vi.spyOn(publishers, 'publishStoredWorkflowEvent').mockResolvedValue(undefined);
       const factory = await import('@/lib/jobs/JobRunnerFactory');
       vi.spyOn(factory, 'getJobRunner').mockResolvedValue(runner);
       await reconcileScheduledCommentPublications(false, fixture.tenant);

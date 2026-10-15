@@ -28,23 +28,47 @@ const { full_name: contactNameField } = contactCoreFieldsSchema.shape;
 
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const contactEmailCanonicalTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
-const contactPhoneNumberInputSchema = z.object({
-  contact_phone_number_id: uuidSchema.optional(),
+// LEVERAGE: pattern contact-row-input-schema — API and model (shared/models/contactModel.ts
+// phoneRowInputSchema/emailRowInputSchema) each define the phone/email row input shape
+export const contactPhoneNumberInputSchema = z.object({
+  contact_phone_number_id: uuidSchema.optional().describe(
+    'Include to keep an existing row on update; omit for a new row.'
+  ),
   phone_number: phoneFieldSchema.pipe(z.string().min(1, 'Phone number is required')),
-  extension: phoneExtensionSchema.nullish(),
+  extension: phoneExtensionSchema.nullish().describe('Digits only.'),
   canonical_type: contactPhoneCanonicalTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   is_default: z.boolean().optional(),
-  display_order: z.number().int().min(0).optional()
-});
+  display_order: z.number().int().min(0).optional(),
+  // Response-only keys: accepted so a GET row can be sent back unchanged. The model's
+  // non-strict phoneRowInputSchema strips them.
+  normalized_phone_number: z.string().optional().describe('Read-only; ignored on write.'),
+  custom_phone_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.'),
+  created_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.'),
+  updated_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.')
+}).strict().describe(
+  'Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. ' +
+  'When any rows are sent, exactly one must have is_default: true. ' +
+  'On update, the array replaces all of the contact\'s phone numbers; include contact_phone_number_id to keep an existing row.'
+);
 
-const contactEmailAddressInputSchema = z.object({
-  contact_additional_email_address_id: uuidSchema.optional(),
-  email_address: emailFieldSchema,
+export const contactEmailAddressInputSchema = z.object({
+  contact_additional_email_address_id: uuidSchema.optional().describe(
+    'Include to keep an existing row on update; omit for a new row.'
+  ),
+  email_address: emailFieldSchema.describe('Must be a valid email address.'),
   canonical_type: contactEmailCanonicalTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
   display_order: z.number().int().min(0).optional(),
-});
+  // Response-only keys; see contactPhoneNumberInputSchema.
+  normalized_email_address: z.string().optional().describe('Read-only; ignored on write.'),
+  custom_email_type_id: uuidSchema.nullish().describe('Read-only; ignored on write.'),
+  created_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.'),
+  updated_at: z.union([z.string(), z.date()]).nullish().describe('Read-only; ignored on write.')
+}).strict().describe(
+  'Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. ' +
+  'On update, the array replaces all of the contact\'s additional email addresses; include contact_additional_email_address_id to keep an existing row.'
+);
 
 const contactPhoneNumberResponseSchema = z.object({
   contact_phone_number_id: uuidSchema,
@@ -70,8 +94,11 @@ const contactEmailAddressResponseSchema = z.object({
 
 // Create contact schema
 export const createContactSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: contactNameField,
   client_id: uuidSchema.optional(),
+  // Reports-to. Must be a person at the same client; null clears it on update.
+  manager_contact_id: uuidSchema.nullable().optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
   email: emailFieldSchema,
   primary_email_canonical_type: contactEmailCanonicalTypeSchema.nullish(),
@@ -85,7 +112,9 @@ export const createContactSchema = z.object({
 }).strict();
 
 // Update contact schema (all fields optional)
-export const updateContactSchema = createUpdateSchema(createContactSchema);
+// Contact kind is established by sync or at creation. Generic updates cannot
+// downgrade a shared mailbox to person and bypass portal eligibility checks.
+export const updateContactSchema = createUpdateSchema(createContactSchema).omit({ contact_kind: true });
 
 // Contact filter schema
 export const contactFilterSchema = baseFilterSchema.extend({
@@ -104,9 +133,11 @@ export const contactListQuerySchema = createListQuerySchema(contactFilterSchema)
 
 // Contact response schema
 export const contactResponseSchema = z.object({
+  contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   contact_name_id: uuidSchema,
   full_name: z.string(),
   client_id: uuidSchema.nullable(),
+  manager_contact_id: uuidSchema.nullable().optional(),
   phone_numbers: z.array(contactPhoneNumberResponseSchema),
   default_phone_number: z.string().nullable().optional(),
   default_phone_type: z.string().nullable().optional(),

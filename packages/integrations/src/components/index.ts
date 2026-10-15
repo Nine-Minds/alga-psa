@@ -4,10 +4,20 @@
 
 export * from './csv';
 export { AccountingMappingManager } from './accounting-mappings';
-export type { AccountingMappingContext, AccountingMappingModule, AccountingMappingLoadResult } from './accounting-mappings/types';
+export type {
+  AccountingMappingContext,
+  AccountingMappingModule,
+  AccountingMappingLoadResult,
+  AccountingMappingEntityOption,
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult
+} from './accounting-mappings/types';
 export {
   EmailProviderConfiguration,
-  EmailSenderIdentityCards,
+  EmailSenderAddressesCard,
+  EmailSenderCardsProvider,
+  EmailSenderRoutingCard,
+  OutboundEmailDiagnosticsDialog,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,
   InboundTicketDefaultsManager,
@@ -22,7 +32,6 @@ export {
   ImapProviderForm,
   MicrosoftProviderForm
 } from './email';
-export type { EmailSenderIdentityCopy } from './email';
 export type { EmailProvider, MicrosoftEmailProviderConfig, GoogleEmailProviderConfig, ImapEmailProviderConfig } from './email/types';
 export type { BaseGmailProviderFormData, CEGmailProviderFormData } from './email/providers/gmail/schemas';
 export * from './settings';

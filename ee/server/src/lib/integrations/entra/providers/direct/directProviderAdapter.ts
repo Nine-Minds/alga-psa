@@ -34,6 +34,7 @@ const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
 // tenant's authority — managedTenants has no user directory.
 const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
 const graphBetaBaseUrl = (): string => getMicrosoftGraphBetaBaseUrl();
+const GRAPH_USER_SELECT = ['id','displayName','givenName','surname','mail','userPrincipalName','accountEnabled','jobTitle','mobilePhone','businessPhones','userType','assignedLicenses'].join(',');
 
 // Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
 // /organization and /users so the partner's own tenant acts as a single managed
@@ -243,6 +244,7 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
 
 export class DirectProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'direct' as const;
+  public async listSharedMailboxIds(): Promise<Set<string> | null> { return null; }
   private readonly managedTenantTokenCache = new Map<
     string,
     { accessToken: string; expiresAt: number }
@@ -440,6 +442,8 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
         givenName: getNullableString(raw.givenName),
         surname: getNullableString(raw.surname),
         accountEnabled: getBoolean(raw.accountEnabled, true),
+        userType: raw.userType === 'Member' || raw.userType === 'Guest' ? raw.userType : null,
+        assignedLicenseCount: Array.isArray(raw.assignedLicenses) ? raw.assignedLicenses.length : null,
         jobTitle: getNullableString(raw.jobTitle),
         mobilePhone: getNullableString(raw.mobilePhone),
         businessPhones: getStringArray(raw.businessPhones),
@@ -456,18 +460,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   ): Promise<{ users: EntraManagedUserRecord[]; pages: number; truncated: boolean }> {
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
-    const select = [
-      'id',
-      'displayName',
-      'givenName',
-      'surname',
-      'mail',
-      'userPrincipalName',
-      'accountEnabled',
-      'jobTitle',
-      'mobilePhone',
-      'businessPhones',
-    ].join(',');
+    const select = GRAPH_USER_SELECT;
 
     // The Lighthouse managedTenants API has no user directory (real Graph
     // answers 400 for /tenantRelationships/managedTenants/users). A managed
@@ -509,18 +502,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     url?: string;
     signal?: AbortSignal;
   }): Promise<{ users: EntraManagedUserRecord[]; nextLink: string | null }> {
-    const select = [
-      'id',
-      'displayName',
-      'givenName',
-      'surname',
-      'mail',
-      'userPrincipalName',
-      'accountEnabled',
-      'jobTitle',
-      'mobilePhone',
-      'businessPhones',
-    ].join(',');
+    const select = GRAPH_USER_SELECT;
     const pageUrl = input.url || `${graphBaseUrl()}/users?$select=${select}&$top=999`;
     const expected = new URL(`${graphBaseUrl()}/users`);
     const requested = new URL(pageUrl);
@@ -694,18 +676,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   ): Promise<EntraManagedUserRecord[]> {
     const users: EntraManagedUserRecord[] = [];
     const seenObjectIds = new Set<string>();
-    const select = [
-      'id',
-      'displayName',
-      'givenName',
-      'surname',
-      'mail',
-      'userPrincipalName',
-      'accountEnabled',
-      'jobTitle',
-      'mobilePhone',
-      'businessPhones',
-    ].join(',');
+    const select = GRAPH_USER_SELECT;
 
     let nextUrl = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
 
@@ -731,6 +702,8 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
           givenName: getNullableString(raw.givenName),
           surname: getNullableString(raw.surname),
           accountEnabled: getBoolean(raw.accountEnabled, true),
+          userType: raw.userType === 'Member' || raw.userType === 'Guest' ? raw.userType : null,
+          assignedLicenseCount: Array.isArray(raw.assignedLicenses) ? raw.assignedLicenses.length : null,
           jobTitle: getNullableString(raw.jobTitle),
           mobilePhone: getNullableString(raw.mobilePhone),
           businessPhones: getStringArray(raw.businessPhones),
@@ -788,8 +761,11 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean> {
+    if (input.membershipMode === 'direct') {
+      return (await this.listSecurityGroupMemberIds({ ...input, membershipMode: 'direct' })).has(input.userEntraObjectId);
+    }
     const encodedUser = encodeURIComponent(input.userEntraObjectId);
     const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
     const payload = await this.managedTenantGraphRequest(
@@ -807,6 +783,23 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     );
     const values = Array.isArray(payload.value) ? payload.value : [];
     return values.some((value) => getNullableString(value) === input.groupId);
+  }
+
+  public async listSecurityGroupMemberIds(input: { tenant: string; managedTenantId: string; groupId: string; membershipMode: 'direct' | 'transitive' }): Promise<Set<string>> {
+    const ids = new Set<string>();
+    const groupId = encodeURIComponent(input.groupId);
+    let nextUrl = `${graphBaseUrl()}/groups/${groupId}/${input.membershipMode === 'direct' ? 'members' : 'transitiveMembers'}/microsoft.graph.user?$select=id&$top=999`;
+    while (nextUrl) {
+      const pageUrl = nextUrl;
+      const payload = await this.managedTenantGraphRequest(input.tenant, input.managedTenantId, (accessToken) =>
+        axios.get(pageUrl, { headers: { Authorization: `Bearer ${accessToken}` }, timeout: GRAPH_REQUEST_TIMEOUT_MS }));
+      for (const row of Array.isArray(payload.value) ? payload.value : []) {
+        const id = getNullableString(toObject(row).id);
+        if (id) ids.add(id);
+      }
+      nextUrl = getNullableString(payload['@odata.nextLink']) || '';
+    }
+    return ids;
   }
 }
 

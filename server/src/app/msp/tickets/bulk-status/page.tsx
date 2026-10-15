@@ -1,15 +1,8 @@
-import type { Metadata } from 'next';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
-import BulkChangeStatusRouteClient from '../_components/BulkChangeStatusRouteClient';
+import { redirect } from 'next/navigation';
 
-export async function generateMetadata(): Promise<Metadata> {
-  const { t } = await getServerTranslation(undefined, 'metadata');
-
-  return {
-    title: t('msp.tickets.bulkStatus.title', { defaultValue: 'Set Status' }),
-  };
-}
-
+// There is no standalone page behind the intercepted bulk modal: a hard load or refresh of
+// this URL renders this route instead of the @modal slot, and re-opening the dialog on top
+// of the rehydrated selection is what made it survive a refresh. Go back to the list.
 export default function BulkChangeStatusPage() {
-  return <BulkChangeStatusRouteClient closeMode="replace" />;
+  redirect('/msp/tickets');
 }

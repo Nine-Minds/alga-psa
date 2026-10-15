@@ -1,0 +1,11 @@
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
+const { useRouter } = await import('next/navigation');
+
+describe('board arrival', () => {
+  it('pushes the board route', () => {
+    expect(typeof useRouter().push).toBe('function');
+  });
+});

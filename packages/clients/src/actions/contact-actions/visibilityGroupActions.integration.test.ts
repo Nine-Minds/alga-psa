@@ -102,6 +102,8 @@ function createVisibilityTrx(state: VisibilityState) {
               matches.forEach((row) => Object.assign(row, updates));
               return matches.length;
             },
+            // Reports-to edges: this fixture has no manager hierarchy.
+            whereNotNull: () => ({ select: async () => [] }),
           };
         },
       };
@@ -135,6 +137,14 @@ function createVisibilityTrx(state: VisibilityState) {
                 .map((row) => ({ board_id: row.board_id })),
           }),
         }),
+      };
+    }
+
+    // No billing-profile ticket grants in this fixture: reassigning a
+    // visibility group must not depend on them.
+    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+      return {
+        where: () => ({ select: async () => [] }),
       };
     }
 

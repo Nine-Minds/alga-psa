@@ -6,13 +6,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { KitManager } from './KitManager';
 
 const getKitDetail = vi.fn();
+const createKitProduct = vi.fn();
+const listKitTenantUnits = vi.fn(async () => [] as Array<{ code: string; label: string }>);
+const registerKitTenantUnit = vi.fn();
 
 vi.mock('../actions', () => ({
   addKitComponent: vi.fn(),
-  createKitProduct: vi.fn(),
+  createKitProduct: (...args: unknown[]) => createKitProduct(...args),
   getKitDetail: (...args: unknown[]) => getKitDetail(...args),
   listKitComponentCandidates: vi.fn(async () => []),
   listKitSummaries: vi.fn(async () => []),
+  listKitTenantUnits: () => listKitTenantUnits(),
+  registerKitTenantUnit: (...args: unknown[]) => registerKitTenantUnit(...args),
   removeKitComponent: vi.fn(),
   updateKitProduct: vi.fn(),
 }));
@@ -133,6 +138,7 @@ const detail = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  listKitTenantUnits.mockImplementation(async () => []);
 });
 
 describe('KitManager pricing policy UI', () => {
@@ -213,5 +219,44 @@ describe('KitManager pricing policy UI', () => {
     fireEvent.change(document.querySelector('#kits-search')!, { target: { value: '' } });
     fireEvent.change(document.querySelector('#kits-status-filter')!, { target: { value: 'no_bom' } });
     expect(screen.getByText('No kits match those filters.')).toBeTruthy();
+  });
+
+  it('offers tenant units in Create kit and submits the chosen unit code and label', async () => {
+    listKitTenantUnits.mockResolvedValue([{ code: 'XBX', label: 'Crate' }]);
+    registerKitTenantUnit.mockResolvedValue({ code: 'C62', label: 'Bundle' });
+    createKitProduct.mockResolvedValue({ ...detail, service_id: 'kit-2', service_name: 'Crate kit' });
+    render(
+      <KitManager
+        initialKits={[]}
+        serviceTypes={[{ id: 'type-1', name: 'Hardware', is_standard: false }]}
+        componentCandidates={[]}
+      />,
+    );
+
+    fireEvent.click(document.querySelector('#kits-create-kit-button')!);
+    fireEvent.change(document.querySelector('#kit-create-name')!, { target: { value: 'Crate kit' } });
+    fireEvent.change(document.querySelector('#kit-create-product-type')!, { target: { value: 'type-1' } });
+
+    const unitSelect = document.querySelector('#kit-create-unit-of-measure') as HTMLSelectElement;
+    await waitFor(() => expect(unitSelect.querySelector('option[value="custom:XBX:Crate"]')).not.toBeNull());
+    expect(listKitTenantUnits).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(unitSelect, { target: { value: 'custom:XBX:Crate' } });
+    fireEvent.click(document.querySelector('#kit-create-submit')!);
+    await waitFor(() => expect(createKitProduct).toHaveBeenCalledTimes(1));
+    expect(createKitProduct.mock.calls[0][0]).toMatchObject({ unit_code: 'XBX', unit_of_measure: 'Crate' });
+
+    fireEvent.click(document.querySelector('#kits-create-kit-button')!);
+    fireEvent.change(document.querySelector('#kit-create-name')!, { target: { value: 'Bundle kit' } });
+    fireEvent.change(document.querySelector('#kit-create-product-type')!, { target: { value: 'type-1' } });
+    fireEvent.change(document.querySelector('#kit-create-unit-of-measure')!, { target: { value: '__custom_unit__' } });
+    fireEvent.change(document.querySelector('#kit-create-unit-of-measure-custom')!, { target: { value: 'Bundle' } });
+    fireEvent.click(document.querySelector('#kit-create-unit-of-measure-register')!);
+    await waitFor(() => expect(registerKitTenantUnit).toHaveBeenCalledWith('Bundle'));
+    await waitFor(() => expect(document.querySelector('#kit-create-unit-of-measure-custom')).toBeNull());
+
+    fireEvent.click(document.querySelector('#kit-create-submit')!);
+    await waitFor(() => expect(createKitProduct).toHaveBeenCalledTimes(2));
+    expect(createKitProduct.mock.calls[1][0]).toMatchObject({ unit_code: 'C62', unit_of_measure: 'Bundle' });
   });
 });

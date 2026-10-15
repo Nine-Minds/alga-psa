@@ -16,6 +16,7 @@
  */
 
 import { Knex } from 'knex';
+import { normalizeHolidayRows } from '../utils/holidayUtils';
 import { tenantDb } from '@alga-psa/db';
 import {
   ISlaPolicy,
@@ -937,7 +938,7 @@ async function getBusinessHoursSchedule(
       return {
         ...schedule,
         entries,
-        holidays
+        holidays: normalizeHolidayRows(holidays)
       };
     }
   }
@@ -960,7 +961,7 @@ async function getBusinessHoursSchedule(
     return {
       ...defaultSchedule,
       entries,
-      holidays
+      holidays: normalizeHolidayRows(holidays)
     };
   }
 

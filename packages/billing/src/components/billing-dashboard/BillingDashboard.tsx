@@ -27,6 +27,8 @@ import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import ServiceCategoriesSettings from '../settings/billing/ServiceCategoriesSettings';
 import { TaxSourceSettings } from '../settings/tax/TaxSourceSettings';
+import { DefaultTaxRateSettings } from '../settings/tax/DefaultTaxRateSettings';
+import { CatalogTaxRateBackfill } from '../settings/tax/CatalogTaxRateBackfill';
 import { TaxRegionsAndRates } from '../settings/tax/TaxRegionsAndRates';
 import TaxDelegationBanner from '../tax/TaxDelegationBanner';
 import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
@@ -35,6 +37,7 @@ import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
+import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -233,6 +236,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               settingsRevision={taxSettingsRevision}
               onSettingsChanged={invalidateTaxSettings}
             />
+            <DefaultTaxRateSettings
+              settingsRevision={taxSettingsRevision}
+              onSettingsChanged={invalidateTaxSettings}
+            />
+            <CatalogTaxRateBackfill />
             <TaxRegionsAndRates />
           </div>
         </Tabs.Content>
@@ -256,7 +264,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="service-periods">
-          <RecurringServicePeriodsTab initialScheduleKey={searchParams?.get('scheduleKey') ?? undefined} />
+          <RecurringServicePeriodsTab
+            initialScheduleKey={(() => {
+              const scheduleKey = searchParams?.get('scheduleKey');
+              // Bookmarked pre-alga0002072 deep links carry a 6-segment key.
+              return scheduleKey ? canonicalizeRecurringServicePeriodScheduleKey(scheduleKey) : undefined;
+            })()}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">

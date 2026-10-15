@@ -17,6 +17,10 @@ import { resolveTicketColumnOrder, TICKET_COLUMNS } from './ticketColumnCatalog'
 
 const CATALOG_KEYS = TICKET_COLUMNS.map((column) => column.key);
 
+const USER_A = '11111111-2222-4333-8444-555555555555';
+const USER_B = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
+const USER_GONE = '99999999-8888-4777-8666-555555555555';
+
 describe('resolveTicketViewSettings', () => {
   it('prefers the board layer over the tenant layer over the catalog', () => {
     const resolved = resolveTicketViewSettings({
@@ -244,18 +248,43 @@ describe('validateCapturedFilters (validate-on-read)', () => {
 
   it('drops only the dead members of a list, keeping the live ones', () => {
     const validated = validateCapturedFilters(
-      { assignedToIds: ['user-1', 'user-gone', 'user-2'] },
-      { userIds: ['user-1', 'user-2'] },
+      { assignedToIds: [USER_A, USER_GONE, USER_B] },
+      { userIds: [USER_A, USER_B] },
     );
-    expect(validated.assignedToIds).toEqual(['user-1', 'user-2']);
+    expect(validated.assignedToIds).toEqual([USER_A, USER_B]);
   });
 
   it('drops a list entirely when nothing in it survives', () => {
     const validated = validateCapturedFilters(
-      { assignedToIds: ['user-gone'] },
-      { userIds: ['user-1'] },
+      { assignedToIds: [USER_GONE] },
+      { userIds: [USER_A] },
     );
     expect(validated).not.toHaveProperty('assignedToIds');
+  });
+
+  it('drops legacy non-UUID assignedToIds even when the user universe is unknown', () => {
+    // The SSR remembered-board path calls this with `{}` — no known users — so
+    // shape validation cannot depend on membership validation. Non-UUID tokens
+    // must be removed before the UUID-only ticket-list schema sees them.
+    const validated = validateCapturedFilters(
+      { assignedToIds: ['legacy-token', USER_A, USER_A, '12345', USER_B] },
+      {},
+    );
+    expect(validated.assignedToIds).toEqual([USER_A, USER_B]);
+  });
+
+  it('omits assignedToIds when every stored value is malformed', () => {
+    const validated = validateCapturedFilters({ assignedToIds: ['legacy-token', 'also-bad'] }, {});
+    expect(validated).not.toHaveProperty('assignedToIds');
+  });
+
+  it('preserves includeUnassigned semantics while normalizing assignee ids', () => {
+    const validated = validateCapturedFilters(
+      { assignedToIds: ['legacy-token', USER_A], includeUnassigned: true },
+      {},
+    );
+    expect(validated.assignedToIds).toEqual([USER_A]);
+    expect(validated.includeUnassigned).toBe(true);
   });
 
   it('leaves a value alone when its universe is unknown', () => {

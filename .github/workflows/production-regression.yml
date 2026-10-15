@@ -105,6 +105,15 @@ jobs:
         env:
           INVENTORY_JOBS: ${{ toJSON(needs) }}
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      # A React test that no jsdom glob claims runs under environment: 'node'
+      # and dies on its first `window`. Checked here, beside the inventory,
+      # because both answer "is this test wired up the way it claims to be".
+      - name: Require every React test to reach a browser environment
+        if: always()
+        # Write into the directory the step below uploads; the default path
+        # (test-results/react-test-environment.json) is outside it and is lost
+        # with the runner.
+        run: node scripts/verify-react-test-environment.mjs test-results/repository-inventory/react-test-environment.json
       - name: Preserve repository inventory
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,6 +122,7 @@ jobs:
           path: test-results/repository-inventory/
           if-no-files-found: error
           retention-days: 30
+          overwrite: true
 
   readiness:
     name: Production regression readiness
@@ -228,3 +238,14 @@ jobs:
           path: test-results/production-readiness/
           if-no-files-found: error
           retention-days: 30
+      # One row per run in the sheet's gate_runs tab: the verdict above plus the
+      # lanes that went red (docs/reference/test-metrics.md). No-op without the
+      # Google secrets; never fails the gate.
+      - name: Record gate verdict to Google Sheet
+        if: always()
+        continue-on-error: true
+        run: node scripts/record-gate-metrics.mjs
+        env:
+          READINESS_JOBS: ${{ toJSON(needs) }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

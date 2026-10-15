@@ -594,33 +594,61 @@ export async function syncCalendarProviderImpl(
               .andWhere(function (this: any) {
                 this.where('se.scheduled_start', '<=', windowEnd).andWhere('se.scheduled_end', '>=', windowStart);
               })
-              .select('cem.schedule_entry_id', 'cem.external_event_id');
+              .select(
+                'cem.schedule_entry_id',
+                'cem.external_event_id',
+                'cem.alga_last_modified',
+                'se.updated_at as schedule_entry_updated_at'
+              );
           });
 
           for (const mapping of mappings) {
-            if (allowPush) {
-              const result = await syncService.syncScheduleEntryToExternal(
-                mapping.schedule_entry_id,
+            // Reconcile the provider's current version before writing to an
+            // existing copy. A forced pull bypasses CalendarSyncService's
+            // simultaneous-edit conflict policy, so manual sync must use the
+            // same policy as ordinary inbound sync.
+            let pullResult: Awaited<ReturnType<CalendarSyncService['syncExternalEventToSchedule']>> | undefined;
+            if (allowPull) {
+              pullResult = await syncService.syncExternalEventToSchedule(
+                mapping.external_event_id,
                 calendarProviderId,
-                true
+                false
               );
-              if (result.success) {
-                pushed += 1;
+              if (pullResult.success) {
+                pulled += 1;
               } else {
-                failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
+                failures.push(`Pull ${mapping.external_event_id}: ${pullResult.error || 'unknown error'}`);
+                // No write is safe when reconciliation failed: the provider
+                // version may contain edits that were not read successfully.
+                // Conflicts remain available to the existing resolution flow.
+                continue;
               }
             }
 
-            if (allowPull) {
-              const result = await syncService.syncExternalEventToSchedule(
-                mapping.external_event_id,
-                calendarProviderId,
-                true
-              );
-              if (result.success) {
-                pulled += 1;
-              } else {
-                failures.push(`Pull ${mapping.external_event_id}: ${result.error || 'unknown error'}`);
+            if (allowPush) {
+              const entryModifiedAt = mapping.schedule_entry_updated_at
+                ? new Date(mapping.schedule_entry_updated_at).getTime()
+                : NaN;
+              const lastPushedAt = mapping.alga_last_modified
+                ? new Date(mapping.alga_last_modified).getTime()
+                : NaN;
+              const hasUnpushedAlgaEdit = Number.isFinite(entryModifiedAt) &&
+                (!Number.isFinite(lastPushedAt) || entryModifiedAt > lastPushedAt);
+              // Provider-only edits and metadata-only echoes are already
+              // reconciled by the pull. CalendarSyncService itself re-pushes
+              // a provider edit rejected by access, so this layer only writes
+              // pending Alga edits (or retains outbound-only behavior).
+              if (!allowPull || hasUnpushedAlgaEdit) {
+                const result = await syncService.syncScheduleEntryToExternal(
+                  mapping.schedule_entry_id,
+                  calendarProviderId,
+                  true
+                );
+                if (result.success) {
+                  pushed += 1;
+                } else {
+                  failures.push(`Push ${mapping.schedule_entry_id}: ${result.error || 'unknown error'}`);
+                }
               }
             }
           }

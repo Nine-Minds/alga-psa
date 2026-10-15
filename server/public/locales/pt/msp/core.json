@@ -102,7 +102,10 @@
       "forms": "Formulários",
       "channels": "Canais"
     },
-    "passwords": "Senhas"
+    "passwords": "Senhas",
+    "ticketsAll": "Todos os tickets",
+    "ticketsRecurring": "Tickets recorrentes",
+    "ticketsTemplates": "Modelos de tickets"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -237,7 +240,20 @@
       "system": "Sistema",
       "selected": "Selecionado"
     },
-    "openUserMenu": "Abrir menu do usuário"
+    "openUserMenu": "Abrir menu do usuário",
+    "stopwatch": {
+      "untitled": "Sem título",
+      "ariaLabelPaused": "Cronômetro pausado: {{label}} em {{clock}}",
+      "ariaLabelRunning": "Cronômetro em andamento: {{label}} em {{clock}}",
+      "paused": "Cronômetro pausado",
+      "running": "Cronômetro em andamento",
+      "resume": "Retomar",
+      "pause": "Pausar",
+      "stop": "Parar e registrar",
+      "discard": "Descartar",
+      "pausedNoDrawer": "Cronômetro pausado em {{clock}}. Abra o item de trabalho para registrar o tempo.",
+      "openTicket": "Abrir ticket"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -43,10 +45,8 @@ export function UsageServiceConfigPanel({
   disabled = false
 }: UsageServiceConfigPanelProps) {
   const { t } = useTranslation('msp/service-catalog');
-  const defaultUnitOfMeasure = t('usageConfig.defaults.unitOfMeasure', {
-    defaultValue: 'Unit',
-  });
-  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure || defaultUnitOfMeasure);
+  const [unitOfMeasure, setUnitOfMeasure] = useState(configuration.unit_of_measure ?? '');
+  const [unitCode, setUnitCode] = useState(configuration.unit_code ?? '');
   const [enableTieredPricing, setEnableTieredPricing] = useState(configuration.enable_tiered_pricing || false);
   const [minimumUsage, setMinimumUsage] = useState<number>(configuration.minimum_usage || 0);
   // Legacy configurations carry no explicit mode; they measure additive
@@ -70,11 +70,12 @@ export function UsageServiceConfigPanel({
 
   // Update local state when props change
   useEffect(() => {
-    setUnitOfMeasure(configuration.unit_of_measure || defaultUnitOfMeasure);
+    setUnitOfMeasure(configuration.unit_of_measure ?? '');
+    setUnitCode(configuration.unit_code ?? '');
     setEnableTieredPricing(configuration.enable_tiered_pricing || false);
     setMinimumUsage(configuration.minimum_usage || 0);
     setMeasurementMode(configuration.measurement_mode === 'period_total' ? 'period_total' : 'additive');
-  }, [configuration.unit_of_measure, configuration.enable_tiered_pricing, configuration.minimum_usage, configuration.measurement_mode, defaultUnitOfMeasure]);
+  }, [configuration.unit_of_measure, configuration.unit_code, configuration.enable_tiered_pricing, configuration.minimum_usage, configuration.measurement_mode]);
 
   useEffect(() => {
     // A later effective boundary can have no tiers; clear the previous display.
@@ -147,10 +148,10 @@ export function UsageServiceConfigPanel({
     setValidationErrors(errors);
   }, [unitOfMeasure, minimumUsage, tiers, enableTieredPricing, t]);
 
-  const handleUnitOfMeasureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setUnitOfMeasure(value);
-    onConfigurationChange({ unit_of_measure: value });
+  const handleUnitOfMeasureChange = (value: UnitSelection) => {
+    setUnitOfMeasure(value.label);
+    setUnitCode(value.code);
+    onConfigurationChange({ unit_of_measure: value.label, unit_code: value.code || null });
   };
 
   const handleEnableTieredPricingChange = (checked: boolean) => {
@@ -326,16 +327,13 @@ export function UsageServiceConfigPanel({
             <Label htmlFor={`${idPrefix}usage-unit-of-measure`}>
               {t('usageConfig.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure' })}
             </Label>
-            <Input
+            <UnitOfMeasureInput
               id={`${idPrefix}usage-unit-of-measure`}
-              type="text"
-              value={unitOfMeasure}
+              value={{ code: unitCode, label: unitOfMeasure }}
               onChange={handleUnitOfMeasureChange}
-              placeholder={t('usageConfig.fields.unitOfMeasure.placeholder', {
-                defaultValue: 'Enter unit of measure',
-              })}
               disabled={disabled}
-              className={validationErrors.unitOfMeasure ? 'border-red-500' : ''}
+              loadCustomUnits={listTenantUnitsOfMeasure}
+              registerCustomUnit={registerTenantUnitOfMeasure}
             />
               {validationErrors.unitOfMeasure ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.unitOfMeasure}</p>

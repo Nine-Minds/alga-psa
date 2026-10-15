@@ -1,6 +1,12 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from './billingProfiles';
+import {
+  normalizePaymentTerms,
+  normalizePreferredPaymentMethod,
+  type PaymentTerms,
+  type PreferredPaymentMethod,
+} from './paymentPreferences';
 
 /**
  * A billing profile's effective billing settings, with client fallback (F087).
@@ -32,7 +38,17 @@ export interface EffectiveBillingIdentity {
   invoiceDeliveryMethod: string | null;
   invoiceTemplateId: string | null;
   billingCycle: string | null;
-  paymentTerms: string | null;
+  /**
+   * A known terms key, or null when neither the profile nor the client holds
+   * one. Legacy free-text values count as "not set" rather than as an override.
+   */
+  paymentTerms: PaymentTerms | null;
+  /**
+   * How this profile pays, as a known method key, or null when neither the
+   * profile nor the client holds one (the client column is legacy free text
+   * and often `''`).
+   */
+  preferredPaymentMethod: PreferredPaymentMethod | null;
   /** True when this profile produces its own invoice document (phase 2). */
   billsSeparately: boolean;
   /** Which fields came from the profile rather than the client. */
@@ -56,6 +72,7 @@ const PROFILE_COLUMNS = [
   'invoice_template_id',
   'billing_cycle',
   'payment_terms',
+  'preferred_payment_method',
 ];
 
 const CLIENT_COLUMNS = [
@@ -69,6 +86,7 @@ const CLIENT_COLUMNS = [
   'invoice_template_id',
   'billing_cycle',
   'payment_terms',
+  'preferred_payment_method',
 ];
 
 export async function resolveEffectiveBillingIdentity(
@@ -138,7 +156,19 @@ export async function resolveEffectiveBillingIdentity(
       client.invoice_template_id ?? null,
     ),
     billingCycle: inherit('billing_cycle', profile.billing_cycle, client.billing_cycle ?? null),
-    paymentTerms: inherit('payment_terms', profile.payment_terms, client.payment_terms ?? null),
+    // Normalized before inheriting: a profile holding legacy free text must
+    // not count as an override, and neither value may reach due-date
+    // calculation or an invoice snapshot unrecognized.
+    paymentTerms: inherit(
+      'payment_terms',
+      normalizePaymentTerms(profile.payment_terms),
+      normalizePaymentTerms(client.payment_terms),
+    ),
+    preferredPaymentMethod: inherit(
+      'preferred_payment_method',
+      normalizePreferredPaymentMethod(profile.preferred_payment_method),
+      normalizePreferredPaymentMethod(client.preferred_payment_method),
+    ),
     billsSeparately: Boolean(profile.bills_separately),
     overriddenFields,
   };

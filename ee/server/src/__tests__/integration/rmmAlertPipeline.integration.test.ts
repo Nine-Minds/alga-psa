@@ -686,7 +686,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
   it('publishes workflow events for non-suppressed outcomes via injected deps', async () => {
     const published: Array<{ eventType: string; payload: Record<string, unknown> }> = [];
     const deps = {
-      publishWorkflowEvent: async (args: { eventType: string; tenantId: string; payload: Record<string, unknown> }) => {
+      publishRmmAlertEvent: async (args: { eventType: string; tenantId: string; payload: Record<string, unknown> }) => {
         published.push({ eventType: args.eventType, payload: args.payload });
       },
     };
@@ -854,6 +854,29 @@ describe('runRmmAlertReconciliation (DB integration)', { shuffle: false }, () =>
       .where({ tenant: tenantId, external_alert_id: 'recon-webhook-origin' })
       .first();
     expect(webhookAlert.status).toBe('active'); // conservatively untouched
+  });
+
+  it('resets an alert whose linked ticket was deleted without failing the cycle', async () => {
+    remoteActive = [
+      event({ externalAlertId: 'recon-orphan', conditionIdentity: 'RECON_ORPHAN', alertClass: 'RECON_ORPHAN' }),
+    ];
+    await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'ninjaone' });
+    await tenantTable('rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'recon-orphan' })
+      .update({ ticket_id: uuidv4() });
+
+    remoteActive = [];
+    const result = await runRmmAlertReconciliation(
+      { knex: db },
+      { tenantId, integrationId, provider: 'ninjaone' }
+    );
+    expect(result.resetsSynthesized).toBe(1);
+
+    const orphan = await tenantTable('rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'recon-orphan' })
+      .first();
+    expect(orphan.status).toBe('resolved');
+    expect(orphan.ticket_id).toBeNull();
   });
 
   it('reprocesses a still-active suppressed alert once its window ends', async () => {

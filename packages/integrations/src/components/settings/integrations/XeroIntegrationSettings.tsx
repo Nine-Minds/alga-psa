@@ -69,6 +69,10 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.xero.settings.callback.accessDenied', {
         defaultValue: 'Xero access was denied before the connection completed.'
       });
+    case 'config_missing':
+      return t('integrations.xero.settings.callback.configMissing', {
+        defaultValue: 'Xero OAuth could not start because the tenant client ID and client secret were not fully configured.'
+      });
     case 'disconnect_in_progress':
       return t('integrations.xero.settings.callback.disconnectInProgress', {
         defaultValue: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
@@ -103,6 +107,11 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
   const [disconnecting, setDisconnecting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  // The failure reported by the connect/callback redirect. Kept apart from
+  // `error` because load() clears `error`, and the status reload that follows
+  // the URL cleanup would otherwise erase this message as soon as it appeared.
+  const [connectFailure, setConnectFailure] = React.useState<string | null>(null);
+  const connectFailureRef = React.useRef<HTMLDivElement | null>(null);
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
   const [editingCredentials, setEditingCredentials] = React.useState(false);
@@ -184,8 +193,16 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
             );
           }
         }
-      } else if (oauthStatus === 'failure' && oauthError) {
-        setError(oauthError);
+      } else if (oauthStatus === 'failure') {
+        // Load the panel too: the initial-load effect skips while an OAuth
+        // status is in the URL, which left the card empty after a failure.
+        void load();
+        setConnectFailure(
+          oauthError ??
+            t('integrations.xero.settings.callback.oauthFailed', {
+              defaultValue: 'The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.'
+            })
+        );
       }
 
       if (!cancelled) {
@@ -201,6 +218,12 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
       cancelled = true;
     };
   }, [load, oauthError, oauthStatus, t]);
+
+  React.useEffect(() => {
+    if (connectFailure) {
+      connectFailureRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+  }, [connectFailure]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -366,6 +389,14 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
         <Alert variant="success">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
+      ) : null}
+
+      {connectFailure ? (
+        <div ref={connectFailureRef}>
+          <Alert variant="destructive" id="xero-connect-failure-alert" role="alert">
+            <AlertDescription>{connectFailure}</AlertDescription>
+          </Alert>
+        </div>
       ) : null}
 
       {error ? (

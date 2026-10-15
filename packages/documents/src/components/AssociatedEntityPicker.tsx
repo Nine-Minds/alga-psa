@@ -15,7 +15,7 @@ import {
 
 export type PickerAssociationEntityType = Extract<
   DocumentAssociationEntityType,
-  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote'
+  'client' | 'contact' | 'ticket' | 'asset' | 'project_task' | 'contract' | 'quote' | 'opportunity'
 >;
 
 interface AssociatedEntityPickerProps {
@@ -42,6 +42,7 @@ const SEARCHABLE_ENTITY_TYPES = new Set<string>([
   'project_task',
   'contract',
   'quote',
+  'opportunity',
 ]);
 
 const DEFAULT_ENTITY_TYPES: PickerAssociationEntityType[] = [
@@ -52,6 +53,7 @@ const DEFAULT_ENTITY_TYPES: PickerAssociationEntityType[] = [
   'project_task',
   'contract',
   'quote',
+  'opportunity',
 ];
 
 function formatEntityTypeLabel(entityType: string): string {

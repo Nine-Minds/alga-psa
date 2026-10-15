@@ -11,7 +11,7 @@ export type StartRunParams = {
   payload: Record<string, unknown>;
   tenantId?: string | null;
   triggerEvent?: { name: string; payload: Record<string, unknown> };
-  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | 'date' | null;
   triggerMetadata?: Record<string, unknown> | null;
   triggerFireKey?: string | null;
   eventType?: string | null;

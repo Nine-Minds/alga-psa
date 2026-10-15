@@ -32,7 +32,8 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
     expect(generated.status(), await generated.text()).toBe(201);
     const invoiceId = (await generated.json()).data.invoice_id;
     const links = await database('invoice_time_entries').where({ tenant, invoice_id: invoiceId });
-    expect(links).toHaveLength(4);
+    // Four entries, with the overtime entry linked twice (regular + overtime segment).
+    expect(links).toHaveLength(5);
     expect(JSON.stringify(links)).not.toContain('PRIVATE');
     const read = async () => {
       const response = await page.request.get(`/api/v1/invoices/${invoiceId}`, { headers });

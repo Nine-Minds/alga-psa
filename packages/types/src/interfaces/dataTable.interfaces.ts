@@ -3,6 +3,11 @@ import { ReactNode } from 'react';
 export interface BaseColumnDefinition<T> {
   title: string | ReactNode;
   dataIndex: string | string[];
+  /**
+   * Column id; defaults to the dataIndex (joined with '_'). Must be unique per table — set it
+   * when two columns read the same field (e.g. an actions column keyed by the row id).
+   */
+  id?: string;
   width?: string;
   /** Optional class for header th */
   headerClassName?: string;
@@ -49,8 +54,29 @@ export interface DataTableProps<T> {
   sortBy?: string;
   /** Current sort direction for server-side sorting */
   sortDirection?: 'asc' | 'desc';
-  /** Callback invoked when sort configuration changes */
+  /**
+   * Callback invoked when sort configuration changes. With `manualSorting` the
+   * caller owns the sort; without it the table sorts itself and this only reports.
+   */
   onSortChange?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+  /**
+   * Controlled column widths in px, keyed by column id. When provided it wins
+   * over the widths the table remembers per `id` in localStorage (which still
+   * record the last-used widths). Omit it to leave widths to the table.
+   */
+  columnSizing?: Record<string, number>;
+  /** Reports every column width change, controlled or not. */
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
+  /**
+   * Controlled column visibility by column id. `false` removes the column
+   * before the auto-fit runs; columns absent from the map stay visible.
+   */
+  columnVisibility?: Record<string, boolean>;
+  /**
+   * Controlled column order by column id. Sparse: listed columns come first in
+   * the given order, unlisted ones follow in their `columns` order.
+   */
+  columnOrder?: string[];
   /** Callback invoked when items per page changes */
   onItemsPerPageChange?: (itemsPerPage: number) => void;
   /**

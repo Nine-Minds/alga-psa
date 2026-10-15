@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import BulkBundleDialog from './BulkBundleDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
+import { createTicketActionsColumn } from './ticketActionsColumn';
+import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -46,7 +48,7 @@ import {
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
+import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -57,20 +59,12 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import {
-  bundleTicketsAction,
-  getBundleMasterStatusAction,
-  getBundleMasterClosedContextAction,
-  type BundleMasterClosedContextActionResult,
-} from '../actions/ticketBundleActions';
-import { ClosedMasterChoiceFields } from './ticket/ClosedMasterChoiceFields';
-import type { ClosedMasterChoice } from '../lib/ticketBundlePolicy';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -103,7 +97,7 @@ import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPick
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { useDrawer } from '@alga-psa/ui';
-import { getClientById } from '../actions/clientLookupActions';
+import { getClientById, getContactByContactNameId } from '../actions/clientLookupActions';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -169,6 +163,7 @@ interface TicketingDashboardProps {
   sortDirection?: 'asc' | 'desc';
   onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
+  renderContactDetails?: (args: { id: string; contact: IContact; clients: IClient[]; userId?: string }) => React.ReactNode;
   initialAgentAvatarUrls?: Record<string, string | null>;
   initialTeamAvatarUrls?: Record<string, string | null>;
   initialTicketTags?: Record<string, ITag[]>;
@@ -197,6 +192,11 @@ interface TicketingDashboardProps {
   /** True when this tab has a stored document of its own (Reset has work to do). */
   hasStoredDefaultView?: boolean;
   onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
+  /** Named-view picker, rendered beside the View menu (the container owns its state). */
+  listViewPicker?: React.ReactNode;
+  /** Controlled column widths for the ticket table (named views capture and apply them). */
+  columnSizing?: Record<string, number>;
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -334,6 +334,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   sortDirection = 'desc',
   onSortChange,
   renderClientDetails,
+  renderContactDetails,
   initialAgentAvatarUrls = {},
   initialTeamAvatarUrls = {},
   initialTicketTags = {},
@@ -348,6 +349,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   savedViewSettings,
   hasStoredDefaultView = false,
   onSavedViewChanged,
+  listViewPicker,
+  columnSizing,
+  onColumnSizingChange,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -376,6 +380,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
@@ -390,16 +395,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
-  const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
-  const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
-  const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
-  const [bundleError, setBundleError] = useState<string | null>(null);
-  const [bundleClosedMasterContext, setBundleClosedMasterContext] = useState<BundleMasterClosedContextActionResult | null>(null);
-  const [bundleClosedMasterChoice, setBundleClosedMasterChoice] = useState<ClosedMasterChoice | null>(null);
-  const [isLoadingBundleClosedContext, setIsLoadingBundleClosedContext] = useState(false);
-  const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
-  const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
-  const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
@@ -501,6 +496,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // Gates the row menu's "Create template from ticket" item; the server action is authoritative.
+  const templatePermissions = useTicketTemplatePermissions();
 
   // The only way out of this route. Announcing the departure *before* the push
   // is the point: the container mirrors filter state into the URL, and a write
@@ -922,9 +920,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
     }
   }, [id, openDrawer, replaceDrawer, renderClientDetails, t]);
-  
-  // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
+
+  const onQuickViewContact = useCallback(async (contactNameId: string) => {
+    if (!contactNameId) return;
+
+    openDrawer(
+      <div className="p-4 text-sm text-gray-600">
+        {t('dashboard.drawer.loading', 'Loading...')}
+      </div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+    try {
+      const contact = await getContactByContactNameId(contactNameId);
+      if (!contact) {
+        replaceDrawer(
+          <div className="p-4 text-sm text-gray-600">
+            {t('info.contactNotFound', 'Contact not found.')}
+          </div>
+        );
+        return;
+      }
+
+      // ContactDetailsView resolves the contact's client name and phone country
+      // from this list, so the owning client is all it needs.
+      const client = contact.client_id ? await getClientById(contact.client_id) : null;
+
+      replaceDrawer(
+        renderContactDetails
+          ? renderContactDetails({
+            id: `${id}-contact-details`,
+            contact,
+            clients: client ? [client] : [],
+            userId: currentUser?.user_id,
+          })
+          : (
+            <div className="p-4 text-sm text-gray-600">
+              {t('dashboard.drawer.contactRendererMissing', 'Contact details are unavailable in this context.')}
+            </div>
+          ),
+        undefined,
+        '900px'
+      );
+    } catch (e) {
+      const message = e instanceof Error
+        ? e.message
+        : t('info.contactLoadFailed', 'Failed to load contact.');
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{message}</div>);
+    }
+  }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
 
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
@@ -935,8 +980,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo(href);
   }, [getCurrentFiltersQuery, navigateAwayTo]);
 
-
-  // Handle saving time entries created from intervals
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
@@ -1375,14 +1418,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [tickets, selectedTicketIds, smartSearchRows]
   );
 
-  const isSelectedBundleMultiClient = useMemo(() => {
-    const uniqueClientIds = new Set(
-      selectedTicketDetails
-        .map(detail => detail.client_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    );
-    return uniqueClientIds.size > 1;
-  }, [selectedTicketDetails]);
 
   // Board id for every ticket currently rendered on the page.
   const onPageBoardById = useMemo(() => {
@@ -1505,6 +1540,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
+      onContactClick: onQuickViewContact,
       statusIsClosedById,
       additionalAgentAvatarUrls,
       teamAvatarUrls,
@@ -1607,7 +1643,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn = createTicketActionsColumn({
+      t,
+      onDuplicate: (ticketId) => navigateAwayTo(buildCreateTicketHref({
+        duplicateFromTicketId: ticketId,
+        isAlgaDeskMode: useAlgaDeskQuickAddForm,
+      })),
+      // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
+      onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
+      canCreateTemplate: templatePermissions.create,
+    });
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1617,6 +1666,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTagsChange,
     ticketTagsRef,
     onQuickViewClient,
+    onQuickViewContact,
     id,
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
@@ -1633,6 +1683,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
+    templatePermissions.create,
     t,
     locale,
     dateFormat,
@@ -1780,176 +1833,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
-  // When the bundle dialog opens, check which of the selected tickets are already
-  // bundle masters of other bundles. Masters can't be added as children, so we must
-  // either force them to BE the master or block the operation entirely.
-  useEffect(() => {
-    if (!isBundleDialogOpen || selectedTicketIdsArray.length === 0) {
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingBundleMasterStatus(true);
-    (async () => {
-      try {
-        const masterStatus = await getBundleMasterStatusAction({ ticketIds: selectedTicketIdsArray });
-        if (cancelled) return;
-        if (isActionMessageError(masterStatus) || isActionPermissionError(masterStatus)) {
-          setBundleExistingMasterIds(new Set());
-          setBundleError(getErrorMessage(masterStatus));
-          return;
-        }
-        const { masterTicketIds } = masterStatus;
-        const masterSet = new Set(masterTicketIds);
-        setBundleExistingMasterIds(masterSet);
-        if (masterSet.size === 1) {
-          // Exactly one of the selected tickets is already a master; force it to be THE master.
-          const [onlyMaster] = Array.from(masterSet);
-          setBundleMasterTicketId(onlyMaster);
-        } else if (masterSet.size > 1) {
-          // Can't bundle: multiple existing masters can't be merged without unbundling first.
-          setBundleError(
-            t(
-              'bulk.bundle.multipleExistingMasters',
-              'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
-              { count: masterSet.size }
-            )
-          );
-          setBundleMasterTicketId(null);
-        } else {
-          setBundleError(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to load bundle master status', error);
-          setBundleExistingMasterIds(new Set());
-        }
-      } finally {
-        if (!cancelled) setIsLoadingBundleMasterStatus(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isBundleDialogOpen, selectedTicketIdsArray, t]);
-
-  const hasMultipleExistingMasters = bundleExistingMasterIds.size > 1;
-
-  // Load the chosen master's closed context so the dialog can require an
-  // explicit consequence when the master is already closed.
-  useEffect(() => {
-    if (!isBundleDialogOpen || !bundleMasterTicketId) {
-      setBundleClosedMasterContext(null);
-      setBundleClosedMasterChoice(null);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingBundleClosedContext(true);
-    (async () => {
-      try {
-        const context = await getBundleMasterClosedContextAction({ masterTicketId: bundleMasterTicketId });
-        if (cancelled) return;
-        if (isActionMessageError(context) || isActionPermissionError(context)) {
-          setBundleClosedMasterContext(null);
-          setBundleClosedMasterChoice(null);
-          return;
-        }
-        setBundleClosedMasterContext(context);
-        if (context.isClosed) {
-          setBundleClosedMasterChoice(
-            context.allowedChoices.includes('keep_closed') ? 'keep_closed' : (context.allowedChoices[0] ?? null)
-          );
-        } else {
-          setBundleClosedMasterChoice(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to load closed-master context', error);
-          setBundleClosedMasterContext(null);
-          setBundleClosedMasterChoice(null);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingBundleClosedContext(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isBundleDialogOpen, bundleMasterTicketId]);
-
-  const bundleNeedsClosedMasterChoice = bundleClosedMasterContext?.isClosed === true;
-  const bundleClosedMasterChoiceReady = !bundleNeedsClosedMasterChoice || Boolean(bundleClosedMasterChoice);
-
-  const performBundleTickets = useCallback(async () => {
-    if (selectedTicketIdsArray.length < 2) {
-      setBundleError(t('bulk.bundle.selectAtLeastTwo', 'Select at least two tickets to bundle.'));
-      return;
-    }
-    if (!bundleMasterTicketId) {
-      setBundleError(t('bulk.bundle.selectMaster', 'Select a master ticket.'));
-      return;
-    }
-    if (hasMultipleExistingMasters) {
-      return;
-    }
-    if (bundleNeedsClosedMasterChoice && !bundleClosedMasterChoice) {
-      setBundleError(
-        t('errors.bundle.closedMasterChoiceRequired', "This bundle's master is closed. Choose how to add the child: {{choices}}.", {
-          choices: (bundleClosedMasterContext?.allowedChoices ?? []).join(', '),
-        })
-      );
-      return;
-    }
-
-    setBundleError(null);
-    try {
-      const result = await bundleTicketsAction({
-        masterTicketId: bundleMasterTicketId,
-        childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
-        mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
-        ...(bundleNeedsClosedMasterChoice && bundleClosedMasterChoice
-          ? { onClosedMaster: bundleClosedMasterChoice }
-          : {}),
-      });
-
-      if (isActionMessageError(result) || isActionPermissionError(result)) {
-        const message = getErrorMessage(result);
-        setBundleError(message);
-        toast.error(message);
-        return;
-      }
-
-      toast.success(t('bulk.bundle.success', 'Tickets bundled'));
-      setIsBundleDialogOpen(false);
-      clearSelection();
-
-      // Re-fetch with current filters after bundling
-      onFilterChange({});
-    } catch (error) {
-      const message = getErrorMessage(error);
-      setBundleError(message);
-      handleError(error);
-    }
-  }, [
-    selectedTicketIdsArray,
-    bundleMasterTicketId,
-    bundleSyncUpdates,
-    currentUser,
-    clearSelection,
-    onFilterChange,
-    hasMultipleExistingMasters,
-    bundleNeedsClosedMasterChoice,
-    bundleClosedMasterChoice,
-    bundleClosedMasterContext,
-    t,
-  ]);
-
-  const handleConfirmBundleTickets = useCallback(() => {
-    if (isSelectedBundleMultiClient) {
-      setIsMultiClientBundleConfirmOpen(true);
-      return;
-    }
-    void performBundleTickets();
-  }, [isSelectedBundleMultiClient, performBundleTickets]);
 
 
   useEffect(() => {
@@ -2005,6 +1888,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
       entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      latest_activity_at: (ticket) => formatPrintDateTime(ticket.latest_activity_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
         return tags.length > 0
@@ -2026,7 +1910,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
             ? 'tickets-print-title-column'
-            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at' || dataIndexKey === 'latest_activity_at'
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
@@ -2512,6 +2396,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   </div>
                   <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  {listViewPicker}
                   {viewPresentation && onViewPresentationChange && (
                     <TicketViewMenu
                       id={`${id}-view-menu`}
@@ -2548,13 +2433,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       </button>
                     </span>
                   ))}
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
-                  >
-                    {t('filters.clearFilters', 'Clear filters')}
-                  </button>
                 </div>
               )}
 
@@ -2844,6 +2722,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <DataTable
                 key={`${currentPage}-${pageSize}`}
                 {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                id={`${id}-tickets-table`}
+                persistPageSize={false}
                 data={ticketsWithIds}
                 columns={columns}
                 pagination={true}
@@ -2867,6 +2747,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={onColumnSizingChange}
               />
               )}
             </ShortcutActiveRegion>
@@ -2925,19 +2807,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       />
 
-      <ConfirmationDialog
-        id={`${id}-bundle-multi-client-confirm`}
-        isOpen={isMultiClientBundleConfirmOpen}
-        onClose={() => setIsMultiClientBundleConfirmOpen(false)}
-        onConfirm={async () => {
-          setIsMultiClientBundleConfirmOpen(false);
-          await performBundleTickets();
-        }}
-        title={t('bulk.bundle.multiClientTitle', 'Bundle spans multiple clients')}
-        message={t('bulk.bundle.multiClientMessage', 'This bundle includes tickets from multiple clients. Confirm that you want to proceed.')}
-        confirmLabel={t('bulk.bundle.proceed', 'Proceed')}
-        cancelLabel={t('actions.cancel', 'Cancel')}
-      />
       {(() => {
         const bulkMoveFooter = (
           <div className="flex justify-end space-x-2">
@@ -3155,145 +3024,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         );
       })()}
 
-      {(() => {
-        const bundleFooter = (
-          <div className="flex justify-end space-x-2">
-            <Button
-              id={`${id}-bundle-cancel`}
-              variant="outline"
-              onClick={() => {
-                setIsBundleDialogOpen(false);
-                setBundleError(null);
-                setBundleExistingMasterIds(new Set());
-                setBundleClosedMasterContext(null);
-                setBundleClosedMasterChoice(null);
-              }}
-            >
-              {t('actions.cancel', 'Cancel')}
-            </Button>
-            <Button
-              id={`${id}-bundle-confirm`}
-              onClick={handleConfirmBundleTickets}
-              disabled={
-                selectedTicketIdsArray.length < 2 ||
-                !bundleMasterTicketId ||
-                isLoadingBundleMasterStatus ||
-                isLoadingBundleClosedContext ||
-                !bundleClosedMasterChoiceReady ||
-                hasMultipleExistingMasters
-              }
-            >
-              {t('bulk.bundleTickets', 'Bundle Tickets')}
-            </Button>
-          </div>
-        );
-        return (
-      <Dialog
-        isOpen={isBundleDialogOpen && selectedTicketIds.size >= 2}
-        onClose={() => {
-          setIsBundleDialogOpen(false);
-          setBundleError(null);
-          setBundleExistingMasterIds(new Set());
-          setBundleClosedMasterContext(null);
-          setBundleClosedMasterChoice(null);
-        }}
-        id={`${id}-bundle-dialog`}
-        title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
-        footer={bundleFooter}
-      >
-        <DialogContent>
-          {bundleError && (
-            <Alert variant="destructive" className="mb-3">
-              <AlertDescription>{bundleError}</AlertDescription>
-            </Alert>
-          )}
-          {bundleExistingMasterIds.size === 1 && !bundleError && (
-            <Alert variant="warning" className="mb-3">
-              <AlertDescription>
-                {t(
-                  'bulk.bundle.existingMasterLocked',
-                  'One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.'
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-          {(() => {
-            if (!isSelectedBundleMultiClient) return null;
-            return (
-              <Alert variant="warning" className="mb-3">
-                <AlertDescription>{t('bulk.bundle.crossClientWarning', 'This bundle spans multiple clients. You\'ll be asked to confirm before bundling.')}</AlertDescription>
-              </Alert>
-            );
-          })()}
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm font-medium text-gray-700 mb-1">{t('bulk.bundle.masterTicket', 'Select Master Ticket')}</div>
-              <CustomSelect
-                id={`${id}-bundle-master-select`}
-                value={bundleMasterTicketId || ''}
-                options={selectedTicketDetails.map(detail => {
-                  const baseLabel = detail.ticket_number || detail.title || detail.ticket_id;
-                  const isExistingMaster = bundleExistingMasterIds.has(detail.ticket_id);
-                  return {
-                    value: detail.ticket_id,
-                    label: isExistingMaster
-                      ? `${baseLabel} ${t('bulk.bundle.existingMasterSuffix', '(existing master)')}`
-                      : baseLabel,
-                  };
-                })}
-                onValueChange={(value) => setBundleMasterTicketId(value)}
-                placeholder={
-                  isLoadingBundleMasterStatus
-                    ? t('bulk.bundle.checkingMasters', 'Checking existing bundles...')
-                    : t('bulk.bundle.selectMasterTicket', 'Select master ticket...')
-                }
-                disabled={
-                  isLoadingBundleMasterStatus ||
-                  hasMultipleExistingMasters ||
-                  bundleExistingMasterIds.size === 1
-                }
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`${id}-bundle-sync-updates`}
-                checked={bundleSyncUpdates}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBundleSyncUpdates(event.target.checked)}
-                skipRegistration
-              />
-              <label htmlFor={`${id}-bundle-sync-updates`} className="text-sm text-gray-700">
-                {t('bulk.bundle.syncUpdates', 'Sync updates from master to children (public replies + workflow changes)')}
-              </label>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.')}
-            </div>
-
-            {bundleNeedsClosedMasterChoice && bundleClosedMasterContext && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30" id={`${id}-bundle-closed-master-section`}>
-                <div className="mb-1 text-sm font-medium text-amber-900 dark:text-amber-200">
-                  {t('details.bundle.closedMasterDialogTitle', "This bundle's master is closed")}
-                </div>
-                <p className="mb-2 text-xs text-amber-800 dark:text-amber-300">
-                  {t('details.bundle.closedMasterDialogIntro', 'The master is closed. Choose what should happen to the child when it is added.')}
-                </p>
-                <ClosedMasterChoiceFields
-                  idPrefix={`${id}-bundle-closed-master`}
-                  allowedChoices={bundleClosedMasterContext.allowedChoices}
-                  value={bundleClosedMasterChoice}
-                  onChange={setBundleClosedMasterChoice}
-                  hasResolutionComment={bundleClosedMasterContext.hasResolutionComment}
-                  masterStatusName={bundleClosedMasterContext.masterStatusName}
-                />
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-        );
-      })()}
+      <BulkBundleDialog
+        id={id}
+        isOpen={isBundleDialogOpen}
+        onClose={() => setIsBundleDialogOpen(false)}
+        initialTicketIds={selectedTicketIdsArray}
+        knownRows={[tickets, smartSearchRows]}
+        onBundled={() => { clearSelection(); onFilterChange({}); }}
+      />
       <BulkTicketActionBar
         idPrefix={`${id}-bulk`}
         count={selectedTicketIds.size}
@@ -3318,10 +3056,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBulkMoveDialogOpen(true);
         }}
         onBundle={() => {
-          setBundleError(null);
-          const first = Array.from(selectedTicketIds)[0] || null;
-          setBundleMasterTicketId(first);
-          setBundleSyncUpdates(true);
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {

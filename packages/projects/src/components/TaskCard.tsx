@@ -505,8 +505,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
       <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
-          {task.due_date ? (
+          {task.start_date && task.due_date ? (
+            // A dated span reads as a range; the "Due" label would mislabel its start.
+            <span className='bg-primary-100 p-1 rounded-md'>
+              {formatDate(new Date(task.start_date), { month: 'short', day: 'numeric' })}
+              {' – '}
+              {formatDate(new Date(task.due_date), { dateStyle: 'medium' })}
+            </span>
+          ) : task.due_date ? (
             <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{formatDate(new Date(task.due_date), { dateStyle: 'medium' })}</span></>
+          ) : task.start_date ? (
+            <>{zoomLevel > 30 && `${t('projectDetail.startsLabel', 'Starts')}: `}<span className='bg-primary-100 p-1 rounded-md'>{formatDate(new Date(task.start_date), { dateStyle: 'medium' })}</span></>
           ) : (
             zoomLevel > 30 && <>{t('projectDetail.noDueDate', 'No due date')}</>
           )}

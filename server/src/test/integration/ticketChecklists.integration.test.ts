@@ -40,6 +40,11 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -76,12 +81,14 @@ import {
   updateChecklistTemplateItem,
   deleteChecklistTemplateItem,
   createChecklistTemplateApplyRule,
+  updateChecklistTemplateApplyRule,
 } from '../../../../packages/tickets/src/actions/checklists/checklistTemplateActions';
 import {
   applyChecklistTemplateToTicket,
   applyMatchingChecklistTemplates,
 } from '@alga-psa/shared/lib/ticketChecklists';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -300,7 +307,7 @@ describe('ticket checklists', () => {
         fixture.tenantId,
         trx,
         { skipLocationValidation: true, skipCategoryValidation: true, skipSubcategoryValidation: true },
-        undefined,
+        silentTicketCreation('checklist auto-apply fixture does not assert on ticket events'),
         undefined,
         fixture.userId
       )
@@ -424,5 +431,64 @@ describe('ticket checklists', () => {
       })
     );
     expect(notApplied).toBe(0);
+  });
+
+  it('apply rules reject categories that are not on the rule board', async () => {
+    const sourceFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const targetFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const insertCategory = async (boardId: string, name: string, parent?: string) => {
+      const categoryId = uuidv4();
+      await scopedDbFor(fixture.tenantId).table('categories').insert({
+        tenant: fixture.tenantId,
+        category_id: categoryId,
+        category_name: name,
+        board_id: boardId,
+        parent_category: parent ?? null,
+        created_by: fixture.userId,
+      });
+      return categoryId;
+    };
+    // Same names on both boards, as after a category copy.
+    const sourceHardware = await insertCategory(sourceFixture.boardId, 'Hardware');
+    const sourceLaptop = await insertCategory(sourceFixture.boardId, 'Laptop', sourceHardware);
+    const targetHardware = await insertCategory(targetFixture.boardId, 'Hardware');
+    const targetLaptop = await insertCategory(targetFixture.boardId, 'Laptop', targetHardware);
+
+    const templateId = await createTemplateWithItems([{ name: 'Scoped step' }]);
+
+    expect(
+      await createChecklistTemplateApplyRule(templateId, { board_id: targetFixture.boardId, category_id: sourceHardware })
+    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryBoardMismatch' });
+    expect(
+      await createChecklistTemplateApplyRule(templateId, {
+        board_id: targetFixture.boardId,
+        category_id: targetHardware,
+        subcategory_id: sourceLaptop,
+      })
+    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleSubcategoryInvalid' });
+    expect(
+      await createChecklistTemplateApplyRule(templateId, { board_id: targetFixture.boardId, category_id: targetLaptop })
+    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryInvalid' });
+    expect(
+      await createChecklistTemplateApplyRule(templateId, { subcategory_id: targetLaptop })
+    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleSubcategoryRequiresCategory' });
+
+    const rule = expectActionSuccess(
+      await createChecklistTemplateApplyRule(templateId, {
+        board_id: targetFixture.boardId,
+        category_id: targetHardware,
+        subcategory_id: targetLaptop,
+      })
+    );
+    // With no board, any board's category is allowed.
+    expectActionSuccess(await createChecklistTemplateApplyRule(templateId, { category_id: sourceHardware }));
+
+    expect(
+      await updateChecklistTemplateApplyRule(rule.apply_rule_id, {
+        board_id: sourceFixture.boardId,
+        category_id: targetHardware,
+        subcategory_id: targetLaptop,
+      })
+    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryBoardMismatch' });
   });
 });

@@ -9,6 +9,7 @@
  * - This decouples the model from Next.js runtime
  */
 
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { ITicket } from '@alga-psa/types';
@@ -139,7 +140,8 @@ const Ticket = {
         .where({
           ticket_id: id
         })
-        .update(ticket);
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+        .update({ ...ticket, ...ticketStatusClockPatch(knexOrTrx, ticket.status_id) });
 
       if (updated === 0) {
         throw new Error(`Ticket ${id} not found in tenant ${tenant}`);

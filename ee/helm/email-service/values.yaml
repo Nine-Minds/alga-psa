@@ -106,6 +106,8 @@ vaultAgent:
   sharedSecretPath: secret/data/alga-psa/shared
 
 livenessProbe:
+  # Unconditional 200; never depends on Redis or the DB.
+  path: /health
   initialDelaySeconds: 20
   periodSeconds: 30
   timeoutSeconds: 10
@@ -113,6 +115,8 @@ livenessProbe:
   successThreshold: 1
 
 readinessProbe:
+  # Fails only on DB down, Redis down or a wedged queue consumer.
+  path: /ready
   initialDelaySeconds: 10
   periodSeconds: 10
   timeoutSeconds: 5
@@ -133,6 +137,19 @@ autoscaling:
   maxReplicas: 3
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
+
+# Prometheus scrape wiring. /metrics is always served by the pod (unless
+# EMAIL_SERVICE_METRICS_ENABLED=false); this block only adds scrape discovery.
+metrics:
+  enabled: false
+  # prometheus.io/* pod annotations when enabled.
+  podAnnotations: true
+  serviceMonitor:
+    # Also requires metrics.enabled. Needs the Prometheus Operator CRDs.
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
 
 podDisruptionBudget:
   enabled: false
@@ -165,9 +182,11 @@ sharedTenantSecrets:
 # by default → cloud/hosted rendering is unchanged.
 waitForBootstrap:
   enabled: false
+  # LEVERAGE: friction pinned-third-party-images — Helm values cannot read docker-compose.images.yaml; scripts/tests/pinned-images.test.mjs enforces equality
   image:
-    name: ankane/pgvector
-    tag: latest
+    name: pgvector/pgvector
+    tag: 0.8.7-pg15-bookworm
+    digest: sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
   pullPolicy: IfNotPresent
 
 namespace: ""

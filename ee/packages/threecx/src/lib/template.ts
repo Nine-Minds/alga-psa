@@ -16,7 +16,7 @@ export interface RenderThreecxTemplateInput {
   country?: string | null;
 }
 
-function escapeXmlAttr(value: string): string {
+function escapeXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -25,9 +25,20 @@ function escapeXmlAttr(value: string): string {
 }
 
 /**
+ * 3CX DateTime variables stringify in the PBX's local culture; the routes
+ * require ISO-8601 UTC, so format them explicitly.
+ */
+function isoUtc(variable: string): string {
+  return `[[${variable}].ToString("yyyy-MM-ddTHH:mm:ssZ")]`;
+}
+
+/** [Duration] is "hh:mm:ss"; the routes take whole seconds. */
+const DURATION_SECONDS = '[[[DurationTimespan].get_TotalSeconds()].ToString("F0")]';
+
+/**
  * The JSON body 3CX posts to report-call. Mirrors ThreecxReportCallBody so the
  * validator test can assert the keys match the route contract. Values are 3CX
- * template variables the CRM engine substitutes at call time.
+ * expressions the CRM engine evaluates at call time.
  */
 export const THREECX_REPORT_CALL_POST_KEYS = [
   'callType',
@@ -37,7 +48,6 @@ export const THREECX_REPORT_CALL_POST_KEYS = [
   'queueExtension',
   'durationSeconds',
   'startTimeUtc',
-  'establishedTimeUtc',
   'endTimeUtc',
   'entityId',
   'entityType',
@@ -52,10 +62,11 @@ export const THREECX_REPORT_CALL_VARIABLES: Record<(typeof THREECX_REPORT_CALL_P
   agentExtension: '[Agent]',
   agentEmail: '[AgentEmail]',
   queueExtension: '[QueueExtension]',
-  durationSeconds: '[Duration]',
-  startTimeUtc: '[CallStartTimeUTC]',
-  establishedTimeUtc: '[CallEstablishedTimeUTC]',
-  endTimeUtc: '[CallEndTimeUTC]',
+  durationSeconds: DURATION_SECONDS,
+  // establishedTimeUtc is optional on the route and left out: missed calls
+  // have no established time, and formatting a null DateTime fails in 3CX.
+  startTimeUtc: isoUtc('CallStartTimeUTC'),
+  endTimeUtc: isoUtc('CallEndTimeUTC'),
   entityId: '[EntityId]',
   entityType: '[EntityType]',
   transcription: '[Transcription]',
@@ -84,9 +95,9 @@ export const THREECX_REPORT_CHAT_VARIABLES: Record<(typeof THREECX_REPORT_CHAT_P
   name: '[Name]',
   agentEmail: '[AgentEmail]',
   queueExtension: '[QueueExtension]',
-  durationSeconds: '[Duration]',
-  startTimeUtc: '[ChatStartTimeUTC]',
-  endTimeUtc: '[ChatEndTimeUTC]',
+  durationSeconds: DURATION_SECONDS,
+  startTimeUtc: isoUtc('ChatStartTimeUTC'),
+  endTimeUtc: isoUtc('ChatEndTimeUTC'),
   messages: '[ChatMessages]',
   entityId: '[EntityId]',
   entityType: '[EntityType]',
@@ -103,73 +114,100 @@ export const THREECX_CREATE_CONTACT_VARIABLES: Record<(typeof THREECX_CREATE_CON
   company: '[Company]',
 };
 
-function postText(variables: Record<string, string>): string {
-  return JSON.stringify(variables);
-}
-
-/** Response path → 3CX output type, shared by every scenario that returns a contact. */
+/**
+ * Variable name → response path → 3CX output type, shared by every scenario
+ * that returns a contact. Paths are absolute from the response root; 3CX
+ * iterates the `contacts` array itself and does not support positional
+ * indexes like `contacts.0.x`.
+ */
 export const THREECX_CONTACT_OUTPUTS: ReadonlyArray<readonly [name: string, path: string, type: string]> = [
-  ['ContactUrl', 'contacts.0.contactUrl', 'ContactUrl'],
-  ['FirstName', 'contacts.0.firstName', 'FirstName'],
-  ['LastName', 'contacts.0.lastName', 'LastName'],
-  ['CompanyName', 'contacts.0.companyName', 'CompanyName'],
-  ['Email', 'contacts.0.email', 'Email'],
-  ['PhoneBusiness', 'contacts.0.phone', 'PhoneBusiness'],
-  ['EntityId', 'contacts.0.entityId', 'EntityId'],
-  ['EntityType', 'contacts.0.entityType', 'EntityType'],
+  ['ContactUrl', 'contacts.contactUrl', 'ContactUrl'],
+  ['FirstName', 'contacts.firstName', 'FirstName'],
+  ['LastName', 'contacts.lastName', 'LastName'],
+  ['CompanyName', 'contacts.companyName', 'CompanyName'],
+  ['Email', 'contacts.email', 'Email'],
+  ['PhoneBusiness', 'contacts.phone', 'PhoneBusiness'],
+  ['EntityId', 'contacts.entityId', 'EntityId'],
+  ['EntityType', 'contacts.entityType', 'EntityType'],
 ];
 
-function contactOutputs(): string {
-  // The JSON response shape is { contacts: [ { contactUrl, firstName, ... } ] };
-  // the first contact drives the caller-id pop.
-  const variables = THREECX_CONTACT_OUTPUTS
-    .map(([name, path]) => `        <Variable Name="${name}" Path="${path}" />`)
-    .join('\n');
-  const outputs = THREECX_CONTACT_OUTPUTS
-    .map(([name, , type]) => `        <Output Type="${type}" Passes="0" Value="${name}" />`)
-    .join('\n');
-  return `      <Variables>\n${variables}\n      </Variables>\n      <Outputs AllowEmpty="true">\n${outputs}\n      </Outputs>`;
+function contactOutputs(allowEmpty: boolean): string[] {
+  return [
+    '      <Rules>',
+    '        <Rule Type="Any" Ethalon="">contacts.contactUrl</Rule>',
+    '      </Rules>',
+    '      <Variables>',
+    ...THREECX_CONTACT_OUTPUTS.flatMap(([name, path]) => [
+      `        <Variable Name="${name}" Path="${path}">`,
+      '          <Filter />',
+      '        </Variable>',
+    ]),
+    '      </Variables>',
+    `      <Outputs AllowEmpty="${allowEmpty}">`,
+    ...THREECX_CONTACT_OUTPUTS.map(([name, , type]) => `        <Output Type="${type}" Passes="0" Value="[${name}]" />`),
+    '      </Outputs>',
+  ];
 }
 
 function authHeaders(): string[] {
   return [
     '        <Headers>',
-    '          <Value Key="Authorization">Bearer [ApiKey]</Value>',
+    '          <Value Key="Authorization" Passes="0" Type="String">Bearer [ApiKey]</Value>',
     '        </Headers>',
   ];
 }
 
-function lookupScenario(id: string, url: string, queryDescription: string): string {
+function lookupScenario(id: string, url: string, comment: string, allowEmpty: boolean): string {
   return [
-    `    <Scenario Id="${escapeXmlAttr(id)}" Type="REST">`,
-    `      <Request SkipIf="" Url="${escapeXmlAttr(url)}" RequestType="GET" ResponseType="Json" RequestContentType="application/json">`,
+    `    <!-- ${comment} -->`,
+    `    <Scenario Id="${escapeXml(id)}" Type="REST">`,
+    `      <Request SkipIf="" Url="${escapeXml(url)}" MessagePasses="0" RequestContentType="" RequestEncoding="UrlEncoded" RequestType="Get" ResponseType="Json">`,
     ...authHeaders(),
     '      </Request>',
-    `      <!-- ${queryDescription} -->`,
-    contactOutputs(),
+    ...contactOutputs(allowEmpty),
     '    </Scenario>',
   ].join('\n');
 }
 
-function postScenario(id: string, url: string, body: Record<string, string>, withOutputs: boolean): string {
+function postScenario(
+  id: string,
+  url: string,
+  comment: string,
+  body: Record<string, string>,
+  withOutputs: boolean,
+): string {
+  const values = Object.entries(body).map(
+    ([key, expression]) => `          <Value Key="${key}" Passes="1" Type="String">${escapeXml(expression)}</Value>`,
+  );
   return [
+    `    <!-- ${comment} -->`,
     `    <Scenario Id="${id}" Type="REST">`,
-    `      <Request SkipIf="" Url="${escapeXmlAttr(url)}" RequestType="POST" ResponseType="Json" RequestContentType="application/json" PostText="${escapeXmlAttr(postText(body))}">`,
+    `      <Request SkipIf="" Url="${escapeXml(url)}" MessagePasses="0" RequestContentType="" RequestEncoding="Json" RequestType="Post" ResponseType="Json">`,
     ...authHeaders(),
+    '        <PostValues>',
+    ...values,
+    '        </PostValues>',
     '      </Request>',
-    ...(withOutputs ? [contactOutputs()] : []),
+    ...(withOutputs ? contactOutputs(false) : []),
     '    </Scenario>',
   ].join('\n');
 }
 
 /**
- * Renders the 3CX CRM template XML for a tenant. Every URL and header is built
- * from the route constants, so a route rename breaks the validator test rather
- * than the rendered template.
+ * Renders the 3CX CRM template XML for a tenant, following the 3CX CRM
+ * Template XML description (enum values are case-sensitive: Get/Post,
+ * Json/UrlEncoded). Every URL is built from the route constants, so a route
+ * rename breaks the validator test rather than the template.
+ *
+ * Number handling: Prefix="Zeros" sends international numbers as 00…, which
+ * survives the query string (a leading + decodes to a space) and which
+ * normalizeToE164 reads as international. MaxLength stays empty so 3CX never
+ * truncates the number before our E.164 matcher sees it.
  */
 export function renderThreecxTemplate(input: RenderThreecxTemplateInput): string {
   const { baseUrl, tenantSlug, templateVersion } = input;
-  const country = (input.country ?? '').trim();
+  // Mandatory on <Crm> but unused by 3CX at runtime.
+  const country = (input.country ?? '').trim() || 'Global';
 
   const url = (segment: string) => threecxRouteUrl(baseUrl, tenantSlug, segment);
   const lookupUrl = `${url(THREECX_ROUTE_SEGMENTS.lookup)}?${THREECX_QUERY_PARAMS.number}=[Number]`;
@@ -178,19 +216,20 @@ export function renderThreecxTemplate(input: RenderThreecxTemplateInput): string
 
   return [
     '<?xml version="1.0" encoding="utf-8"?>',
-    `<Crm Country="${escapeXmlAttr(country)}" Name="AlgaPSA" Version="${templateVersion}" SupportsEmojis="true" ListRendering="false">`,
-    '  <Number Prefix="Plus" MaxLength="" />',
-    '  <Authentication Type="No" />',
+    `<Crm xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Country="${escapeXml(country)}" Name="AlgaPSA" Version="${templateVersion}" SupportsEmojis="true">`,
+    '  <Number Prefix="Zeros" MaxLength="" />',
+    '  <Connection MaxConcurrentRequests="4" />',
     '  <Parameters>',
-    '    <Parameter Name="ApiKey" Type="Password" Editor="String" Title="API key" />',
+    '    <Parameter Name="ApiKey" Type="Password" Parent="General Configuration" Editor="String" Title="AlgaPSA API key:" Default="" />',
     '  </Parameters>',
+    '  <Authentication Type="No" />',
     '  <Scenarios>',
-    lookupScenario('', lookupUrl, 'Lookup by number'),
-    lookupScenario('LookupByEmail', emailUrl, 'Lookup by email'),
-    lookupScenario('SearchContacts', searchUrl, 'Free-text search'),
-    postScenario('CreateContactRecordFromClient', url(THREECX_ROUTE_SEGMENTS.contacts), THREECX_CREATE_CONTACT_VARIABLES, true),
-    postScenario('ReportCall', url(THREECX_ROUTE_SEGMENTS.reportCall), THREECX_REPORT_CALL_VARIABLES, false),
-    postScenario('ReportChat', url(THREECX_ROUTE_SEGMENTS.reportChat), THREECX_REPORT_CHAT_VARIABLES, false),
+    lookupScenario('', lookupUrl, 'Lookup by number', true),
+    lookupScenario('LookupByEmail', emailUrl, 'Lookup by email', false),
+    lookupScenario('SearchContacts', searchUrl, 'Free text search', false),
+    postScenario('CreateContactRecordFromClient', url(THREECX_ROUTE_SEGMENTS.contacts), 'Create contact from the 3CX client', THREECX_CREATE_CONTACT_VARIABLES, true),
+    postScenario('ReportCall', url(THREECX_ROUTE_SEGMENTS.reportCall), 'Call journaling', THREECX_REPORT_CALL_VARIABLES, false),
+    postScenario('ReportChat', url(THREECX_ROUTE_SEGMENTS.reportChat), 'Chat journaling', THREECX_REPORT_CHAT_VARIABLES, false),
     '  </Scenarios>',
     '</Crm>',
   ].join('\n');

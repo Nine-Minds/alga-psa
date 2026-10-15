@@ -13,6 +13,7 @@ describe('serviceReadService mapper', () => {
       service_type_name: 'Managed',
       default_rate: 150,
       unit_of_measure: 'month',
+      unit_code: 'MON',
       is_active: true,
       sku: 'MON-001',
       tenant: 'should-not-leak',
@@ -29,7 +30,10 @@ describe('serviceReadService mapper', () => {
       'serviceTypeId',
       'serviceTypeName',
       'sku',
+      'unitCode',
       'unitOfMeasure',
     ])
+    expect(mapped.unitCode).toBe('MON')
+    expect(mapped.unitOfMeasure).toBe('month')
   })
 })

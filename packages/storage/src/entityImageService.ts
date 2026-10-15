@@ -13,6 +13,10 @@ interface UploadResult {
   imageUrl?: string | null;
   /** URL of the uncropped source written under `sourceVariant`, when one was. */
   sourceImageUrl?: string | null;
+  /** Document that now holds the stored variant, so callers can record provenance. */
+  documentId?: string;
+  /** Name the stored document carries, for surfaces that show the file name. */
+  fileName?: string;
 }
 
 function getImageFolderPath(entityType: EntityType): string {
@@ -377,10 +381,11 @@ export async function uploadEntityImage(
       await deleteEntityImage(entityType, entityId, userId, tenant, undefined, sourceVariant);
     }
 
-    await storeEntityImageVariant({
+    const storedBytes = crop ? { ...bytes, name: markFileName(bytes.name) } : bytes;
+    const documentId = await storeEntityImageVariant({
       ...common,
       logoVariant,
-      bytes: crop ? { ...bytes, name: markFileName(bytes.name) } : bytes,
+      bytes: storedBytes,
       processing: crop
         ? { cropRect: crop }
         : { isEntityLogo: isLogoUpload || false, isFavicon: logoVariant === 'favicon' },
@@ -391,7 +396,7 @@ export async function uploadEntityImage(
       ? await getEntityImageUrl(entityType, entityId, tenant, sourceVariant)
       : undefined;
 
-    return { success: true, imageUrl, sourceImageUrl };
+    return { success: true, imageUrl, sourceImageUrl, documentId, fileName: storedBytes.name };
   } catch (error) {
     console.error(`[EntityImageService] Failed to upload image for ${entityType} (ID: ${entityId}):`, {
       operation: 'uploadEntityImage',
@@ -410,8 +415,14 @@ export async function uploadEntityImage(
 }
 
 export interface RecropEntityLogoParams {
-  /** Variant holding the uncropped wordmark to cut from. */
+  /** Variant holding the uncropped wordmark to cut from. Ignored when `sourceDocumentId` is set. */
   sourceVariant: EntityLogoVariant;
+  /**
+   * Cut from this document instead of the `sourceVariant` association. A mark
+   * uploaded as its own square is re-cut from that original upload, so
+   * adjusting the zone twice never compounds two crops.
+   */
+  sourceDocumentId?: string;
   /** Variant that receives the new square mark. */
   targetVariant: EntityLogoVariant;
   crop: LogoCropRect;
@@ -427,34 +438,44 @@ export async function recropEntityLogo(
   entityId: string,
   userId: string,
   tenant: string,
-  { sourceVariant, targetVariant, crop, contextName }: RecropEntityLogoParams,
+  { sourceVariant, sourceDocumentId, targetVariant, crop, contextName }: RecropEntityLogoParams,
 ): Promise<UploadResult> {
   const { knex } = await createTenantKnex(tenant);
 
   try {
-    const association = await tenantScopedTable(knex, 'document_associations', tenant)
-      .select('document_id')
-      .where({
-        entity_id: entityId,
-        entity_type: entityType,
-        is_entity_logo: true,
-        entity_logo_variant: sourceVariant,
-      })
-      .first();
-    const document = association?.document_id
+    let sourceId = sourceDocumentId;
+    if (!sourceId) {
+      const association = await tenantScopedTable(knex, 'document_associations', tenant)
+        .select('document_id')
+        .where({
+          entity_id: entityId,
+          entity_type: entityType,
+          is_entity_logo: true,
+          entity_logo_variant: sourceVariant,
+        })
+        .first();
+      sourceId = association?.document_id;
+    }
+    const document = sourceId
       ? await tenantScopedTable(knex, 'documents', tenant)
           .select('file_id', 'document_name', 'mime_type')
-          .where({ document_id: association.document_id })
+          .where({ document_id: sourceId })
           .first()
       : null;
 
     if (!document?.file_id) {
-      return { success: false, message: `No ${sourceVariant} logo to crop from.` };
+      return {
+        success: false,
+        message: sourceDocumentId
+          ? 'The image to crop from is no longer available.'
+          : `No ${sourceVariant} logo to crop from.`,
+      };
     }
 
     const { buffer, metadata } = await StorageService.downloadFile(document.file_id);
+    const storedName = markFileName(document.document_name || metadata.original_name);
 
-    await storeEntityImageVariant({
+    const documentId = await storeEntityImageVariant({
       knex,
       entityType,
       entityId,
@@ -465,7 +486,7 @@ export async function recropEntityLogo(
       logoVariant: targetVariant,
       bytes: {
         buffer,
-        name: markFileName(document.document_name || metadata.original_name),
+        name: storedName,
         mimeType: document.mime_type || metadata.mime_type,
         size: buffer.length,
       },
@@ -473,7 +494,7 @@ export async function recropEntityLogo(
     });
 
     const imageUrl = await getEntityImageUrl(entityType, entityId, tenant, targetVariant);
-    return { success: true, imageUrl };
+    return { success: true, imageUrl, documentId, fileName: storedName };
   } catch (error) {
     console.error(`[EntityImageService] Failed to recrop logo for ${entityType} (ID: ${entityId}):`, {
       operation: 'recropEntityLogo',
@@ -485,6 +506,82 @@ export async function recropEntityLogo(
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });
     const message = error instanceof Error ? error.message : `Failed to update ${entityType} image`;
+    return { success: false, message };
+  }
+}
+
+export interface LinkEntityImageFromDocumentParams {
+  /** Image document already in the tenant's library. */
+  documentId: string;
+  /** Variant the document fills; defaults to the light image. */
+  logoVariant?: EntityLogoVariant;
+  contextName?: string;
+}
+
+/**
+ * Fills an image variant from a document the tenant already uploaded, so a logo
+ * can be picked from the library instead of being uploaded a second time. The
+ * source document is left exactly as it is: its bytes are re-stored under the
+ * variant's own document, which is what carries the variant's processing.
+ */
+export async function linkEntityImageFromDocument(
+  entityType: EntityType,
+  entityId: string,
+  userId: string,
+  tenant: string,
+  { documentId, logoVariant = 'default', contextName }: LinkEntityImageFromDocumentParams,
+): Promise<UploadResult> {
+  const { knex } = await createTenantKnex(tenant);
+
+  try {
+    const document = await tenantScopedTable(knex, 'documents', tenant)
+      .select('file_id', 'document_name', 'mime_type')
+      .where({ document_id: documentId })
+      .first();
+
+    if (!document?.file_id) {
+      return { success: false, message: 'Document not found.' };
+    }
+
+    const mimeType: string | undefined = document.mime_type;
+    if (!mimeType?.startsWith('image/')) {
+      return { success: false, message: 'Only image documents can be used here.' };
+    }
+
+    const { buffer, metadata } = await StorageService.downloadFile(document.file_id);
+    const storedName = document.document_name || metadata.original_name;
+
+    const newDocumentId = await storeEntityImageVariant({
+      knex,
+      entityType,
+      entityId,
+      userId,
+      tenant,
+      context: contextName || `${entityType}_image`,
+      isLogoUpload: true,
+      logoVariant,
+      bytes: {
+        buffer,
+        name: storedName,
+        mimeType,
+        size: buffer.length,
+      },
+      processing: logoVariant === 'favicon' ? { isFavicon: true } : { isEntityLogo: true },
+    });
+
+    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant, logoVariant);
+    return { success: true, imageUrl, documentId: newDocumentId, fileName: storedName };
+  } catch (error) {
+    console.error(`[EntityImageService] Failed to link document as image for ${entityType} (ID: ${entityId}):`, {
+      operation: 'linkEntityImageFromDocument',
+      entityType,
+      entityId,
+      tenant,
+      documentId,
+      logoVariant,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+    const message = error instanceof Error ? error.message : `Failed to link document as ${entityType} image`;
     return { success: false, message };
   }
 }

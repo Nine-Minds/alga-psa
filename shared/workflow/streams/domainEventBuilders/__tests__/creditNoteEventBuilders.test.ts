@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   creditNoteAppliedEventPayloadSchema,
   creditNoteCreatedEventPayloadSchema,
   creditNoteVoidedEventPayloadSchema,
-} from '../../../runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildCreditNoteAppliedPayload,
   buildCreditNoteCreatedPayload,

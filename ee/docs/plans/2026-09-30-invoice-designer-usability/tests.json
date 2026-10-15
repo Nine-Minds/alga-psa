@@ -1,0 +1,229 @@
+[
+  {
+    "id": "T001",
+    "description": "Insertion target rules: container/leaf/page/climb and 'after' placement (utils/structureEditing.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F009"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Reorder, move-out, move-into targets and subtree copy (utils/structureEditing.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Layer name helpers: default-name detection, suggestions from binding/label/token, inner-layer rename planning (utils/structureEditing.layerNames.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F039"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Store paste/duplicate: fresh ids, AST id dropped, invalid parent refused, unique names, delete re-selection (state/designerStore.pasteSubtree.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F016"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Store paste style replaces visual style and container layout, leaves size, undoes in one step; first-free default names; header preset bindings and translations (state/designerStore.pasteStyle.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F026",
+      "F053"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "New blocks are content-sized and media keep frames (state/designerStore.layout.test.ts, designerStore.addNodeFromPalette.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "AST authoring round-trips: layer names, no names for shipped templates, logo binding export/import, column widths/alignment, translated defaults for tables/totals, text translation then fixed text (ast/workspaceAst.authoring.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F030",
+      "F031",
+      "F032",
+      "F034",
+      "F035",
+      "F045"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Canonical binding ids for designed tables and logo import as Logo block (ast/workspaceAst.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F052",
+      "F030"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Standard document label catalog matches en documents.json and text lookup works (lib/invoice-template-ast/standardDocumentLabels.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Auto-link of exact standard text and persistent fixed-text opt-out (utils/translatableText.autoLink.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Default field format and logo render path per document kind (fields/documentBindingCatalog.defaultFormat.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F031"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "'Set' means differs from a new block's default; empty values are unset (inspector/fieldState.test.ts).",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Rounded tables render with separate borders; square tables keep collapsed borders (lib/invoice-template-ast/react-renderer.tableCorners.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Spacing controls: per-side padding inputs, shorthand parsing, independent sides by default, 'Same on all sides', clearing one side (inspector/DesignerSchemaInspector.spacingControls.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Schema inspector: live-typing an emptied field stays empty and blur unsets it; example placeholders (inspector/DesignerSchemaInspector.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F028"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unified Size control sets width/height by mode and typed value; no X/Y inputs (DesignerShell.sharedSizing.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Layout & size tab hosts grid and flex controls (DesignerShell.gridLayoutControls / flexItemControls integration tests).",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F027"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Table editor: column move/expand, binding suggestions per expanded column (inspector/TableEditorWidget.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F034"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Outline: children order and aria-selected highlight (palette/OutlineView.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Canvas media aspect and hover badge (canvas/DesignCanvas.mediaAspect.integration.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Editor save flow: stays in the editor with preview running; a new layout's second save carries the first save's id (billing-dashboard/InvoiceTemplateEditor.authoritativeFlow.test.tsx).",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Shortcut catalog contract keeps designer shortcuts editor-scoped (packages/ui keyboard-shortcuts tests).",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F057"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Translation validation passes for all locales (node scripts/validate-translations.cjs).",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Usability acceptance: an evaluator rebuilds the Detailed invoice layout from a blank layout via UI operations only; saved AST matches the source; three consecutive ratings >= 8/10 (manual, recorded in SCRATCHPAD.md).",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F008",
+      "F010",
+      "F012",
+      "F017",
+      "F022",
+      "F024",
+      "F043",
+      "F047",
+      "F048",
+      "F054",
+      "F055"
+    ]
+  }
+]

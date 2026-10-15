@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "⟦Ƈȯƞƒīřḿ Ŀīƈḗƞşḗ Ŭƥḓȧŧḗ⟧",
       "increaseDescription": "⟦Řḗṽīḗẇ ŧħḗ ḓḗŧȧīŀş ȯƒ ẏȯŭř ŀīƈḗƞşḗ īƞƈřḗȧşḗ ƀḗƒȯřḗ ƈȯƞƒīřḿīƞɠ.⟧",
-      "decreaseDescription": "⟦Řḗṽīḗẇ ŧħḗ ḓḗŧȧīŀş ȯƒ ẏȯŭř ŀīƈḗƞşḗ ḓḗƈřḗȧşḗ. Ƈħȧƞɠḗş ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
       "currentMonthlyCost": "⟦Ƈŭřřḗƞŧ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
       "currentLicenseCount": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
       "newMonthlyCost": "⟦Ƞḗẇ Ḿȯƞŧħŀẏ Ƈȯşŧ⟧",
       "newLicenseCount": "⟦Ƞḗẇ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧",
       "monthlyIncrease": "⟦Ḿȯƞŧħŀẏ Īƞƈřḗȧşḗ⟧",
-      "monthlySavings": "⟦Ḿȯƞŧħŀẏ Şȧṽīƞɠş⟧",
       "paymentMethod": "⟦Ƥȧẏḿḗƞŧ Ḿḗŧħȯḓ⟧",
       "changePaymentMethod": "⟦Ƈħȧƞɠḗ⟧",
       "immediateChargeTitle": "⟦Īḿḿḗḓīȧŧḗ ƈħȧřɠḗ⟧",
       "immediateChargeDescription": "⟦Ẏȯŭ ẇīŀŀ ƀḗ ƈħȧřɠḗḓ {{amountDue}} ƞȯẇ ƒȯř ŧħḗ ƥřȯřȧŧḗḓ ȧḿȯŭƞŧ.⟧",
       "prorationDescription": "⟦Ƥřȯřȧŧīȯƞ: {{amount}} ƒȯř ŧħḗ řḗḿȧīƞḓḗř ȯƒ ŧħīş ƀīŀŀīƞɠ ƥḗřīȯḓ⟧",
-      "scheduledTitle": "⟦Şƈħḗḓŭŀḗḓ ƒȯř ƥḗřīȯḓ ḗƞḓ⟧",
-      "scheduledDescription": "⟦Ŀīƈḗƞşḗ ḓḗƈřḗȧşḗ ẇīŀŀ ŧȧķḗ ḗƒƒḗƈŧ ȯƞ {{date}} ȧŧ ŧħḗ ḗƞḓ ȯƒ ẏȯŭř ƈŭřřḗƞŧ ƀīŀŀīƞɠ ƥḗřīȯḓ.⟧",
-      "scheduledKeepAccess": "⟦Ẏȯŭ'ŀŀ ķḗḗƥ ȧƈƈḗşş ŧȯ ȧŀŀ {{count}} ŀīƈḗƞşḗş ŭƞŧīŀ ŧħḗƞ.⟧",
       "cancel": "⟦Ƈȧƞƈḗŀ⟧",
       "confirmPayNow": "⟦Ƈȯƞƒīřḿ & Ƥȧẏ Ƞȯẇ⟧",
-      "confirmSchedule": "⟦Ƈȯƞƒīřḿ Şƈħḗḓŭŀḗ⟧"
+      "confirm": "⟦Ƈȯƞƒīřḿ⟧",
+      "trialTitle": "⟦Ƞȯ ƈħȧřɠḗ ḓŭřīƞɠ ẏȯŭř ŧřīȧŀ⟧",
+      "trialDescription": "⟦Ẏȯŭř ŧřīȧŀ ƈȯƞŧīƞŭḗş ȧş ƀḗƒȯřḗ. Ɓīŀŀīƞɠ şŧȧřŧş ȧŧ {{amount}} ȯƞ {{date}}.⟧"
     },
     "usage": {
       "title": "⟦Ƈŭřřḗƞŧ Ŀīƈḗƞşḗ Ŭşȧɠḗ⟧",
       "licensesUsed": "⟦ŀīƈḗƞşḗş ŭşḗḓ⟧"
     },
     "fields": {
-      "totalLicenseCount": "⟦Ŧȯŧȧŀ Ŀīƈḗƞşḗ Ƈȯŭƞŧ⟧"
+      "licensesToAdd": "⟦Ŀīƈḗƞşḗş ŧȯ ȧḓḓ⟧"
     },
     "help": {
-      "totalLicenseCount": "⟦Ḗƞŧḗř ŧħḗ ƞḗẇ ŧȯŧȧŀ ƞŭḿƀḗř ȯƒ ŀīƈḗƞşḗş (ḿīƞīḿŭḿ: {{minimum}}). Ƈŭřřḗƞŧŀẏ: {{current}}⟧",
-      "reduceViaAccount": "⟦Ŧȯ řḗḓŭƈḗ ŀīƈḗƞşḗş, ṽīşīŧ Ȧƈƈȯŭƞŧ Ḿȧƞȧɠḗḿḗƞŧ⟧",
-      "quantityWarning": "⟦Ẇȧřƞīƞɠ: Ẏȯŭ ħȧṽḗ {{used}} ŭşḗřş ƀŭŧ ȧřḗ şḗŧŧīƞɠ ŧħḗ ŧȯŧȧŀ ŧȯ {{quantity}}⟧"
+      "licensesToAdd": "⟦Ḗƞŧḗř ħȯẇ ḿȧƞẏ ŀīƈḗƞşḗş ŧȯ ȧḓḓ. Ẏȯŭř ƞḗẇ ŧȯŧȧŀ ŭƥḓȧŧḗş ƀḗŀȯẇ.⟧"
     },
     "pricing": {
       "pricePerLicense": "⟦Ƥřīƈḗ ƥḗř ŀīƈḗƞşḗ:⟧",
-      "quantity": "⟦Ɋŭȧƞŧīŧẏ:⟧",
-      "total": "⟦Ŧȯŧȧŀ:⟧"
+      "addedCost": "⟦Ȧḓḓḗḓ ƈȯşŧ:⟧",
+      "newTotal": "⟦Ƞḗẇ ŧȯŧȧŀ:⟧"
     },
     "actions": {
       "creatingCheckout": "⟦Ƈřḗȧŧīƞɠ Ƈħḗƈķȯŭŧ...⟧",
-      "noChange": "⟦Ƞȯ Ƈħȧƞɠḗ⟧",
-      "updateToTotal": "⟦Ŭƥḓȧŧḗ ŧȯ {{quantity}} Ŧȯŧȧŀ ({{difference}} {{licenseLabel}})⟧"
+      "addLicenses": "⟦Ȧḓḓ {{count}} {{licenseLabel}}⟧"
     },
     "info": {
-      "totalQuantity": "⟦Ŧħīş şḗŧş ẏȯŭř ŧȯŧȧŀ şŭƀşƈřīƥŧīȯƞ ʠŭȧƞŧīŧẏ (ƞȯŧ ȧƞ ȧḓḓīŧīȯƞ ŧȯ ƈŭřřḗƞŧ ŀīƈḗƞşḗş)⟧",
       "increasingImmediate": "⟦Īƞƈřḗȧşīƞɠ ŀīƈḗƞşḗş: Īḿḿḗḓīȧŧḗ ȧƈƈḗşş ẇīŧħ ƥřȯřȧŧḗḓ ƈħȧřɠḗ⟧",
-      "billedMonthly": "⟦Ŀīƈḗƞşḗş ȧřḗ ƀīŀŀḗḓ ḿȯƞŧħŀẏ ȧƞḓ ƈȧƞ ƀḗ ƈȧƞƈḗŀḗḓ ȧƞẏŧīḿḗ⟧"
+      "billedMonthly": "⟦Ŀīƈḗƞşḗş ȧřḗ ƀīŀŀḗḓ ḿȯƞŧħŀẏ ȧƞḓ ƈȧƞ ƀḗ ƈȧƞƈḗŀḗḓ ȧƞẏŧīḿḗ⟧",
+      "addsToTotal": "⟦Ŀīƈḗƞşḗş ȧřḗ ȧḓḓḗḓ ŧȯ ẏȯŭř ƈŭřřḗƞŧ ŧȯŧȧŀ. Ŧȯ řḗḓŭƈḗ ŀīƈḗƞşḗş, ṽīşīŧ Ȧƈƈȯŭƞŧ Ḿȧƞȧɠḗḿḗƞŧ.⟧"
     },
     "solo": {
       "title": "⟦Şȯŀȯ īƞƈŀŭḓḗş ȯƞḗ ŭşḗř⟧",
       "description": "⟦Ŧħḗ Şȯŀȯ ƥŀȧƞ īş ḓḗşīɠƞḗḓ ƒȯř ȧ şīƞɠŀḗ ŭşḗř ȧƞḓ ḓȯḗş ƞȯŧ şŭƥƥȯřŧ ȧḓḓīƞɠ ŀīƈḗƞşḗş. Ŭƥɠřȧḓḗ ŧȯ Ƥřȯ ŧȯ ȧḓḓ ḿȯřḗ ŭşḗřş ŧȯ ẏȯŭř ŧḗȧḿ.⟧",
       "upgradeCta": "⟦Ŭƥɠřȧḓḗ ŧȯ Ƥřȯ⟧"
+    },
+    "summary": {
+      "currentLicenses": "⟦Ƈŭřřḗƞŧ ŀīƈḗƞşḗş⟧",
+      "licensesToAdd": "⟦Ŀīƈḗƞşḗş ŧȯ ȧḓḓ⟧",
+      "newTotal": "⟦Ƞḗẇ ŧȯŧȧŀ⟧"
     }
   },
   "removalModal": {

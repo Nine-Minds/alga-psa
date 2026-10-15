@@ -2,11 +2,12 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ClientRecurringTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
@@ -91,6 +92,11 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
         windowEnd={props.windowEnd}
       />
     ),
+    []
+  );
+
+  const renderClientRecurringTickets = useCallback(
+    (props: ClientRecurringTicketsRenderProps) => <MspRecurringTicketsClientSection clientId={props.clientId} />,
     []
   );
 
@@ -189,6 +195,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,
       renderClientTickets,
+      renderClientRecurringTickets,
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
@@ -208,6 +215,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,
       renderClientTickets,
+      renderClientRecurringTickets,
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,

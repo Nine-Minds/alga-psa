@@ -65,6 +65,7 @@ async function sendExpirationNotification(
   ].join('\n');
 
   const result = await emailService.sendEmail({
+    mailClass: 'sales',
     tenantId,
     to: notification.creatorEmail,
     subject,

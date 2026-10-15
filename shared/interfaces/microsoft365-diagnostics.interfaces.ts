@@ -32,6 +32,8 @@ export interface Microsoft365DiagnosticsSummary {
 
 export interface Microsoft365DiagnosticsReport {
   createdAt: string;
+  diagnosticSource?: 'oauth_callback';
+  diagnosticCreatedAt?: string;
   summary: Microsoft365DiagnosticsSummary;
   steps: Microsoft365DiagnosticsStep[];
   recommendations: string[];

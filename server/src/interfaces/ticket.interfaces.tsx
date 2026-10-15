@@ -51,6 +51,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
+  // List-only: newest of the ticket's own timestamps and its newest visible
+  // comment. Computed in SQL, never stored on the tickets table.
+  latest_activity_at?: string | null;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
@@ -73,6 +76,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Who produced the activity shown in latest_activity_at; null when nobody can be named.
+  latest_activity_actor?: { kind: 'user' | 'client_user' | 'contact' | 'email_sender' | 'system'; name: string | null } | null;
 }
 
 export interface ITicketListFilters {
