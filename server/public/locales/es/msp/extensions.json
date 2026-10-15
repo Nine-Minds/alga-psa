@@ -371,5 +371,13 @@
       "medium": "Los permisos de modificación permiten que la extensión actualice datos existentes.",
       "high": "Los permisos avanzados permiten que la extensión cree, elimine o ejecute operaciones."
     }
+  },
+  "iframe": {
+    "title": "Aplicación de la extensión",
+    "starting": "Iniciando extensión",
+    "loadingUi": "Cargando la interfaz de la extensión…",
+    "connecting": "Conectando al espacio de trabajo de ejecución…",
+    "loadFailed": "No se pudo cargar esta extensión.",
+    "configurationHint": "Revise la configuración de la extensión e inténtelo de nuevo."
   }
 }

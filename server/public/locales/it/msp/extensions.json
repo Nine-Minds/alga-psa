@@ -371,5 +371,13 @@
       "medium": "Le autorizzazioni di modifica consentono all'estensione di aggiornare i dati esistenti.",
       "high": "Le autorizzazioni avanzate consentono all'estensione di creare, eliminare o eseguire operazioni."
     }
+  },
+  "iframe": {
+    "title": "Applicazione dell’estensione",
+    "starting": "Avvio dell’estensione",
+    "loadingUi": "Caricamento dell’interfaccia dell’estensione…",
+    "connecting": "Connessione all’area di lavoro di esecuzione…",
+    "loadFailed": "Impossibile caricare questa estensione.",
+    "configurationHint": "Controlla la configurazione dell’estensione e riprova."
   }
 }

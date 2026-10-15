@@ -115,7 +115,11 @@
     "saveChanges": "Wijzigingen opslaan",
     "printSelected_few": "Geselecteerde afdrukken ({{count}})",
     "printSelected_many": "Geselecteerde afdrukken ({{count}})",
-    "saveSettings": "Instellingen opslaan"
+    "saveSettings": "Instellingen opslaan",
+    "finishSetup": "Installatie voltooien",
+    "skip": "Overslaan",
+    "saveAsDraft": "Opslaan als concept",
+    "completing": "Voltooien..."
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1914,7 +1918,8 @@
       },
       "select": "Selecteren",
       "searchPlaceholder": "Zoeken op naam, e-mail of telefoon..."
-    }
+    },
+    "defaultTitle": "Dialoogvenster"
   },
   "viewDensity": {
     "compact": {

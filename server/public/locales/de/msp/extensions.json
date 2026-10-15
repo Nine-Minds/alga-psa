@@ -371,5 +371,13 @@
       "medium": "Änderungsberechtigungen erlauben der Erweiterung, vorhandene Daten zu aktualisieren.",
       "high": "Erweiterte Berechtigungen erlauben der Erweiterung, Vorgänge zu erstellen, zu löschen oder auszuführen."
     }
+  },
+  "iframe": {
+    "title": "Erweiterungs-App",
+    "starting": "Erweiterung wird gestartet",
+    "loadingUi": "Erweiterungsoberfläche wird geladen…",
+    "connecting": "Verbindung zum Laufzeit-Arbeitsbereich wird hergestellt…",
+    "loadFailed": "Diese Erweiterung konnte nicht geladen werden.",
+    "configurationHint": "Überprüfen Sie die Konfiguration der Erweiterung und versuchen Sie es erneut."
   }
 }

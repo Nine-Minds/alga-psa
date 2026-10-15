@@ -115,7 +115,11 @@
     "saveChanges": "Änderungen speichern",
     "printSelected_few": "Auswahl drucken ({{count}})",
     "printSelected_many": "Auswahl drucken ({{count}})",
-    "saveSettings": "Einstellungen speichern"
+    "saveSettings": "Einstellungen speichern",
+    "finishSetup": "Einrichtung abschließen",
+    "skip": "Überspringen",
+    "saveAsDraft": "Als Entwurf speichern",
+    "completing": "Abschließen..."
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1914,7 +1918,8 @@
       },
       "select": "Auswählen",
       "searchPlaceholder": "Nach Name, E-Mail oder Telefon suchen..."
-    }
+    },
+    "defaultTitle": "Dialog"
   },
   "viewDensity": {
     "compact": {

@@ -115,7 +115,11 @@
     "saveChanges": "Spara ändringar",
     "printSelected_few": "Skriv ut markerade ({{count}})",
     "printSelected_many": "Skriv ut markerade ({{count}})",
-    "saveSettings": "Spara inställningar"
+    "saveSettings": "Spara inställningar",
+    "finishSetup": "Slutför konfigurationen",
+    "skip": "Hoppa över",
+    "saveAsDraft": "Spara som utkast",
+    "completing": "Slutför…"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1914,7 +1918,8 @@
       },
       "select": "Välj",
       "searchPlaceholder": "Sök efter namn, e-post eller telefon…"
-    }
+    },
+    "defaultTitle": "Dialogruta"
   },
   "viewDensity": {
     "compact": {

@@ -115,7 +115,11 @@
     "printSelected_many": "Drukuj zaznaczone ({{count}})",
     "removeTag": "Usuń tag",
     "saveChanges": "Zapisz zmiany",
-    "saveSettings": "Zapisz ustawienia"
+    "saveSettings": "Zapisz ustawienia",
+    "finishSetup": "Zakończ konfigurację",
+    "skip": "Pomiń",
+    "saveAsDraft": "Zapisz jako wersję roboczą",
+    "completing": "Kończenie..."
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1914,7 +1918,8 @@
       },
       "select": "Wybierz",
       "searchPlaceholder": "Szukaj według imienia i nazwiska, adresu e-mail lub telefonu..."
-    }
+    },
+    "defaultTitle": "Okno dialogowe"
   },
   "viewDensity": {
     "compact": {

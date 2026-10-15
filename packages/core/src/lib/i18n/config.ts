@@ -203,6 +203,7 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/projects': ['common', 'client-portal', 'features/projects'],
   '/client-portal/billing': ['common', 'client-portal', 'features/billing'],
   '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
+  '/client-portal/extensions': ['common', 'client-portal', 'msp/extensions'],
   '/client-portal/kb': ['common', 'client-portal', 'features/documents'],
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/client-portal/request-services': ['common', 'client-portal', 'client-portal/service-requests'],

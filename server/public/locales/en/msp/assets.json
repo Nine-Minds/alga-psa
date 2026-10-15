@@ -36,6 +36,20 @@
       "offline": "Offline",
       "overdue": "Overdue",
       "unknown": "Unknown"
+    },
+    "rmaStatus": {
+      "open": "Open",
+      "awaiting_return": "Awaiting return",
+      "returned": "Returned",
+      "sent_to_vendor": "Sent to vendor",
+      "replacement_received": "Replacement received",
+      "replacement_deployed": "Replacement deployed",
+      "dead_unit_owed": "Dead unit owed",
+      "dead_unit_returned": "Dead unit returned",
+      "replaced": "Replaced",
+      "credited": "Credited",
+      "charged": "Charged",
+      "closed": "Closed"
     }
   },
   "assetAlertsSection": {
@@ -1631,5 +1645,30 @@
     "empty": "No matching assets for this client",
     "loading": "Loading...",
     "remove": "Remove asset"
+  },
+  "inventoryProvenance": {
+    "title": "Inventory provenance",
+    "fields": {
+      "product": {
+        "label": "Product"
+      },
+      "serial": {
+        "label": "Serial"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Origin sales order"
+      },
+      "delivered": {
+        "label": "Delivered"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA history"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
   }
 }

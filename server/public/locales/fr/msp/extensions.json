@@ -371,5 +371,13 @@
       "medium": "Les autorisations de modification permettent à l'extension de mettre à jour des données existantes.",
       "high": "Les autorisations avancées permettent à l'extension de créer, supprimer ou exécuter des opérations."
     }
+  },
+  "iframe": {
+    "title": "Application de l’extension",
+    "starting": "Démarrage de l’extension",
+    "loadingUi": "Chargement de l’interface de l’extension…",
+    "connecting": "Connexion à l’espace de travail d’exécution…",
+    "loadFailed": "Impossible de charger cette extension.",
+    "configurationHint": "Vérifiez la configuration de l’extension et réessayez."
   }
 }

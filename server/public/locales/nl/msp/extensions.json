@@ -371,5 +371,13 @@
       "medium": "Met wijzigingsmachtigingen kan de extensie bestaande gegevens bijwerken.",
       "high": "Met geavanceerde machtigingen kan de extensie bewerkingen maken, verwijderen of uitvoeren."
     }
+  },
+  "iframe": {
+    "title": "Extensie-app",
+    "starting": "Extensie starten",
+    "loadingUi": "Extensie-interface laden…",
+    "connecting": "Verbinding maken met de runtimewerkruimte…",
+    "loadFailed": "Deze extensie kon niet worden geladen.",
+    "configurationHint": "Controleer de configuratie van de extensie en probeer het opnieuw."
   }
 }

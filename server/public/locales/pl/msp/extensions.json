@@ -371,5 +371,13 @@
       "medium": "Uprawnienia do modyfikacji pozwalają rozszerzeniu aktualizować istniejące dane.",
       "high": "Uprawnienia zaawansowane pozwalają rozszerzeniu tworzyć, usuwać i wykonywać operacje."
     }
+  },
+  "iframe": {
+    "title": "Aplikacja rozszerzenia",
+    "starting": "Uruchamianie rozszerzenia",
+    "loadingUi": "Ładowanie interfejsu rozszerzenia…",
+    "connecting": "Łączenie z obszarem roboczym środowiska wykonawczego…",
+    "loadFailed": "Nie udało się załadować tego rozszerzenia.",
+    "configurationHint": "Sprawdź konfigurację rozszerzenia i spróbuj ponownie."
   }
 }

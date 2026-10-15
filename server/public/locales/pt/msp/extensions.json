@@ -371,5 +371,13 @@
       "medium": "As permissões de modificação permitem que a extensão atualize dados existentes.",
       "high": "As permissões avançadas permitem que a extensão crie, exclua ou execute operações."
     }
+  },
+  "iframe": {
+    "title": "Aplicativo da extensão",
+    "starting": "Iniciando extensão",
+    "loadingUi": "Carregando interface da extensão…",
+    "connecting": "Conectando ao espaço de trabalho de execução…",
+    "loadFailed": "Não foi possível carregar esta extensão.",
+    "configurationHint": "Verifique a configuração da extensão e tente novamente."
   }
 }

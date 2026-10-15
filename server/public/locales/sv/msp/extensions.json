@@ -371,5 +371,13 @@
       "medium": "Ändringsbehörigheter låter tillägget uppdatera befintliga data.",
       "high": "Avancerade behörigheter låter tillägget skapa, radera eller utföra åtgärder."
     }
+  },
+  "iframe": {
+    "title": "Tilläggsapp",
+    "starting": "Startar tillägget",
+    "loadingUi": "Läser in tilläggets gränssnitt…",
+    "connecting": "Ansluter till körmiljöns arbetsyta…",
+    "loadFailed": "Det gick inte att läsa in det här tillägget.",
+    "configurationHint": "Kontrollera tilläggets konfiguration och försök igen."
   }
 }

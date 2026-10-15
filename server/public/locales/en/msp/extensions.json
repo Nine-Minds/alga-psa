@@ -371,5 +371,13 @@
       "medium": "Modification permissions allow the extension to update existing data.",
       "high": "Advanced permissions allow the extension to create, delete, or execute operations."
     }
+  },
+  "iframe": {
+    "title": "Extension App",
+    "starting": "Starting extension",
+    "loadingUi": "Loading extension UI…",
+    "connecting": "Connecting to the runtime workspace…",
+    "loadFailed": "We couldn’t load this extension.",
+    "configurationHint": "Check the extension configuration and try again."
   }
 }

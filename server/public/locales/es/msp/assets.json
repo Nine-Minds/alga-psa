@@ -36,6 +36,20 @@
       "offline": "Desconectado",
       "overdue": "Atrasado",
       "unknown": "Desconocido"
+    },
+    "rmaStatus": {
+      "open": "Abierto",
+      "awaiting_return": "Esperando devolución",
+      "returned": "Devuelto",
+      "sent_to_vendor": "Enviado al proveedor",
+      "replacement_received": "Reemplazo recibido",
+      "replacement_deployed": "Reemplazo desplegado",
+      "dead_unit_owed": "Unidad defectuosa pendiente",
+      "dead_unit_returned": "Unidad defectuosa devuelta",
+      "replaced": "Reemplazado",
+      "credited": "Acreditado",
+      "charged": "Cobrado",
+      "closed": "Cerrado"
     }
   },
   "assetAlertsSection": {
@@ -1631,5 +1645,30 @@
     "empty": "No hay activos coincidentes para este cliente",
     "loading": "Cargando...",
     "remove": "Quitar activo"
+  },
+  "inventoryProvenance": {
+    "title": "Procedencia del inventario",
+    "fields": {
+      "product": {
+        "label": "Producto"
+      },
+      "serial": {
+        "label": "Número de serie"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Orden de venta de origen"
+      },
+      "delivered": {
+        "label": "Entregado"
+      }
+    },
+    "rmaHistory": {
+      "title": "Historial de RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
   }
 }

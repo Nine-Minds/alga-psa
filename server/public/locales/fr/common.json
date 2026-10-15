@@ -115,7 +115,11 @@
     "saveChanges": "Enregistrer les modifications",
     "printSelected_few": "Imprimer la sélection ({{count}})",
     "printSelected_many": "Imprimer la sélection ({{count}})",
-    "saveSettings": "Enregistrer les paramètres"
+    "saveSettings": "Enregistrer les paramètres",
+    "finishSetup": "Terminer la configuration",
+    "skip": "Passer",
+    "saveAsDraft": "Enregistrer comme brouillon",
+    "completing": "Finalisation..."
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1914,7 +1918,8 @@
       },
       "select": "Sélectionner",
       "searchPlaceholder": "Rechercher par nom, e-mail ou téléphone..."
-    }
+    },
+    "defaultTitle": "Boîte de dialogue"
   },
   "viewDensity": {
     "compact": {
