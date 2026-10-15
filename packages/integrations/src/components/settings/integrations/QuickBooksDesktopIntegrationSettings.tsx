@@ -9,6 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -26,6 +27,7 @@ import {
 import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type SettingsField = keyof QuickBooksDesktopSettings;
+type TextSettingsField = Exclude<SettingsField, 'newProductItemType'>;
 
 /**
  * QuickBooks Desktop (IIF) Integration Settings
@@ -119,7 +121,7 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
   const canManageConnections = caps.connectionsManage;
   const isDirty = (Object.keys(draft) as SettingsField[]).some((key) => draft[key] !== settings[key]);
 
-  const fields: Array<{ key: SettingsField; label: string; help: string; required?: boolean }> = [
+  const fields: Array<{ key: TextSettingsField; label: string; help: string; required?: boolean }> = [
     {
       key: 'arAccount',
       label: t('integrations.qbd.settings.fields.arAccount', { defaultValue: 'Accounts Receivable account' }),
@@ -140,6 +142,17 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
       key: 'defaultSalesTaxItem',
       label: t('integrations.qbd.settings.fields.defaultSalesTaxItem', { defaultValue: 'Default sales tax item' }),
       help: t('integrations.qbd.settings.fields.defaultSalesTaxItemHelp', { defaultValue: 'Sales tax item or group for taxed invoices whose tax code mapping has no "qbdSalesTaxItem" metadata.' })
+    }
+  ];
+
+  const inventoryFields: Array<{ key: TextSettingsField; label: string }> = [
+    {
+      key: 'inventoryAssetAccount',
+      label: t('integrations.qbd.settings.fields.inventoryAssetAccount', { defaultValue: 'Inventory asset account' })
+    },
+    {
+      key: 'cogsAccount',
+      label: t('integrations.qbd.settings.fields.cogsAccount', { defaultValue: 'Cost of goods sold account' })
     }
   ];
 
@@ -209,6 +222,57 @@ const QuickBooksDesktopIntegrationSettings: React.FC = () => {
                 <p className="mt-1 text-xs text-muted-foreground">{field.help}</p>
               </div>
             ))}
+          </div>
+          <div className="space-y-3 rounded border border-border/60 p-4" id="qbd-new-items-settings">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {t('integrations.qbd.settings.newItems.title', { defaultValue: 'Items created by exports' })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.qbd.settings.newItems.description', { defaultValue: 'When an export creates a new QuickBooks item for an Alga product, it uses this item type. Services are always created as Service items.' })}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-foreground" htmlFor="qbd-setting-newProductItemType">
+                  {t('integrations.qbd.settings.fields.newProductItemType', { defaultValue: 'New product item type' })}
+                </label>
+                <CustomSelect
+                  id="qbd-setting-newProductItemType"
+                  options={[
+                    { value: 'NONINVENTORY', label: t('integrations.qbd.settings.itemTypes.nonInventory', { defaultValue: 'Non-inventory Part' }) },
+                    { value: 'INVENTORY', label: t('integrations.qbd.settings.itemTypes.inventory', { defaultValue: 'Inventory Part' }) }
+                  ]}
+                  value={draft.newProductItemType}
+                  onValueChange={(value) =>
+                    setDraft((prev) => ({ ...prev, newProductItemType: value === 'INVENTORY' ? 'INVENTORY' : 'NONINVENTORY' }))
+                  }
+                  disabled={isSaving || !canManageConnections}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {draft.newProductItemType === 'INVENTORY'
+                    ? t('integrations.qbd.settings.fields.inventoryWarning', { defaultValue: 'Alga stock receipts are not exported, so QuickBooks on-hand quantities will go negative unless you also enter stock in QuickBooks.' })
+                    : t('integrations.qbd.settings.fields.nonInventoryHelp', { defaultValue: 'Recommended: Alga stays the inventory system of record and QuickBooks only records the sale.' })}
+                </p>
+              </div>
+            </div>
+            {draft.newProductItemType === 'INVENTORY' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {inventoryFields.map((field) => (
+                  <div key={field.key}>
+                    <Input
+                      id={`qbd-setting-${field.key}`}
+                      label={field.label}
+                      required
+                      value={draft[field.key]}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                      disabled={isSaving || !canManageConnections}
+                      maxLength={159}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
             {t('integrations.qbd.settings.metadataHelp', { defaultValue: 'Per-item overrides: add {"qbdIncomeAccount": "Account name"} to an Items / Services or Discounts mapping, or {"qbdSalesTaxItem": "Item name"} to a Tax Codes mapping, using the mapping metadata editor.' })}
