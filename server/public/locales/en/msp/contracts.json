@@ -1674,10 +1674,6 @@
       "recurringQuantityLabel": "Recurring quantity",
       "allocationQuantityLabel": "Allocation quantity",
       "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
-    },
-    "advanceSuggestion": {
-      "message": "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
-      "action": "Bill in advance on the contract's cadence"
     }
   },
   "wizardProducts": {
@@ -2652,7 +2648,8 @@
       "advance": "Billed in advance on the contract's cadence: the first invoice is available from {{date}}, the contract start date."
     },
     "client": {
-      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's current billing period ends.",
+      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends.",
+      "arrearsPartial": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's billing period containing the start date ends. Because the start date falls partway through that period, it covers {{periodStart}} – {{periodEnd}}.",
       "advance": "Billed in advance on the client's billing schedule: the first invoice is available from {{date}}, the start of the client's billing period that contains the contract start date."
     }
   },
@@ -2664,5 +2661,9 @@
   },
   "sellHourBlockNote": {
     "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "First invoice: the {{invoiceDate}} invoice covers {{periodStart}} – {{periodEnd}} (billed in arrears). Choose In Advance to bill it on the invoice for the period starting {{advanceInvoiceDate}}.",
+    "billInAdvance": "Bill in advance"
   }
 }

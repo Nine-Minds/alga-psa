@@ -29,6 +29,8 @@ import {
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { FixedServiceConfigPanel } from '../service-configurations/FixedServiceConfigPanel';
 import type { IContractLineServiceRateTier } from '@alga-psa/types';
+import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -40,6 +42,9 @@ interface CreateCustomContractLineDialogProps {
   onClose: () => void;
   contractId: string;
   currencyCode?: string;
+  /** Client and start date of the contract, to say when a Fixed arrears line's first partial period invoices. */
+  clientId?: string | null;
+  startDate?: string | null;
   onCreated: () => Promise<void>;
 }
 
@@ -48,6 +53,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   onClose,
   contractId,
   currencyCode,
+  clientId = null,
+  startDate = null,
   onCreated,
 }) => {
   const { t } = useTranslation('msp/contracts');
@@ -59,6 +66,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   const [planType, setPlanType] = useState<PlanType | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>('arrears');
+  const { schedule: clientSchedule } = useClientBillingSchedule(clientId, isOpen && !!startDate);
 
   // Fixed plan state
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -1081,6 +1089,19 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     defaultValue: 'Advance billing is typical for fixed fees; arrears for time/usage-based services.',
                   })}
                 </p>
+                {planType === 'Fixed' && (
+                  <div className="mt-2">
+                    <ArrearsFirstInvoiceHint
+                      id="create-custom-line-first-invoice-hint"
+                      lineType="Fixed"
+                      cadenceOwner="client"
+                      billingTiming={billingTiming}
+                      startDate={startDate}
+                      clientSchedule={clientSchedule}
+                      today={new Date()}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </section>

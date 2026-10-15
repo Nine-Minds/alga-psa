@@ -66,6 +66,8 @@ import {
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 
 interface ContractLinesProps {
   contract: IContract;
@@ -75,6 +77,11 @@ interface ContractLinesProps {
    * with no owner), location controls are hidden.
    */
   clientId?: string | null;
+  /**
+   * The contract's start date (`YYYY-MM-DD`) for the client this tab is scoped to.
+   * With `clientId`, lets Fixed lines say when their first partial period will invoice.
+   */
+  startDate?: string | null;
   onContractLinesChanged?: () => void;
   isReadOnly?: boolean;
 }
@@ -158,7 +165,9 @@ const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
-const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, startDate = null, onContractLinesChanged, isReadOnly = false }) => {
+  // One schedule fetch for the whole tab; every Fixed row's first-invoice hint reads it.
+  const { schedule: clientSchedule } = useClientBillingSchedule(clientId, !!startDate);
   const { t } = useTranslation('msp/contracts');
 
   const handleAssignLineBillingProfile = async (
@@ -1570,6 +1579,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                       : t('billing.timing.arrears', { defaultValue: 'In Arrears' })}
                                   </p>
                                 )}
+                                {line.contract_line_type === 'Fixed' && (
+                                  <div className="mt-2">
+                                    <ArrearsFirstInvoiceHint
+                                      id={`first-invoice-hint-${line.contract_line_id}`}
+                                      lineType={line.contract_line_type}
+                                      cadenceOwner={
+                                        editingLineId === line.contract_line_id && !pricingOnly
+                                          ? editLineData.cadence_owner || line.cadence_owner || 'client'
+                                          : line.cadence_owner || 'client'
+                                      }
+                                      billingTiming={
+                                        editingLineId === line.contract_line_id && !pricingOnly
+                                          ? editLineData.billing_timing || line.billing_timing || 'arrears'
+                                          : line.billing_timing || 'arrears'
+                                      }
+                                      startDate={startDate}
+                                      clientSchedule={clientSchedule}
+                                      today={new Date()}
+                                    />
+                                  </div>
+                                )}
                               </div>
                               <div>
                                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -2083,6 +2113,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             onClose={() => setShowCreateCustomDialog(false)}
             contractId={contract.contract_id}
             currencyCode={contract.currency_code}
+            clientId={clientId}
+            startDate={startDate}
             onCreated={handleAddContractLines}
           />
 
