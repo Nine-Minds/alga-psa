@@ -24218,6 +24218,78 @@
           "entry_ids"
         ]
       },
+      "WorkV1CreateTimePeriodBody": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+          },
+          "is_current": {
+            "type": "boolean",
+            "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ]
+      },
+      "WorkV1UpdateTimePeriodBody": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ]
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Exclusive end of the period: the first day after the period. A period covering Aug 16–22 has end_date 2026-08-23."
+          },
+          "is_current": {
+            "type": "boolean",
+            "description": "Ignored. is_current is derived from the dates on read; accepted for backward compatibility."
+          }
+        }
+      },
       "WorkV1CreateTimeSheetBody": {
         "type": "object",
         "properties": {
@@ -98741,7 +98813,7 @@
       },
       "post": {
         "summary": "Create time period",
-        "description": "Creates time period via ApiTimeSheetController.createTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+        "description": "Creates a time period. start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date). is_current is ignored on input and derived on read. Returns 409 when it overlaps an existing period; periods that touch (one's end_date equals the next's start_date) are allowed. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -98764,7 +98836,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1CreateTimePeriodBody"
               }
             }
           }
@@ -98820,6 +98892,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -98836,7 +98918,7 @@
     "/api/v1/time-periods/current": {
       "get": {
         "summary": "Get current time period",
-        "description": "Current route delegates to ApiTimeSheetController.list() and does not call a dedicated current-period method.",
+        "description": "Returns the period containing today (UTC) or ?date=, via getCurrentTimePeriod(). When no period covers today it may materialize one from time period settings.",
         "tags": [
           "Work Management v1"
         ],
@@ -98849,8 +98931,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -98974,7 +99055,7 @@
     "/api/v1/time-periods/{id}": {
       "delete": {
         "summary": "Delete time period",
-        "description": "Deletes time period UUID via deleteTimePeriod().",
+        "description": "Deletes time period UUID via deleteTimePeriod(). Returns 409 when the period is closed or has time sheets.",
         "tags": [
           "Work Management v1"
         ],
@@ -99005,16 +99086,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",
@@ -99061,6 +99132,16 @@
           },
           "404": {
             "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
             "content": {
               "application/json": {
                 "schema": {
@@ -99179,7 +99260,7 @@
       },
       "put": {
         "summary": "Update time period",
-        "description": "Updates time period UUID via updateTimePeriod(). end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
+        "description": "Updates time period UUID via updateTimePeriod(). start_date/end_date accept YYYY-MM-DD (datetimes are truncated to their date); is_current is ignored. Returns 409 when the period is closed, when it has time sheets, or when the new dates overlap another period. end_date is exclusive: the first day after the period (a period covering Aug 16–22 has end_date 2026-08-23).",
         "tags": [
           "Work Management v1"
         ],
@@ -99215,7 +99296,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1UpdateTimePeriodBody"
               }
             }
           }
@@ -99271,6 +99352,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected controller/service failure.",
             "content": {
@@ -99287,7 +99378,7 @@
     "/api/v1/time-periods/{id}/close": {
       "post": {
         "summary": "Close time period",
-        "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period close logic.",
+        "description": "Sets is_closed true (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
         "tags": [
           "Work Management v1"
         ],
@@ -99300,8 +99391,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -99319,16 +99409,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",
@@ -99406,7 +99486,7 @@
     "/api/v1/time-periods/{id}/reopen": {
       "post": {
         "summary": "Reopen time period",
-        "description": "Current route delegates to ApiTimeSheetController.update() (time sheet update flow), not dedicated time-period reopen logic.",
+        "description": "Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.",
         "tags": [
           "Work Management v1"
         ],
@@ -99419,8 +99499,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -99438,16 +99517,6 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Operation succeeded.",

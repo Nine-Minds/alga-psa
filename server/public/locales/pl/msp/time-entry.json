@@ -457,7 +457,8 @@
       "missingFieldNamed": "Brakuje wymaganego pola arkusza czasu pracy lub wpisu czasu: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Wprowadź prawidłowe daty rozpoczęcia i zakończenia."
+      "datesRequired": "Wprowadź prawidłowe daty rozpoczęcia i zakończenia.",
+      "closed": "Ten okres jest zamknięty. Otwórz go ponownie przed wprowadzeniem zmian."
     },
     "timePeriodSettings": {
       "invalidValue": "Jedna z wartości ustawienia okresu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
