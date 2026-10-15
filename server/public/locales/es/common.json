@@ -120,7 +120,8 @@
     "skip": "Omitir",
     "saveAsDraft": "Guardar como borrador",
     "completing": "Finalizando...",
-    "more": "Más"
+    "more": "Más",
+    "closeDialog": "Cerrar diálogo"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -138,7 +139,8 @@
     "active": "Activo",
     "inactive": "Inactivo",
     "completed": "Completado",
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "loadingLabel": "Cargando"
   },
   "messages": {
     "welcome": "Bienvenido",
@@ -154,7 +156,15 @@
     "passwordMismatch": "Las contraseñas no coinciden"
   },
   "fields": {
-    "notes": "Notas"
+    "notes": "Notas",
+    "phone": {
+      "label": "Teléfono",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Extensión",
+      "placeholder": "extensión 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Confirmar acción"
-    }
+    },
+    "contentTitle": "Contenido del diálogo"
   },
   "viewDensity": {
     "compact": {

@@ -120,7 +120,8 @@
     "skip": "Salta",
     "saveAsDraft": "Salva come bozza",
     "completing": "Completamento...",
-    "more": "Altro"
+    "more": "Altro",
+    "closeDialog": "Chiudi finestra di dialogo"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -138,7 +139,8 @@
     "active": "Attivo",
     "inactive": "Inattivo",
     "completed": "Completato",
-    "cancelled": "Annullato"
+    "cancelled": "Annullato",
+    "loadingLabel": "Caricamento"
   },
   "messages": {
     "welcome": "Benvenuto",
@@ -218,7 +220,15 @@
     }
   },
   "fields": {
-    "notes": "Note"
+    "notes": "Note",
+    "phone": {
+      "label": "Telefono",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Interno",
+      "placeholder": "int. 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Conferma azione"
-    }
+    },
+    "contentTitle": "Contenuto della finestra di dialogo"
   },
   "viewDensity": {
     "compact": {

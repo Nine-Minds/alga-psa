@@ -120,7 +120,8 @@
     "skip": "Overslaan",
     "saveAsDraft": "Opslaan als concept",
     "completing": "Voltooien...",
-    "more": "Meer"
+    "more": "Meer",
+    "closeDialog": "Dialoogvenster sluiten"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -138,7 +139,8 @@
     "inactive": "Inactief",
     "completed": "Voltooid",
     "cancelled": "Geannuleerd",
-    "processing": "Bezig..."
+    "processing": "Bezig...",
+    "loadingLabel": "Bezig met laden"
   },
   "messages": {
     "welcome": "Welkom",
@@ -821,7 +823,15 @@
     }
   },
   "fields": {
-    "notes": "Notities"
+    "notes": "Notities",
+    "phone": {
+      "label": "Telefoon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Toestelnummer",
+      "placeholder": "toestel 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Actie bevestigen"
-    }
+    },
+    "contentTitle": "Inhoud van dialoogvenster"
   },
   "viewDensity": {
     "compact": {

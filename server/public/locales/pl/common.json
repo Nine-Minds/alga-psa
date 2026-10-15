@@ -120,7 +120,8 @@
     "skip": "Pomiń",
     "saveAsDraft": "Zapisz jako wersję roboczą",
     "completing": "Kończenie...",
-    "more": "Więcej"
+    "more": "Więcej",
+    "closeDialog": "Zamknij okno dialogowe"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -138,7 +139,8 @@
     "active": "Aktywne",
     "inactive": "Nieaktywne",
     "completed": "Zakończone",
-    "cancelled": "Anulowane"
+    "cancelled": "Anulowane",
+    "loadingLabel": "Ładowanie"
   },
   "messages": {
     "welcome": "Witamy",
@@ -218,7 +220,15 @@
     }
   },
   "fields": {
-    "notes": "Notatki"
+    "notes": "Notatki",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Numer wewnętrzny",
+      "placeholder": "wew. 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Potwierdź działanie"
-    }
+    },
+    "contentTitle": "Zawartość okna dialogowego"
   },
   "viewDensity": {
     "compact": {

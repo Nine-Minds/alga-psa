@@ -120,7 +120,8 @@
     "skip": "Hoppa över",
     "saveAsDraft": "Spara som utkast",
     "completing": "Slutför…",
-    "more": "Mer"
+    "more": "Mer",
+    "closeDialog": "Stäng dialogruta"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -182,7 +183,8 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "completed": "Slutförd",
-    "cancelled": "Avbruten"
+    "cancelled": "Avbruten",
+    "loadingLabel": "Läser in"
   },
   "messages": {
     "welcome": "Välkommen",
@@ -262,7 +264,15 @@
     }
   },
   "fields": {
-    "notes": "Anteckningar"
+    "notes": "Anteckningar",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Anknytning",
+      "placeholder": "ankn. 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Bekräfta åtgärd"
-    }
+    },
+    "contentTitle": "Dialoginnehåll"
   },
   "viewDensity": {
     "compact": {

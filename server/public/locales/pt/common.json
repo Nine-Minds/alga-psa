@@ -120,7 +120,8 @@
     "skip": "Pular",
     "saveAsDraft": "Salvar como rascunho",
     "completing": "Concluindo...",
-    "more": "Mais"
+    "more": "Mais",
+    "closeDialog": "Fechar caixa de diálogo"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -182,7 +183,8 @@
     "active": "Ativo",
     "inactive": "Inativo",
     "completed": "Concluído",
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "loadingLabel": "Carregando"
   },
   "messages": {
     "welcome": "Bem-vindo",
@@ -262,7 +264,15 @@
     }
   },
   "fields": {
-    "notes": "Notas"
+    "notes": "Notas",
+    "phone": {
+      "label": "Telefone",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Ramal",
+      "placeholder": "ramal 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Confirmar ação"
-    }
+    },
+    "contentTitle": "Conteúdo da caixa de diálogo"
   },
   "viewDensity": {
     "compact": {

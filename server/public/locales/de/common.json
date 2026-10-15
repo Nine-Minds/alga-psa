@@ -120,7 +120,8 @@
     "skip": "Überspringen",
     "saveAsDraft": "Als Entwurf speichern",
     "completing": "Abschließen...",
-    "more": "Mehr"
+    "more": "Mehr",
+    "closeDialog": "Dialog schließen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -138,7 +139,8 @@
     "inactive": "Inaktiv",
     "completed": "Abgeschlossen",
     "cancelled": "Abgebrochen",
-    "processing": "Wird verarbeitet..."
+    "processing": "Wird verarbeitet...",
+    "loadingLabel": "Wird geladen"
   },
   "messages": {
     "welcome": "Willkommen",
@@ -821,7 +823,15 @@
     }
   },
   "fields": {
-    "notes": "Notizen"
+    "notes": "Notizen",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Durchwahl",
+      "placeholder": "Durchw. 1234"
+    }
   },
   "auth": {
     "signOut": {
@@ -1972,7 +1982,8 @@
     },
     "confirmAction": {
       "title": "Aktion bestätigen"
-    }
+    },
+    "contentTitle": "Dialoginhalt"
   },
   "viewDensity": {
     "compact": {
