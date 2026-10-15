@@ -149,43 +149,49 @@ function DocumentCard({ document, onView, onDownload, isDownloading, labels }: D
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4 !pt-4">
-        <div className="flex items-start gap-3">
+        {/* Beside an expanded folder sidebar an 800px portal leaves a 224px card,
+            and sharing the name's row with the actions cut the name to ~15px.
+            Under 18rem of card width the actions take their own line (~126px of
+            name instead); wider cards keep the original single row. */}
+        <div className="@container flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-muted rounded-lg">
             {getDocumentIcon(document.mime_type)}
           </div>
-          <div className="flex-1 min-w-0">
-            <button type="button" id={`client-docs-title-view-${document.document_id}`} className="block w-full text-sm font-medium truncate text-left" title={document.document_name} onClick={() => onView(document)}>{document.document_name}</button>
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{formatFileSize(document.file_size)}</span>
-              <span>·</span>
-              <span>{formatDate(document.entered_at)}</span>
+          <div className="flex flex-1 min-w-0 flex-col gap-1 @[18rem]:flex-row @[18rem]:items-start @[18rem]:gap-3">
+            <div className="flex-1 min-w-0">
+              <button type="button" id={`client-docs-title-view-${document.document_id}`} className="block w-full text-sm font-medium truncate text-left" title={document.document_name} onClick={() => onView(document)}>{document.document_name}</button>
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                <span>{formatFileSize(document.file_size)}</span>
+                <span>·</span>
+                <span>{formatDate(document.entered_at)}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-shrink-0 items-center gap-1">
-            <Button
-              id={`client-docs-view-document-${document.document_id}`}
-              variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
-              className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
-            {document.file_id ? <Button
-              id={`client-docs-download-document-${document.document_id}`}
-              variant="ghost"
-              size="sm"
-              onClick={() => onDownload(document)}
-              disabled={isDownloading}
-              className="flex-shrink-0"
-            >
-              <Download className="w-4 h-4" />
-            </Button> : <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download} className="flex-shrink-0">
-                  <Download className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
-                <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>}
+            <div className="flex flex-shrink-0 items-center justify-end gap-1">
+              <Button
+                id={`client-docs-view-document-${document.document_id}`}
+                variant="ghost" size="sm" onClick={() => onView(document)} aria-label={labels.view}
+                className="flex-shrink-0"><Eye className="w-4 h-4" /></Button>
+              {document.file_id ? <Button
+                id={`client-docs-download-document-${document.document_id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDownload(document)}
+                disabled={isDownloading}
+                className="flex-shrink-0"
+              >
+                <Download className="w-4 h-4" />
+              </Button> : <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button id={`client-docs-download-document-${document.document_id}`} variant="ghost" size="sm" disabled={isDownloading} aria-label={labels.download} className="flex-shrink-0">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem id={`client-docs-download-pdf-${document.document_id}`} onSelect={() => onDownload(document, 'pdf')}>{labels.downloadPdf}</DropdownMenuItem>
+                  <DropdownMenuItem id={`client-docs-download-markdown-${document.document_id}`} onSelect={() => onDownload(document, 'md')}>{labels.downloadMarkdown}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>}
+            </div>
           </div>
         </div>
       </CardContent>

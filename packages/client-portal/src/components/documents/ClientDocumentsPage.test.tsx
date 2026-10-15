@@ -224,6 +224,15 @@ describe('ClientDocumentsPage', () => {
     expect(title.className).toContain('truncate');
     expect(title).toHaveAttribute('title', 'Service Agreement.pdf');
     expect(title.closest('.min-w-0')?.nextElementSibling?.className).toContain('flex-shrink-0');
+
+    // Beside an expanded folder sidebar an 800px portal leaves a 224px card,
+    // where sharing a row with the actions cut the name to ~15px. The card
+    // measures itself and drops the actions to their own line under 18rem.
+    const row = title.closest('.\\@container')!;
+    expect(row).not.toBeNull();
+    const actionsWrapper = title.closest('.min-w-0')!.parentElement!;
+    expect(actionsWrapper.className).toContain('flex-col');
+    expect(actionsWrapper.className).toContain('@[18rem]:flex-row');
   });
 
   it('routes uploaded document downloads through the checked portal file endpoint', async () => {
