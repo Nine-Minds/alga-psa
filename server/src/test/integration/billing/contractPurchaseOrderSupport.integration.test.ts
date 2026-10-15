@@ -8,6 +8,7 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   setupClientTaxConfiguration,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
@@ -15,7 +16,6 @@ import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpe
 let db: Knex;
 let tenantId: string;
 
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let createContract: typeof import('@alga-psa/billing/actions/contractActions').createContract;
 let assignContractToClient: typeof import('@alga-psa/clients/actions/clientContractActions').assignContractToClient;
@@ -135,7 +135,6 @@ describe('Contract Purchase Order Support', () => {
     tenantId = await ensureTenant(db);
     setupCommonMocks({ tenantId, userId: 'po-test-user', permissionCheck: () => true });
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ createContract } = await import('@alga-psa/billing/actions/contractActions'));
     ({ assignContractToClient } = await import('@alga-psa/clients/actions/clientContractActions'));
@@ -237,7 +236,7 @@ describe('Contract Purchase Order Support', () => {
       round_up_to_nearest: undefined,
     });
 
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
     expect(invoice).toBeTruthy();
 
     const invoiceRow = await tenantTable(db, tenantId, 'invoices')
@@ -283,7 +282,7 @@ describe('Contract Purchase Order Support', () => {
       round_up_to_nearest: undefined,
     });
 
-    await expect(generateInvoice(billingCycleId)).resolves.toEqual({
+    await expect(generateInvoiceForCycle(billingCycleId)).resolves.toEqual({
       actionError: 'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
     });
 
@@ -319,7 +318,7 @@ describe('Contract Purchase Order Support', () => {
       round_up_to_nearest: undefined,
     });
 
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await generateInvoiceForCycle(billingCycleId);
     expect(invoice).toBeTruthy();
 
     const invoiceRow = await tenantTable(db, tenantId, 'invoices')

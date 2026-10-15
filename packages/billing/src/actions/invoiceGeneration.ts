@@ -1262,13 +1262,15 @@ async function resolveCanonicalClientCadenceSelectorInput(params: {
 }
 
 /**
- * Resolves every recurring due obligation materialized for a client's billing
- * window (legacy billing-cycle bridge). A client cycle window can contain
- * multiple client-cadence schedules (one per contract line) plus
- * contract-cadence lines whose invoice window coincides with the cycle window;
- * production grouped generation (recurringBillingRunActions) passes one
- * selector input per obligation, and the cycle bridge must do the same or it
- * silently drops every obligation after the first.
+ * Resolves every live recurring obligation (anything not archived or
+ * superseded) in a client's invoice window, **including obligations that are
+ * already billed**. It is meant for whole-window previews such as
+ * previewRecurringUnitRevisionInvoiceImpact. Generation must not select its
+ * members here: a billed member trips the duplicate-invoice guard for the whole
+ * request. Generation selects members through due-work
+ * (getAvailableRecurringDueWork), which only offers unbilled obligations.
+ * A client window can contain multiple client-cadence schedules (one per
+ * contract line) plus contract-cadence lines whose invoice window coincides.
  */
 async function resolveCanonicalSelectorInputsForClientWindow(params: {
   knex: Knex;
@@ -3240,93 +3242,6 @@ export const createSeparateProjectProductInvoices = withAuth(async (
   });
 });
 
-export const generateInvoice = withAuth(async (
-  user,
-  { tenant },
-  billing_cycle_id: string,
-  options: IInvoiceGenerationRequestOptions = {}
-): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
-  return withInvoiceGenerationActionErrors(async () => {
-  // Get billing cycle details
-  const { knex } = await createTenantKnex();
-
-  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check permissions within transaction
-    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
-      throw new Error('Permission denied: Cannot generate invoices');
-    }
-
-    return await tenantDb(trx, tenant).table('client_billing_cycles')
-      .where({
-        billing_cycle_id,
-      })
-      .first();
-  });
-
-  if (!billingCycle) {
-    throw new Error('Billing cycle not found');
-  }
-
-  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
-
-  let cycleStart: ISO8601String;
-  let cycleEnd: ISO8601String;
-
-  if (period_start_date && period_end_date) {
-    cycleStart = normalizeRecurringWindowDate(period_start_date);
-    cycleEnd = normalizeRecurringWindowDate(period_end_date);
-  } else if (effective_date) {
-    cycleStart = normalizeRecurringWindowDate(effective_date);
-    cycleEnd = normalizeRecurringWindowDate(
-      unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
-    );
-  } else {
-    throw new Error('Invalid billing cycle dates');
-  }
-
-  // Resolve every materialized obligation in this cycle window (multiple
-  // client-cadence schedules and same-window contract-cadence lines), matching
-  // how grouped recurring generation invoices a window. Resolving only the
-  // first schedule key would silently drop the remaining contract lines.
-  const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
-    knex,
-    tenant,
-    clientId: client_id,
-    windowStart: cycleStart,
-    windowEnd: cycleEnd,
-  });
-
-  let normalizedSelectorInputs: IRecurringDueSelectionInput[];
-  try {
-    normalizedSelectorInputs = await Promise.all(
-      selectorInputs.map((selectorInput) =>
-        normalizeRecurringSelectorInput({
-          knex,
-          tenant,
-          selectorInput,
-        }),
-      ),
-    );
-  } catch (error) {
-    throw withRecurringWindowErrorContext(
-      error instanceof Error
-        ? error
-        : new Error('An error occurred while validating the recurring execution window.'),
-      selectorInputs[0],
-    );
-  }
-
-  return generateInvoiceForNormalizedSelectionInputs({
-    user,
-    tenant,
-    knex,
-    normalizedSelectorInputs,
-    options,
-    bridgeMetadata: { billingCycleId: billing_cycle_id },
-  });
-  });
-});
-
 export const generateInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
@@ -3600,7 +3515,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       if (computed.overageCents > 0 && !params.options?.allowPoOverage) {
         const currencyCode = billingResult.currency_code || 'USD';
         console.warn(
-          `[generateInvoice] PO overage detected (client_contract_id=${clientContractId}). ` +
+          `[generateInvoiceForNormalizedSelectionInputs] PO overage detected (client_contract_id=${clientContractId}). ` +
             `Over by ${formatCurrencyFromMinorUnits(computed.overageCents, 'en-US', currencyCode)}; continuing because PO limits are advisory.`,
         );
       }

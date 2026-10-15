@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,7 +14,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -241,8 +242,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoices that will exceed padding length
-    const invoice1 = await generateInvoice(billingCycle1);
-    const invoice2 = await generateInvoice(billingCycle2);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
     expect(invoice1).not.toBeNull();
     expect(invoice2).not.toBeNull();
 
@@ -288,7 +289,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const invoice = await generateInvoiceForCycle(billingCycle);
     expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
@@ -412,8 +413,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       });
 
     // Generate the first two invoices
-    const invoice1 = await generateInvoice(billingCycle1);
-    const invoice2 = await generateInvoice(billingCycle2);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
     expect(invoice1).not.toBeNull();
     expect(invoice2).not.toBeNull();
 
@@ -424,7 +425,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     const maxInvoiceNumber = await getHighestInvoiceNumber();
 
     // Generate an invoice that would conflict with the prior lowest invoice number
-    const invoice3 = await generateInvoice(billingCycle3);
+    const invoice3 = await generateInvoiceForCycle(billingCycle3);
     expect(invoice3).not.toBeNull();
 
       // Output the invoice numbers of every existing invoice to the console
@@ -498,9 +499,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     // Assign plan to client for all periods
 
     // Generate invoices in sequence
-    const invoice1 = await generateInvoice(billingCycle1);
-    const invoice2 = await generateInvoice(billingCycle2);
-    const invoice3 = await generateInvoice(billingCycle3);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
+    const invoice3 = await generateInvoiceForCycle(billingCycle3);
     expect(invoice1).not.toBeNull();
     expect(invoice2).not.toBeNull();
     expect(invoice3).not.toBeNull();
@@ -560,7 +561,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const invoice = await generateInvoiceForCycle(billingCycle);
     expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
@@ -628,7 +629,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      return await generateInvoice(billingCycle);
+      return await generateInvoiceForCycle(billingCycle);
     }
 
     it('should embed the date in the tenant timezone, keeping the prefix and padding', async () => {
@@ -698,7 +699,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const invoice = await generateInvoiceForCycle(billingCycle);
     expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
@@ -742,7 +743,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice
-    const invoice = await generateInvoice(billingCycle);
+    const invoice = await generateInvoiceForCycle(billingCycle);
     expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
@@ -784,7 +785,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice with initial prefix
-    const invoice1 = await generateInvoice(billingCycle1);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
     expect(invoice1).not.toBeNull();
 
     // Verify the invoice number format with initial prefix
@@ -808,7 +809,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       // to February retires the January service period this cycle invoices.
 
     // Generate invoice with new prefix
-    const invoice2 = await generateInvoice(billingCycle2);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
     expect(invoice2).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
@@ -850,7 +851,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Generate invoice with initial prefix
-    const invoice1 = await generateInvoice(billingCycle1);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
     expect(invoice1).not.toBeNull();
 
     // Verify the invoice number format with initial prefix
@@ -874,7 +875,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       // to February retires the January service period this cycle invoices.
 
     // Generate invoice with shorter prefix
-    const invoice2 = await generateInvoice(billingCycle2);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
     expect(invoice2).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
@@ -898,7 +899,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     // February service period this cycle invoices.
 
     // Generate invoice with longer prefix
-    const invoice3 = await generateInvoice(billingCycle3);
+    const invoice3 = await generateInvoiceForCycle(billingCycle3);
     expect(invoice3).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
@@ -943,7 +944,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
-    const refused = await generateInvoice(billingCycle);
+    const refused = await generateInvoiceForCycle(billingCycle);
     expect(refused).toMatchObject({
       messageKey: FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
       messageParams: expect.objectContaining({ lines: 'Unconfigured Plan' })

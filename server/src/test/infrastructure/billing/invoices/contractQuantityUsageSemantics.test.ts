@@ -17,13 +17,7 @@ import { updateContractLineService } from '@alga-psa/billing/actions/contractLin
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks, setMockUser, createMockUser } from '../../../../../test-utils/testMocks';
-import {
-  generateInvoice,
-  generateInvoiceForSelectionInput,
-  previewGroupedInvoicesForSelectionInputs,
-  previewRecurringRevisionInvoiceImpact,
-  previewInvoice,
-} from '@alga-psa/billing/actions/invoiceGeneration';
+import { generateInvoiceForSelectionInput, previewGroupedInvoicesForSelectionInputs, previewRecurringRevisionInvoiceImpact, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
@@ -56,6 +50,7 @@ import {
   updateCatalogPrice,
   unwrapInvoiceResult,
   materializeRecurringServicePeriods,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
@@ -507,7 +502,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(updated).not.toHaveProperty('actionError');
       if ('actionError' in updated) throw new Error(JSON.stringify(updated));
       expect(Number(updated.quantity)).toBe(5);
-      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(5000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(5000);
     });
     it.each([false, true])('later mode-only transition preserves prior effective rate (legacy null snapshot: %s)', async (legacyNull) => {
       const setup = await setupUsageLine({measurementMode: 'additive'});
@@ -526,7 +521,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       }
       expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
         contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
-      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(8000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(aprilCycle)).subtotal).toBe(8000);
     });
     it('same-mode dated pricing edit retains earlier period price', async () => {
       const setup = await setupUsageLine({measurementMode: 'additive'});
@@ -536,10 +531,10 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(await updateContractLineService(setup.contractLineId, setup.serviceId, { customRate: 2000, typeConfig: {
         measurement_mode: 'additive', effective_period_start: '2023-02-01', base_rate: 2000,
       }})).toBe(true);
-      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(4000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(4000);
       expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
         contract_line_id: setup.contractLineId, usage_date: '2023-02-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
-      expect(unwrapInvoiceResult(await generateInvoice(marchCycle)).subtotal).toBe(8000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(marchCycle)).subtotal).toBe(8000);
       const baseline = await context.db('contract_line_service_usage_config').where({tenant: context.tenantId, config_id: setup.configId}).first();
       expect(Number(baseline.base_rate)).toBe(1000);
     });
@@ -576,7 +571,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       }, rateTiers: [{min_quantity: 1, rate: 3000}]});
       expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
         contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
-      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(18000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(aprilCycle)).subtotal).toBe(18000);
     });
 
     it('partial dated pricing permits explicit zero, false, null and empty tiers', async () => {
@@ -599,7 +594,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
         contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
       // Cleared prices fall back to the 1000-cent catalog rate, with no minimum.
-      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(4000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(aprilCycle)).subtotal).toBe(4000);
     });
 
     it('deleting a pre-history report must retain its consumed request id', async () => {
@@ -615,7 +610,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(await upsertUsagePeriodTotal({...input, quantity: input.quantity + 1})).toHaveProperty('actionError');
       const preview = await previewInvoice(setup.billingCycleId);
       expect(preview).toMatchObject({success: false, code: 'USAGE_RECORDS_MISSING'});
-      expect(await generateInvoice(setup.billingCycleId)).toHaveProperty('actionError');
+      expect(await generateInvoiceForCycle(setup.billingCycleId)).toHaveProperty('actionError');
       expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
     });
 
@@ -670,7 +665,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(preview.expectedUsagePeriodTotals).toHaveLength(2);
       expect(preview.expectedUsagePeriodTotals).toContainEqual(expect.objectContaining({serviceId, revision: 0}));
       await upsertUsagePeriodTotal({...reportInput(setup), config_id: configId, service_id: serviceId});
-      expect(await generateInvoice(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals, acknowledgeUnreportedUsage: true}))
+      expect(await generateInvoiceForCycle(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals, acknowledgeUnreportedUsage: true}))
         .toMatchObject({messageKey: USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY});
       expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
     });
@@ -691,7 +686,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const pending: Promise<unknown>[] = [];
       try {
         const preview = await previewInvoice(setup.billingCycleId);
-        const generation = generateInvoice(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals});
+        const generation = generateInvoiceForCycle(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals});
         pending.push(generation.catch(() => undefined));
         await Promise.race([validated, generation.then(() => { throw new Error('Generation finished before the persistence gate'); })]);
         let updated = false;
@@ -770,7 +765,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(preview).toMatchObject({success: false, code: 'USAGE_CALCULATION_ERROR'});
       expect(preview.usageServicePeriodStatuses).toEqual([expect.objectContaining({service_id: setup.serviceId,
         service_period_start: '2023-01-01', service_period_end: '2023-01-31', status: 'calculation_error', quantity: 4})]);
-      expect(await generateInvoice(setup.billingCycleId)).toMatchObject({messageKey: USAGE_CALCULATION_ERROR_MESSAGE_KEY});
+      expect(await generateInvoiceForCycle(setup.billingCycleId)).toMatchObject({messageKey: USAGE_CALCULATION_ERROR_MESSAGE_KEY});
       expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
     });
     it('a dated measurement transition preserves earlier additive interpretation and applies the new period mode only prospectively', async () => {
@@ -784,8 +779,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(await upsertUsagePeriodTotal({...reportInput(setup, 12), period_start: '2023-02-01', period_end: '2023-02-28'})).toHaveProperty('total');
       expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId, contract_line_id: setup.contractLineId,
         usage_date: '2023-02-10', quantity: 3, request_id: uuidv4()})).toHaveProperty('actionError');
-      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(4000);
-      expect(unwrapInvoiceResult(await generateInvoice(marchCycle)).subtotal).toBe(12000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(4000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(marchCycle)).subtotal).toBe(12000);
       const overview: any = await getContractOverview(setup.contractId);
       expect(overview.contractLines[0].services[0]).toMatchObject({measurement_mode: 'period_total', quantity: null});
       expect(await context.db('contract_line_service_usage_config').where({tenant: context.tenantId, config_id: setup.configId}).first())
@@ -807,7 +802,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(edits.filter(edit => edit.actionError)).toHaveLength(1);
         const preview = await previewInvoice(setup.billingCycleId);
         if (!preview.success) throw new Error(JSON.stringify(preview));
-        const results: any[] = await Promise.all([1, 2].map(() => generateInvoice(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals}).catch(error => error)));
+        const results: any[] = await Promise.all([1, 2].map(() => generateInvoiceForCycle(setup.billingCycleId, {expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals}).catch(error => error)));
         expect(results.filter(result => result?.invoice_id)).toHaveLength(1);
         expect(await pool('invoices').where({tenant: context.tenantId})).toHaveLength(1);
         expect(await pool('usage_period_totals').where({tenant: context.tenantId}).first()).toMatchObject({lifecycle_state: 'billed', revision: 2});
@@ -836,7 +831,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       });
       if ('actionError' in (created as object)) throw new Error(JSON.stringify(created));
 
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 10000, tax: 1000, total_amount: 11000, status: 'draft' });
 
       const rows = await totalsTable().where({ tenant: context.tenantId });
@@ -907,7 +902,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(rowsBefore).toHaveLength(1);
       expect(rowsBefore[0]).toMatchObject({ quantity: 12, revision: 2, lifecycle_state: 'recorded' });
 
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 12000, tax: 1200, total_amount: 13200 });
 
       const rowsAfter = await totalsTable().where({ tenant: context.tenantId });
@@ -915,7 +910,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(rowsAfter[0]).toMatchObject({ quantity: 12, revision: 2, lifecycle_state: 'billed' });
 
       // Re-generating the same window must not create a second charge.
-      const second = await generateInvoice(billingCycleId).catch((error: unknown) => error);
+      const second = await generateInvoiceForCycle(billingCycleId).catch((error: unknown) => error);
       expect(second === null || second instanceof Error || 'actionError' in (second ?? {})).toBe(true);
     });
 
@@ -995,7 +990,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const rows = await totalsTable().where({ tenant: context.tenantId });
       expect(rows).toHaveLength(1);
 
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice.subtotal).toBe(10000);
     });
 
@@ -1048,7 +1043,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       });
       if ('actionError' in (zero as object)) throw new Error(JSON.stringify(zero));
 
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       // Zero bills zero (no minimum). The report is consumed.
       expect(invoice.subtotal).toBe(0);
 
@@ -1074,7 +1069,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       if ('actionError' in (zero as object)) throw new Error(JSON.stringify(zero));
 
       // The floor applies once to the period total: 5 × $10.
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 5000 });
     });
 
@@ -1089,7 +1084,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         period_end: JAN_PERIOD.period_end,
         quantity: 10
       });
-      await generateInvoice(billingCycleId);
+      await generateInvoiceForCycle(billingCycleId);
 
       const edit = await upsertUsagePeriodTotal({
         client_id: context.clientId,
@@ -1160,7 +1155,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       await createUsageRecord({ client_id: context.clientId, service_id: serviceId, quantity: 10, usage_date: '2023-01-10', contract_line_id: contractLineId });
       await createUsageRecord({ client_id: context.clientId, service_id: serviceId, quantity: 12, usage_date: '2023-01-12', contract_line_id: contractLineId });
 
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 22000, tax: 2200, total_amount: 24200 });
 
       const rows = await context.db('usage_tracking').where({ tenant: context.tenantId });
@@ -1248,7 +1243,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(rows).toHaveLength(2);
 
       // 10 + 10 bill additively.
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 20000 });
     });
   });
@@ -1317,8 +1312,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(await updateContractLineService(setup.contractLineId, setup.standard.serviceId, {quantity: 12,
         typeConfig: {effective_period_start: '2023-02-01'}})).toBe(true);
       expect(await context.db('contract_line_service_configuration').where({tenant: context.tenantId, config_id: setup.standard.configId}).first()).toMatchObject({quantity: 10});
-      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(189000);
-      expect(unwrapInvoiceResult(await generateInvoice(febCycle)).subtotal).toBe(209000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(189000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(febCycle)).subtotal).toBe(209000);
       const overview: any = await getContractOverview(setup.contractId);
       expect(overview.totalEstimatedMonthlyValue).toBe(209000);
       expect(overview.contractLines[0].services.find((service: any) => service.service_id === setup.standard.serviceId)).toMatchObject({quantity: 12, unit_rate: 10000});
@@ -1332,7 +1327,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.basic.configId}).update({pricing_basis: null});
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.server.configId}).update({pricing_basis: 'bundle'});
       await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: setup.contractLineId}).update({custom_rate: 90000});
-      const invoice = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId));
       expect(invoice.subtotal).toBe(190000); // 10 catalog-priced seats plus the unchanged bundle total.
       expect(await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.basic.configId}).first()).toMatchObject({pricing_basis: null});
     });
@@ -1384,7 +1379,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
       const januaryCycle = await setupInvoiceCycle(2023, 2, 1);
-      const first = unwrapInvoiceResult(await generateInvoice(januaryCycle));
+      const first = unwrapInvoiceResult(await generateInvoiceForCycle(januaryCycle));
       expect(first.subtotal).toBe(50000); // (2 + 3) × 10000
 
       const revisionA = await scheduleUnitPricingRevision({
@@ -1407,12 +1402,12 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       if ('actionError' in (revisionB as object)) throw new Error(JSON.stringify(revisionB));
 
       const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
-      const second = unwrapInvoiceResult(await generateInvoice(februaryCycle));
+      const second = unwrapInvoiceResult(await generateInvoiceForCycle(februaryCycle));
       expect(second.subtotal).toBe(120000); // (5 + 7) × 10000
-    });
+    }, 120000);
     it('10/9/1 seats bill CA$1890 equivalent without usage rows', async () => {
       const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
-      const invoice1 = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      const invoice1 = unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId));
       // 10×10000 + 9×8500 + 1×12500 = 189000 minor units ($1,890.00).
       expect(invoice1).toMatchObject({ subtotal: 189000, tax: 18900, total_amount: 207900 });
 
@@ -1427,7 +1422,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
     it('a scheduled 10 → 12 change bills 209000 at the next unbilled boundary; the earlier billed period is unchanged', async () => {
       // Window 1 (Feb) invoices January at the original 10 units.
       const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
-      const invoice1 = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      const invoice1 = unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId));
       expect(invoice1.subtotal).toBe(189000);
 
       // Schedule Standard 10 → 12 effective at the next unbilled boundary.
@@ -1443,7 +1438,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
       // Window 2 (Mar) invoices February with the revision.
       const cycle2 = await setupInvoiceCycle(2023, 3, 1);
-      const invoice2 = unwrapInvoiceResult(await generateInvoice(cycle2));
+      const invoice2 = unwrapInvoiceResult(await generateInvoiceForCycle(cycle2));
       expect(invoice2.subtotal).toBe(209000);
 
       // The earlier invoice row is untouched.
@@ -1473,7 +1468,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       await updateCatalogPrice(context, seat.serviceId, { rateCents: 12000, effectiveDate: '2023-02-01' });
 
       const januaryCycle = await setupInvoiceCycle(2023, 2, 1);
-      expect(unwrapInvoiceResult(await generateInvoice(januaryCycle)).subtotal).toBe(100000);
+      expect(unwrapInvoiceResult(await generateInvoiceForCycle(januaryCycle)).subtotal).toBe(100000);
 
       const scheduled = await scheduleUnitPricingRevision({
         contract_line_id: contractLineId,
@@ -1492,12 +1487,12 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       if (!preview.success) throw new Error('unreachable');
       expect(preview.data!.subtotal).toBe(120000); // 10 × $120 catalog, never 0
 
-      const february = unwrapInvoiceResult(await generateInvoice(februaryCycle));
+      const february = unwrapInvoiceResult(await generateInvoiceForCycle(februaryCycle));
       expect(february.subtotal).toBe(120000);
 
       // Catalog inheritance stays dynamic: a later catalog price change applies.
       await updateCatalogPrice(context, seat.serviceId, { rateCents: 13000, effectiveDate: '2023-03-01' });
-      const march = unwrapInvoiceResult(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      const march = unwrapInvoiceResult(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 4, 1)));
       expect(march.subtotal).toBe(130000);
 
       // Overview valuation agrees with the billed catalog revisions.
@@ -1531,7 +1526,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     it('refuses to delete a configuration that appears on an issued invoice and keeps its provenance', async () => {
       const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
-      await generateInvoice(setup.billingCycleId);
+      await generateInvoiceForCycle(setup.billingCycleId);
 
       const before = await context.db('invoice_charge_details')
         .where({ tenant: context.tenantId, config_id: setup.standard.configId }).first();
@@ -1634,7 +1629,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       });
       const cycle = await setupInvoiceCycle(2023, 2, 1);
       // No charge may come from a zero-quantity seat (0 × $100 = $0).
-      const invoice = await generateInvoice(cycle).catch((e) => e);
+      const invoice = await generateInvoiceForCycle(cycle).catch((e) => e);
       const isError = invoice === null || invoice instanceof Error || 'actionError' in (invoice ?? {});
       if (!isError) {
         expect(invoice.subtotal).toBe(0);
@@ -1753,7 +1748,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
     it('bills 20/30/2 at $3,900, then 23 users at $4,200 from the next boundary, preserving the earlier invoice', async () => {
       const setup = await setupProductLine();
 
-      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
       expect(january.subtotal).toBe(390000);
 
       const scheduled = expectScheduled(await scheduleProduct(setup, setup.users, {
@@ -1768,7 +1763,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       if (!februaryPreview.success) throw new Error('unreachable');
       expect(februaryPreview.data.subtotal).toBe(420000);
 
-      const february = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(februaryCycle));
       expect(february.subtotal).toBe(420000);
 
       const earlier = await context.db('invoices')
@@ -1782,24 +1777,24 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     it('handles decrease, a zero stop and later resumption as separate effective periods', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 18, effective_period_start: '2023-02-01' }));
-      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(370000); // 18×100 + 30×50 + 2×200
 
       expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 0, effective_period_start: '2023-03-01' }));
-      const march = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      const march = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 4, 1)));
       expect(march.subtotal).toBe(190000); // users stopped; endpoints + locations only
 
       expectScheduled(await scheduleProduct(setup, setup.users, { quantity: 20, effective_period_start: '2023-04-01' }));
-      const april = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 5, 1)));
+      const april = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 5, 1)));
       expect(april.subtotal).toBe(390000);
     });
 
     it('applies an explicit override and keeps catalog-policy revisions following the catalog price', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       expectScheduled(await scheduleProduct(setup, setup.users, {
         quantity: 23,
@@ -1815,17 +1810,17 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         effective_period_start: '2023-02-01',
       }));
 
-      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(443000); // 23×$110 + 30×$50 + 2×$200
 
       await updateCatalogPrice(context, setup.endpoints.serviceId, { rateCents: 6000, effectiveDate: '2023-03-01' });
-      const march = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 4, 1)));
+      const march = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 4, 1)));
       expect(march.subtotal).toBe(473000); // 23×$110 + 30×$60 + 2×$200
     });
 
     it('an all-zero contract reaches a stable no-charge period without duplicate invoices', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       // Stop every product at the next boundary.
       for (const member of [setup.users, setup.endpoints, setup.locations]) {
@@ -1836,7 +1831,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       }
 
       const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
-      const february = await generateInvoice(februaryCycle).catch((error) => error);
+      const february = await generateInvoiceForCycle(februaryCycle).catch((error) => error);
       // A deliberate no-charge outcome: either no invoice or a zero-total one,
       // never an error and never a phantom unit.
       if (february instanceof Error) throw february;
@@ -1848,7 +1843,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // Not endlessly retryable: a second generation of the same window must not
       // create another invoice.
       const before = await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId });
-      await generateInvoice(februaryCycle).catch(() => null);
+      await generateInvoiceForCycle(februaryCycle).catch(() => null);
       const after = await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId });
       expect(after.length).toBe(before.length);
       // The stop is recorded: every product carries its zero revision.
@@ -1877,7 +1872,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         contract_line_id: setup.contractLineId,
       });
 
-      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
       // invoice.subtotal is net of discounts; the gross 390000 is reduced by 10%.
       expect(january.subtotal).toBe(351000);
       expect(Number(january.tax)).toBe(39000);
@@ -1900,7 +1895,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(preview.data.total).toBe(420000);
       expect(preview.data.items.find(item => item.total < 0)?.total).toBe(-42000);
 
-      const february = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(februaryCycle));
       expect(february.subtotal).toBe(378000);
       expect(Number(february.tax)).toBe(42000);
       expect(Number(february.total_amount)).toBe(420000);
@@ -1932,7 +1927,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         contract_line_id: setup.contractLineId,
       });
 
-      const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+      const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
       expect(january.subtotal).toBe(380000); // 390000 gross − 10000 fixed
       expect(Number(january.tax)).toBe(39000); // tax stays on the gross base
       expect(Number(january.total_amount)).toBe(419000);
@@ -1941,7 +1936,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         quantity: 23,
         effective_period_start: '2023-02-01',
       }));
-      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(410000); // 420000 gross − 10000 fixed
       expect(Number(february.tax)).toBe(42000);
       expect(Number(february.total_amount)).toBe(452000);
@@ -2001,7 +1996,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           // The persistence caller reads the entire tenant ledger. Keep both
           // rows present so this proves it scopes supplied rows too.
           await context.db('contract_recurring_unit_adjustments').insert(invalid);
-          const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+          const invoice = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
           expect(invoice.subtotal).toBe(405484);
           const rows = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, adjustment_source_kind: 'contract_change' });
           expect(rows).toHaveLength(1);
@@ -2014,7 +2009,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
         }));
-        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const owner = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         const otherId = await cloneDraftBase(owner.invoice_id);
         await context.db.transaction(async trx => {
           const other = await reconcileContractChangeAdjustmentsForInvoice({ trx, tenant: context.tenantId, invoiceId: otherId });
@@ -2034,7 +2029,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
         }));
-        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const owner = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         const otherId = await cloneDraftBase(owner.invoice_id);
         await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' }).delete();
         await context.db('contract_recurring_unit_adjustments').where({ tenant: context.tenantId }).update({
@@ -2062,7 +2057,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
         }));
-        const owner = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const owner = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         const nextId = await cloneDraftBase(owner.invoice_id);
         await context.db('invoices').where({ tenant: context.tenantId, invoice_id: owner.invoice_id }).update({ currency_code: 'EUR' });
         await context.db.transaction(async trx => {
@@ -2087,7 +2082,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         }));
         const preview = await previewInvoice(setup.billingCycleId);
         expect(preview.success).toBe(true);
-        const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const invoice = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         const expected = discountType === 'percentage' ? 364936 : 5484;
         expect(Number(invoice.subtotal)).toBe(expected);
         if (preview.success) expect(Number(preview.data!.subtotal)).toBe(expected);
@@ -2112,9 +2107,9 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(januaryCycle));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(januaryCycle));
         expect(Number(january.subtotal)).toBe(405484);
-        const february = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         expect(Number(february.subtotal)).toBe(420000);
         const adjustments = await context.db('invoice_charges').where({ tenant: context.tenantId, adjustment_source_kind: 'contract_change' });
         expect(adjustments).toHaveLength(1);
@@ -2126,7 +2121,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         const revision = expectScheduled(await scheduleProduct(setup, setup.users, {
           quantity: 23, allow_mid_period: true, mid_period_effective_date: '2023-01-16', effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // Model the original invoice finalizing before the valid pending event
         // is materialized: keep its base charges and release its unbilled event.
         await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: january.invoice_id, adjustment_source_kind: 'contract_change' }).delete();
@@ -2144,7 +2139,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         const cycle = await setupInvoiceCycle(2023, 3, 1);
         const preview = await previewInvoice(cycle);
         expect(preview.success).toBe(true);
-        const february = unwrapInvoiceResult<any>(await generateInvoice(cycle));
+        const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(cycle));
         expect(Number(february.subtotal)).toBe(435484 - 43548);
         if (preview.success) expect(Number(preview.data!.subtotal)).toBe(Number(february.subtotal));
         const row = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: february.invoice_id, adjustment_source_kind: 'contract_change' }).first();
@@ -2163,7 +2158,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         await context.db.schema.renameTable('contract_recurring_unit_adjustments', 'test_hidden_contract_adjustments');
         await context.db.schema.alterTable('invoice_charges', table => table.renameColumn('adjustment_source_kind', 'test_hidden_source_kind'));
         try {
-          const invoice = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+          const invoice = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
           expect(invoice.subtotal).toBe(351000);
           await new BillingEngine().recalculateInvoice(invoice.invoice_id);
           await context.db.transaction(trx => releaseOrphanedContractAdjustments({ trx, tenant: context.tenantId }));
@@ -2190,7 +2185,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(dateOnly(revision.effective_period_start)).toBe('2023-02-01');
         expect(dateOnly(revision.mid_period_effective_date)).toBe('2023-01-16');
 
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // 20/30/2 at $3,900 + 3 x $100 x 16/31 days = +$154.84
         expect(january.subtotal).toBe(405484);
 
@@ -2210,7 +2205,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         // The recurrence itself bill the old quantity in the affected period.
         expect(String(adjustment.description)).toContain('Mid-period quantity change');
 
-        const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+        const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
         expect(february.subtotal).toBe(420000);
 
         const ledger = await context.db('contract_recurring_unit_adjustments')
@@ -2244,7 +2239,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(Number(ledgerRows[0].new_quantity)).toBe(25);
         expect(Number(ledgerRows[0].revision_version)).toBe(2);
 
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         const adjustments = await context.db('invoice_charges')
           .where({
             tenant: context.tenantId,
@@ -2274,7 +2269,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           effective_period_start: '2023-02-01',
           expected_version: decrease.version,
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // 20 x $100 x 16/31 = 103225.8 -> 103226 credit for the stopped item.
         expect(january.subtotal).toBe(390000 - 103226);
         const credits = await context.db('invoice_charges')
@@ -2286,7 +2281,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(credits).toHaveLength(1);
         expect(Number(credits[0].net_amount)).toBe(-103226);
         // Zero remains zero: February bills only Endpoints + Locations.
-        const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+        const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
         expect(february.subtotal).toBe(190000);
       });
 
@@ -2298,7 +2293,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-01',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // 3 x $100 x 31/31 = +$300
         expect(january.subtotal).toBe(390000 + 30000);
       });
@@ -2311,7 +2306,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-31',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // 3 x $100 x 1/31 = 9.677 -> +$9.68
         expect(january.subtotal).toBe(390000 + 968);
       });
@@ -2335,8 +2330,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
-        await generateInvoice(setup.billingCycleId);
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
+        await generateInvoiceForCycle(setup.billingCycleId);
         const invoices = await context.db('invoices')
           .where({ tenant: context.tenantId, client_id: context.clientId })
           .orderBy('invoice_date', 'asc');
@@ -2356,7 +2351,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         expect(january.subtotal).toBe(405484);
 
         // Once the affected period is billed, a second mid-period edit inside it
@@ -2392,7 +2387,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         expect(january.subtotal).toBe(405484);
 
         // Return to boundary-only at the same boundary: reconcile removes the
@@ -2428,7 +2423,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         expect(Number(january.subtotal)).toBe(405484);
 
         const recalculate = vi.spyOn(BillingEngine.prototype, 'recalculateInvoice')
@@ -2481,7 +2476,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         await context.db('invoices')
           .where({ tenant: context.tenantId, invoice_id: january.invoice_id })
           .update({ status: 'sent', finalized_at: new Date().toISOString() });
@@ -2532,7 +2527,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // 20x9000 + 30x5000 + 2x20000 = 370000 base; true-up 3 x 9000 x 16/31 = 13936
         expect(january.subtotal).toBe(370000 + 13936);
         const adjustment = await context.db('invoice_charges')
@@ -2570,7 +2565,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // Positive gross 390000, credit -51613, discount 10% of the positive
         // base only (39000); tax stays on the positive base too.
         expect(january.subtotal).toBe(390000 - 51613 - 39000);
@@ -2605,7 +2600,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           mid_period_effective_date: '2023-01-16',
           effective_period_start: '2023-02-01',
         }));
-        const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
+        const january = unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId));
         // gross 405484; one 10% discount line, and the adjustment stays positive.
         const discounts = await context.db('invoice_charges')
           .where({ tenant: context.tenantId, invoice_id: january.invoice_id, is_discount: true });
@@ -2641,7 +2636,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           effective_period_start: '2023-02-01',
           expected_version: first.version,
         }));
-        const refused = await generateInvoice(setup.billingCycleId, {
+        const refused = await generateInvoiceForCycle(setup.billingCycleId, {
           expectedRecurringPricingSources: reviewed,
         } as any).catch((error) => error);
         const isRefused =
@@ -2657,7 +2652,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     it('persists revision provenance and rejects generation after the reviewed revision changed', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       const first = expectScheduled(await scheduleProduct(setup, setup.users, {
         quantity: 23,
@@ -2685,7 +2680,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expected_version: 1,
       }));
 
-      const refused = await generateInvoice(februaryCycle, {
+      const refused = await generateInvoiceForCycle(februaryCycle, {
         expectedRecurringPricingSources: reviewed,
       } as any).catch((error) => error);
       const isRefused =
@@ -2713,7 +2708,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         quantity: 23,
         effective_period_start: '2023-02-01',
       }));
-      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(420000);
 
       const detail = await context.db('invoice_charge_details')
@@ -2750,7 +2745,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // Catalog price moves before generation: the reviewed source is stale.
       await updateCatalogPrice(context, setup.endpoints.serviceId, { rateCents: 6000, effectiveDate: '2023-02-01' });
 
-      const refused = await generateInvoice(februaryCycle, {
+      const refused = await generateInvoiceForCycle(februaryCycle, {
         expectedRecurringPricingSources: reviewed,
       } as any).catch((error) => error);
       const isRefused =
@@ -2805,7 +2800,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       }));
 
       // Single (billing-cycle) generation with the reviewed empty set refuses.
-      const refusedSingle = await generateInvoice(februaryCycle, {
+      const refusedSingle = await generateInvoiceForCycle(februaryCycle, {
         expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
       } as any).catch((error) => error);
       expect(
@@ -2997,7 +2992,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     it('rejects a product change inside an already-billed period and allows the next boundary', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       const insideBilled = await scheduleProduct(setup, setup.users, {
         quantity: 25,
@@ -3014,26 +3009,26 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     it('does not duplicate a revised period on repeated generation', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       expectScheduled(await scheduleProduct(setup, setup.users, {
         quantity: 23,
         effective_period_start: '2023-02-01',
       }));
       const februaryCycle = await setupInvoiceCycle(2023, 3, 1);
-      const first = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
+      const first = unwrapInvoiceResult<any>(await generateInvoiceForCycle(februaryCycle));
       expect(first.subtotal).toBe(420000);
 
       // A second generation of the same window must not create a second invoice
       // (or a duplicate charge) for the already-persisted February period.
-      await generateInvoice(februaryCycle).catch(() => undefined);
+      await generateInvoiceForCycle(februaryCycle).catch(() => undefined);
       const invoices = await context.db('invoices').where({ tenant: context.tenantId });
       expect(invoices).toHaveLength(2);
     });
 
     it('leaves untouched products on their legacy pricing until a revision applies', async () => {
       const setup = await setupProductLine();
-      expect(unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId)).subtotal).toBe(390000);
+      expect(unwrapInvoiceResult<any>(await generateInvoiceForCycle(setup.billingCycleId)).subtotal).toBe(390000);
 
       // A future revision on Users must not reprice the older February period
       // when it is billed late; only the applicable boundary changes.
@@ -3041,7 +3036,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         quantity: 23,
         effective_period_start: '2023-03-01',
       }));
-      const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
+      const february = unwrapInvoiceResult<any>(await generateInvoiceForCycle(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(390000);
     });
   });
@@ -3096,7 +3091,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
       // Generating against the stale previewed revision is refused, and no
       // invoice exists afterwards. Preview itself marked nothing invoiced.
-      const stale = await generateInvoice(setup.billingCycleId, {
+      const stale = await generateInvoiceForCycle(setup.billingCycleId, {
         expectedUsagePeriodTotals: [previewed],
       });
       expect('actionError' in ((stale ?? {}) as object)).toBe(true);
@@ -3111,7 +3106,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const repreviewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
       expect(repreviewed.revision).toBe(2);
       const invoice = unwrapInvoiceResult(
-        await generateInvoice(setup.billingCycleId, {
+        await generateInvoiceForCycle(setup.billingCycleId, {
           expectedUsagePeriodTotals: [repreviewed],
         }),
       );
@@ -3135,7 +3130,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       });
       expect(deletion === undefined || !('actionError' in ((deletion ?? {}) as object))).toBe(true);
 
-      const stale = await generateInvoice(setup.billingCycleId, {
+      const stale = await generateInvoiceForCycle(setup.billingCycleId, {
         expectedUsagePeriodTotals: [previewed],
       });
       expect('actionError' in ((stale ?? {}) as object)).toBe(true);
@@ -3146,7 +3141,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       await reportJanuaryTotal(setup, 7);
       const repreviewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
       const invoice = unwrapInvoiceResult(
-        await generateInvoice(setup.billingCycleId, {
+        await generateInvoiceForCycle(setup.billingCycleId, {
           expectedUsagePeriodTotals: [repreviewed],
         }),
       );
@@ -3165,7 +3160,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const previewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
 
       const invoice = unwrapInvoiceResult(
-        await generateInvoice(setup.billingCycleId, { expectedUsagePeriodTotals: [previewed] }),
+        await generateInvoiceForCycle(setup.billingCycleId, { expectedUsagePeriodTotals: [previewed] }),
       );
       expect(invoice).toMatchObject({ subtotal: 10000 });
 
@@ -3175,7 +3170,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(rows[0]).toMatchObject({ quantity: 10, revision: 1, lifecycle_state: 'billed' });
 
       // A retry with the same previewed revision refuses and adds no charge.
-      const retry = await generateInvoice(setup.billingCycleId, {
+      const retry = await generateInvoiceForCycle(setup.billingCycleId, {
         expectedUsagePeriodTotals: [previewed],
       }).catch((error: unknown) => error);
       const retryIsRefusal =
@@ -3195,7 +3190,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // Edit after an (unpassed) preview: generation without an expectation
       // simply bills the current stored report.
       await reportJanuaryTotal(setup, 12, 1);
-      const invoice = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId));
       expect(invoice).toMatchObject({ subtotal: 12000 });
     });
   });
@@ -3361,7 +3356,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       )).toBe(false);
 
       // Generation refuses rather than silently omitting the recorded charge.
-      const refused = await generateInvoice(setup.billingCycleId);
+      const refused = await generateInvoiceForCycle(setup.billingCycleId);
       expect('actionError' in ((refused ?? {}) as object)).toBe(true);
       expect((refused as { messageKey?: string }).messageKey).toBe(USAGE_CALCULATION_ERROR_MESSAGE_KEY);
       expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
@@ -3380,7 +3375,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         period_end: JAN_PERIOD.period_end,
         quantity: 10,
       });
-      unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      unwrapInvoiceResult(await generateInvoiceForCycle(setup.billingCycleId));
 
       // Re-previewing the same window: the consumed total is evidence of
       // reporting, so the failure must not be the coded "record usage" state;
@@ -3503,7 +3498,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
     it('without acknowledgement, a mixed window fails coded, lists the omitted services, and creates nothing', async () => {
       const setup = await setupMixedWindow();
 
-      const refused = await generateInvoice(setup.billingCycleId);
+      const refused = await generateInvoiceForCycle(setup.billingCycleId);
       expect('actionError' in ((refused ?? {}) as object)).toBe(true);
       const failure = refused as { messageKey?: string; messageParams?: Record<string, string> };
       expect(failure.messageKey).toBe(USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY);
@@ -3520,7 +3515,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const setup = await setupMixedWindow();
 
       const invoice = unwrapInvoiceResult(
-        await generateInvoice(setup.billingCycleId, { acknowledgeUnreportedUsage: true }),
+        await generateInvoiceForCycle(setup.billingCycleId, { acknowledgeUnreportedUsage: true }),
       );
       // 10 seats × $100 and nothing else.
       expect(invoice).toMatchObject({ subtotal: 100000 });

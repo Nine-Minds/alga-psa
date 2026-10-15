@@ -11,9 +11,9 @@ import {
   ensureClientPlanBundlesTable as ensureClientContractsTable,
   ensureClientBillingEmail,
   seedBillingChargeSources,
-  unwrapManualInvoice
+  unwrapManualInvoice,
 } from '../../../../../test-utils/billingTestHelpers';
-import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
+import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from '@alga-psa/billing/services';

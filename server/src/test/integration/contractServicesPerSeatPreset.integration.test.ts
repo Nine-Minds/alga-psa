@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,7 +20,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createPreset: typeof import('@alga-psa/billing/actions/contractLinePresetActions').createContractLinePreset;
 let updatePresetServices: typeof import('@alga-psa/billing/actions/contractLinePresetActions').updateContractLinePresetServices;
@@ -184,7 +184,7 @@ async function addFromPresetAndInvoice(
   expect(typeof lineId).toBe('string');
   await syncLine(lineId);
   await syncLine(host.contract_line_id);
-  const invoice: any = ok(await generateInvoice(januaryCycle));
+  const invoice: any = ok(await generateInvoiceForCycle(januaryCycle));
   return { lineId, invoice };
 }
 
@@ -202,7 +202,6 @@ describe('contract line presets: per-seat recurring services', () => {
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({
       createContractLinePreset: createPreset,

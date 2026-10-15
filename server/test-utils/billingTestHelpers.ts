@@ -5,6 +5,9 @@ import { tenantDb } from '../../packages/db/src/lib/tenantDb';
 import type { CadenceOwner } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { TestContext } from './testContext';
+import type { IInvoiceGenerationRequestOptions } from '@alga-psa/billing/actions/invoiceGeneration';
+import type { InvoiceGenerationActionError } from '@alga-psa/billing/actions/invoiceGenerationActionErrors';
+import type { InvoiceViewModel } from '@alga-psa/types';
 
 // Browser fixtures can reuse billing setup without constructing a Vitest lifecycle.
 export type BillingFixtureContext = Pick<TestContext, 'db' | 'tenantId' | 'clientId' | 'createEntity'>;
@@ -1148,9 +1151,9 @@ export async function ensureClientBillingEmail(
   });
 }
 
-// generateInvoice resolves its billing window through recurring_service_periods.
-// Fixtures that only write contracts/contract_lines leave that table empty, and
-// the action then returns "Recurring service periods were not materialized...".
+// Recurring generation (and generateInvoiceForCycle) select their members from
+// recurring_service_periods. Fixtures that only write contracts/contract_lines
+// leave that table empty, and the action then returns "Recurring service periods were not materialized...".
 export async function materializeRecurringServicePeriods(
   context: BillingFixtureContext,
   contractLineId: string
@@ -1168,7 +1171,7 @@ export async function materializeRecurringServicePeriods(
   });
 }
 
-// generateInvoice resolves to {actionError}/{permissionError} for expected
+// Invoice generation resolves to {actionError}/{permissionError} for expected
 // failures. Those objects are truthy, so `if (!invoice) throw` waves them
 // through and the real cause only shows up as `expected undefined to be ...`.
 export function unwrapInvoiceResult<T = any>(result: unknown): T {
@@ -1177,9 +1180,109 @@ export function unwrapInvoiceResult<T = any>(result: unknown): T {
     throw new Error(value.permissionError ?? value.actionError);
   }
   if (!result) {
-    throw new Error('generateInvoice returned no invoice');
+    throw new Error('invoice generation returned no invoice');
   }
   return result as T;
+}
+
+const NO_DUE_WORK_PAGE_SIZE = 500;
+
+function toDateOnly(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  return String(value).slice(0, 10);
+}
+
+/**
+ * Test-only replacement for the retired cycle-id invoice-generation
+ * action. Picks invoice members exactly the way Automatic Invoices does: the
+ * real due-work reader (unbilled obligations only), narrowed to the cycle's
+ * client + invoice window, then one `generateInvoiceForSelectionInputs` call
+ * stamped with the cycle as bridge metadata.
+ *
+ * Returns a `NO_DUE_RECURRING_WORK` actionError when nothing is due. It never
+ * falls back to already-billed members; fix the fixture instead.
+ */
+// LEVERAGE: friction due-work-client-window-filter — getAvailableRecurringDueWork has no client/invoice-window filter, so "due work for this client window" is done by paging and filtering. If a second caller appears (a REST "generate for cycle" or the preview follow-up), the reader should accept { clientId, invoiceWindow } directly.
+export async function generateInvoiceForCycle(
+  billingCycleId: string,
+  options: IInvoiceGenerationRequestOptions = {},
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError | { actionError: string; code: string }> {
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { toPlainDate, toISODate } = await import('@alga-psa/core');
+  const { getAvailableRecurringDueWork, getNextBillingDate } = await import(
+    '@alga-psa/billing/actions/billingAndTax'
+  );
+  const { generateInvoiceForSelectionInputs } = await import(
+    '@alga-psa/billing/actions/invoiceGeneration'
+  );
+
+  const { knex, tenant } = await createTenantKnex();
+  // Some suites resolve the tenant only through a mocked current user, so
+  // createTenantKnex() can return a null tenant; billing_cycle_id is globally
+  // unique, so look the cycle up directly in that case.
+  const cycleQuery = tenant
+    ? tenantDb(knex, tenant).table('client_billing_cycles')
+    : knex('client_billing_cycles');
+  const cycle = await cycleQuery.where({ billing_cycle_id: billingCycleId }).first();
+  if (!cycle) {
+    return { actionError: 'Billing cycle not found' };
+  }
+
+  let windowStart: string;
+  let windowEnd: string;
+  if (cycle.period_start_date && cycle.period_end_date) {
+    windowStart = toISODate(toPlainDate(cycle.period_start_date));
+    windowEnd = toISODate(toPlainDate(cycle.period_end_date));
+  } else if (cycle.effective_date) {
+    windowStart = toISODate(toPlainDate(cycle.effective_date));
+    const next: any = await getNextBillingDate(cycle.client_id, windowStart);
+    if (next && typeof next === 'object' && ('actionError' in next || 'permissionError' in next)) {
+      return next;
+    }
+    windowEnd = toISODate(toPlainDate(next));
+  } else {
+    return { actionError: 'Invalid billing cycle dates' };
+  }
+
+  const selectorInputs: any[] = [];
+  const seenIdentityKeys = new Set<string>();
+  let page = 1;
+  let totalPages = 1;
+  while (page <= totalPages) {
+    const result: any = await getAvailableRecurringDueWork({ page, pageSize: NO_DUE_WORK_PAGE_SIZE });
+    if (result && 'permissionError' in result) {
+      return result;
+    }
+    totalPages = result.totalPages;
+    for (const candidate of result.invoiceCandidates) {
+      if (
+        candidate.clientId !== cycle.client_id ||
+        toDateOnly(candidate.windowStart) !== windowStart ||
+        toDateOnly(candidate.windowEnd) !== windowEnd
+      ) {
+        continue;
+      }
+      for (const member of candidate.members) {
+        if (seenIdentityKeys.has(member.executionIdentityKey)) {
+          continue;
+        }
+        seenIdentityKeys.add(member.executionIdentityKey);
+        selectorInputs.push(member.selectorInput);
+      }
+    }
+    page += 1;
+  }
+
+  if (selectorInputs.length === 0) {
+    return {
+      actionError: `No unbilled recurring work is due for billing cycle ${billingCycleId} (${cycle.client_id}, ${windowStart}→${windowEnd}).`,
+      code: 'NO_DUE_RECURRING_WORK',
+    };
+  }
+
+  return generateInvoiceForSelectionInputs(selectorInputs, options, { billingCycleId });
 }
 
 // generateManualInvoice returns a {success, invoice} | {success:false, error}

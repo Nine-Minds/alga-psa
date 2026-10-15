@@ -17,6 +17,7 @@ import {
   createFixedPlanAssignment,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers';
 
@@ -41,7 +42,6 @@ import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers'
 
 let db: Knex;
 let tenantId: string;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let browserPoolService: typeof import('@alga-psa/billing/services/browserPoolService').browserPoolService;
@@ -226,7 +226,6 @@ describeDb('visual goldens: standard invoice templates', () => {
     tenantId = tenantRow.tenant;
     setupCommonMocks({ tenantId, userId: GOLDEN_USER_ID, permissionCheck: () => true });
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ browserPoolService } = await import('@alga-psa/billing/services/browserPoolService'));
@@ -403,7 +402,7 @@ describeDb('visual goldens: standard invoice templates', () => {
     });
 
     // ---- real generation + finalization -----------------------------------
-    const generated = await generateInvoice(januaryCycleId);
+    const generated = await generateInvoiceForCycle(januaryCycleId);
     expect(generated?.invoice_id, JSON.stringify(generated)).toBeDefined();
     const invoiceId = generated!.invoice_id;
     const finalizeResult = await finalizeInvoice(invoiceId);

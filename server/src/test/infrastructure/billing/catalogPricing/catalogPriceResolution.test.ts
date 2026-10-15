@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
@@ -14,7 +14,8 @@ import {
   setLineProvenance,
   updateCatalogPrice,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import {
   previewServicePriceChange,
@@ -243,7 +244,7 @@ describe('Catalog price resolution – fixed path', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
 
     expect(result).not.toBeNull();
     expect(result!.subtotal).toBe(12000);
@@ -318,7 +319,7 @@ describe('Catalog price resolution – fixed path', () => {
         period_start_date: JAN_START,
         period_end_date: FEB_START
       }, 'billing_cycle_id');
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       if (!result || !(result as { invoice_id?: string }).invoice_id) {
         throw new Error(`invoice generation failed for ${clientId}: ${JSON.stringify(result)}`);
       }
@@ -410,7 +411,7 @@ describe('Catalog price resolution – fixed path', () => {
       period_end_date: endDate
     }, 'billing_cycle_id');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
     expect(result).not.toBeNull();
     return result!;
   }
@@ -982,7 +983,7 @@ describe('Catalog price resolution – fixed path', () => {
         },
         'billing_cycle_id',
       );
-      const february = await generateInvoice(billingCycleId);
+      const february = await generateInvoiceForCycle(billingCycleId);
       if (!february) {
         throw new Error(`invoice generation failed for ${shape.name}`);
       }

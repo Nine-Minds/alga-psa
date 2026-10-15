@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -16,7 +16,8 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   clearServiceTypeCache,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -278,21 +279,21 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     (context as any).clientId = originalClientId;
 
     // First successful generation
-    const invoice1 = unwrapInvoiceResult(await generateInvoice(successCycle1));
+    const invoice1 = unwrapInvoiceResult(await generateInvoiceForCycle(successCycle1));
     expect(invoice1.invoice_number).toBe('INV-000001');
 
     // Failed generation attempt (no contract line for this client)
     await expectError(
-      () => generateInvoice(failCycle),
+      () => generateInvoiceForCycle(failCycle),
       {
-        // A client with no contract lines has no materialized recurring service
-        // periods, so generation stops before the billing engine's own guard.
-        messagePattern: /^Service periods haven't been generated for this billing window yet\./
+        // A client with no contract lines has no unbilled recurring work due,
+        // so the cycle helper stops before the billing engine's own guard.
+        messagePattern: /^No unbilled recurring work is due for billing cycle /
       }
     );
 
     // Second successful generation - should be next in sequence
-    const invoice2 = await generateInvoice(successCycle2);
+    const invoice2 = await generateInvoiceForCycle(successCycle2);
     if (!invoice2) {
       throw new Error('Failed to generate second invoice');
     }
@@ -312,7 +313,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       .first();
 
     expect(nextNumber.last_number).toBe('2');
-  });
+  }, 120000);
 
   it('should handle various prefix lengths and special characters', async () => {
     // Test cases for different prefixes
@@ -406,7 +407,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       // materialized periods.
 
       // Generate invoice and verify prefix handling
-      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycle));
+      const invoice = unwrapInvoiceResult(await generateInvoiceForCycle(billingCycle));
       expect(invoice.invoice_number).toBe(testCase.expected);
 
       // Verify invoice items were created - should be single consolidated row for fixed plan
@@ -469,8 +470,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     });
 
     // Generate invoices and verify they increment correctly from initial value
-    const invoice1 = await generateInvoice(billingCycle1);
-    const invoice2 = await generateInvoice(billingCycle2);
+    const invoice1 = await generateInvoiceForCycle(billingCycle1);
+    const invoice2 = await generateInvoiceForCycle(billingCycle2);
 
     if (!invoice1) {
       throw new Error(`Failed to generate invoice1`);

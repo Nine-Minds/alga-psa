@@ -13,6 +13,7 @@ import {
   assignServiceTaxRate,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
@@ -26,7 +27,6 @@ let db: Knex;
 let tenantId: string;
 let currentUser: { user_id: string; user_type: string };
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let submitTimeSheet: typeof import('@alga-psa/scheduling/actions/timeSheetOperations').submitTimeSheet;
 let approveTimeSheet: typeof import('@alga-psa/scheduling/actions/timeSheetActions').approveTimeSheet;
@@ -128,7 +128,6 @@ describe('journey: ticket → time → approval → billing', () => {
     currentUser = { user_id: uuidv4(), user_type: 'internal' };
     setupCommonMocks({ tenantId, userId: currentUser.user_id, permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ submitTimeSheet } = await import('@alga-psa/scheduling/actions/timeSheetOperations'));
     ({ approveTimeSheet } = await import('@alga-psa/scheduling/actions/timeSheetActions'));
@@ -330,7 +329,7 @@ describe('journey: ticket → time → approval → billing', () => {
     // entry in the window is unapproved ---
     const invoicesBeforeApproval = await tenantTable(db, tenantId, 'invoices')
       .select('invoice_id').orderBy('invoice_id');
-    await expect(generateInvoice(januaryCycleId)).resolves.toEqual({
+    await expect(generateInvoiceForCycle(januaryCycleId)).resolves.toEqual({
       actionError: 'Blocked until approval: 1 unapproved entry.',
       messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
       messageParams: { count: '1' },
@@ -357,7 +356,7 @@ describe('journey: ticket → time → approval → billing', () => {
     expect(sheetAfter?.approval_status).toBe('APPROVED');
 
     // --- now the invoice picks the hours up: 2h × 120.00 = 240.00 ---
-    const invoice = await generateInvoice(januaryCycleId);
+    const invoice = await generateInvoiceForCycle(januaryCycleId);
     expect(invoice).toBeTruthy();
     expect((invoice as any)?.actionError).toBeUndefined();
     expect(invoice?.invoice_id).toBeDefined();
