@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConversationAiError } from '../../../../../shared/lib/tickets/conversationAi';
+import { AiCreditsError } from '../../../../../ee/server/src/lib/aiGateway/types';
 const mocks = vi.hoisted(() => ({ session: vi.fn(), enabled: vi.fn(), addOn: vi.fn(), product: vi.fn(), resolve: vi.fn(), create: vi.fn(), notify: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({ getSession: mocks.session }));
 vi.mock('@alga-psa/tenancy/actions', () => ({ isExperimentalFeatureEnabled: mocks.enabled }));
@@ -59,10 +60,21 @@ describe('ticket conversation inference edition adapter', () => {
     await expect(provider.generate({ ...request, signal: abort.signal })).rejects.toMatchObject({ code: 'AI_CANCELLED' });
     expect(mocks.create).toHaveBeenCalledTimes(calls);
   });
-  it('maps existing AI-credit errors and keeps the CE edition unavailable', async () => {
-    mocks.create.mockRejectedValue({ status: 402, error: { code: 'out_of_credits' } });
-    await expect(provider.generate(request)).rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });
-    expect(mocks.notify).toHaveBeenCalledWith(actor.tenant, 'chat', expect.objectContaining({ reason: 'out_of_credits' }));
+  it.each(['no_subscription', 'out_of_credits', 'consent_required'] as const)(
+    'reports %s to the caller without announcing a background fallback', async (reason) => {
+      mocks.create.mockRejectedValue({ status: 402, error: { code: reason } });
+      await expect(provider.generate(request)).rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });
+      expect(mocks.create).toHaveBeenCalledTimes(1);
+      expect(mocks.notify).not.toHaveBeenCalled();
+
+      mocks.create.mockClear();
+      mocks.resolve.mockRejectedValue(new AiCreditsError(reason));
+      await expect(provider.generate(request)).rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });
+      expect(mocks.create).not.toHaveBeenCalled();
+      expect(mocks.notify).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps the CE edition unavailable', async () => {
     const { ticketConversationAiProvider: ce } = await import('../../../../../packages/ee/src/services/ticketConversationInference');
     await expect(ce.assertAvailable(actor)).rejects.toBeInstanceOf(ConversationAiError);
     await expect(ce.generate(request)).rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });

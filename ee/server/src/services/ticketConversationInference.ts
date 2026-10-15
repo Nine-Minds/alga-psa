@@ -55,8 +55,9 @@ export const ticketConversationAiProvider: ConversationAiProvider = {
       if (error instanceof ConversationAiError) throw error;
       const credits = toAiCreditsError(error);
       if (credits) {
-        const { notifyAiCreditsUnavailable } = await import('../lib/aiGateway/notifications');
-        await notifyAiCreditsUnavailable(actor.tenant, 'chat', credits);
+        // Interactive requests report failure to their caller; the background
+        // notification would incorrectly claim that a non-AI fallback ran.
+        throw new ConversationAiError('AI_UNAVAILABLE');
       }
       // A configured provider may have a smaller context than the source-reader
       // admission cap. Preserve that failure instead of silently slicing input.
