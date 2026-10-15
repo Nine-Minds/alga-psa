@@ -6,8 +6,10 @@ import '@testing-library/jest-dom/vitest';
 import type { InvoiceViewModel } from '@alga-psa/types';
 
 const actions = vi.hoisted(() => ({ clients: vi.fn(), services: vi.fn(), capability: vi.fn() }));
-vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getAllClientsForBilling: actions.clients }));
-vi.mock('@alga-psa/billing/actions/serviceActions', () => ({ getServices: actions.services }));
+// The card prefetches through the session-recoverable wrappers, so the mocks
+// must expose those names and not the raw loaders.
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({ getAllClientsForBillingRecoverable: actions.clients }));
+vi.mock('@alga-psa/billing/actions/serviceActions', () => ({ getServicesRecoverable: actions.services }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ getInvoiceAdjustmentCapability: actions.capability }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key }),

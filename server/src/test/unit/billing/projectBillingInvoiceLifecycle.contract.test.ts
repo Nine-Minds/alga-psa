@@ -144,10 +144,12 @@ describe("project invoice lifecycle contracts", () => {
       "async function releaseProjectBillingForDeletedInvoice",
       "type ProjectDepositCreditEvent",
     );
+    // updateInvoiceManualItems is now an exported wrapper around the authed
+    // implementation, so the authed const is what follows unfinalizeInvoice.
     const unfinalize = section(
       invoiceModification,
       "export const unfinalizeInvoice",
-      "export const updateInvoiceManualItems",
+      "const updateInvoiceManualItemsWithAuth = withAuth(",
     );
     // Hard delete logic lives in the auth-free shared engine; the UI action
     // (hardDeleteInvoice) is a thin wrapper that delegates to it.
