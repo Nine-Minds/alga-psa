@@ -3,6 +3,7 @@
 import React from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { Dialog } from './Dialog';
