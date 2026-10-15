@@ -416,7 +416,8 @@
       "createBatch": "Criar lote",
       "creating": "Criando...",
       "cancelBatch": "Cancelar lote",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "resolveUnmapped": "Resolver itens sem mapeamento"
     },
     "states": {
       "loadingBatches": "Carregando lotes...",
@@ -491,6 +492,33 @@
       "download": "Baixar",
       "unavailable": "Este lote histórico não tem nenhum arquivo salvo. Ele não pode ser recuperado sem executar uma nova exportação.",
       "storageFallback": "Armazenado em um backup do banco de dados"
+    },
+    "unmapped": {
+      "title": "Itens do QuickBooks sem mapeamento",
+      "descriptionDesktop": "Estes itens ainda não têm mapeamento no QuickBooks. Crie-os como novas entradas (o arquivo IIF os adicionará ao QuickBooks Desktop) ou vincule-os a uma entrada existente do QuickBooks com exatamente o mesmo nome. Suas escolhas são salvas como mapeamentos, então as próximas exportações não perguntarão novamente.",
+      "descriptionCsv": "Estes itens ainda não têm mapeamento no QuickBooks. Exporte-os com o nome abaixo (o QuickBooks adiciona nomes novos ao importar o CSV) ou vincule-os a uma entrada existente do QuickBooks com exatamente o mesmo nome. Suas escolhas são salvas como mapeamentos, então as próximas exportações não perguntarão novamente.",
+      "permissionNotice": "Salvar mapeamentos do QuickBooks exige a capacidade de gerenciar mapeamentos. Peça a um administrador ou mapeie estes itens nas configurações do QuickBooks.",
+      "kinds": {
+        "client": "Cliente",
+        "service": "Serviço",
+        "product": "Produto",
+        "discount": "Desconto"
+      },
+      "modes": {
+        "create": "Criar novo",
+        "existing": "Já existe no QuickBooks"
+      },
+      "nameAria": "Nome no QuickBooks para {{name}}",
+      "desktopNote": "Produtos novos usam o tipo de item escolhido nas configurações do QuickBooks Desktop. Escolha \"Já existe no QuickBooks\" para tudo o que já estiver no arquivo da empresa, para que os dados não sejam sobrescritos.",
+      "actions": {
+        "cancel": "Cancelar",
+        "goToMappings": "Ir para os mapeamentos do QuickBooks",
+        "save": "Salvar mapeamentos e exportar"
+      },
+      "toast": {
+        "saved": "Mapeamentos do QuickBooks salvos",
+        "saveError": "Falha ao salvar os mapeamentos do QuickBooks"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Permissão negada: não é possível criar lotes de exportação contábil",
         "read": "Permissão negada: não é possível acessar os lotes de exportação contábil",
         "update": "Permissão negada: não é possível modificar os lotes de exportação contábil",
-        "execute": "Permissão negada: não é possível executar os lotes de exportação contábil"
+        "execute": "Permissão negada: não é possível executar os lotes de exportação contábil",
+        "createMappings": "Criar mapeamentos do QuickBooks a partir de uma exportação exige as capacidades de exportar e de gerenciar mapeamentos"
       }
     },
     "vendorBill": {

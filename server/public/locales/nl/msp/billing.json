@@ -416,7 +416,8 @@
       "createBatch": "Batch maken",
       "creating": "Creëren...",
       "cancelBatch": "Batch annuleren",
-      "retry": "Opnieuw proberen"
+      "retry": "Opnieuw proberen",
+      "resolveUnmapped": "Niet-gekoppelde items oplossen"
     },
     "states": {
       "loadingBatches": "Batch laden...",
@@ -491,6 +492,33 @@
       "download": "Downloaden",
       "unavailable": "Voor deze historische batch is geen bestand opgeslagen. Herstel is alleen mogelijk door een nieuwe export uit te voeren.",
       "storageFallback": "Opgeslagen in een databaseback-up"
+    },
+    "unmapped": {
+      "title": "Niet-gekoppelde QuickBooks-items",
+      "descriptionDesktop": "Deze items hebben nog geen QuickBooks-koppeling. Maak ze aan als nieuwe vermeldingen (het IIF-bestand voegt ze toe aan QuickBooks Desktop) of koppel ze aan een bestaande QuickBooks-vermelding met exact dezelfde naam. Uw keuzes worden als koppelingen opgeslagen, zodat volgende exports er niet opnieuw om vragen.",
+      "descriptionCsv": "Deze items hebben nog geen QuickBooks-koppeling. Exporteer ze onder de onderstaande naam (QuickBooks voegt nieuwe namen toe bij het importeren van de CSV) of koppel ze aan een bestaande QuickBooks-vermelding met exact dezelfde naam. Uw keuzes worden als koppelingen opgeslagen, zodat volgende exports er niet opnieuw om vragen.",
+      "permissionNotice": "Voor het opslaan van QuickBooks-koppelingen is de bevoegdheid voor het beheren van koppelingen nodig. Vraag een beheerder of koppel deze items via de QuickBooks-instellingen.",
+      "kinds": {
+        "client": "Klant",
+        "service": "Dienst",
+        "product": "Product",
+        "discount": "Korting"
+      },
+      "modes": {
+        "create": "Nieuw aanmaken",
+        "existing": "Staat al in QuickBooks"
+      },
+      "nameAria": "QuickBooks-naam voor {{name}}",
+      "desktopNote": "Nieuwe producten krijgen het artikeltype uit de QuickBooks Desktop-instellingen. Kies \"Staat al in QuickBooks\" voor alles wat al in uw bedrijfsbestand staat, zodat de gegevens niet worden overschreven.",
+      "actions": {
+        "cancel": "Annuleren",
+        "goToMappings": "Naar QuickBooks-koppelingen",
+        "save": "Koppelingen opslaan en exporteren"
+      },
+      "toast": {
+        "saved": "QuickBooks-koppelingen opgeslagen",
+        "saveError": "QuickBooks-koppelingen konden niet worden opgeslagen"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden aangemaakt",
         "read": "Toestemming geweigerd: boekhoudexportbatches zijn niet toegankelijk",
         "update": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden gewijzigd",
-        "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd"
+        "execute": "Toestemming geweigerd: boekhoudexportbatches kunnen niet worden uitgevoerd",
+        "createMappings": "Voor het aanmaken van QuickBooks-koppelingen vanuit een export zijn de bevoegdheden voor exporteren en het beheren van koppelingen nodig"
       }
     },
     "vendorBill": {

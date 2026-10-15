@@ -440,6 +440,126 @@ describe('QuickBooksDesktopAdapter IIF transform', () => {
   });
 });
 
+describe('QuickBooksDesktopAdapter list records for items created by the export prompt', () => {
+  const created = (extra: Record<string, unknown> = {}) => ({ createdByExport: true, qbdCreateInBatch: 'batch-1', ...extra });
+
+  beforeEach(() => {
+    harness.rows.client_locations = [{
+      address_line1: '1 Main St', address_line2: 'Suite 2', city: 'Springfield', state_province: 'IL',
+      postal_code: '62701', country_name: 'USA', phone: '555-0100', email: 'ap@acme.test', is_billing_address: true
+    }];
+  });
+
+  it('defines new customers and items before the transactions that use them', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.rows.service_catalog = [{ service_id: 'svc-1', service_name: 'Consulting', description: 'Hourly consulting', default_rate: 5000, item_kind: 'service' }];
+    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: created() } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created() } };
+
+    const { rows } = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+
+    expect(rows.map((r) => r[0])).toEqual(['!CUST', 'CUST', '!INVITEM', 'INVITEM', '!TRNS', '!SPL', '!ENDTRNS', 'TRNS', 'SPL', 'ENDTRNS']);
+    const cust = rows[1];
+    expect(field(rows, '!CUST', cust, 'NAME')).toBe('Acme Corp');
+    expect(field(rows, '!CUST', cust, 'BADDR2')).toBe('1 Main St');
+    expect(field(rows, '!CUST', cust, 'BADDR4')).toBe('Springfield IL 62701');
+    expect(field(rows, '!CUST', cust, 'EMAIL')).toBe('ap@acme.test');
+    expect(field(rows, '!CUST', cust, 'TERMS')).toBe('Net 30');
+
+    const item = rows[3];
+    expect(field(rows, '!INVITEM', item, 'NAME')).toBe('Consulting');
+    expect(field(rows, '!INVITEM', item, 'INVITEMTYPE')).toBe('SERV');
+    expect(field(rows, '!INVITEM', item, 'ACCNT')).toBe('Services Income');
+    expect(field(rows, '!INVITEM', item, 'PRICE')).toBe('50.00');
+    expect(field(rows, '!INVITEM', item, 'DESC')).toBe('Hourly consulting');
+  });
+
+  it('creates products as Non-inventory Parts by default and Inventory Parts when configured', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.rows.service_catalog = [{ service_id: 'svc-1', service_name: 'Laptop', item_kind: 'product' }];
+    harness.rows.product_inventory_settings = [{ service_id: 'svc-1', average_cost: 42000 }];
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Laptop', metadata: created() } };
+    const lines = [{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }];
+
+    const nonInventory = await transformContent(context(lines));
+    const partRow = nonInventory.rows.find((r) => r[0] === 'INVITEM')!;
+    expect(field(nonInventory.rows, '!INVITEM', partRow, 'INVITEMTYPE')).toBe('PART');
+    expect(field(nonInventory.rows, '!INVITEM', partRow, 'ASSETACCNT')).toBe('');
+
+    const inventory = await transformContent(
+      context(lines, { ...SETTINGS, newProductItemType: 'INVENTORY', inventoryAssetAccount: 'Inventory Asset', cogsAccount: 'Cost of Goods Sold' })
+    );
+    const invRow = inventory.rows.find((r) => r[0] === 'INVITEM')!;
+    expect(field(inventory.rows, '!INVITEM', invRow, 'INVITEMTYPE')).toBe('INVENTORY');
+    expect(field(inventory.rows, '!INVITEM', invRow, 'ASSETACCNT')).toBe('Inventory Asset');
+    expect(field(inventory.rows, '!INVITEM', invRow, 'COGSACCNT')).toBe('Cost of Goods Sold');
+    expect(field(inventory.rows, '!INVITEM', invRow, 'COST')).toBe('420.00');
+  });
+
+  it('creates the automatic discount as a Discount item', async () => {
+    harness.rows.invoices = [invoice({ total_amount: 9500 })];
+    harness.rows.invoice_charges = [
+      charge(),
+      charge({ item_id: 'charge-2', service_id: null, is_discount: true, quantity: 1, unit_price: null, net_amount: -500, total_price: -500, description: 'Loyalty discount' })
+    ];
+    harness.mappings.discount = { external_entity_id: 'Loyalty Discount', metadata: created() };
+
+    const { rows } = await transformContent(
+      context([
+        { document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 },
+        { document_id: 'inv-1', document_line_id: 'charge-2', amount_cents: -500 }
+      ])
+    );
+    const items = rows.filter((r) => r[0] === 'INVITEM');
+    expect(items).toHaveLength(1);
+    expect(field(rows, '!INVITEM', items[0], 'NAME')).toBe('Loyalty Discount');
+    expect(field(rows, '!INVITEM', items[0], 'INVITEMTYPE')).toBe('DISC');
+  });
+
+  it('never writes list records for mappings linked to existing entries or created by another batch', async () => {
+    harness.rows.invoices = [invoice()];
+    harness.rows.invoice_charges = [charge()];
+    harness.mappings.clients = { 'client-1': { external_entity_id: 'Acme Corp', metadata: { linked_via: 'accounting_export' } } };
+    harness.mappings.services = { 'svc-1': { external_entity_id: 'Consulting', metadata: created({ qbdCreateInBatch: 'batch-0' }) } };
+
+    const { rows } = await transformContent(
+      context([{ document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 }])
+    );
+    expect(rows.map((r) => r[0])).toEqual(['!TRNS', '!SPL', '!ENDTRNS', 'TRNS', 'SPL', 'ENDTRNS']);
+  });
+
+  it('leaves out the list records of an invoice that failed delivery', async () => {
+    harness.rows.invoices = [invoice(), invoice({ invoice_id: 'inv-2', invoice_number: 'INV-1002', client_id: 'client-2' })];
+    harness.rows.invoice_charges = [charge(), charge({ item_id: 'charge-2', invoice_id: 'inv-2' })];
+    harness.rows.clients = [
+      { client_id: 'client-1', client_name: 'Acme Corp', payment_terms: null },
+      { client_id: 'client-2', client_name: 'Globex', payment_terms: null }
+    ];
+    harness.mappings.clients = {
+      'client-1': { external_entity_id: 'Acme Corp' },
+      'client-2': { external_entity_id: 'Globex', metadata: created() }
+    };
+    harness.lockFailures.add('inv-2');
+
+    const adapter = await QuickBooksDesktopAdapter.create();
+    const ctx = context([
+      { document_id: 'inv-1', document_line_id: 'charge-1', amount_cents: 10000 },
+      { document_id: 'inv-2', document_line_id: 'charge-2', amount_cents: 10000 }
+    ]);
+    const transformed = await adapter.transform(ctx);
+    expect(String(transformed.files?.[0]?.content)).toContain('CUST\tGlobex');
+
+    const delivered = await adapter.deliver(transformed, ctx);
+    const content = (delivered.metadata as any).files[0].content as string;
+    expect(content).not.toContain('!CUST');
+    expect(content).not.toContain('Globex');
+  });
+});
+
 describe('QuickBooksDesktopAdapter delivery', () => {
   it('records an iif invoice mapping and returns a file containing only delivered invoices', async () => {
     harness.rows.invoices = [invoice(), invoice({ invoice_id: 'inv-2', invoice_number: 'INV-1002' })];

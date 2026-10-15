@@ -416,7 +416,8 @@
       "createBatch": "Skapa batch",
       "creating": "Skapar…",
       "cancelBatch": "Avbryt batch",
-      "retry": "Försök igen"
+      "retry": "Försök igen",
+      "resolveUnmapped": "Lös omappade poster"
     },
     "states": {
       "loadingBatches": "Läser in batcher…",
@@ -491,6 +492,33 @@
       "download": "Hämta",
       "unavailable": "Den här historiska exportomgången saknar en sparad fil. Den kan inte återskapas utan en ny export.",
       "storageFallback": "Lagrad i databasens säkerhetskopia"
+    },
+    "unmapped": {
+      "title": "Omappade QuickBooks-poster",
+      "descriptionDesktop": "Dessa saknar ännu QuickBooks-mappning. Skapa dem som nya poster (IIF-filen lägger till dem i QuickBooks Desktop) eller koppla dem till en befintlig QuickBooks-post med exakt samma namn. Dina val sparas som mappningar, så framtida exporter frågar inte igen.",
+      "descriptionCsv": "Dessa saknar ännu QuickBooks-mappning. Exportera dem under namnet nedan (QuickBooks lägger till nya namn när du importerar CSV-filen) eller koppla dem till en befintlig QuickBooks-post med exakt samma namn. Dina val sparas som mappningar, så framtida exporter frågar inte igen.",
+      "permissionNotice": "För att spara QuickBooks-mappningar krävs behörigheten att hantera mappningar. Be en administratör, eller mappa posterna i QuickBooks-inställningarna.",
+      "kinds": {
+        "client": "Kund",
+        "service": "Tjänst",
+        "product": "Produkt",
+        "discount": "Rabatt"
+      },
+      "modes": {
+        "create": "Skapa ny",
+        "existing": "Finns redan i QuickBooks"
+      },
+      "nameAria": "QuickBooks-namn för {{name}}",
+      "desktopNote": "Nya produkter får den artikeltyp som valts i QuickBooks Desktop-inställningarna. Välj \"Finns redan i QuickBooks\" för allt som finns i din företagsfil, så att uppgifterna inte skrivs över.",
+      "actions": {
+        "cancel": "Avbryt",
+        "goToMappings": "Gå till QuickBooks-mappningar",
+        "save": "Spara mappningar och exportera"
+      },
+      "toast": {
+        "saved": "QuickBooks-mappningar sparade",
+        "saveError": "Det gick inte att spara QuickBooks-mappningarna"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Åtkomst nekad: du kan inte skapa batcher för bokföringsexport",
         "read": "Åtkomst nekad: du kan inte komma åt batcher för bokföringsexport",
         "update": "Åtkomst nekad: du kan inte ändra batcher för bokföringsexport",
-        "execute": "Åtkomst nekad: du kan inte köra batcher för bokföringsexport"
+        "execute": "Åtkomst nekad: du kan inte köra batcher för bokföringsexport",
+        "createMappings": "För att skapa QuickBooks-mappningar från en export krävs behörigheterna att exportera och att hantera mappningar"
       }
     },
     "vendorBill": {

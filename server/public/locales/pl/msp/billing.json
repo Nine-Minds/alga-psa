@@ -416,7 +416,8 @@
       "createBatch": "Utwórz partię",
       "creating": "Tworzenie...",
       "cancelBatch": "Anuluj partię",
-      "retry": "Ponów"
+      "retry": "Ponów",
+      "resolveUnmapped": "Rozwiąż niezmapowane pozycje"
     },
     "states": {
       "loadingBatches": "Ładowanie partii...",
@@ -491,6 +492,33 @@
       "download": "Pobierz",
       "unavailable": "Ten historyczny pakiet nie zawiera zapisanego pliku. Można go odzyskać tylko przez ponowne wykonanie eksportu.",
       "storageFallback": "Zapisano w kopii zapasowej bazy danych"
+    },
+    "unmapped": {
+      "title": "Niezmapowane pozycje QuickBooks",
+      "descriptionDesktop": "Te pozycje nie mają jeszcze mapowania QuickBooks. Utwórz je jako nowe wpisy (plik IIF doda je do QuickBooks Desktop) albo połącz z istniejącym wpisem QuickBooks o dokładnie tej samej nazwie. Wybory są zapisywane jako mapowania, więc kolejne eksporty nie będą o to pytać.",
+      "descriptionCsv": "Te pozycje nie mają jeszcze mapowania QuickBooks. Wyeksportuj je pod nazwą poniżej (QuickBooks dodaje nowe nazwy podczas importu CSV) albo połącz z istniejącym wpisem QuickBooks o dokładnie tej samej nazwie. Wybory są zapisywane jako mapowania, więc kolejne eksporty nie będą o to pytać.",
+      "permissionNotice": "Zapisywanie mapowań QuickBooks wymaga uprawnienia do zarządzania mapowaniami. Poproś administratora albo zmapuj te pozycje w ustawieniach QuickBooks.",
+      "kinds": {
+        "client": "Klient",
+        "service": "Usługa",
+        "product": "Produkt",
+        "discount": "Rabat"
+      },
+      "modes": {
+        "create": "Utwórz nowy",
+        "existing": "Już w QuickBooks"
+      },
+      "nameAria": "Nazwa w QuickBooks dla {{name}}",
+      "desktopNote": "Nowe produkty otrzymują typ pozycji wybrany w ustawieniach QuickBooks Desktop. Wybierz „Już w QuickBooks\" dla wszystkiego, co istnieje w pliku firmy, aby nie nadpisać jego danych.",
+      "actions": {
+        "cancel": "Anuluj",
+        "goToMappings": "Przejdź do mapowań QuickBooks",
+        "save": "Zapisz mapowania i eksportuj"
+      },
+      "toast": {
+        "saved": "Zapisano mapowania QuickBooks",
+        "saveError": "Nie udało się zapisać mapowań QuickBooks"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Odmowa uprawnień: nie można tworzyć partii eksportu księgowego",
         "read": "Odmowa uprawnień: brak dostępu do partii eksportu księgowego",
         "update": "Odmowa uprawnień: nie można modyfikować partii eksportu księgowego",
-        "execute": "Odmowa uprawnień: nie można uruchamiać partii eksportu księgowego"
+        "execute": "Odmowa uprawnień: nie można uruchamiać partii eksportu księgowego",
+        "createMappings": "Tworzenie mapowań QuickBooks z eksportu wymaga uprawnień do eksportu i zarządzania mapowaniami"
       }
     },
     "vendorBill": {

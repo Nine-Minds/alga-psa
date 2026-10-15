@@ -416,7 +416,8 @@
       "createBatch": "Crear lote",
       "creating": "Creando...",
       "cancelBatch": "Cancelar lote",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "resolveUnmapped": "Resolver elementos sin asignar"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
@@ -491,6 +492,33 @@
       "download": "Descargar",
       "unavailable": "Este lote histórico no tiene ningún archivo guardado. No se puede recuperar sin ejecutar una nueva exportación.",
       "storageFallback": "Guardado en una copia de seguridad de la base de datos"
+    },
+    "unmapped": {
+      "title": "Elementos de QuickBooks sin asignar",
+      "descriptionDesktop": "Estos elementos aún no tienen asignación en QuickBooks. Créelos como entradas nuevas (el archivo IIF los añadirá a QuickBooks Desktop) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones, por lo que las próximas exportaciones no volverán a preguntar.",
+      "descriptionCsv": "Estos elementos aún no tienen asignación en QuickBooks. Expórtelos con el nombre indicado (QuickBooks añade los nombres nuevos al importar el CSV) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones, por lo que las próximas exportaciones no volverán a preguntar.",
+      "permissionNotice": "Para guardar asignaciones de QuickBooks se requiere la capacidad de gestionar asignaciones. Consulte a un administrador o asigne estos elementos desde la configuración de QuickBooks.",
+      "kinds": {
+        "client": "Cliente",
+        "service": "Servicio",
+        "product": "Producto",
+        "discount": "Descuento"
+      },
+      "modes": {
+        "create": "Crear nuevo",
+        "existing": "Ya existe en QuickBooks"
+      },
+      "nameAria": "Nombre en QuickBooks para {{name}}",
+      "desktopNote": "Los productos nuevos usan el tipo de artículo elegido en la configuración de QuickBooks Desktop. Elija \"Ya existe en QuickBooks\" para todo lo que ya figure en su archivo de empresa, de modo que no se sobrescriban sus datos.",
+      "actions": {
+        "cancel": "Cancelar",
+        "goToMappings": "Ir a las asignaciones de QuickBooks",
+        "save": "Guardar asignaciones y exportar"
+      },
+      "toast": {
+        "saved": "Asignaciones de QuickBooks guardadas",
+        "saveError": "No se pudieron guardar las asignaciones de QuickBooks"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Permiso denegado: no se pueden crear lotes de exportación contable",
         "read": "Permiso denegado: no se puede acceder a los lotes de exportación contable",
         "update": "Permiso denegado: no se pueden modificar los lotes de exportación contable",
-        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable"
+        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable",
+        "createMappings": "Para crear asignaciones de QuickBooks desde una exportación se requieren las capacidades de exportar y de gestionar asignaciones"
       }
     },
     "vendorBill": {

@@ -416,7 +416,8 @@
       "createBatch": "Crea lotto",
       "creating": "Creazione...",
       "cancelBatch": "Annulla lotto",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "resolveUnmapped": "Risolvi elementi non mappati"
     },
     "states": {
       "loadingBatches": "Caricamento batch...",
@@ -491,6 +492,33 @@
       "download": "Scarica",
       "unavailable": "Questo batch storico non contiene file salvati. Non è possibile recuperarli senza eseguire una nuova esportazione.",
       "storageFallback": "Salvato in un backup del database"
+    },
+    "unmapped": {
+      "title": "Elementi QuickBooks non mappati",
+      "descriptionDesktop": "Questi elementi non hanno ancora una mappatura QuickBooks. Creali come nuove voci (il file IIF li aggiungerà a QuickBooks Desktop) oppure collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le scelte vengono salvate come mappature, quindi le prossime esportazioni non lo chiederanno più.",
+      "descriptionCsv": "Questi elementi non hanno ancora una mappatura QuickBooks. Esportali con il nome indicato (QuickBooks aggiunge i nuovi nomi durante l'importazione del CSV) oppure collegali a una voce QuickBooks esistente con esattamente lo stesso nome. Le scelte vengono salvate come mappature, quindi le prossime esportazioni non lo chiederanno più.",
+      "permissionNotice": "Per salvare le mappature QuickBooks serve la capacità di gestione delle mappature. Chiedi a un amministratore oppure mappa questi elementi dalle impostazioni di QuickBooks.",
+      "kinds": {
+        "client": "Cliente",
+        "service": "Servizio",
+        "product": "Prodotto",
+        "discount": "Sconto"
+      },
+      "modes": {
+        "create": "Crea nuovo",
+        "existing": "Già in QuickBooks"
+      },
+      "nameAria": "Nome QuickBooks per {{name}}",
+      "desktopNote": "I nuovi prodotti usano il tipo di articolo scelto nelle impostazioni di QuickBooks Desktop. Scegli \"Già in QuickBooks\" per tutto ciò che esiste già nel file aziendale, così i suoi dati non vengono sovrascritti.",
+      "actions": {
+        "cancel": "Annulla",
+        "goToMappings": "Vai alle mappature QuickBooks",
+        "save": "Salva mappature ed esporta"
+      },
+      "toast": {
+        "saved": "Mappature QuickBooks salvate",
+        "saveError": "Impossibile salvare le mappature QuickBooks"
+      }
     }
   },
   "templateRenderer": {
@@ -728,7 +756,8 @@
         "create": "Autorizzazione negata: impossibile creare lotti di esportazione contabile",
         "read": "Autorizzazione negata: impossibile accedere ai lotti di esportazione contabile",
         "update": "Autorizzazione negata: impossibile modificare i lotti di esportazione contabile",
-        "execute": "Autorizzazione negata: impossibile eseguire i lotti di esportazione contabile"
+        "execute": "Autorizzazione negata: impossibile eseguire i lotti di esportazione contabile",
+        "createMappings": "Per creare mappature QuickBooks da un'esportazione servono le capacità di esportazione e di gestione delle mappature"
       }
     },
     "vendorBill": {
