@@ -232,6 +232,9 @@
     "phoneExtension": {
       "label": "Numer wewnętrzny",
       "placeholder": "wew. 1234"
+    },
+    "priority": {
+      "placeholder": "Wybierz priorytet"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags musi być używany wewnątrz TagProvider"
-    }
+    },
+    "empty": "Nie znaleziono tagów"
   },
   "statusDialog": {
     "nameRequired": "Nazwa statusu jest wymagana",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Ładowanie ustawień..."
+    },
+    "editor": {
+      "loading": "Ładowanie edytora..."
+    },
+    "taskForm": {
+      "loading": "Ładowanie formularza zadania..."
+    },
+    "workflow": {
+      "loading": "Ładowanie wizualizacji workflow..."
     }
   },
   "dialogs": {

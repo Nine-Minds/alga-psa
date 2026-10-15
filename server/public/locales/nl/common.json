@@ -835,6 +835,9 @@
     "phoneExtension": {
       "label": "Toestelnummer",
       "placeholder": "toestel 1234"
+    },
+    "priority": {
+      "placeholder": "Prioriteit selecteren"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags moet binnen een TagProvider worden gebruikt"
-    }
+    },
+    "empty": "Geen labels gevonden"
   },
   "statusDialog": {
     "nameRequired": "De statusnaam is verplicht",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Instellingen laden..."
+    },
+    "editor": {
+      "loading": "Editor laden..."
+    },
+    "taskForm": {
+      "loading": "Taakformulier laden..."
+    },
+    "workflow": {
+      "loading": "Workflowvisualisatie laden..."
     }
   },
   "dialogs": {

@@ -276,6 +276,9 @@
     "phoneExtension": {
       "label": "Extension",
       "placeholder": "ext. 1234"
+    },
+    "priority": {
+      "placeholder": "Select Priority"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags must be used within a TagProvider"
-    }
+    },
+    "empty": "No tags found"
   },
   "statusDialog": {
     "nameRequired": "Status name is required",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Loading settings configuration..."
+    },
+    "editor": {
+      "loading": "Loading editor..."
+    },
+    "taskForm": {
+      "loading": "Loading task form..."
+    },
+    "workflow": {
+      "loading": "Loading workflow visualization..."
     }
   },
   "dialogs": {

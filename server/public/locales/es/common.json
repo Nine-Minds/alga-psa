@@ -168,6 +168,9 @@
     "phoneExtension": {
       "label": "Extensión",
       "placeholder": "extensión 1234"
+    },
+    "priority": {
+      "placeholder": "Seleccione la prioridad"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags debe usarse dentro de un TagProvider"
-    }
+    },
+    "empty": "No se encontraron etiquetas"
   },
   "statusDialog": {
     "nameRequired": "El nombre del estado es obligatorio",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Cargando configuración..."
+    },
+    "editor": {
+      "loading": "Cargando editor..."
+    },
+    "taskForm": {
+      "loading": "Cargando formulario de tarea..."
+    },
+    "workflow": {
+      "loading": "Cargando visualización del flujo de trabajo..."
     }
   },
   "dialogs": {

@@ -835,6 +835,9 @@
     "phoneExtension": {
       "label": "Poste",
       "placeholder": "poste 1234"
+    },
+    "priority": {
+      "placeholder": "Sélectionner une priorité"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags doit être utilisé au sein d’un TagProvider"
-    }
+    },
+    "empty": "Aucune étiquette trouvée"
   },
   "statusDialog": {
     "nameRequired": "Le nom du statut est obligatoire",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Chargement des paramètres..."
+    },
+    "editor": {
+      "loading": "Chargement de l’éditeur..."
+    },
+    "taskForm": {
+      "loading": "Chargement du formulaire de tâche..."
+    },
+    "workflow": {
+      "loading": "Chargement de la visualisation du workflow..."
     }
   },
   "dialogs": {

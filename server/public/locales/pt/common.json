@@ -276,6 +276,9 @@
     "phoneExtension": {
       "label": "Ramal",
       "placeholder": "ramal 1234"
+    },
+    "priority": {
+      "placeholder": "Selecione a prioridade"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags deve ser usado dentro de um TagProvider"
-    }
+    },
+    "empty": "Nenhuma tag encontrada"
   },
   "statusDialog": {
     "nameRequired": "O nome do status é obrigatório",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Carregando configurações..."
+    },
+    "editor": {
+      "loading": "Carregando editor..."
+    },
+    "taskForm": {
+      "loading": "Carregando formulário de tarefa..."
+    },
+    "workflow": {
+      "loading": "Carregando visualização do fluxo de trabalho..."
     }
   },
   "dialogs": {

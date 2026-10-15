@@ -835,6 +835,9 @@
     "phoneExtension": {
       "label": "Durchwahl",
       "placeholder": "Durchw. 1234"
+    },
+    "priority": {
+      "placeholder": "Priorität auswählen"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags muss innerhalb eines TagProvider verwendet werden"
-    }
+    },
+    "empty": "Keine Tags gefunden"
   },
   "statusDialog": {
     "nameRequired": "Der Statusname ist erforderlich",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Einstellungen werden geladen..."
+    },
+    "editor": {
+      "loading": "Editor wird geladen..."
+    },
+    "taskForm": {
+      "loading": "Aufgabenformular wird geladen..."
+    },
+    "workflow": {
+      "loading": "Workflow-Visualisierung wird geladen..."
     }
   },
   "dialogs": {

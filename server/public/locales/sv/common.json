@@ -276,6 +276,9 @@
     "phoneExtension": {
       "label": "Anknytning",
       "placeholder": "ankn. 1234"
+    },
+    "priority": {
+      "placeholder": "Välj prioritet"
     }
   },
   "auth": {
@@ -1751,7 +1754,8 @@
     },
     "errors": {
       "providerRequired": "useTags måste användas inom en TagProvider"
-    }
+    },
+    "empty": "Inga taggar hittades"
   },
   "statusDialog": {
     "nameRequired": "Statusnamn krävs",
@@ -1983,6 +1987,15 @@
     },
     "settingsTab": {
       "loading": "Läser in inställningar..."
+    },
+    "editor": {
+      "loading": "Läser in redigeraren…"
+    },
+    "taskForm": {
+      "loading": "Läser in uppgiftsformuläret…"
+    },
+    "workflow": {
+      "loading": "Läser in arbetsflödesvisualiseringen…"
     }
   },
   "dialogs": {
