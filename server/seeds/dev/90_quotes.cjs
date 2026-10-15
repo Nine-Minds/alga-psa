@@ -105,7 +105,12 @@ const resolveSeedTenant = async (knex) => {
 };
 
 exports.seed = async function seed(knex) {
-  if (!(await knex.schema.hasTable('quotes'))) return;
+  // Seeds run against partially-migrated schemas in some test harnesses; a
+  // throw here would abort the whole directory run.
+  const tables = ['quotes', 'quote_items', 'quote_document_templates', 'standard_quote_document_templates'];
+  for (const table of tables) {
+    if (!(await knex.schema.hasTable(table))) return;
+  }
 
   const context = await resolveSeedTenant(knex);
   if (!context) return;
