@@ -61,6 +61,31 @@ describe('client portal document routes', () => {
     expect(Buffer.from(await attachment.arrayBuffer()).toString()).toBe('%PDF-example');
   });
 
+  it('serves uploaded text files inline while markup and office files stay downloads', async () => {
+    mocks.document.mockResolvedValueOnce(documentRecord({ mime_type: 'text/plain', document_name: 'Server Notes' }));
+    mocks.downloadFile.mockResolvedValueOnce({ buffer: Buffer.from('server rebooted at 02:00\nall clear'), metadata: { original_name: 'server-notes.txt', mime_type: 'text/plain' } });
+    const text = await getFile(request('/api/client-portal/documents/doc-1/file?disposition=inline'), params);
+    expect(text.status).toBe(200);
+    expect(text.headers.get('Content-Type')).toBe('text/plain');
+    expect(text.headers.get('Content-Disposition')).toContain('inline; filename="server-notes.txt"');
+    expect(text.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect(text.headers.get('Content-Security-Policy')).toContain('sandbox');
+    expect(await text.text()).toBe('server rebooted at 02:00\nall clear');
+
+    mocks.document.mockResolvedValueOnce(documentRecord({ mime_type: 'text/csv; charset=utf-8' }));
+    mocks.downloadFile.mockResolvedValueOnce({ buffer: Buffer.from('host,status\nweb-1,ok'), metadata: { original_name: 'hosts.csv', mime_type: 'text/csv' } });
+    const csv = await getFile(request('/api/client-portal/documents/doc-1/file?disposition=inline'), params);
+    expect(csv.status).toBe(200);
+    expect(await csv.text()).toBe('host,status\nweb-1,ok');
+
+    for (const mime of ['text/html', 'image/svg+xml', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']) {
+      mocks.document.mockResolvedValueOnce(documentRecord({ mime_type: mime }));
+      const rejected = await getFile(request('/api/client-portal/documents/doc-1/file?disposition=inline'), params);
+      expect(rejected.status).toBe(415);
+      expect(await rejected.json()).toMatchObject({ code: 'unsupported_preview' });
+    }
+  });
+
   it('preserves legitimate uploaded JSON files as attachments', async () => {
     const jsonBytes = Buffer.from('{"meeting":"agenda"}');
     mocks.document.mockResolvedValueOnce(documentRecord({ mime_type: 'application/json', document_name: 'agenda.json' }));
