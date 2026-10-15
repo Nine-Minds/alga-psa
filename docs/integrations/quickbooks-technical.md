@@ -4,6 +4,11 @@ This document describes the current QuickBooks integration architecture in AlgaP
 
 ## Current State (UI)
 - **QuickBooks CSV (`quickbooks_csv`)**: selectable in **Settings → Integrations → Accounting** in every edition.
+- **QuickBooks Desktop (`quickbooks_desktop`)**: selectable in **Settings → Integrations → Accounting** in every edition.
+  - Settings component: `packages/integrations/src/components/settings/integrations/QuickBooksDesktopIntegrationSettings.tsx`.
+  - Settings actions: `packages/integrations/src/actions/integrations/quickBooksDesktopActions.ts`.
+  - The card renders the shared `CSVMappingManager`, so Desktop and CSV use one mapping set.
+  - IIF format and rules are in [the accounting integration overview](../accounting-integration-overview.md#quickbooks-desktop).
 - **QuickBooks Online OAuth (`quickbooks_online`)**: selectable in **Settings → Integrations → Accounting** in Enterprise Edition. `AccountingIntegrationsSetup.tsx` gates the card on `NEXT_PUBLIC_EDITION === 'enterprise'` and omits it entirely in Community Edition.
 - Settings component: `packages/integrations/src/components/settings/integrations/QboIntegrationSettings.tsx`.
 
