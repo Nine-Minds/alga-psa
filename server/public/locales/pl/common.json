@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Wymagane"
+  },
+  "tabs": {
+    "ariaLabel": "Karty"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Przełącz widok"
   }
 }

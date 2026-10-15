@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Verplicht"
+  },
+  "tabs": {
+    "ariaLabel": "Tabbladen"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Weergave wisselen"
   }
 }

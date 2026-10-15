@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Erforderlich"
+  },
+  "tabs": {
+    "ariaLabel": "Registerkarten"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Ansicht wechseln"
   }
 }

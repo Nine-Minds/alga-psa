@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Obligatorio"
+  },
+  "tabs": {
+    "ariaLabel": "Pestañas"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Cambiar vista"
   }
 }

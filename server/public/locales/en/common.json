@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Required"
+  },
+  "tabs": {
+    "ariaLabel": "Tabs"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Switch view"
   }
 }

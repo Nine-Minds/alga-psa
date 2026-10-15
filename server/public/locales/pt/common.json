@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Obrigatório"
+  },
+  "tabs": {
+    "ariaLabel": "Abas"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Alternar visualização"
   }
 }

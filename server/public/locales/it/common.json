@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Obbligatorio"
+  },
+  "tabs": {
+    "ariaLabel": "Schede"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Cambia vista"
   }
 }

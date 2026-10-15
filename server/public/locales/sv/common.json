@@ -2166,5 +2166,11 @@
   },
   "label": {
     "required": "Obligatoriskt"
+  },
+  "tabs": {
+    "ariaLabel": "Flikar"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Byt vy"
   }
 }
