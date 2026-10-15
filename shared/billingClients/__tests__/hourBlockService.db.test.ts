@@ -862,6 +862,109 @@ async function assertAvailableBoundary(opts: {
   }
 }
 
+describe.runIf(enabled)('hourBlockService contract-line coverage (DB)', () => {
+  const today = '2026-10-13';
+
+  async function seedLine(
+    db: Knex,
+    tenant: string,
+    clientId: string,
+    serviceIds: string[],
+    name: string,
+    start: string,
+    end: string | null,
+  ): Promise<void> {
+    const contractId = uuidv4();
+    const lineId = uuidv4();
+    await db('contracts').insert({
+      tenant, contract_id: contractId, contract_name: `Contract ${name}`, is_template: false, status: 'active',
+    });
+    await db('contract_lines').insert({
+      tenant, contract_line_id: lineId, contract_id: contractId, contract_line_name: `Line ${name}`, is_template: false,
+    });
+    for (const serviceId of serviceIds) {
+      await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: serviceId });
+    }
+    await db('client_contracts').insert({
+      tenant, client_contract_id: uuidv4(), client_id: clientId, contract_id: contractId,
+      start_date: start, end_date: end, is_active: true,
+    });
+  }
+
+  async function cleanup(db: Knex, tenant: string) {
+    await db('client_contracts').where({ tenant }).delete();
+    await db('contract_line_services').where({ tenant }).delete();
+    await db('contract_lines').where({ tenant }).delete();
+    await db('contracts').where({ tenant }).delete();
+    await db('time_entries').where({ tenant }).delete();
+    await db('tickets').where({ tenant }).delete();
+    await db('service_catalog').where({ tenant }).delete();
+    await db('service_types').where({ tenant }).delete();
+    await db('users').where({ tenant }).delete();
+    await db('clients').where({ tenant }).delete();
+    await db('tenants').where({ tenant }).delete();
+    await db.destroy();
+  }
+
+  it('reports coverage by window and keeps the burn rule unchanged', async () => {
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB Cov Tenant', email: 'cov@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Cov Client' });
+      const { service_id: one } = await insertService(db, tenant, 'Cov One', 1);
+      const { service_id: two } = await insertService(db, tenant, 'Cov Two', 2);
+      const { service_id: later } = await insertService(db, tenant, 'Cov Later', 3);
+      const { service_id: far } = await insertService(db, tenant, 'Cov Far', 4);
+      const { service_id: ended } = await insertService(db, tenant, 'Cov Ended', 5);
+      const { service_id: none } = await insertService(db, tenant, 'Cov None', 6);
+      const userId = await insertUser(db, tenant);
+      const ticketId = await insertTicket(db, tenant, clientId, 'Cov Ticket');
+
+      await seedLine(db, tenant, clientId, [one], 'One', '2026-01-01', null);
+      await seedLine(db, tenant, clientId, [two], 'Two A', '2026-01-01', null);
+      await seedLine(db, tenant, clientId, [two], 'Two B', '2026-02-01', '2027-02-01');
+      await seedLine(db, tenant, clientId, [later], 'Later', '2026-12-01', null);
+      await seedLine(db, tenant, clientId, [far], 'Far', '2027-11-20', null); // 13 months out
+      await seedLine(db, tenant, clientId, [ended], 'Ended', '2025-01-01', '2026-10-12');
+
+      const get = (serviceIds: string[] | null, expirationDate: string | null) =>
+        getContractLineCoverageForClient(db, tenant, clientId, { serviceIds, expirationDate, today });
+
+      const r1 = await get([one], null);
+      expect(r1).toHaveLength(1);
+      expect(r1[0].assignment).toBe('automatic');
+      expect(r1[0].lines).toHaveLength(1);
+
+      const r2 = await get([two], null);
+      expect(r2[0].assignment).toBe('when_assigned');
+      expect(r2[0].lines).toHaveLength(2);
+
+      // Starts after today but before expiry: included.
+      expect((await get([later], '2027-01-31')).map((c) => c.service_id)).toEqual([later]);
+      // No expiry => today + 12 months; a line starting 13 months out is excluded.
+      expect(await get([far], null)).toEqual([]);
+      // Ended before today: excluded.
+      expect(await get([ended], null)).toEqual([]);
+      expect(await get([none], null)).toEqual([]);
+
+      // Unscoped returns every covered service in the window.
+      const all = await get(null, null);
+      expect(all.map((c) => c.service_name).sort()).toEqual(['Cov Later', 'Cov One', 'Cov Two']);
+
+      // Regression: burn rule unchanged by the builder refactor.
+      await db.transaction(async (trx: Knex.Transaction) => {
+        const entryOne = await insertTimeEntry(db, tenant, userId, ticketId, one, 60, today);
+        const entryTwo = await insertTimeEntry(db, tenant, userId, ticketId, two, 60, today);
+        expect(await isEntryEligibleForBlockBurn(trx, tenant, entryOne)).toBe(false);
+        expect(await isEntryEligibleForBlockBurn(trx, tenant, entryTwo)).toBe(true);
+      });
+    } finally {
+      await cleanup(db, tenant);
+    }
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Prepaid Block contract lines (alga-2026-0002695, plan section 2): burn
@@ -1154,6 +1257,42 @@ describe.runIf(enabled)('hourBlockService prepaid block contract lines', () => {
       await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
       expect(await allocatedFor(w, e1.entry_id)).toEqual([{ block_id: expired, minutes: 100 }]);
       expect(await remaining(w, expired)).toBe(500);
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('reconcileLineAllocations keeps a null-line entry drawn via deterministic resolution, re-draws it onto a new pending block, and releases it on void', async () => {
+    const w = await setup();
+    try {
+      const active = await block(w, { line: w.lineA, remaining: 120 });
+      const explicit = await entry(w, w.svcA, 100, w.lineA, '2026-08-10', 0);
+      const nullLine = await entry(w, w.svcA, 100, null, '2026-08-11', 0);
+      await w.db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, w.tenant, w.clientId, explicit);
+        await allocateTimeEntry(trx, w.tenant, w.clientId, nullLine); // 20 left -> partial
+      });
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+
+      // Plain reconcile must not strip the null-line entry's coverage.
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+      expect(await allocatedFor(w, explicit.entry_id)).toEqual([{ block_id: active, minutes: 100 }]);
+
+      // A pending block appears: overflow of the null-line entry lands on it.
+      const pending = await block(w, { line: w.lineA, status: 'pending', total: 600 });
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual(
+        [{ block_id: active, minutes: 20 }, { block_id: pending, minutes: 80 }].sort((x, y) => (x.block_id < y.block_id ? -1 : 1)),
+      );
+      expect(await remaining(w, pending)).toBe(520);
+
+      // Void: released, back to the active block's 20 minutes only.
+      await w.db('hour_blocks').where({ tenant: w.tenant, block_id: pending }).update({ status: 'voided' });
+      await w.db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, w.tenant, w.lineA));
+      expect(await allocatedFor(w, nullLine.entry_id)).toEqual([{ block_id: active, minutes: 20 }]);
+      expect(await remaining(w, pending)).toBe(600);
+      expect(await remaining(w, active)).toBe(0);
     } finally {
       await teardown(w);
     }
