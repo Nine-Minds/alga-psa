@@ -28,7 +28,7 @@ it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, 
 it('opens native and shared tasks with distinct qualified links and server pagination', async () => {
   mount(); expect(await screen.findByRole('link', { name: 'Local task' })).toHaveAttribute('href', '/msp/projects/native-project/tasks/same-id');
   expect(screen.getByRole('link', { name: 'Shared task' })).toHaveAttribute('href', '/msp/co-management/tasks/customer/relationship/same-id');
-  expect(screen.getByText('coManaged.projects.queue.counts:{"total":51,"open":50,"closed":1}')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.projects.queue.counts:{"count":51,"open":50,"closed":1}')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.next' }));
   await waitFor(() => expect(mocks.load).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, pageSize: 25 })));
 });

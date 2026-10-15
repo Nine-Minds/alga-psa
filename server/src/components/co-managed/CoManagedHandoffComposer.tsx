@@ -7,6 +7,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '@/lib/actions/coManagedSharedWorkActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
+import { useCoManagedWorkSignals } from './CoManagedWorkSignalsProvider';
 
 export type HandoffAction = 'escalate' | 'handback' | 'revoke';
 export default function CoManagedHandoffComposer({ action, side, resource, revision, onSaved, onCancel, onReload }: {
@@ -14,6 +15,7 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
   onSaved: () => void; onCancel: () => void; onReload: () => void;
 }) {
   const { t } = useTranslation('msp/licensing');
+  const { refresh: refreshWorkSignals } = useCoManagedWorkSignals();
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -42,6 +44,8 @@ export default function CoManagedHandoffComposer({ action, side, resource, revis
       return;
     }
     inFlight.current = false;
+    // Escalate / hand back / take back changes the callout and badge counts.
+    refreshWorkSignals();
     if (mounted.current) { setBusy(false); onSaved(); }
   }
   return <form className="space-y-3 rounded-lg border p-4" onSubmit={event => { event.preventDefault(); void submit(); }}>

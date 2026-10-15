@@ -1,0 +1,5 @@
+Native /msp/tickets parity, old build (:23374, pre-refactor copy) vs new dev server (:3374), qa@emeraldcity.oz, light theme.
+Widths 1440 and 390, Filters closed and open: full-page screenshots pixel-diffed with PIL ImageChops.
+Result: identical at all four states except bbox (1,841)-(75,900) = Next dev-mode indicator badge (dev server only).
+Toolbar DOM (search input ancestor outerHTML): identical at 390; at 1440 identical after normalising React useId ids (radix-_r_xx_, _r_xx_) only.
+Note: the old build was reached via http://feature-co-managed-it.localhost:23374 (its NEXTAUTH_URL host).

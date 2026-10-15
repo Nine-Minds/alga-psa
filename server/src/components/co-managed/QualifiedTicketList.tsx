@@ -26,14 +26,29 @@ import {
   type TicketListIdentity,
   type TicketListPresentation,
 } from '@alga-psa/tickets/lib';
-import { Download, Filter, XCircle } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { ShareActionsMenu } from '@alga-psa/ui/components/ShareActionsMenu';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { Input } from '@alga-psa/ui/components/Input';
+import {
+  LIST_FILTER_DENSITY_PRESETS,
+  ListCard,
+  ListFilterChips,
+  ListFilterPanel,
+  ListFilterRow,
+  ListPageHeading,
+  ListToolbarEnd,
+  ListToolbarFiltersToggle,
+  ListToolbarResetButton,
+  ListToolbarRow,
+  ListToolbarSearchInput,
+  ListToolbarSurface,
+  listDensityIndex,
+  useDebouncedSearchField,
+} from '@alga-psa/ui/components/ListToolbar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketQueueAction, exportCoManagedTicketQueueAction } from '@/lib/actions/coManagedTicketQueueActions';
@@ -96,7 +111,6 @@ export default function QualifiedTicketList({
   const [showFilters, setShowFilters] = useState(() => Boolean(initialPresentation?.signal));
   const [clientOptions, setClientOptions] = useState<Array<{ client_id: string; client_name: string }> | null>(null);
   const [view, setView] = useViewPreference(actorScope);
-  const [searchDraft, setSearchDraft] = useState(() => presentation.searchQuery);
   const [result, setResult] = useState<CoManagedTicketQueuePage | null>(null);
   const [error, setError] = useState<'load' | 'export' | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -127,9 +141,6 @@ export default function QualifiedTicketList({
     if (isQualifiedTicketListScope(liveScope)) setWorkspace(liveScope.workspace);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- adopt the address bar once per mount
   }, []);
-
-  // Keep the search box in step with a scope/history-driven presentation change.
-  useEffect(() => { setSearchDraft(presentation.searchQuery); }, [presentation.searchQuery]);
 
   const clientId = fixedClientId ?? presentation.clientId;
 
@@ -176,6 +187,13 @@ export default function QualifiedTicketList({
       return next;
     });
   }, [embedded, scope, workspace]);
+
+  // Search applies as you type (debounced like the native dashboard); Enter applies it at once. Back / Reset replace the text.
+  const { draft: searchDraft, setDraft: setSearchDraft, flush: flushSearch } = useDebouncedSearchField(
+    presentation.searchQuery,
+    searchQuery => updatePresentation({ searchQuery }),
+  );
+  const filterDensity = LIST_FILTER_DENSITY_PRESETS[listDensityIndex(view.density)];
 
   const exportTickets = useCallback(async () => {
     if (exporting) return;
@@ -374,134 +392,115 @@ export default function QualifiedTicketList({
     ? t(presentation.signal === 'escalated_unassigned' ? 'coManaged.customerTickets.signals.escalatedUnassigned' : 'coManaged.customerTickets.signals.awaitingReply')
     : null;
 
-  // LEVERAGE: pattern list-toolbar-filters-toggle — search + Filters toggle + Reset repeats the native dashboard toolbar markup; a shared presentational toolbar below TicketingDashboard would serve both lists.
+  const shareMenu = (
+    <ShareActionsMenu
+      id={`${idPrefix}-share`}
+      tooltip={t('coManaged.customerTickets.share', 'Share')}
+      disabled={!result || exporting}
+      actions={[{
+        id: `${idPrefix}-export`,
+        icon: Download,
+        label: t(exporting ? 'coManaged.queue.exporting' : 'coManaged.queue.export'),
+        onSelect: () => { void exportTickets(); },
+        disabled: !result || exporting,
+      }]}
+    />
+  );
+
+  const filterChips = signalLabel ? [{
+    key: 'signal',
+    label: signalLabel,
+    removeId: `${idPrefix}-clear-signal`,
+    removeLabel: t('coManaged.customerTickets.clearSignal', 'Remove filter'),
+    onRemove: () => updatePresentation({ signal: undefined }),
+  }] : [];
+
   const toolbar = (
-    <div id={`${idPrefix}-toolbar`} className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <form
-          className="flex min-w-[260px] flex-1 items-center gap-2"
-          onSubmit={event => { event.preventDefault(); updatePresentation({ searchQuery: searchDraft }); }}
-        >
-          <Input
+    <ListToolbarSurface id={`${idPrefix}-toolbar`} density={filterDensity}>
+      <div className="space-y-3">
+        <ListToolbarRow>
+          <ListToolbarSearchInput
             id={`${idPrefix}-search`}
             aria-label={t('coManaged.queue.search', 'Search tickets')}
             value={searchDraft}
             maxLength={200}
             placeholder={t('coManaged.queue.searchPlaceholder', 'Search by number or title')}
             onChange={event => setSearchDraft(event.target.value)}
-            className="h-[38px] w-full text-sm"
+            onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); flushSearch(); } }}
           />
-          <Button id={`${idPrefix}-search-submit`} type="submit" variant="outline" className="shrink-0 h-[38px]">{t('coManaged.queue.search', 'Search tickets')}</Button>
-        </form>
-        <Button
-          id={`${idPrefix}-toggle-filters`}
-          type="button"
-          variant={showFilters ? 'soft' : 'outline'}
-          aria-expanded={showFilters}
-          onClick={() => setShowFilters(value => !value)}
-          className="shrink-0 flex items-center gap-1.5 h-[38px]"
-        >
-          <Filter className="h-4 w-4" />
-          {t('coManaged.customerTickets.filters', 'Filters')}
-          {activeFilterCount > 0 && (
-            <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">{activeFilterCount}</span>
-          )}
-        </Button>
-        <Button
-          id={`${idPrefix}-reset`}
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={resetFilters}
-          className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-          disabled={!isFiltered}
-        >
-          <XCircle className="h-4 w-4" />
-          {t('resetFilters', 'Reset')}
-        </Button>
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          <CoManagedTicketListViewMenu id={`${idPrefix}-view-menu`} view={view} onChange={setView} />
-          <ShareActionsMenu
-            id={`${idPrefix}-share`}
-            tooltip={t('coManaged.customerTickets.share', 'Share')}
-            disabled={!result || exporting}
-            actions={[{
-              id: `${idPrefix}-export`,
-              icon: Download,
-              label: t(exporting ? 'coManaged.queue.exporting' : 'coManaged.queue.export'),
-              onSelect: () => { void exportTickets(); },
-              disabled: !result || exporting,
-            }]}
+          <ListToolbarFiltersToggle
+            id={`${idPrefix}-toggle-filters`}
+            type="button"
+            aria-expanded={showFilters}
+            open={showFilters}
+            activeCount={activeFilterCount}
+            label={t('coManaged.customerTickets.filters', 'Filters')}
+            onToggle={() => setShowFilters(value => !value)}
           />
-        </div>
-      </div>
-      {signalLabel && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="chip-primary inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] py-1 pl-2.5 pr-1.5 text-xs font-medium">
-            <span>{signalLabel}</span>
-            <button
-              type="button"
-              id={`${idPrefix}-clear-signal`}
-              aria-label={t('coManaged.customerTickets.clearSignal', 'Remove filter')}
-              onClick={() => updatePresentation({ signal: undefined })}
-              className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full"
-            >
-              <XCircle className="h-3.5 w-3.5" />
-            </button>
-          </span>
-        </div>
-      )}
-      {showFilters && (
-        <div className="flex flex-wrap items-end gap-3 border-t border-[rgb(var(--color-border-200))] pt-3">
-          <div className="min-w-[220px]">
-            <CustomSelect
-              id={`${idPrefix}-workspace`}
-              label={t('coManaged.queue.workspace', 'Workspace')}
-              value={ticketListWorkspaceToken(workspace)}
-              options={workspaceOptions}
-              onValueChange={token => { const next: TicketListWorkspace = token === 'all' ? 'all' : { tenant: token }; setWorkspace(next); updatePresentation({}, { workspace: next }); }}
-            />
-          </div>
-          {!fixedClientId && (
-            <div className="min-w-[220px]">
+          <ListToolbarResetButton
+            id={`${idPrefix}-reset`}
+            active={isFiltered}
+            label={t('resetFilters', 'Reset')}
+            onClick={resetFilters}
+          />
+          <ListToolbarEnd>
+            <CoManagedTicketListViewMenu id={`${idPrefix}-view-menu`} view={view} onChange={setView} />
+            {/* The page heading carries Share; an embedded list has no heading, so it keeps Share here. */}
+            {embedded && shareMenu}
+          </ListToolbarEnd>
+        </ListToolbarRow>
+        <ListFilterChips chips={filterChips} />
+        {showFilters && (
+          <ListFilterPanel>
+            <ListFilterRow density={filterDensity}>
               <CustomSelect
-                id={`${idPrefix}-client`}
-                label={t('coManaged.customerTickets.client', 'Client')}
-                value={presentation.clientId ?? 'all'}
-                options={[
-                  { value: 'all', label: t('coManaged.customerTickets.allClients', 'All clients') },
-                  ...(clientOptions ?? []).map(client => ({ value: client.client_id, label: client.client_name })),
-                  ...(presentation.clientId && !(clientOptions ?? []).some(client => client.client_id === presentation.clientId)
-                    ? [{ value: presentation.clientId, label: presentation.clientId }] : []),
-                ]}
-                onValueChange={value => updatePresentation({ clientId: value === 'all' ? undefined : value })}
+                id={`${idPrefix}-workspace`}
+                value={ticketListWorkspaceToken(workspace)}
+                options={workspaceOptions}
+                placeholder={t('coManaged.queue.workspace', 'Workspace')}
+                onValueChange={token => { const next: TicketListWorkspace = token === 'all' ? 'all' : { tenant: token }; setWorkspace(next); updatePresentation({}, { workspace: next }); }}
               />
-            </div>
-          )}
-          <div className="min-w-[180px]">
-            <CustomSelect
-              id={`${idPrefix}-state`}
-              label={t('coManaged.queue.state', 'Status')}
-              value={presentation.state}
-              options={(['open', 'closed', 'all'] as const).map(value => ({ value, label: t(`coManaged.queue.${value}`) }))}
-              onValueChange={value => updatePresentation({ state: value as TicketListPresentation['state'] })}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+              {!fixedClientId && (
+                <CustomSelect
+                  id={`${idPrefix}-client`}
+                  value={presentation.clientId ?? 'all'}
+                  options={[
+                    { value: 'all', label: t('coManaged.customerTickets.allClients', 'All clients') },
+                    ...(clientOptions ?? []).map(client => ({ value: client.client_id, label: client.client_name })),
+                    ...(presentation.clientId && !(clientOptions ?? []).some(client => client.client_id === presentation.clientId)
+                      ? [{ value: presentation.clientId, label: presentation.clientId }] : []),
+                  ]}
+                  placeholder={t('coManaged.customerTickets.client', 'Client')}
+                  onValueChange={value => updatePresentation({ clientId: value === 'all' ? undefined : value })}
+                />
+              )}
+              <CustomSelect
+                id={`${idPrefix}-state`}
+                value={presentation.state}
+                options={(['open', 'closed', 'all'] as const).map(value => ({ value, label: t(`coManaged.queue.${value}`) }))}
+                placeholder={t('coManaged.queue.state', 'Status')}
+                onValueChange={value => updatePresentation({ state: value as TicketListPresentation['state'] })}
+              />
+            </ListFilterRow>
+          </ListFilterPanel>
+        )}
+      </div>
+    </ListToolbarSurface>
   );
 
   return (
     <div id={idPrefix} data-automation-id={idPrefix} className={embedded ? undefined : 'p-6'}>
       {!embedded && (
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">{t('coManaged.customerTickets.title', 'Customer Tickets')}</h1>
-          <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">{t(`coManaged.queue.${scope.view}Description`)}</p>
+        <>
+          <ListPageHeading
+            title={t('coManaged.customerTickets.title', 'Customer Tickets')}
+            subtitle={t(`coManaged.queue.${scope.view}Description`)}
+            actions={shareMenu}
+          />
           <div
             role="group"
             aria-label={t('coManaged.queue.view', 'View')}
-            className="mt-4 inline-flex rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-0.5"
+            className="mb-4 inline-flex rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-0.5"
           >
             {(['working', 'oversight'] as const).map(candidate => (
               <Button
@@ -517,11 +516,13 @@ export default function QualifiedTicketList({
               </Button>
             ))}
           </div>
-        </div>
+        </>
       )}
+      <ListCard>
       {toolbar}
+      <div className={filterDensity.filterPadding}>
       {error ? (
-        <div role="alert" className="mt-4 flex flex-wrap items-center gap-3 text-destructive">
+        <div role="alert" className="flex flex-wrap items-center gap-3 text-destructive">
           <span>{t(error === 'export' ? 'coManaged.queue.exportError' : 'coManaged.queue.loadError')}</span>
           {/* Retry re-reads under the same applied filters; it never widens an explicit workspace or fixed client. */}
           <Button id={`${idPrefix}-retry`} type="button" variant="outline" size="sm" onClick={() => setRefresh(value => value + 1)}>
@@ -529,11 +530,11 @@ export default function QualifiedTicketList({
           </Button>
         </div>
       ) : !result ? (
-        <p role="status" className="mt-4">{t('coManaged.ticket.loading', 'Loading tickets…')}</p>
+        <p role="status">{t('coManaged.ticket.loading', 'Loading tickets…')}</p>
       ) : (
         <>
-          <p ref={countsRef} tabIndex={-1} role="status" className="mt-4 text-sm text-[rgb(var(--color-text-500))] outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))]">
-            {t('coManaged.queue.counts', { total: result.totalCount, open: result.openCount, closed: result.closedCount })}
+          <p ref={countsRef} tabIndex={-1} role="status" className="text-sm text-[rgb(var(--color-text-500))] outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))]">
+            {t('coManaged.queue.counts', { count: result.totalCount, open: result.openCount, closed: result.closedCount })}
           </p>
           <div className="mt-3">
             <CoManagedTicketHandbackComposer
@@ -574,6 +575,8 @@ export default function QualifiedTicketList({
           )}
         </>
       )}
+      </div>
+      </ListCard>
     </div>
   );
 }

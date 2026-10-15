@@ -133,13 +133,45 @@ describe('T023 — dismissal is per viewer and per count', () => {
     first.unmount();
   };
 
-  it('stays dismissed when the count falls below the dismissed value', async () => {
-    await dismissAt({ escalatedUnassigned: 2, awaitingReply: 2 });
-    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 1, awaitingReply: 1 } });
-    mount();
+  it('shows the strip again for new work after a dismissed count fell to zero (3 -> dismiss -> 0 -> 2)', async () => {
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 3, awaitingReply: 0 } });
+    const first = mount();
+    await screen.findByTestId('co-managed-callout');
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    first.unmount();
+    // All three handled: the count is 0 and nothing renders, but the stored dismissal must reset.
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 0, awaitingReply: 0 } });
+    const second = mount();
     await waitFor(() => expect(mocks.signals).toHaveBeenCalledTimes(2));
     await act(async () => { await Promise.resolve(); });
     expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+    second.unmount();
+    // Two new escalations arrive.
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 2, awaitingReply: 0 } });
+    mount();
+    expect(await screen.findByRole('link', { name: 'coManaged.callout.escalatedUnassigned:2' })).toBeInTheDocument();
+  });
+
+  it('keeps the dismissal while the count is unknown (error) so a failed read does not reset it', async () => {
+    await dismissAt({ escalatedUnassigned: 2, awaitingReply: 2 });
+    mocks.signals.mockRejectedValue(new Error('denied'));
+    mount();
+    await waitFor(() => expect(mocks.signals).toHaveBeenCalledTimes(2));
+    await act(async () => { await Promise.resolve(); });
+    expect(JSON.parse(window.localStorage.getItem('alga.coManaged.callout.dismissed:viewer-1:all')!)).toEqual({ escalatedUnassigned: 2, awaitingReply: 2 });
+  });
+
+  it('stays dismissed while the count is at or below what was dismissed but above zero, and a rise past the lowered value returns', async () => {
+    await dismissAt({ escalatedUnassigned: 3, awaitingReply: 0 });
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 2, awaitingReply: 0 } });
+    const second = mount();
+    await waitFor(() => expect(mocks.signals).toHaveBeenCalledTimes(2));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId('co-managed-callout')).toBeNull();
+    second.unmount();
+    mocks.signals.mockResolvedValue({ assignedRelationshipCount: 2, signals: { escalatedUnassigned: 3, awaitingReply: 0 } });
+    mount();
+    expect(await screen.findByRole('link', { name: 'coManaged.callout.escalatedUnassigned:3' })).toBeInTheDocument();
   });
 
   it('returns when the count rises above the dismissed value', async () => {
