@@ -185,7 +185,8 @@
       "createTicket": "Create ticket",
       "requestAppointment": "Request appointment",
       "viewLatestInvoice": "View Latest Invoice",
-      "newServiceRequest": "New service request"
+      "newServiceRequest": "New service request",
+      "createSupportTicket": "Create Support Ticket"
     },
     "appointments": {
       "title": "Upcoming Appointments",

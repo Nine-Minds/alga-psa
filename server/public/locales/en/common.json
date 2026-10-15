@@ -1955,6 +1955,13 @@
     },
     "kanbanBoard": {
       "loading": "Loading Kanban board"
+    },
+    "chart": {
+      "loading": "Loading chart...",
+      "loadingNamed": "Loading {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Loading settings configuration..."
     }
   },
   "dialogs": {

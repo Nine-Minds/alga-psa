@@ -1955,6 +1955,13 @@
     },
     "kanbanBoard": {
       "loading": "Läser in Kanban-tavlan…"
+    },
+    "chart": {
+      "loading": "Läser in diagram...",
+      "loadingNamed": "Läser in {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Läser in inställningar..."
     }
   },
   "dialogs": {

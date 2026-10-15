@@ -179,7 +179,8 @@
       "createTicket": "Criar ticket",
       "requestAppointment": "Solicitar agendamento",
       "viewLatestInvoice": "Ver última fatura",
-      "newServiceRequest": "Nova solicitação de serviço"
+      "newServiceRequest": "Nova solicitação de serviço",
+      "createSupportTicket": "Criar ticket de suporte"
     },
     "appointments": {
       "title": "Próximos compromissos",

@@ -1670,5 +1670,10 @@
     },
     "emptyValue": "—",
     "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Cargando formulario de activo..."
+    }
   }
 }

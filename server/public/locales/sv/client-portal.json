@@ -185,7 +185,8 @@
       "createTicket": "Skapa ärende",
       "requestAppointment": "Begär bokning",
       "viewLatestInvoice": "Visa senaste fakturan",
-      "newServiceRequest": "Ny tjänsteförfrågan"
+      "newServiceRequest": "Ny tjänsteförfrågan",
+      "createSupportTicket": "Skapa supportärende"
     },
     "appointments": {
       "title": "Kommande bokningar",

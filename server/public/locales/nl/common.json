@@ -1955,6 +1955,13 @@
     },
     "kanbanBoard": {
       "loading": "Kanbanbord laden"
+    },
+    "chart": {
+      "loading": "Grafiek laden...",
+      "loadingNamed": "{{title}} laden..."
+    },
+    "settingsTab": {
+      "loading": "Instellingen laden..."
     }
   },
   "dialogs": {
