@@ -1799,7 +1799,8 @@
       "everyone": "Iedereen",
       "aiAssistant": "Alga AI-assistent",
       "noUsername": "geen gebruikersnaam",
-      "userTitle": "{{displayName}} ({{username}})"
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "vermelding"
     }
   },
   "emailPreferences": {
@@ -2116,6 +2117,9 @@
     }
   },
   "widgets": {
+    "highlight": {
+      "ariaLabel": "Gemarkeerde inhoud"
+    },
     "buttonLink": {
       "unavailable": "Link niet beschikbaar",
       "actions": {

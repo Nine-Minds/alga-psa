@@ -111,6 +111,9 @@ const SKIP_FILE = [
   // Copy-free presentation wrappers: callers supply and translate all text.
   // Their class strings and TypeScript signatures are scanner false positives.
   /\/packages\/ui\/src\/components\/(?:Alert|Card)\.tsx$/,
+  /\/packages\/ui-kit\/src\/components\/Button\.tsx$/,
+  // This streaming wrapper displays only the Alga AI brand and supplied content.
+  /\/packages\/ui\/src\/editor\/AiResponseBlock\.tsx$/,
   /\.test\.[jt]sx?$/,
   /\.spec\.[jt]sx?$/,
   /__tests__/,

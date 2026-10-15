@@ -1799,7 +1799,8 @@
       "everyone": "Alla",
       "aiAssistant": "Alga AI-assistent",
       "noUsername": "inget användarnamn",
-      "userTitle": "{{displayName}} ({{username}})"
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "omnämnande"
     }
   },
   "listViews": {
@@ -2116,6 +2117,9 @@
     }
   },
   "widgets": {
+    "highlight": {
+      "ariaLabel": "Markerat innehåll"
+    },
     "buttonLink": {
       "unavailable": "Länken är inte tillgänglig",
       "actions": {

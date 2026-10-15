@@ -2081,6 +2081,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "mention",
       ",",
       "3CX",
       "Acme IT Solutions",

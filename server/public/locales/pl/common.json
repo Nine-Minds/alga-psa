@@ -1799,7 +1799,8 @@
       "everyone": "Wszyscy",
       "aiAssistant": "Asystent Alga AI",
       "noUsername": "brak nazwy użytkownika",
-      "userTitle": "{{displayName}} ({{username}})"
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "wzmianka"
     }
   },
   "emailPreferences": {
@@ -2116,6 +2117,9 @@
     }
   },
   "widgets": {
+    "highlight": {
+      "ariaLabel": "Wyróżniona treść"
+    },
     "buttonLink": {
       "unavailable": "Link niedostępny",
       "actions": {
