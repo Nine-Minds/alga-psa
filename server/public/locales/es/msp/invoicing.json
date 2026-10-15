@@ -147,6 +147,7 @@
       "preview": {
         "title": "Vista previa de factura",
         "description": "Esta es una vista previa de cómo se verá la factura una vez finalizada.",
+        "noBillingEmailWarning": "{{clientName}} no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada.",
         "summary_one": "Factura {{count}} seleccionada",
         "summary_other": "Facturas {{count}} seleccionadas",
         "summaryCombined": "Esta selección generará una factura combinada.",
@@ -397,7 +398,7 @@
       "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
     },
     "warnings": {
-      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."
+      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. La factura se puede generar, pero no se podrá enviar por correo electrónico ni pagar en línea hasta que configure un contacto de facturación, un correo electrónico de facturación del cliente o un correo electrónico en la ubicación de facturación o predeterminada."
     },
     "errorFallback": {
       "title": "algo salió mal",

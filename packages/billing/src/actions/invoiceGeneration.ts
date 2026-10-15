@@ -36,6 +36,7 @@ import {
   IInvoice,
   IRecurringDueSelectionInput,
   PreviewInvoiceResponse,
+  InvoiceBillingEmailWarning,
   RecurringInvoiceFailureCode,
   InvoiceViewModel,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
@@ -2258,6 +2259,8 @@ interface BuiltPreviewInvoice {
    * scheduled sources, which generation treats as a reviewed (empty) set.
    */
   expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
+  /** Set when the billed client/profile has no address to email the invoice to. */
+  billingEmailWarning?: InvoiceBillingEmailWarning;
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2290,22 +2293,22 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     .select('client_name')
     .first();
 
+  // Advisory: the preview still renders without an address, the dialog just
+  // warns that the invoice cannot be emailed or paid online until one is set.
+  let billingEmailWarning: InvoiceBillingEmailWarning | undefined;
   if (clientForValidation) {
     const emailValidation = await validateClientBillingEmail(
       knex,
       tenant,
       client_id,
       clientForValidation.client_name,
+      selectedProfileId,
     );
     if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        canonicalSelection,
-      );
+      billingEmailWarning = {
+        code: 'NO_BILLING_EMAIL',
+        params: { clientName: clientForValidation.client_name },
+      };
     }
   }
 
@@ -2598,6 +2601,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
     expectedRecurringPricingSources,
+    ...(billingEmailWarning ? { billingEmailWarning } : {}),
   };
 }
 
@@ -2770,6 +2774,8 @@ export type RecurringGroupedPreviewResponse = {
      * pass back through generation as expectedUsagePeriodTotals.
      */
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    /** Set when the billed client/profile has no address to email the invoice to. */
+    billingEmailWarning?: InvoiceBillingEmailWarning;
     /**
      * Reviewed recurring revision/catalog sources for scheduled charges, to
      * pass back through generation as expectedRecurringPricingSources. Always
@@ -2841,6 +2847,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
             : {}),
           expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+          ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
         };
       }),
     );
@@ -2917,6 +2924,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3007,6 +3015,7 @@ export const previewInvoice = withAuth(async (
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
       expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
+      ...(preview.billingEmailWarning ? { billingEmailWarning: preview.billingEmailWarning } : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3395,23 +3404,6 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   const cycleStart = normalizedSelectorInput.windowStart;
   const cycleEnd = normalizedSelectorInput.windowEnd;
 
-  const clientForValidation = await tenantDb(knex, tenant).table('clients')
-    .where({ client_id })
-    .select('client_name')
-    .first();
-  if (clientForValidation) {
-    const emailValidation = await validateClientBillingEmail(knex, tenant, client_id, clientForValidation.client_name);
-    if (!emailValidation.valid) {
-      throw withRecurringWindowErrorContext(
-        new ManualInvoiceError(
-          emailValidation.code ?? 'NO_BILLING_EMAIL',
-          emailValidation.error ?? 'Client billing email is required',
-          emailValidation.params ?? { clientName: clientForValidation.client_name },
-        ),
-        normalizedSelectorInput,
-      );
-    }
-  }
 
   for (const selectorInput of params.normalizedSelectorInputs) {
     const existingInvoice = await findExistingRecurringInvoiceForSelectionInput({
