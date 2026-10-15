@@ -3782,5 +3782,24 @@
       "xx": "Pseudo-język (xx)",
       "yy": "Pseudo-język (yy)"
     }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Statystyki użytkowania",
+        "enabledDescription": "Włączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt",
+        "disabledDescription": "Wyłączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt"
+      }
+    },
+    "environmentHelp": "Statystyki użytkowania są kontrolowane przez zmienną środowiskową {{variable}}. Skontaktuj się z administratorem systemu, aby zmienić to ustawienie.",
+    "sections": {
+      "collectedData": {
+        "title": "Jakie dane są zbierane",
+        "featureUsage": "Wzorce korzystania z funkcji (bez danych osobowych)",
+        "errorReports": "Raporty błędów do debugowania",
+        "performance": "Wskaźniki wydajności",
+        "configuration": "Konfiguracja systemu (zanonimizowana)"
+      }
+    }
   }
 }

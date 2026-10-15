@@ -1387,6 +1387,11 @@
       "projects": "Projetos",
       "system": "Sistema",
       "appointments": "Compromissos"
+    },
+    "theme": {
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
     }
   },
   "timePicker": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Aumentar espaçamento"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Selecione os contatos..."
+      },
+      "search": {
+        "placeholder": "Pesquisar contatos..."
+      }
+    },
+    "noResults": "Nenhum resultado encontrado",
+    "noContacts": "Nenhum contato disponível",
+    "noEmail": "sem email",
+    "actions": {
+      "clearAll": "Limpar tudo"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Alternar tema",
+    "selected": "Selecionado"
   }
 }

@@ -294,7 +294,16 @@
     "installCompleteError": "Extension finalisée, mais l'installation ne s'est pas terminée",
     "installUnexpected": "Erreur inattendue lors de l'installation",
     "finalizeRequireManifest": "Veuillez coller le JSON du manifeste avant de finaliser.",
-    "finalizeProvidedFailed": "Échec de la finalisation avec le manifeste fourni"
+    "finalizeProvidedFailed": "Échec de la finalisation avec le manifeste fourni",
+    "pro": {
+      "title": "Extensions (Pro)",
+      "description": "L’installation et la gestion des extensions sont disponibles dans AlgaPSA Pro.",
+      "featureTitle": "Fonctionnalité Pro",
+      "help": "Le programme d’installation des extensions est disponible uniquement dans AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "En savoir plus sur Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Installer une extension",

@@ -294,7 +294,16 @@
     "installCompleteError": "Erweiterung abgeschlossen, aber Installation wurde nicht beendet",
     "installUnexpected": "Unerwarteter Fehler während der Installation",
     "finalizeRequireManifest": "Bitte fügen Sie das Manifest-JSON ein, bevor Sie abschließen.",
-    "finalizeProvidedFailed": "Abschluss mit dem bereitgestellten Manifest fehlgeschlagen"
+    "finalizeProvidedFailed": "Abschluss mit dem bereitgestellten Manifest fehlgeschlagen",
+    "pro": {
+      "title": "Erweiterungen (Pro)",
+      "description": "Die Installation und Verwaltung von Erweiterungen sind in AlgaPSA Pro verfügbar.",
+      "featureTitle": "Pro-Funktion",
+      "help": "Das Installationsprogramm für Erweiterungen ist nur in AlgaPSA Pro verfügbar.",
+      "actions": {
+        "learnMore": "Mehr über Pro erfahren"
+      }
+    }
   },
   "installSimple": {
     "title": "Erweiterung installieren",

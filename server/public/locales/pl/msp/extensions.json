@@ -294,7 +294,16 @@
     "installCompleteError": "Rozszerzenie zostało sfinalizowane, ale instalacja nie została zakończona",
     "installUnexpected": "Nieoczekiwany błąd podczas instalacji",
     "finalizeRequireManifest": "Wklej manifest JSON przed finalizacją.",
-    "finalizeProvidedFailed": "Nie udało się sfinalizować z podanym manifestem"
+    "finalizeProvidedFailed": "Nie udało się sfinalizować z podanym manifestem",
+    "pro": {
+      "title": "Rozszerzenia (Pro)",
+      "description": "Instalowanie rozszerzeń i zarządzanie nimi są dostępne w AlgaPSA Pro.",
+      "featureTitle": "Funkcja Pro",
+      "help": "Instalator rozszerzeń jest dostępny tylko w AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Dowiedz się więcej o Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Zainstaluj rozszerzenie",

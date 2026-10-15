@@ -1387,6 +1387,11 @@
       "projects": "Projekt",
       "system": "System",
       "appointments": "Bokningar"
+    },
+    "theme": {
+      "light": "Ljust",
+      "dark": "Mörkt",
+      "system": "System"
     }
   },
   "timePicker": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Öka avståndet"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Välj kontakter..."
+      },
+      "search": {
+        "placeholder": "Sök kontakter..."
+      }
+    },
+    "noResults": "Inga resultat hittades",
+    "noContacts": "Inga kontakter tillgängliga",
+    "noEmail": "ingen e-postadress",
+    "actions": {
+      "clearAll": "Rensa alla"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Byt tema",
+    "selected": "Valt"
   }
 }

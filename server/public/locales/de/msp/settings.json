@@ -3782,5 +3782,24 @@
       "xx": "Pseudosprache (xx)",
       "yy": "Pseudosprache (yy)"
     }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Nutzungsstatistiken",
+        "enabledDescription": "Aktiviert - Sendet anonyme Nutzungsdaten zur Verbesserung des Produkts",
+        "disabledDescription": "Deaktiviert - Sendet anonyme Nutzungsdaten zur Verbesserung des Produkts"
+      }
+    },
+    "environmentHelp": "Nutzungsstatistiken werden über die Umgebungsvariable {{variable}} gesteuert. Wenden Sie sich an Ihren Systemadministrator, um diese Einstellung zu ändern.",
+    "sections": {
+      "collectedData": {
+        "title": "Welche Daten werden erfasst",
+        "featureUsage": "Nutzungsmuster von Funktionen (keine personenbezogenen Daten)",
+        "errorReports": "Fehlerberichte zur Fehlerbehebung",
+        "performance": "Leistungskennzahlen",
+        "configuration": "Systemkonfiguration (anonymisiert)"
+      }
+    }
   }
 }

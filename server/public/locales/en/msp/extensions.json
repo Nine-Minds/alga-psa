@@ -294,7 +294,16 @@
     "installCompleteError": "Extension finalized, but install did not complete",
     "installUnexpected": "Unexpected error during installation",
     "finalizeRequireManifest": "Please paste the manifest JSON before finalizing.",
-    "finalizeProvidedFailed": "Failed to finalize with provided manifest"
+    "finalizeProvidedFailed": "Failed to finalize with provided manifest",
+    "pro": {
+      "title": "Extensions (Pro)",
+      "description": "Extension installation and management are available in AlgaPSA Pro.",
+      "featureTitle": "Pro feature",
+      "help": "The extensions installer is only available in AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Learn about Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Install Extension",

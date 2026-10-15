@@ -1343,6 +1343,11 @@
       "projects": "Projets",
       "system": "Système",
       "appointments": "Rendez-vous"
+    },
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
     }
   },
   "form": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Augmenter l’espacement"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Sélectionner des contacts..."
+      },
+      "search": {
+        "placeholder": "Rechercher des contacts..."
+      }
+    },
+    "noResults": "Aucun résultat trouvé",
+    "noContacts": "Aucun contact disponible",
+    "noEmail": "sans e-mail",
+    "actions": {
+      "clearAll": "Tout effacer"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Changer de thème",
+    "selected": "Sélectionné"
   }
 }

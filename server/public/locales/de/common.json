@@ -1343,6 +1343,11 @@
       "projects": "Projekte",
       "system": "System",
       "appointments": "Termine"
+    },
+    "theme": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
     }
   },
   "form": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Abstände vergrößern"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Kontakte auswählen..."
+      },
+      "search": {
+        "placeholder": "Kontakte suchen..."
+      }
+    },
+    "noResults": "Keine Ergebnisse gefunden",
+    "noContacts": "Keine Kontakte verfügbar",
+    "noEmail": "keine E-Mail",
+    "actions": {
+      "clearAll": "Alles löschen"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Design wechseln",
+    "selected": "Ausgewählt"
   }
 }

@@ -2065,5 +2065,22 @@
     "question": "Zależności nie są wymuszane, więc możesz kontynuować. Czy chcesz to zrobić?",
     "proceed": "Kontynuuj mimo to",
     "cancel": "Anuluj"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompaktowy"
+    },
+    "spacious": {
+      "label": "Przestronny"
+    },
+    "decrease": {
+      "title": "Zmniejsz szerokość kolumn"
+    },
+    "increase": {
+      "title": "Zwiększ szerokość kolumn"
+    },
+    "reset": {
+      "title": "Przywróć wartość domyślną"
+    }
   }
 }

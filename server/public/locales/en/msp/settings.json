@@ -3782,5 +3782,24 @@
       "xx": "Pseudo (xx)",
       "yy": "Pseudo (yy)"
     }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Usage Statistics",
+        "enabledDescription": "Enabled - Sends anonymous usage data to help improve the product",
+        "disabledDescription": "Disabled - Sends anonymous usage data to help improve the product"
+      }
+    },
+    "environmentHelp": "Usage statistics are controlled via the {{variable}} environment variable. Contact your system administrator to modify this setting.",
+    "sections": {
+      "collectedData": {
+        "title": "What data is collected",
+        "featureUsage": "Feature usage patterns (no personal data)",
+        "errorReports": "Error reports for debugging",
+        "performance": "Performance metrics",
+        "configuration": "System configuration (anonymized)"
+      }
+    }
   }
 }

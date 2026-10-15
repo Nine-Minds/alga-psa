@@ -85,7 +85,9 @@
     "noService": "Geen service",
     "servicePlaceholder": "Standaardservice selecteren",
     "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} taken",
+    "taskCount_many": "{{count}} taken"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
     "taskTypeFallback": "Taak",
     "timeline": "Tijdlijn",
-    "loadingTimeline": "Tijdlijn laden..."
+    "loadingTimeline": "Tijdlijn laden...",
+    "bulkTagsSuccess_few": "Labels toegevoegd aan {{count}} taken",
+    "bulkTagsSuccess_many": "Labels toegevoegd aan {{count}} taken"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Neemt {{service}} over van het project.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Startdatum van taak",
-    "startDatePlaceholder": "Selecteer startdatum"
+    "startDatePlaceholder": "Selecteer startdatum",
+    "createdTicketsIntro_few": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "createdTicketsIntro_many": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "documentCleanupFailure_few": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentCleanupFailure_many": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentsCleanupIntro_few": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "documentsCleanupIntro_many": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "ticketCleanupFailure_few": "{{count}} tickets konden niet worden verwijderd",
+    "ticketCleanupFailure_many": "{{count}} tickets konden niet worden verwijderd"
   },
   "taskDependencies": {
     "title": "Afhankelijkheden",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "{{count}} geselecteerde exporteren",
     "selectedTasksNotice_one": "{{count}} geselecteerde taak wordt geëxporteerd.",
-    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd."
+    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "phasesSelected_few": "{{selected}} van {{total}} fasen geselecteerd",
+    "phasesSelected_many": "{{selected}} van {{total}} fasen geselecteerd",
+    "selectedTasksNotice_few": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "selectedTasksNotice_many": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "success_few": "{{count}} taken naar CSV geëxporteerd.",
+    "success_many": "{{count}} taken naar CSV geëxporteerd."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Status komt niet overeen met een bestaande status voor deze fase. Los op in de mappingstappen voor de import.",
     "statusFallbackSuffix": "Standaard",
     "statusFallbackTooltip": "De standaard fallback-status voor deze fase wordt gebruikt.",
-    "inPhaseBadge": "binnen {{phase}}"
+    "inPhaseBadge": "binnen {{phase}}",
+    "taskCountLabel_few": "({{count}} taken)",
+    "taskCountLabel_many": "({{count}} taken)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Taken",
       "badgeCount_one": "{{count}} Taak",
       "billsToProject": "Tijd wordt als projecttijd gefactureerd",
-      "billsToClient": "Tijd wordt op klantniveau gefactureerd"
+      "billsToClient": "Tijd wordt op klantniveau gefactureerd",
+      "badgeCount_few": "{{count}} Taken",
+      "badgeCount_many": "{{count}} Taken"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "{{count}} taken",
       "unknownUser": "Onbekend",
       "unknownTask": "Onbekende taak",
-      "checklistCountTitle": "{{count}} checklist-item"
+      "checklistCountTitle": "{{count}} checklist-item",
+      "taskCount_few": "{{count}} taken",
+      "taskCount_many": "{{count}} taken"
     },
     "taskForm": {
       "addTitle": "Taak toevoegen",
@@ -1625,7 +1649,9 @@
       "submitting": "Labels toevoegen...",
       "confirm_one": "Labels toevoegen aan {{count}} taak",
       "confirm_other": "Labels toevoegen aan {{count}} taken",
-      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
+      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:",
+      "confirm_few": "Labels toevoegen aan {{count}} taken",
+      "confirm_many": "Labels toevoegen aan {{count}} taken"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
       "edit": "Voorwaarden bewerken",
       "saved": "Factureringsvoorwaarden bijgewerkt",
-      "dialogTitle": "Factureringsvoorwaarden bewerken"
+      "dialogTitle": "Factureringsvoorwaarden bewerken",
+      "lockedSummary_few": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
+      "lockedSummary_many": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet."
     },
     "setup": {
       "title": "Dit project factureren",
@@ -2037,5 +2065,22 @@
     "question": "Afhankelijkheden worden niet afgedwongen, dus u kunt doorgaan. Wilt u dat?",
     "proceed": "Toch doorgaan",
     "cancel": "Annuleren"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Ruim"
+    },
+    "decrease": {
+      "title": "Kolombreedte verkleinen"
+    },
+    "increase": {
+      "title": "Kolombreedte vergroten"
+    },
+    "reset": {
+      "title": "Standaardwaarde herstellen"
+    }
   }
 }

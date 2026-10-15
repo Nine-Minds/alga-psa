@@ -3782,5 +3782,24 @@
       "xx": "Pseudotaal (xx)",
       "yy": "Pseudotaal (yy)"
     }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Gebruiksstatistieken",
+        "enabledDescription": "Ingeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren",
+        "disabledDescription": "Uitgeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren"
+      }
+    },
+    "environmentHelp": "Gebruiksstatistieken worden beheerd via de omgevingsvariabele {{variable}}. Neem contact op met uw systeembeheerder om deze instelling te wijzigen.",
+    "sections": {
+      "collectedData": {
+        "title": "Welke gegevens worden verzameld",
+        "featureUsage": "Gebruikspatronen van functies (geen persoonsgegevens)",
+        "errorReports": "Foutrapporten voor foutopsporing",
+        "performance": "Prestatiestatistieken",
+        "configuration": "Systeemconfiguratie (geanonimiseerd)"
+      }
+    }
   }
 }

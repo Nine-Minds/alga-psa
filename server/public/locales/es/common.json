@@ -1343,6 +1343,11 @@
       "projects": "Proyectos",
       "system": "Sistema",
       "appointments": "Citas"
+    },
+    "theme": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
     }
   },
   "form": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Aumentar espaciado"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Seleccione contactos..."
+      },
+      "search": {
+        "placeholder": "Buscar contactos..."
+      }
+    },
+    "noResults": "No se encontraron resultados",
+    "noContacts": "No hay contactos disponibles",
+    "noEmail": "sin correo electrónico",
+    "actions": {
+      "clearAll": "Borrar todo"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Cambiar tema",
+    "selected": "Seleccionado"
   }
 }

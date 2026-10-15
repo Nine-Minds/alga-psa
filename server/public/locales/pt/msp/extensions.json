@@ -294,7 +294,16 @@
     "installCompleteError": "Extensão finalizada, mas a instalação não foi concluída",
     "installUnexpected": "Erro inesperado durante a instalação",
     "finalizeRequireManifest": "Cole o JSON do manifesto antes de finalizar.",
-    "finalizeProvidedFailed": "Falha ao finalizar com o manifesto fornecido"
+    "finalizeProvidedFailed": "Falha ao finalizar com o manifesto fornecido",
+    "pro": {
+      "title": "Extensões (Pro)",
+      "description": "A instalação e o gerenciamento de extensões estão disponíveis no AlgaPSA Pro.",
+      "featureTitle": "Recurso Pro",
+      "help": "O instalador de extensões está disponível apenas no AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Saiba mais sobre o Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Instalar extensão",

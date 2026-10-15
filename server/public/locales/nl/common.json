@@ -1343,6 +1343,11 @@
       "projects": "Projecten",
       "system": "Systeem",
       "appointments": "Afspraken"
+    },
+    "theme": {
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
     }
   },
   "form": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Afstand vergroten"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Contacten selecteren..."
+      },
+      "search": {
+        "placeholder": "Contacten zoeken..."
+      }
+    },
+    "noResults": "Geen resultaten gevonden",
+    "noContacts": "Geen contacten beschikbaar",
+    "noEmail": "geen e-mail",
+    "actions": {
+      "clearAll": "Alles wissen"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Thema wisselen",
+    "selected": "Geselecteerd"
   }
 }

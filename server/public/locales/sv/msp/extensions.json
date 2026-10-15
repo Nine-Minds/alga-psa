@@ -294,7 +294,16 @@
     "installCompleteError": "Tillägget har slutförts, men installationen blev inte klar",
     "installUnexpected": "Ett oväntat fel uppstod under installationen",
     "finalizeRequireManifest": "Klistra in manifestet i JSON-format innan du slutför installationen.",
-    "finalizeProvidedFailed": "Det gick inte att slutföra installationen med det angivna manifestet"
+    "finalizeProvidedFailed": "Det gick inte att slutföra installationen med det angivna manifestet",
+    "pro": {
+      "title": "Tillägg (Pro)",
+      "description": "Installation och hantering av tillägg är tillgängliga i AlgaPSA Pro.",
+      "featureTitle": "Pro-funktion",
+      "help": "Installationsprogrammet för tillägg är endast tillgängligt i AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Läs mer om Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Installera tillägg",

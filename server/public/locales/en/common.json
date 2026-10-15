@@ -1387,6 +1387,11 @@
       "projects": "Projects",
       "system": "System",
       "appointments": "Appointments"
+    },
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
     }
   },
   "timePicker": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Increase spacing"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Select contacts..."
+      },
+      "search": {
+        "placeholder": "Search contacts..."
+      }
+    },
+    "noResults": "No results found",
+    "noContacts": "No contacts available",
+    "noEmail": "no email",
+    "actions": {
+      "clearAll": "Clear all"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Theme toggle",
+    "selected": "Selected"
   }
 }

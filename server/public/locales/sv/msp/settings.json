@@ -3782,5 +3782,24 @@
       "xx": "Pseudospråk (xx)",
       "yy": "Pseudospråk (yy)"
     }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Användningsstatistik",
+        "enabledDescription": "Aktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten",
+        "disabledDescription": "Inaktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten"
+      }
+    },
+    "environmentHelp": "Användningsstatistik styrs via miljövariabeln {{variable}}. Kontakta din systemadministratör för att ändra den här inställningen.",
+    "sections": {
+      "collectedData": {
+        "title": "Vilka data samlas in",
+        "featureUsage": "Användningsmönster för funktioner (inga personuppgifter)",
+        "errorReports": "Felrapporter för felsökning",
+        "performance": "Prestandamått",
+        "configuration": "Systemkonfiguration (anonymiserad)"
+      }
+    }
   }
 }

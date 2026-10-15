@@ -85,7 +85,9 @@
     "noService": "Nessun servizio",
     "servicePlaceholder": "Seleziona servizio predefinito",
     "serviceHelp": "Usato per le registrazioni ore sulle attività di questa fase quando l’attività stessa non imposta un servizio.",
-    "serviceDisplayLabel": "Servizio"
+    "serviceDisplayLabel": "Servizio",
+    "taskCount_few": "{{count}} attività",
+    "taskCount_many": "{{count}} attività"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Impossibile aggiungere i tag alle attività selezionate",
     "taskTypeFallback": "Attività",
     "timeline": "Cronologia",
-    "loadingTimeline": "Caricamento cronologia..."
+    "loadingTimeline": "Caricamento cronologia...",
+    "bulkTagsSuccess_few": "Tag aggiunti a {{count}} attività",
+    "bulkTagsSuccess_many": "Tag aggiunti a {{count}} attività"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Eredita {{service}} dal progetto.",
     "startDateLabel": "Data di inizio",
     "taskStartDateLabel": "Data di inizio dell'attività",
-    "startDatePlaceholder": "Seleziona data di inizio"
+    "startDatePlaceholder": "Seleziona data di inizio",
+    "createdTicketsIntro_few": "Hai creato {{count}} ticket durante questa sessione:",
+    "createdTicketsIntro_many": "Hai creato {{count}} ticket durante questa sessione:",
+    "documentCleanupFailure_few": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentCleanupFailure_many": "Impossibile eliminare {{count}} documenti: rimarranno in Documenti",
+    "documentsCleanupIntro_few": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Hai {{count}} documenti che sono stati {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Impossibile eliminare {{count}} ticket",
+    "ticketCleanupFailure_many": "Impossibile eliminare {{count}} ticket"
   },
   "taskDependencies": {
     "title": "Dipendenze",
@@ -644,7 +656,13 @@
     },
     "exportSelected": "Esporta {{count}} selezionata/e",
     "selectedTasksNotice_one": "Esportazione di {{count}} attività selezionata.",
-    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate."
+    "selectedTasksNotice_other": "Esportazione di {{count}} attività selezionate.",
+    "phasesSelected_few": "{{selected}} di {{total}} fasi selezionate",
+    "phasesSelected_many": "{{selected}} di {{total}} fasi selezionate",
+    "selectedTasksNotice_few": "Esportazione di {{count}} attività selezionate.",
+    "selectedTasksNotice_many": "Esportazione di {{count}} attività selezionate.",
+    "success_few": "{{count}} attività esportate con successo in CSV.",
+    "success_many": "{{count}} attività esportate con successo in CSV."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -765,7 +783,9 @@
     "statusUnmatchedTooltip": "Lo stato non corrisponde a nessuno stato esistente per questa fase. Risolvi nei passaggi di mappatura prima dell'importazione.",
     "statusFallbackSuffix": "Predefinito",
     "statusFallbackTooltip": "Utilizzo dello stato di ripiego predefinito per questa fase.",
-    "inPhaseBadge": "nella fase {{phase}}"
+    "inPhaseBadge": "nella fase {{phase}}",
+    "taskCountLabel_few": "({{count}} attività)",
+    "taskCountLabel_many": "({{count}} attività)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +859,9 @@
       "badgeCount_other": "{{count}} Attività",
       "badgeCount_one": "{{count}} Attività",
       "billsToProject": "Le ore sono fatturate come ore di progetto",
-      "billsToClient": "Le ore sono fatturate a livello cliente"
+      "billsToClient": "Le ore sono fatturate a livello cliente",
+      "badgeCount_few": "{{count}} Attività",
+      "badgeCount_many": "{{count}} Attività"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",
@@ -1215,7 +1237,9 @@
       "taskCount_other": "{{count}} attività",
       "unknownUser": "Sconosciuto",
       "unknownTask": "Attività sconosciuta",
-      "checklistCountTitle": "{{count}} elemento checklist"
+      "checklistCountTitle": "{{count}} elemento checklist",
+      "taskCount_few": "{{count}} attività",
+      "taskCount_many": "{{count}} attività"
     },
     "taskForm": {
       "addTitle": "Aggiungi attività",
@@ -1625,7 +1649,9 @@
       "submitting": "Aggiunta dei tag...",
       "confirm_one": "Aggiungi tag a {{count}} attività",
       "confirm_other": "Aggiungi tag a {{count}} attività",
-      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:"
+      "failedHeading": "Impossibile aggiungere i tag alle seguenti attività:",
+      "confirm_few": "Aggiungi tag a {{count}} attività",
+      "confirm_many": "Aggiungi tag a {{count}} attività"
     }
   },
   "common:actions": {
@@ -1688,7 +1714,9 @@
       "lockedSummary_other": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
       "edit": "Modifica condizioni",
       "saved": "Condizioni di fatturazione aggiornate",
-      "dialogTitle": "Modifica condizioni di fatturazione"
+      "dialogTitle": "Modifica condizioni di fatturazione",
+      "lockedSummary_few": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
+      "lockedSummary_many": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno."
     },
     "setup": {
       "title": "Fattura questo progetto",
@@ -2037,5 +2065,22 @@
     "question": "Le dipendenze non sono vincolanti, quindi puoi continuare. Vuoi farlo?",
     "proceed": "Continua comunque",
     "cancel": "Annulla"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compatto"
+    },
+    "spacious": {
+      "label": "Spazioso"
+    },
+    "decrease": {
+      "title": "Riduci la larghezza delle colonne"
+    },
+    "increase": {
+      "title": "Aumenta la larghezza delle colonne"
+    },
+    "reset": {
+      "title": "Ripristina il valore predefinito"
+    }
   }
 }

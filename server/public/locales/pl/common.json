@@ -1343,6 +1343,11 @@
       "projects": "Projekty",
       "system": "System",
       "appointments": "Wizyty"
+    },
+    "theme": {
+      "light": "Jasny",
+      "dark": "Ciemny",
+      "system": "Systemowy"
     }
   },
   "form": {
@@ -1939,5 +1944,25 @@
     "increase": {
       "title": "Zwiększ odstępy"
     }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Wybierz kontakty..."
+      },
+      "search": {
+        "placeholder": "Szukaj kontaktów..."
+      }
+    },
+    "noResults": "Nie znaleziono wyników",
+    "noContacts": "Brak dostępnych kontaktów",
+    "noEmail": "brak adresu e-mail",
+    "actions": {
+      "clearAll": "Wyczyść wszystko"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Zmień motyw",
+    "selected": "Wybrany"
   }
 }

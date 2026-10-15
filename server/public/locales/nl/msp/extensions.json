@@ -294,7 +294,16 @@
     "installCompleteError": "Extensie afgerond, maar de installatie is niet voltooid",
     "installUnexpected": "Onverwachte fout tijdens installatie",
     "finalizeRequireManifest": "Plak het manifest-JSON voordat u afrondt.",
-    "finalizeProvidedFailed": "Kan niet afronden met het opgegeven manifest"
+    "finalizeProvidedFailed": "Kan niet afronden met het opgegeven manifest",
+    "pro": {
+      "title": "Extensies (Pro)",
+      "description": "De installatie en het beheer van extensies zijn beschikbaar in AlgaPSA Pro.",
+      "featureTitle": "Pro-functie",
+      "help": "Het installatieprogramma voor extensies is alleen beschikbaar in AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Meer informatie over Pro"
+      }
+    }
   },
   "installSimple": {
     "title": "Extensie installeren",
