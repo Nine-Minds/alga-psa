@@ -55,6 +55,7 @@ COPY packages/licensing/package.json ./packages/licensing/
 COPY packages/list-views/package.json ./packages/list-views/
 COPY packages/notifications/package.json ./packages/notifications/
 COPY packages/opportunities/package.json ./packages/opportunities/
+COPY packages/product-chat/package.json ./packages/product-chat/
 COPY packages/projects/package.json ./packages/projects/
 COPY packages/reference-data/package.json ./packages/reference-data/
 COPY packages/scheduling/package.json ./packages/scheduling/
