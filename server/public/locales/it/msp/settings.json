@@ -3739,5 +3739,48 @@
       "loadFailed": "Errore durante il caricamento dei flag delle funzionalità: {{message}}"
     },
     "dependencies": "Richiede: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Impostazioni della lingua del portale clienti",
+    "description": "Configura le opzioni di lingua disponibili per i tuoi clienti",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Lingua predefinita",
+        "help": "Questa lingua verrà usata per i nuovi clienti e quando non è impostata alcuna preferenza"
+      },
+      "availableLanguages": {
+        "label": "Lingue disponibili",
+        "help": "Seleziona le lingue tra cui i clienti possono scegliere"
+      }
+    },
+    "defaultSuffix": "(predefinita)",
+    "preview": {
+      "title": "Anteprima",
+      "defaultLanguage": "Lingua predefinita:",
+      "availableLanguages": "Lingue disponibili:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Impostazioni salvate correttamente"
+      }
+    },
+    "errors": {
+      "saveFailed": "Impossibile salvare le impostazioni"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Inglese",
+      "fr": "Francese",
+      "es": "Spagnolo",
+      "de": "Tedesco",
+      "nl": "Olandese",
+      "it": "Italiano",
+      "pl": "Polacco",
+      "pt": "Portoghese (Brasile)",
+      "sv": "Svedese",
+      "xx": "Pseudolingua (xx)",
+      "yy": "Pseudolingua (yy)"
+    }
   }
 }

@@ -37,7 +37,6 @@
     "packages/notifications/src/components/NotificationItem.tsx",
     "packages/onboarding/src/hooks/useOnboardingProgress.tsx",
     "packages/product-auth-ee/oss/entry.tsx",
-    "packages/product-chat/context.tsx",
     "packages/product-chat/oss/entry.tsx",
     "packages/product-extensions-pages/oss/details.tsx",
     "packages/product-extensions-pages/oss/list.tsx",
@@ -45,8 +44,6 @@
     "packages/product-extensions/ee/DockerExtensionIframe.tsx",
     "packages/product-extensions/ee/ExtensionIframe.tsx",
     "packages/projects/src/components/KanbanZoomControl.tsx",
-    "packages/scheduling/src/components/shared/SchedulingProjectTaskDetails.tsx",
-    "packages/scheduling/src/components/shared/SchedulingTicketDetails.tsx",
     "packages/scheduling/src/components/time-management/time-entry/TimeEntryList.tsx",
     "packages/scheduling/src/lib/scheduleEntryLauncher.tsx",
     "packages/scheduling/src/lib/timeEntryLauncher.tsx",
@@ -105,7 +102,6 @@
     "packages/ui/src/components/settings/policy/PolicyManagement.tsx",
     "packages/ui/src/components/settings/telemetry/TelemetrySettings.tsx",
     "packages/ui/src/components/skeletons/AssetFormSkeleton.tsx",
-    "packages/ui/src/components/skeletons/CalendarSkeleton.tsx",
     "packages/ui/src/components/skeletons/ChartSkeleton.tsx",
     "packages/ui/src/components/skeletons/EditorSkeleton.tsx",
     "packages/ui/src/components/skeletons/KanbanBoardSkeleton.tsx",
@@ -130,7 +126,6 @@
     "packages/ui/src/editor/MentionSuggestion.tsx",
     "packages/ui/src/editor/RichTextViewer.tsx",
     "packages/ui/src/editor/TextEditor.tsx",
-    "packages/ui/src/lib/i18n/ClientPortalLanguageConfig.tsx",
     "packages/ui/src/lib/i18n/LanguageSwitcher.tsx",
     "packages/ui/src/ui-reflection/ReflectionParentContext.tsx"
   ]

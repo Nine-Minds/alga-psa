@@ -3739,5 +3739,48 @@
       "loadFailed": "Błąd ładowania flag funkcji: {{message}}"
     },
     "dependencies": "Wymaga: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Ustawienia języka portalu klienta",
+    "description": "Skonfiguruj opcje językowe dostępne dla klientów",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Język domyślny",
+        "help": "Ten język będzie używany dla nowych klientów oraz gdy nie ustawiono preferencji"
+      },
+      "availableLanguages": {
+        "label": "Dostępne języki",
+        "help": "Wybierz języki, z których mogą korzystać klienci"
+      }
+    },
+    "defaultSuffix": "(domyślny)",
+    "preview": {
+      "title": "Podgląd",
+      "defaultLanguage": "Język domyślny:",
+      "availableLanguages": "Dostępne języki:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Ustawienia zapisane pomyślnie"
+      }
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawień"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    }
   }
 }

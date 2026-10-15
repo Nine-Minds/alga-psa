@@ -114,7 +114,8 @@
     "removeTag": "Quitar etiqueta",
     "saveChanges": "Guardar cambios",
     "printSelected_few": "Imprimir seleccionados ({{count}})",
-    "printSelected_many": "Imprimir seleccionados ({{count}})"
+    "printSelected_many": "Imprimir seleccionados ({{count}})",
+    "saveSettings": "Guardar configuración"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Seleccionado: {{label}}",
     "help": "Seleccione un ícono para representar este tipo de interacción. El ícono se mostrará en listas y formularios."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Cargando calendario..."
+    }
   }
 }

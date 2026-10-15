@@ -114,7 +114,8 @@
     "removeTag": "Ta bort tagg",
     "saveChanges": "Spara ändringar",
     "printSelected_few": "Skriv ut markerade ({{count}})",
-    "printSelected_many": "Skriv ut markerade ({{count}})"
+    "printSelected_many": "Skriv ut markerade ({{count}})",
+    "saveSettings": "Spara inställningar"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Valt: {{label}}",
     "help": "Välj en ikon för den här interaktionstypen. Ikonen visas i listor och formulär."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Läser in kalendern…"
+    }
   }
 }

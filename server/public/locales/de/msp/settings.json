@@ -3739,5 +3739,48 @@
       "loadFailed": "Fehler beim Laden der Funktionsschalter: {{message}}"
     },
     "dependencies": "Erfordert: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Spracheinstellungen des Kundenportals",
+    "description": "Konfigurieren Sie die Sprachoptionen für Ihre Kunden",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standardsprache",
+        "help": "Diese Sprache wird für neue Kunden und bei fehlender Spracheinstellung verwendet"
+      },
+      "availableLanguages": {
+        "label": "Verfügbare Sprachen",
+        "help": "Wählen Sie die Sprachen aus, die Ihren Kunden zur Auswahl stehen"
+      }
+    },
+    "defaultSuffix": "(Standard)",
+    "preview": {
+      "title": "Vorschau",
+      "defaultLanguage": "Standardsprache:",
+      "availableLanguages": "Verfügbare Sprachen:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Einstellungen erfolgreich gespeichert"
+      }
+    },
+    "errors": {
+      "saveFailed": "Einstellungen konnten nicht gespeichert werden"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Englisch",
+      "fr": "Französisch",
+      "es": "Spanisch",
+      "de": "Deutsch",
+      "nl": "Niederländisch",
+      "it": "Italienisch",
+      "pl": "Polnisch",
+      "pt": "Portugiesisch (Brasilien)",
+      "sv": "Schwedisch",
+      "xx": "Pseudosprache (xx)",
+      "yy": "Pseudosprache (yy)"
+    }
   }
 }

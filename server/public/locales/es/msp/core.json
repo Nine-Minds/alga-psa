@@ -771,5 +771,25 @@
   "githubStar": {
     "label": "Marcar con estrella",
     "ariaLabel": "Marcar {{repository}} con una estrella en GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Panel",
+      "ticketDetails": "Detalles del ticket",
+      "tickets": "Tickets",
+      "projectDetails": "Detalles del proyecto",
+      "projects": "Proyectos",
+      "clientDetails": "Detalles del cliente",
+      "clients": "Clientes",
+      "contactDetails": "Detalles del contacto",
+      "contacts": "Contactos",
+      "assetDetails": "Detalles del activo",
+      "assets": "Activos",
+      "billing": "Facturación",
+      "settings": "Configuración",
+      "settingsSection": "Configuración: {{section}}",
+      "chat": "Chat"
+    }
   }
 }

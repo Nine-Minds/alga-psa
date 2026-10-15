@@ -771,5 +771,25 @@
   "githubStar": {
     "label": "Ster geven",
     "ariaLabel": "{{repository}} een ster geven op GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portaal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticketdetails",
+      "tickets": "Tickets",
+      "projectDetails": "Projectdetails",
+      "projects": "Projecten",
+      "clientDetails": "Klantdetails",
+      "clients": "Klanten",
+      "contactDetails": "Contactdetails",
+      "contacts": "Contacten",
+      "assetDetails": "Assetdetails",
+      "assets": "Assets",
+      "billing": "Facturatie",
+      "settings": "Instellingen",
+      "settingsSection": "Instellingen: {{section}}",
+      "chat": "Chat"
+    }
   }
 }

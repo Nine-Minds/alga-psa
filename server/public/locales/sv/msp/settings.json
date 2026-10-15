@@ -3739,5 +3739,48 @@
       "loadFailed": "Det gick inte att läsa in funktionsflaggor: {{message}}"
     },
     "dependencies": "Kräver: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Språkinställningar för kundportalen",
+    "description": "Konfigurera de språkalternativ som är tillgängliga för dina kunder",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standardspråk",
+        "help": "Det här språket används för nya kunder och när ingen språkinställning har valts"
+      },
+      "availableLanguages": {
+        "label": "Tillgängliga språk",
+        "help": "Välj vilka språk kunderna kan välja mellan"
+      }
+    },
+    "defaultSuffix": "(standard)",
+    "preview": {
+      "title": "Förhandsgranskning",
+      "defaultLanguage": "Standardspråk:",
+      "availableLanguages": "Tillgängliga språk:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Inställningarna har sparats"
+      }
+    },
+    "errors": {
+      "saveFailed": "Det gick inte att spara inställningarna"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engelska",
+      "fr": "Franska",
+      "es": "Spanska",
+      "de": "Tyska",
+      "nl": "Nederländska",
+      "it": "Italienska",
+      "pl": "Polska",
+      "pt": "Portugisiska (Brasilien)",
+      "sv": "Svenska",
+      "xx": "Pseudospråk (xx)",
+      "yy": "Pseudospråk (yy)"
+    }
   }
 }

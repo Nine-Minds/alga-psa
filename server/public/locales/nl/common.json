@@ -114,7 +114,8 @@
     "removeTag": "Label verwijderen",
     "saveChanges": "Wijzigingen opslaan",
     "printSelected_few": "Geselecteerde afdrukken ({{count}})",
-    "printSelected_many": "Geselecteerde afdrukken ({{count}})"
+    "printSelected_many": "Geselecteerde afdrukken ({{count}})",
+    "saveSettings": "Instellingen opslaan"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Geselecteerd: {{label}}",
     "help": "Selecteer een pictogram voor dit interactietype. Het pictogram wordt weergegeven in lijsten en formulieren."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Kalender laden..."
+    }
   }
 }

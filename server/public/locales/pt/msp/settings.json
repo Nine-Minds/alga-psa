@@ -3739,5 +3739,48 @@
       "loadFailed": "Erro ao carregar sinalizadores de recursos: {{message}}"
     },
     "dependencies": "Requer: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Configurações de idioma do portal do cliente",
+    "description": "Configure as opções de idioma disponíveis para seus clientes",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Idioma padrão",
+        "help": "Este idioma será usado para novos clientes e quando nenhuma preferência estiver definida"
+      },
+      "availableLanguages": {
+        "label": "Idiomas disponíveis",
+        "help": "Selecione os idiomas que os clientes podem escolher"
+      }
+    },
+    "defaultSuffix": "(padrão)",
+    "preview": {
+      "title": "Prévia",
+      "defaultLanguage": "Idioma padrão:",
+      "availableLanguages": "Idiomas disponíveis:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Configurações salvas com sucesso"
+      }
+    },
+    "errors": {
+      "saveFailed": "Falha ao salvar as configurações"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Inglês",
+      "fr": "Francês",
+      "es": "Espanhol",
+      "de": "Alemão",
+      "nl": "Holandês",
+      "it": "Italiano",
+      "pl": "Polonês",
+      "pt": "Português (Brasil)",
+      "sv": "Sueco",
+      "xx": "Pseudoidioma (xx)",
+      "yy": "Pseudoidioma (yy)"
+    }
   }
 }

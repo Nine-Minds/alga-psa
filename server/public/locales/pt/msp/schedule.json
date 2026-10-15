@@ -853,5 +853,76 @@
       "members": "Membros",
       "creatorNote": "Você poderá gerenciar esta agenda."
     }
+  },
+  "ticketDetails": {
+    "title": "Detalhes do ticket",
+    "numberedTitle": "Ticket nº {{number}}",
+    "untitled": "Ticket sem título",
+    "noDescription": "Sem descrição",
+    "notAvailable": "N/D",
+    "unassigned": "Não atribuído",
+    "fields": {
+      "title": {
+        "label": "Título"
+      },
+      "description": {
+        "label": "Descrição"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Prioridade"
+      },
+      "board": {
+        "label": "Quadro"
+      },
+      "client": {
+        "label": "Cliente"
+      },
+      "contact": {
+        "label": "Contato"
+      },
+      "assignedUser": {
+        "label": "Usuário atribuído"
+      },
+      "entered": {
+        "label": "Criado"
+      },
+      "updated": {
+        "label": "Atualizado"
+      },
+      "closed": {
+        "label": "Fechado"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Tarefa do projeto",
+    "noDescription": "Sem descrição",
+    "notAvailable": "N/D",
+    "unassigned": "Não atribuído",
+    "untitledItem": "Item sem título",
+    "noChecklistItems": "Nenhum item na lista de verificação",
+    "fields": {
+      "description": {
+        "label": "Descrição"
+      },
+      "project": {
+        "label": "Projeto"
+      },
+      "phase": {
+        "label": "Fase"
+      },
+      "assignedTo": {
+        "label": "Atribuído a"
+      },
+      "dueDate": {
+        "label": "Data de vencimento"
+      },
+      "checklist": {
+        "label": "Lista de verificação"
+      }
+    }
   }
 }

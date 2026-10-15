@@ -3739,5 +3739,48 @@
       "loadFailed": "Error loading feature flags: {{message}}"
     },
     "dependencies": "Requires: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Client Portal Language Settings",
+    "description": "Configure the language options available to your clients",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Default Language",
+        "help": "This language will be used for new clients and when no preference is set"
+      },
+      "availableLanguages": {
+        "label": "Available Languages",
+        "help": "Select which languages clients can choose from"
+      }
+    },
+    "defaultSuffix": "(default)",
+    "preview": {
+      "title": "Preview",
+      "defaultLanguage": "Default language:",
+      "availableLanguages": "Available languages:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Settings saved successfully"
+      }
+    },
+    "errors": {
+      "saveFailed": "Failed to save settings"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish",
+      "de": "German",
+      "nl": "Dutch",
+      "it": "Italian",
+      "pl": "Polish",
+      "pt": "Portuguese (Brazil)",
+      "sv": "Swedish",
+      "xx": "Pseudo (xx)",
+      "yy": "Pseudo (yy)"
+    }
   }
 }

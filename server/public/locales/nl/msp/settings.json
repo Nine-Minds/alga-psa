@@ -3739,5 +3739,48 @@
       "loadFailed": "Fout bij het laden van functieschakelaars: {{message}}"
     },
     "dependencies": "Vereist: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Taalinstellingen voor het klantenportaal",
+    "description": "Configureer de taalopties die beschikbaar zijn voor uw klanten",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standaardtaal",
+        "help": "Deze taal wordt gebruikt voor nieuwe klanten en wanneer er geen voorkeur is ingesteld"
+      },
+      "availableLanguages": {
+        "label": "Beschikbare talen",
+        "help": "Selecteer de talen waaruit klanten kunnen kiezen"
+      }
+    },
+    "defaultSuffix": "(standaard)",
+    "preview": {
+      "title": "Voorbeeld",
+      "defaultLanguage": "Standaardtaal:",
+      "availableLanguages": "Beschikbare talen:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Instellingen succesvol opgeslagen"
+      }
+    },
+    "errors": {
+      "saveFailed": "Instellingen opslaan mislukt"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "nl": "Nederlands",
+      "it": "Italiaans",
+      "pl": "Pools",
+      "pt": "Portugees (Brazilië)",
+      "sv": "Zweeds",
+      "xx": "Pseudotaal (xx)",
+      "yy": "Pseudotaal (yy)"
+    }
   }
 }

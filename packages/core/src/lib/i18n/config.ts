@@ -236,7 +236,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
-  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities'],
+  '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities', 'msp/schedule'],
   '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],

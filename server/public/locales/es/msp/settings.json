@@ -3739,5 +3739,48 @@
       "loadFailed": "Error al cargar indicadores de funciones: {{message}}"
     },
     "dependencies": "Requiere: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Configuración de idioma del portal del cliente",
+    "description": "Configure las opciones de idioma disponibles para sus clientes",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Idioma predeterminado",
+        "help": "Este idioma se usará para clientes nuevos y cuando no se haya establecido una preferencia"
+      },
+      "availableLanguages": {
+        "label": "Idiomas disponibles",
+        "help": "Seleccione los idiomas que los clientes pueden elegir"
+      }
+    },
+    "defaultSuffix": "(predeterminado)",
+    "preview": {
+      "title": "Vista previa",
+      "defaultLanguage": "Idioma predeterminado:",
+      "availableLanguages": "Idiomas disponibles:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Configuración guardada correctamente"
+      }
+    },
+    "errors": {
+      "saveFailed": "No se pudo guardar la configuración"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Inglés",
+      "fr": "Francés",
+      "es": "Español",
+      "de": "Alemán",
+      "nl": "Neerlandés",
+      "it": "Italiano",
+      "pl": "Polaco",
+      "pt": "Portugués (Brasil)",
+      "sv": "Sueco",
+      "xx": "Pseudoidioma (xx)",
+      "yy": "Pseudoidioma (yy)"
+    }
   }
 }

@@ -3739,5 +3739,48 @@
       "loadFailed": "Erreur lors du chargement des indicateurs de fonctionnalités : {{message}}"
     },
     "dependencies": "Nécessite : {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Paramètres de langue du portail client",
+    "description": "Configurez les options de langue disponibles pour vos clients",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Langue par défaut",
+        "help": "Cette langue sera utilisée pour les nouveaux clients et lorsqu’aucune préférence n’est définie"
+      },
+      "availableLanguages": {
+        "label": "Langues disponibles",
+        "help": "Sélectionnez les langues que les clients peuvent choisir"
+      }
+    },
+    "defaultSuffix": "(par défaut)",
+    "preview": {
+      "title": "Aperçu",
+      "defaultLanguage": "Langue par défaut :",
+      "availableLanguages": "Langues disponibles :"
+    },
+    "messages": {
+      "success": {
+        "saved": "Paramètres enregistrés avec succès"
+      }
+    },
+    "errors": {
+      "saveFailed": "Échec de l’enregistrement des paramètres"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Anglais",
+      "fr": "Français",
+      "es": "Espagnol",
+      "de": "Allemand",
+      "nl": "Néerlandais",
+      "it": "Italien",
+      "pl": "Polonais",
+      "pt": "Portugais (Brésil)",
+      "sv": "Suédois",
+      "xx": "Pseudo-langue (xx)",
+      "yy": "Pseudo-langue (yy)"
+    }
   }
 }

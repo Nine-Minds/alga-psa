@@ -771,5 +771,25 @@
   "githubStar": {
     "label": "Oznacz gwiazdką",
     "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Pulpit",
+      "ticketDetails": "Szczegóły zgłoszenia",
+      "tickets": "Zgłoszenia",
+      "projectDetails": "Szczegóły projektu",
+      "projects": "Projekty",
+      "clientDetails": "Szczegóły klienta",
+      "clients": "Klienci",
+      "contactDetails": "Szczegóły kontaktu",
+      "contacts": "Kontakty",
+      "assetDetails": "Szczegóły zasobu",
+      "assets": "Zasoby",
+      "billing": "Rozliczenia",
+      "settings": "Ustawienia",
+      "settingsSection": "Ustawienia: {{section}}",
+      "chat": "Czat"
+    }
   }
 }

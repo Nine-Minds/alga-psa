@@ -114,7 +114,8 @@
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
     "printSelected_many": "Drukuj zaznaczone ({{count}})",
     "removeTag": "Usuń tag",
-    "saveChanges": "Zapisz zmiany"
+    "saveChanges": "Zapisz zmiany",
+    "saveSettings": "Zapisz ustawienia"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Wybrano: {{label}}",
     "help": "Wybierz ikonę reprezentującą ten typ interakcji. Ikona będzie wyświetlana na listach i w formularzach."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Ładowanie kalendarza..."
+    }
   }
 }

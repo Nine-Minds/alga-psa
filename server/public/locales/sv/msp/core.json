@@ -771,5 +771,25 @@
   "githubStar": {
     "label": "Stjärnmärk",
     "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portal",
+      "dashboard": "Översikt",
+      "ticketDetails": "Ärendedetaljer",
+      "tickets": "Ärenden",
+      "projectDetails": "Projektdetaljer",
+      "projects": "Projekt",
+      "clientDetails": "Kunduppgifter",
+      "clients": "Kunder",
+      "contactDetails": "Kontaktuppgifter",
+      "contacts": "Kontakter",
+      "assetDetails": "Tillgångsdetaljer",
+      "assets": "Tillgångar",
+      "billing": "Fakturering",
+      "settings": "Inställningar",
+      "settingsSection": "Inställningar: {{section}}",
+      "chat": "Chatt"
+    }
   }
 }

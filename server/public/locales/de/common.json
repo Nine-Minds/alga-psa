@@ -114,7 +114,8 @@
     "removeTag": "Tag entfernen",
     "saveChanges": "Änderungen speichern",
     "printSelected_few": "Auswahl drucken ({{count}})",
-    "printSelected_many": "Auswahl drucken ({{count}})"
+    "printSelected_many": "Auswahl drucken ({{count}})",
+    "saveSettings": "Einstellungen speichern"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Ausgewählt: {{label}}",
     "help": "Wählen Sie ein Symbol für diesen Interaktionstyp. Das Symbol wird in Listen und Formularen angezeigt."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Kalender wird geladen..."
+    }
   }
 }

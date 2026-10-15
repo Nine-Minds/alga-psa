@@ -114,7 +114,8 @@
     "removeTag": "Remove tag",
     "saveChanges": "Save Changes",
     "printSelected_few": "Print selected ({{count}})",
-    "printSelected_many": "Print selected ({{count}})"
+    "printSelected_many": "Print selected ({{count}})",
+    "saveSettings": "Save Settings"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -1859,5 +1860,10 @@
     },
     "selected": "Selected: {{label}}",
     "help": "Select an icon to represent this interaction type. The icon will be displayed in lists and forms."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Loading calendar..."
+    }
   }
 }
