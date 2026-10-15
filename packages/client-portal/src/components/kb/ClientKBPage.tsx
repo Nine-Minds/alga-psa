@@ -133,13 +133,13 @@ function ArticleCard({ article, onClick }: ArticleCardProps) {
       className="hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4 !pt-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 p-2 bg-muted rounded-lg">
             {TYPE_ICONS[article.article_type] || <FileText className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium line-clamp-2">
+            <h4 className="text-sm font-medium line-clamp-2 break-words">
               {article.document_name || article.slug}
             </h4>
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
@@ -287,7 +287,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
             }`}
           >
             <Card className="h-full">
-              <CardContent className="p-2 h-full overflow-auto">
+              <CardContent className="p-2 !pt-2 h-full overflow-auto">
                 {isCategorySidebarCollapsed ? (
                   <CollapseToggleButton
                     id="kb-expand-categories"
