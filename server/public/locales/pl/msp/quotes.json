@@ -384,8 +384,8 @@
       "description": "Opcjonalne nagłówki układu standardowej oferty grupowanej.",
       "monthlyLabel": "Tytuł sekcji miesięcznej",
       "oneTimeLabel": "Tytuł sekcji jednorazowej",
-      "monthlyPlaceholder": "Pozycje miesięczne",
-      "oneTimePlaceholder": "Pozycje jednorazowe"
+      "monthlyPlaceholder": "Miesięcznie",
+      "oneTimePlaceholder": "Jednorazowo"
     }
   },
   "quoteDetail": {

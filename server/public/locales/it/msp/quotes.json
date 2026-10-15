@@ -384,8 +384,8 @@
       "description": "Intestazioni facoltative del layout preventivo standard raggruppato.",
       "monthlyLabel": "Titolo della sezione mensile",
       "oneTimeLabel": "Titolo della sezione una tantum",
-      "monthlyPlaceholder": "Voci mensili",
-      "oneTimePlaceholder": "Voci una tantum"
+      "monthlyPlaceholder": "Mensile",
+      "oneTimePlaceholder": "Una tantum"
     }
   },
   "quoteDetail": {

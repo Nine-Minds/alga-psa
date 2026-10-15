@@ -384,8 +384,8 @@
       "description": "Optionale Überschriften für das Layout „Standardangebot gruppiert“.",
       "monthlyLabel": "Titel des Monatsabschnitts",
       "oneTimeLabel": "Titel des einmaligen Abschnitts",
-      "monthlyPlaceholder": "Monatliche Positionen",
-      "oneTimePlaceholder": "Einmalige Positionen"
+      "monthlyPlaceholder": "Monatlich",
+      "oneTimePlaceholder": "Einmalig"
     }
   },
   "quoteDetail": {

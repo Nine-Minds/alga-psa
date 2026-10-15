@@ -384,8 +384,8 @@
       "description": "Encabezados opcionales del diseño de cotización estándar agrupada.",
       "monthlyLabel": "Título de la sección mensual",
       "oneTimeLabel": "Título de la sección única",
-      "monthlyPlaceholder": "Artículos mensuales",
-      "oneTimePlaceholder": "Artículos únicos"
+      "monthlyPlaceholder": "Mensual",
+      "oneTimePlaceholder": "Único"
     }
   },
   "quoteDetail": {

@@ -384,8 +384,8 @@
       "description": "Optional headings used by the Standard Quote Grouped layout.",
       "monthlyLabel": "Monthly section title",
       "oneTimeLabel": "One-time section title",
-      "monthlyPlaceholder": "Monthly Items",
-      "oneTimePlaceholder": "One-time Items"
+      "monthlyPlaceholder": "Monthly",
+      "oneTimePlaceholder": "One-time"
     }
   },
   "quoteDetail": {

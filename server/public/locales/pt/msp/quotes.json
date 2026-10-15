@@ -384,8 +384,8 @@
       "description": "Cabeçalhos opcionais do layout padrão de cotação agrupada.",
       "monthlyLabel": "Título da seção mensal",
       "oneTimeLabel": "Título da seção avulsa",
-      "monthlyPlaceholder": "Itens mensais",
-      "oneTimePlaceholder": "Itens avulsos"
+      "monthlyPlaceholder": "Mensal",
+      "oneTimePlaceholder": "Único"
     }
   },
   "quoteDetail": {
