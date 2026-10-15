@@ -249,6 +249,9 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
         cancelLabel: 'Cancel'
       }
     },
+    metadata: {
+      enableJsonEditor: true
+    },
     elements: {
       addButton: 'add-qbcsv-discount-mapping-button',
       table: 'qbcsv-discount-mappings-table',
